@@ -20,7 +20,10 @@ module.exports = {
     nextQueries:  element(by.css('[ng-click="loadMore()"]')),
     dbTableFld: element(by.model('dbTable')),
     dbTableBtn: element(by.css('[ng-click="addDbTable()"]')),
-    dbTableList: element(by.name('selectedDbTable'))
+    dbTableList: element(by.name('selectedDbTable')),
+    reloadTop: element(by.css('[ng-click="$root.doRefresh($root.time_range)"]')),
+    dbToExplain: element(by.name('db')),
+    explainBtn: element(by.css('[ng-click="getQueryExplain()"]'))
   },  
       
   get: function() {  
@@ -104,4 +107,21 @@ module.exports = {
     element(by.cssContainingText('option', table)).click();
     },
  
+  addDbToExplain: function(db)  {
+    this.mainPage.dbToExplain.clear();
+    this.mainPage.dbToExplain.sendKeys(db);
+  },
+
+  returnDbExplain: function(db) {
+    return this.mainPage.dbToExplain.getAttribute('value');
+  },
+
+  clickExplainBtn: function() {
+    this.mainPage.explainBtn.click();
+  },
+
+  explainIsActive: function() {
+    return this.mainPage.explainBtn.isEnabled();
+  },
+
 };

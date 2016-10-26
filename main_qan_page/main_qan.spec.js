@@ -6,7 +6,7 @@ describe('Main QAN Page', function () {
     browser.ignoreSynchronization = false;
     mainQANPage.get();
     element.all(by.css('.alert.msg')).then(function(items)  {
-    expect(items.length).toBe(0);
+      expect(items.length).toBe(0);
     });
     //expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
     expect(mainQANPage.returnTopTitle()).toContain('Top');
@@ -67,6 +67,24 @@ describe('Main QAN Page', function () {
   it('should click on management button', function () {
     mainQANPage.clickManagement();
     expect(browser.getCurrentUrl()).toContain('/qan/#/management/mysql');
+  });
+
+  it('should explain the query', function () {
+    mainQANPage.clearSearch();
+    mainQANPage.searchFor('select');
+    mainQANPage.doSearch();
+    mainQANPage.clickQueryNr(9);
+    mainQANPage.returnDbExplain().then(function(db){
+      console.log("Db is = " + db); 
+    });
+    if (expect(mainQANPage.returnDbExplain().length).not.toEqual(0)) {
+console.log("qweqweweqwewqeqwe");
+      expect(mainQANPage.explainIsActive()).toBe(true);
+
+    } else {
+console.log("000000000");
+      expect(mainQANPage.explainIsActive()).toBe(false);
+    }
   });
 
 });
