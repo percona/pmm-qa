@@ -30,7 +30,7 @@ exports.config = {
   suites: {
     mainQanPage: 'main_qan_page/*spec.js',
     landingPage: 'landing_page/*spec.js',
-  //  mysqlPage: 'mysql_connection_page/*spec.js',
+    managementPage: 'management_page/*spec.js',
   },
 
  

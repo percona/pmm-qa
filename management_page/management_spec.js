@@ -1,10 +1,10 @@
-var mysqlPage = require('./mysql_conn_page.po.js');
+var managementPage = require('./management.po.js');
 
 describe('Management Page', function () {
 
   beforeEach(function () {
     browser.ignoreSynchronization = false;
-    mysqlPage.get();
+    managementPage.get();
     expect(browser.getCurrentUrl()).toContain(browser.baseUrl + '/qan/#/management');
   });
 
@@ -15,7 +15,9 @@ describe('Management Page', function () {
   });
 
   it('should click on status, log, settings tabs', function () {
-    mysqlPage.clickAddNewMysql();
-    expect(mysqlPage.getMysqlName()).toEqual('');
+    managementPage.clickLog();
+    managementPage.clickStatus();
+    managementPage.clickSettings();
   });
 
+})
