@@ -73,16 +73,11 @@ describe('Main QAN Page', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor('select');
     mainQANPage.doSearch();
-    mainQANPage.clickQueryNr(9);
-    mainQANPage.returnDbExplain().then(function(db){
-      console.log("Db is = " + db); 
-    });
+    mainQANPage.clickQueryNr(8);
     mainQANPage.returnDbExplain().then(function(result) {
       if (result!=0) {
-        console.log("If DB is not empty " + result);
         expect(mainQANPage.explainIsActive()).toBe(true);
       } else {
-        console.log("If DB is empty " + result);
         expect(mainQANPage.explainIsActive()).toBe(false);
       }
     });
