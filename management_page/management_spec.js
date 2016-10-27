@@ -5,7 +5,7 @@ describe('Management Page', function () {
   beforeEach(function () {
     browser.ignoreSynchronization = false;
     managementPage.get();
-    expect(browser.getCurrentUrl()).toContain(browser.baseUrl + '/qan/#/management');
+    expect(browser.getCurrentUrl()).toContain('/qan/#/management/');
   });
 
   afterEach(function() {
@@ -15,9 +15,9 @@ describe('Management Page', function () {
   });
 
   it('should click on status, log, settings tabs', function () {
-    managementPage.clickLog();
-    managementPage.clickStatus();
-    managementPage.clickSettings();
+    managementPage.clickLogTab();
+    managementPage.clickStatusTab();
+    managementPage.clickSettingsTab();
   });
 
 })

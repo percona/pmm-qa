@@ -2,15 +2,18 @@
 
 module.exports = {
   managementPage: {
+    managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),    
     collectInterval: element(by.name('interval')),
     selectedConnection: element(by.className('btn btn-warning navbar-btn dropdown-toggle ng-binding')),
-    statusTab: element(by.xpath('//a[text()="Status"]'))  
-    logTab: element(by.xpath('//a[text()="Log"]'))  
-    settingsTab: element(by.xpath('//a[text()="Settings"]'))  
+    statusTab: element(by.xpath('//a[text()="STATUS"]')),  
+    logTab: element(by.xpath('//a[text()="LOG"]')),  
+    settingsTab: element(by.xpath('//a[text()="SETTINGS"]'))  
 },
 
   get: function() {
-    browser.get('/qan/#/management/');
+    browser.get('/qan/');
+    this.managementPage.managementBtn.click();
+    browser.sleep(1000);
     browser.waitForAngular();
   },
 
@@ -22,7 +25,7 @@ module.exports = {
     this.managementPage.statusTab.click();
   },
 
-  clickLogTab: function(connection)  {
+  clickSettingsTab: function(connection)  {
     this.managementPage.settingsTab.click();
-  },
+  }
 };

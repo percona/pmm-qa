@@ -90,7 +90,7 @@ exports.config = {
  
   // Selector for the element housing the angular app - this defaults to
   // body, but is necessary if ng-app is on a descendant of 
-  rootElement: 'body',
+  rootElement: 'html',
  
   // -----------------------------------------------------------------
   // Other configuration.
