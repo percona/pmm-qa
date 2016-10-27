@@ -77,14 +77,15 @@ describe('Main QAN Page', function () {
     mainQANPage.returnDbExplain().then(function(db){
       console.log("Db is = " + db); 
     });
-    if (expect(mainQANPage.returnDbExplain().length).not.toEqual(0)) {
-console.log("qweqweweqwewqeqwe");
-      expect(mainQANPage.explainIsActive()).toBe(true);
-
-    } else {
-console.log("000000000");
-      expect(mainQANPage.explainIsActive()).toBe(false);
-    }
+    mainQANPage.returnDbExplain().then(function(result) {
+      if (result!=0) {
+        console.log("If DB is not empty " + result);
+        expect(mainQANPage.explainIsActive()).toBe(true);
+      } else {
+        console.log("If DB is empty " + result);
+        expect(mainQANPage.explainIsActive()).toBe(false);
+      }
+    });
   });
 
 });

@@ -2,7 +2,7 @@ var HtmlScreenshotReporter = require('protractor-jasmine2-screenshot-reporter');
 
 var reporter = new HtmlScreenshotReporter({
   dest: 'screenshots',
-  filename: 'qan-test-report.html',
+  filename: 'pmm-test-report.html',
   captureOnlyFailedSpecs: true
 });
  
@@ -28,8 +28,8 @@ exports.config = {
   //],
 
   suites: {
-  //  landingPage: 'landing_page/**/*spec.js',
     mainQanPage: 'main_qan_page/*spec.js',
+    landingPage: 'landing_page/*spec.js',
   //  mysqlPage: 'mysql_connection_page/*spec.js',
   },
 
@@ -120,7 +120,6 @@ exports.config = {
     var width = 1600;
     var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
-    
     browser.driver.manage().window().setSize(width, height);
     
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
@@ -151,7 +150,7 @@ exports.config = {
     // If true, include stack traces in failures.
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
-    defaultTimeoutInterval: 30000
+    defaultTimeoutInterval: 100000
   }
 
 };
