@@ -12,7 +12,11 @@ describe('Management Page', function () {
      browser.manage().logs().get('browser').then(function(browserLog) {
      console.log('log: ' + require('util').inspect(browserLog));
      });
-  });
+/*    element.all(by.css('.alert.msg')).then(function(items)  {
+      expect(items.length).toBe(0);
+    });
+    expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
+  */});
 
   it('should click on status, log, settings tabs', function () {
     managementPage.clickLogTab();

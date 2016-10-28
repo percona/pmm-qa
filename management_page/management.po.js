@@ -8,7 +8,7 @@ module.exports = {
     statusTab: element(by.xpath('//a[text()="STATUS"]')),  
     logTab: element(by.xpath('//a[text()="LOG"]')),  
     settingsTab: element(by.xpath('//a[text()="SETTINGS"]')),
-    apply: element(by.css('[ng-click="setQanConfig(selected_agent)"]')),
+    applyBtn: element(by.css('[ng-click="setQanConfig(selected_agent)"]')),
     sendQueryExamples: element(by.model('qanConf.ExampleQueries')), 
     collectFrom: element(by.name('source'))     
 },
@@ -35,5 +35,14 @@ module.exports = {
   inputCollectInterval: function(interval)  {
     this.managementPage.collectInterval.clear();
     this.managementPage.collectInterval.sendKeys(interval);
-  }
+  },
+
+  clickApplyBtn: function(connection)  {
+    this.managementPage.applyBtn.click();
+  },
+
+  returnCollectInterval: function()  {
+    return this.managementPage.collectInterval.getAttribute('value');
+  },
+
 };
