@@ -15,8 +15,12 @@ module.exports = {
 
   get: function() {
     browser.get('/qan/');
+    browser.waitForAngular();
     this.managementPage.managementBtn.click();
-    browser.sleep(1000);
+   browser.wait(10000);
+    // var element = this.managementPage.statusTab;
+    //browser.wait(protractor.ExpectedConditions.elementToBeClickable(element), 15000, 'Element not clickable');
+
     browser.waitForAngular();
   },
 
@@ -37,7 +41,7 @@ module.exports = {
     this.managementPage.collectInterval.sendKeys(interval);
   },
 
-  clickApplyBtn: function(connection)  {
+  clickApply: function(connection)  {
     this.managementPage.applyBtn.click();
   },
 
@@ -45,4 +49,14 @@ module.exports = {
     return this.managementPage.collectInterval.getAttribute('value');
   },
 
+ openAlertDialog() {
+    return browser.wait(() => {
+      this.pressSubmitButton();
+
+      return browser.switchTo().alert().then(
+        function(alert) { alert.dismiss(); return true; },
+        function() { return false; }
+      );
+    });
+  }
 };

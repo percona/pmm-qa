@@ -5,6 +5,7 @@ describe('Management Page', function () {
   beforeEach(function () {
     browser.ignoreSynchronization = false;
     managementPage.get();
+    browser.ignoreSynchronization = true;
     expect(browser.getCurrentUrl()).toContain('/qan/#/management/');
   });
 
@@ -19,9 +20,16 @@ describe('Management Page', function () {
   */});
 
   it('should click on status, log, settings tabs', function () {
+    managementPage.get();
+    expect(browser.getCurrentUrl()).toContain('/qan/#/management/');
     managementPage.clickLogTab();
-    managementPage.clickStatusTab();
-    managementPage.clickSettingsTab();
+    //managementPage.clickStatusTab();
+   // managementPage.clickSettingsTab();
   });
 
+  it('should change collect interval', function () {
+   // managementPage.inputCollectInterval(2);
+//    managementPage.clickApply();
+  //  expect(element(by.css('.alert.msa')).isPresent()).toBe(true);
+  });
 })
