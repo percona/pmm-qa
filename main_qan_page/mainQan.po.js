@@ -82,6 +82,11 @@ module.exports = {
     });
   },
 
+  clickLastQuery: function()  {
+    var elm = this.mainPage.queryList.last();
+    elm.click();
+  },
+
   returnTopQueriesTxt: function() {
     this.mainPage.topTitle.getAttribute('title');
   },
@@ -122,6 +127,12 @@ module.exports = {
 
   explainIsActive: function() {
     return this.mainPage.explainBtn.isEnabled();
+  },
+
+  returnQueriesCount: function()  {
+    this.mainPage.queryList.count().then(function(count) {
+      console.log("Count was "+count);
+    });
   },
 
 };

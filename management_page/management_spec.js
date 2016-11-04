@@ -5,7 +5,6 @@ describe('Management Page', function () {
   beforeEach(function () {
     browser.ignoreSynchronization = false;
     managementPage.get();
-    browser.ignoreSynchronization = true;
     expect(browser.getCurrentUrl()).toContain('/qan/#/management/');
   });
 
@@ -17,19 +16,16 @@ describe('Management Page', function () {
       expect(items.length).toBe(0);
     });
     expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
-  */});
-
+*/  });
+/*
   it('should click on status, log, settings tabs', function () {
-    managementPage.get();
-    expect(browser.getCurrentUrl()).toContain('/qan/#/management/');
-    managementPage.clickLogTab();
+    //managementPage.clickLogTab();
     //managementPage.clickStatusTab();
-   // managementPage.clickSettingsTab();
+    //managementPage.clickSettingsTab();
   });
-
-  it('should change collect interval', function () {
-   // managementPage.inputCollectInterval(2);
-//    managementPage.clickApply();
+ */ it('should change collect interval', function () {
+    managementPage.inputCollectInterval(2);
+  //    managementPage.clickApply();
   //  expect(element(by.css('.alert.msa')).isPresent()).toBe(true);
   });
 })

@@ -73,10 +73,11 @@ describe('Main QAN Page', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor('select');
     mainQANPage.doSearch();
-    mainQANPage.clickQueryNr(8);
+    mainQANPage.clickLastQuery();
     mainQANPage.returnDbExplain().then(function(result) {
       if (result!=0) {
         expect(mainQANPage.explainIsActive()).toBe(true);
+        //mainQANPage.
       } else {
         expect(mainQANPage.explainIsActive()).toBe(false);
       }
