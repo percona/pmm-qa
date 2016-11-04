@@ -1,4 +1,5 @@
 var mainQANPage = require('./mainQan.po.js')
+var data = require('./main_page_data.json')
    
 describe('Main QAN Page', function () {
  
@@ -20,7 +21,7 @@ describe('Main QAN Page', function () {
 
   it('should search Select query', function () {
     mainQANPage.clearSearch();
-    mainQANPage.searchFor('select');
+    mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     expect(mainQANPage.returnTopTitle()).toContain('Top');
     mainQANPage.clearSearch();
@@ -30,7 +31,7 @@ describe('Main QAN Page', function () {
 
   it('shouldnt search any query', function () {
     mainQANPage.clearSearch();
-    mainQANPage.searchFor('querry');
+    mainQANPage.searchFor(data['selectNotExist']);
     mainQANPage.doSearch();
     expect(mainQANPage.returnNoQueriesTxt()).toContain('There is no data');
     mainQANPage.clearSearch();
@@ -40,7 +41,7 @@ describe('Main QAN Page', function () {
   
   it('should click Select query', function () {
     mainQANPage.clearSearch();
-    mainQANPage.searchFor('select');
+    mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     mainQANPage.clickQueryNr(0);
     mainQANPage.clickExample();
@@ -48,11 +49,17 @@ describe('Main QAN Page', function () {
   });
 
   it('should add db.table', function () {
-    var tableValid = 'mysql.user';
     mainQANPage.clickQueryNr(1);
-    mainQANPage.addTable(tableValid);
-    mainQANPage.clickAddedTable(tableValid);
+    mainQANPage.addTable(data['tableValid']);
+    mainQANPage.clickAddedTable(data['tableValid']);
     expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
+  });
+
+  it('should show error for invalid db.table', function () {
+    mainQANPage.clickQueryNr(1);
+    mainQANPage.addTable(data['tableInvalid']);
+    mainQANPage.clickAddedTable(data['tableInvalid']);
+    expect(element(by.css('.alert-danger')).isPresent()).toBe(true);
   });
 
   it('should open Server Summary page', function () {
@@ -71,13 +78,12 @@ describe('Main QAN Page', function () {
 
   it('should explain the query', function () {
     mainQANPage.clearSearch();
-    mainQANPage.searchFor('select');
+    mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     mainQANPage.clickLastQuery();
     mainQANPage.returnDbExplain().then(function(result) {
       if (result!=0) {
         expect(mainQANPage.explainIsActive()).toBe(true);
-        //mainQANPage.
       } else {
         expect(mainQANPage.explainIsActive()).toBe(false);
       }
