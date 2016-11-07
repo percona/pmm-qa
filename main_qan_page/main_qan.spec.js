@@ -69,6 +69,7 @@ describe('Main QAN Page', function () {
 
   it('should click on Total', function () {
     mainQANPage.clickTotal();
+    mainQANPage.returnTotalElm();
   });
 
   it('should click on management button', function () {

@@ -23,7 +23,8 @@ module.exports = {
     dbTableList: element(by.name('selectedDbTable')),
     reloadTop: element(by.css('[ng-click="$root.doRefresh($root.time_range)"]')),
     dbToExplain: element(by.name('db')),
-    explainBtn: element(by.css('[ng-click="getQueryExplain()"]'))
+    explainBtn: element(by.css('[ng-click="getQueryExplain()"]')),
+    totalRow: element(by.css('[ng-click="qanSelectSummary()"]'))
   },  
       
   get: function() {  
@@ -131,8 +132,17 @@ module.exports = {
 
   returnQueriesCount: function()  {
     this.mainPage.queryList.count().then(function(count) {
-      console.log("Count was "+count);
+      console.log("Count was " + count);
     });
   },
+
+  returnTotalElm: function()  {
+    element.all(by.css('[ng-click="qanSelectSummary()"]')).each(function(element, index) {
+  element.getText().then(function (text) {
+    console.log(text);
+  });
+    });
+  },
+
 
 };
