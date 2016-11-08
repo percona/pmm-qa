@@ -138,11 +138,15 @@ module.exports = {
 
   returnTotalElm: function()  {
     element.all(by.css('[ng-click="qanSelectSummary()"]')).each(function(element, index) {
-  element.getText().then(function (text) {
-    console.log(text);
-  });
+      element.getText().then(function (text) {
+        console.log("Elm " + index + " is " + text);
+      });
     });
   },
 
+  clickLoadNext: function() {
+    this.mainPage.nextQueries.click();
+  },
 
+  
 };

@@ -1,3 +1,9 @@
 #!/bin/bash
 
-protractor --baseUrl='https://qwe123:qwe1@10.10.11.50' config.js
+if [ ! $# == 1 ]; then
+  echo "Usage: $0 url_to_pmm-server"
+  exit
+fi
+
+URL=$1
+protractor --baseUrl=$URL config.js
