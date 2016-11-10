@@ -16,8 +16,12 @@ exports.config = {
   //
   // Note that this server must have chromedriver in its path for Chromium
   // tests to work.
-  seleniumAddress: 'http://localhost:4444/wd/hub',
- 
+  //seleniumAddress: 'http://localhost:4444/wd/hub',
+  //seleniumAddress: 'http://ondemand.saucelabs.com:80/wd/hub',
+
+  seleniumAddress: 'http://nailya.kutlubaeva@percona.com:ueaabe1832f202ec@hub.crossbrowsertesting.com:80/wd/hub',
+  //sauceUser: process.env.SAUCE_USERNAME,
+  //sauceKey: process.env.SAUCE_ACCESS_KEY, 
   // -----------------------------------------------------------------
   // Specify the test code that will run.
   // -----------------------------------------------------------------
@@ -65,10 +69,24 @@ exports.config = {
   // Browser and Capabilities: Chrome
   // -----------------------------------------------------------------
   capabilities: {
-    browserName: 'chrome',
-    version: '',
-    platform: 'ANY'
-  },
+   // browserName: 'chrome',
+   // version: '',
+   // platform: 'ANY'
+//crossbrowsertesting 
+ name : 'Selenium-Protractor',
+    browser_api_name : 'Chrome53x64', // change this according to what browser you are using
+    browserName: 'chrome', // change this according to what browser you are using 'internet explorer', 'chrome' etc
+    os_api_name : 'Win10', // change this for the OS you are using
+    screen_resolution : '1024x768', // change this for the resolution
+
+    // optional recording capabilities
+    record_video : 'true',
+    record_network : 'false',
+    record_snapshot : 'false',
+
+    username :  "nailya.kutlubaeva@percona.com",
+    password : "ueaabe1832f202ec", 
+},
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
   // -----------------------------------------------------------------
@@ -90,7 +108,7 @@ exports.config = {
  
   // Selector for the element housing the angular app - this defaults to
   // body, but is necessary if ng-app is on a descendant of 
-  rootElement: '*[ng-app]',
+  //rootElement: '*[ng-app]',
 //useAllAngular2AppRoots: true 
   // -----------------------------------------------------------------
   // Other configuration.
@@ -120,8 +138,8 @@ exports.config = {
     var width = 1600;
     var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
-    browser.driver.manage().window().setSize(width, height);
-    
+    //browser.driver.manage().window().setSize(width, height);
+    browser.driver.manage().window().maximize();
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,
         savePath: 'testresults',

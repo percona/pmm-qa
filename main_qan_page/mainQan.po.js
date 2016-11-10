@@ -17,7 +17,7 @@ module.exports = {
     querySelected:  element(by.css('[ng-click="qanSelectRow(row)"]')),
     fingerprintTitle:  element(by.xpath('//*[contains(text(), "Fingerprint")]')),
     exampleTitle:  element(by.xpath('//*[contains(text(), "Example")]')),
-    nextQueries:  element(by.css('[ng-click="loadMore()"]')),
+    nextQueries:  element(by.id('show_more')),
     dbTableFld: element(by.model('dbTable')),
     dbTableBtn: element(by.css('[ng-click="addDbTable()"]')),
     dbTableList: element(by.name('selectedDbTable')),
@@ -27,8 +27,8 @@ module.exports = {
     totalRow: element(by.css('[ng-click="qanSelectSummary()"]'))
   },  
       
-  get: function() {  
-    browser.get('/qan/');   
+  get: function(url) {  
+    browser.get(url + '/qan/');   
     browser.waitForAngular();  
   },  
       

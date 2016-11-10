@@ -1,10 +1,11 @@
 var landingPage = require('./landing.po.js');
+var global = require('../test_data/global_data.json')
 
 describe('Landing Page', function () {
 
   beforeEach(function () {
     browser.ignoreSynchronization = true;
-    browser.get(browser.baseUrl);
+    browser.get(global['url']);
     expect(browser.getCurrentUrl()).toContain(browser.baseUrl)
   });
 

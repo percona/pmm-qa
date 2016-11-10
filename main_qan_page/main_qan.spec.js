@@ -1,11 +1,12 @@
 var mainQANPage = require('./mainQan.po.js')
-var data = require('./main_page_data.json')
+var data = require('../test_data/main_page_data.json')
+var global = require('../test_data/global_data.json')
    
 describe('Main QAN Page', function () {
  
   beforeEach(function () {
     browser.ignoreSynchronization = false;
-    mainQANPage.get();
+    mainQANPage.get(global['url']);
     element.all(by.css('.alert.msg')).then(function(items)  {
       expect(items.length).toBe(0);
     });
@@ -89,6 +90,10 @@ describe('Main QAN Page', function () {
         expect(mainQANPage.explainIsActive()).toBe(false);
       }
     });
+  });
+  
+  it('should load all queries', function ()  {
+    mainQANPage.clickLoadNext();
   });
 
 });
