@@ -1,9 +1,9 @@
 #!/bin/bash
 
 if [ ! $# == 1 ]; then
-  echo "Usage: $0 url_to_pmm-server"
+  echo "Usage: $0 config_file"
   exit
 fi
 
-URL=$1
-protractor --baseUrl=$URL config.js
+config_file=$1
+protractor  $config_file
