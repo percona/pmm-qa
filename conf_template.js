@@ -18,8 +18,8 @@ exports.config = {
   // tests to work.
   //seleniumAddress: 'http://localhost:4444/wd/hub',
   //seleniumAddress: 'http://ondemand.saucelabs.com:80/wd/hub',
-
-  seleniumAddress: 'http://nailya.kutlubaeva@percona.com:ueaabe1832f202ec@hub.crossbrowsertesting.com:80/wd/hub',
+  // seleniumAddress for Crossbrowsertesting
+  seleniumAddress: 'http://your_mail:your_key@hub.crossbrowsertesting.com:80/wd/hub',
   //sauceUser: process.env.SAUCE_USERNAME,
   //sauceKey: process.env.SAUCE_ACCESS_KEY, 
   // -----------------------------------------------------------------
@@ -84,8 +84,8 @@ exports.config = {
     record_network : 'false',
     record_snapshot : 'false',
 
-    username :  "nailya.kutlubaeva@percona.com",
-    password : "ueaabe1832f202ec", 
+    username :  "your_mail",
+    password : "your_key", 
 },
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
