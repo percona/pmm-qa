@@ -32,8 +32,8 @@ exports.config = {
   //],
 
   suites: {
-    mainQanPage: 'main_qan_page/*spec.js',
-    landingPage: 'landing_page/*spec.js',
+    mainQanPage: 'specs/*spec.js',
+    landingPage: 'specs/*spec.js',
 //    managementPage: 'management_page/*spec.js',
   },
 
@@ -69,11 +69,11 @@ exports.config = {
   // Browser and Capabilities: Chrome
   // -----------------------------------------------------------------
   capabilities: {
-   // browserName: 'chrome',
-   // version: '',
-   // platform: 'ANY'
+    browserName: 'chrome',
+    version: '',
+    platform: 'ANY'
 //crossbrowsertesting 
- name : 'Selenium-Protractor',
+/* name : 'Selenium-Protractor',
     browser_api_name : 'Chrome53x64', // change this according to what browser you are using
     browserName: 'chrome', // change this according to what browser you are using 'internet explorer', 'chrome' etc
     os_api_name : 'Win10', // change this for the OS you are using
@@ -85,7 +85,7 @@ exports.config = {
     record_snapshot : 'false',
 
     username :  "your_mail",
-    password : "your_key", 
+    password : "your_key", */
 },
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
@@ -138,8 +138,7 @@ exports.config = {
     var width = 1600;
     var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
-    //browser.driver.manage().window().setSize(width, height);
-    browser.driver.manage().window().maximize();
+    browser.driver.manage().window().setSize(width, height);
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,
         savePath: 'testresults',
