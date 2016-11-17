@@ -16,10 +16,10 @@ exports.config = {
   //
   // Note that this server must have chromedriver in its path for Chromium
   // tests to work.
-  //seleniumAddress: 'http://localhost:4444/wd/hub',
+  seleniumAddress: 'http://localhost:4444/wd/hub',
   //seleniumAddress: 'http://ondemand.saucelabs.com:80/wd/hub',
   // seleniumAddress for Crossbrowsertesting
-  seleniumAddress: 'http://your_mail:your_key@hub.crossbrowsertesting.com:80/wd/hub',
+  //seleniumAddress: 'http://your_mail:your_key@hub.crossbrowsertesting.com:80/wd/hub',
   //sauceUser: process.env.SAUCE_USERNAME,
   //sauceKey: process.env.SAUCE_ACCESS_KEY, 
   // -----------------------------------------------------------------
