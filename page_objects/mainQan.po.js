@@ -28,7 +28,13 @@ module.exports = {
   },  
       
   get: function(url) {  
-    browser.get(url + '/qan/');   
+    browser.get(url + '/qan/'); 
+    //browser.wait(function() {
+    //return driver.getTitle().then(function(title) {
+    //    return title === 'Percona Query Analytics';
+   // });
+//}, 10000);
+ 
     browser.waitForAngular();  
   },  
       
