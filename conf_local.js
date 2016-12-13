@@ -17,11 +17,11 @@ exports.config = {
   // Note that this server must have chromedriver in its path for Chromium
   // tests to work.
  seleniumAddress: 'http://localhost:4444/wd/hub',
-  //seleniumAddress: 'http://ondemand.saucelabs.com:80/wd/hub',
+//  seleniumAddress: 'http://ondemand.saucelabs.com:80/wd/hub',
   // seleniumAddress for Crossbrowsertesting
   //  seleniumAddress: 'http://your_mail:your_key@hub.crossbrowsertesting.com:80/wd/hub',
-  //sauceUser: process.env.SAUCE_USERNAME,
-  //sauceKey: process.env.SAUCE_ACCESS_KEY, 
+//  sauceUser: process.env.SAUCE_USERNAME,
+//  sauceKey: process.env.SAUCE_ACCESS_KEY, 
   // -----------------------------------------------------------------
   // Specify the test code that will run.
   // -----------------------------------------------------------------
@@ -33,7 +33,7 @@ exports.config = {
 
   suites: {
     mainQanPage: 'specs/*spec.js',
-    landingPage: 'specs/*spec.js',
+    //grafana: 'specs/main_grafana.js',
 //    managementPage: 'management_page/*spec.js',
   },
 
@@ -76,8 +76,8 @@ exports.config = {
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
   // -----------------------------------------------------------------
-/* 
-  
+ 
+ /* 
   capabilities: {
     browserName: 'firefox',
     version: '',
