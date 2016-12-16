@@ -1,19 +1,37 @@
-var Utils = function {
-// wait for & verify correct page is loaded
-
-this.at = function() {
-    var that = this;
-    return browser.wait(function() {
-        // call the page's pageLoaded method
-        return that.pageLoaded();
-    }, 5000);
+/**
+* Usage: Return Random Email Id.
+*/
+exports.getRandomEmail = function () {
+    var strValues = "abcdefghijk123456789";
+    var strEmail = "";
+    for (var i = 0; i < strValues.length; i++) {
+        strEmail = strEmail + strValues.charAt(Math.round(strValues.length * Math.random()));
+    }
+    return strEmail + "@mymail.test";
 };
 
-// navigate to a page 
-this.to = function() {
-    browser.get(this.url, 5000);
-    // wait and verify we're on the expected page
-    return this.at();
+/**
+* Usage: Generate random string.
+* characterLength :  Length of string.
+* Returns : Random string.
+*/
+exports.getRandomString = function (characterLength) {
+    var randomText = "";
+    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    for (var i = 0; i < characterLength; i++)
+        randomText += possible.charAt(Math.floor(Math.random() * possible.length));
+    return randomText;
 };
-}
 
+/**
+* Usage: Generate random number.
+* characterLength :  Length of number.
+* Returns : Random number.
+*/
+exports.getRandomNumber = function (numberLength) {
+    var randomNumber = "";
+    var possible = "0123456789";
+    for (var i = 0; i < numberLength; i++)
+        randomNumber += possible.charAt(Math.floor(Math.random() * possible.length));
+    return randomNumber;
+};
