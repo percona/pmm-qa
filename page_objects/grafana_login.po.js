@@ -3,15 +3,15 @@
 module.exports = {
   LoginPage: {
     username: element(by.name('username')),
-    password: element(by.password('password')),
+    password: element(by.name('password')),
     logInBtn: element(by.buttonText('Log In')),
     email: element(by.model('formModel.email')),
-    signUpBtn: element(by.xpath('//button[@class,"btn-login-tab active"] and .//text()="Sign Up"')),
-    signUpTab: element(by.xpath('//button[@class,"btn btn-large p-x-3 btn-inverse"] and .//text()="Sign Up"'))
+    signUpBtn: element(by.xpath('//button[@class="btn btn-large p-x-3 btn-primary" and text()="Sign up"]')),
+    signUpTab: element(by.buttonText('Sign up'))
   },
 
   get: function(url) {
-    browser.get(url + '/graph/');
+    browser.get(url + '/graph/login');
     //browser.wait(function() {
     //return driver.getTitle().then(function(title) {
     //    return title === 'Percona Query Analytics';
@@ -41,7 +41,7 @@ module.exports = {
     this.LoginPage.email.sendKeys(mail);
   },
 
-  clickSignUp: function() { 
+  clickSignUpBtn: function() { 
     this.LoginPage.signUpBtn.click();
   },
 
