@@ -2,7 +2,8 @@
   
 module.exports = {  
   mainPage: { 
-    noQueriesTxt: element(by.id('text_no_profile_data')), 
+    noQueries: element(by.id('text_no_profile_data')),
+    noQueiesText: 'There is no data for the selected MySQL instance, time range or search query.', 
     topTitle: element(by.id('text_count_queries')),  
     calendarBtn: element(by.id('btn_cal')),  
     managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
@@ -12,7 +13,7 @@ module.exports = {
     searchFld: element(by.name('search')),
     searchBtn: element(by.xpath('//button[@type="submit"]')),
     serverSummary: element(by.xpath('//*[contains(text(), "Server Summary")]')),
-    timeRangeDspl: element(by.xpath('//p[@class="well navbar-text ng-binding"]')),  
+    time3h: element(by.id('btn_3h')),  
     queryList: element.all(by.repeater('row in qanData')),
     querySelected:  element(by.css('[ng-click="qanSelectRow(row)"]')),
     fingerprintTitle:  element(by.xpath('//*[contains(text(), "Fingerprint")]')),
@@ -44,8 +45,9 @@ module.exports = {
   
     
   returnNoQueriesTxt: function() {
-    return this.mainPage.noQueriesTxt.getText();
+    return this.mainPage.noQueries.getText();
   },
+
   
   clickCalendar: function() {  
     this.mainPage.calendarBtn.click();  
@@ -147,12 +149,40 @@ module.exports = {
       element.getText().then(function (text) {
         console.log("Elm " + index + " is " + text);
       });
+
     });
   },
+
+  returnFingerprint: function() {
+    /*var mappedVals = element.all(by.repeater('row in qanData')).column(0).map(function (elm) {
+    return elm.getText();
+    });
+    console.log("Im here"); 
+    mappedVals.then(function (textArr) {
+      console.log("Query is " + textArr[1]);  
+    });*/
+    var row = this.mainPage.queryList.first();
+    var cells = row.all(by.tagName('td'));
+//expect(cells.get(2).getText()).toEqual("something");
+//var cellTexts = cells.map(function (elm) {
+//    return elm.getText();
+    return  cells.get(2).getText().then(function(elm) {;
+    console.log("Td is " + elm);
+    return elm;
+    });
+
+
+  },  
 
   clickLoadNext: function() {
     this.mainPage.nextQueries.click();
   },
 
-  
+  clickCalendar: function() {
+    this.mainPage.calendarBtn.click();
+  },
+
+  clickTime3h: function() {
+    this.mainPage.time3h.click()
+  },  
 };

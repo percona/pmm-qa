@@ -14,21 +14,28 @@ describe('Main QAN Page', function () {
     expect(mainQANPage.returnTopTitle()).toContain('Top');
   });
   
-  afterEach(function() {
+/*  afterEach(function() {
     browser.manage().logs().get('browser').then(function(browserLog) {
     console.log('log: ' + require('util').inspect(browserLog));
     });
+  });
+*/
+
+  it('should return fingerprint', function()  {
+    console.log("Result is " + mainQANPage.returnFingerprint());
+
   });
 
   it('should search Select query', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
-    browser.sleep(5000);
+    browser.sleep(25000);
     expect(mainQANPage.returnTopTitle()).toContain('Top');
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
-    browser.sleep(5000);
+    browser.waitForAngular();
+    browser.sleep(25000);
     expect(mainQANPage.returnTopTitle()).toContain('Top');
   });
 
@@ -36,11 +43,11 @@ describe('Main QAN Page', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectNotExist']);
     mainQANPage.doSearch();
-    browser.sleep(5000);
+    browser.sleep(25000);
     expect(mainQANPage.returnNoQueriesTxt()).toContain('There is no data');
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
-    browser.sleep(5000);
+    browser.sleep(25000);
     expect(mainQANPage.returnTopTitle()).toContain('Top');
   });
   
@@ -81,6 +88,8 @@ describe('Main QAN Page', function () {
   it('should click on management button', function () {
     mainQANPage.clickManagement();
     expect(browser.getCurrentUrl()).toContain('/qan/#/management/mysql');
+    element(by.xpath('//button[@ng-click="$root.goToQueries();"]')).click();
+    expect(mainQANPage.returnTopTitle()).toContain('Top');
   });
 
   it('should explain the query', function () {
@@ -99,6 +108,14 @@ describe('Main QAN Page', function () {
   
   it('should load all queries', function ()  {
     mainQANPage.clickLoadNext();
+  });
+
+  it('should click on calendar', function ()  {
+    mainQANPage.clickCalendar();
+    mainQANPage.clickTime3h();
+    browser.sleep(25000);
+    expect(mainQANPage.returnTopTitle()).toContain('Top');
+
   });
 
 });
