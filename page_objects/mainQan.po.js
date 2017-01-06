@@ -30,20 +30,19 @@ module.exports = {
       
   get: function(url) {  
     browser.get(url + '/qan/'); 
-    //browser.wait(function() {
-    //return driver.getTitle().then(function(title) {
-    //    return title === 'Percona Query Analytics';
-   // });
-//}, 10000);
- 
     browser.waitForAngular();  
   },  
-      
+  /**
+   * returnTopTitle returns a text above Top queries
+   */  
   returnTopTitle: function() {
     return this.mainPage.topTitle.getText();
   },
   
-    
+   /**
+   * returnNoQueriesTxt returns a text message 
+   * if there is no any query
+   */
   returnNoQueriesTxt: function() {
     return this.mainPage.noQueries.getText();
   },
@@ -83,7 +82,10 @@ module.exports = {
       return query;
     });
   },
-
+  
+   /**
+   * clickQueryNumber clicks on specified query's number
+   */
   clickQueryNr: function(num) {
     this.mainPage.queryList.then(function(tables) {
       var titleElement = tables[num].element(by.css('[ng-click="qanSelectRow(row)"]'));
@@ -91,11 +93,17 @@ module.exports = {
     });
   },
 
+  /**
+   * clickLastQuery click on last query from Top queries
+   */
   clickLastQuery: function()  {
     var elm = this.mainPage.queryList.last();
     elm.click();
   },
 
+  /**
+   * returnTopQueriesTxt returns a text above Top queries
+   */
   returnTopQueriesTxt: function() {
     this.mainPage.topTitle.getAttribute('title');
   },
@@ -138,40 +146,36 @@ module.exports = {
     return this.mainPage.explainBtn.isEnabled();
   },
 
+/**
+ * returnQueriesCount returns count of all queries in Top queries
+ */
   returnQueriesCount: function()  {
     this.mainPage.queryList.count().then(function(count) {
       console.log("Count was " + count);
+      return count;
     });
   },
 
   returnTotalElm: function()  {
     element.all(by.css('[ng-click="qanSelectSummary()"]')).each(function(element, index) {
       element.getText().then(function (text) {
-        console.log("Elm " + index + " is " + text);
+       // console.log("Elm " + index + " is " + text);
       });
 
     });
   },
 
-  returnFingerprint: function() {
-    /*var mappedVals = element.all(by.repeater('row in qanData')).column(0).map(function (elm) {
-    return elm.getText();
-    });
-    console.log("Im here"); 
-    mappedVals.then(function (textArr) {
-      console.log("Query is " + textArr[1]);  
-    });*/
+/**
+ * returnFingeprint returns query's ID 
+ * base on query's number in Top queries
+ */
+  returnFingerprint: function(num) {
     var row = this.mainPage.queryList.first();
     var cells = row.all(by.tagName('td'));
-//expect(cells.get(2).getText()).toEqual("something");
-//var cellTexts = cells.map(function (elm) {
-//    return elm.getText();
-    return  cells.get(2).getText().then(function(elm) {;
+    return  cells.get(num).getText().then(function(elm) {
     console.log("Td is " + elm);
     return elm;
     });
-
-
   },  
 
   clickLoadNext: function() {
