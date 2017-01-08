@@ -170,9 +170,9 @@ module.exports = {
  * base on query's number in Top queries
  */
   returnFingerprint: function(num) {
-    var row = this.mainPage.queryList.first();
+    var row = this.mainPage.queryList.get(num);
     var cells = row.all(by.tagName('td'));
-    return  cells.get(num).getText().then(function(elm) {
+    return  cells.get(2).getText().then(function(elm) {
     console.log("Td is " + elm);
     return elm;
     });
