@@ -65,15 +65,44 @@ exports.config = {
     platform: 'ANY'
   },
   */
+
+  multiCapabilities: [{
+    browserName: 'firefox',
+    version: '32',
+    platform: 'OS X 10.10',
+    name: "firefox-osx",
+    shardTestFiles: true,
+    screenResolution: '1600x1200',
+    maxInstances: 2
+  }, {
+    browserName: 'chrome',
+    version: '49',
+    platform: 'Windows 7',
+    name: "chrome-win7",
+    shardTestFiles: true,
+    screenResolution: '1600x1200',
+    maxInstances: 2
+  }, {
+    browserName: 'chrome',
+    version: '55',
+    platform: 'OS X 10.12',
+    name: "chrome-osx",
+    shardTestFiles: true,
+    screenResolution: '1920x1440',
+    maxInstances: 2
+}],
  
   // -----------------------------------------------------------------
   // Browser and Capabilities: Chrome
   // -----------------------------------------------------------------
-  capabilities: {
+/*  capabilities: {
     browserName: 'chrome',
-    version: '',
-    platform: 'ANY'
-},
+    version: '51.0',
+    platform: 'OS X 10.11',
+    name: "chrome-tests",
+    screenResolution: '1600x1200',
+  
+},*/
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
   // -----------------------------------------------------------------
@@ -122,6 +151,7 @@ exports.config = {
   onPrepare: function() {
     // At this point, global 'protractor' object will be set up, and
     // jasmine will be available.
+ var caps = browser.getCapabilities();
     var width = 1600;
     var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
