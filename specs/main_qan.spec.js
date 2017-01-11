@@ -10,7 +10,7 @@ describe('Main QAN Page', function () {
     element.all(by.css('.alert.msg')).then(function(items)  {
       expect(items.length).toBe(0);
     });
-    //expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
+    expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
     expect(mainQANPage.returnTopTitle()).toContain('Top');
   });
   
@@ -21,8 +21,14 @@ describe('Main QAN Page', function () {
   });
 */
 
-  it('should return fingerprint', function()  {
-    console.log("Result is " + mainQANPage.returnFingerprint());
+  it('should search by fingerprint', function()  {
+    var fingerprint = mainQANPage.returnFingerprint(0);
+    mainQANPage.clearSearch();
+    mainQANPage.searchFor(fingerprint);
+    mainQANPage.doSearch();
+    browser.sleep(25000);
+    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    expect(mainQANPage.returnFingerprint(0)).toEqual(fingerprint);
 
   });
 
@@ -34,8 +40,8 @@ describe('Main QAN Page', function () {
     expect(mainQANPage.returnTopTitle()).toContain('Top');
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
-    browser.waitForAngular();
     browser.sleep(25000);
+    browser.waitForAngular();
     expect(mainQANPage.returnTopTitle()).toContain('Top');
   });
 
@@ -56,6 +62,7 @@ describe('Main QAN Page', function () {
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     browser.sleep(5000);
+    expect(mainQANPage.returnTopTitle()).toContain('Top');
     mainQANPage.clickQueryNr(0);
     mainQANPage.clickExample();
     mainQANPage.clickFingerprint();
@@ -88,6 +95,7 @@ describe('Main QAN Page', function () {
   it('should click on management button', function () {
     mainQANPage.clickManagement();
     expect(browser.getCurrentUrl()).toContain('/qan/#/management/mysql');
+    browser.waitForAngular();
     element(by.xpath('//button[@ng-click="$root.goToQueries();"]')).click();
     expect(mainQANPage.returnTopTitle()).toContain('Top');
   });

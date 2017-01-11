@@ -173,7 +173,6 @@ module.exports = {
     var row = this.mainPage.queryList.get(num);
     var cells = row.all(by.tagName('td'));
     return  cells.get(2).getText().then(function(elm) {
-    console.log("Td is " + elm);
     return elm;
     });
   },  
