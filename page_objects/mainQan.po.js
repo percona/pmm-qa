@@ -7,7 +7,8 @@ module.exports = {
     topTitle: element(by.id('text_count_queries')),  
     calendarBtn: element(by.id('btn_cal')),  
     managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
-    instancesList: element(by.xpath('//*button[contains(@title,"Databases")]')),  
+    instancesBtn: element(by.id('dropdownMenu1')),  
+    instancesAll: element.all(by.repeater('db in instances')),
     serverSumBtn: element(by.xpath('//button[contains(@title,"View database and server summary info")]')),
     totalLink: element(by.linkText('TOTAL')),
     searchFld: element(by.name('search')),
@@ -187,5 +188,22 @@ module.exports = {
 
   clickTime3h: function() {
     this.mainPage.time3h.click()
+  },
+
+  clickInstancesMenu: function() {
+    this.mainPage.instancesBtn.click();
+  },
+
+
+  returnInstancesCount: function() {
+    return this.mainPage.instancesAll.count();
   },  
+
+  clickEachInstance: function() {
+    this.mainPage.instancesAll.each(function(element, index) {
+      element.getText().then(function (text) {
+        console.log(index, text);
+      });
+    });
+  },
 };

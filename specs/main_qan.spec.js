@@ -21,6 +21,13 @@ describe('Main QAN Page', function () {
   });
 */
 
+  it('should click on each instances in menu list', function() {
+    mainQANPage.clickInstancesMenu();
+    mainQANPage.clickEachInstance();
+    //console.log('Count = ' + mainQANPage.returnInstancesCount());
+
+  });
+
   it('should search by fingerprint', function()  {
     var fingerprint = mainQANPage.returnFingerprint(0);
     mainQANPage.clearSearch();
