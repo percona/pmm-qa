@@ -201,9 +201,13 @@ module.exports = {
 
   clickEachInstance: function() {
     this.mainPage.instancesAll.each(function(element, index) {
-      element.getText().then(function (text) {
-        console.log(index, text);
+        element.getText().then(function (text) {
+        console.log(text);
       });
     });
+  },
+
+  selectInstance: function() {
+    
   },
 };

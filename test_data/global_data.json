@@ -1,5 +1,5 @@
 {
-"url":"https://pmmdemo.percona.com",
+"url":"http://pmmdemo.percona.com",
 "url_graf":"https://qwe123:qwe1@10.10.11.50/graph/login",
 "tableInvalid":"userr123",
 "selectExists":"select",
