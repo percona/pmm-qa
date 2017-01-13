@@ -202,7 +202,7 @@ module.exports = {
   clickEachInstance: function() {
     this.mainPage.instancesAll.each(function(element, index) {
         element.getText().then(function (text) {
-        console.log(text);
+      //  console.log(text);
       });
     });
   },

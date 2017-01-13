@@ -32,7 +32,7 @@ exports.config = {
   //],
 
   suites: {
-    mainQanPage: 'specs/main_qan_spec.js',
+    mainQanPage: 'specs/*spec.js',
     //grafana: 'specs/main_grafana.js',
 //    managementPage: 'management_page/*spec.js',
   },
