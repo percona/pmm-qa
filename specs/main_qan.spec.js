@@ -36,6 +36,7 @@ describe('Main QAN Page', function () {
     browser.sleep(25000);
     expect(mainQANPage.returnTopTitle()).toContain('Top');
     expect(mainQANPage.returnFingerprint(0)).toEqual(fingerprint);
+    expect(mainQANPage.returnFingerprint(0)).toEqual(3);
 
   });
 
