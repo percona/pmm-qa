@@ -6,7 +6,8 @@ describe('Main QAN Page', function () {
  
   beforeEach(function () {
     browser.ignoreSynchronization = false;
-    mainQANPage.get(global['url']);
+    //mainQANPage.get(global['url']);
+    mainQANPage.get(browser.baseUrl);
     element.all(by.css('.alert.msg')).then(function(items)  {
       expect(items.length).toBe(0);
     });
