@@ -104,7 +104,7 @@ exports.config = {
   // than the maximum time your application needs to stabilize between tasks.
   allScriptsTimeout: 55000,
   framework: "jasmine2",
- 
+  useAllAngular2AppRoots: true, 
   /**
    * A callback function called once protractor is ready and available,
    * and before the specs are executed.
