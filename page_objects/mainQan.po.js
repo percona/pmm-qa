@@ -5,14 +5,15 @@ module.exports = {
     noQueries: element(by.id('text_no_profile_data')),
     noQueiesText: 'There is no data for the selected MySQL instance, time range or search query.', 
     topTitle: element(by.id('text_count_queries')),  
-    calendarBtn: element(by.id('btn_cal')),  
+    titleContains: element(by.xpath('*//contains(text(),"Grand Total Time"')),
+    calendarBtn: element(by.id('supportedContentDropdown')),  
     managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
-    instancesBtn: element(by.id('dropdownMenu1')),  
+    instancesBtn: element(by.id('dbServerDropdown')),  
     instancesAll: element.all(by.repeater('db in instances')),
     serverSumBtn: element(by.xpath('//button[contains(@title,"View database and server summary info")]')),
     totalLink: element(by.linkText('TOTAL')),
-    searchFld: element(by.name('search')),
-    searchBtn: element(by.xpath('//button[@type="submit"]')),
+    searchFld: element(by.id('search_field')),
+    searchBtn: element(by.id('search_button')),
     serverSummary: element(by.xpath('//*[contains(text(), "Server Summary")]')),
     time3h: element(by.id('btn_3h')),  
     queryList: element.all(by.repeater('row in qanData')),
@@ -209,5 +210,9 @@ module.exports = {
 
   selectInstance: function() {
     
+  },
+
+  returnTitleContains: function() {
+    return this.mainPage.titleContains;
   },
 };
