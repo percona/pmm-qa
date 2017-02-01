@@ -29,31 +29,31 @@ describe('Main QAN Page', function () {
 
   });
 
-  it('should search by fingerprint', function()  {
+  xit('should search by fingerprint', function()  {
     var fingerprint = mainQANPage.returnFingerprint(0);
     mainQANPage.clearSearch();
     mainQANPage.searchFor(fingerprint);
     mainQANPage.doSearch();
     browser.sleep(25000);
-    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    expect(mainQANPage.returnTitleContains()).toBe('true');
     expect(mainQANPage.returnFingerprint(0)).toEqual(fingerprint);
 
   });
 
-  it('should search Select query', function () {
+  xit('should search Select query', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     browser.sleep(25000);
-    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    expect(mainQANPage.returnTitleContains()).toBe('true');
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
     browser.sleep(25000);
     browser.waitForAngular();
-    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    expect(mainQANPage.returnTitleContains()).toBe('true');
   });
 
-  it('shouldnt search any query', function () {
+  xit('shouldnt search any query', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectNotExist']);
     mainQANPage.doSearch();
@@ -62,15 +62,15 @@ describe('Main QAN Page', function () {
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
     browser.sleep(25000);
-    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    expect(mainQANPage.returnTitleContains()).toBe('true');
   });
   
-  it('should click Select query', function () {
+  xit('should click Select query', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     browser.sleep(5000);
-    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    expect(mainQANPage.returnTitleContains()).toBe('true');
     mainQANPage.clickQueryNr(0);
     mainQANPage.clickExample();
     mainQANPage.clickFingerprint();
@@ -102,10 +102,10 @@ describe('Main QAN Page', function () {
 
   it('should click on management button', function () {
     mainQANPage.clickManagement();
-    expect(browser.getCurrentUrl()).toContain('/qan/#/management/mysql');
+    expect(browser.getCurrentUrl()).toContain('settings');
     browser.waitForAngular();
-    element(by.xpath('//button[@ng-click="$root.goToQueries();"]')).click();
-    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    mainQANPage.clickQueryProfileBtn();
+    expect(mainQANPage.returnTitleContains()).toBe('true');
   });
 
   it('should explain the query', function () {

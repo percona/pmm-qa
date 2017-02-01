@@ -10,12 +10,12 @@ module.exports = {
     managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
     instancesBtn: element(by.id('dbServerDropdown')),  
     instancesAll: element.all(by.repeater('db in instances')),
-    serverSumBtn: element(by.xpath('//button[contains(@title,"View database and server summary info")]')),
+    //serverSumBtn: element(by.xpath('//button[contains(@title,"View database and server summary info")]')),
     totalLink: element(by.linkText('TOTAL')),
     searchFld: element(by.id('search_field')),
     searchBtn: element(by.id('search_button')),
-    serverSummary: element(by.xpath('//*[contains(text(), "Server Summary")]')),
-    time3h: element(by.id('btn_3h')),  
+    serverSummaryBtn: element(by.id('summary_link')),
+    time3h: element(by.linkText('Last 3 hours')),  
     queryList: element.all(by.repeater('row in qanData')),
     querySelected:  element(by.css('[ng-click="qanSelectRow(row)"]')),
     fingerprintTitle:  element(by.xpath('//*[contains(text(), "Fingerprint")]')),
@@ -27,7 +27,8 @@ module.exports = {
     reloadTop: element(by.css('[ng-click="$root.doRefresh($root.time_range)"]')),
     dbToExplain: element(by.name('db')),
     explainBtn: element(by.css('[ng-click="getQueryExplain()"]')),
-    totalRow: element(by.css('[ng-click="qanSelectSummary()"]'))
+    totalRow: element(by.css('[ng-click="qanSelectSummary()"]')),
+    queryProfileBtn: element(by.id('settings_link'))
   },  
       
   get: function(url) {  
@@ -67,7 +68,7 @@ module.exports = {
   },
  
   clickSummary: function() {  
-    this.mainPage.serverSumBtn.click();
+    this.mainPage.serverSummaryBtn.click();
   }, 
 
   clickManagement: function() {  
@@ -214,5 +215,9 @@ module.exports = {
 
   returnTitleContains: function() {
     return this.mainPage.titleContains;
+  },
+
+  cliclQueryProfileBtn: function()  {
+    this.mainPage.queryProfileBtn.click();
   },
 };
