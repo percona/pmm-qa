@@ -217,7 +217,7 @@ module.exports = {
     return this.mainPage.titleContains;
   },
 
-  cliclQueryProfileBtn: function()  {
+  clickQueryProfileBtn: function()  {
     this.mainPage.queryProfileBtn.click();
   },
 };
