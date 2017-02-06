@@ -108,7 +108,7 @@ describe('Main QAN Page', function () {
     expect(mainQANPage.returnTitleContains()).toBe('true');
   });
 
-  it('should explain the query', function () {
+  xit('should explain the query', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
@@ -122,15 +122,15 @@ describe('Main QAN Page', function () {
     });
   });
   
-  it('should load all queries', function ()  {
+  it('should load next queries', function ()  {
     mainQANPage.clickLoadNext();
   });
 
   it('should click on calendar', function ()  {
     mainQANPage.clickCalendar();
-    mainQANPage.clickTime3h();
+    //mainQANPage.clickTime3h();
     browser.sleep(25000);
-    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    expect(mainQANPage.returnTitleContains()).toBe('true');
 
   });
 

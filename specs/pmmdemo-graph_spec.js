@@ -1,5 +1,5 @@
-describe('Selenium Test Case', function() {
-  it('should execute test case without errors', function() {
+describe('Grafana tests', function() {
+  it('should search ', function() {
     browser.get("http://pmmdemo.percona.com/graph/");
     browser.sleep(15000);
     browser.ignoreSynchronization = true;
