@@ -4,7 +4,7 @@ module.exports = {
   LoginPage: {
     username: element(by.name('username')),
     password: element(by.name('password')),
-    logInBtn: element(by.css('.gf-form-button-row button[type="submit"]')),
+    loginBtn: element(by.css('.gf-form-button-row button[type="submit"]')),
     email: element(by.model('formModel.email')),
     signUpBtn: element(by.xpath('//button[@class="btn btn-large p-x-3 btn-primary" and text()="Sign up"]')),
     signUpTab: element(by.buttonText('Sign up'))
@@ -21,7 +21,7 @@ module.exports = {
     browser.waitForAngular();
   },
 
-  clickLogIn: function() {
+  clickLogin: function() {
     this.LoginPage.loginBtn.click();
   },
 

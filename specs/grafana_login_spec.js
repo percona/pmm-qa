@@ -1,5 +1,6 @@
 var global = require('../test_data/global_data.json')
-var mainQANPage = require('../page_objects/grafana_login.po.js')
+var data = require('../test_data/grafana_page.json') 
+var grafLoginPage = require('../page_objects/grafana_login.po.js')
 
 describe('Grafana authentication tests', function() { 
 
@@ -9,12 +10,9 @@ describe('Grafana authentication tests', function() {
     browser.sleep(5000);
     browser.waitForAngular();
     browser.ignoreSynchronization = true;
-
-
   });
 
   it('should redirect to the login page if trying to load protected page while not authenticated', function() {
-     
     expect(browser.getCurrentUrl()).toContain('login');
   });
 
@@ -24,9 +22,9 @@ describe('Grafana authentication tests', function() {
 
   it('should accept a valid email address and password', function() {
  
-    element.all(by.name('username')).sendKeys('admin');
-    element(by.name('password')).sendKeys('admin');
-    element(by.css('.gf-form-button-row button[type="submit"]')).click();
+    grafLoginPage.setUsername(data['userValid']);
+    grafLoginPage.setPassword(data['passwordValid']);
+    grafLoginPage.clickLogin();
     browser.driver.wait(function() {
         return browser.driver.getCurrentUrl().then(function(url) {
             return (/dashboard/).test(url);

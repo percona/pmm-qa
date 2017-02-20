@@ -44,11 +44,11 @@ describe('Main QAN Page', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
-    browser.sleep(25000);
+    browser.sleep(15000);
     expect(mainQANPage.returnTopTitle()).toContain('Top');
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
-    browser.sleep(25000);
+    browser.sleep(15000);
     browser.waitForAngular();
     expect(mainQANPage.returnTopTitle()).toContain('Top');
   });
@@ -57,7 +57,7 @@ describe('Main QAN Page', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectNotExist']);
     mainQANPage.doSearch();
-    browser.sleep(25000);
+    browser.sleep(15000);
     expect(mainQANPage.returnNoQueriesTxt()).toContain('There is no data');
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
@@ -77,7 +77,12 @@ describe('Main QAN Page', function () {
   });
 
   it('should add db.table', function () {
-    mainQANPage.clickQueryNr(1);
+    mainQANPage.clearSearch();
+    mainQANPage.searchFor(data['selectExists']);
+    mainQANPage.doSearch();
+    browser.sleep(5000);
+    expect(mainQANPage.returnTopTitle()).toContain('Top');
+    mainQANPage.clickQueryNr(0);
     mainQANPage.addTable(data['tableValid']);
     mainQANPage.clickAddedTable(data['tableValid']);
     expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
