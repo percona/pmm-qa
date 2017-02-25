@@ -26,7 +26,10 @@ module.exports = {
     reloadTop: element(by.css('[ng-click="$root.doRefresh($root.time_range)"]')),
     dbToExplain: element(by.name('db')),
     explainBtn: element(by.css('[ng-click="getQueryExplain()"]')),
-    totalRow: element(by.css('[ng-click="qanSelectSummary()"]'))
+    totalRow: element(by.css('[ng-click="qanSelectSummary()"]')),
+    alertMsg: element.all(by.css('.alert.msg')),
+    alertDang: element(by.css('.alert-danger')),
+    instanceCur: element(by.xpath('//a[@class="list-group-item ng-scope active"]'))
   },  
       
   get: function(url) {  
@@ -160,7 +163,6 @@ module.exports = {
   returnTotalElm: function()  {
     element.all(by.css('[ng-click="qanSelectSummary()"]')).each(function(element, index) {
       element.getText().then(function (text) {
-       // console.log("Elm " + index + " is " + text);
       });
 
     });
@@ -202,12 +204,12 @@ module.exports = {
   clickEachInstance: function() {
     this.mainPage.instancesAll.each(function(element, index) {
         element.getText().then(function (text) {
-      //  console.log(text);
       });
     });
   },
 
-  selectInstance: function() {
-    
-  },
+  returnInstanceList: function() {
+    return this.mainPage.instancesAll;
+  }
+
 };
