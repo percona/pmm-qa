@@ -29,7 +29,8 @@ module.exports = {
     totalRow: element(by.css('[ng-click="qanSelectSummary()"]')),
     alertMsg: element.all(by.css('.alert.msg')),
     alertDang: element(by.css('.alert-danger')),
-    instanceCur: element(by.xpath('//a[@class="list-group-item ng-scope active"]'))
+    instanceCur: element(by.xpath('//a[@class="list-group-item ng-scope active"]')),
+    goToMain: element(by.css('[ng-click="$root.goToQueries();"]'))
   },  
       
   get: function(url) {  
@@ -80,13 +81,13 @@ module.exports = {
     this.mainPage.totalLink.click();
   },
 
-  returnQueryLink: function(num) {
+  /*returnQueryLink: function(num) {
     this.mainPage.queryList.then(function(row) {
     var query = row[0].element(by.css('[ng-click="qanSelectRow(row)"]'));
       return query;
     });
   },
-  
+  */
    /**
    * clickQueryNumber clicks on specified query's number
    */
@@ -210,6 +211,10 @@ module.exports = {
 
   returnInstanceList: function() {
     return this.mainPage.instancesAll;
-  }
+  },
 
+  goToMainPage: function() {
+    this.mainPage.goToMain.click();
+    browser.waitForAngular();
+  }
 };
