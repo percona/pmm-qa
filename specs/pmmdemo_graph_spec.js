@@ -11,7 +11,10 @@ describe('Selenium Test Case', function() {
   });
 
   it('should check all links on top', function() {
-    expect(element(by.linkText('Query Analytics'))).toBeTruthy();
+    expect(graphMainDash.graphPage.qanLink).toBeTruthy();
+    expect(graphMainDash.graphPage.orchLink).toBeTruthy();
+    expect(graphMainDash.graphPage.docLink).toBeTruthy();
+    expect(graphMainDash.graphPage.queryDistChart).toBeTruthy();
   });
 
   it('should execute test case without errors', function() {

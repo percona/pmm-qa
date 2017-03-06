@@ -39,12 +39,18 @@ describe('Check main QAN Page', function () {
                 browser.waitForAngular();
                 mgtQanPage.clickLog();
                 browser.waitForAngular();
-                //expect(element(by.xpath('//html')).getText()).not.toContain('warning');
                 mgtQanPage.managementPage.logList.each(function(rows) {
                   rows.getText().then(function(text) {
                     expect(text).not.toContain('warning');
                   });
                 });
+                
+               /* var value = mgtQanPage.managementPage.logList.reduce(function(acc, elem) {
+                return elem.getText().then(function(text) {
+                  return acc + text + ' ';
+                  expect(text).not.toContain('warning');
+                 });
+                }, '');*/
             });
 
         })(i); 
