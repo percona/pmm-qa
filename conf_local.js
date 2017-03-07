@@ -133,6 +133,11 @@ exports.config = {
     }));
 
     jasmine.getEnv().addReporter(reporter);
+    browser.manage().timeouts().pageLoadTimeout(40000);
+    browser.manage().timeouts().implicitlyWait(25000);
+
+  // for non-angular page
+  browser.ignoreSynchronization = true;
   },
 
   afterLaunch: function(exitCode) {

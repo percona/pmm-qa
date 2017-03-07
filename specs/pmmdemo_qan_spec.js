@@ -6,6 +6,7 @@ var instances = ['mdb101','mysql57r','ps55', 'ps56', 'ps57', 'ps57r', 'pxc56-1',
 describe('Check main QAN Page', function () {
 
   beforeEach(function () {
+    browser.ignoreSyncronization = false;
     mainQANPage.get(url);
     mainQANPage.mainPage.alertMsg.then(function(items)  {
       expect(items.length).toBe(0);
