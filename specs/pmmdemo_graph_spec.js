@@ -15,13 +15,16 @@ describe('Selenium Test Case', function() {
     expect(graphMainDash.graphPage.orchLink).toBeTruthy();
     expect(graphMainDash.graphPage.docLink).toBeTruthy();
     expect(graphMainDash.graphPage.queryDistChart).toBeTruthy();
+    expect(graphMainDash.graphPage.loadAvgChart).toBeTruthy();
+    expect(graphMainDash.graphPage.memDistrChart).toBeTruthy();
+    expect(graphMainDash.graphPage.procChart).toBeTruthy();
+    expect(graphMainDash.graphPage.forksChart).toBeTruthy();
+    expect(graphMainDash.graphPage.cpuUsgChart).toBeTruthy();
   });
 
   it('should execute test case without errors', function() {
     graphMainDash.clickPmmDemo();
-    element(by.xpath("//div[@class='search-field-wrapper']/span/input")).sendKeys("disk space");
-    browser.sleep(5000);
-    element(by.xpath("//span[@class='search-result-link']//span[.='Disk Space']")).click();
+    graphMainDash.searchDashboard("Disk Space");
     expect(browser.getCurrentUrl()).toContain('dashboard/db/disk-space');
     
   });
