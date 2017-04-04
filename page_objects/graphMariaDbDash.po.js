@@ -2,9 +2,7 @@
 
 module.exports = {
   graphPage: {
-    openSearch: element(by.linkText('Cross Server Graphs')),
-    //openSearch: element(by.css('[ng-click="openSearch()"]')),
-    loadAvgChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Load Average"]')),
+    areaPageCache: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]')),
     memUsgChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Memory Usage"]')),
     mysqlConnChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "MySQL Connections"]')),
     mysqlQueryChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "MySQL Queries"]')),
@@ -20,11 +18,7 @@ module.exports = {
     browser.sleep(5000);
   },
 
-    clickOpenSearch: function() {
-      this.graphPage.openSearch.click();
-    },
-
-    searchDashboard: function(name) {
+    areaPageCacheTitle: function() {
       this.graphPage.searchFld.sendKeys(name);
       browser.sleep(5000);
       element(by.xpath("//span[@class='search-result-link']//span[.='" + name + "']")).click();

@@ -4,12 +4,12 @@ var url = 'http://pmmdemo.percona.com'
 
 describe('Selenium Test Case', function() {
   beforeEach(function () {
-    graphMainDash.get(url);
+    graphMainDash.get(browser.baseUrl);
     browser.ignoreSynchronization = true;
     browser.sleep(15000);
        browser.wait(function() {
       return browser.driver.getCurrentUrl().then(function(url) {
-        return /pmm-demo/.test(url);
+        return /dashboard/.test(url);
       });
     });
   });
