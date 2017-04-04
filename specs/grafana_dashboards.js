@@ -1,6 +1,6 @@
 //var graphMongoDbRocks = require('../page_objects/mainQan.po.js')
 var graphMainDash = require('../page_objects/graphMainDash.po.js')
-var url = 'http://pmmdemo.percona.com'
+var graphMariaDbDash = require('../page_objects/graphMariaDbDash.po.js')
 
 describe('Selenium Test Case', function() {
   beforeEach(function () {
@@ -9,7 +9,7 @@ describe('Selenium Test Case', function() {
     browser.sleep(15000);
        browser.wait(function() {
       return browser.driver.getCurrentUrl().then(function(url) {
-        return /dashboard/.test(url);
+        return /cross-server-graphs/.test(url);
       });
     });
   });
@@ -18,36 +18,10 @@ describe('Selenium Test Case', function() {
 
   });
 
-  it('should check all links on top', function() {
-    browser.sleep(25000);
-    expect(graphMainDash.graphPage.qanLink.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.orchLink.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.docLink.isDisplayed()).toBeTruthy();
-    
-    expect(graphMainDash.graphPage.queryDistChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.loadAvgChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.memDistrChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.procChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.forksChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.cpuUsgChart.isDisplayed()).toBeTruthy();
-  });
 
-  it('should check Disk Space dashboard', function() {
-    graphMainDash.clickPmmDemo();
-    graphMainDash.searchDashboard("Disk Space");
-    expect(browser.getCurrentUrl()).toContain('dashboard/db/disk-space');
+  it('should check main (Cross Server Graphs) dashboard', function() {
     browser.sleep(25000);
-    expect(graphMainDash.graphPage.mntPntUsgChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.mntPntChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.mntBootChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.mntPntRemChart.isDisplayed()).toBeTruthy();
-  });
-
-  it('should check Cross Server Graphs dashboard', function() {
-    graphMainDash.clickPmmDemo();
-    graphMainDash.searchDashboard("Cross Server Graphs");
     expect(browser.getCurrentUrl()).toContain('dashboard/db/cross-server-graphs');
-    browser.sleep(25000);
     expect(graphMainDash.graphPage.loadAvgChart.isDisplayed()).toBeTruthy();
     expect(graphMainDash.graphPage.memUsgChart.isDisplayed()).toBeTruthy();
     expect(graphMainDash.graphPage.mysqlConnChart.isDisplayed()).toBeTruthy();
@@ -58,4 +32,26 @@ describe('Selenium Test Case', function() {
     expect(graphMainDash.graphPage.mysqlInfoChart.isDisplayed()).toBeTruthy();
   });
 
+  it('should check Disk Space dashboard', function() {
+   // graphMainDash.clickPmmDemo();
+    graphMainDash.clickOpenSearch();
+    browser.sleep(25000);
+    graphMainDash.searchDashboard("Disk Space");
+    expect(browser.getCurrentUrl()).toContain('dashboard/db/disk-space');
+    browser.sleep(25000);
+    expect(graphMainDash.graphPage.mntPntUsgChart.isDisplayed()).toBeTruthy();
+    expect(graphMainDash.graphPage.mntPntChart.isDisplayed()).toBeTruthy();
+    expect(graphMainDash.graphPage.mntBootChart.isDisplayed()).toBeTruthy();
+    expect(graphMainDash.graphPage.mntPntRemChart.isDisplayed()).toBeTruthy();
+  });
+
+  it('should check MariaDB', function() {
+    //graphMainDash.clickPmmDemo();
+    graphMainDash.clickOpenSearch();
+    graphMainDash.searchDashboard("MariaDB");
+    expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
+    browser.sleep(25000);
+    expect(graphMariaDbDash.graphPage.ariaPageCache.isDisplayed()).toBeTruthy();
+
+  });
 });
