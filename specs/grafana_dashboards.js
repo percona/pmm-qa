@@ -1,6 +1,7 @@
 //var graphMongoDbRocks = require('../page_objects/mainQan.po.js')
 var graphMainDash = require('../page_objects/graphMainDash.po.js')
-var graphMariaDbDash = require('../page_objects/graphMariaDbDash.po.js')
+var graphMariaDb = require('../page_objects/graphMariaDbDash.po.js')
+var graphDiskSpace = require('../page_objects/graphDiskSpaceDash.po.js')
 
 describe('Selenium Test Case', function() {
   beforeEach(function () {
@@ -33,25 +34,27 @@ describe('Selenium Test Case', function() {
   });
 
   it('should check Disk Space dashboard', function() {
-   // graphMainDash.clickPmmDemo();
-    graphMainDash.clickOpenSearch();
-    browser.sleep(25000);
-    graphMainDash.searchDashboard("Disk Space");
-    expect(browser.getCurrentUrl()).toContain('dashboard/db/disk-space');
-    browser.sleep(25000);
-    expect(graphMainDash.graphPage.mntPntUsgChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.mntPntChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.mntBootChart.isDisplayed()).toBeTruthy();
-    expect(graphMainDash.graphPage.mntPntRemChart.isDisplayed()).toBeTruthy();
-  });
+element(by.css('[ng-click="openSearch()"]')).click();   
+//element(by.linkText("Cross Server Graphs")).click();
+graphMainDash.searchDashboard("Disk Space");
+browser.sleep(25000);   
+// element(by.linkText("MySQL Percona   MariaDB")).click();
+    text = element(by.tagName('html')).getText();
+    expect(text).toContain("" + "Mountpoint Usage");
+    expect(element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]')).isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.graphPage.mntPntUsgChart.isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.graphPage.mntPntChart.isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getHostnameTitle().isDisplayed()).toBeTruthy();
+ });
 
   it('should check MariaDB', function() {
     //graphMainDash.clickPmmDemo();
-    graphMainDash.clickOpenSearch();
+    element(by.linkText("Cross Server Graphs")).click();
+    //graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("MariaDB");
     expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
     browser.sleep(25000);
-    expect(graphMariaDbDash.graphPage.ariaPageCache.isDisplayed()).toBeTruthy();
+    expect(areaPageCacheTitle.isDisplayed()).toBeTruthy();
 
-  });
+  }); 
 });

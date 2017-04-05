@@ -19,8 +19,6 @@ module.exports = {
   },
 
     areaPageCacheTitle: function() {
-      this.graphPage.searchFld.sendKeys(name);
-      browser.sleep(5000);
-      element(by.xpath("//span[@class='search-result-link']//span[.='" + name + "']")).click();
+      this.graphPage.areaPageCache;
     },
 };
