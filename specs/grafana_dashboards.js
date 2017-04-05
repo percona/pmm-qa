@@ -35,12 +35,10 @@ describe('Selenium Test Case', function() {
 
   it('should check Disk Space dashboard', function() {
     graphMainDash.clickOpenSearch();
- //   element(by.css('[ng-click="openSearch()"]')).click();   
     graphMainDash.searchDashboard("Disk Space");
     browser.sleep(25000);   
     text = element(by.tagName('html')).getText();
     expect(text).toContain("" + "Mountpoint Usage");
-    expect(element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]')).isDisplayed()).toBeTruthy();
     expect(graphDiskSpace.getHostnameTitle().isDisplayed()).toBeTruthy();
     expect(graphDiskSpace.getMntPntUsgTitle().isDisplayed()).toBeTruthy();
     expect(graphDiskSpace.getMntPntTitle().isDisplayed()).toBeTruthy();
@@ -53,13 +51,17 @@ describe('Selenium Test Case', function() {
  });
 
   it('should check MariaDB', function() {
-    //graphMainDash.clickPmmDemo();
-    element(by.linkText("Cross Server Graphs")).click();
-    //graphMainDash.clickOpenSearch();
+    graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("MariaDB");
     expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
     browser.sleep(25000);
-    expect(areaPageCacheTitle.isDisplayed()).toBeTruthy();
+    expect(graphMariaDb.ariaPageCacheTitle().isDisplayed()).toBeTruthy();
+    expect(graphMariaDb.ariaTransactTitle().isDisplayed()).toBeTruthy();
+    expect(graphMariaDb.ariaPageTitle().isDisplayed()).toBeTruthy();
+    expect(graphMariaDb.innodbOnlineTitle().isDisplayed()).toBeTruthy();
+    expect(graphMariaDb.innodbDefrTitle().isDisplayed()).toBeTruthy();
+    expect(graphMariaDb.innodbCondTitle().isDisplayed()).toBeTruthy();
+    expect(graphMariaDb.innodbDeadTitle().isDisplayed()).toBeTruthy();
 
   }); 
 });

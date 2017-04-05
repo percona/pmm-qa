@@ -8,17 +8,17 @@ module.exports = {
     mntHostsChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /etc/hosts"]')),
     mntNginxChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /etc/nginx/ssl"]')),
     mntResolvChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /etc/resolv.conf"]')),
-    mntConsulChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /etc/opt/consul-data"]')),
-    mntPromethChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /opt/prometheus"]')),
+    mntConsulChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /opt/consul-data"]')),
+    mntPromethChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /opt/prometheus/data"]')),
     mntMysqlChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /var/lib/mysql"]')),
   },
 
     getMntPntUsgTitle: function() {
-      return graphPage.mntPntUsgChart;
+      return this.graphPage.mntPntUsgChart;
     },
 
     getMntPntTitle: function() {
-      return graphPage.mntPntChart;
+      return this.graphPage.mntPntChart;
     },
 
     getHostnameTitle: function() {
@@ -26,26 +26,26 @@ module.exports = {
     },
 
     getHostsTitle: function() {
-      return graphPage.mntHostsChart;
+      return this.graphPage.mntHostsChart;
     },
 
     getNginxTitle: function() {
-      return graphPage.mntNginxChart;
+      return this.graphPage.mntNginxChart;
     },
 
     getResolvTitle: function() {
-      return graphPage.mntResolvChart;
+      return this.graphPage.mntResolvChart;
     },
 
     getConsulTitle: function() {
-      return graphPage.mntConsulChart;
+      return this.graphPage.mntConsulChart;
     },
 
     getPromethTitle: function() {
-      return graphPage.mntPromethChart;
+      return this.graphPage.mntPromethChart;
     },
 
     getMysqlTitle: function() {
-      return graphPage.mntMysqlChart;
+      return this.graphPage.mntMysqlChart;
     },
 };
