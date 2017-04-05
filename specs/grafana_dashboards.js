@@ -34,17 +34,22 @@ describe('Selenium Test Case', function() {
   });
 
   it('should check Disk Space dashboard', function() {
-element(by.css('[ng-click="openSearch()"]')).click();   
-//element(by.linkText("Cross Server Graphs")).click();
-graphMainDash.searchDashboard("Disk Space");
-browser.sleep(25000);   
-// element(by.linkText("MySQL Percona   MariaDB")).click();
+    graphMainDash.clickOpenSearch();
+ //   element(by.css('[ng-click="openSearch()"]')).click();   
+    graphMainDash.searchDashboard("Disk Space");
+    browser.sleep(25000);   
     text = element(by.tagName('html')).getText();
     expect(text).toContain("" + "Mountpoint Usage");
     expect(element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]')).isDisplayed()).toBeTruthy();
-    expect(graphDiskSpace.graphPage.mntPntUsgChart.isDisplayed()).toBeTruthy();
-    expect(graphDiskSpace.graphPage.mntPntChart.isDisplayed()).toBeTruthy();
     expect(graphDiskSpace.getHostnameTitle().isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getMntPntUsgTitle().isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getMntPntTitle().isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getHostsTitle().isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getNginxTitle().isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getResolvTitle().isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getConsulTitle().isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getPromethTitle().isDisplayed()).toBeTruthy();
+    expect(graphDiskSpace.getMysqlTitle().isDisplayed()).toBeTruthy();
  });
 
   it('should check MariaDB', function() {

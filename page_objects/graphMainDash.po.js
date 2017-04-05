@@ -2,8 +2,8 @@
 
 module.exports = {
   graphPage: {
-    openSearch: element(by.linkText('Cross Server Graphs')),
-    //openSearch: element(by.css('[ng-click="openSearch()"]')),
+    //openSearch: element(by.linkText('Cross Server Graphs')),
+    openSearch: element(by.css('[ng-click="openSearch()"]')),
     loadAvgChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Load Average"]')),
     memUsgChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Memory Usage"]')),
     mysqlConnChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "MySQL Connections"]')),
