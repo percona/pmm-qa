@@ -86,10 +86,38 @@ exports.config = {
     browserName: 'chrome',
     version: '55',
     platform: 'OS X 10.12',
-    name: "chrome-osx",
+    name: "chrome_55-osx",
     shardTestFiles: true,
     screenResolution: '1920x1440',
     maxInstances: 2
+  }, {
+    browserName: 'chrome',
+    version: '57',
+    platform: 'OS X 10.12',
+    name: "chrome_57-osx",
+    shardTestFiles: true,
+    screenResolution: '1920x1440',
+    maxInstances: 2
+  }, {
+    browserName: 'internet explorer',
+    version: '11.103',
+    platform: 'Windows 8',
+    name: "windows_8-ie_11",
+    screenResolution: '1920x1440',
+  }, {
+    browserName: 'opera',
+    version: '12.15',
+    platform: 'Linux',
+    name: "Linux-opera_12",
+    screenResolution: '1920x1440',
+  }, {
+    browserName: 'firefox',
+    version: '45.0',
+    platform: 'Linux',
+    name: "Linux-ff_45",
+    screenResolution: '1920x1440',
+    
+
 }],
  
   // -----------------------------------------------------------------
