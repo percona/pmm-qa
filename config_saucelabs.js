@@ -34,7 +34,7 @@ exports.config = {
 
   suites: {
     mainQanPage: 'specs/main_qan.spec.js',
- //   grafana: 'specs/grafana*.spec.js',
+    grafana: 'specs/grafana*.spec.js',
 //    managementPage: 'management_page/*spec.js',
   },
 
@@ -101,21 +101,21 @@ exports.config = {
   }, {
     browserName: 'internet explorer',
     version: '11.103',
-    platform: 'Windows 8',
+    platform: 'Windows 8.1',
     name: "windows_8-ie_11",
-    screenResolution: '1920x1440',
+    screenResolution: '1600x1200',
   }, {
     browserName: 'opera',
     version: '12.15',
     platform: 'Linux',
     name: "Linux-opera_12",
-    screenResolution: '1920x1440',
+    screenResolution: '1024x768',
   }, {
     browserName: 'firefox',
     version: '45.0',
     platform: 'Linux',
     name: "Linux-ff_45",
-    screenResolution: '1920x1440',
+    screenResolution: '1024x768',
     
 
 }],
