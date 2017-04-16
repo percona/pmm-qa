@@ -75,10 +75,10 @@ exports.config = {
     screenResolution: '1600x1200',
     maxInstances: 2
   }, {
-    browserName: 'chrome',
-    version: '49',
-    platform: 'Windows 7',
-    name: "chrome-win7",
+    browserName: 'firefox',
+    version: '52.0',
+    platform: 'Windows 8.1',
+    name: "firefox-win8.1",
     shardTestFiles: true,
     screenResolution: '1600x1200',
     maxInstances: 2
@@ -101,8 +101,8 @@ exports.config = {
   }, {
     browserName: 'internet explorer',
     version: '11.103',
-    platform: 'Windows 8.1',
-    name: "windows_8-ie_11",
+    platform: 'Windows 10',
+    name: "windows_10-ie_11",
     screenResolution: '1600x1200',
   }, {
     browserName: 'opera',
