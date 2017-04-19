@@ -83,14 +83,7 @@ exports.config = {
     screenResolution: '1600x1200',
     maxInstances: 2
   }, {
-    */browserName: 'chrome',
-    version: '55',
-    platform: 'OS X 10.12',
-    name: "chrome_55-osx",
-    shardTestFiles: true,
-    screenResolution: '1920x1440',
-    maxInstances: 2
-  }, {
+    */ 
     browserName: 'chrome',
     version: '57',
     platform: 'OS X 10.12',
@@ -133,15 +126,7 @@ exports.config = {
 },*/
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
-  // -----------------------------------------------------------------
- 
- /* 
-  capabilities: {
-    browserName: 'firefox',
-    version: '',
-    platform: 'ANY'
-  },
- */
+  // -------------------------------------------------------------
   // -----------------------------------------------------------------
   // Application configuration.
   // -----------------------------------------------------------------
@@ -213,7 +198,8 @@ exports.config = {
     // If true, include stack traces in failures.
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
-    defaultTimeoutInterval: 100000
+    defaultTimeoutInterval: 100000,
+    idleTimeout: 100000
   }
 
 };
