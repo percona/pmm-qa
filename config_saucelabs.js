@@ -75,7 +75,7 @@ exports.config = {
     screenResolution: '1600x1200',
     maxInstances: 2
   }, {
-    browserName: 'firefox',
+  /*  browserName: 'firefox',
     version: '52.0',
     platform: 'Windows 8.1',
     name: "firefox-win8.1",
@@ -83,7 +83,7 @@ exports.config = {
     screenResolution: '1600x1200',
     maxInstances: 2
   }, {
-    browserName: 'chrome',
+    */browserName: 'chrome',
     version: '55',
     platform: 'OS X 10.12',
     name: "chrome_55-osx",
@@ -98,7 +98,7 @@ exports.config = {
     shardTestFiles: true,
     screenResolution: '1920x1440',
     maxInstances: 2
-  }, {
+  },/* {
     browserName: 'internet explorer',
     version: '11.103',
     platform: 'Windows 10',
@@ -116,7 +116,7 @@ exports.config = {
     platform: 'Linux',
     name: "Linux-ff_45",
     screenResolution: '1024x768',
-    
+    */
 
 }],
  
