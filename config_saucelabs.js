@@ -98,7 +98,7 @@ exports.config = {
     shardTestFiles: true,
     screenResolution: '1920x1440',
     maxInstances: 2
-  },/* {
+  /*}, {
     browserName: 'internet explorer',
     version: '11.103',
     platform: 'Windows 10',
