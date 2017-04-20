@@ -22,13 +22,14 @@ describe('Selenium Test Case', function() {
   it('should check Disk Space dashboard', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("Disk Space");
-    /*elem = element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]'));
+ browser.ignoreSynchronization = false;    
+/*elem = element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]'));
     browser.wait(function() {
     return browser.isElementPresent(elem);
     }, 130000);
 
 expect(browser.isElementPresent(elem)).toBeTruthy();    
-*/browser.sleep(75000);   
+browser.sleep(75000);   
     text = element(by.tagName('html')).getText();
     expect(text).toContain("" + "Mountpoint Usage");
     /*expect(graphDiskSpace.getHostnameTitle().isDisplayed()).toBeTruthy();

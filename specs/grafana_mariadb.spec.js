@@ -22,7 +22,13 @@ describe('Selenium Test Case', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("MariaDB");
     expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
-    browser.sleep(25000);
+    /*elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]'));
+    browser.wait(function() {
+    return browser.isElementPresent(elem);
+    }, 130000);
+
+expect(browser.isElementPresent(elem)).toBeTruthy();
+   //browser.sleep(65000);
     expect(graphMariaDb.ariaPageCacheTitle().isDisplayed()).toBeTruthy();
     expect(graphMariaDb.ariaTransactTitle().isDisplayed()).toBeTruthy();
     expect(graphMariaDb.ariaPageTitle().isDisplayed()).toBeTruthy();
@@ -30,6 +36,6 @@ describe('Selenium Test Case', function() {
     expect(graphMariaDb.innodbDefrTitle().isDisplayed()).toBeTruthy();
     expect(graphMariaDb.innodbCondTitle().isDisplayed()).toBeTruthy();
     expect(graphMariaDb.innodbDeadTitle().isDisplayed()).toBeTruthy();
-  });
+ */ });
 
 });
