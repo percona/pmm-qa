@@ -200,9 +200,6 @@ onComplete: function() {
     /**
      * onComplete will be called just before the driver quits.
      */
-   onComplete: function() {
-
-    }
 // If true, display spec names.
     isVerbose: true,
     // If true, print colors to the terminal.
