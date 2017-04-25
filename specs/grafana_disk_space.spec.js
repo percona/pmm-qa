@@ -20,10 +20,10 @@ describe('Selenium Test Case', function() {
   });
 
   it('should check Disk Space dashboard', function() {
-    graphMainDash.clickOpenSearch();
+/*    graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("Disk Space");
  browser.ignoreSynchronization = false;    
-/*elem = element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]'));
+elem = element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]'));
     browser.wait(function() {
     return browser.isElementPresent(elem);
     }, 130000);
