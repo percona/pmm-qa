@@ -174,7 +174,7 @@ exports.config = {
     }));
 
     jasmine.getEnv().addReporter(reporter);
-        browser.manage().timeouts().pageLoadTimeout(80000);
+        browser.manage().timeouts().pageLoadTimeout(100000);
     browser.manage().timeouts().implicitlyWait(125000);
   },
 
