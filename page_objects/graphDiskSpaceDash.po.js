@@ -11,7 +11,14 @@ module.exports = {
     mntConsulChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /opt/consul-data"]')),
     mntPromethChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /opt/prometheus/data"]')),
     mntMysqlChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint /var/lib/mysql"]')),
+    selectHost: element(by.css('[ng-click="vm.show()"]')),
   },
+
+    selectInstance: function(host) {
+       this.selectHost.click();
+       this.selectHost.sendKeys(host);
+
+    },
 
     getMntPntUsgTitle: function() {
       return this.graphPage.mntPntUsgChart;

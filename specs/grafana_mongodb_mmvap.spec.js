@@ -19,11 +19,11 @@ describe('Selenium Test Case', function() {
 
 
   it('should check charts titles of MongoDB MMAPv1 dashboards', function() {
-    graphMainDash.clickOpenSearch();
+   /* graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("MongoDB MMAPv1");
     expect(browser.getCurrentUrl()).toContain('dashboard/db/mongodb-mmapv1');
     browser.sleep(25000);
-   /* expect(graph.ariaPageCacheTitle().isDisplayed()).toBeTruthy();
+    expect(graph.ariaPageCacheTitle().isDisplayed()).toBeTruthy();
     expect(graphMariaDb.ariaTransactTitle().isDisplayed()).toBeTruthy();
     expect(graphMariaDb.ariaPageTitle().isDisplayed()).toBeTruthy();
     expect(graphMariaDb.innodbOnlineTitle().isDisplayed()).toBeTruthy();

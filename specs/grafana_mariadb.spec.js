@@ -19,10 +19,10 @@ describe('Selenium Test Case', function() {
 
 
   it('should check MariaDB', function() {
-    graphMainDash.clickOpenSearch();
+    /*graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("MariaDB");
     expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
-    /*elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]'));
+    elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]'));
     browser.wait(function() {
     return browser.isElementPresent(elem);
     }, 130000);
