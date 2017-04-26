@@ -34,7 +34,7 @@ exports.config = {
 
   suites: {
     mainQanPage: 'specs/main_qan.spec.js',
-    grafana: 'specs/grafana*.spec.js',
+   // grafana: 'specs/grafana*.spec.js',
 //    managementPage: 'management_page/*spec.js',
   },
 
@@ -71,19 +71,14 @@ exports.config = {
     version: '32',
     platform: 'OS X 10.10',
     name: "firefox-osx",
-    shardTestFiles: true,
-    screenResolution: '1600x1200',
     maxInstances: 2
   }, {
-  /*  browserName: 'firefox',
-    version: '52.0',
+    browserName: 'internet explorer',
+    version: 'latest',
     platform: 'Windows 8.1',
     name: "firefox-win8.1",
-    shardTestFiles: true,
-    screenResolution: '1600x1200',
-    maxInstances: 2
   }, {
-    */ 
+     
     browserName: 'chrome',
     version: '57',
     platform: 'OS X 10.12',
