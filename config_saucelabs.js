@@ -34,7 +34,7 @@ exports.config = {
 
   suites: {
     mainQanPage: 'specs/main_qan.spec.js',
-   // grafana: 'specs/grafana*.spec.js',
+    grafana: 'specs/grafana*.spec.js',
 //    managementPage: 'management_page/*spec.js',
   },
 
@@ -72,13 +72,7 @@ exports.config = {
     platform: 'OS X 10.10',
     name: "firefox-osx",
     maxInstances: 2
-  }, {
-    browserName: 'internet explorer',
-    version: 'latest',
-    platform: 'Windows 8.1',
-    name: "firefox-win8.1",
-  }, {
-     
+  }, { 
     browserName: 'chrome',
     version: '57',
     platform: 'OS X 10.12',
@@ -111,14 +105,6 @@ exports.config = {
   // -----------------------------------------------------------------
   // Browser and Capabilities: Chrome
   // -----------------------------------------------------------------
-/*  capabilities: {
-    browserName: 'chrome',
-    version: '51.0',
-    platform: 'OS X 10.11',
-    name: "chrome-tests",
-    screenResolution: '1600x1200',
-  
-},*/
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
   // -------------------------------------------------------------
@@ -140,7 +126,7 @@ exports.config = {
  
   // The timeout for each script run on the browser. This should be longer
   // than the maximum time your application needs to stabilize between tasks.
-  allScriptsTimeout: 65000,
+  allScriptsTimeout: 105000,
   framework: "jasmine2",
  
   /**
@@ -173,8 +159,8 @@ exports.config = {
     }));
 
     jasmine.getEnv().addReporter(reporter);
-        browser.manage().timeouts().pageLoadTimeout(80000);
-    browser.manage().timeouts().implicitlyWait(125000);
+        browser.manage().timeouts().pageLoadTimeout(120000);
+    browser.manage().timeouts().implicitlyWait(65000);
   },
 
     onComplete: function () {
