@@ -6,13 +6,13 @@ exports.config = {
     sauceKey: process.env.SAUCE_ACCESS_KEY,
  
     //seleniumAddress: 'http://ondemand.saucelabs.com:80/wd/hub',
-    //specs: ['specs/*spec.js'],
-  suites: {
+    specs: ['specs/main_qan.spec.js'],
+/*  suites: {
     mainQanPage: 'specs/main_qan.spec.js',
  //   grafana: 'specs/grafana_*spec.js',
 //    managementPage: 'management_page/*spec.js',
   },
- 
+ */
     restartBrowserBetweenTests: true,
  
     framework: 'jasmine2',
@@ -34,6 +34,7 @@ exports.config = {
             shardTestFiles: true,
             maxInstances: 25
         }];
+
         for (var i = 0; i < multiCaps.length; i++) {
             multiCaps[i].build = process.env.BUILD_TAG;
         }
@@ -58,5 +59,10 @@ exports.config = {
                 return browser.get
             });
         });
-    }
+    },
+
+  jasmineNodeOpts: {
+    showColors: true, // Use colors in the command line report.
+  }
+
 }

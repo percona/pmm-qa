@@ -165,6 +165,7 @@ exports.config = {
     // At this point, global 'protractor' object will be set up, and
     // jasmine will be available.
  var caps = browser.getCapabilities();
+
     var width = 1600;
     var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
@@ -177,7 +178,20 @@ exports.config = {
     }));
 
     jasmine.getEnv().addReporter(reporter);
+        browser.manage().timeouts().pageLoadTimeout(80000);
+    browser.manage().timeouts().implicitlyWait(125000);
   },
+
+    onComplete: function () {
+        browser.getSession().then(function (session) {
+            return browser.getProcessedConfig().then(function (config) {
+                // config.capabilities is the CURRENT capability being run, if
+                // you are using multiCapabilities.
+                console.log('SauceOnDemandSessionID=' + session.getId() + ' job-name=' + config.capabilities.name);
+                return browser.get
+            });
+        });
+    },
 
   afterLaunch: function(exitCode) {
     return new Promise(function(resolve){
@@ -190,8 +204,7 @@ exports.config = {
     /**
      * onComplete will be called just before the driver quits.
      */
-    onComplete: function () {},
-    // If true, display spec names.
+// If true, display spec names.
     isVerbose: true,
     // If true, print colors to the terminal.
     showColors: true,
@@ -199,7 +212,7 @@ exports.config = {
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
     defaultTimeoutInterval: 100000,
-    idleTimeout: 100000
+    idleTimeout: 100
   }
 
 };
