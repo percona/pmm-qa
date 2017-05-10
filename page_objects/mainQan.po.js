@@ -8,7 +8,7 @@ module.exports = {
     titleContains: element(by.xpath('*//contains(text(),"Grand Total Time"')),
     calendarBtn: element(by.id('supportedContentDropdown')),  
     managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
-    instancesBtn: element(by.id('dbServerDropdown')),  
+    instancesBtn: element(by.id('navbarDropdownMenuLink')),  
     instancesAll: element.all(by.repeater('db in instances')),
     //serverSumBtn: element(by.xpath('//button[contains(@title,"View database and server summary info")]')),
     totalLink: element(by.linkText('TOTAL')),
@@ -21,8 +21,8 @@ module.exports = {
     fingerprintTitle:  element(by.xpath('//*[contains(text(), "Fingerprint")]')),
     exampleTitle:  element(by.xpath('//*[contains(text(), "Example")]')),
     nextQueries:  element(by.id('show_more')),
-    dbTableFld: element(by.model('dbTable')),
-    dbTableBtn: element(by.css('[ng-click="addDbTable()"]')),
+    dbTableFld: element(by.id('dbTblNamesInput')),
+    dbTableBtn: element(by.buttonText('ADD')),
     dbTableList: element(by.name('selectedDbTable')),
     reloadTop: element(by.css('[ng-click="$root.doRefresh($root.time_range)"]')),
     dbToExplain: element(by.name('db')),
@@ -32,7 +32,7 @@ module.exports = {
   },  
       
   get: function(url) {  
-    browser.get(url + '/qan/'); 
+    browser.get(url + '/qan2/'); 
     browser.waitForAngular();  
   },  
   /**
@@ -90,10 +90,12 @@ module.exports = {
    * clickQueryNumber clicks on specified query's number
    */
   clickQueryNr: function(num) {
-    this.mainPage.queryList.then(function(tables) {
+    /*this.mainPage.queryList.then(function(tables) {
       var titleElement = tables[num].element(by.css('[ng-click="qanSelectRow(row)"]'));
       titleElement.click(); 
-    });
+    });*/
+    var data = element.all(by.css('table[id="query_profile_table"]')).all(by.css('a'));
+    data.get(num).click();
   },
 
   /**

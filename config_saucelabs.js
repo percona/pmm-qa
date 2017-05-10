@@ -33,7 +33,7 @@ exports.config = {
   //],
 
   suites: {
-    mainQanPage: 'specs/*spec.js',
+    mainQanPage: 'specs/main_qan_spec.js',
     //grafana: 'specs/main_grafana.js',
 //    managementPage: 'management_page/*spec.js',
   },
@@ -84,11 +84,10 @@ exports.config = {
     maxInstances: 2
   }, {
     browserName: 'chrome',
-    version: '55',
+    version: '57',
     platform: 'OS X 10.12',
     name: "chrome-osx",
     shardTestFiles: true,
-    screenResolution: '1920x1440',
     maxInstances: 2
 }],
  
@@ -125,7 +124,7 @@ exports.config = {
   // Selector for the element housing the angular app - this defaults to
   // body, but is necessary if ng-app is on a descendant of 
   rootElement: 'html',
-//useAllAngular2AppRoots: true 
+  useAllAngular2AppRoots: true, 
   // -----------------------------------------------------------------
   // Other configuration.
   // -----------------------------------------------------------------
