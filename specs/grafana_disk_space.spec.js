@@ -11,7 +11,7 @@ describe('Selenium Test Case', function() {
         return /cross-server-graphs/.test(url);
       });
     });
-   browser.sleep(10000);
+   browser.sleep(60000);
    expect(browser.getTitle()).toEqual('Grafana - Cross Server Graphs');
   });
 
