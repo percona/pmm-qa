@@ -1,22 +1,18 @@
 var mainQANPage = require('../page_objects/mainQan.po.js')
 var data = require('../test_data/main_page_data.json')
 var global = require('../test_data/global_data.json')
+var utils = require('../common/utils.js')
    
 describe('Main QAN Page', function () {
  
   beforeEach(function () {
     browser.ignoreSynchronization = false;
-    //mainQANPage.get(global['url']);
     mainQANPage.get(browser.baseUrl);
-    var ec = protractor.ExpectedConditions
-    var timeout = 60000;
-    var elem = element(by.id('query_profile_table'));
-    browser.wait(ec.presenceOf(elem), timeout);
+    utils.waitForElementPresent(mainQANPage.mainPage.topTitle);
     element.all(by.css('.alert.msg')).then(function(items)  {
       expect(items.length).toBe(0);
     });
     expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
-    //expect(mainQANPage.returnTitleContains()).toBe('true');
   });
   
   afterEach(function() {
@@ -82,10 +78,9 @@ describe('Main QAN Page', function () {
 
   it('should add db.table', function () {
     mainQANPage.clickQueryNr(2);
-    //mainQANPage.clickQueryNr(1);
-    //mainQANPage.addTable(data['tableValid']);
-    //mainQANPage.clickAddedTable(data['tableValid']);
-    //expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
+    mainQANPage.addTable(data['tableValid']);
+    mainQANPage.clickAddedTable(data['tableValid']);
+    expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
   });
 
   it('should show error for invalid db.table', function () {
@@ -100,21 +95,17 @@ describe('Main QAN Page', function () {
     element(by.xpath('//*[contains(text(), "Server Summary")]'));
   });
 
-  xit('should click on Total', function () {
+  it('should click on Total', function () {
     mainQANPage.clickTotal();
     mainQANPage.returnTotalElm();
   });
 
-  it('should click on management button', function () {
+  it('should click on Settings button', function () {
     mainQANPage.clickManagement();
     expect(browser.getCurrentUrl()).toContain('settings');
     browser.waitForAngular();
-    var ec = protractor.ExpectedConditions
-    var timeout = 60000;
-    var elem = element(by.id('settingsTab-header'));
-    browser.wait(ec.elementToBeClickable(elem), timeout);
-    
-    //mainQANPage.clickQueryProfileBtn();
+    utils.waitForElementPresent(mainQANPage.settingsTab.settingsHeader);
+    mainQANPage.clickQueryProfileBtn();
     //expect(mainQANPage.returnTitleContains()).toBe('true');
   });
 

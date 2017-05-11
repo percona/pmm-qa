@@ -4,7 +4,7 @@ module.exports = {
   mainPage: { 
     noQueries: element(by.id('text_no_profile_data')),
     noQueiesText: 'There is no data for the selected MySQL instance, time range or search query.', 
-    topTitle: element(by.id('text_count_queries')),  
+    topTitle: element(by.id('query_profile_top')),  
     titleContains: element(by.xpath('*//contains(text(),"Grand Total Time"')),
     calendarBtn: element(by.id('supportedContentDropdown')),  
     managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
@@ -16,7 +16,7 @@ module.exports = {
     searchBtn: element(by.id('search_button')),
     serverSummaryBtn: element(by.id('summary_link')),
     time3h: element(by.linkText('Last 3 hours')),  
-    queryList: element.all(by.repeater('row in qanData')),
+    queryTable: element.all(by.css('table[id="query_profile_table"]')),
     querySelected:  element(by.css('[ng-click="qanSelectRow(row)"]')),
     fingerprintTitle:  element(by.xpath('//*[contains(text(), "Fingerprint")]')),
     exampleTitle:  element(by.xpath('//*[contains(text(), "Example")]')),
@@ -30,7 +30,10 @@ module.exports = {
     totalRow: element(by.css('[ng-click="qanSelectSummary()"]')),
     queryProfileBtn: element(by.id('settings_link'))
   },  
-      
+
+  settingsTab: {
+    settingsHeader: element(by.id('settingsTab-header')),
+  }, 
   get: function(url) {  
     browser.get(url + '/qan2/'); 
     browser.waitForAngular();  
@@ -94,7 +97,7 @@ module.exports = {
       var titleElement = tables[num].element(by.css('[ng-click="qanSelectRow(row)"]'));
       titleElement.click(); 
     });*/
-    var data = element.all(by.css('table[id="query_profile_table"]')).all(by.css('a'));
+    var data = this.mainPage.queryTable.all(by.css('a'));
     data.get(num).click();
   },
 
