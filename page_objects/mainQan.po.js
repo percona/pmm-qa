@@ -2,8 +2,8 @@
   
 module.exports = {  
   mainPage: { 
-    noQueries: element(by.id('text_no_profile_data')),
-    noQueiesText: 'There is no data for the selected MySQL instance, time range or search query.', 
+    noQueries: element(by.id('query_profile_no_data')),
+    noQueiesText: 'No data for selected time-range', 
     topTitle: element(by.id('query_profile_top')),  
     titleContains: element(by.xpath('*//contains(text(),"Grand Total Time"')),
     calendarBtn: element(by.id('supportedContentDropdown')),  
