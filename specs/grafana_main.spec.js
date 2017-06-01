@@ -12,7 +12,7 @@ describe('Cross-Server dashboards tests', function() {
         return /cross-server-graphs/.test(url);
       });
     });
-    browser.sleep(60000)
+    //browser.sleep(100000)
   });
 
   afterEach(function () {
@@ -20,6 +20,10 @@ describe('Cross-Server dashboards tests', function() {
 
 
   it('should check all charts exist', function() {
+    elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Load Average"]'));
+    browser.wait(function() {
+    return browser.isElementPresent(elem);
+    }, 130000);
     expect(browser.getCurrentUrl()).toContain('dashboard/db/cross-server-graphs');
     expect(graphMainDash.graphPage.loadAvgChart.isDisplayed()).toBeTruthy();
     expect(graphMainDash.graphPage.memUsgChart.isDisplayed()).toBeTruthy();

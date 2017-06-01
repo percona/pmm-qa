@@ -40,12 +40,12 @@ describe('Main QAN Page', function () {
 
   });
 
-  xit('should search Select query', function () {
+  it('should search Select query', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     browser.sleep(25000);
-    expect(mainQANPage.returnTitleContains()).toBe('true');
+    expect(mainQANPage.mainPage.topTitle).toBe('true');
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
     browser.sleep(25000);

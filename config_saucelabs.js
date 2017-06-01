@@ -34,7 +34,7 @@ exports.config = {
 
   suites: {
     mainQanPage: 'specs/main_qan_spec.js',
-    grafana: 'specs/grafana*.spec.js',
+ //   grafana: 'specs/grafana*.spec.js',
 //    managementPage: 'management_page/*spec.js',
   },
 
@@ -74,7 +74,7 @@ exports.config = {
     shardTestFiles: true,
     screenResolution: '1600x1200',
     maxInstances: 2
-  }, {
+ /* }, {
     browserName: 'chrome',
     version: '49',
     platform: 'Windows 7',
@@ -89,7 +89,7 @@ exports.config = {
     name: "chrome-osx",
     shardTestFiles: true,
     maxInstances: 2
-}],
+*/}],
  
   // -----------------------------------------------------------------
   // Browser and Capabilities: Chrome
@@ -123,7 +123,7 @@ exports.config = {
  
   // Selector for the element housing the angular app - this defaults to
   // body, but is necessary if ng-app is on a descendant of 
-  rootElement: 'html',
+ // rootElement: 'html',
   useAllAngular2AppRoots: true, 
   // -----------------------------------------------------------------
   // Other configuration.
@@ -131,7 +131,7 @@ exports.config = {
  
   // The timeout for each script run on the browser. This should be longer
   // than the maximum time your application needs to stabilize between tasks.
-  allScriptsTimeout: 65000,
+  allScriptsTimeout: 100000,
   framework: "jasmine2",
  
   /**

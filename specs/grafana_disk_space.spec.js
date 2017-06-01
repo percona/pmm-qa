@@ -14,7 +14,7 @@ browser.wait(function() {
       });
     });
    var EC = protractor.ExpectedConditions;
-   browser.wait(EC.visibilityOf(elem),100000);
+   browser.wait(EC.presenceOf(elem),300000);
    browser.sleep(10000);
    expect(browser.getTitle()).toEqual('Grafana - Cross Server Graphs');
   });
