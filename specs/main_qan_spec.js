@@ -45,7 +45,7 @@ describe('Main QAN Page', function () {
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     browser.sleep(25000);
-    expect(mainQANPage.mainPage.topTitle).toBe('true');
+    expect(mainQANPage.mainPage.topTitle.isDisplayed()).toBe('true');
     mainQANPage.clearSearch();
     mainQANPage.doSearch();
     browser.sleep(25000);

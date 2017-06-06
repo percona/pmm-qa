@@ -2,7 +2,7 @@
   
 module.exports = {  
   mainPage: { 
-    noQueries: element(by.id('query_profile_no_data')),
+    noQueries: element(by.id('query_profile_heared')),
     noQueiesText: 'No data for selected time-range', 
     topTitle: element(by.id('query_profile_top')),  
     titleContains: element(by.xpath('*//contains(text(),"Grand Total Time"')),
