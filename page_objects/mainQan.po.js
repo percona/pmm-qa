@@ -35,7 +35,7 @@ module.exports = {
     settingsHeader: element(by.id('settingsTab-header')),
   }, 
   get: function(url) {  
-    browser.get(url + '/qan2/'); 
+    browser.get(url + '/qan/'); 
     browser.waitForAngular();  
   },  
   /**
