@@ -53,7 +53,7 @@ describe('Main QAN Page', function () {
     expect(mainQANPage.returnTitleContains()).toBe('true');
   });
 
-  xit('shouldnt search any query', function () {
+  it('shouldnt search any query', function () {
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectNotExist']);
     mainQANPage.doSearch();
@@ -77,7 +77,7 @@ describe('Main QAN Page', function () {
   });
 
   it('should add db.table', function () {
-    mainQANPage.clickQueryNr(2);
+    mainQANPage.clickQueryNr(1);
     mainQANPage.addTable(data['tableValid']);
     mainQANPage.clickAddedTable(data['tableValid']);
     expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
