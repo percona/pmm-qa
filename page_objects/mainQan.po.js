@@ -3,14 +3,13 @@
 module.exports = {  
   mainPage: { 
     noQueries: element(by.id('query_profile_heared')),
-    noQueiesText: 'No data for selected time-range', 
+    noQueriesText: 'No data for selected time-range', 
     topTitle: element(by.id('query_profile_top')),  
     titleContains: element(by.xpath('*//contains(text(),"Grand Total Time"')),
     calendarBtn: element(by.id('supportedContentDropdown')),  
     managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
     instancesBtn: element(by.id('navbarDropdownMenuLink')),  
     instancesAll: element.all(by.repeater('db in instances')),
-    //serverSumBtn: element(by.xpath('//button[contains(@title,"View database and server summary info")]')),
     totalLink: element(by.linkText('TOTAL')),
     searchFld: element(by.id('search_field')),
     searchBtn: element(by.id('search_button')),
@@ -35,8 +34,7 @@ module.exports = {
     settingsHeader: element(by.id('settingsTab-header')),
   }, 
   get: function(url) {  
-    browser.get(url + '/qan/'); 
-    browser.waitForAngular();  
+    browser.get(url + '/qan/',30000);
   },  
   /**
    * returnTopTitle returns a text above Top queries
@@ -97,7 +95,7 @@ module.exports = {
       var titleElement = tables[num].element(by.css('[ng-click="qanSelectRow(row)"]'));
       titleElement.click(); 
     });*/
-    var data = this.mainPage.queryTable.all(by.css('a'));
+    var data = this.mainPage.queryTable;
     data.get(num).click();
   },
 
