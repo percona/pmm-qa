@@ -1,4 +1,5 @@
 var mainQANPage = require('../page_objects/mainQan.po.js')
+var settingsQANPage = require('../page_objects/settingsQan.po.js')
 var data = require('../test_data/main_page_data.json')
 var global = require('../test_data/global_data.json')
 var utils = require('../common/utils.js')
@@ -23,6 +24,8 @@ describe('Main QAN Page', function () {
 
 
   it('should click on each instances in menu list', function() {
+    browser.executeScript("sauce:context=Select instance");
+    
     mainQANPage.clickInstancesMenu();
     //mainQANPage.clickEachInstance();
     //console.log('Count = ' + mainQANPage.returnInstancesCount());
@@ -41,6 +44,7 @@ describe('Main QAN Page', function () {
   });
 
   it('should search Select query', function () {
+    browser.executeScript("sauce:context=Search SELECT query");
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
@@ -49,6 +53,7 @@ describe('Main QAN Page', function () {
   });
 
   it('shouldnt search any query', function () {
+    browser.executeScript("sauce:context=Cannot search SELECT query");
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectNotExist']);
     mainQANPage.doSearch();
@@ -58,6 +63,7 @@ describe('Main QAN Page', function () {
   });
   
   it('should click Select query', function () {
+    browser.executeScript("sauce:context=Choose query");
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
@@ -69,6 +75,7 @@ describe('Main QAN Page', function () {
   });
 
   xit('should add db.table', function () {
+    browser.executeScript("sauce:context=Select instance");
     mainQANPage.clickQueryNr(1);
     mainQANPage.addTable(data['tableValid']);
     mainQANPage.clickAddedTable(data['tableValid']);
@@ -88,15 +95,16 @@ describe('Main QAN Page', function () {
   });
 
   it('should click on Total', function () {
+    browser.executeScript("sauce:context=Click on Total");
     mainQANPage.clickTotal();
     mainQANPage.returnTotalElm();
   });
 
-  xit('should click on Settings button', function () {
+  it('should click on Settings button', function () {
     mainQANPage.clickManagement();
     expect(browser.getCurrentUrl()).toContain('settings');
-    browser.waitForAngular();
-    utils.waitForElementPresent(mainQANPage.settingsTab.settingsHeader);
+  //  browser.waitForAngular();
+    utils.waitForElementPresent(settingsQANPage.SettingsPage.settingsTab);
     mainQANPage.clickQueryProfileBtn();
     //expect(mainQANPage.returnTitleContains()).toBe('true');
   });

@@ -7,7 +7,7 @@ module.exports = {
     topTitle: element(by.id('query_profile_top')),  
     titleContains: element(by.xpath('*//contains(text(),"Grand Total Time"')),
     calendarBtn: element(by.id('supportedContentDropdown')),  
-    managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
+    managementBtn: element(by.xpath('//*[contains(@title,"Configure query analytics")]')),  
     instancesBtn: element(by.id('navbarDropdownMenuLink')),  
     instancesAll: element.all(by.repeater('db in instances')),
     totalLink: element(by.linkText('TOTAL')),
@@ -34,7 +34,7 @@ module.exports = {
     settingsHeader: element(by.id('settingsTab-header')),
   }, 
   get: function(url) {  
-    browser.get(url + '/qan/',30000);
+    browser.get(url + '/qan/',100000);
   },  
   /**
    * returnTopTitle returns a text above Top queries
