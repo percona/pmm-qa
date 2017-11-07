@@ -73,7 +73,10 @@ exports.config = {
     name: "firefox-osx",
     shardTestFiles: true,
     screenResolution: '1600x1200',
-    maxInstances: 2
+    maxInstances: 25,
+    webdriverRemoteQuietExceptions: true,
+    recordScreenshots: false,
+    marionette: true
  /* }, {
     browserName: 'chrome',
     version: '49',
@@ -124,14 +127,15 @@ exports.config = {
   // Selector for the element housing the angular app - this defaults to
   // body, but is necessary if ng-app is on a descendant of 
  // rootElement: 'html',
-  useAllAngular2AppRoots: true, 
+  //useAllAngular2AppRoots: true, 
   // -----------------------------------------------------------------
   // Other configuration.
   // -----------------------------------------------------------------
  
   // The timeout for each script run on the browser. This should be longer
   // than the maximum time your application needs to stabilize between tasks.
-  allScriptsTimeout: 100000,
+  allScriptsTimeout: 220000,
+  //getPageTimeout: 200000,
   framework: "jasmine2",
  
   /**
@@ -184,7 +188,7 @@ exports.config = {
     // If true, include stack traces in failures.
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
-    defaultTimeoutInterval: 100000
+    defaultTimeoutInterval: 220000
   }
 
 };
