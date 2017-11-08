@@ -7,7 +7,8 @@ var reporter = new HtmlScreenshotReporter({
 });
  
 exports.config = {
- 
+  sauceUser: process.env.SAUCE_USERNAME,
+  sauceKey: process.env.SAUCE_ACCESS_KEY, 
   // -----------------------------------------------------------------
   // Selenium Setup: An existing Selenium standalone server.
   // -----------------------------------------------------------------
@@ -16,8 +17,8 @@ exports.config = {
   //
   // Note that this server must have chromedriver in its path for Chromium
   // tests to work.
- seleniumAddress: 'http://localhost:4444/wd/hub',
-//  seleniumAddress: 'http://ondemand.saucelabs.com:80/wd/hub',
+ //seleniumAddress: 'http://localhost:4444/wd/hub',
+  //seleniumAddress: 'http://ondemand.saucelabs.com:80/wd/hub',
   // seleniumAddress for Crossbrowsertesting
   //  seleniumAddress: 'http://your_mail:your_key@hub.crossbrowsertesting.com:80/wd/hub',
 //  sauceUser: process.env.SAUCE_USERNAME,
@@ -32,13 +33,8 @@ exports.config = {
   //],
 
   suites: {
-<<<<<<< HEAD
-    //mainQanPage: 'specs/main_qan.spec.js',
-    grafana: 'specs/grafana_*spec.js',
-=======
-//    mainQanPage: 'specs/main_qan_spec.js',
-  grafana: 'specs/grafana*spec.js',
->>>>>>> new-gui-qan
+ //   mainQanPage: 'specs/main_qan_spec.js',
+    grafana: 'specs/grafana*.spec.js',
 //    managementPage: 'management_page/*spec.js',
   },
 
@@ -69,15 +65,38 @@ exports.config = {
     platform: 'ANY'
   },
   */
+
+  multiCapabilities: [{
+    browserName: 'firefox',
+    version: '32',
+    platform: 'OS X 10.10',
+    name: "firefox-osx",
+    shardTestFiles: true,
+  }, {
+    browserName: 'chrome',
+    version: '49',
+    platform: 'Windows 7',
+    name: "chrome-win7",
+  }, {
+    browserName: 'chrome',
+    version: '57',
+    platform: 'OS X 10.12',
+    name: "chrome-osx",
+    shardTestFiles: true,
+    maxInstances: 2
+}],
  
   // -----------------------------------------------------------------
   // Browser and Capabilities: Chrome
   // -----------------------------------------------------------------
-  capabilities: {
+/*  capabilities: {
     browserName: 'chrome',
-    version: '',
-    platform: 'ANY'
-},
+    version: '51.0',
+    platform: 'OS X 10.11',
+    name: "chrome-tests",
+    screenResolution: '1600x1200',
+  
+},*/
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
   // -----------------------------------------------------------------
@@ -100,16 +119,16 @@ exports.config = {
   // Selector for the element housing the angular app - this defaults to
   // body, but is necessary if ng-app is on a descendant of 
   rootElement: 'html',
-  useAllAngular2AppRoots: true ,
+ // useAllAngular2AppRoots: true, 
   // -----------------------------------------------------------------
   // Other configuration.
   // -----------------------------------------------------------------
  
   // The timeout for each script run on the browser. This should be longer
   // than the maximum time your application needs to stabilize between tasks.
-  allScriptsTimeout: 300000,
+  allScriptsTimeout: 65000,
   framework: "jasmine2",
-  //useAllAngular2AppRoots: true, 
+ 
   /**
    * A callback function called once protractor is ready and available,
    * and before the specs are executed.
@@ -126,6 +145,7 @@ exports.config = {
   onPrepare: function() {
     // At this point, global 'protractor' object will be set up, and
     // jasmine will be available.
+ var caps = browser.getCapabilities();
     var width = 1600;
     var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
@@ -138,16 +158,6 @@ exports.config = {
     }));
 
     jasmine.getEnv().addReporter(reporter);
-<<<<<<< HEAD
-    browser.manage().timeouts().pageLoadTimeout(40000);
-    browser.manage().timeouts().implicitlyWait(25000);
-
-  // for non-angular page
-  browser.ignoreSynchronization = true;
-=======
-    browser.manage().timeouts().pageLoadTimeout(300000);
-    browser.manage().timeouts().implicitlyWait(300000)
->>>>>>> new-gui-qan
   },
 
   afterLaunch: function(exitCode) {
@@ -169,7 +179,7 @@ exports.config = {
     // If true, include stack traces in failures.
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
-    defaultTimeoutInterval: 300000
+    defaultTimeoutInterval: 100000
   }
 
 };

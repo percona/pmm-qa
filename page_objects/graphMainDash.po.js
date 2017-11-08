@@ -12,7 +12,7 @@ module.exports = {
     netTrafChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Network Traffic"]')),
     sysInfoChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "System Info"]')),
     mysqlInfoChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "MySQL Info"]')),
-    searchFld: element(by.xpath("//div[@class='search-field-wrapper']/span/input")),
+    searchFld: element(by.xpath("//div[@class='search-field-wrapper']/div/input")),
     logList: element.all(by.repeater('log in agentLog'))
   },
     get: function(url) {
@@ -28,5 +28,6 @@ module.exports = {
       this.graphPage.searchFld.sendKeys(name);
       browser.sleep(5000);
       element(by.xpath("//span[@class='search-result-link']//span[.='" + name + "']")).click();
+      browser.sleep(20000);
     },
 };

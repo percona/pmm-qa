@@ -2,12 +2,11 @@
 * Usage: Return Random Email Id.
 */
 exports.getRandomEmail = function () {
-    var strValues = "abcdefghijk123456789";
-    var strEmail = "";
-    for (var i = 0; i < strValues.length; i++) {
-        strEmail = strEmail + strValues.charAt(Math.round(strValues.length * Math.random()));
-    }
-    return strEmail + "@mymail.test";
+  var strValues = "abcdefghijk123456789";
+  var strEmail = "";
+  for (var i = 0; i < strValues.length; i++) 
+    strEmail = strEmail + strValues.charAt(Math.round(strValues.length * Math.random()));
+  return strEmail + "@mymail.test";
 };
 
 /**
@@ -16,11 +15,11 @@ exports.getRandomEmail = function () {
 * Returns : Random string.
 */
 exports.getRandomString = function (characterLength) {
-    var randomText = "";
-    var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    for (var i = 0; i < characterLength; i++)
-        randomText += possible.charAt(Math.floor(Math.random() * possible.length));
-    return randomText;
+  var randomText = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  for (var i = 0; i < characterLength; i++)
+    randomText += possible.charAt(Math.floor(Math.random() * possible.length));
+  return randomText;
 };
 
 /**
@@ -29,9 +28,19 @@ exports.getRandomString = function (characterLength) {
 * Returns : Random number.
 */
 exports.getRandomNumber = function (numberLength) {
-    var randomNumber = "";
-    var possible = "0123456789";
-    for (var i = 0; i < numberLength; i++)
-        randomNumber += possible.charAt(Math.floor(Math.random() * possible.length));
-    return randomNumber;
+  var randomNumber = "";
+  var possible = "0123456789";
+  for (var i = 0; i < numberLength; i++)
+    randomNumber += possible.charAt(Math.floor(Math.random() * possible.length));
+  return randomNumber;
+};
+
+/**
+* Usage: waiting for element is presented
+*
+*/
+exports.waitForElementPresent = function (elem) {
+    var ec = protractor.ExpectedConditions
+    var timeout = 60000;
+    browser.wait(ec.presenceOf(elem), timeout);
 };

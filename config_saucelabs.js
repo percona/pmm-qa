@@ -33,7 +33,6 @@ exports.config = {
   //],
 
   suites: {
-    mainQanPage: 'specs/main_qan.spec.js',
     grafana: 'specs/grafana*.spec.js',
 //    managementPage: 'management_page/*spec.js',
   },
@@ -71,6 +70,20 @@ exports.config = {
     version: '32',
     platform: 'OS X 10.10',
     name: "firefox-osx",
+    shardTestFiles: true,
+    screenResolution: '1600x1200',
+    maxInstances: 5,
+    webdriverRemoteQuietExceptions: true,
+    recordScreenshots: false,
+    marionette: true
+ /* }, {
+    browserName: 'chrome',
+    version: '49',
+    platform: 'Windows 7',
+    name: "chrome-win7",
+    shardTestFiles: true,
+    screenResolution: '1600x1200',
+>>>>>>> new-gui-qan
     maxInstances: 2
   }, { 
     browserName: 'chrome',
@@ -78,8 +91,8 @@ exports.config = {
     platform: 'OS X 10.12',
     name: "chrome_57-osx",
     shardTestFiles: true,
-    screenResolution: '1920x1440',
     maxInstances: 2
+<<<<<<< HEAD
   /*}, {
     browserName: 'internet explorer',
     version: '11.103',
@@ -118,15 +131,16 @@ exports.config = {
  
   // Selector for the element housing the angular app - this defaults to
   // body, but is necessary if ng-app is on a descendant of 
-  rootElement: 'html',
-//useAllAngular2AppRoots: true 
+ // rootElement: 'html',
+  //useAllAngular2AppRoots: true, 
   // -----------------------------------------------------------------
   // Other configuration.
   // -----------------------------------------------------------------
  
   // The timeout for each script run on the browser. This should be longer
   // than the maximum time your application needs to stabilize between tasks.
-  allScriptsTimeout: 105000,
+  allScriptsTimeout: 220000,
+  //getPageTimeout: 200000,
   framework: "jasmine2",
  
   /**
@@ -192,8 +206,8 @@ exports.config = {
     // If true, include stack traces in failures.
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
-    defaultTimeoutInterval: 100000,
-    idleTimeout: 100
+    idleTimeout: 100,
+    defaultTimeoutInterval: 220000
   }
 
 };

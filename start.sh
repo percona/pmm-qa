@@ -7,5 +7,5 @@ if [ ! $# == 2 ]; then
   exit
 fi
 
-config_file=$1
-protractor  $config_file --baseUrl=$2
+#nvm use 7.9.0
+protractor  $1 --baseUrl=$2

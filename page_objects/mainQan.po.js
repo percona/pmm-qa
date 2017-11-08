@@ -2,26 +2,26 @@
   
 module.exports = {  
   mainPage: { 
-    noQueries: element(by.id('text_no_profile_data')),
-    noQueiesText: 'There is no data for the selected MySQL instance, time range or search query.', 
-    topTitle: element(by.id('text_count_queries')),  
-    calendarBtn: element(by.id('btn_cal')),  
-    managementBtn: element(by.xpath('//*[contains(@title,"Configure query analitics")]')),  
-    instancesBtn: element(by.id('dropdownMenu1')),  
+    noQueries: element(by.id('query_profile_heared')),
+    noQueriesText: 'No data for selected time-range', 
+    topTitle: element(by.id('query_profile_top')),  
+    titleContains: element(by.xpath('*//contains(text(),"Grand Total Time"')),
+    calendarBtn: element(by.id('supportedContentDropdown')),  
+    managementBtn: element(by.xpath('//*[contains(@title,"Configure query analytics")]')),  
+    instancesBtn: element(by.id('navbarDropdownMenuLink')),  
     instancesAll: element.all(by.repeater('db in instances')),
-    serverSumBtn: element(by.xpath('//button[contains(@title,"View database and server summary info")]')),
     totalLink: element(by.linkText('TOTAL')),
-    searchFld: element(by.name('search')),
-    searchBtn: element(by.xpath('//button[@type="submit"]')),
-    serverSummary: element(by.xpath('//*[contains(text(), "Server Summary")]')),
-    time3h: element(by.id('btn_3h')),  
-    queryList: element.all(by.repeater('row in qanData')),
+    searchFld: element(by.id('search_field')),
+    searchBtn: element(by.id('search_button')),
+    serverSummaryBtn: element(by.id('summary_link')),
+    time3h: element(by.linkText('Last 3 hours')),  
+    queryTable: element.all(by.css('table[id="query_profile_table"]')),
     querySelected:  element(by.css('[ng-click="qanSelectRow(row)"]')),
     fingerprintTitle:  element(by.xpath('//*[contains(text(), "Fingerprint")]')),
     exampleTitle:  element(by.xpath('//*[contains(text(), "Example")]')),
     nextQueries:  element(by.id('show_more')),
-    dbTableFld: element(by.model('dbTable')),
-    dbTableBtn: element(by.css('[ng-click="addDbTable()"]')),
+    dbTableFld: element(by.id('dbTblNamesInput')),
+    dbTableBtn: element(by.buttonText('ADD')),
     dbTableList: element(by.name('selectedDbTable')),
     reloadTop: element(by.css('[ng-click="$root.doRefresh($root.time_range)"]')),
     dbToExplain: element(by.name('db')),
@@ -32,10 +32,12 @@ module.exports = {
     instanceCur: element(by.xpath('//a[@class="list-group-item ng-scope active"]')),
     goToMain: element(by.css('[ng-click="$root.goToQueries();"]'))
   },  
-      
+
+  settingsTab: {
+    settingsHeader: element(by.id('settingsTab-header')),
+  }, 
   get: function(url) {  
-    browser.get(url + '/qan/'); 
-    browser.waitForAngular();  
+    browser.get(url + '/qan/',100000);
   },  
   /**
    * returnTopTitle returns a text above Top queries
@@ -70,7 +72,7 @@ module.exports = {
   },
  
   clickSummary: function() {  
-    this.mainPage.serverSumBtn.click();
+    this.mainPage.serverSummaryBtn.click();
   }, 
 
   clickManagement: function() {  
@@ -92,10 +94,12 @@ module.exports = {
    * clickQueryNumber clicks on specified query's number
    */
   clickQueryNr: function(num) {
-    this.mainPage.queryList.then(function(tables) {
+    /*this.mainPage.queryList.then(function(tables) {
       var titleElement = tables[num].element(by.css('[ng-click="qanSelectRow(row)"]'));
       titleElement.click(); 
-    });
+    });*/
+    var data = this.mainPage.queryTable;
+    data.get(num).click();
   },
 
   /**
@@ -216,5 +220,13 @@ module.exports = {
   goToMainPage: function() {
     this.mainPage.goToMain.click();
     browser.waitForAngular();
-  }
+  },
+
+  returnTitleContains: function() {
+    return this.mainPage.titleContains;
+  },
+
+  //clickQueryProfileBtn: function()  {
+  //  this.mainPage.queryProfileBtn.click();
+  //},
 };

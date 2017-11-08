@@ -1,12 +1,13 @@
 var graphMainDash = require('../page_objects/graphMainDash.po.js')
 var graphDiskSpace = require('../page_objects/graphDiskSpaceDash.po.js')
 
-describe('Selenium Test Case', function() {
+describe('Disk Space dashboards tests', function() {
   beforeEach(function () {
     graphMainDash.get(browser.baseUrl);
     browser.ignoreSynchronization = true;
     browser.sleep(15000);
-    browser.wait(function() {
+
+   browser.wait(function() {
       return browser.driver.getCurrentUrl().then(function(url) {
         return /cross-server-graphs/.test(url);
       });
@@ -20,8 +21,8 @@ describe('Selenium Test Case', function() {
   });
 
   it('should check Disk Space dashboard', function() {
-/*    graphMainDash.clickOpenSearch();
-    graphMainDash.searchDashboard("Disk Space");
+   graphMainDash.clickOpenSearch();
+/*    graphMainDash.searchDashboard("Disk Space");
  browser.ignoreSynchronization = false;    
 elem = element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]'));
     browser.wait(function() {
@@ -33,6 +34,23 @@ browser.sleep(75000);
     text = element(by.tagName('html')).getText();
     expect(text).toContain("" + "Mountpoint Usage");
     /*expect(graphDiskSpace.getHostnameTitle().isDisplayed()).toBeTruthy();
+=======
+  it('should check charts titles', function() {
+    /*graphMainDash.clickOpenSearch();
+    graphMainDash.searchDashboard("Disk Space");
+    
+    elem = element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]'));
+    browser.wait(function() {
+       return browser.isElementPresent(elem);
+    }, 130000);
+
+    expect(browser.isElementPresent(elem)).toBeTruthy();    
+   /* browser.ignoreSynchronization = false;  
+    browser.sleep(75000);   
+    text = element(by.tagName('html')).getText();
+    expect(text).toContain("" + "Mountpoint Usage");
+    expect(graphDiskSpace.getHostnameTitle().isDisplayed()).toBeTruthy();
+>>>>>>> new-gui-qan
     expect(graphDiskSpace.getMntPntUsgTitle().isDisplayed()).toBeTruthy();
     expect(graphDiskSpace.getMntPntTitle().isDisplayed()).toBeTruthy();
     expect(graphDiskSpace.getHostsTitle().isDisplayed()).toBeTruthy();
