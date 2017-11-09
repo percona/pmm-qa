@@ -5,12 +5,13 @@ describe('Grafana MariaDB test', function() {
   beforeEach(function () {
     graphMainDash.get(browser.baseUrl);
     browser.ignoreSynchronization = true;
-    browser.sleep(15000);
-       browser.wait(function() {
+    browser.wait(function() {
       return browser.driver.getCurrentUrl().then(function(url) {
         return /cross-server-graphs/.test(url);
       });
     });
+      browser.sleep(60000);
+      expect(browser.getTitle()).toEqual('Grafana - Cross Server Graphs');
   });
 
   afterEach(function () {

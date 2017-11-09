@@ -12,7 +12,8 @@ describe('Cross-Server dashboards tests', function() {
         return /cross-server-graphs/.test(url);
       });
     });
-    browser.sleep(60000)
+    browser.sleep(60000);
+    expect(browser.getTitle()).toEqual('Grafana - Cross Server Graphs');
   });
 
   afterEach(function () {
