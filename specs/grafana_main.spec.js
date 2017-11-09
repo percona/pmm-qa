@@ -4,7 +4,7 @@ var graphDiskSpace = require('../page_objects/graphDiskSpaceDash.po.js')
 
 describe('Cross-Server dashboards tests', function() {
   beforeEach(function () {
-    graphMainDash.get(browser.baseUrl);
+    graphMainDash.get(browser.baseUrl,100000);
     browser.ignoreSynchronization = true;
     browser.sleep(15000);
        browser.wait(function() {

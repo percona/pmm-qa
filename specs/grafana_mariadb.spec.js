@@ -3,7 +3,7 @@ var graphMariaDb = require('../page_objects/graphMariaDbDash.po.js')
 
 describe('Grafana MariaDB test', function() {
   beforeEach(function () {
-    graphMainDash.get(browser.baseUrl);
+    graphMainDash.get(browser.baseUrl,100000);
     browser.ignoreSynchronization = true;
     browser.wait(function() {
       return browser.driver.getCurrentUrl().then(function(url) {
@@ -21,8 +21,8 @@ describe('Grafana MariaDB test', function() {
 
   it('should check MariaDB', function() {
     graphMainDash.clickOpenSearch();
-    /*graphMainDash.searchDashboard("MariaDB");
-    expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
+    graphMainDash.searchDashboard("MariaDB");
+    /*expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
     elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]'));
     browser.wait(function() {
     return browser.isElementPresent(elem);

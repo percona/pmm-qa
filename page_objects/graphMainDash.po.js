@@ -12,11 +12,12 @@ module.exports = {
     netTrafChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Network Traffic"]')),
     sysInfoChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "System Info"]')),
     mysqlInfoChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "MySQL Info"]')),
-    searchFld: element(by.xpath("//div[@class='search-field-wrapper']/div/input")),
+    //searchFld: element(by.xpath("//div[@class='search-field-wrapper']/div/input")),
+    searchFld: element(by.css('[placeholder="Find dashboards by name"]')),
     logList: element.all(by.repeater('log in agentLog'))
   },
     get: function(url) {
-    browser.get(url + '/graph/');
+    browser.get(url + '/graph/',50000);
     browser.sleep(5000);
   },
 

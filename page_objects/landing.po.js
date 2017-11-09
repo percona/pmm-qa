@@ -7,7 +7,8 @@ module.exports = {
     orchLink: element(by.css('a[href*="/orchestrator/"]')),
     docsLink: element(by.linkText('Review the documentation')),
     downloadLink: element(by.linkText('Download User Manual')),
-    forumLink: element(by.linkText('questions and discussions')),  
+    forumLink: element(by.linkText('questions and discussions')),
+    updateLink: element(by.css('[onClick="checkUpdate()"]')),  
   },
 
   clickQan: function() {
@@ -38,6 +39,12 @@ module.exports = {
     var landingPage = this.landingPage;
     landingPage.downloadLink.isDisplayed();
     landingPage.downloadLink.click();
+  },
+  
+  clickUpdate: function() {
+    var landingPage = this.landingPage;
+    landingPage.updateLink.isDisplayed();
+    landingPage.updateLink.click();
   },
 /*
   getDownloadlTitle: finction() {

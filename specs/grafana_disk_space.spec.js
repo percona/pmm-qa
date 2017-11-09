@@ -22,8 +22,8 @@ describe('Disk Space dashboards tests', function() {
 
   it('should check Disk Space dashboard', function() {
    graphMainDash.clickOpenSearch();
-/*    graphMainDash.searchDashboard("Disk Space");
- browser.ignoreSynchronization = false;    
+    graphMainDash.searchDashboard("Disk Space");
+/* browser.ignoreSynchronization = false;    
 elem = element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Mountpoint Usage"]'));
     browser.wait(function() {
     return browser.isElementPresent(elem);

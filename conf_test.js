@@ -35,7 +35,7 @@ exports.config = {
   suites: {
     mainQanPage: 'specs/main_qan_spec.js',
     grafana: 'specs/grafana*.spec.js',
-//    managementPage: 'management_page/*spec.js',
+    update: 'specs/update*spec.js',
   },
 
  
@@ -108,7 +108,7 @@ exports.config = {
  
   // The timeout for each script run on the browser. This should be longer
   // than the maximum time your application needs to stabilize between tasks.
-  allScriptsTimeout: 100000,
+  allScriptsTimeout: 200000,
   framework: "jasmine2",
   /**
    * A callback function called once protractor is ready and available,
@@ -140,6 +140,17 @@ exports.config = {
     jasmine.getEnv().addReporter(reporter);
   },
 
+    onComplete: function () {
+        browser.getSession().then(function (session) {
+            return browser.getProcessedConfig().then(function (config) {
+                // config.capabilities is the CURRENT capability being run, if
+                // you are using multiCapabilities.
+                console.log('SauceOnDemandSessionID=' + session.getId() + ' job-name=' + config.capabilities.name);
+                return browser.get
+            });
+        });
+    },
+
   afterLaunch: function(exitCode) {
     return new Promise(function(resolve){
       reporter.afterLaunch(resolve.bind(this, exitCode));
@@ -159,7 +170,8 @@ exports.config = {
     // If true, include stack traces in failures.
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
-    defaultTimeoutInterval: 100000
+    //idleTimeout: 100,
+    defaultTimeoutInterval: 200000
   }
 
 };
