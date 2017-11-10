@@ -85,8 +85,9 @@ exports.config = {
     version: '',
     platform: 'OS X 10.12',
     name: "firefox-osx",
-    platform: 'ANY',
     maxInstances: 5,
+    commandTimeout: 600, 
+    maxDuration: 1200, 
     marionette: true
   },
 
