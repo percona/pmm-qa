@@ -108,7 +108,7 @@ exports.config = {
  
   // The timeout for each script run on the browser. This should be longer
   // than the maximum time your application needs to stabilize between tasks.
-  allScriptsTimeout: 200000,
+  allScriptsTimeout: 250000,
   framework: "jasmine2",
   /**
    * A callback function called once protractor is ready and available,
@@ -171,7 +171,7 @@ exports.config = {
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
     //idleTimeout: 100,
-    defaultTimeoutInterval: 200000
+    defaultTimeoutInterval: 250000
   }
 
 };
