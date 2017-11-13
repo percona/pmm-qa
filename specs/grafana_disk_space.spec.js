@@ -3,7 +3,7 @@ var graphDiskSpace = require('../page_objects/graphDiskSpaceDash.po.js')
 
 describe('Disk Space dashboards tests', function() {
   beforeEach(function () {
-    graphMainDash.get(browser.baseUrl);
+    browser.get(browser.baseUrl +'/graph',1000);
     browser.ignoreSynchronization = true;
     browser.sleep(15000);
 

@@ -17,7 +17,7 @@ module.exports = {
     logList: element.all(by.repeater('log in agentLog'))
   },
     get: function(url) {
-    browser.get(url + '/graph/',50000);
+    browser.get(url + '/graph/',60000);
     browser.sleep(5000);
   },
 

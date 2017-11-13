@@ -3,7 +3,7 @@ var graphPO = require('../page_objects/graphMongoMMVAP1Dash.po.js')
 
 describe('MongoMMVAP1 Dashboards tests', function() {
   beforeEach(function () {
-    graphMainDash.get(browser.baseUrl,100000);
+    browser.get(browser.baseUrl +'/graph');
     browser.ignoreSynchronization = true;
     browser.sleep(15000);
     browser.wait(function() {
@@ -22,8 +22,8 @@ describe('MongoMMVAP1 Dashboards tests', function() {
 
   it('should check charts titles of MongoDB MMAPv1 dashboards', function() {
     graphMainDash.clickOpenSearch();
-    graphMainDash.searchDashboard("MongoDB MMAPv1");
-    expect(browser.getCurrentUrl()).toContain('dashboard/db/mongodb-mmapv1');
+   // graphMainDash.searchDashboard("MongoDB MMAPv1");
+   // expect(browser.getCurrentUrl()).toContain('dashboard/db/mongodb-mmapv1');
    /* browser.sleep(25000);
     expect(graph.ariaPageCacheTitle().isDisplayed()).toBeTruthy();
   it('should check charts titles', function() {
