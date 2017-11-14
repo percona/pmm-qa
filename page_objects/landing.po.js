@@ -9,6 +9,10 @@ module.exports = {
     downloadLink: element(by.linkText('Download User Manual')),
     forumLink: element(by.linkText('questions and discussions')),
     updateLink: element(by.css('[onClick="checkUpdate()"]')),  
+    updateModal: element(by.id('updateDialog')),  
+    updateLoader: element(by.id'checkLoader')),  
+    updateLoadCheck: element(by.id('checkText')),  
+    updateLoadTxt: element(by.id('updateText')),  
   },
 
   clickQan: function() {
