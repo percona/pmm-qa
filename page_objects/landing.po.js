@@ -10,7 +10,7 @@ module.exports = {
     forumLink: element(by.linkText('questions and discussions')),
     updateLink: element(by.css('[onClick="checkUpdate()"]')),  
     updateModal: element(by.id('updateDialog')),  
-    updateLoader: element(by.id'checkLoader')),  
+    updateLoader: element(by.id('checkLoader')),  
     updateLoadCheck: element(by.id('checkText')),  
     updateLoadTxt: element(by.id('updateText')),  
   },
