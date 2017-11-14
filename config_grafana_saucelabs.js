@@ -137,7 +137,7 @@ exports.config = {
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,
         savePath: 'testresults',
-        filePrefix: 'xmloutput'
+        filePrefix: 'xmloutput-grafana'
     }));
 
     jasmine.getEnv().addReporter(reporter);

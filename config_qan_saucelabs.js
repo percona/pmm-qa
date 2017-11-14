@@ -138,7 +138,7 @@ exports.config = {
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,
         savePath: 'testresults',
-        filePrefix: 'xmloutput'
+        filePrefix: 'xmloutput-qan'
     }));
 
     jasmine.getEnv().addReporter(reporter);
