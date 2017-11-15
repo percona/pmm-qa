@@ -44,3 +44,23 @@ exports.waitForElementPresent = function (elem) {
     var timeout = 60000;
     browser.wait(ec.presenceOf(elem), timeout);
 };
+
+/**
+* Usage: waiting for element is invisible
+*
+*/
+exports.waitForElementInvisible = function (elem) {
+    var ec = protractor.ExpectedConditions
+    var timeout = 60000;
+    browser.wait(ec.invisibilityOf(elem), timeout);
+};
+
+/**
+* Usage: waiting for element is clickable
+*
+*/
+exports.waitForElementClickable = function (elem) {
+    var ec = protractor.ExpectedConditions
+    var timeout = 60000;
+    browser.wait(ec.elementToBeClickable(elem), timeout);
+};

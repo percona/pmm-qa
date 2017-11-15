@@ -13,6 +13,9 @@ module.exports = {
     updateLoader: element(by.id('checkLoader')),  
     updateLoadCheck: element(by.id('checkText')),  
     updateLoadTxt: element(by.id('updateText')),  
+    updateRunBtn: element(by.id('updateRunBtn')),  
+    updateCloseBtn: element(by.id('updateCloseBtn')),  
+    //updateRunBtn: element(by.id('updateRunBtn')),  
   },
 
   clickQan: function() {
