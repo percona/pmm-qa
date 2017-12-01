@@ -15,7 +15,7 @@ module.exports = {
     updateLoadTxt: element(by.id('updateText')),  
     updateRunBtn: element(by.id('updateRunBtn')),  
     updateCloseBtn: element(by.id('updateCloseBtn')),  
-    //updateRunBtn: element(by.id('updateRunBtn')),  
+    updateText: element(by.id('updateText')),  
   },
 
   clickQan: function() {

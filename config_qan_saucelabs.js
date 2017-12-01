@@ -33,7 +33,7 @@ exports.config = {
   //],
 
   suites: {
-    mainQanPage: 'specs/main_qan_spec.js',
+   // mainQanPage: 'specs/main_qan_spec.js',
     update: 'specs/update*spec.js',
   },
 
@@ -133,7 +133,7 @@ exports.config = {
     var width = 1600;
     var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
-    browser.driver.manage().window().setSize(width, height);
+    //browser.driver.manage().window().setSize(width, height);
     //browser.driver.manage().window().maximize();
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,
