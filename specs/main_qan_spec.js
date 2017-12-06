@@ -104,7 +104,7 @@ describe('Main QAN Page', function () {
     mainQANPage.clickManagement();
     expect(browser.getCurrentUrl()).toContain('settings');
   //  browser.waitForAngular();
-    utils.waitForElementPresent(settingsQANPage.SettingsPage.settingsTab);
+    utils.waitForElementPresent(settingsQANPage.SettingsPage.applyBtn);
     //expect(mainQANPage.returnTitleContains()).toBe('true');
   });
 

@@ -4,7 +4,8 @@ module.exports = {
   SettingsPage: { 
     managementBtn: element(by.xpath('//*[contains(@title,"Configure query analytics")]')),  
     settingsTab: element(by.id('settingsTab-header')),  
-    queryProfileBtn: element(by.id('settings_link'))
+    queryProfileBtn: element(by.id('settings_link')),
+    applyBtn: element(by.id('settings_apply_button'))
   },  
 
 
