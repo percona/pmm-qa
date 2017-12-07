@@ -32,13 +32,8 @@ exports.config = {
   //],
 
   suites: {
-<<<<<<< HEAD
     //mainQanPage: 'specs/main_qan.spec.js',
     grafana: 'specs/grafana_*spec.js',
-=======
-//    mainQanPage: 'specs/main_qan_spec.js',
-  grafana: 'specs/grafana*spec.js',
->>>>>>> new-gui-qan
 //    managementPage: 'management_page/*spec.js',
   },
 
@@ -100,7 +95,7 @@ exports.config = {
   // Selector for the element housing the angular app - this defaults to
   // body, but is necessary if ng-app is on a descendant of 
   rootElement: 'html',
-  useAllAngular2AppRoots: true ,
+//  useAllAngular2AppRoots: true ,
   // -----------------------------------------------------------------
   // Other configuration.
   // -----------------------------------------------------------------
@@ -138,16 +133,12 @@ exports.config = {
     }));
 
     jasmine.getEnv().addReporter(reporter);
-<<<<<<< HEAD
     browser.manage().timeouts().pageLoadTimeout(40000);
     browser.manage().timeouts().implicitlyWait(25000);
 
   // for non-angular page
-  browser.ignoreSynchronization = true;
-=======
     browser.manage().timeouts().pageLoadTimeout(300000);
     browser.manage().timeouts().implicitlyWait(300000)
->>>>>>> new-gui-qan
   },
 
   afterLaunch: function(exitCode) {
