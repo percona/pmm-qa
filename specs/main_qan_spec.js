@@ -7,13 +7,9 @@ var utils = require('../common/utils.js')
 describe('Main QAN Page', function () {
  
   beforeEach(function () {
-  //  browser.ignoreSynchronization = false;
     mainQANPage.get(browser.baseUrl);
-    //utils.waitForElementPresent(mainQANPage.mainPage.topTitle);
-   // element.all(by.css('.alert.msg')).then(function(items)  {
-   //   expect(items.length).toBe(0);
-   // });
-   // expect(element(by.css('.alert-danger')).isPresent()).toBe(false);
+    expect(browser.getCurrentUrl()).not.toContain('add-instance');
+    expect(element(by.css('.alert-warning')).isPresent()).toBe(false);
   });
   
   afterEach(function() {
