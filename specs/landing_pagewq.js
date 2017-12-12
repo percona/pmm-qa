@@ -5,7 +5,7 @@ describe('Landing Page', function () {
 
   beforeEach(function () {
     browser.ignoreSynchronization = true;
-    browser.get(global['url']);
+    browser.get(browser.baseUrl);
     expect(browser.getCurrentUrl()).toContain(browser.baseUrl)
   });
 
