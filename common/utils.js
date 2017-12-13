@@ -64,3 +64,41 @@ exports.waitForElementClickable = function (elem) {
     var timeout = 60000;
     browser.wait(ec.elementToBeClickable(elem), timeout);
 };
+
+/**
+* Usage: waiting for text is presented in element
+*
+*/
+exports.waitForTextPresent = function (elem, text) {
+    var ec = protractor.ExpectedConditions
+    var timeout = 60000;
+    browser.wait(ec.textToBePresentInElement(elem,text), timeout);
+};
+
+/**
+* Usage: waiting for element is visible
+*
+*/
+exports.waitForElementVisible = function (elem) {
+    var ec = protractor.ExpectedConditions
+    var timeout = 60000;
+    browser.wait(ec.visibilityOf(elem, timeout));
+};
+
+/**
+* Usage: checking if alert presented
+*
+*/
+exports.checkAlert = function () {
+    browser.getCurrentUrl().then(function(url) {
+       browser.navigate().refresh().catch(function() {
+         return browser.switchTo().alert().then(function (alert) {
+           console.log("Unexpected alert = " + alert.getText()); 
+           alert.accept();
+           return browser.get(url);
+         });
+       });
+    });
+};
+
+

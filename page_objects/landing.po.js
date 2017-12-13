@@ -2,7 +2,8 @@
 
 module.exports = {
   landingPage: {
-    qanLink:  element(by.css('a[href*="/qan"]')),
+    //qanLink:  element(by.css('a[href*="/qan"]')),
+    qanLink:  element(by.partialLinkText('Query')),
     grafanaLink: element(by.css('a[href*="/graph"]')),
     orchLink: element(by.css('a[href*="/orchestrator/"]')),
     docsLink: element(by.linkText('Review the documentation')),
@@ -15,7 +16,7 @@ module.exports = {
     updateLoadTxt: element(by.id('updateText')),  
     updateRunBtn: element(by.id('updateRunBtn')),  
     updateCloseBtn: element(by.id('updateCloseBtn')),  
-    //updateRunBtn: element(by.id('updateRunBtn')),  
+    updateText: element(by.id('updateText')),  
   },
 
   clickQan: function() {
