@@ -2,7 +2,8 @@
 
 module.exports = {
   landingPage: {
-    qanLink:  element(by.css('a[href*="/qan"]')),
+    //qanLink:  element(by.css('a[href*="/qan"]')),
+    qanLink:  element(by.partialLinkText('Query')),
     grafanaLink: element(by.css('a[href*="/graph"]')),
     orchLink: element(by.css('a[href*="/orchestrator/"]')),
     docsLink: element(by.linkText('Review the documentation')),
