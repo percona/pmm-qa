@@ -18,7 +18,6 @@ describe('Update from landing page', function() {
            console.log("Unexpected alert is opened " + text); 
 
            } else {
-                      //             // element is not visible
                                       }
         });
     });

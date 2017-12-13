@@ -33,7 +33,8 @@ exports.config = {
   //],
 
   suites: {
-    grafana: 'specs/grafana*.spec.js',
+    main: 'specs/landing*.js',
+    grafana: 'specs/grafana*.js',
   },
 
  
@@ -129,10 +130,7 @@ exports.config = {
   onPrepare: function() {
     // At this point, global 'protractor' object will be set up, and
     // jasmine will be available.
-    var width = 1600;
-    var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
-    browser.driver.manage().window().setSize(width, height);
     //browser.driver.manage().window().maximize();
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,

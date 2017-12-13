@@ -33,7 +33,7 @@ exports.config = {
   //],
 
   suites: {
-   // mainQanPage: 'specs/main_qan_spec.js',
+    mainQanPage: 'specs/main_qan_spec.js',
     update: 'specs/update*spec.js',
   },
 
