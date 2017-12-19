@@ -7,6 +7,7 @@ var utils = require('../common/utils.js')
 describe('Main QAN Page', function () {
  
   beforeEach(function () {
+    browser.ignoreSynchronization = false;
     mainQANPage.get(browser.baseUrl);
     expect(browser.getCurrentUrl()).not.toContain('add-instance');
     expect(element(by.css('.alert-warning')).isPresent()).toBe(false);
@@ -85,7 +86,7 @@ describe('Main QAN Page', function () {
     //expect(element(by.css('.alert-danger')).isPresent()).toBe(true);
   });
 
-  xit('should open Server Summary page', function () {
+  it('should open Server Summary page', function () {
     mainQANPage.clickSummary();
     element(by.xpath('//*[contains(text(), "Server Summary")]'));
   });
@@ -97,9 +98,18 @@ describe('Main QAN Page', function () {
   });
 
   it('should click on Settings button', function () {
-    mainQANPage.clickManagement().then(function(){
-      expect(browser.getCurrentUrl()).toContain('settings');
-    });
+    mainQANPage.clickManagement();
+    //element(by.xpath('//*[@id="settings_link"]/span')).click();
+    browser.sleep(5000);
+    browser.ignoreSynchronization = true;
+      browser.wait(function() {
+            return browser.driver.getCurrentUrl().then(function(url) {
+                    return /settings/.test(url);
+                        });
+              });
+
+//    expect(browser.getCurrentUrl()).toContain('settings');
+    
     //element(by.xpath('//*[contains(text(), "Settings")]'))
     //  browser.waitForAngular();
   //  utils.waitForElementPresent(settingsQANPage.SettingsPage.applyBtn);
