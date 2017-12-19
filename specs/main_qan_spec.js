@@ -97,8 +97,9 @@ describe('Main QAN Page', function () {
   });
 
   it('should click on Settings button', function () {
-    mainQANPage.clickManagement();
-    expect(browser.getCurrentUrl()).toContain('settings');
+    mainQANPage.clickManagement().then(function(){
+      expect(browser.getCurrentUrl()).toContain('settings');
+    });
     //element(by.xpath('//*[contains(text(), "Settings")]'))
     //  browser.waitForAngular();
   //  utils.waitForElementPresent(settingsQANPage.SettingsPage.applyBtn);
