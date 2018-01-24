@@ -23,30 +23,18 @@ describe('Grafana PMM QAn dashboard test', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("_PMM Query Analytics");
     expect(browser.getCurrentUrl()).toContain('_pmm-query-analytics');
-    /*elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]'));
-    browser.wait(function() {
-    return browser.isElementPresent(elem);
-    }, 130000);
+  });
 
-expect(browser.isElementPresent(elem)).toBeTruthy();
-   //browser.sleep(65000);
-  it('should check chart titles', function() {
+  it('should check PMM QAN Summary dashboard exists', function() {
     graphMainDash.clickOpenSearch();
-    graphMainDash.searchDashboard("MariaDB");
-    expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
-    //browser.ignoreSynchronization = false;
-    elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]'));
-    browser.wait(function() {
-    return browser.isElementPresent(elem);
-    }, 130000);
-    expect(browser.isElementPresent(elem)).toBeTruthy();
-    expect(graphMariaDb.ariaPageCacheTitle().isDisplayed()).toBeTruthy();
-    expect(graphMariaDb.ariaTransactTitle().isDisplayed()).toBeTruthy();
-    expect(graphMariaDb.ariaPageTitle().isDisplayed()).toBeTruthy();
-    expect(graphMariaDb.innodbOnlineTitle().isDisplayed()).toBeTruthy();
-    expect(graphMariaDb.innodbDefrTitle().isDisplayed()).toBeTruthy();
-    expect(graphMariaDb.innodbCondTitle().isDisplayed()).toBeTruthy();
-    expect(graphMariaDb.innodbDeadTitle().isDisplayed()).toBeTruthy();
-<<<<<<< HEAD
- */ });
+    graphMainDash.searchDashboard("_PMM System Summary");
+    expect(browser.getCurrentUrl()).toContain('_pmm-system-summary');
+  });
+
+  it('should check PMM Add Instance dashboard exists', function() {
+    graphMainDash.clickOpenSearch();
+    graphMainDash.searchDashboard("_PMM Add Instance");
+    expect(browser.getCurrentUrl()).toContain('_pmm-add-instance');
+  });
+
 });
