@@ -1,7 +1,7 @@
 var graphMainDash = require('../page_objects/graphMainDash.po.js')
 var graphMariaDb = require('../page_objects/graphMariaDbDash.po.js')
 
-describe('Grafana MariaDB test', function() {
+describe('Grafana PMM QAn dashboard test', function() {
   beforeEach(function () {
     browser.get(browser.baseUrl +'/graph',10000);
     browser.ignoreSynchronization = true;
@@ -19,11 +19,11 @@ describe('Grafana MariaDB test', function() {
   });
 
 
-  it('should check MariaDB', function() {
+  it('should check PMM QAN dashboard exists', function() {
     graphMainDash.clickOpenSearch();
-    //graphMainDash.searchDashboard("MariaDB");
-    /*expect(browser.getCurrentUrl()).toContain('dashboard/db/mariadb');
-    elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]'));
+    graphMainDash.searchDashboard("_PMM Query Analytics");
+    expect(browser.getCurrentUrl()).toContain('_pmm-query-analytics');
+    /*elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Aria Pagecache Reads/Writes"]'));
     browser.wait(function() {
     return browser.isElementPresent(elem);
     }, 130000);
