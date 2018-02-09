@@ -1,6 +1,4 @@
 var graphMainDash = require('../page_objects/graphMainDash.po.js')
-var graphMariaDb = require('../page_objects/graphMariaDbDash.po.js')
-var graphDiskSpace = require('../page_objects/graphDiskSpaceDash.po.js')
 var data = require('../test_data/grafana_data.json')
 var random = require('../common/utils.js')
 

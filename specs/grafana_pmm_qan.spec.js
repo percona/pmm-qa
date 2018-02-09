@@ -23,12 +23,14 @@ describe('Grafana PMM QAn dashboard test', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("_PMM Query Analytics");
     expect(browser.getCurrentUrl()).toContain('_pmm-query-analytics');
+    expect(element(by.css('.alert-warning')).isPresent()).toBe(true);
   });
 
   it('should check PMM QAN Summary dashboard exists', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("_PMM System Summary");
     expect(browser.getCurrentUrl()).toContain('_pmm-system-summary');
+    expect(element(by.css('.alert-warning')).isPresent()).toBe(true);
   });
 
   it('should check PMM Add Instance dashboard exists', function() {
