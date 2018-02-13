@@ -33,8 +33,9 @@ exports.config = {
   //],
 
   suites: {
-    main: 'specs/landing*.js',
+//    main: 'specs/landing*.js',
     grafana: 'specs/grafana*.js',
+//      grafana_pmm: 'specs/grafana_pmm_qan.spec.js',
   },
 
  
@@ -73,7 +74,7 @@ exports.config = {
     version: '',
     screenResolution: '1600x1200',
     platform: 'OS X 10.12',
-    idleTimeout: 90,
+    idleTimeout: 100,
     name: 'chrome-OSX',
     maxInstances: 5
 },

@@ -41,7 +41,7 @@ exports.getRandomNumber = function (numberLength) {
 */
 exports.waitForElementPresent = function (elem) {
     var ec = protractor.ExpectedConditions
-    var timeout = 100000;
+    var timeout = 110000;
     browser.wait(ec.presenceOf(elem), timeout);
 };
 
@@ -51,7 +51,7 @@ exports.waitForElementPresent = function (elem) {
 */
 exports.waitForElementInvisible = function (elem) {
     var ec = protractor.ExpectedConditions
-    var timeout = 60000;
+    var timeout = 100000;
     browser.wait(ec.invisibilityOf(elem), timeout);
 };
 
@@ -71,7 +71,7 @@ exports.waitForElementClickable = function (elem) {
 */
 exports.waitForTextPresent = function (elem, text) {
     var ec = protractor.ExpectedConditions
-    var timeout = 60000;
+    var timeout = 100000;
     browser.wait(ec.textToBePresentInElement(elem,text), timeout);
 };
 
@@ -81,7 +81,7 @@ exports.waitForTextPresent = function (elem, text) {
 */
 exports.waitForElementVisible = function (elem) {
     var ec = protractor.ExpectedConditions
-    var timeout = 60000;
+    var timeout = 100000;
     browser.wait(ec.visibilityOf(elem, timeout));
 };
 
