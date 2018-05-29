@@ -8,16 +8,16 @@ describe('Grafana PMM QAN test', function() {
     browser.ignoreSynchronization = true;
     browser.wait(function() {
       return browser.driver.getCurrentUrl().then(function(url) {
-        return /cross-server-graphs/.test(url);
+        return /home-dashboard/.test(url);
       });
     });
-      expect(browser.getTitle()).toEqual('Grafana - Cross Server Graphs');
+      expect(browser.getTitle()).toEqual('Grafana - Home Dashboard');
   });
 
   afterEach(function () {
   });
 
-  it('should check PMM QAN dashboard exists111', function() {
+  it('should check PMM QAN dashboard exists', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("_PMM Query Analytics")
   });

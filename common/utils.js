@@ -85,6 +85,17 @@ exports.waitForElementVisible = function (elem) {
     browser.wait(ec.visibilityOf(elem, timeout));
 };
 
+
+/**
+* Usage: waiting for element is not presented
+*
+*/
+exports.waitForElementNotPresented = function (elem) {
+    var ec = protractor.ExpectedConditions
+    var timeout = 200000;
+    browser.wait(ec.not(ec.visibilityOf(elem, timeout)));
+};
+
 /**
 * Usage: checking if alert presented
 *

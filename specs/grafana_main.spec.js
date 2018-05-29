@@ -23,7 +23,7 @@ describe('Cross-Server dashboards tests', function() {
 
 
   it('should check main (Cross Server Graphs) dashboard', function() {
-//    expect(browser.getCurrentUrl()).toContain('dashboard/db/cross-server-graphs');
+    expect(browser.getCurrentUrl()).toContain('dashboard/db/cross-server-graphs');
     /*expect(graphMainDash.graphPage.loadAvgChart.isDisplayed()).toBeTruthy();
   it('should check all charts exist', function() {
     elem =  element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Load Average"]'));

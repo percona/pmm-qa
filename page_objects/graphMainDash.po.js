@@ -2,11 +2,16 @@
 
 module.exports = {
   graphPage: {
-    //openSearch: element(by.linkText('Cross Server Graphs')),
-    //openSearch: element(by.css('[ng-click="openSearch()"]')),
+    currentVersion: element(by.xpath('//div[@id="pmm-update-widget"]/div[1]/div[2]')),
+    checkUpdateBtn: element(by.css('[ng-click="checkForUpdate()"]')),
+    updateBtn: element(by.css('[ng-click="update()"]')),
+    releaseNotes: element(by.id('pmm-update-widget')).element(by.linkText("What's new?")),
+    updateCloseBtn: element(by.id('pmm-update-widget')).element(by.buttonText('Close')),
+    updateModal: element(by.id('pmm-update-modal')), 
     openSearch: element(by.css('[ng-click="ctrl.showSearch()"]')),
     openSearchTxt: element(by.xpath('//*[@ng-click="ctrl.showSearch()"]/i')),
     listDashboards: element.all(by.repeater('row in ctrl.results')),
+    menuQAN: element(by.linkText("Query Analytics")),
     loadAvgChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Load Average"]')),
     memUsgChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "Memory Usage"]')),
     mysqlConnChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "MySQL Connections"]')),
@@ -17,7 +22,8 @@ module.exports = {
     mysqlInfoChart: element(by.xpath('//span[contains(@class, "panel-title-text drag-handle") and (text()) = "MySQL Info"]')),
     searchFld: element(by.css('[placeholder="Find dashboards by name"]')),
     manageBtn:  element(by.css('i.fa.fa-cog')),
-    saveAsMenu: element(by.partialLinkText("Save As")),
+    saveAsMenu: element(by.css('[ng-click="ctrl.openSaveAsModal()"]')),
+    //saveAsMenu: element(by.partialLinkText("Save As")),
     modalWindow: element(by.className('modal-body')), 
     saveBtn: $('.modal-body').element(by.buttonText("Save")), 
     saveName: $('.modal-body').element(by.xpath("//div[@class='p-t-2']/div/input")), 
@@ -33,12 +39,17 @@ module.exports = {
     clickOpenSearch: function() {
       this.graphPage.openSearch.click();
     },
+    
+    clickQANmenu: function() {
+      this.graphPage.menuQAN.click();
+    },
 
     searchDashboard: function(name) {
      return this.graphPage.searchFld.sendKeys(name).then(function(){
        browser.sleep(5000);
-       element(by.xpath("//span[@class='search-result-link']//span[.='" + name + "']")).click();
-       browser.sleep(20000);
+       //element(by.xpath('//dashboard-search-results//div[contains(@text(),"PMM Query Analytics Settings")')).click();
+       element(by.xpath('//div[(text() = "' + name +'")]')).click();
+       browser.sleep(10000);
      });
     },
 
