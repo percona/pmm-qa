@@ -28,10 +28,9 @@ describe('Grafana PMM QAN test', function() {
       expect(element(by.xpath('//*[@id="query_profile_top"]')).isPresent()).toBe(true);
       });
     });
-     // browser.switchTo().defaultContent();
     
   });
-/*
+  
   it('should check PMM QAN Summary dashboard exists', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("_PMM System Summary");
@@ -48,5 +47,4 @@ describe('Grafana PMM QAN test', function() {
     graphMainDash.searchDashboard("_PMM Add Instance");
     expect(browser.getCurrentUrl()).toContain('_pmm-add-instance');
   });
-*/
 });

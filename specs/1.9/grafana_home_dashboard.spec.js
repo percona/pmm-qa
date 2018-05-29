@@ -19,9 +19,9 @@ describe('Home dashboards tests', function() {
   afterEach(function () {
   });
 
-
   it('should check main (Home) dashboard', function() {
     expect(browser.getCurrentUrl()).toContain('/home-dashboard');
+
   });
 
   it('should copy Home dashboard (using Save As..) dashboard', function() {
@@ -29,10 +29,7 @@ describe('Home dashboards tests', function() {
     var new_dashboard = data['new_dashboard'] + random.getRandomString(4);
     var alertElement = element(by.css('.alert-success'));
     graphMainDash.saveDashboardAs(new_dashboard);
-    //browser.wait(protractor.ExpectedConditions.visibilityOf(alertElement), 10000).then(function(){ 
       expect(browser.getCurrentUrl()).toContain('/new-dashboard');
-    //  });
   });
-
 });
 
