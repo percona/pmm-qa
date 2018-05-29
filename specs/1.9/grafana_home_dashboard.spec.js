@@ -28,8 +28,11 @@ describe('Home dashboards tests', function() {
     var n;
     var new_dashboard = data['new_dashboard'] + random.getRandomString(4);
     var alertElement = element(by.css('.alert-success'));
-    graphMainDash.saveDashboardAs(new_dashboard);
-      expect(browser.getCurrentUrl()).toContain('/new-dashboard');
+    graphMainDash.saveDashboardAs(new_dashboard).then(function() {
+      utils.waitForElementPresent(alertElement).then(function() {
+        expect(browser.getCurrentUrl()).toContain('/new-dashboard');
+      }); 
+    });
   });
 });
 
