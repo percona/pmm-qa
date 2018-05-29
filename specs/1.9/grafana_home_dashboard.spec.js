@@ -1,6 +1,6 @@
 var graphMainDash = require('../../page_objects/graphMainDash.po.js')
 var data = require('../../test_data/grafana_data.json')
-var random = require('../../common/utils.js')
+var utils = require('../../common/utils.js')
 
 describe('Home dashboards tests', function() {
   beforeEach(function () {
@@ -26,13 +26,11 @@ describe('Home dashboards tests', function() {
 
   it('should copy Home dashboard (using Save As..) dashboard', function() {
     var n;
-    var new_dashboard = data['new_dashboard'] + random.getRandomString(4);
-    var alertElement = element(by.css('.alert-success'));
-    graphMainDash.saveDashboardAs(new_dashboard).then(function() {
-      utils.waitForElementPresent(alertElement).then(function() {
-        expect(browser.getCurrentUrl()).toContain('/new-dashboard');
-      }); 
-    });
+    var new_dashboard = data['new_dashboard'] + utils.getRandomString(4);
+    var alertS = element(by.css('div.alert-title'));
+    graphMainDash.saveDashboardAs(new_dashboard);
+    utils.waitForElementPresent(alertS); 
+     expect(browser.getCurrentUrl()).toContain('/new-dashboard');
   });
 });
 
