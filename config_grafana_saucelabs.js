@@ -34,7 +34,7 @@ exports.config = {
 
   suites: {
 //    main: 'specs/landing*.js',
-    grafana: 'specs/1.9/grafana_*.spec.js',
+    grafana: 'specs/1.9/grafana_home_dashboard.spec.js',
 //      grafana_pmm: 'specs/grafana_pmm_qan.spec.js',
   },
 
