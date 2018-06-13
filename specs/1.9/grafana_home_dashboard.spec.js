@@ -14,14 +14,16 @@ describe('Home dashboards tests', function() {
     });
     browser.sleep(40000);
     expect(browser.getTitle()).toEqual('Grafana - Home Dashboard');
+    // wait while any singlestat element is presented
+    utils.waitForElementPresent(element(by.xpath('//span[contains(text(),"Percona Monitoring and Management")]')));
   });
 
   afterEach(function () {
   });
 
-  it('should check main (Home) dashboard', function() {
+  it('should check dashboards elements', function() {
     expect(browser.getCurrentUrl()).toContain('/home-dashboard');
-
+  //  expect(element(by.css('.text-center dashboard-header')).getAttribute('src')).toBe('public/img/pmm-logo.svg');
   });
 
   it('should copy Home dashboard (using Save As..) dashboard', function() {

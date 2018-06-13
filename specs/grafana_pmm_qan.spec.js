@@ -25,10 +25,9 @@ describe('Grafana PMM QAN test', function() {
   it('should check PMM QAN dashboard exists', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("_PMM Query Analytics").then(function() {
-      //utils.waitForElementPresent(element(by.tagName('iframe')));
+      utils.waitForElementPresent(element(by.tagName('iframe')));
       expect(browser.getCurrentUrl()).toContain('_pmm-query-analytics');
       browser.switchTo().frame(browser.findElement(by.xpath('//ng-transclude/iframe'))).then(function() {
-      expect(element(by.css('.alert-warning')).isPresent()).toBe(false);
       //expect(element(by.xpath('//*[@id="query_profile_heared"]')).isPresent()).toBe(true);
       expect(element(by.xpath('//*[@id="query_profile_heared"]')).isPresent()).toBe(true);
       expect(element(by.xpath('//*[@id="query_profile_top"]')).isPresent()).toBe(true);

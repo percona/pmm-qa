@@ -11,21 +11,38 @@ describe('Grafana PMM QAN test', function() {
         return /home-dashboard/.test(url);
       });
     });
-      expect(browser.getTitle()).toEqual('Grafana - Home Dashboard');
+      expect(browser.getTitle()).toContain('Home Dashboard');
   });
 
   afterEach(function () {
   });
 
+  it('should check PMM QAN dashboard exists', function() {
+        graphMainDash.clickOpenSearch();
+        graphMainDash.searchDashboard("_PMM Query Analytics")
+      expect(browser.getCurrentUrl()).toContain('_pmm-query-analytics');
+  });
 
   it('should check PMM QAN dashboard exists', function() {
+      graphMainDash.clickOpenSearch();
+      graphMainDash.searchDashboard("_PMM Query Analytics").then(function() {
+        expect(browser.getCurrentUrl()).toContain('_pmm-query-analytics');
+        utils.waitForElementPresent(element(by.tagName('iframe')));
+        browser.switchTo().frame(browser.findElement(by.xpath('//ng-transclude/iframe'))).then(function() {
+          expect(element(by.css('.alert-warning')).isPresent()).toBe(false);
+          expect(element(by.xpath('//*[@id="query_profile_heared"]')).isPresent()).toBe(true);
+          expect(element(by.xpath('//*[@id="query_profile_top"]')).isPresent()).toBe(true);
+        });
+      });
+  });
+
+  it('should check PMM QAN Total', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("_PMM Query Analytics").then(function() {
       expect(browser.getCurrentUrl()).toContain('_pmm-query-analytics');
       browser.switchTo().frame(browser.findElement(by.xpath('//ng-transclude/iframe'))).then(function() {
-      expect(element(by.css('.alert-warning')).isPresent()).toBe(false);
-      expect(element(by.xpath('//*[@id="query_profile_heared"]')).isPresent()).toBe(true);
-      expect(element(by.xpath('//*[@id="query_profile_top"]')).isPresent()).toBe(true);
+        expect(element(by.xpath('//*[@id="query_profile_heared"]')).isPresent()).toBe(true);
+        element(by.linkText('TOTAL')).click();
       });
     });
     
@@ -35,10 +52,9 @@ describe('Grafana PMM QAN test', function() {
     graphMainDash.clickOpenSearch();
     graphMainDash.searchDashboard("_PMM System Summary");
     expect(browser.getCurrentUrl()).toContain('_pmm-system-summary');
-    expect(element(by.css('.alert-warning')).isPresent()).toBe(false);
     browser.switchTo().frame(browser.findElement(by.xpath('//ng-transclude/iframe'))).then(function() {
-      expect(element(by.xpath('//*[@id="system-summary-panel"]/div/text()')).isPresent()).toBe(false);
-      expect(element(by.xpath('//*[@id="mysql-summary-panel"]/div/text()')).isPresent()).toBe(false);
+      expect(element(by.xpath('//*[@id="system-summary-panel"]')).isPresent()).toBe(true);
+      expect(element(by.xpath('//*[@id="mysql-summary-panel"]')).isPresent()).toBe(true);
     });
   });
 

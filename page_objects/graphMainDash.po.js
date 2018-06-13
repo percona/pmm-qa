@@ -46,10 +46,10 @@ module.exports = {
 
     searchDashboard: function(name) {
      return this.graphPage.searchFld.sendKeys(name).then(function(){
-       browser.sleep(5000);
-       //element(by.xpath('//dashboard-search-results//div[contains(@text(),"PMM Query Analytics Settings")')).click();
-       element(by.xpath('//div[(text() = "' + name +'")]')).click();
        browser.sleep(10000);
+       //element(by.xpath('//div[contains(@class,"search-item__body-title") and contains(@text(), "' + name +'")]')).click();
+       element(by.xpath('//div[contains(text(), "' + name +'")]')).click();
+       browser.sleep(5000);
      });
     },
 

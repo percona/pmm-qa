@@ -41,7 +41,7 @@ exports.getRandomNumber = function (numberLength) {
 */
 exports.waitForElementPresent = function (elem) {
     var ec = protractor.ExpectedConditions
-    var timeout = 110000;
+    var timeout = 200000;
     browser.wait(ec.presenceOf(elem), timeout);
 };
 

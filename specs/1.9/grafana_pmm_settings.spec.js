@@ -22,7 +22,6 @@ describe('Grafana PMM Settings dashboard tests', function() {
       element(by.linkText("_PMM Query Analytics Settings")).click().then(function() {  
         expect(browser.getCurrentUrl()).toContain('_pmm-query-analytics-settings');
         browser.switchTo().frame(browser.findElement(by.xpath('//ng-transclude/iframe'))).then(function() {
-          expect(element(by.css('.alert-warning')).isPresent()).toBe(false);
           element(by.id("inputSource")).$('option:checked').getText().then(function(querySource) {
             if (querySource.trim() === "Slow log" ) {
               expect(element(by.xpath('//label[@for="RetainSlowLogs"]')).getText()).toContain("Slow logs to retain on disk");
