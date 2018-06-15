@@ -33,7 +33,7 @@ exports.config = {
   //],
 
   suites: {
-    mainQanPage: 'specs/1.9/grafana_pmm_*.spec.js',
+    mainQanPage: 'specs/main_qan_spec.js',
 //    update: 'specs/update*spec.js',
   },
 
