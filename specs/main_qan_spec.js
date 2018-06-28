@@ -14,15 +14,10 @@ describe('Main QAN Page', function () {
   });
   
   afterEach(function() {
-//    browser.manage().logs().get('browser').then(function(browserLog) {
-//    console.log('log: ' + require('util').inspect(browserLog));
-  //  });
   });
-
 
   it('should click on each instances in menu list', function() {
     browser.executeScript("sauce:context=Select instance");
-    
     mainQANPage.clickInstancesMenu();
     //mainQANPage.clickEachInstance();
     //console.log('Count = ' + mainQANPage.returnInstancesCount());
@@ -49,30 +44,28 @@ describe('Main QAN Page', function () {
     expect(mainQANPage.mainPage.topTitle.isDisplayed()).toBe(true);
   });
 
-  it('shouldnt search any query', function () {
+  it('shouldnt search specified query', function () {
     browser.executeScript("sauce:context=Cannot search SELECT query");
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectNotExist']);
     mainQANPage.doSearch();
     browser.sleep(25000);
     expect(mainQANPage.mainPage.topTitle.isDisplayed()).toBe(true);
-   // expect(mainQANPage.mainPage.noQueriesText.isDisplayed()).toBe(true);
   });
   
-  it('should click Select query', function () {
-    browser.executeScript("sauce:context=Choose query");
+  it('should check Visual Explain for specified query', function () {
+    browser.executeScript("sauce:context=Click on specified query and check Visual Explain");
     mainQANPage.clearSearch();
     mainQANPage.searchFor(data['selectExists']);
     mainQANPage.doSearch();
     browser.sleep(5000);
-    //expect(mainQANPage.returnTitleContains()).toBe(true);
-    //mainQANPage.clickQueryNr(0);
-    //mainQANPage.clickExample();
-    //mainQANPage.clickFingerprint();
+    mainQANPage.clickQueryNr(2);
+    mainQANPage.clickVisual();
+    expect(element(by.css('.alert alert-warning')).isPresent()).toBe(false);
   });
 
   xit('should add db.table', function () {
-    browser.executeScript("sauce:context=Select instance");
+    browser.executeScript("sauce:context=Check db.table");
     mainQANPage.clickQueryNr(1);
     mainQANPage.addTable(data['tableValid']);
     mainQANPage.clickAddedTable(data['tableValid']);
@@ -99,21 +92,13 @@ describe('Main QAN Page', function () {
 
   it('should click on Settings button', function () {
     mainQANPage.clickManagement();
-    //element(by.xpath('//*[@id="settings_link"]/span')).click();
     browser.sleep(5000);
     browser.ignoreSynchronization = true;
-      browser.wait(function() {
+    browser.wait(function() {
             return browser.driver.getCurrentUrl().then(function(url) {
                     return /settings/.test(url);
-                        });
-              });
-
-//    expect(browser.getCurrentUrl()).toContain('settings');
-    
-    //element(by.xpath('//*[contains(text(), "Settings")]'))
-    //  browser.waitForAngular();
-  //  utils.waitForElementPresent(settingsQANPage.SettingsPage.applyBtn);
-    //expect(mainQANPage.returnTitleContains()).toBe('true');
+            });
+    });
   });
 
   xit('should explain the query', function () {
@@ -136,13 +121,10 @@ describe('Main QAN Page', function () {
 
   xit('should click on calendar', function ()  {
     mainQANPage.clickCalendar();
-     var ec = protractor.ExpectedConditions
+    var ec = protractor.ExpectedConditions
     var timeout = 60000;
     var elem = element(by.xpath('//div[@title="Time range"]'));
     browser.wait(ec.presenceOf(elem), timeout);
-    //mainQANPage.clickTime3h();
-    //browser.sleep(25000);
-    //expect(mainQANPage.returnTitleContains()).toBe('true');
 
   });
 

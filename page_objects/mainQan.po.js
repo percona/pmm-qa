@@ -20,6 +20,7 @@ module.exports = {
     querySelected:  element(by.css('[ng-click="qanSelectRow(row)"]')),
     fingerprintTitle:  element(by.xpath('//*[contains(text(), "Fingerprint")]')),
     exampleTitle:  element(by.xpath('//*[contains(text(), "Example")]')),
+    visualTitle: element(by.xpath('//div[@id="visual-explain-header"]//*[contains(text(),"VISUAL")]')),
     nextQueries:  element(by.id('show_more')),
     dbTableFld: element(by.id('dbTblNamesInput')),
     dbTableBtn: element(by.buttonText('ADD')),
@@ -99,8 +100,9 @@ module.exports = {
       var titleElement = tables[num].element(by.css('[ng-click="qanSelectRow(row)"]'));
       titleElement.click(); 
     });*/
-    var data = this.mainPage.queryTable;
-    data.get(num).click();
+    //var data = this.mainPage.queryTable;
+    //data.get(num).click();
+   element(by.xpath('//*[contains(@id,"query_profile_table")]//tr[2]//a')).click();
   },
 
   /**
@@ -128,6 +130,10 @@ module.exports = {
 
   clickExample: function()  {
     this.mainPage.exampleTitle.click();
+  },
+
+  clickVisual: function()  {
+    this.mainPage.visualTitle.click();
   },
 
   addTable: function(table)  {
