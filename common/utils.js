@@ -81,7 +81,7 @@ exports.waitForTextPresent = function (elem, text) {
 */
 exports.waitForElementVisible = function (elem) {
     var ec = protractor.ExpectedConditions
-    var timeout = 100000;
+    var timeout = 200000;
     browser.wait(ec.visibilityOf(elem, timeout));
 };
 

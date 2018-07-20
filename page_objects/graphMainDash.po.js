@@ -2,6 +2,10 @@
 
 module.exports = {
   graphPage: {
+    alertS: element(by.css('div.alert-title')),
+    updateTitle: element(by.xpath('//*[@id="pmm-update-widget"]/header/h2')),
+    updateAvailable: element(by.xpath('//*[@id="pmm-update-widget"]/section/p')),
+    noUpdateAvail: element(by.xpath('//*[@id="pmm-update-widget"]/section/div/p[1]')),
     currentVersion: element(by.xpath('//div[@id="pmm-update-widget"]/div[1]/div[2]')),
     checkUpdateBtn: element(by.css('[ng-click="checkForUpdate()"]')),
     updateBtn: element(by.css('[ng-click="update()"]')),

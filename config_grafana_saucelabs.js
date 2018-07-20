@@ -33,8 +33,7 @@ exports.config = {
   //],
 
   suites: {
-    grafana: 'specs/1.9/grafana_*.spec.js',
-//      grafana_pmm: 'specs/grafana_pmm_qan.spec.js',
+      grafana: 'specs/1.9/grafana*.spec.js',
   },
 
  
@@ -57,32 +56,27 @@ exports.config = {
   //
   // It is also hard to pass through needed command line parameters.
  
-  /*
-  capabilities: {
-    browserName: 'phantomjs',
-    version: '',
-    platform: 'ANY'
-  },
-  */
  
   // -----------------------------------------------------------------
   // Browser and Capabilities: Chrome
   // -----------------------------------------------------------------
-  capabilities: {
+/*  capabilities: {
     browserName: 'chrome',
-    version: '',
+    version: '63',
     screenResolution: '1600x1200',
-    platform: 'OS X 10.12',
-    idleTimeout: 100,
+    platform: 'OS X 10.13',
+    idleTimeout: 250,
     name: 'chrome-OSX',
-    maxInstances: 5
-},
+    maxInstances: 5,
+    chromeOptions: {
+      args:["--headless", "--disable-gpu", "window-size=1920, 1080", "--disable-browser-side-navigation"]
+    }
+},*/
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
   // -----------------------------------------------------------------
  
- 
- /* capabilities: {
+  multiCapabilities:[{ 
     browserName: 'firefox',
     version: '',
     platform: 'OS X 10.12',
@@ -90,9 +84,24 @@ exports.config = {
     maxInstances: 5,
     screenResolution: '1600x1200',
    // commandTimeout: 200, 
-   // maxDuration: 2200, 
+    maxDuration: 2200, 
+    maxInstances: 5,
     marionette: true
-  },*/
+  }, {
+    browserName: 'chrome',
+    version: '',
+    screenResolution: '1600x1200',
+    platform: 'OS X 10.13',
+    //idleTimeout: 250,
+    maxDuration: 2200, 
+    name: 'chrome-OSX',
+    maxInstances: 5,
+    marionette: true
+   // chromeOptions: {
+   //   args:["--headless", "--disable-gpu", "window-size=1920, 1080", "--disable-browser-side-navigation"]
+   // }
+  }],
+
 
   // -----------------------------------------------------------------
   // Application configuration.
@@ -171,8 +180,7 @@ exports.config = {
     // If true, include stack traces in failures.
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
-   // idleTimeout: 200,
-    defaultTimeoutInterval: 220000
+    defaultTimeoutInterval: 250000
   }
 
 };
