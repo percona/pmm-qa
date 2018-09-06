@@ -1,0 +1,27 @@
+{
+  "output": "tests/output",
+  "helpers": {
+    "WebDriverIO": {
+      "url": "http://localhost:8080/",
+      "browser": "chrome"
+    },
+    "Protractor": {
+      "url": "http://localhost:8080/",
+      "driver": "local",
+      "browser": "chrome",
+      "rootElement": "body"
+    }
+  },
+  "include": {
+    "loginPage": "./tests/pages/loginPage.js",
+    "homePage": "./tests/pages/homePage.js"
+  },
+  "mocha": {},
+  "bootstrap": false,
+  "teardown": null,
+  "hooks": [],
+  "gherkin": {},
+  "tests": "tests/*_test.js",
+  "timeout": 10000,
+  "name": "pmm-qa"
+}
