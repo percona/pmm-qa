@@ -12,7 +12,7 @@ module.exports = {
     instancesBtn: element(by.id('navbarDropdownMenuLink')),  
     instancesAll: element.all(by.repeater('db in instances')),
     totalLink: element(by.linkText('TOTAL')),
-    searchFld: element(by.id('search_field')),
+    searchFld: element(by.name('searchValue')),
     searchBtn: element(by.id('search_button')),
     serverSummaryBtn: element(by.id('summary_link')),
     time3h: element(by.linkText('Last 3 hours')),  
