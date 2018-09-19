@@ -13,7 +13,7 @@ module.exports = {
     instancesAll: element.all(by.repeater('db in instances')),
     totalLink: element(by.linkText('TOTAL')),
     searchFld: element(by.name('searchValue')),
-    searchBtn: element(by.id('search_button')),
+    searchBtn: element(by.className('search-button')),
     serverSummaryBtn: element(by.id('summary_link')),
     time3h: element(by.linkText('Last 3 hours')),  
     queryTable: element.all(by.css('table[id="query_profile_table"]')),
