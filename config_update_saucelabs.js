@@ -68,7 +68,7 @@ exports.config = {
   // -----------------------------------------------------------------
   // Browser and Capabilities: Chrome
   // -----------------------------------------------------------------
-  capabilities: {
+/*  capabilities: {
     browserName: 'chrome',
     version: '',
     screenResolution: '1600x1200',
@@ -76,13 +76,13 @@ exports.config = {
     idleTimeout: 90,
     name: 'chrome-OSX',
     maxInstances: 5
-},
+},*/
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
   // -----------------------------------------------------------------
  
  
- /* capabilities: {
+   capabilities: {
     browserName: 'firefox',
     version: '',
     platform: 'OS X 10.12',
@@ -92,7 +92,7 @@ exports.config = {
    // commandTimeout: 200, 
    // maxDuration: 2200, 
     marionette: true
-  },*/
+  },
 
   // -----------------------------------------------------------------
   // Application configuration.
