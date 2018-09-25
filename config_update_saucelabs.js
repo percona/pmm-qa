@@ -34,7 +34,7 @@ exports.config = {
 
   suites: {
    // mainQanPage: 'specs/main_qan_spec.js',
-    update: 'specs/update*spec.js',
+    update: 'specs/1.9/update*spec.js',
   },
 
  
@@ -85,7 +85,7 @@ exports.config = {
    capabilities: {
     browserName: 'firefox',
     version: '',
-    platform: 'OS X 10.12',
+    platform: 'OS X 10.13',
     name: "firefox-osx",
     maxInstances: 5,
     screenResolution: '1600x1200',
@@ -133,8 +133,6 @@ exports.config = {
     var width = 1600;
     var height = 1200;
     var jasmineReporters = require('jasmine-reporters');
-    //browser.driver.manage().window().setSize(width, height);
-    //browser.driver.manage().window().maximize();
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,
         savePath: 'testresults',
