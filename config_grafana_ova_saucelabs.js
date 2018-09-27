@@ -33,7 +33,7 @@ exports.config = {
   //],
 
   suites: {
-      grafana: 'specs/1.9/grafana*.spec.js',
+      grafana: 'specs/1.9/update_from_home.spec.js',
   },
 
  
@@ -77,14 +77,13 @@ exports.config = {
   // -----------------------------------------------------------------
  
   multiCapabilities:[{ 
-    browserName: 'firefox',
+    browserName: 'chrome',
     version: '',
-    platform: 'OS X 10.12',
-    name: "firefox-osx",
-    maxInstances: 5,
     screenResolution: '1600x1200',
-   // commandTimeout: 200, 
+    platform: 'OS X 10.13',
+    //idleTimeout: 250,
     maxDuration: 2200, 
+    name: 'chrome-OSX',
     maxInstances: 5,
     marionette: true
   }],
