@@ -82,7 +82,7 @@ exports.config = {
     screenResolution: '1600x1200',
     platform: 'OS X 10.13',
     idleTimeout: 250,
-    maxDuration: 22000, 
+    maxDuration: 10800, 
     name: 'chrome-OSX',
     maxInstances: 5,
     marionette: true
