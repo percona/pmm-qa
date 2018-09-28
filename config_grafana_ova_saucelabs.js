@@ -81,8 +81,8 @@ exports.config = {
     version: '',
     screenResolution: '1600x1200',
     platform: 'OS X 10.13',
-    //idleTimeout: 250,
-    maxDuration: 2200, 
+    idleTimeout: 250,
+    maxDuration: 22000, 
     name: 'chrome-OSX',
     maxInstances: 5,
     marionette: true
@@ -125,7 +125,7 @@ exports.config = {
   onPrepare: function() {
     // At this point, global 'protractor' object will be set up, and
     // jasmine will be available.
-    var jasmineReporters = require('jasmine-reporters');
+    var jasmineReporters = require('./node_modules/jasmine-reporters');
     //browser.driver.manage().window().maximize();
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,
