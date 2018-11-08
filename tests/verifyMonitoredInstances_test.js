@@ -11,5 +11,5 @@ Scenario('open the home Dashboard and verify the count of Monitored System Insta
     I.waitForVisible(homePage.fields.systemsUnderMonitoringCount, 5);
     let count = await homePage.getCount(homePage.fields.systemsUnderMonitoringCount);
     var assert = require('assert');
-    assert.equal(String(count), '2');
+    assert.equal(String(count), '1');
 });
