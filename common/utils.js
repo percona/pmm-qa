@@ -51,7 +51,7 @@ exports.waitForElementPresent = function (elem) {
 */
 exports.waitForElementInvisible = function (elem) {
     var ec = protractor.ExpectedConditions
-    var timeout = 100000;
+    var timeout = 300000;
     browser.wait(ec.invisibilityOf(elem), timeout);
 };
 
@@ -92,7 +92,7 @@ exports.waitForElementVisible = function (elem) {
 */
 exports.waitForElementNotPresented = function (elem) {
     var ec = protractor.ExpectedConditions
-    var timeout = 200000;
+    var timeout = 400000;
     browser.wait(ec.not(ec.visibilityOf(elem, timeout)));
 };
 

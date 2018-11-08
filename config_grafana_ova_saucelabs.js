@@ -2,13 +2,13 @@ var HtmlScreenshotReporter = require('protractor-jasmine2-screenshot-reporter');
 
 var reporter = new HtmlScreenshotReporter({
   dest: 'screenshots',
-  filename: 'pmm-update-report.html',
+  filename: 'pmm-test-grafana-report.html',
   captureOnlyFailedSpecs: true
 });
  
 exports.config = {
   sauceUser: process.env.SAUCE_USERNAME,
-  sauceKey: process.env.SAUCE_ACCESS_KEY, 
+  sauceKey: process.env.SAUCE_ACCESS_KEY,
   // -----------------------------------------------------------------
   // Selenium Setup: An existing Selenium standalone server.
   // -----------------------------------------------------------------
@@ -33,8 +33,7 @@ exports.config = {
   //],
 
   suites: {
-   // mainQanPage: 'specs/main_qan_spec.js',
-    update: 'specs/1.9/update*spec.js',
+      grafana: 'specs/1.9/update_from_home.spec.js',
   },
 
  
@@ -57,42 +56,38 @@ exports.config = {
   //
   // It is also hard to pass through needed command line parameters.
  
-  /*
-  capabilities: {
-    browserName: 'phantomjs',
-    version: '',
-    platform: 'ANY'
-  },
-  */
  
   // -----------------------------------------------------------------
   // Browser and Capabilities: Chrome
   // -----------------------------------------------------------------
 /*  capabilities: {
     browserName: 'chrome',
-    version: '',
+    version: '63',
     screenResolution: '1600x1200',
-    platform: 'OS X 10.12',
-    idleTimeout: 90,
+    platform: 'OS X 10.13',
+    idleTimeout: 250,
     name: 'chrome-OSX',
-    maxInstances: 5
+    maxInstances: 5,
+    chromeOptions: {
+      args:["--headless", "--disable-gpu", "window-size=1920, 1080", "--disable-browser-side-navigation"]
+    }
 },*/
   // -----------------------------------------------------------------
   // Browser and Capabilities: Firefox
   // -----------------------------------------------------------------
  
- 
-   capabilities: {
-    browserName: 'firefox',
+  multiCapabilities:[{ 
+    browserName: 'chrome',
     version: '',
-    platform: 'OS X 10.13',
-    name: "firefox-osx",
-    maxInstances: 5,
     screenResolution: '1600x1200',
-   // commandTimeout: 200, 
-   // maxDuration: 2200, 
+    platform: 'OS X 10.13',
+    idleTimeout: 250,
+    maxDuration: 10800, 
+    name: 'chrome-OSX',
+    maxInstances: 5,
     marionette: true
-  },
+  }],
+
 
   // -----------------------------------------------------------------
   // Application configuration.
@@ -130,13 +125,12 @@ exports.config = {
   onPrepare: function() {
     // At this point, global 'protractor' object will be set up, and
     // jasmine will be available.
-    var width = 1600;
-    var height = 1200;
-    var jasmineReporters = require('jasmine-reporters');
+    var jasmineReporters = require('./node_modules/jasmine-reporters');
+    //browser.driver.manage().window().maximize();
     jasmine.getEnv().addReporter(new jasmineReporters.JUnitXmlReporter({
         consolidateAll: true,
         savePath: 'testresults',
-        filePrefix: 'xmloutput-update'
+        filePrefix: 'xmloutput-grafana'
     }));
 
     jasmine.getEnv().addReporter(reporter);
@@ -172,8 +166,7 @@ exports.config = {
     // If true, include stack traces in failures.
     includeStackTrace: true,
     // Default time to wait in ms before a test fails.
-   // idleTimeout: 200,
-    defaultTimeoutInterval: 220000
+    defaultTimeoutInterval: 250000
   }
 
 };

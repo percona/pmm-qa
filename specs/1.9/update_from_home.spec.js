@@ -7,22 +7,21 @@ describe('Update from Home dashboard page', function() {
     beforeEach(function () {
        browser.waitForAngularEnabled(false); 
        browser.get(browser.baseUrl,50000);
-       browser.ignoreSynchronization = true;
        browser.sleep(15000);
        expect(browser.getTitle()).toEqual('Grafana - Home Dashboard');
     });
 
-   it('should check current version', function() {
-      var version = landing.graphPage.currentVersion.getText();
+   xit('should check current version', function() {
+      var version = landing.updateWidget.currentVersion.getText();
       version.then(function (realTextValue) {
             console.log(realTextValue);
       });
     });
 
     it('should check if update is available', function() {
-      landing.graphPage.checkUpdateBtn.click().then(function () {
-        utils.waitForElementClickable(landing.graphPage.updateBtn);
-        expect(landing.graphPage.releaseNotes.isPresent()).toBe(true);
+      landing.updateWidget.checkUpdateBtn.click().then(function () {
+        utils.waitForElementClickable(landing.updateWidget.updateBtn);
+        expect(landing.updateWidget.releaseNotes.isPresent()).toBe(true);
 
       });
     });
@@ -30,15 +29,15 @@ describe('Update from Home dashboard page', function() {
 
     it('should run update', function() {
       var EC = protractor.ExpectedConditions;
-      landing.graphPage.checkUpdateBtn.click().then(function () {
-        landing.graphPage.updateBtn.click().then(function () {
-        utils.waitForElementPresent(landing.graphPage.updateModal);
-          
-        utils.waitForElementNotPresented(element(by.xpath('//div[contains(text(), "Update in progress")]')));
-        expect(element(by.id('pmm-update-modal')).getText()).not.toContain('Update failed');
-        landing.graphPage.updateCloseBtn.click();
-           });
-    
+      landing.updateWidget.checkUpdateBtn.click().then(function() {
+        landing.updateWidget.updateBtn.click().then(function() {
+        utils.waitForElementPresent(landing.updateWidget.updateModal);
+          utils.waitForElementInvisible(landing.updateWidget.updateSpinner);
+            expect(landing.updateWidget.updateStatus).not.toContain('Update failed');
+            landing.updateWidget.updateCloseBtn.click().then(function() {
+              expect(landing.updateWidget.updateWnd.isPresent()).toBeFalsy();
+            });
+        });
       });
     });
 

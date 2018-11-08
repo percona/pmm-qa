@@ -3,15 +3,6 @@
 module.exports = {
   graphPage: {
     alertS: element(by.css('div.alert-title')),
-    updateTitle: element(by.xpath('//*[@id="pmm-update-widget"]/header/h2')),
-    updateAvailable: element(by.xpath('//*[@id="pmm-update-widget"]/section/p')),
-    noUpdateAvail: element(by.xpath('//*[@id="pmm-update-widget"]/section/div/p[1]')),
-    currentVersion: element(by.xpath('//div[@id="pmm-update-widget"]/div[1]/div[2]')),
-    checkUpdateBtn: element(by.css('[ng-click="checkForUpdate()"]')),
-    updateBtn: element(by.css('[ng-click="update()"]')),
-    releaseNotes: element(by.id('pmm-update-widget')).element(by.linkText("What's new?")),
-    updateCloseBtn: element(by.id('pmm-update-widget')).element(by.buttonText('Close')),
-    updateModal: element(by.id('pmm-update-modal')), 
     openSearch: element(by.css('[ng-click="ctrl.showSearch()"]')),
     openSearchTxt: element(by.xpath('//*[@ng-click="ctrl.showSearch()"]/i')),
     listDashboards: element.all(by.repeater('row in ctrl.results')),
@@ -35,6 +26,23 @@ module.exports = {
     deleteBtn: $('.modal-body').element(by.linkText("Delete")),
 
   },
+  
+  updateWidget: {
+    updateTitle: element(by.xpath('//*[@id="pmm-update-widget"]/header/h2')),
+    updateAvailable: element(by.xpath('//*[@id="pmm-update-widget"]/section/p')),
+    noUpdateAvail: element(by.xpath('//*[@id="pmm-update-widget"]/section/div/p[1]')),
+    currentVersion: element(by.xpath('//div[@id="pmm-update-widget"]/div[1]/div[2]')),
+    checkUpdateBtn: element(by.css('[ng-click="checkForUpdate()"]')),
+    updateWnd: element(by.id('pmm-update-modal')),
+    updateSpinner: element(by.id('pmm-update-modal')).element(by.css('.fa-spinner')),
+    updateBtn: element(by.css('[ng-click="update()"]')),
+    releaseNotes: element(by.id('pmm-update-widget')).element(by.linkText("What's new?")),
+    updateStatus: element(by.xpath('//div[@id="pmm-update-modal"]/div/div/h4')),
+    updateCloseBtn: element(by.id('pmm-update-modal')).element(by.css('[ng-click="reloadAfterUpdate()"]')),
+    updateModal: element(by.id('pmm-update-modal')), 
+
+  },
+
     get: function(url) {
     browser.driver.get(url + '/graph/',60000);
     browser.sleep(5000);
