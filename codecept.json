@@ -4,17 +4,12 @@
     "WebDriverIO": {
       "url": "http://localhost:8080/",
       "browser": "chrome"
-    },
-    "Protractor": {
-      "url": "http://localhost:8080/",
-      "driver": "local",
-      "browser": "chrome",
-      "rootElement": "body"
     }
   },
   "include": {
     "loginPage": "./tests/pages/loginPage.js",
-    "homePage": "./tests/pages/homePage.js"
+    "homePage": "./tests/pages/homePage.js",
+    "remoteInstancesPage" : "./tests/pages/remoteInstancesPage.js"
   },
   "mocha": {},
   "bootstrap": false,
