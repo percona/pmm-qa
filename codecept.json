@@ -3,7 +3,15 @@
   "helpers": {
     "WebDriverIO": {
       "url": "http://localhost:8080/",
-      "browser": "chrome"
+      "browser": "chrome",
+      "user": "pmm_qa",
+      "key": "{SAUCE_USER_KEY}",
+      "host": "ondemand.saucelabs.com"
+    },
+    "SauceHelper": {
+      "require": "./tests/helpers/sauceHelper.js",
+      "user": "pmm_qa",
+      "key": "{SAUCE_USER_KEY}"
     }
   },
   "include": {
@@ -14,7 +22,10 @@
   "mocha": {},
   "bootstrap": false,
   "teardown": null,
-  "hooks": [],
+  "hooks": [
+    "./tests/helpers/hooks/sauceHookFailed.js",
+    "./tests/helpers/hooks/sauceHookPassed.js"
+  ],
   "gherkin": {},
   "tests": "tests/*_test.js",
   "timeout": 10000,
