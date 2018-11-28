@@ -19,7 +19,23 @@
     "homePage": "./tests/pages/homePage.js",
     "remoteInstancesPage" : "./tests/pages/remoteInstancesPage.js"
   },
-  "mocha": {},
+  "mocha": {
+    "reporterOptions": {
+      "codeceptjs-cli-reporter": {
+        "stdout": "-",
+        "options": {
+          "verbose": false,
+          "steps": true
+        }
+      },
+      "mocha-junit-reporter": {
+        "stdout": "./tests/output/console.log",
+        "options": {
+          "mochaFile": "./tests/output/result.xml"
+        }
+      }
+    }
+  },
   "bootstrap": false,
   "teardown": null,
   "hooks": [
