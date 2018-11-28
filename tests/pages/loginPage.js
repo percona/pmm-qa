@@ -16,6 +16,6 @@ module.exports = {
         I.fillField(this.fields.username, username);
         I.fillField(this.fields.password, password);
         I.click(this.loginButton);
-        I.waitForText("Percona Monitoring and Management", 5);
+        I.wait(10);
     }
 }

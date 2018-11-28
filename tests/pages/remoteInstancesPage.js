@@ -6,6 +6,6 @@ module.exports = {
     // setting locators
     url: "graph/d/pmm-list/_pmm-rds-and-remote-instances?orgId=1",
     fields: {
-        pageHeaderText: "_PMM RDS and Remote Instances"
+        pageHeaderText: "_PMM Amazon RDS and Remote Instances"
     }
 }
