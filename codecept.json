@@ -33,6 +33,13 @@
         "options": {
           "mochaFile": "./tests/output/result.xml"
         }
+      },
+      "mochawesome": {
+        "stdout": "./tests/output/mocharesult.log",
+        "options": {
+          "reportDir": "tests/output",
+          "reportFilename": "result.html"
+        }
       }
     }
   },
