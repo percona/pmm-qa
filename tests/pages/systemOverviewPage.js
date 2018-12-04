@@ -7,7 +7,7 @@ module.exports = {
     url: "graph/d/qyzrQGHmk/system-overview",
     fields: {
         pageHeaderText: "System Overview",
-        notAvailableMetrics: "//span[contains(text(), 'NA')]"
+        notAvailableMetrics: "//span[contains(text(), 'N/A')]"
     },
     metrics: ["System Uptime", "Virtual CPUs", "Load Average", "RAM", "Memory Available", "CPU Usage", "CPU Saturation and Max Core Usage"],
 
