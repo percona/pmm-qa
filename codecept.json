@@ -22,6 +22,12 @@
     "systemOverviewPage" : "./tests/pages/systemOverviewPage.js",
     "compareSystemParametersPage" : "./tests/pages/compareSystemParametersPage.js"
   },
+  "multiple": {
+    "parallel": {
+      "chunks": 3,
+      "browsers": ["chrome"]
+    }
+  },
   "mocha": {
     "reporterOptions": {
       "codeceptjs-cli-reporter": {
