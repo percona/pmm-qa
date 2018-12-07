@@ -1,0 +1,13 @@
+
+Feature('to verify PostgreSQL Overview Dashboards');
+
+Before((I, loginPage) => {
+    I.amOnPage('/');
+    I.amOnPage(loginPage.url);
+    loginPage.login("admin", "admin");
+});
+
+Scenario('Open the PostgreSQL Overview Dashboard', async (I, adminPage, postgresqlOverviewPage) => {
+    adminPage.navigateToDashboard("PostgreSQL", "PostgreSQL Overview");
+    postgresqlOverviewPage.verifyMetricsExistence();
+});
