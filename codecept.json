@@ -22,7 +22,8 @@
     "systemOverviewPage" : "./tests/pages/systemOverviewPage.js",
     "compareSystemParametersPage" : "./tests/pages/compareSystemParametersPage.js",
     "mysqlOverviewPage": "./tests/pages/mysqlOverviewPage.js",
-    "postgresqlOverviewPage": "./tests/pages/postgresqlOverviewPage.js"
+    "postgresqlOverviewPage": "./tests/pages/postgresqlOverviewPage.js",
+    "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js"
   },
   "multiple": {
     "parallel": {
