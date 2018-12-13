@@ -6,7 +6,10 @@ module.exports = {
     // setting locators
     url: "graph/d/Fxvd1timk/home-dashboard?orgId=1",
     fields: {
-        navigation: "//div[@class='navbar']//a"
+        navigation: "//div[@class='navbar']//a",
+        updateWidget: "//div[@id='pmm-update-widget']",
+        checkUpdateButton: "//button[@class='check-update-button']",
+        updateButton: "//button[@ng-if='shouldBeUpdated']"
     },
 
     // introducing methods
@@ -28,5 +31,16 @@ module.exports = {
     prepareDashboardLocator (dashboardName) {
         locator = "(//a[@ng-repeat]//div[contains(text(),'" + dashboardName + "') and @class='search-item__body-title'])[1]";
         return locator;
+    },
+
+    checkForUpdate (update) {
+        I.click(this.fields.checkUpdateButton);
+        I.wait(5);
+        I.waitForVisible(this.fields.updateButton);
+        if (update)
+        {
+            I.click(this.fields.updateButton);
+            I.wait(600);
+        }
     }
 }
