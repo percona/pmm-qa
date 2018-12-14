@@ -6,7 +6,10 @@ module.exports = {
     // setting locators
     url: "graph/d/Fxvd1timk/home-dashboard?orgId=1",
     fields: {
-        navigation: "//div[@class='navbar']//a"
+        navigation: "//div[@class='navbar']//a",
+        timePickerMenu: "//button[@ng-click='ctrl.openDropdown()']",
+        fromTime: "(//input[@input-datetime])[1]",
+        applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]"
     },
 
     // introducing methods
@@ -28,5 +31,13 @@ module.exports = {
     prepareDashboardLocator (dashboardName) {
         locator = "(//a[@ng-repeat]//div[contains(text(),'" + dashboardName + "') and @class='search-item__body-title'])[1]";
         return locator;
+    },
+
+    applyTimer (timeDiff) {
+        I.click(this.fields.timePickerMenu);
+        I.waitForElement(this.fields.fromTime, 30);
+        I.fillField(this.fields.fromTime, "now-" + timeDiff);
+        I.click(this.fields.applyCustomTimer);
+        I.wait(5);
     }
 }

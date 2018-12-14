@@ -7,7 +7,8 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('open the Remote and RDS Instances Listing Page', async (I, remoteInstancesPage) => {
+Scenario('open the Remote and RDS Instances Listing Page', async (I, adminPage, remoteInstancesPage) => {
     I.amOnPage(remoteInstancesPage.url);
+    adminPage.applyTimer("1m");
     I.see(remoteInstancesPage.fields.pageHeaderText)
 });

@@ -6,7 +6,8 @@
       "browser": "chrome",
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}",
-      "host": "ondemand.saucelabs.com"
+      "host": "ondemand.saucelabs.com",
+      "windowSize": "maximize"
     },
     "SauceHelper": {
       "require": "./tests/helpers/sauceHelper.js",

@@ -9,5 +9,6 @@ Before((I, loginPage) => {
 
 Scenario('Open the Compare System Parameters Dashboard', async (I, adminPage, compareSystemParametersPage) => {
     adminPage.navigateToDashboard("OS", "Compare System Parameters");
+    adminPage.applyTimer("1m");
     compareSystemParametersPage.verifyMetricsExistence();
 });
