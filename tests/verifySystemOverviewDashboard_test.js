@@ -9,5 +9,6 @@ Before((I, loginPage) => {
 
 Scenario('Open the System Overview Dashboard', async (I, adminPage, systemOverviewPage) => {
     adminPage.navigateToDashboard("OS", "System Overview");
+    adminPage.applyTimer("1m");
     systemOverviewPage.verifyMetricsExistence();
 });
