@@ -13,6 +13,12 @@
       "require": "./tests/helpers/sauceHelper.js",
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}"
+    },
+    "ResembleHelper" : {
+      "require": "./tests/helpers/resembleHelper.js",
+      "screenshotFolder" : "./tests/output/",
+      "baseFolder": "./tests/screenshots/base/",
+      "diffFolder": "./tests/screenshots/diff/"
     }
   },
   "include": {
