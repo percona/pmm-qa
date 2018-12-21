@@ -10,7 +10,7 @@
       "windowSize": "maximize"
     },
     "SauceHelper": {
-      "require": "./tests/helpers/sauceHelper.js",
+      "require": "codeceptjs-saucehelper",
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}"
     }
