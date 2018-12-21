@@ -60,10 +60,7 @@
   },
   "bootstrap": false,
   "teardown": null,
-  "hooks": [
-    "./tests/helpers/hooks/sauceHookFailed.js",
-    "./tests/helpers/hooks/sauceHookPassed.js"
-  ],
+  "hooks": [],
   "gherkin": {},
   "tests": "tests/*_test.js",
   "timeout": 10000,
