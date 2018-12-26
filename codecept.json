@@ -10,7 +10,7 @@
       "windowSize": "maximize"
     },
     "SauceHelper": {
-      "require": "./tests/helpers/sauceHelper.js",
+      "require": "codeceptjs-saucehelper",
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}"
     },
@@ -30,7 +30,9 @@
     "compareSystemParametersPage" : "./tests/pages/compareSystemParametersPage.js",
     "mysqlOverviewPage": "./tests/pages/mysqlOverviewPage.js",
     "postgresqlOverviewPage": "./tests/pages/postgresqlOverviewPage.js",
-    "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js"
+    "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js",
+    "summaryDashboardPage": "./tests/pages/summaryDashboardPage.js",
+    "summaryDashboardPage": "./tests/pages/trendsDashboardPage.js"
   },
   "multiple": {
     "parallel": {
@@ -64,10 +66,7 @@
   },
   "bootstrap": false,
   "teardown": null,
-  "hooks": [
-    "./tests/helpers/hooks/sauceHookFailed.js",
-    "./tests/helpers/hooks/sauceHookPassed.js"
-  ],
+  "hooks": [],
   "gherkin": {},
   "tests": "tests/*_test.js",
   "timeout": 10000,
