@@ -1,0 +1,10 @@
+{
+  "name": "pmm-qa",
+  "version": "1.0.0",
+  "dependencies": {
+    "codeceptjs": "^1.4.6",
+    "codeceptjs-resemblehelper": "^1.0.0",
+    "codeceptjs-saucehelper": "^1.0.2",
+    "webdriverio": "^4.14.1"
+  }
+}

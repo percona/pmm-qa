@@ -15,7 +15,7 @@
       "key": "{SAUCE_USER_KEY}"
     },
     "ResembleHelper" : {
-      "require": "./tests/helpers/resembleHelper.js",
+      "require": "codeceptjs-resemblehelper",
       "screenshotFolder" : "./tests/output/",
       "baseFolder": "./tests/screenshots/base/",
       "diffFolder": "./tests/screenshots/diff/"
