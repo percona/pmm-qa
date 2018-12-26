@@ -3,6 +3,7 @@
 // use any assertion library you like
 const resemble = require("resemblejs");
 const fs = require('fs');
+let assert = require('assert');
 
 /**
  * Resemble.js helper class for CodeceptJS, this allows screen comparison
@@ -21,7 +22,7 @@ class ResembleHelper extends codecept_helper {
      * @param options
      * @returns {Promise<any | never>}
      */
-    async compareImages (image1, image2, diffImage, options) {
+    async _compareImages (image1, image2, diffImage, options) {
         image1 = this.config.baseFolder + image1;
         image2 = this.config.screenshotFolder + image2;
 
@@ -53,10 +54,46 @@ class ResembleHelper extends codecept_helper {
      * @param options
      * @returns {Promise<*>}
      */
-    async fetchMisMatchPercentage (image1, image2, diffImage, options) {
-        var result = this.compareImages(image1, image2, diffImage, options);
+    async _fetchMisMatchPercentage (image1, image2, diffImage, options) {
+        var result = this._compareImages(image1, image2, diffImage, options);
         var data = await Promise.resolve(result);
         return data.misMatchPercentage;
+    }
+
+    /**
+     * Miss match Percentage Verification
+     * @param baseImage
+     * @param screenShotImage
+     * @param diffImageName
+     * @param tolerance
+     * @param prepareBase
+     * @param options
+     */
+    async verifyMisMatchPercentage(baseImage, screenShotImage, diffImageName, tolerance = 10, prepareBase = false, options){
+        if (prepareBase)
+        {
+            this.prepareBaseImage(baseImage, screenShotImage);
+        }
+        else
+        {
+            var misMatch = await this._fetchMisMatchPercentage(baseImage, screenShotImage, diffImageName, options);
+            console.log("MisMatch Percentage Calculated is " + misMatch);
+            assert.ok(misMatch < tolerance, "MissMatch Percentage" + misMatch);
+        }
+    }
+
+    /**
+     * Function to prepare Base Images from Screenshots
+     *
+     * @param baseImage
+     * @param screenShotImage
+     */
+    prepareBaseImage(baseImage, screenShotImage) {
+
+        fs.copyFile(this.config.screenshotFolder + screenShotImage, this.config.baseFolder + baseImage, (err) => {
+            if (err) throw err;
+            console.log('Base Image created for ' + screenShotImage);
+        });
     }
 }
 
