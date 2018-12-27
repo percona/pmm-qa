@@ -8,8 +8,6 @@ Scenario('Open the System Overview Dashboard', async (I, adminPage, loginPage) =
     adminPage.applyTimer("1m");
     adminPage.viewMetric("CPU Usage");
     await I.saveScreenshot("System_Overview_CPU_Usage.png");
-    I.amInPath('./tests/output/');
-    I.seeFile('System_Overview_CPU_Usage.png');
 });
 
 Scenario('Compare CPU Usage Images', async (I) => {
