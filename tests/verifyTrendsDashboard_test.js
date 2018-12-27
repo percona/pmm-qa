@@ -10,5 +10,5 @@ Before((I, loginPage) => {
 Scenario('Open the Trends Dashboard', async (I, adminPage, trendsDashboardPage) => {
     adminPage.navigateToDashboard("Insight", "Trends Dashboard");
     adminPage.applyTimer("1m");
-    trendsPage.verifyMetricsExistence();
+    trendsDashboardPage.verifyMetricsExistence();
 });
