@@ -32,7 +32,7 @@
     "postgresqlOverviewPage": "./tests/pages/postgresqlOverviewPage.js",
     "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js",
     "summaryDashboardPage": "./tests/pages/summaryDashboardPage.js",
-    "summaryDashboardPage": "./tests/pages/trendsDashboardPage.js"
+    "trendsDashboardPage": "./tests/pages/trendsDashboardPage.js"
   },
   "multiple": {
     "parallel": {
