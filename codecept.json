@@ -16,10 +16,11 @@
     },
     "ResembleHelper" : {
       "require": "codeceptjs-resemblehelper",
-      "screenshotFolder" : "./tests/output/",
+      "screenshotFolder": "./tests/output/",
       "baseFolder": "./tests/screenshots/base/",
       "diffFolder": "./tests/screenshots/diff/"
-    }
+    },
+    "FileSystem": {}
   },
   "include": {
     "loginPage": "./tests/pages/loginPage.js",
