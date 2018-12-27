@@ -39,5 +39,12 @@ module.exports = {
         I.fillField(this.fields.fromTime, "now-" + timeDiff);
         I.click(this.fields.applyCustomTimer);
         I.wait(5);
+    },
+
+    viewMetric (metricName) {
+        I.click("//span[contains(text(), '"+ metricName +"')]");
+        I.waitForElement("//span[@class='dropdown-item-text' and contains(text(), 'View')]", 30);
+        I.click("//span[@class='dropdown-item-text' and contains(text(), 'View')]");
+        I.wait(10);
     }
 }

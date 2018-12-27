@@ -13,6 +13,12 @@
       "require": "codeceptjs-saucehelper",
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}"
+    },
+    "ResembleHelper" : {
+      "require": "codeceptjs-resemblehelper",
+      "screenshotFolder" : "./tests/output/",
+      "baseFolder": "./tests/screenshots/base/",
+      "diffFolder": "./tests/screenshots/diff/"
     }
   },
   "include": {
