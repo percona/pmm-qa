@@ -14,5 +14,5 @@ Scenario('Open the System Overview Dashboard', async (I, adminPage, loginPage) =
 });
 
 Scenario('Compare CPU Usage Images', async (I) => {
-    I.verifyMisMatchPercentage("System_Overview_CPU_Usage.png", "System_Overview_CPU_Usage.png", "DiffImage_SystemOverview_CPU_USAGE_Dashboard", 5);
+    I.verifyMisMatchPercentage("System_Overview_CPU_Usage.png", "System_Overview_CPU_Usage.png", "DiffImage_SystemOverview_CPU_USAGE_Dashboard", 5, true);
 });
