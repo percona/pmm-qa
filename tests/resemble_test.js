@@ -8,9 +8,6 @@ Scenario('Open the System Overview Dashboard and take CPU Usage Screenshot @visu
     adminPage.applyTimer("1m");
     adminPage.viewMetric("CPU Usage");
     I.saveScreenshot("System_Overview_CPU_Usage.png");
-    I.wait(60);
-    I.amInPath('./tests/output/');
-    I.seeFile('System_Overview_CPU_Usage.png');
 });
 
 Scenario('Compare CPU Usage Images @visual-test', async (I) => {
