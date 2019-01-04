@@ -1,0 +1,67 @@
+{
+  "output": "tests/output",
+  "helpers": {
+    "WebDriverIO": {
+      "url": "http://localhost:8080/",
+      "browser": "chrome",
+      "windowSize": "maximize"
+    },
+    "ResembleHelper" : {
+      "require": "codeceptjs-resemblehelper",
+      "screenshotFolder": "./tests/output/",
+      "baseFolder": "./tests/screenshots/base/",
+      "diffFolder": "./tests/screenshots/diff/"
+    },
+    "FileSystem": {}
+  },
+  "include": {
+    "loginPage": "./tests/pages/loginPage.js",
+    "homePage": "./tests/pages/homePage.js",
+    "remoteInstancesPage" : "./tests/pages/remoteInstancesPage.js",
+    "adminPage" : "./tests/pages/adminPage.js",
+    "systemOverviewPage" : "./tests/pages/systemOverviewPage.js",
+    "compareSystemParametersPage" : "./tests/pages/compareSystemParametersPage.js",
+    "mysqlOverviewPage": "./tests/pages/mysqlOverviewPage.js",
+    "postgresqlOverviewPage": "./tests/pages/postgresqlOverviewPage.js",
+    "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js",
+    "summaryDashboardPage": "./tests/pages/summaryDashboardPage.js",
+    "trendsDashboardPage": "./tests/pages/trendsDashboardPage.js"
+  },
+  "multiple": {
+    "parallel": {
+      "chunks": 3,
+      "browsers": ["chrome"]
+    }
+  },
+  "mocha": {
+    "reporterOptions": {
+      "codeceptjs-cli-reporter": {
+        "stdout": "-",
+        "options": {
+          "verbose": false,
+          "steps": true
+        }
+      },
+      "mocha-junit-reporter": {
+        "stdout": "./tests/output/console.log",
+        "options": {
+          "mochaFile": "./tests/output/result.xml"
+        }
+      },
+      "mochawesome": {
+        "stdout": "./tests/output/mocharesult.log",
+        "options": {
+          "reportDir": "tests/output",
+          "reportFilename": "result.html"
+        }
+      }
+    }
+  },
+  "bootstrap": false,
+  "teardown": null,
+  "hooks": [],
+  "gherkin": {},
+  "tests": "tests/*_test.js",
+  "timeout": 10000,
+  "name": "pmm-qa"
+}
