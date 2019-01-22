@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.345. Release 6.5.2</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-6-5-3.html" title="E.344. Release 6.5.3" /><link rel="next" href="release-6-5-1.html" title="E.346. Release 6.5.1" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.345. Release 6.5.2</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-6-5-3.html" title="E.344. Release 6.5.3">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-6-5-1.html" title="E.346. Release 6.5.1">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-6-5-2"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.345. Release 6.5.2</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-6-5-2.html#id-1.11.6.349.4">E.345.1. Migration to Version 6.5.2</a></span></dt><dt><span class="sect2"><a href="release-6-5-2.html#id-1.11.6.349.5">E.345.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>1999-09-15</p><p>   This is basically a cleanup release for 6.5.1.  We have fixed a variety of
+   problems reported by 6.5.1 users.
+  </p><div class="sect2" id="id-1.11.6.349.4"><div class="titlepage"><div><div><h3 class="title">E.345.1. Migration to Version 6.5.2</h3></div></div></div><p>    A dump/restore is <span class="emphasis"><em>not</em></span> required for those running
+    6.5.*.
+   </p></div><div class="sect2" id="id-1.11.6.349.5"><div class="titlepage"><div><div><h3 class="title">E.345.2. Changes</h3></div></div></div><pre class="programlisting">subselect+CASE fixes(Tom)
+Add SHLIB_LINK setting for solaris_i386 and solaris_sparc ports(Daren Sefcik)
+Fixes for CASE in WHERE join clauses(Tom)
+Fix BTScan abort(Tom)
+Repair the check for redundant UNIQUE and PRIMARY KEY indexes(Thomas)
+Improve it so that it checks for multicolumn constraints(Thomas)
+Fix for Windows making problem with MB enabled(Hiroki Kataoka)
+Allow BSD yacc and bison to compile pl code(Bruce)
+Fix SET NAMES working
+int8 fixes(Thomas)
+Fix vacuum's memory consumption(Hiroshi,Tatsuo)
+Reduce the total memory consumption of vacuum(Tom)
+Fix for timestamp(datetime)
+Rule deparsing bugfixes(Tom)
+Fix quoting problems in mkMakefile.tcldefs.sh.in and mkMakefile.tkdefs.sh.in(Tom)
+This is to re-use space on index pages freed by vacuum(Vadim)
+document -x for pg_dump(Bruce)
+Fix for unary operators in rule deparser(Tom)
+Comment out FileUnlink of excess segments during mdtruncate()(Tom)
+IRIX linking fix from Yu Cao &gt;yucao@falcon.kla-tencor.com&lt;
+Repair logic error in LIKE: should not return LIKE_ABORT
+  when reach end of pattern before end of text(Tom)
+Repair incorrect cleanup of heap memory allocation during transaction abort(Tom)
+Updated version of pgaccess 0.98</pre><p>
+   </p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-6-5-3.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-6-5-1.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.344. Release 6.5.3 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.346. Release 6.5.1</td></tr></table></div></body></html>

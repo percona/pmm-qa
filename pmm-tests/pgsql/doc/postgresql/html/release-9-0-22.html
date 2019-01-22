@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.129. Release 9.0.22</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-0-23.html" title="E.128. Release 9.0.23" /><link rel="next" href="release-9-0-21.html" title="E.130. Release 9.0.21" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.129. Release 9.0.22</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-0-23.html" title="E.128. Release 9.0.23">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-0-21.html" title="E.130. Release 9.0.21">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-0-22"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.129. Release 9.0.22</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-0-22.html#id-1.11.6.133.5">E.129.1. Migration to Version 9.0.22</a></span></dt><dt><span class="sect2"><a href="release-9-0-22.html#id-1.11.6.133.6">E.129.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2015-06-12</p><p>   This release contains a small number of fixes from 9.0.21.
+   For information about new features in the 9.0 major release, see
+   <a class="xref" href="release-9-0.html" title="E.151. Release 9.0">Section E.151</a>.
+  </p><p>   The <span class="productname">PostgreSQL</span> community will stop releasing updates
+   for the 9.0.X release series in September 2015.
+   Users are encouraged to update to a newer release branch soon.
+  </p><div class="sect2" id="id-1.11.6.133.5"><div class="titlepage"><div><div><h3 class="title">E.129.1. Migration to Version 9.0.22</h3></div></div></div><p>    A dump/restore is not required for those running 9.0.X.
+   </p><p>    However, if you are upgrading from a version earlier than 9.0.18,
+    see <a class="xref" href="release-9-0-18.html" title="E.133. Release 9.0.18">Section E.133</a>.
+   </p></div><div class="sect2" id="id-1.11.6.133.6"><div class="titlepage"><div><div><h3 class="title">E.129.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix rare failure to invalidate relation cache init file (Tom Lane)
+     </p><p>      With just the wrong timing of concurrent activity, a <code class="command">VACUUM
+      FULL</code> on a system catalog might fail to update the <span class="quote">“<span class="quote">init file</span>”</span>
+      that's used to avoid cache-loading work for new sessions.  This would
+      result in later sessions being unable to access that catalog at all.
+      This is a very ancient bug, but it's so hard to trigger that no
+      reproducible case had been seen until recently.
+     </p></li><li class="listitem"><p>      Avoid deadlock between incoming sessions and <code class="literal">CREATE/DROP
+      DATABASE</code> (Tom Lane)
+     </p><p>      A new session starting in a database that is the target of
+      a <code class="command">DROP DATABASE</code> command, or is the template for
+      a <code class="command">CREATE DATABASE</code> command, could cause the command to wait
+      for five seconds and then fail, even if the new session would have
+      exited before that.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-0-23.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-0-21.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.128. Release 9.0.23 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.130. Release 9.0.21</td></tr></table></div></body></html>

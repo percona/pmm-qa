@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.54. Release 9.3.23</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-3-24.html" title="E.53. Release 9.3.24" /><link rel="next" href="release-9-3-22.html" title="E.55. Release 9.3.22" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.54. Release 9.3.23</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-3-24.html" title="E.53. Release 9.3.24">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-3-22.html" title="E.55. Release 9.3.22">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-3-23"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.54. Release 9.3.23</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-3-23.html#id-1.11.6.58.4">E.54.1. Migration to Version 9.3.23</a></span></dt><dt><span class="sect2"><a href="release-9-3-23.html#id-1.11.6.58.5">E.54.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2018-05-10</p><p>   This release contains a variety of fixes from 9.3.22.
+   For information about new features in the 9.3 major release, see
+   <a class="xref" href="release-9-3.html" title="E.77. Release 9.3">Section E.77</a>.
+  </p><div class="sect2" id="id-1.11.6.58.4"><div class="titlepage"><div><div><h3 class="title">E.54.1. Migration to Version 9.3.23</h3></div></div></div><p>    A dump/restore is not required for those running 9.3.X.
+   </p><p>    However, if the function marking mistakes mentioned in the first
+    changelog entry below affect you, you will want to take steps to
+    correct your database catalogs.
+   </p><p>    Also, if you are upgrading from a version earlier than 9.3.22,
+    see <a class="xref" href="release-9-3-22.html" title="E.55. Release 9.3.22">Section E.55</a>.
+   </p></div><div class="sect2" id="id-1.11.6.58.5"><div class="titlepage"><div><div><h3 class="title">E.54.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix incorrect volatility markings on a few built-in functions
+      (Thomas Munro, Tom Lane)
+     </p><p>      The functions
+      <code class="function">query_to_xml</code>,
+      <code class="function">cursor_to_xml</code>,
+      <code class="function">cursor_to_xmlschema</code>,
+      <code class="function">query_to_xmlschema</code>, and
+      <code class="function">query_to_xml_and_xmlschema</code>
+      should be marked volatile because they execute user-supplied queries
+      that might contain volatile operations.  They were not, leading to a
+      risk of incorrect query optimization.  This has been repaired for new
+      installations by correcting the initial catalog data, but existing
+      installations will continue to contain the incorrect markings.
+      Practical use of these functions seems to pose little hazard, but in
+      case of trouble, it can be fixed by manually updating these
+      functions' <code class="structname">pg_proc</code> entries, for example
+      <code class="literal">ALTER FUNCTION pg_catalog.query_to_xml(text, boolean,
+      boolean, text) VOLATILE</code>.  (Note that that will need to be
+      done in each database of the installation.)  Another option is
+      to <span class="application">pg_upgrade</span> the database to a version
+      containing the corrected initial data.
+     </p></li><li class="listitem"><p>      Avoid re-using TOAST value OIDs that match dead-but-not-yet-vacuumed
+      TOAST entries (Pavan Deolasee)
+     </p><p>      Once the OID counter has wrapped around, it's possible to assign a
+      TOAST value whose OID matches a previously deleted entry in the same
+      TOAST table.  If that entry were not yet vacuumed away, this resulted
+      in <span class="quote">“<span class="quote">unexpected chunk number 0 (expected 1) for toast
+      value <em class="replaceable"><code>nnnnn</code></em></span>”</span> errors, which would
+      persist until the dead entry was removed
+      by <code class="command">VACUUM</code>.  Fix by not selecting such OIDs when
+      creating a new TOAST entry.
+     </p></li><li class="listitem"><p>      Change <code class="command">ANALYZE</code>'s algorithm for updating
+      <code class="structname">pg_class</code>.<code class="structfield">reltuples</code>
+      (David Gould)
+     </p><p>      Previously, pages not actually scanned by <code class="command">ANALYZE</code>
+      were assumed to retain their old tuple density.  In a large table
+      where <code class="command">ANALYZE</code> samples only a small fraction of the
+      pages, this meant that the overall tuple density estimate could not
+      change very much, so that <code class="structfield">reltuples</code> would
+      change nearly proportionally to changes in the table's physical size
+      (<code class="structfield">relpages</code>) regardless of what was actually
+      happening in the table.  This has been observed to result
+      in <code class="structfield">reltuples</code> becoming so much larger than
+      reality as to effectively shut off autovacuuming.  To fix, assume
+      that <code class="command">ANALYZE</code>'s sample is a statistically unbiased
+      sample of the table (as it should be), and just extrapolate the
+      density observed within those pages to the whole table.
+     </p></li><li class="listitem"><p>      Fix <code class="literal">UPDATE/DELETE ... WHERE CURRENT OF</code> to not fail
+      when the referenced cursor uses an index-only-scan plan (Yugo Nagata,
+      Tom Lane)
+     </p></li><li class="listitem"><p>      Fix incorrect planning of join clauses pushed into parameterized
+      paths (Andrew Gierth, Tom Lane)
+     </p><p>      This error could result in misclassifying a condition as
+      a <span class="quote">“<span class="quote">join filter</span>”</span> for an outer join when it should be a
+      plain <span class="quote">“<span class="quote">filter</span>”</span> condition, leading to incorrect join
+      output.
+     </p></li><li class="listitem"><p>      Fix misoptimization of <code class="literal">CHECK</code> constraints having
+      provably-NULL subclauses of
+      top-level <code class="literal">AND</code>/<code class="literal">OR</code> conditions
+      (Tom Lane, Dean Rasheed)
+     </p><p>      This could, for example, allow constraint exclusion to exclude a
+      child table that should not be excluded from a query.
+     </p></li><li class="listitem"><p>      Avoid failure if a query-cancel or session-termination interrupt
+      occurs while committing a prepared transaction (Stas Kelvich)
+     </p></li><li class="listitem"><p>      Fix query-lifespan memory leakage in repeatedly executed hash joins
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix overly strict sanity check
+      in <code class="function">heap_prepare_freeze_tuple</code>
+      (Álvaro Herrera)
+     </p><p>      This could result in incorrect <span class="quote">“<span class="quote">cannot freeze committed
+      xmax</span>”</span> failures in databases that have
+      been <span class="application">pg_upgrade</span>'d from 9.2 or earlier.
+     </p></li><li class="listitem"><p>      Prevent dangling-pointer dereference when a C-coded before-update row
+      trigger returns the <span class="quote">“<span class="quote">old</span>”</span> tuple (Rushabh Lathia)
+     </p></li><li class="listitem"><p>      Reduce locking during autovacuum worker scheduling (Jeff Janes)
+     </p><p>      The previous behavior caused drastic loss of potential worker
+      concurrency in databases with many tables.
+     </p></li><li class="listitem"><p>      Ensure client hostname is copied while copying
+      <code class="structname">pg_stat_activity</code> data to local memory
+      (Edmund Horner)
+     </p><p>      Previously the supposedly-local snapshot contained a pointer into
+      shared memory, allowing the client hostname column to change
+      unexpectedly if any existing session disconnected.
+     </p></li><li class="listitem"><p>      Fix incorrect processing of multiple compound affixes
+      in <code class="literal">ispell</code> dictionaries (Arthur Zakirov)
+     </p></li><li class="listitem"><p>      Fix collation-aware searches (that is, indexscans using inequality
+      operators) in SP-GiST indexes on text columns (Tom Lane)
+     </p><p>      Such searches would return the wrong set of rows in most non-C
+      locales.
+     </p></li><li class="listitem"><p>      Count the number of index tuples correctly during initial build of an
+      SP-GiST index (Tomas Vondra)
+     </p><p>      Previously, the tuple count was reported to be the same as that of
+      the underlying table, which is wrong if the index is partial.
+     </p></li><li class="listitem"><p>      Count the number of index tuples correctly during vacuuming of a
+      GiST index (Andrey Borodin)
+     </p><p>      Previously it reported the estimated number of heap tuples,
+      which might be inaccurate, and is certainly wrong if the
+      index is partial.
+     </p></li><li class="listitem"><p>      Allow <code class="function">scalarltsel</code>
+      and <code class="function">scalargtsel</code> to be used on non-core datatypes
+      (Tomas Vondra)
+     </p></li><li class="listitem"><p>      Reduce <span class="application">libpq</span>'s memory consumption when a
+      server error is reported after a large amount of query output has
+      been collected (Tom Lane)
+     </p><p>      Discard the previous output before, not after, processing the error
+      message.  On some platforms, notably Linux, this can make a
+      difference in the application's subsequent memory footprint.
+     </p></li><li class="listitem"><p>      Fix double-free crashes in <span class="application">ecpg</span>
+      (Patrick Krecker, Jeevan Ladhe)
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span> to handle <code class="type">long long
+      int</code> variables correctly in MSVC builds (Michael Meskes,
+      Andrew Gierth)
+     </p></li><li class="listitem"><p>      Fix mis-quoting of values for list-valued GUC variables in dumps
+      (Michael Paquier, Tom Lane)
+     </p><p>      The <code class="varname">local_preload_libraries</code>,
+      <code class="varname">session_preload_libraries</code>,
+      <code class="varname">shared_preload_libraries</code>,
+      and <code class="varname">temp_tablespaces</code> variables were not correctly
+      quoted in <span class="application">pg_dump</span> output.  This would
+      cause problems if settings for these variables appeared in
+      <code class="command">CREATE FUNCTION ... SET</code> or <code class="command">ALTER
+      DATABASE/ROLE ... SET</code> clauses.
+     </p></li><li class="listitem"><p>      Fix overflow handling in <span class="application">PL/pgSQL</span>
+      integer <code class="command">FOR</code> loops (Tom Lane)
+     </p><p>      The previous coding failed to detect overflow of the loop variable
+      on some non-gcc compilers, leading to an infinite loop.
+     </p></li><li class="listitem"><p>      Adjust <span class="application">PL/Python</span> regression tests to pass
+      under Python 3.7 (Peter Eisentraut)
+     </p></li><li class="listitem"><p>      Support testing <span class="application">PL/Python</span> and related
+      modules when building with Python 3 and MSVC (Andrew Dunstan)
+     </p></li><li class="listitem"><p>      Rename internal <code class="function">b64_encode</code>
+      and <code class="function">b64_decode</code> functions to avoid conflict with
+      Solaris 11.4 built-in functions (Rainer Orth)
+     </p></li><li class="listitem"><p>      Sync our copy of the timezone library with IANA tzcode release 2018e
+      (Tom Lane)
+     </p><p>      This fixes the <span class="application">zic</span> timezone data compiler
+      to cope with negative daylight-savings offsets.  While
+      the <span class="productname">PostgreSQL</span> project will not
+      immediately ship such timezone data, <span class="application">zic</span>
+      might be used with timezone data obtained directly from IANA, so it
+      seems prudent to update <span class="application">zic</span> now.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span>
+      release 2018d for DST law changes in Palestine and Antarctica (Casey
+      Station), plus historical corrections for Portugal and its colonies,
+      as well as Enderbury, Jamaica, Turks &amp; Caicos Islands, and
+      Uruguay.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-3-24.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-3-22.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.53. Release 9.3.24 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.55. Release 9.3.22</td></tr></table></div></body></html>

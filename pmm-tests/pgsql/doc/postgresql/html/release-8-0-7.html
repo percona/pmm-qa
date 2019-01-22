@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.266. Release 8.0.7</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-0-8.html" title="E.265. Release 8.0.8" /><link rel="next" href="release-8-0-6.html" title="E.267. Release 8.0.6" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.266. Release 8.0.7</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-0-8.html" title="E.265. Release 8.0.8">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-0-6.html" title="E.267. Release 8.0.6">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-0-7"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.266. Release 8.0.7</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-0-7.html#id-1.11.6.270.4">E.266.1. Migration to Version 8.0.7</a></span></dt><dt><span class="sect2"><a href="release-8-0-7.html#id-1.11.6.270.5">E.266.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2006-02-14</p><p>   This release contains a variety of fixes from 8.0.6.
+   For information about new features in the 8.0 major release, see
+   <a class="xref" href="release-8-0.html" title="E.273. Release 8.0">Section E.273</a>.
+  </p><div class="sect2" id="id-1.11.6.270.4"><div class="titlepage"><div><div><h3 class="title">E.266.1. Migration to Version 8.0.7</h3></div></div></div><p>    A dump/restore is not required for those running 8.0.X.  However,
+    if you are upgrading from a version earlier than 8.0.6,
+    see <a class="xref" href="release-8-0-6.html" title="E.267. Release 8.0.6">Section E.267</a>.
+   </p></div><div class="sect2" id="id-1.11.6.270.5"><div class="titlepage"><div><div><h3 class="title">E.266.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Fix potential crash in <code class="command">SET
+SESSION AUTHORIZATION</code> (CVE-2006-0553)</p><p>An unprivileged user could crash the server process, resulting in
+momentary denial of service to other users, if the server has been compiled
+with Asserts enabled (which is not the default).
+Thanks to Akio Ishida for reporting this problem.</p></li><li class="listitem"><p>Fix bug with row visibility logic in self-inserted
+rows (Tom)</p><p>Under rare circumstances a row inserted by the current command
+could be seen as already valid, when it should not be.  Repairs bug
+created in 8.0.4, 7.4.9, and 7.3.11 releases.</p></li><li class="listitem"><p>Fix race condition that could lead to <span class="quote">“<span class="quote">file already
+exists</span>”</span> errors during pg_clog and pg_subtrans file creation
+(Tom)</p></li><li class="listitem"><p>Fix cases that could lead to crashes if a cache-invalidation
+message arrives at just the wrong time (Tom)</p></li><li class="listitem"><p>Properly check <code class="literal">DOMAIN</code> constraints for
+<code class="literal">UNKNOWN</code> parameters in prepared statements
+(Neil)</p></li><li class="listitem"><p>Ensure <code class="command">ALTER COLUMN TYPE</code> will process
+<code class="literal">FOREIGN KEY</code>, <code class="literal">UNIQUE</code>, and <code class="literal">PRIMARY KEY</code>
+constraints in the proper order (Nakano Yoshihisa)</p></li><li class="listitem"><p>Fixes to allow restoring dumps that have cross-schema
+references to custom operators or operator classes (Tom)</p></li><li class="listitem"><p>Allow <span class="application">pg_restore</span> to continue properly after a
+<code class="command">COPY</code> failure; formerly it tried to treat the remaining
+<code class="command">COPY</code> data as SQL commands (Stephen Frost)</p></li><li class="listitem"><p>Fix <span class="application">pg_ctl</span> <code class="literal">unregister</code> crash
+when the  data directory is not specified (Magnus)</p></li><li class="listitem"><p>Fix <span class="application">ecpg</span> crash on AMD64 and PPC
+(Neil)</p></li><li class="listitem"><p>Recover properly if error occurs during argument passing
+in <span class="application">PL/Python</span> (Neil)</p></li><li class="listitem"><p>Fix <span class="application">PL/Perl</span>'s handling of locales on
+Win32 to match the backend (Andrew)</p></li><li class="listitem"><p>Fix crash when <code class="literal">log_min_messages</code> is set to
+<code class="literal">DEBUG3</code> or above in <code class="filename">postgresql.conf</code> on Win32
+(Bruce)</p></li><li class="listitem"><p>Fix <span class="application">pgxs</span> <code class="literal">-L</code> library path
+specification for Win32, Cygwin, macOS, AIX (Bruce)</p></li><li class="listitem"><p>Check that SID is enabled while checking for Win32 admin
+privileges (Magnus)</p></li><li class="listitem"><p>Properly reject out-of-range date inputs (Kris
+Jurka)</p></li><li class="listitem"><p>Portability fix for testing presence of <code class="function">finite</code>
+and <code class="function">isinf</code> during configure (Tom)</p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-0-8.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-0-6.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.265. Release 8.0.8 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.267. Release 8.0.6</td></tr></table></div></body></html>

@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.172. Release 8.4.2</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-4-3.html" title="E.171. Release 8.4.3" /><link rel="next" href="release-8-4-1.html" title="E.173. Release 8.4.1" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.172. Release 8.4.2</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-4-3.html" title="E.171. Release 8.4.3">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-4-1.html" title="E.173. Release 8.4.1">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-4-2"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.172. Release 8.4.2</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-4-2.html#id-1.11.6.176.4">E.172.1. Migration to Version 8.4.2</a></span></dt><dt><span class="sect2"><a href="release-8-4-2.html#id-1.11.6.176.5">E.172.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2009-12-14</p><p>   This release contains a variety of fixes from 8.4.1.
+   For information about new features in the 8.4 major release, see
+   <a class="xref" href="release-8-4.html" title="E.174. Release 8.4">Section E.174</a>.
+  </p><div class="sect2" id="id-1.11.6.176.4"><div class="titlepage"><div><div><h3 class="title">E.172.1. Migration to Version 8.4.2</h3></div></div></div><p>    A dump/restore is not required for those running 8.4.X.
+    However, if you have any hash indexes,
+    you should <code class="command">REINDEX</code> them after updating to 8.4.2,
+    to repair possible damage.
+   </p></div><div class="sect2" id="id-1.11.6.176.5"><div class="titlepage"><div><div><h3 class="title">E.172.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Protect against indirect security threats caused by index functions
+      changing session-local state (Gurjeet Singh, Tom)
+     </p><p>      This change prevents allegedly-immutable index functions from possibly
+      subverting a superuser's session (CVE-2009-4136).
+     </p></li><li class="listitem"><p>      Reject SSL certificates containing an embedded null byte in the common
+      name (CN) field (Magnus)
+     </p><p>      This prevents unintended matching of a certificate to a server or client
+      name during SSL validation (CVE-2009-4034).
+     </p></li><li class="listitem"><p>      Fix hash index corruption (Tom)
+     </p><p>      The 8.4 change that made hash indexes keep entries sorted by hash value
+      failed to update the bucket splitting and compaction routines to
+      preserve the ordering.  So application of either of those operations
+      could lead to permanent corruption of an index, in the sense that
+      searches might fail to find entries that are present.  To deal with
+      this, it is recommended to <code class="literal">REINDEX</code> any hash indexes you may
+      have after installing this update.
+     </p></li><li class="listitem"><p>      Fix possible crash during backend-startup-time cache initialization (Tom)
+     </p></li><li class="listitem"><p>      Avoid crash on empty thesaurus dictionary (Tom)
+     </p></li><li class="listitem"><p>      Prevent signals from interrupting <code class="literal">VACUUM</code> at unsafe times
+      (Alvaro)
+     </p><p>      This fix prevents a PANIC if a <code class="literal">VACUUM FULL</code> is canceled
+      after it's already committed its tuple movements, as well as transient
+      errors if a plain <code class="literal">VACUUM</code> is interrupted after having
+      truncated the table.
+     </p></li><li class="listitem"><p>      Fix possible crash due to integer overflow in hash table size
+      calculation (Tom)
+     </p><p>      This could occur with extremely large planner estimates for the size of
+      a hashjoin's result.
+     </p></li><li class="listitem"><p>      Fix crash if a <code class="literal">DROP</code> is attempted on an internally-dependent
+      object (Tom)
+     </p></li><li class="listitem"><p>      Fix very rare crash in <code class="type">inet</code>/<code class="type">cidr</code> comparisons (Chris
+      Mikkelson)
+     </p></li><li class="listitem"><p>      Ensure that shared tuple-level locks held by prepared transactions are
+      not ignored (Heikki)
+     </p></li><li class="listitem"><p>      Fix premature drop of temporary files used for a cursor that is accessed
+      within a subtransaction (Heikki)
+     </p></li><li class="listitem"><p>      Fix memory leak in syslogger process when rotating to a new CSV logfile
+      (Tom)
+     </p></li><li class="listitem"><p>      Fix memory leak in postmaster when re-parsing <code class="filename">pg_hba.conf</code>
+      (Tom)
+     </p></li><li class="listitem"><p>      Fix Windows permission-downgrade logic (Jesse Morris)
+     </p><p>      This fixes some cases where the database failed to start on Windows,
+      often with misleading error messages such as <span class="quote">“<span class="quote">could not locate
+      matching postgres executable</span>”</span>.
+     </p></li><li class="listitem"><p>      Make <code class="literal">FOR UPDATE/SHARE</code> in the primary query not propagate
+      into <code class="literal">WITH</code> queries (Tom)
+     </p><p>      For example, in
+</p><pre class="programlisting">WITH w AS (SELECT * FROM foo) SELECT * FROM w, bar ... FOR UPDATE</pre><p>
+      the <code class="literal">FOR UPDATE</code> will now affect <code class="literal">bar</code> but not
+      <code class="literal">foo</code>.  This is more useful and consistent than the original
+      8.4 behavior, which tried to propagate <code class="literal">FOR UPDATE</code> into the
+      <code class="literal">WITH</code> query but always failed due to assorted implementation
+      restrictions.  It also follows the design rule that <code class="literal">WITH</code>
+      queries are executed as if independent of the main query.
+     </p></li><li class="listitem"><p>      Fix bug with a <code class="literal">WITH RECURSIVE</code> query immediately inside
+      another one (Tom)
+     </p></li><li class="listitem"><p>      Fix concurrency bug in hash indexes (Tom)
+     </p><p>      Concurrent insertions could cause index scans to transiently report
+      wrong results.
+     </p></li><li class="listitem"><p>      Fix incorrect logic for GiST index page splits, when the split depends
+      on a non-first column of the index (Paul Ramsey)
+     </p></li><li class="listitem"><p>      Fix wrong search results for a multi-column GIN index with
+      <code class="literal">fastupdate</code> enabled (Teodor)
+     </p></li><li class="listitem"><p>      Fix bugs in WAL entry creation for GIN indexes (Tom)
+     </p><p>      These bugs were masked when <code class="varname">full_page_writes</code> was on, but
+      with it off a WAL replay failure was certain if a crash occurred before
+      the next checkpoint.
+     </p></li><li class="listitem"><p>      Don't error out if recycling or removing an old WAL file fails at the
+      end of checkpoint (Heikki)
+     </p><p>      It's better to treat the problem as non-fatal and allow the checkpoint
+      to complete.  Future checkpoints will retry the removal.  Such problems
+      are not expected in normal operation, but have been seen to be
+      caused by misdesigned Windows anti-virus and backup software.
+     </p></li><li class="listitem"><p>      Ensure WAL files aren't repeatedly archived on Windows (Heikki)
+     </p><p>      This is another symptom that could happen if some other process
+      interfered with deletion of a no-longer-needed file.
+     </p></li><li class="listitem"><p>      Fix PAM password processing to be more robust (Tom)
+     </p><p>      The previous code is known to fail with the combination of the Linux
+      <code class="literal">pam_krb5</code> PAM module with Microsoft Active Directory as the
+      domain controller.  It might have problems elsewhere too, since it was
+      making unjustified assumptions about what arguments the PAM stack would
+      pass to it.
+     </p></li><li class="listitem"><p>      Raise the maximum authentication token (Kerberos ticket) size in GSSAPI
+      and SSPI authentication methods (Ian Turner)
+     </p><p>      While the old 2000-byte limit was more than enough for Unix Kerberos
+      implementations, tickets issued by Windows Domain Controllers can be
+      much larger.
+     </p></li><li class="listitem"><p>      Ensure that domain constraints are enforced in constructs like
+      <code class="literal">ARRAY[...]::domain</code>, where the domain is over an array type
+      (Heikki)
+     </p></li><li class="listitem"><p>      Fix foreign-key logic for some cases involving composite-type columns
+      as foreign keys (Tom)
+     </p></li><li class="listitem"><p>      Ensure that a cursor's snapshot is not modified after it is created
+      (Alvaro)
+     </p><p>      This could lead to a cursor delivering wrong results if later operations
+      in the same transaction modify the data the cursor is supposed to return.
+     </p></li><li class="listitem"><p>      Fix <code class="literal">CREATE TABLE</code> to properly merge default expressions
+      coming from different inheritance parent tables (Tom)
+     </p><p>      This used to work but was broken in 8.4.
+     </p></li><li class="listitem"><p>      Re-enable collection of access statistics for sequences (Akira Kurosawa)
+     </p><p>      This used to work but was broken in 8.3.
+     </p></li><li class="listitem"><p>      Fix processing of ownership dependencies during <code class="literal">CREATE OR
+      REPLACE FUNCTION</code> (Tom)
+     </p></li><li class="listitem"><p>      Fix incorrect handling of <code class="literal">WHERE</code>
+      <em class="replaceable"><code>x</code></em>=<em class="replaceable"><code>x</code></em> conditions (Tom)
+     </p><p>      In some cases these could get ignored as redundant, but they aren't
+      — they're equivalent to <em class="replaceable"><code>x</code></em> <code class="literal">IS NOT NULL</code>.
+     </p></li><li class="listitem"><p>      Fix incorrect plan construction when using hash aggregation to implement
+      <code class="literal">DISTINCT</code> for textually identical volatile expressions (Tom)
+     </p></li><li class="listitem"><p>      Fix Assert failure for a volatile <code class="literal">SELECT DISTINCT ON</code>
+      expression (Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="function">ts_stat()</code> to not fail on an empty <code class="type">tsvector</code>
+      value (Tom)
+     </p></li><li class="listitem"><p>      Make text search parser accept underscores in XML attributes (Peter)
+     </p></li><li class="listitem"><p>      Fix encoding handling in <code class="type">xml</code> binary input (Heikki)
+     </p><p>      If the XML header doesn't specify an encoding, we now assume UTF-8 by
+      default; the previous handling was inconsistent.
+     </p></li><li class="listitem"><p>      Fix bug with calling <code class="literal">plperl</code> from <code class="literal">plperlu</code> or vice
+      versa (Tom)
+     </p><p>      An error exit from the inner function could result in crashes due to
+      failure to re-select the correct Perl interpreter for the outer function.
+     </p></li><li class="listitem"><p>      Fix session-lifespan memory leak when a PL/Perl function is redefined
+      (Tom)
+     </p></li><li class="listitem"><p>      Ensure that Perl arrays are properly converted to
+      <span class="productname">PostgreSQL</span> arrays when returned by a set-returning
+      PL/Perl function (Andrew Dunstan, Abhijit Menon-Sen)
+     </p><p>      This worked correctly already for non-set-returning functions.
+     </p></li><li class="listitem"><p>      Fix rare crash in exception processing in PL/Python (Peter)
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span> problem with comments in <code class="literal">DECLARE
+      CURSOR</code> statements (Michael)
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span> to not treat recently-added keywords as
+      reserved words (Tom)
+     </p><p>      This affected the keywords <code class="literal">CALLED</code>, <code class="literal">CATALOG</code>,
+      <code class="literal">DEFINER</code>, <code class="literal">ENUM</code>, <code class="literal">FOLLOWING</code>,
+      <code class="literal">INVOKER</code>, <code class="literal">OPTIONS</code>, <code class="literal">PARTITION</code>,
+      <code class="literal">PRECEDING</code>, <code class="literal">RANGE</code>, <code class="literal">SECURITY</code>,
+      <code class="literal">SERVER</code>, <code class="literal">UNBOUNDED</code>, and <code class="literal">WRAPPER</code>.
+     </p></li><li class="listitem"><p>      Re-allow regular expression special characters in <span class="application">psql</span>'s
+      <code class="literal">\df</code> function name parameter (Tom)
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/fuzzystrmatch</code>, correct the calculation of
+      <code class="function">levenshtein</code> distances with non-default costs (Marcin Mank)
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/pg_standby</code>, disable triggering failover with a
+      signal on Windows (Fujii Masao)
+     </p><p>      This never did anything useful, because Windows doesn't have Unix-style
+      signals, but recent changes made it actually crash.
+     </p></li><li class="listitem"><p>      Put <code class="literal">FREEZE</code> and <code class="literal">VERBOSE</code> options in the right
+      order in the <code class="literal">VACUUM</code> command that
+      <code class="filename">contrib/vacuumdb</code> produces (Heikki)
+     </p></li><li class="listitem"><p>      Fix possible leak of connections when <code class="filename">contrib/dblink</code>
+      encounters an error (Tatsuhito Kasahara)
+     </p></li><li class="listitem"><p>      Ensure <span class="application">psql</span>'s flex module is compiled with the correct
+      system header definitions (Tom)
+     </p><p>      This fixes build failures on platforms where
+      <code class="literal">--enable-largefile</code> causes incompatible changes in the
+      generated code.
+     </p></li><li class="listitem"><p>      Make the postmaster ignore any <code class="literal">application_name</code> parameter in
+      connection request packets, to improve compatibility with future libpq
+      versions (Tom)
+     </p></li><li class="listitem"><p>      Update the timezone abbreviation files to match current reality (Joachim
+      Wieland)
+     </p><p>      This includes adding <code class="literal">IDT</code> to the default
+      timezone abbreviation set.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2009s
+      for DST law changes in Antarctica, Argentina, Bangladesh, Fiji,
+      Novokuznetsk, Pakistan, Palestine, Samoa, Syria; also historical
+      corrections for Hong Kong.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-4-3.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-4-1.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.171. Release 8.4.3 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.173. Release 8.4.1</td></tr></table></div></body></html>

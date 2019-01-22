@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.239. Release 8.1.7</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-1-8.html" title="E.238. Release 8.1.8" /><link rel="next" href="release-8-1-6.html" title="E.240. Release 8.1.6" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.239. Release 8.1.7</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-1-8.html" title="E.238. Release 8.1.8">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-1-6.html" title="E.240. Release 8.1.6">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-1-7"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.239. Release 8.1.7</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-1-7.html#id-1.11.6.243.4">E.239.1. Migration to Version 8.1.7</a></span></dt><dt><span class="sect2"><a href="release-8-1-7.html#id-1.11.6.243.5">E.239.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2007-02-05</p><p>   This release contains a variety of fixes from 8.1.6, including
+   a security fix.
+   For information about new features in the 8.1 major release, see
+   <a class="xref" href="release-8-1.html" title="E.246. Release 8.1">Section E.246</a>.
+  </p><div class="sect2" id="id-1.11.6.243.4"><div class="titlepage"><div><div><h3 class="title">E.239.1. Migration to Version 8.1.7</h3></div></div></div><p>    A dump/restore is not required for those running 8.1.X.
+    However, if you are upgrading from a version earlier than 8.1.2,
+    see <a class="xref" href="release-8-1-2.html" title="E.244. Release 8.1.2">Section E.244</a>.
+   </p></div><div class="sect2" id="id-1.11.6.243.5"><div class="titlepage"><div><div><h3 class="title">E.239.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>     Remove security vulnerabilities that allowed connected users
+     to read backend memory (Tom)
+    </p><p>     The vulnerabilities involve suppressing the normal check that a SQL
+     function returns the data type it's declared to, and changing the
+     data type of a table column (CVE-2007-0555, CVE-2007-0556).  These
+     errors can easily be exploited to cause a backend crash, and in
+     principle might be used to read database content that the user
+     should not be able to access.
+    </p></li><li class="listitem"><p>     Fix rare bug wherein btree index page splits could fail
+     due to choosing an infeasible split point (Heikki Linnakangas)
+    </p></li><li class="listitem"><p>     Improve <code class="command">VACUUM</code> performance for databases with many tables (Tom)
+    </p></li><li class="listitem"><p>     Fix autovacuum to avoid leaving non-permanent transaction IDs in
+     non-connectable databases (Alvaro)
+    </p><p>     This bug affects the 8.1 branch only.
+    </p></li><li class="listitem"><p>     Fix for rare Assert() crash triggered by <code class="literal">UNION</code> (Tom)
+    </p></li><li class="listitem"><p>     Tighten security of multi-byte character processing for UTF8 sequences
+     over three bytes long (Tom)
+    </p></li><li class="listitem"><p>     Fix bogus <span class="quote">“<span class="quote">permission denied</span>”</span> failures occurring on Windows
+     due to attempts to fsync already-deleted files (Magnus, Tom)
+    </p></li><li class="listitem"><p>     Fix possible crashes when an already-in-use PL/pgSQL function is
+     updated (Tom)
+    </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-1-8.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-1-6.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.238. Release 8.1.8 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.240. Release 8.1.6</td></tr></table></div></body></html>

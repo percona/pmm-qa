@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.305. Release 7.3.21</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-7-4.html" title="E.304. Release 7.4" /><link rel="next" href="release-7-3-20.html" title="E.306. Release 7.3.20" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.305. Release 7.3.21</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-7-4.html" title="E.304. Release 7.4">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-7-3-20.html" title="E.306. Release 7.3.20">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-7-3-21"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.305. Release 7.3.21</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-7-3-21.html#id-1.11.6.309.5">E.305.1. Migration to Version 7.3.21</a></span></dt><dt><span class="sect2"><a href="release-7-3-21.html#id-1.11.6.309.6">E.305.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2008-01-07</p><p>   This release contains a variety of fixes from 7.3.20,
+   including fixes for significant security issues.
+  </p><p>   This is expected to be the last <span class="productname">PostgreSQL</span> release
+   in the 7.3.X series.  Users are encouraged to update to a newer
+   release branch soon.
+  </p><div class="sect2" id="id-1.11.6.309.5"><div class="titlepage"><div><div><h3 class="title">E.305.1. Migration to Version 7.3.21</h3></div></div></div><p>    A dump/restore is not required for those running 7.3.X.  However,
+    if you are upgrading from a version earlier than 7.3.13,
+    see <a class="xref" href="release-7-3-13.html" title="E.313. Release 7.3.13">Section E.313</a>.
+   </p></div><div class="sect2" id="id-1.11.6.309.6"><div class="titlepage"><div><div><h3 class="title">E.305.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Prevent functions in indexes from executing with the privileges of
+      the user running <code class="command">VACUUM</code>, <code class="command">ANALYZE</code>, etc (Tom)
+     </p><p>      Functions used in index expressions and partial-index
+      predicates are evaluated whenever a new table entry is made.  It has
+      long been understood that this poses a risk of trojan-horse code
+      execution if one modifies a table owned by an untrustworthy user.
+      (Note that triggers, defaults, check constraints, etc. pose the
+      same type of risk.)  But functions in indexes pose extra danger
+      because they will be executed by routine maintenance operations
+      such as <code class="command">VACUUM FULL</code>, which are commonly performed
+      automatically under a superuser account.  For example, a nefarious user
+      can execute code with superuser privileges by setting up a
+      trojan-horse index definition and waiting for the next routine vacuum.
+      The fix arranges for standard maintenance operations
+      (including <code class="command">VACUUM</code>, <code class="command">ANALYZE</code>, <code class="command">REINDEX</code>,
+      and <code class="command">CLUSTER</code>) to execute as the table owner rather than
+      the calling user, using the same privilege-switching mechanism already
+      used for <code class="literal">SECURITY DEFINER</code> functions.  To prevent bypassing
+      this security measure, execution of <code class="command">SET SESSION
+      AUTHORIZATION</code> and <code class="command">SET ROLE</code> is now forbidden within a
+      <code class="literal">SECURITY DEFINER</code> context.  (CVE-2007-6600)
+     </p></li><li class="listitem"><p>      Require non-superusers who use <code class="filename">/contrib/dblink</code> to use only
+      password authentication, as a security measure (Joe)
+     </p><p>      The fix that appeared for this in 7.3.20 was incomplete, as it plugged
+      the hole for only some <code class="filename">dblink</code> functions.  (CVE-2007-6601,
+      CVE-2007-3278)
+     </p></li><li class="listitem"><p>      Fix potential crash in <code class="function">translate()</code> when using a multibyte
+      database encoding (Tom)
+     </p></li><li class="listitem"><p>      Make <code class="filename">contrib/tablefunc</code>'s <code class="function">crosstab()</code> handle
+      NULL rowid as a category in its own right, rather than crashing (Joe)
+     </p></li><li class="listitem"><p>      Require a specific version of <span class="productname">Autoconf</span> to be used
+      when re-generating the <code class="command">configure</code> script (Peter)
+     </p><p>      This affects developers and packagers only.  The change was made
+      to prevent accidental use of untested combinations of
+      <span class="productname">Autoconf</span> and <span class="productname">PostgreSQL</span> versions.
+      You can remove the version check if you really want to use a
+      different <span class="productname">Autoconf</span> version, but it's
+      your responsibility whether the result works or not.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-7-4.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-7-3-20.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.304. Release 7.4 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.306. Release 7.3.20</td></tr></table></div></body></html>

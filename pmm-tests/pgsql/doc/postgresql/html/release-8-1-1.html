@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.245. Release 8.1.1</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-1-2.html" title="E.244. Release 8.1.2" /><link rel="next" href="release-8-1.html" title="E.246. Release 8.1" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.245. Release 8.1.1</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-1-2.html" title="E.244. Release 8.1.2">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-1.html" title="E.246. Release 8.1">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-1-1"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.245. Release 8.1.1</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-1-1.html#id-1.11.6.249.4">E.245.1. Migration to Version 8.1.1</a></span></dt><dt><span class="sect2"><a href="release-8-1-1.html#id-1.11.6.249.5">E.245.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2005-12-12</p><p>   This release contains a variety of fixes from 8.1.0.
+   For information about new features in the 8.1 major release, see
+   <a class="xref" href="release-8-1.html" title="E.246. Release 8.1">Section E.246</a>.
+  </p><div class="sect2" id="id-1.11.6.249.4"><div class="titlepage"><div><div><h3 class="title">E.245.1. Migration to Version 8.1.1</h3></div></div></div><p>    A dump/restore is not required for those running 8.1.X.
+   </p></div><div class="sect2" id="id-1.11.6.249.5"><div class="titlepage"><div><div><h3 class="title">E.245.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Fix incorrect optimizations of outer-join conditions
+(Tom)</p></li><li class="listitem"><p>Fix problems with wrong reported column names in cases
+involving sub-selects flattened by the optimizer (Tom)</p></li><li class="listitem"><p>Fix update failures in scenarios involving CHECK constraints,
+toasted columns, <span class="emphasis"><em>and</em></span> indexes (Tom)</p></li><li class="listitem"><p>Fix bgwriter problems after recovering from errors
+(Tom)</p><p>The background writer was found to leak buffer pins after write errors.
+While not fatal in itself, this might lead to mysterious blockages of
+later VACUUM commands.</p></li><li class="listitem"><p>Prevent failure if client sends Bind protocol message
+when current transaction is already aborted</p></li><li class="listitem"><p><code class="filename">/contrib/tsearch2</code> and <code class="filename">/contrib/ltree</code>
+fixes (Teodor)</p></li><li class="listitem"><p>Fix problems with translated error messages in
+languages that require word reordering, such as Turkish; also problems with
+unexpected truncation of output strings and wrong display of the smallest
+possible bigint value (Andrew, Tom)</p><p>These problems only appeared on platforms that were using our
+<code class="filename">port/snprintf.c</code> code, which includes BSD variants if
+<code class="literal">--enable-nls</code> was given, and perhaps others.  In addition,
+a different form of the translated-error-message problem could appear
+on Windows depending on which version of <code class="filename">libintl</code> was used.</p></li><li class="listitem"><p>Re-allow <code class="literal">AM</code>/<code class="literal">PM</code>, <code class="literal">HH</code>,
+<code class="literal">HH12</code>, and <code class="literal">D</code> format specifiers for
+<code class="function">to_char(time)</code> and <code class="function">to_char(interval)</code>.
+(<code class="function">to_char(interval)</code> should probably use
+<code class="literal">HH24</code>.) (Bruce)</p></li><li class="listitem"><p>AIX, HPUX, and MSVC compile fixes (Tom, Hiroshi
+Saito)</p></li><li class="listitem"><p>Optimizer improvements (Tom)</p></li><li class="listitem"><p>Retry file reads and writes after Windows
+NO_SYSTEM_RESOURCES error (Qingqing Zhou)</p></li><li class="listitem"><p>Prevent <span class="application">autovacuum</span> from crashing during
+ANALYZE of expression index (Alvaro)</p></li><li class="listitem"><p>Fix problems with ON COMMIT DELETE ROWS temp
+tables</p></li><li class="listitem"><p>Fix problems when a trigger alters the output of a SELECT
+DISTINCT query</p></li><li class="listitem"><p>Add 8.1.0 release note item on how to migrate invalid
+<code class="literal">UTF-8</code> byte sequences (Paul Lindner)</p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-1-2.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-1.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.244. Release 8.1.2 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.246. Release 8.1</td></tr></table></div></body></html>

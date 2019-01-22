@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.7. Release 9.6.10</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-10.html" title="E.6. Release 10" /><link rel="next" href="release-9-6-9.html" title="E.8. Release 9.6.9" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.7. Release 9.6.10</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-10.html" title="E.6. Release 10">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-6-9.html" title="E.8. Release 9.6.9">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-6-10"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.7. Release 9.6.10</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-6-10.html#id-1.11.6.11.4">E.7.1. Migration to Version 9.6.10</a></span></dt><dt><span class="sect2"><a href="release-9-6-10.html#id-1.11.6.11.5">E.7.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2018-08-09</p><p>   This release contains a variety of fixes from 9.6.9.
+   For information about new features in the 9.6 major release, see
+   <a class="xref" href="release-9-6.html" title="E.17. Release 9.6">Section E.17</a>.
+  </p><div class="sect2" id="id-1.11.6.11.4"><div class="titlepage"><div><div><h3 class="title">E.7.1. Migration to Version 9.6.10</h3></div></div></div><p>    A dump/restore is not required for those running 9.6.X.
+   </p><p>    However, if you are upgrading from a version earlier than 9.6.9,
+    see <a class="xref" href="release-9-6-9.html" title="E.8. Release 9.6.9">Section E.8</a>.
+   </p></div><div class="sect2" id="id-1.11.6.11.5"><div class="titlepage"><div><div><h3 class="title">E.7.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix failure to reset <span class="application">libpq</span>'s state fully
+      between connection attempts (Tom Lane)
+     </p><p>      An unprivileged user of <code class="filename">dblink</code>
+      or <code class="filename">postgres_fdw</code> could bypass the checks intended
+      to prevent use of server-side credentials, such as
+      a <code class="filename">~/.pgpass</code> file owned by the operating-system
+      user running the server.  Servers allowing peer authentication on
+      local connections are particularly vulnerable.  Other attacks such
+      as SQL injection into a <code class="filename">postgres_fdw</code> session
+      are also possible.
+      Attacking <code class="filename">postgres_fdw</code> in this way requires the
+      ability to create a foreign server object with selected connection
+      parameters, but any user with access to <code class="filename">dblink</code>
+      could exploit the problem.
+      In general, an attacker with the ability to select the connection
+      parameters for a <span class="application">libpq</span>-using application
+      could cause mischief, though other plausible attack scenarios are
+      harder to think of.
+      Our thanks to Andrew Krasichkov for reporting this issue.
+      (CVE-2018-10915)
+     </p></li><li class="listitem"><p>      Fix <code class="literal">INSERT ... ON CONFLICT UPDATE</code> through a view
+      that isn't just <code class="literal">SELECT * FROM ...</code>
+      (Dean Rasheed, Amit Langote)
+     </p><p>      Erroneous expansion of an updatable view could lead to crashes
+      or <span class="quote">“<span class="quote">attribute ... has the wrong type</span>”</span> errors, if the
+      view's <code class="literal">SELECT</code> list doesn't match one-to-one with
+      the underlying table's columns.
+      Furthermore, this bug could be leveraged to allow updates of columns
+      that an attacking user lacks <code class="literal">UPDATE</code> privilege for,
+      if that user has <code class="literal">INSERT</code> and <code class="literal">UPDATE</code>
+      privileges for some other column(s) of the table.
+      Any user could also use it for disclosure of server memory.
+      (CVE-2018-10925)
+     </p></li><li class="listitem"><p>      Ensure that updates to the <code class="structfield">relfrozenxid</code>
+      and <code class="structfield">relminmxid</code> values
+      for <span class="quote">“<span class="quote">nailed</span>”</span> system catalogs are processed in a timely
+      fashion (Andres Freund)
+     </p><p>      Overoptimistic caching rules could prevent these updates from being
+      seen by other sessions, leading to spurious errors and/or data
+      corruption.  The problem was significantly worse for shared catalogs,
+      such as <code class="structname">pg_authid</code>, because the stale cache
+      data could persist into new sessions as well as existing ones.
+     </p></li><li class="listitem"><p>      Fix case where a freshly-promoted standby crashes before having
+      completed its first post-recovery checkpoint (Michael Paquier, Kyotaro
+      Horiguchi, Pavan Deolasee, Álvaro Herrera)
+     </p><p>      This led to a situation where the server did not think it had reached
+      a consistent database state during subsequent WAL replay, preventing
+      restart.
+     </p></li><li class="listitem"><p>      Avoid emitting a bogus WAL record when recycling an all-zero btree
+      page (Amit Kapila)
+     </p><p>      This mistake has been seen to cause assertion failures, and
+      potentially it could result in unnecessary query cancellations on hot
+      standby servers.
+     </p></li><li class="listitem"><p>      During WAL replay, guard against corrupted record lengths exceeding
+      1GB (Michael Paquier)
+     </p><p>      Treat such a case as corrupt data.  Previously, the code would try to
+      allocate space and get a hard error, making recovery impossible.
+     </p></li><li class="listitem"><p>      When ending recovery, delay writing the timeline history file as long
+      as possible (Heikki Linnakangas)
+     </p><p>      This avoids some situations where a failure during recovery cleanup
+      (such as a problem with a two-phase state file) led to inconsistent
+      timeline state on-disk.
+     </p></li><li class="listitem"><p>      Improve performance of WAL replay for transactions that drop many
+      relations (Fujii Masao)
+     </p><p>      This change reduces the number of times that shared buffers are
+      scanned, so that it is of most benefit when that setting is large.
+     </p></li><li class="listitem"><p>      Improve performance of lock releasing in standby server WAL replay
+      (Thomas Munro)
+     </p></li><li class="listitem"><p>      Make logical WAL senders report streaming state correctly (Simon
+      Riggs, Sawada Masahiko)
+     </p><p>      The code previously mis-detected whether or not it had caught up with
+      the upstream server.
+     </p></li><li class="listitem"><p>      Fix bugs in snapshot handling during logical decoding, allowing wrong
+      decoding results in rare cases (Arseny Sher, Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Ensure a table's cached index list is correctly rebuilt after an index
+      creation fails partway through (Peter Geoghegan)
+     </p><p>      Previously, the failed index's OID could remain in the list, causing
+      problems later in the same session.
+     </p></li><li class="listitem"><p>      Fix mishandling of empty uncompressed posting list pages in GIN
+      indexes (Sivasubramanian Ramasubramanian, Alexander Korotkov)
+     </p><p>      This could result in an assertion failure after pg_upgrade of a
+      pre-9.4 GIN index (9.4 and later will not create such pages).
+     </p></li><li class="listitem"><p>      Ensure that <code class="command">VACUUM</code> will respond to signals
+      within btree page deletion loops (Andres Freund)
+     </p><p>      Corrupted btree indexes could result in an infinite loop here, and
+      that previously wasn't interruptible without forcing a crash.
+     </p></li><li class="listitem"><p>      Fix misoptimization of equivalence classes involving composite-type
+      columns (Tom Lane)
+     </p><p>      This resulted in failure to recognize that an index on a composite
+      column could provide the sort order needed for a mergejoin on that
+      column.
+     </p></li><li class="listitem"><p>      Fix planner to avoid <span class="quote">“<span class="quote">ORDER/GROUP BY expression not found in
+      targetlist</span>”</span> errors in some queries with set-returning functions
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix SQL-standard <code class="literal">FETCH FIRST</code> syntax to allow
+      parameters (<code class="literal">$<em class="replaceable"><code>n</code></em></code>), as the
+      standard expects (Andrew Gierth)
+     </p></li><li class="listitem"><p>      Fix <code class="command">EXPLAIN</code>'s accounting for resource usage,
+      particularly buffer accesses, in parallel workers
+      (Amit Kapila, Robert Haas)
+     </p></li><li class="listitem"><p>      Fix failure to schema-qualify some object names
+      in <code class="function">getObjectDescription</code> output
+      (Kyotaro Horiguchi, Tom Lane)
+     </p><p>      Names of collations, conversions, and text search objects
+      were not schema-qualified when they should be.
+     </p></li><li class="listitem"><p>      Fix <code class="command">CREATE AGGREGATE</code> type checking so that
+      parallelism support functions can be attached to variadic aggregates
+      (Alexey Bashtanov)
+     </p></li><li class="listitem"><p>      Widen <code class="command">COPY FROM</code>'s current-line-number counter
+      from 32 to 64 bits (David Rowley)
+     </p><p>      This avoids two problems with input exceeding 4G lines: <code class="literal">COPY
+      FROM WITH HEADER</code> would drop a line every 4G lines, not only
+      the first line, and error reports could show a wrong line number.
+     </p></li><li class="listitem"><p>      Add a string freeing function
+      to <span class="application">ecpg</span>'s <code class="filename">pgtypes</code>
+      library, so that cross-module memory management problems can be
+      avoided on Windows (Takayuki Tsunakawa)
+     </p><p>      On Windows, crashes can ensue if the <code class="function">free</code> call
+      for a given chunk of memory is not made from the same DLL
+      that <code class="function">malloc</code>'ed the memory.
+      The <code class="filename">pgtypes</code> library sometimes returns strings
+      that it expects the caller to free, making it impossible to follow
+      this rule.  Add a <code class="function">PGTYPESchar_free()</code> function
+      that just wraps <code class="function">free</code>, allowing applications
+      to follow this rule.
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span>'s support for <code class="type">long
+      long</code> variables on Windows, as well as other platforms that
+      declare <code class="function">strtoll</code>/<code class="function">strtoull</code>
+      nonstandardly or not at all (Dang Minh Huong, Tom Lane)
+     </p></li><li class="listitem"><p>      Fix misidentification of SQL statement type in PL/pgSQL, when a rule
+      change causes a change in the semantics of a statement intra-session
+      (Tom Lane)
+     </p><p>      This error led to assertion failures, or in rare cases, failure to
+      enforce the <code class="literal">INTO STRICT</code> option as expected.
+     </p></li><li class="listitem"><p>      Fix password prompting in client programs so that echo is properly
+      disabled on Windows when <code class="literal">stdin</code> is not the
+      terminal (Matthew Stickney)
+     </p></li><li class="listitem"><p>      Further fix mis-quoting of values for list-valued GUC variables in
+      dumps (Tom Lane)
+     </p><p>      The previous fix for quoting of <code class="varname">search_path</code> and
+      other list-valued variables in <span class="application">pg_dump</span>
+      output turned out to misbehave for empty-string list elements, and it
+      risked truncation of long file paths.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span>'s failure to
+      dump <code class="literal">REPLICA IDENTITY</code> properties for constraint
+      indexes (Tom Lane)
+     </p><p>      Manually created unique indexes were properly marked, but not those
+      created by declaring <code class="literal">UNIQUE</code> or <code class="literal">PRIMARY
+      KEY</code> constraints.
+     </p></li><li class="listitem"><p>      Make <span class="application">pg_upgrade</span> check that the old server
+      was shut down cleanly (Bruce Momjian)
+     </p><p>      The previous check could be fooled by an immediate-mode shutdown.
+     </p></li><li class="listitem"><p>      Fix <code class="filename">contrib/hstore_plperl</code> to look through Perl
+      scalar references, and to not crash if it doesn't find a hash
+      reference where it expects one (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix crash in <code class="filename">contrib/ltree</code>'s
+      <code class="function">lca()</code> function when the input array is empty
+      (Pierre Ducroquet)
+     </p></li><li class="listitem"><p>      Fix various error-handling code paths in which an incorrect error code
+      might be reported (Michael Paquier, Tom Lane, Magnus Hagander)
+     </p></li><li class="listitem"><p>      Rearrange makefiles to ensure that programs link to freshly-built
+      libraries (such as <code class="filename">libpq.so</code>) rather than ones
+      that might exist in the system library directories (Tom Lane)
+     </p><p>      This avoids problems when building on platforms that supply old copies
+      of <span class="productname">PostgreSQL</span> libraries.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span>
+      release 2018e for DST law changes in North Korea, plus historical
+      corrections for Czechoslovakia.
+     </p><p>      This update includes a redefinition of <span class="quote">“<span class="quote">daylight savings</span>”</span>
+      in Ireland, as well as for some past years in Namibia and
+      Czechoslovakia.  In those jurisdictions, legally standard time is
+      observed in summer, and daylight savings time in winter, so that the
+      daylight savings offset is one hour behind standard time not one hour
+      ahead.  This does not affect either the actual UTC offset or the
+      timezone abbreviations in use; the only known effect is that
+      the <code class="structfield">is_dst</code> column in
+      the <code class="structname">pg_timezone_names</code> view will now be true
+      in winter and false in summer in these cases.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-10.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-6-9.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.6. Release 10 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.8. Release 9.6.9</td></tr></table></div></body></html>

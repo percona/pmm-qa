@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.104. Release 9.1.23</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-1-24.html" title="E.103. Release 9.1.24" /><link rel="next" href="release-9-1-22.html" title="E.105. Release 9.1.22" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.104. Release 9.1.23</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-1-24.html" title="E.103. Release 9.1.24">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-1-22.html" title="E.105. Release 9.1.22">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-1-23"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.104. Release 9.1.23</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-1-23.html#id-1.11.6.108.5">E.104.1. Migration to Version 9.1.23</a></span></dt><dt><span class="sect2"><a href="release-9-1-23.html#id-1.11.6.108.6">E.104.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2016-08-11</p><p>   This release contains a variety of fixes from 9.1.22.
+   For information about new features in the 9.1 major release, see
+   <a class="xref" href="release-9-1.html" title="E.127. Release 9.1">Section E.127</a>.
+  </p><p>   The <span class="productname">PostgreSQL</span> community will stop releasing updates
+   for the 9.1.X release series in September 2016.
+   Users are encouraged to update to a newer release branch soon.
+  </p><div class="sect2" id="id-1.11.6.108.5"><div class="titlepage"><div><div><h3 class="title">E.104.1. Migration to Version 9.1.23</h3></div></div></div><p>    A dump/restore is not required for those running 9.1.X.
+   </p><p>    However, if you are upgrading from a version earlier than 9.1.16,
+    see <a class="xref" href="release-9-1-16.html" title="E.111. Release 9.1.16">Section E.111</a>.
+   </p></div><div class="sect2" id="id-1.11.6.108.6"><div class="titlepage"><div><div><h3 class="title">E.104.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix possible mis-evaluation of
+      nested <code class="literal">CASE</code>-<code class="literal">WHEN</code> expressions (Heikki
+      Linnakangas, Michael Paquier, Tom Lane)
+     </p><p>      A <code class="literal">CASE</code> expression appearing within the test value
+      subexpression of another <code class="literal">CASE</code> could become confused about
+      whether its own test value was null or not.  Also, inlining of a SQL
+      function implementing the equality operator used by
+      a <code class="literal">CASE</code> expression could result in passing the wrong test
+      value to functions called within a <code class="literal">CASE</code> expression in the
+      SQL function's body.  If the test values were of different data
+      types, a crash might result; moreover such situations could be abused
+      to allow disclosure of portions of server memory.  (CVE-2016-5423)
+     </p></li><li class="listitem"><p>      Fix client programs' handling of special characters in database and
+      role names (Noah Misch, Nathan Bossart, Michael Paquier)
+     </p><p>      Numerous places in <span class="application">vacuumdb</span> and other client programs
+      could become confused by database and role names containing double
+      quotes or backslashes.  Tighten up quoting rules to make that safe.
+      Also, ensure that when a conninfo string is used as a database name
+      parameter to these programs, it is correctly treated as such throughout.
+     </p><p>      Fix handling of paired double quotes
+      in <span class="application">psql</span>'s <code class="command">\connect</code>
+      and <code class="command">\password</code> commands to match the documentation.
+     </p><p>      Introduce a new <code class="option">-reuse-previous</code> option
+      in <span class="application">psql</span>'s <code class="command">\connect</code> command to allow
+      explicit control of whether to re-use connection parameters from a
+      previous connection.  (Without this, the choice is based on whether
+      the database name looks like a conninfo string, as before.)  This
+      allows secure handling of database names containing special
+      characters in <span class="application">pg_dumpall</span> scripts.
+     </p><p>      <span class="application">pg_dumpall</span> now refuses to deal with database and role
+      names containing carriage returns or newlines, as it seems impractical
+      to quote those characters safely on Windows.  In future we may reject
+      such names on the server side, but that step has not been taken yet.
+     </p><p>      These are considered security fixes because crafted object names
+      containing special characters could have been used to execute
+      commands with superuser privileges the next time a superuser
+      executes <span class="application">pg_dumpall</span> or other routine maintenance
+      operations.  (CVE-2016-5424)
+     </p></li><li class="listitem"><p>      Fix corner-case misbehaviors for <code class="literal">IS NULL</code>/<code class="literal">IS NOT
+      NULL</code> applied to nested composite values (Andrew Gierth, Tom Lane)
+     </p><p>      The SQL standard specifies that <code class="literal">IS NULL</code> should return
+      TRUE for a row of all null values (thus <code class="literal">ROW(NULL,NULL) IS
+      NULL</code> yields TRUE), but this is not meant to apply recursively
+      (thus <code class="literal">ROW(NULL, ROW(NULL,NULL)) IS NULL</code> yields FALSE).
+      The core executor got this right, but certain planner optimizations
+      treated the test as recursive (thus producing TRUE in both cases),
+      and <code class="filename">contrib/postgres_fdw</code> could produce remote queries
+      that misbehaved similarly.
+     </p></li><li class="listitem"><p>      Make the <code class="type">inet</code> and <code class="type">cidr</code> data types properly reject
+      IPv6 addresses with too many colon-separated fields (Tom Lane)
+     </p></li><li class="listitem"><p>      Prevent crash in <code class="function">close_ps()</code>
+      (the <code class="type">point</code> <code class="literal">##</code> <code class="type">lseg</code> operator)
+      for NaN input coordinates (Tom Lane)
+     </p><p>      Make it return NULL instead of crashing.
+     </p></li><li class="listitem"><p>      Fix several one-byte buffer over-reads in <code class="function">to_number()</code>
+      (Peter Eisentraut)
+     </p><p>      In several cases the <code class="function">to_number()</code> function would read one
+      more character than it should from the input string.  There is a
+      small chance of a crash, if the input happens to be adjacent to the
+      end of memory.
+     </p></li><li class="listitem"><p>      Avoid unsafe intermediate state during expensive paths
+      through <code class="function">heap_update()</code> (Masahiko Sawada, Andres Freund)
+     </p><p>      Previously, these cases locked the target tuple (by setting its XMAX)
+      but did not WAL-log that action, thus risking data integrity problems
+      if the page were spilled to disk and then a database crash occurred
+      before the tuple update could be completed.
+     </p></li><li class="listitem"><p>      Avoid consuming a transaction ID during <code class="command">VACUUM</code>
+      (Alexander Korotkov)
+     </p><p>      Some cases in <code class="command">VACUUM</code> unnecessarily caused an XID to be
+      assigned to the current transaction.  Normally this is negligible,
+      but if one is up against the XID wraparound limit, consuming more
+      XIDs during anti-wraparound vacuums is a very bad thing.
+     </p></li><li class="listitem"><p>      Avoid canceling hot-standby queries during <code class="command">VACUUM FREEZE</code>
+      (Simon Riggs, Álvaro Herrera)
+     </p><p>      <code class="command">VACUUM FREEZE</code> on an otherwise-idle master server could
+      result in unnecessary cancellations of queries on its standby
+      servers.
+     </p></li><li class="listitem"><p>      When a manual <code class="command">ANALYZE</code> specifies a column list, don't
+      reset the table's <code class="literal">changes_since_analyze</code> counter
+      (Tom Lane)
+     </p><p>      If we're only analyzing some columns, we should not prevent routine
+      auto-analyze from happening for the other columns.
+     </p></li><li class="listitem"><p>      Fix <code class="command">ANALYZE</code>'s overestimation of <code class="literal">n_distinct</code>
+      for a unique or nearly-unique column with many null entries (Tom
+      Lane)
+     </p><p>      The nulls could get counted as though they were themselves distinct
+      values, leading to serious planner misestimates in some types of
+      queries.
+     </p></li><li class="listitem"><p>      Prevent autovacuum from starting multiple workers for the same shared
+      catalog (Álvaro Herrera)
+     </p><p>      Normally this isn't much of a problem because the vacuum doesn't take
+      long anyway; but in the case of a severely bloated catalog, it could
+      result in all but one worker uselessly waiting instead of doing
+      useful work on other tables.
+     </p></li><li class="listitem"><p>      Fix <code class="filename">contrib/btree_gin</code> to handle the smallest
+      possible <code class="type">bigint</code> value correctly (Peter Eisentraut)
+     </p></li><li class="listitem"><p>      Teach libpq to correctly decode server version from future servers
+      (Peter Eisentraut)
+     </p><p>      It's planned to switch to two-part instead of three-part server
+      version numbers for releases after 9.6.  Make sure
+      that <code class="function">PQserverVersion()</code> returns the correct value for
+      such cases.
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span>'s code for <code class="literal">unsigned long long</code>
+      array elements (Michael Meskes)
+     </p></li><li class="listitem"><p>      Make <span class="application">pg_basebackup</span> accept <code class="literal">-Z 0</code> as
+      specifying no compression (Fujii Masao)
+     </p></li><li class="listitem"><p>      Revert to the old heuristic timeout for <code class="literal">pg_ctl start -w</code>
+      (Tom Lane)
+     </p><p>      The new method adopted as of release 9.1.20 does not work
+      when <code class="varname">silent_mode</code> is enabled, so go back to the old way.
+     </p></li><li class="listitem"><p>      Fix makefiles' rule for building AIX shared libraries to be safe for
+      parallel make (Noah Misch)
+     </p></li><li class="listitem"><p>      Fix TAP tests and MSVC scripts to work when build directory's path
+      name contains spaces (Michael Paquier, Kyotaro Horiguchi)
+     </p></li><li class="listitem"><p>      Make regression tests safe for Danish and Welsh locales (Jeff Janes,
+      Tom Lane)
+     </p><p>      Change some test data that triggered the unusual sorting rules of
+      these locales.
+     </p></li><li class="listitem"><p>      Update our copy of the timezone code to match
+      IANA's <span class="application">tzcode</span> release 2016c (Tom Lane)
+     </p><p>      This is needed to cope with anticipated future changes in the time
+      zone data files.  It also fixes some corner-case bugs in coping with
+      unusual time zones.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2016f
+      for DST law changes in Kemerovo and Novosibirsk, plus historical
+      corrections for Azerbaijan, Belarus, and Morocco.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-1-24.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-1-22.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.103. Release 9.1.24 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.105. Release 9.1.22</td></tr></table></div></body></html>

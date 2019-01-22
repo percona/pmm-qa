@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>J.2. Tool Sets</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="docguide-docbook.html" title="J.1. DocBook" /><link rel="next" href="docguide-build.html" title="J.3. Building The Documentation" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">J.2. Tool Sets</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="docguide-docbook.html" title="J.1. DocBook">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="docguide.html" title="Appendix J. Documentation">Up</a></td><th width="60%" align="center">Appendix J. Documentation</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="docguide-build.html" title="J.3. Building The Documentation">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="DOCGUIDE-TOOLSETS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">J.2. Tool Sets</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="docguide-toolsets.html#id-1.11.11.5.5">J.2.1. Installation on Fedora, RHEL, and Derivatives</a></span></dt><dt><span class="sect2"><a href="docguide-toolsets.html#id-1.11.11.5.6">J.2.2. Installation on FreeBSD</a></span></dt><dt><span class="sect2"><a href="docguide-toolsets.html#id-1.11.11.5.7">J.2.3. Debian Packages</a></span></dt><dt><span class="sect2"><a href="docguide-toolsets.html#id-1.11.11.5.8">J.2.4. macOS</a></span></dt><dt><span class="sect2"><a href="docguide-toolsets.html#id-1.11.11.5.9">J.2.5. Manual Installation from Source</a></span></dt><dt><span class="sect2"><a href="docguide-toolsets.html#DOCGUIDE-TOOLSETS-CONFIGURE">J.2.6. Detection by <code class="command">configure</code></a></span></dt></dl></div><p>   The following tools are used to process the documentation.  Some
+   might be optional, as noted.
+
+   </p><div class="variablelist"><dl class="variablelist"><dt><span class="term"><a class="ulink" href="http://www.oasis-open.org/docbook/" target="_top">DocBook DTD</a></span></dt><dd><p>       This is the definition of DocBook itself.  We currently use version
+       4.2; you cannot use later or earlier versions.  You need
+       the <acronym class="acronym">SGML</acronym> and the <acronym class="acronym">XML</acronym> variant of
+       the DocBook DTD of the same version.  These will usually be in separate
+       packages.
+      </p></dd><dt><span class="term"><a class="ulink" href="http://www.oasis-open.org/cover/ISOEnts.zip" target="_top">ISO 8879 character entities</a></span></dt><dd><p>       These are required by DocBook SGML but are distributed separately
+       because they are maintained by ISO.
+      </p></dd><dt><span class="term"><a class="ulink" href="https://github.com/docbook/wiki/wiki/DocBookXslStylesheets" target="_top">DocBook XSL Stylesheets</a></span></dt><dd><p>       These contain the processing instructions for converting the
+       DocBook sources to other formats, such as
+       <acronym class="acronym">HTML</acronym>.
+      </p><p>       The minimum required version is currently 1.77.0, but it is recommended
+       to use the latest available version for best results.
+      </p></dd><dt><span class="term"><a class="ulink" href="http://openjade.sourceforge.net" target="_top">OpenSP</a></span></dt><dd><p>       This is the base package of <acronym class="acronym">SGML</acronym> processing.  Note
+       that we no longer need OpenJade, the <acronym class="acronym">DSSSL</acronym>
+       processor, only the OpenSP package for converting SGML to XML.
+      </p></dd><dt><span class="term"><a class="ulink" href="http://xmlsoft.org/" target="_top">Libxml2</a> for <code class="command">xmllint</code></span></dt><dd><p>       This library and the <code class="command">xmllint</code> tool it contains are
+       used for processing XML.  Many developers will already
+       have <span class="application">Libxml2</span> installed, because it is also
+       used when building the PostgreSQL code.  Note, however,
+       that <code class="command">xmllint</code> might need to be installed from a
+       separate subpackage.
+      </p></dd><dt><span class="term"><a class="ulink" href="http://xmlsoft.org/XSLT/" target="_top">Libxslt</a> for <code class="command">xsltproc</code></span></dt><dd><p>       <code class="command">xsltproc</code> is an XSLT processor, that is, a program to
+       convert XML to other formats using XSLT stylesheets.
+      </p></dd><dt><span class="term"><a class="ulink" href="https://xmlgraphics.apache.org/fop/" target="_top">FOP</a></span></dt><dd><p>       This is a program for converting, among other things, XML to PDF.
+      </p></dd></dl></div><p>
+  </p><p>   We have documented experience with several installation methods for
+   the various tools that are needed to process the documentation.
+   These will be described below.  There might be some other packaged
+   distributions for these tools. Please report package status to the
+   documentation mailing list, and we will include that information
+   here.
+  </p><p>   You can get away with not installing DocBook XML and the DocBook XSLT
+   stylesheets locally, because the required files will be downloaded from the
+   Internet and cached locally.  This may in fact be the preferred solution if
+   your operating system packages provide only an old version of especially
+   the stylesheets or if no packages are available at all.  See
+   the <code class="option">--nonet</code> option for <code class="command">xmllint</code>
+   and <code class="command">xsltproc</code> for more information.
+  </p><div class="sect2" id="id-1.11.11.5.5"><div class="titlepage"><div><div><h3 class="title">J.2.1. Installation on Fedora, RHEL, and Derivatives</h3></div></div></div><p>    To install the required packages, use:
+</p><pre class="programlisting">yum install docbook-dtds docbook-style-xsl fop libxslt opensp</pre><p>
+   </p></div><div class="sect2" id="id-1.11.11.5.6"><div class="titlepage"><div><div><h3 class="title">J.2.2. Installation on FreeBSD</h3></div></div></div><p>    The FreeBSD Documentation Project is itself a heavy user of
+    DocBook, so it comes as no surprise that there is a full set of
+    <span class="quote">“<span class="quote">ports</span>”</span> of the documentation tools available on
+    FreeBSD.  The following ports need to be installed to build the
+    documentation on FreeBSD.
+    </p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p><code class="filename">textproc/docbook-sgml</code></p></li><li class="listitem"><p><code class="filename">textproc/docbook-xml</code></p></li><li class="listitem"><p><code class="filename">textproc/docbook-xsl</code></p></li><li class="listitem"><p><code class="filename">textproc/dsssl-docbook-modular</code></p></li><li class="listitem"><p><code class="filename">textproc/libxslt</code></p></li><li class="listitem"><p><code class="filename">textproc/fop</code></p></li><li class="listitem"><p><code class="filename">textproc/opensp</code></p></li></ul></div><p>
+   </p><p>    To install the required packages with <code class="command">pkg</code>, use:
+</p><pre class="programlisting">pkg install docbook-sgml docbook-xml docbook-xsl fop libxslt opensp</pre><p>
+   </p><p>    When building the documentation from the <code class="filename">doc</code>
+    directory you'll need to use <code class="command">gmake</code>, because the
+    makefile provided is not suitable for FreeBSD's <code class="command">make</code>.
+   </p><p>    More information about the FreeBSD documentation tools can be
+    found in the <a class="ulink" href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/fdp-primer/tools.html" target="_top">    FreeBSD Documentation Project's instructions</a>.
+   </p></div><div class="sect2" id="id-1.11.11.5.7"><div class="titlepage"><div><div><h3 class="title">J.2.3. Debian Packages</h3></div></div></div><p>    There is a full set of packages of the documentation tools
+    available for <span class="productname">Debian GNU/Linux</span>.
+    To install, simply use:
+</p><pre class="programlisting">apt-get install docbook docbook-xml docbook-xsl fop libxml2-utils opensp xsltproc</pre><p>
+   </p></div><div class="sect2" id="id-1.11.11.5.8"><div class="titlepage"><div><div><h3 class="title">J.2.4. macOS</h3></div></div></div><p>    If you use MacPorts, the following will get you set up:
+</p><pre class="programlisting">sudo port install docbook-sgml-4.2 docbook-xml-4.2 docbook-xsl fop libxslt opensp</pre><p>
+   </p></div><div class="sect2" id="id-1.11.11.5.9"><div class="titlepage"><div><div><h3 class="title">J.2.5. Manual Installation from Source</h3></div></div></div><p>    The manual installation process of the DocBook tools is somewhat
+    complex, so if you have pre-built packages available, use them.
+    We describe here only a standard setup, with reasonably standard
+    installation paths, and no <span class="quote">“<span class="quote">fancy</span>”</span> features.  For
+    details, you should study the documentation of the respective
+    package, and read <acronym class="acronym">SGML</acronym> introductory material.
+   </p><div class="sect3" id="id-1.11.11.5.9.3"><div class="titlepage"><div><div><h4 class="title">J.2.5.1. Installing OpenSP</h4></div></div></div><p>     The installation of OpenSP offers a GNU-style
+     <code class="literal">./configure; make; make install</code> build process.
+     Details can be found in the OpenSP source distribution. In a nutshell:
+</p><pre class="synopsis">./configure --enable-default-catalog=/usr/local/etc/sgml/catalog
+make
+make install</pre><p>
+     Be sure to remember where you put the <span class="quote">“<span class="quote">default catalog</span>”</span>; you
+     will need it below.  You can also leave it off, but then you will have to
+     set the environment variable <code class="envar">SGML_CATALOG_FILES</code> to point
+     to the file whenever you use any programs from OpenSP later on.  (This
+     method is also an option if OpenSP is already installed and you want to
+     install the rest of the toolchain locally.)
+    </p></div><div class="sect3" id="id-1.11.11.5.9.4"><div class="titlepage"><div><div><h4 class="title">J.2.5.2. Installing the <span class="productname">DocBook</span> <acronym class="acronym">DTD</acronym> Kit</h4></div></div></div><div class="procedure"><ol class="procedure" type="1"><li class="step"><p>       Obtain the <a class="ulink" href="http://www.docbook.org/sgml/4.2/docbook-4.2.zip" target="_top">       DocBook V4.2 distribution</a>.
+      </p></li><li class="step"><p>       Create the directory
+       <code class="filename">/usr/local/share/sgml/docbook-4.2</code> and change
+       to it. (The exact location is irrelevant, but this one is
+       reasonable within the layout we are following here.)
+</p><pre class="screen"><code class="prompt">$ </code><strong class="userinput"><code>mkdir /usr/local/share/sgml/docbook-4.2</code></strong>
+<code class="prompt">$ </code><strong class="userinput"><code>cd /usr/local/share/sgml/docbook-4.2</code></strong></pre><p>
+      </p></li><li class="step"><p>       Unpack the archive:
+</p><pre class="screen"><code class="prompt">$ </code><strong class="userinput"><code>unzip -a ...../docbook-4.2.zip</code></strong></pre><p>
+       (The archive will unpack its files into the current directory.)
+      </p></li><li class="step"><p>       Edit the file
+       <code class="filename">/usr/local/share/sgml/catalog</code> (or whatever
+       you told jade during installation) and put a line like this
+       into it:
+</p><pre class="programlisting">CATALOG "docbook-4.2/docbook.cat"</pre><p>
+      </p></li><li class="step"><p>       Download the <a class="ulink" href="http://www.oasis-open.org/cover/ISOEnts.zip" target="_top">       ISO 8879 character entities archive</a>, unpack it, and put the
+       files in the same directory you put the DocBook files in:
+</p><pre class="screen"><code class="prompt">$ </code><strong class="userinput"><code>cd /usr/local/share/sgml/docbook-4.2</code></strong>
+<code class="prompt">$ </code><strong class="userinput"><code>unzip ...../ISOEnts.zip</code></strong></pre><p>
+      </p></li><li class="step"><p>       Run the following command in the directory with the DocBook and ISO files:
+</p><pre class="programlisting">perl -pi -e 's/iso-(.*).gml/ISO\1/g' docbook.cat</pre><p>
+       (This fixes a mixup between the names used in the DocBook
+       catalog file and the actual names of the ISO character entity
+       files.)
+      </p></li></ol></div></div></div><div class="sect2" id="DOCGUIDE-TOOLSETS-CONFIGURE"><div class="titlepage"><div><div><h3 class="title">J.2.6. Detection by <code class="command">configure</code></h3></div></div></div><p>   Before you can build the documentation you need to run the
+   <code class="filename">configure</code> script as you would when building
+   the <span class="productname">PostgreSQL</span> programs themselves.
+   Check the output near the end of the run, it should look something
+   like this:
+</p><pre class="screen"><code class="computeroutput">checking for onsgmls... onsgmls
+checking for DocBook V4.2... yes
+checking for dbtoepub... dbtoepub
+checking for xmllint... xmllint
+checking for xsltproc... xsltproc
+checking for osx... osx
+checking for fop... fop</code></pre><p>
+   If neither <code class="filename">onsgmls</code> nor
+   <code class="filename">nsgmls</code> were found then some of the following tests
+   will be skipped.  <code class="filename">nsgmls</code> is part of the OpenSP
+   package.  You can pass the environment variable
+   <code class="envar">NSGMLS</code> to configure to point
+   to the programs if they are not found automatically.  If
+   <span class="quote">“<span class="quote">DocBook V4.2</span>”</span> was not found then you did not install
+   the DocBook DTD kit in a place where OpenSP can find it, or you have
+   not set up the catalog files correctly.  See the installation hints
+   above.
+  </p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="docguide-docbook.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="docguide.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="docguide-build.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">J.1. DocBook </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> J.3. Building The Documentation</td></tr></table></div></body></html>

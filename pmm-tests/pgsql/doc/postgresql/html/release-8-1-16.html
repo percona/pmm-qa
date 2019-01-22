@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.230. Release 8.1.16</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-1-17.html" title="E.229. Release 8.1.17" /><link rel="next" href="release-8-1-15.html" title="E.231. Release 8.1.15" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.230. Release 8.1.16</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-1-17.html" title="E.229. Release 8.1.17">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-1-15.html" title="E.231. Release 8.1.15">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-1-16"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.230. Release 8.1.16</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-1-16.html#id-1.11.6.234.4">E.230.1. Migration to Version 8.1.16</a></span></dt><dt><span class="sect2"><a href="release-8-1-16.html#id-1.11.6.234.5">E.230.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2009-02-02</p><p>   This release contains a variety of fixes from 8.1.15.
+   For information about new features in the 8.1 major release, see
+   <a class="xref" href="release-8-1.html" title="E.246. Release 8.1">Section E.246</a>.
+  </p><div class="sect2" id="id-1.11.6.234.4"><div class="titlepage"><div><div><h3 class="title">E.230.1. Migration to Version 8.1.16</h3></div></div></div><p>    A dump/restore is not required for those running 8.1.X.
+    However, if you are upgrading from a version earlier than 8.1.15,
+    see <a class="xref" href="release-8-1-15.html" title="E.231. Release 8.1.15">Section E.231</a>.
+   </p></div><div class="sect2" id="id-1.11.6.234.5"><div class="titlepage"><div><div><h3 class="title">E.230.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix crash in autovacuum (Alvaro)
+     </p><p>      The crash occurs only after vacuuming a whole database for
+      anti-transaction-wraparound purposes, which means that it occurs
+      infrequently and is hard to track down.
+     </p></li><li class="listitem"><p>      Improve handling of URLs in <code class="function">headline()</code> function (Teodor)
+     </p></li><li class="listitem"><p>      Improve handling of overlength headlines in <code class="function">headline()</code>
+      function (Teodor)
+     </p></li><li class="listitem"><p>      Prevent possible Assert failure or misconversion if an encoding
+      conversion is created with the wrong conversion function for the
+      specified pair of encodings (Tom, Heikki)
+     </p></li><li class="listitem"><p>      Avoid unnecessary locking of small tables in <code class="command">VACUUM</code>
+      (Heikki)
+     </p></li><li class="listitem"><p>      Ensure that the contents of a holdable cursor don't depend on the
+      contents of TOAST tables (Tom)
+     </p><p>      Previously, large field values in a cursor result might be represented
+      as TOAST pointers, which would fail if the referenced table got dropped
+      before the cursor is read, or if the large value is deleted and then
+      vacuumed away.  This cannot happen with an ordinary cursor,
+      but it could with a cursor that is held past its creating transaction.
+     </p></li><li class="listitem"><p>      Fix uninitialized variables in <code class="filename">contrib/tsearch2</code>'s
+      <code class="function">get_covers()</code> function (Teodor)
+     </p></li><li class="listitem"><p>      Fix <span class="application">configure</span> script to properly report failure when
+      unable to obtain linkage information for PL/Perl (Andrew)
+     </p></li><li class="listitem"><p>      Make all documentation reference <code class="literal">pgsql-bugs</code> and/or
+      <code class="literal">pgsql-hackers</code> as appropriate, instead of the
+      now-decommissioned <code class="literal">pgsql-ports</code> and <code class="literal">pgsql-patches</code>
+      mailing lists (Tom)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2009a (for
+      Kathmandu and historical DST corrections in Switzerland, Cuba)
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-1-17.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-1-15.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.229. Release 8.1.17 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.231. Release 8.1.15</td></tr></table></div></body></html>

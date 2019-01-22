@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.4. Release 10.2</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-10-3.html" title="E.3. Release 10.3" /><link rel="next" href="release-10-1.html" title="E.5. Release 10.1" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.4. Release 10.2</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-10-3.html" title="E.3. Release 10.3">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-10-1.html" title="E.5. Release 10.1">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-10-2"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.4. Release 10.2</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-10-2.html#id-1.11.6.8.4">E.4.1. Migration to Version 10.2</a></span></dt><dt><span class="sect2"><a href="release-10-2.html#id-1.11.6.8.5">E.4.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2018-02-08</p><p>   This release contains a variety of fixes from 10.1.
+   For information about new features in major release 10, see
+   <a class="xref" href="release-10.html" title="E.6. Release 10">Section E.6</a>.
+  </p><div class="sect2" id="id-1.11.6.8.4"><div class="titlepage"><div><div><h3 class="title">E.4.1. Migration to Version 10.2</h3></div></div></div><p>    A dump/restore is not required for those running 10.X.
+   </p><p>    However,
+    if you use <code class="filename">contrib/cube</code>'s <code class="literal">~&gt;</code>
+    operator, see the entry below about that.
+   </p><p>    Also, if you are upgrading from a version earlier than 10.1,
+    see <a class="xref" href="release-10-1.html" title="E.5. Release 10.1">Section E.5</a>.
+   </p></div><div class="sect2" id="id-1.11.6.8.5"><div class="titlepage"><div><div><h3 class="title">E.4.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix processing of partition keys containing multiple expressions
+      (Álvaro Herrera, David Rowley)
+     </p><p>      This error led to crashes or, with carefully crafted input, disclosure
+      of arbitrary backend memory.
+      (CVE-2018-1052)
+     </p></li><li class="listitem"><p>      Ensure that all temporary files made
+      by <span class="application">pg_upgrade</span> are non-world-readable
+      (Tom Lane, Noah Misch)
+     </p><p>      <span class="application">pg_upgrade</span> normally restricts its
+      temporary files to be readable and writable only by the calling user.
+      But the temporary file containing <code class="literal">pg_dumpall -g</code>
+      output would be group- or world-readable, or even writable, if the
+      user's <code class="literal">umask</code> setting allows.  In typical usage on
+      multi-user machines, the <code class="literal">umask</code> and/or the working
+      directory's permissions would be tight enough to prevent problems;
+      but there may be people using <span class="application">pg_upgrade</span>
+      in scenarios where this oversight would permit disclosure of database
+      passwords to unfriendly eyes.
+      (CVE-2018-1053)
+     </p></li><li class="listitem"><p>      Fix vacuuming of tuples that were updated while key-share locked
+      (Andres Freund, Álvaro Herrera)
+     </p><p>      In some cases <code class="command">VACUUM</code> would fail to remove such
+      tuples even though they are now dead, leading to assorted data
+      corruption scenarios.
+     </p></li><li class="listitem"><p>      Fix failure to mark a hash index's metapage dirty after
+      adding a new overflow page, potentially leading to index corruption
+      (Lixian Zou, Amit Kapila)
+     </p></li><li class="listitem"><p>      Ensure that vacuum will always clean up the pending-insertions list of
+      a GIN index (Masahiko Sawada)
+     </p><p>      This is necessary to ensure that dead index entries get removed.
+      The old code got it backwards, allowing vacuum to skip the cleanup if
+      some other process were running cleanup concurrently, thus risking
+      invalid entries being left behind in the index.
+     </p></li><li class="listitem"><p>      Fix inadequate buffer locking in some LSN fetches (Jacob Champion,
+      Asim Praveen, Ashwin Agrawal)
+     </p><p>      These errors could result in misbehavior under concurrent load.
+      The potential consequences have not been characterized fully.
+     </p></li><li class="listitem"><p>      Fix incorrect query results from cases involving flattening of
+      subqueries whose outputs are used in <code class="literal">GROUPING SETS</code>
+      (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Fix handling of list partitioning constraints for partition keys of
+      boolean or array types (Amit Langote)
+     </p></li><li class="listitem"><p>      Avoid unnecessary failure in a query on an inheritance tree that
+      occurs concurrently with some child table being removed from the tree
+      by <code class="command">ALTER TABLE NO INHERIT</code> (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix spurious deadlock failures when multiple sessions are
+      running <code class="command">CREATE INDEX CONCURRENTLY</code> (Jeff Janes)
+     </p></li><li class="listitem"><p>      During <code class="command">VACUUM FULL</code>, update the table's size fields
+      in <code class="structname">pg_class</code> sooner (Amit Kapila)
+     </p><p>      This prevents poor behavior when rebuilding hash indexes on the
+      table, since those use the <code class="structname">pg_class</code>
+      statistics to govern the initial hash size.
+     </p></li><li class="listitem"><p>      Fix
+      <code class="literal">UNION</code>/<code class="literal">INTERSECT</code>/<code class="literal">EXCEPT</code>
+      over zero columns (Tom Lane)
+     </p></li><li class="listitem"><p>      Disallow identity columns on typed tables and partitions
+      (Michael Paquier)
+     </p><p>      These cases will be treated as unsupported features for now.
+     </p></li><li class="listitem"><p>      Fix assorted failures to apply the correct default value when
+      inserting into an identity column (Michael Paquier, Peter Eisentraut)
+     </p><p>      In several contexts, notably <code class="command">COPY</code>
+      and <code class="command">ALTER TABLE ADD COLUMN</code>, the expected default
+      value was not applied and instead a null value was inserted.
+     </p></li><li class="listitem"><p>      Fix failures when an inheritance tree contains foreign child tables
+      (Etsuro Fujita)
+     </p><p>      A mix of regular and foreign tables in an inheritance tree resulted in
+      creation of incorrect plans for <code class="command">UPDATE</code>
+      and <code class="command">DELETE</code> queries.  This led to visible failures in
+      some cases, notably when there are row-level triggers on a foreign
+      child table.
+     </p></li><li class="listitem"><p>      Repair failure with correlated sub-<code class="literal">SELECT</code>
+      inside <code class="literal">VALUES</code> inside a <code class="literal">LATERAL</code>
+      subquery (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <span class="quote">“<span class="quote">could not devise a query plan for the given query</span>”</span>
+      planner failure for some cases involving nested <code class="literal">UNION
+      ALL</code> inside a lateral subquery (Tom Lane)
+     </p></li><li class="listitem"><p>      Allow functional dependency statistics to be used for boolean columns
+      (Tom Lane)
+     </p><p>      Previously, although extended statistics could be declared and
+      collected on boolean columns, the planner failed to apply them.
+     </p></li><li class="listitem"><p>      Avoid underestimating the number of groups emitted by subqueries
+      containing set-returning functions in their grouping columns (Tom Lane)
+     </p><p>      Cases similar to <code class="literal">SELECT DISTINCT unnest(foo)</code> got a
+      lower output rowcount estimate in 10.0 than they did in earlier
+      releases, possibly resulting in unfavorable plan choices.  Restore the
+      prior estimation behavior.
+     </p></li><li class="listitem"><p>      Fix use of triggers in logical replication workers (Petr Jelinek)
+     </p></li><li class="listitem"><p>      Fix logical decoding to correctly clean up disk files for crashed
+      transactions (Atsushi Torikoshi)
+     </p><p>      Logical decoding may spill WAL records to disk for transactions
+      generating many WAL records.  Normally these files are cleaned up
+      after the transaction's commit or abort record arrives; but if
+      no such record is ever seen, the removal code misbehaved.
+     </p></li><li class="listitem"><p>      Fix walsender timeout failure and failure to respond to interrupts
+      when processing a large transaction (Petr Jelinek)
+     </p></li><li class="listitem"><p>      Fix race condition during replication origin drop that could allow the
+      dropping process to wait indefinitely (Tom Lane)
+     </p></li><li class="listitem"><p>      Allow members of the <code class="literal">pg_read_all_stats</code> role to see
+      walsender statistics in the <code class="structname">pg_stat_replication</code>
+      view (Feike Steenbergen)
+     </p></li><li class="listitem"><p>      Show walsenders that are sending base backups as active in
+      the <code class="structname">pg_stat_activity</code> view (Magnus Hagander)
+     </p></li><li class="listitem"><p>      Fix reporting of <code class="literal">scram-sha-256</code> authentication
+      method in the <code class="structname">pg_hba_file_rules</code> view
+      (Michael Paquier)
+     </p><p>      Previously this was printed as <code class="literal">scram-sha256</code>,
+      possibly confusing users as to the correct spelling.
+     </p></li><li class="listitem"><p>      Fix <code class="function">has_sequence_privilege()</code> to
+      support <code class="literal">WITH GRANT OPTION</code> tests,
+      as other privilege-testing functions do (Joe Conway)
+     </p></li><li class="listitem"><p>      In databases using UTF8 encoding, ignore any XML declaration that
+      asserts a different encoding (Pavel Stehule, Noah Misch)
+     </p><p>      We always store XML strings in the database encoding, so allowing
+      libxml to act on a declaration of another encoding gave wrong results.
+      In encodings other than UTF8, we don't promise to support non-ASCII
+      XML data anyway, so retain the previous behavior for bug compatibility.
+      This change affects only <code class="function">xpath()</code> and related
+      functions; other XML code paths already acted this way.
+     </p></li><li class="listitem"><p>      Provide for forward compatibility with future minor protocol versions
+      (Robert Haas, Badrul Chowdhury)
+     </p><p>      Up to now, <span class="productname">PostgreSQL</span> servers simply
+      rejected requests to use protocol versions newer than 3.0, so that
+      there was no functional difference between the major and minor parts
+      of the protocol version number.  Allow clients to request versions 3.x
+      without failing, sending back a message showing that the server only
+      understands 3.0.  This makes no difference at the moment, but
+      back-patching this change should allow speedier introduction of future
+      minor protocol upgrades.
+     </p></li><li class="listitem"><p>      Allow a client that supports SCRAM channel binding (such as v11 or
+      later <span class="application">libpq</span>) to connect to a v10 server
+      (Michael Paquier)
+     </p><p>      v10 does not have this feature, and the connection-time negotiation
+      about whether to use it was done incorrectly.
+     </p></li><li class="listitem"><p>      Avoid live-lock in <code class="function">ConditionVariableBroadcast()</code>
+      (Tom Lane, Thomas Munro)
+     </p><p>      Given repeatedly-unlucky timing, a process attempting to awaken all
+      waiters for a condition variable could loop indefinitely.  Due to the
+      limited usage of condition variables in v10, this affects only
+      parallel index scans and some operations on replication slots.
+     </p></li><li class="listitem"><p>      Clean up waits for condition variables correctly during subtransaction
+      abort (Robert Haas)
+     </p></li><li class="listitem"><p>      Ensure that child processes that are waiting for a condition variable
+      will exit promptly if the postmaster process dies (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix crashes in parallel queries using more than one Gather node
+      (Thomas Munro)
+     </p></li><li class="listitem"><p>      Fix hang in parallel index scan when processing a deleted or half-dead
+      index page (Amit Kapila)
+     </p></li><li class="listitem"><p>      Avoid crash if parallel bitmap heap scan is unable to allocate a
+      shared memory segment (Robert Haas)
+     </p></li><li class="listitem"><p>      Cope with failure to start a parallel worker process
+      (Amit Kapila, Robert Haas)
+     </p><p>      Parallel query previously tended to hang indefinitely if a worker
+      could not be started, as the result of <code class="literal">fork()</code>
+      failure or other low-probability problems.
+     </p></li><li class="listitem"><p>      Avoid unnecessary failure when no parallel workers can be obtained
+      during parallel query startup (Robert Haas)
+     </p></li><li class="listitem"><p>      Fix collection of <code class="command">EXPLAIN</code> statistics from parallel
+      workers (Amit Kapila, Thomas Munro)
+     </p></li><li class="listitem"><p>      Ensure that query strings passed to parallel workers are correctly
+      null-terminated (Thomas Munro)
+     </p><p>      This prevents emitting garbage in postmaster log output from such
+      workers.
+     </p></li><li class="listitem"><p>      Avoid unsafe alignment assumptions when working
+      with <code class="type">__int128</code> (Tom Lane)
+     </p><p>      Typically, compilers assume that <code class="type">__int128</code> variables are
+      aligned on 16-byte boundaries, but our memory allocation
+      infrastructure isn't prepared to guarantee that, and increasing the
+      setting of MAXALIGN seems infeasible for multiple reasons.  Adjust the
+      code to allow use of <code class="type">__int128</code> only when we can tell the
+      compiler to assume lesser alignment.  The only known symptom of this
+      problem so far is crashes in some parallel aggregation queries.
+     </p></li><li class="listitem"><p>      Prevent stack-overflow crashes when planning extremely deeply
+      nested set operations
+      (<code class="literal">UNION</code>/<code class="literal">INTERSECT</code>/<code class="literal">EXCEPT</code>)
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Avoid crash during an EvalPlanQual recheck of an indexscan that is the
+      inner child of a merge join (Tom Lane)
+     </p><p>      This could only happen during an update or <code class="command">SELECT FOR
+      UPDATE</code> of a join, when there is a concurrent update of some
+      selected row.
+     </p></li><li class="listitem"><p>      Fix crash in autovacuum when extended statistics are defined
+      for a table but can't be computed (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Fix null-pointer crashes for some types of LDAP URLs appearing
+      in <code class="filename">pg_hba.conf</code> (Thomas Munro)
+     </p></li><li class="listitem"><p>      Prevent out-of-memory failures due to excessive growth of simple hash
+      tables (Tomas Vondra, Andres Freund)
+     </p></li><li class="listitem"><p>      Fix sample <code class="function">INSTR()</code> functions in the PL/pgSQL
+      documentation (Yugo Nagata, Tom Lane)
+     </p><p>      These functions are stated to
+      be <span class="trademark">Oracle</span>® compatible, but
+      they weren't exactly.  In particular, there was a discrepancy in the
+      interpretation of a negative third parameter: Oracle thinks that a
+      negative value indicates the last place where the target substring can
+      begin, whereas our functions took it as the last place where the
+      target can end.  Also, Oracle throws an error for a zero or negative
+      fourth parameter, whereas our functions returned zero.
+     </p><p>      The sample code has been adjusted to match Oracle's behavior more
+      precisely.  Users who have copied this code into their applications
+      may wish to update their copies.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to make ACL (permissions),
+      comment, and security label entries reliably identifiable in archive
+      output formats (Tom Lane)
+     </p><p>      The <span class="quote">“<span class="quote">tag</span>”</span> portion of an ACL archive entry was usually
+      just the name of the associated object.  Make it start with the object
+      type instead, bringing ACLs into line with the convention already used
+      for comment and security label archive entries.  Also, fix the
+      comment and security label entries for the whole database, if present,
+      to make their tags start with <code class="literal">DATABASE</code> so that they
+      also follow this convention.  This prevents false matches in code that
+      tries to identify large-object-related entries by seeing if the tag
+      starts with <code class="literal">LARGE OBJECT</code>.  That could have resulted
+      in misclassifying entries as data rather than schema, with undesirable
+      results in a schema-only or data-only dump.
+     </p><p>      Note that this change has user-visible results in the output
+      of <code class="command">pg_restore --list</code>.
+     </p></li><li class="listitem"><p>      Rename <span class="application">pg_rewind</span>'s
+      <code class="function">copy_file_range</code> function to avoid conflict
+      with new Linux system call of that name (Andres Freund)
+     </p><p>      This change prevents build failures with newer glibc versions.
+     </p></li><li class="listitem"><p>      In <span class="application">ecpg</span>, detect indicator arrays that do
+      not have the correct length and report an error (David Rader)
+     </p></li><li class="listitem"><p>      Change the behavior of <code class="filename">contrib/cube</code>'s
+      <code class="type">cube</code> <code class="literal">~&gt;</code> <code class="type">int</code>
+      operator to make it compatible with KNN search (Alexander Korotkov)
+     </p><p>      The meaning of the second argument (the dimension selector) has been
+      changed to make it predictable which value is selected even when
+      dealing with cubes of varying dimensionalities.
+     </p><p>      This is an incompatible change, but since the point of the operator
+      was to be used in KNN searches, it seems rather useless as-is.
+      After installing this update, any expression indexes or materialized
+      views using this operator will need to be reindexed/refreshed.
+     </p></li><li class="listitem"><p>      Avoid triggering a libc assertion
+      in <code class="filename">contrib/hstore</code>, due to use
+      of <code class="function">memcpy()</code> with equal source and destination
+      pointers (Tomas Vondra)
+     </p></li><li class="listitem"><p>      Fix incorrect display of tuples' null bitmaps
+      in <code class="filename">contrib/pageinspect</code> (Maksim Milyutin)
+     </p></li><li class="listitem"><p>      Fix incorrect output from <code class="filename">contrib/pageinspect</code>'s
+      <code class="function">hash_page_items()</code> function (Masahiko Sawada)
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/postgres_fdw</code>, avoid
+      <span class="quote">“<span class="quote">outer pathkeys do not match mergeclauses</span>”</span>
+      planner error when constructing a plan involving a remote join
+      (Robert Haas)
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/postgres_fdw</code>, avoid planner failure
+      when there are duplicate <code class="literal">GROUP BY</code> entries
+      (Jeevan Chalke)
+     </p></li><li class="listitem"><p>      Provide modern examples of how to auto-start Postgres on macOS
+      (Tom Lane)
+     </p><p>      The scripts in <code class="filename">contrib/start-scripts/osx</code> use
+      infrastructure that's been deprecated for over a decade, and which no
+      longer works at all in macOS releases of the last couple of years.
+      Add a new subdirectory <code class="filename">contrib/start-scripts/macos</code>
+      containing scripts that use the newer <span class="application">launchd</span>
+      infrastructure.
+     </p></li><li class="listitem"><p>      Fix incorrect selection of configuration-specific libraries for
+      OpenSSL on Windows (Andrew Dunstan)
+     </p></li><li class="listitem"><p>      Support linking to MinGW-built versions of libperl (Noah Misch)
+     </p><p>      This allows building PL/Perl with some common Perl distributions for
+      Windows.
+     </p></li><li class="listitem"><p>      Fix MSVC build to test whether 32-bit libperl
+      needs <code class="literal">-D_USE_32BIT_TIME_T</code> (Noah Misch)
+     </p><p>      Available Perl distributions are inconsistent about what they expect,
+      and lack any reliable means of reporting it, so resort to a build-time
+      test on what the library being used actually does.
+     </p></li><li class="listitem"><p>      On Windows, install the crash dump handler earlier in postmaster
+      startup (Takayuki Tsunakawa)
+     </p><p>      This may allow collection of a core dump for some early-startup
+      failures that did not produce a dump before.
+     </p></li><li class="listitem"><p>      On Windows, avoid encoding-conversion-related crashes when emitting
+      messages very early in postmaster startup (Takayuki Tsunakawa)
+     </p></li><li class="listitem"><p>      Use our existing Motorola 68K spinlock code on OpenBSD as
+      well as NetBSD (David Carlier)
+     </p></li><li class="listitem"><p>      Add support for spinlocks on Motorola 88K (David Carlier)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span>
+      release 2018c for DST law changes in Brazil, Sao Tome and Principe,
+      plus historical corrections for Bolivia, Japan, and South Sudan.
+      The <code class="literal">US/Pacific-New</code> zone has been removed (it was
+      only an alias for <code class="literal">America/Los_Angeles</code> anyway).
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-10-3.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-10-1.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.3. Release 10.3 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.5. Release 10.1</td></tr></table></div></body></html>

@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>27.3. Standby Server Settings</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="recovery-target-settings.html" title="27.2. Recovery Target Settings" /><link rel="next" href="monitoring.html" title="Chapter 28. Monitoring Database Activity" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">27.3. Standby Server Settings</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="recovery-target-settings.html" title="27.2. Recovery Target Settings">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="recovery-config.html" title="Chapter 27. Recovery Configuration">Up</a></td><th width="60%" align="center">Chapter 27. Recovery Configuration</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="monitoring.html" title="Chapter 28. Monitoring Database Activity">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="STANDBY-SETTINGS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">27.3. Standby Server Settings</h2></div></div></div><div class="variablelist"><dl class="variablelist"><dt id="STANDBY-MODE"><span class="term"><code class="varname">standby_mode</code> (<code class="type">boolean</code>)
+        <a id="id-1.6.14.8.2.1.1.3" class="indexterm"></a>
+        </span></dt><dd><p>          Specifies whether to start the <span class="productname">PostgreSQL</span> server as
+          a standby. If this parameter is <code class="literal">on</code>, the server will
+          not stop recovery when the end of archived WAL is reached, but
+          will keep trying to continue recovery by fetching new WAL segments
+          using <code class="varname">restore_command</code>
+          and/or by connecting to the primary server as specified by the
+          <code class="varname">primary_conninfo</code> setting.
+         </p></dd><dt id="PRIMARY-CONNINFO"><span class="term"><code class="varname">primary_conninfo</code> (<code class="type">string</code>)
+        <a id="id-1.6.14.8.2.2.1.3" class="indexterm"></a>
+        </span></dt><dd><p>          Specifies a connection string to be used for the standby server
+          to connect with the primary. This string is in the format
+          described in <a class="xref" href="libpq-connect.html#LIBPQ-CONNSTRING" title="33.1.1. Connection Strings">Section 33.1.1</a>. If any option is
+          unspecified in this string, then the corresponding environment
+          variable (see <a class="xref" href="libpq-envars.html" title="33.14. Environment Variables">Section 33.14</a>) is checked. If the
+          environment variable is not set either, then
+          defaults are used.
+         </p><p>          The connection string should specify the host name (or address)
+          of the primary server, as well as the port number if it is not
+          the same as the standby server's default.
+          Also specify a user name corresponding to a suitably-privileged role
+          on the primary (see
+          <a class="xref" href="warm-standby.html#STREAMING-REPLICATION-AUTHENTICATION" title="26.2.5.1. Authentication">Section 26.2.5.1</a>).
+          A password needs to be provided too, if the primary demands password
+          authentication.  It can be provided in the
+          <code class="varname">primary_conninfo</code> string, or in a separate
+          <code class="filename">~/.pgpass</code> file on the standby server (use
+          <code class="literal">replication</code> as the database name).
+          Do not specify a database name in the
+          <code class="varname">primary_conninfo</code> string.
+         </p><p>          This setting has no effect if <code class="varname">standby_mode</code> is <code class="literal">off</code>.
+         </p></dd><dt id="PRIMARY-SLOT-NAME"><span class="term"><code class="varname">primary_slot_name</code> (<code class="type">string</code>)
+        <a id="id-1.6.14.8.2.3.1.3" class="indexterm"></a>
+        </span></dt><dd><p>          Optionally specifies an existing replication slot to be used when
+          connecting to the primary via streaming replication to control
+          resource removal on the upstream node
+          (see <a class="xref" href="warm-standby.html#STREAMING-REPLICATION-SLOTS" title="26.2.6. Replication Slots">Section 26.2.6</a>).
+          This setting has no effect if <code class="varname">primary_conninfo</code> is not
+          set.
+         </p></dd><dt id="TRIGGER-FILE"><span class="term"><code class="varname">trigger_file</code> (<code class="type">string</code>)
+        <a id="id-1.6.14.8.2.4.1.3" class="indexterm"></a>
+        </span></dt><dd><p>          Specifies a trigger file whose presence ends recovery in the
+          standby.  Even if this value is not set, you can still promote
+          the standby using <code class="command">pg_ctl promote</code>.
+          This setting has no effect if <code class="varname">standby_mode</code> is <code class="literal">off</code>.
+         </p></dd><dt id="RECOVERY-MIN-APPLY-DELAY"><span class="term"><code class="varname">recovery_min_apply_delay</code> (<code class="type">integer</code>)
+      <a id="id-1.6.14.8.2.5.1.3" class="indexterm"></a>
+      </span></dt><dd><p>        By default, a standby server restores WAL records from the
+        primary as soon as possible. It may be useful to have a time-delayed
+        copy of the data, offering opportunities to correct data loss errors.
+        This parameter allows you to delay recovery by a fixed period of time,
+        measured in milliseconds if no unit is specified.  For example, if
+        you set this parameter to <code class="literal">5min</code>, the standby will
+        replay each transaction commit only when the system time on the standby
+        is at least five minutes past the commit time reported by the master.
+       </p><p>        It is possible that the replication delay between servers exceeds the
+        value of this parameter, in which case no delay is added.
+        Note that the delay is calculated between the WAL time stamp as written
+        on master and the current time on the standby. Delays in transfer
+        because of network lag or cascading replication configurations
+        may reduce the actual wait time significantly. If the system
+        clocks on master and standby are not synchronized, this may lead to
+        recovery applying records earlier than expected; but that is not a
+        major issue because useful settings of this parameter are much larger
+        than typical time deviations between servers.
+       </p><p>        The delay occurs only on WAL records for transaction commits.
+        Other records are replayed as quickly as possible, which
+        is not a problem because MVCC visibility rules ensure their effects
+        are not visible until the corresponding commit record is applied.
+       </p><p>        The delay occurs once the database in recovery has reached a consistent
+        state, until the standby is promoted or triggered. After that the standby
+        will end recovery without further waiting.
+       </p><p>        This parameter is intended for use with streaming replication deployments;
+        however, if the parameter is specified it will be honored in all cases.
+
+        <code class="varname">hot_standby_feedback</code> will be delayed by use of this feature
+        which could lead to bloat on the master; use both together with care.
+
+        </p><div class="warning"><h3 class="title">Warning</h3><p>          Synchronous replication is affected by this setting when <code class="varname">synchronous_commit</code>
+          is set to <code class="literal">remote_apply</code>; every <code class="literal">COMMIT</code>
+          will need to wait to be applied.
+         </p></div><p>
+       </p></dd></dl></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="recovery-target-settings.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="recovery-config.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="monitoring.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">27.2. Recovery Target Settings </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Chapter 28. Monitoring Database Activity</td></tr></table></div></body></html>

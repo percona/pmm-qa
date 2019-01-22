@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.31. Release 9.5.1</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-5-2.html" title="E.30. Release 9.5.2" /><link rel="next" href="release-9-5.html" title="E.32. Release 9.5" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.31. Release 9.5.1</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-5-2.html" title="E.30. Release 9.5.2">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-5.html" title="E.32. Release 9.5">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-5-1"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.31. Release 9.5.1</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-5-1.html#id-1.11.6.35.4">E.31.1. Migration to Version 9.5.1</a></span></dt><dt><span class="sect2"><a href="release-9-5-1.html#id-1.11.6.35.5">E.31.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2016-02-11</p><p>   This release contains a variety of fixes from 9.5.0.
+   For information about new features in the 9.5 major release, see
+   <a class="xref" href="release-9-5.html" title="E.32. Release 9.5">Section E.32</a>.
+  </p><div class="sect2" id="id-1.11.6.35.4"><div class="titlepage"><div><div><h3 class="title">E.31.1. Migration to Version 9.5.1</h3></div></div></div><p>    A dump/restore is not required for those running 9.5.X.
+   </p></div><div class="sect2" id="id-1.11.6.35.5"><div class="titlepage"><div><div><h3 class="title">E.31.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix infinite loops and buffer-overrun problems in regular expressions
+      (Tom Lane)
+     </p><p>      Very large character ranges in bracket expressions could cause
+      infinite loops in some cases, and memory overwrites in other cases.
+      (CVE-2016-0773)
+     </p></li><li class="listitem"><p>      Fix an oversight that caused hash joins to miss joining to some tuples
+      of the inner relation in rare cases (Tomas Vondra, Tom Lane)
+     </p></li><li class="listitem"><p>      Avoid pushdown of <code class="literal">HAVING</code> clauses when grouping sets are
+      used (Andrew Gierth)
+     </p></li><li class="listitem"><p>      Fix deparsing of <code class="literal">ON CONFLICT</code> arbiter <code class="literal">WHERE</code>
+      clauses (Peter Geoghegan)
+     </p></li><li class="listitem"><p>      Make <code class="literal">%h</code> and <code class="literal">%r</code> escapes
+      in <code class="varname">log_line_prefix</code> work for messages emitted due
+      to <code class="varname">log_connections</code> (Tom Lane)
+     </p><p>      Previously, <code class="literal">%h</code>/<code class="literal">%r</code> started to work just after a
+      new session had emitted the <span class="quote">“<span class="quote">connection received</span>”</span> log message;
+      now they work for that message too.
+     </p></li><li class="listitem"><p>      Avoid leaking a token handle during SSPI authentication
+      (Christian Ullrich)
+     </p></li><li class="listitem"><p>      Fix <span class="application">psql</span>'s <code class="literal">\det</code> command to interpret its
+      pattern argument the same way as other <code class="literal">\d</code> commands with
+      potentially schema-qualified patterns do (Reece Hart)
+     </p></li><li class="listitem"><p>      In <span class="application">pg_ctl</span> on Windows, check service status to decide
+      where to send output, rather than checking if standard output is a
+      terminal (Michael Paquier)
+     </p></li><li class="listitem"><p>      Fix assorted corner-case bugs in <span class="application">pg_dump</span>'s processing
+      of extension member objects (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix improper quoting of domain constraint names
+      in <span class="application">pg_dump</span> (Elvis Pranskevichus)
+     </p></li><li class="listitem"><p>      Make <span class="application">pg_dump</span> mark a view's triggers as needing to be
+      processed after its rule, to prevent possible failure during
+      parallel <span class="application">pg_restore</span> (Tom Lane)
+     </p></li><li class="listitem"><p>      Install guards in <span class="application">pgbench</span> against corner-case overflow
+      conditions during evaluation of script-specified division or modulo
+      operators (Fabien Coelho, Michael Paquier)
+     </p></li><li class="listitem"><p>      Suppress useless warning message when <span class="application">pg_receivexlog</span>
+      connects to a pre-9.4 server (Marco Nenciarini)
+     </p></li><li class="listitem"><p>      Avoid dump/reload problems when using both <span class="application">plpython2</span>
+      and <span class="application">plpython3</span> (Tom Lane)
+     </p><p>      In principle, both versions of <span class="application">PL/Python</span> can be used in
+      the same database, though not in the same session (because the two
+      versions of <span class="application">libpython</span> cannot safely be used concurrently).
+      However, <span class="application">pg_restore</span> and <span class="application">pg_upgrade</span> both
+      do things that can fall foul of the same-session restriction.  Work
+      around that by changing the timing of the check.
+     </p></li><li class="listitem"><p>      Fix <span class="application">PL/Python</span> regression tests to pass with Python 3.5
+      (Peter Eisentraut)
+     </p></li><li class="listitem"><p>      Prevent certain <span class="application">PL/Java</span> parameters from being set by
+      non-superusers (Noah Misch)
+     </p><p>      This change mitigates a <span class="application">PL/Java</span> security bug
+      (CVE-2016-0766), which was fixed in <span class="application">PL/Java</span> by marking
+      these parameters as superuser-only.  To fix the security hazard for
+      sites that update <span class="productname">PostgreSQL</span> more frequently
+      than <span class="application">PL/Java</span>, make the core code aware of them also.
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span>-supplied header files to not contain comments
+      continued from a preprocessor directive line onto the next line
+      (Michael Meskes)
+     </p><p>      Such a comment is rejected by <span class="application">ecpg</span>.  It's not yet clear
+      whether <span class="application">ecpg</span> itself should be changed.
+     </p></li><li class="listitem"><p>      Fix <code class="function">hstore_to_json_loose()</code>'s test for whether
+      an <code class="type">hstore</code> value can be converted to a JSON number (Tom Lane)
+     </p><p>      Previously this function could be fooled by non-alphanumeric trailing
+      characters, leading to emitting syntactically-invalid JSON.
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/postgres_fdw</code>, fix bugs triggered by use
+      of <code class="literal">tableoid</code> in data-modifying commands (Etsuro Fujita,
+      Robert Haas)
+     </p></li><li class="listitem"><p>      Fix ill-advised restriction of <code class="literal">NAMEDATALEN</code> to be less
+      than 256 (Robert Haas, Tom Lane)
+     </p></li><li class="listitem"><p>      Improve reproducibility of build output by ensuring filenames are given
+      to the linker in a fixed order (Christoph Berg)
+     </p><p>      This avoids possible bitwise differences in the produced executable
+      files from one build to the next.
+     </p></li><li class="listitem"><p>      Ensure that <code class="filename">dynloader.h</code> is included in the installed
+      header files in MSVC builds (Bruce Momjian, Michael Paquier)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2016a for
+      DST law changes in Cayman Islands, Metlakatla, and Trans-Baikal
+      Territory (Zabaykalsky Krai), plus historical corrections for Pakistan.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-5-2.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-5.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.30. Release 9.5.2 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.32. Release 9.5</td></tr></table></div></body></html>

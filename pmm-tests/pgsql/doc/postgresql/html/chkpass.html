@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>F.8. chkpass</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="btree-gist.html" title="F.7. btree_gist" /><link rel="next" href="citext.html" title="F.9. citext" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">F.8. chkpass</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="btree-gist.html" title="F.7. btree_gist">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="contrib.html" title="Appendix F. Additional Supplied Modules">Up</a></td><th width="60%" align="center">Appendix F. Additional Supplied Modules</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="citext.html" title="F.9. citext">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="CHKPASS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">F.8. chkpass</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="chkpass.html#id-1.11.7.17.11">F.8.1. Author</a></span></dt></dl></div><a id="id-1.11.7.17.2" class="indexterm"></a><p>  This module implements a data type <code class="type">chkpass</code> that is
+  designed for storing encrypted passwords.
+  Each password is automatically converted to encrypted form upon entry,
+  and is always stored encrypted.  To compare, simply compare against a clear
+  text password and the comparison function will encrypt it before comparing.
+ </p><p>  There are provisions in the code to report an error if the password is
+  determined to be easily crackable.  However, this is currently just
+  a stub that does nothing.
+ </p><p>  If you precede an input string with a colon, it is assumed to be an
+  already-encrypted password, and is stored without further encryption.
+  This allows entry of previously-encrypted passwords.
+ </p><p>  On output, a colon is prepended.  This makes it possible to dump and reload
+  passwords without re-encrypting them.  If you want the encrypted password
+  without the colon then use the <code class="function">raw()</code> function.
+  This allows you to use the
+  type with things like Apache's <code class="literal">Auth_PostgreSQL</code> module.
+ </p><p>  The encryption uses the standard Unix function <code class="function">crypt()</code>,
+  and so it suffers
+  from all the usual limitations of that function; notably that only the
+  first eight characters of a password are considered.
+ </p><p>  Note that the <code class="type">chkpass</code> data type is not indexable.
+  
+ </p><p>  Sample usage:
+ </p><pre class="programlisting">test=# create table test (p chkpass);
+CREATE TABLE
+test=# insert into test values ('hello');
+INSERT 0 1
+test=# select * from test;
+       p
+----------------
+ :dVGkpXdOrE3ko
+(1 row)
+
+test=# select raw(p) from test;
+      raw
+---------------
+ dVGkpXdOrE3ko
+(1 row)
+
+test=# select p = 'hello' from test;
+ ?column?
+----------
+ t
+(1 row)
+
+test=# select p = 'goodbye' from test;
+ ?column?
+----------
+ f
+(1 row)</pre><div class="sect2" id="id-1.11.7.17.11"><div class="titlepage"><div><div><h3 class="title">F.8.1. Author</h3></div></div></div><p>   D'Arcy J.M. Cain (<code class="email">&lt;<a class="email" href="mailto:darcy@druid.net">darcy@druid.net</a>&gt;</code>)
+  </p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="btree-gist.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="contrib.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="citext.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">F.7. btree_gist </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> F.9. citext</td></tr></table></div></body></html>

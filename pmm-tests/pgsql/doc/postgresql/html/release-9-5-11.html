@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.21. Release 9.5.11</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-5-12.html" title="E.20. Release 9.5.12" /><link rel="next" href="release-9-5-10.html" title="E.22. Release 9.5.10" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.21. Release 9.5.11</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-5-12.html" title="E.20. Release 9.5.12">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-5-10.html" title="E.22. Release 9.5.10">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-5-11"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.21. Release 9.5.11</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-5-11.html#id-1.11.6.25.4">E.21.1. Migration to Version 9.5.11</a></span></dt><dt><span class="sect2"><a href="release-9-5-11.html#id-1.11.6.25.5">E.21.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2018-02-08</p><p>   This release contains a variety of fixes from 9.5.10.
+   For information about new features in the 9.5 major release, see
+   <a class="xref" href="release-9-5.html" title="E.32. Release 9.5">Section E.32</a>.
+  </p><div class="sect2" id="id-1.11.6.25.4"><div class="titlepage"><div><div><h3 class="title">E.21.1. Migration to Version 9.5.11</h3></div></div></div><p>    A dump/restore is not required for those running 9.5.X.
+   </p><p>    However, if you are upgrading from a version earlier than 9.5.10,
+    see <a class="xref" href="release-9-5-10.html" title="E.22. Release 9.5.10">Section E.22</a>.
+   </p></div><div class="sect2" id="id-1.11.6.25.5"><div class="titlepage"><div><div><h3 class="title">E.21.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Ensure that all temporary files made
+      by <span class="application">pg_upgrade</span> are non-world-readable
+      (Tom Lane, Noah Misch)
+     </p><p>      <span class="application">pg_upgrade</span> normally restricts its
+      temporary files to be readable and writable only by the calling user.
+      But the temporary file containing <code class="literal">pg_dumpall -g</code>
+      output would be group- or world-readable, or even writable, if the
+      user's <code class="literal">umask</code> setting allows.  In typical usage on
+      multi-user machines, the <code class="literal">umask</code> and/or the working
+      directory's permissions would be tight enough to prevent problems;
+      but there may be people using <span class="application">pg_upgrade</span>
+      in scenarios where this oversight would permit disclosure of database
+      passwords to unfriendly eyes.
+      (CVE-2018-1053)
+     </p></li><li class="listitem"><p>      Fix vacuuming of tuples that were updated while key-share locked
+      (Andres Freund, Álvaro Herrera)
+     </p><p>      In some cases <code class="command">VACUUM</code> would fail to remove such
+      tuples even though they are now dead, leading to assorted data
+      corruption scenarios.
+     </p></li><li class="listitem"><p>      Fix inadequate buffer locking in some LSN fetches (Jacob Champion,
+      Asim Praveen, Ashwin Agrawal)
+     </p><p>      These errors could result in misbehavior under concurrent load.
+      The potential consequences have not been characterized fully.
+     </p></li><li class="listitem"><p>      Fix incorrect query results from cases involving flattening of
+      subqueries whose outputs are used in <code class="literal">GROUPING SETS</code>
+      (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Avoid unnecessary failure in a query on an inheritance tree that
+      occurs concurrently with some child table being removed from the tree
+      by <code class="command">ALTER TABLE NO INHERIT</code> (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix spurious deadlock failures when multiple sessions are
+      running <code class="command">CREATE INDEX CONCURRENTLY</code> (Jeff Janes)
+     </p></li><li class="listitem"><p>      Fix failures when an inheritance tree contains foreign child tables
+      (Etsuro Fujita)
+     </p><p>      A mix of regular and foreign tables in an inheritance tree resulted in
+      creation of incorrect plans for <code class="command">UPDATE</code>
+      and <code class="command">DELETE</code> queries.  This led to visible failures in
+      some cases, notably when there are row-level triggers on a foreign
+      child table.
+     </p></li><li class="listitem"><p>      Repair failure with correlated sub-<code class="literal">SELECT</code>
+      inside <code class="literal">VALUES</code> inside a <code class="literal">LATERAL</code>
+      subquery (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <span class="quote">“<span class="quote">could not devise a query plan for the given query</span>”</span>
+      planner failure for some cases involving nested <code class="literal">UNION
+      ALL</code> inside a lateral subquery (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix logical decoding to correctly clean up disk files for crashed
+      transactions (Atsushi Torikoshi)
+     </p><p>      Logical decoding may spill WAL records to disk for transactions
+      generating many WAL records.  Normally these files are cleaned up
+      after the transaction's commit or abort record arrives; but if
+      no such record is ever seen, the removal code misbehaved.
+     </p></li><li class="listitem"><p>      Fix walsender timeout failure and failure to respond to interrupts
+      when processing a large transaction (Petr Jelinek)
+     </p></li><li class="listitem"><p>      Fix <code class="function">has_sequence_privilege()</code> to
+      support <code class="literal">WITH GRANT OPTION</code> tests,
+      as other privilege-testing functions do (Joe Conway)
+     </p></li><li class="listitem"><p>      In databases using UTF8 encoding, ignore any XML declaration that
+      asserts a different encoding (Pavel Stehule, Noah Misch)
+     </p><p>      We always store XML strings in the database encoding, so allowing
+      libxml to act on a declaration of another encoding gave wrong results.
+      In encodings other than UTF8, we don't promise to support non-ASCII
+      XML data anyway, so retain the previous behavior for bug compatibility.
+      This change affects only <code class="function">xpath()</code> and related
+      functions; other XML code paths already acted this way.
+     </p></li><li class="listitem"><p>      Provide for forward compatibility with future minor protocol versions
+      (Robert Haas, Badrul Chowdhury)
+     </p><p>      Up to now, <span class="productname">PostgreSQL</span> servers simply
+      rejected requests to use protocol versions newer than 3.0, so that
+      there was no functional difference between the major and minor parts
+      of the protocol version number.  Allow clients to request versions 3.x
+      without failing, sending back a message showing that the server only
+      understands 3.0.  This makes no difference at the moment, but
+      back-patching this change should allow speedier introduction of future
+      minor protocol upgrades.
+     </p></li><li class="listitem"><p>      Cope with failure to start a parallel worker process
+      (Amit Kapila, Robert Haas)
+     </p><p>      Parallel query previously tended to hang indefinitely if a worker
+      could not be started, as the result of <code class="literal">fork()</code>
+      failure or other low-probability problems.
+     </p></li><li class="listitem"><p>      Avoid unsafe alignment assumptions when working
+      with <code class="type">__int128</code> (Tom Lane)
+     </p><p>      Typically, compilers assume that <code class="type">__int128</code> variables are
+      aligned on 16-byte boundaries, but our memory allocation
+      infrastructure isn't prepared to guarantee that, and increasing the
+      setting of MAXALIGN seems infeasible for multiple reasons.  Adjust the
+      code to allow use of <code class="type">__int128</code> only when we can tell the
+      compiler to assume lesser alignment.  The only known symptom of this
+      problem so far is crashes in some parallel aggregation queries.
+     </p></li><li class="listitem"><p>      Prevent stack-overflow crashes when planning extremely deeply
+      nested set operations
+      (<code class="literal">UNION</code>/<code class="literal">INTERSECT</code>/<code class="literal">EXCEPT</code>)
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix null-pointer crashes for some types of LDAP URLs appearing
+      in <code class="filename">pg_hba.conf</code> (Thomas Munro)
+     </p></li><li class="listitem"><p>      Fix sample <code class="function">INSTR()</code> functions in the PL/pgSQL
+      documentation (Yugo Nagata, Tom Lane)
+     </p><p>      These functions are stated to
+      be <span class="trademark">Oracle</span>® compatible, but
+      they weren't exactly.  In particular, there was a discrepancy in the
+      interpretation of a negative third parameter: Oracle thinks that a
+      negative value indicates the last place where the target substring can
+      begin, whereas our functions took it as the last place where the
+      target can end.  Also, Oracle throws an error for a zero or negative
+      fourth parameter, whereas our functions returned zero.
+     </p><p>      The sample code has been adjusted to match Oracle's behavior more
+      precisely.  Users who have copied this code into their applications
+      may wish to update their copies.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to make ACL (permissions),
+      comment, and security label entries reliably identifiable in archive
+      output formats (Tom Lane)
+     </p><p>      The <span class="quote">“<span class="quote">tag</span>”</span> portion of an ACL archive entry was usually
+      just the name of the associated object.  Make it start with the object
+      type instead, bringing ACLs into line with the convention already used
+      for comment and security label archive entries.  Also, fix the
+      comment and security label entries for the whole database, if present,
+      to make their tags start with <code class="literal">DATABASE</code> so that they
+      also follow this convention.  This prevents false matches in code that
+      tries to identify large-object-related entries by seeing if the tag
+      starts with <code class="literal">LARGE OBJECT</code>.  That could have resulted
+      in misclassifying entries as data rather than schema, with undesirable
+      results in a schema-only or data-only dump.
+     </p><p>      Note that this change has user-visible results in the output
+      of <code class="command">pg_restore --list</code>.
+     </p></li><li class="listitem"><p>      Rename <span class="application">pg_rewind</span>'s
+      <code class="function">copy_file_range</code> function to avoid conflict
+      with new Linux system call of that name (Andres Freund)
+     </p><p>      This change prevents build failures with newer glibc versions.
+     </p></li><li class="listitem"><p>      In <span class="application">ecpg</span>, detect indicator arrays that do
+      not have the correct length and report an error (David Rader)
+     </p></li><li class="listitem"><p>      Avoid triggering a libc assertion
+      in <code class="filename">contrib/hstore</code>, due to use
+      of <code class="function">memcpy()</code> with equal source and destination
+      pointers (Tomas Vondra)
+     </p></li><li class="listitem"><p>      Provide modern examples of how to auto-start Postgres on macOS
+      (Tom Lane)
+     </p><p>      The scripts in <code class="filename">contrib/start-scripts/osx</code> use
+      infrastructure that's been deprecated for over a decade, and which no
+      longer works at all in macOS releases of the last couple of years.
+      Add a new subdirectory <code class="filename">contrib/start-scripts/macos</code>
+      containing scripts that use the newer <span class="application">launchd</span>
+      infrastructure.
+     </p></li><li class="listitem"><p>      Fix incorrect selection of configuration-specific libraries for
+      OpenSSL on Windows (Andrew Dunstan)
+     </p></li><li class="listitem"><p>      Support linking to MinGW-built versions of libperl (Noah Misch)
+     </p><p>      This allows building PL/Perl with some common Perl distributions for
+      Windows.
+     </p></li><li class="listitem"><p>      Fix MSVC build to test whether 32-bit libperl
+      needs <code class="literal">-D_USE_32BIT_TIME_T</code> (Noah Misch)
+     </p><p>      Available Perl distributions are inconsistent about what they expect,
+      and lack any reliable means of reporting it, so resort to a build-time
+      test on what the library being used actually does.
+     </p></li><li class="listitem"><p>      On Windows, install the crash dump handler earlier in postmaster
+      startup (Takayuki Tsunakawa)
+     </p><p>      This may allow collection of a core dump for some early-startup
+      failures that did not produce a dump before.
+     </p></li><li class="listitem"><p>      On Windows, avoid encoding-conversion-related crashes when emitting
+      messages very early in postmaster startup (Takayuki Tsunakawa)
+     </p></li><li class="listitem"><p>      Use our existing Motorola 68K spinlock code on OpenBSD as
+      well as NetBSD (David Carlier)
+     </p></li><li class="listitem"><p>      Add support for spinlocks on Motorola 88K (David Carlier)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span>
+      release 2018c for DST law changes in Brazil, Sao Tome and Principe,
+      plus historical corrections for Bolivia, Japan, and South Sudan.
+      The <code class="literal">US/Pacific-New</code> zone has been removed (it was
+      only an alias for <code class="literal">America/Los_Angeles</code> anyway).
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-5-12.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-5-10.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.20. Release 9.5.12 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.22. Release 9.5.10</td></tr></table></div></body></html>

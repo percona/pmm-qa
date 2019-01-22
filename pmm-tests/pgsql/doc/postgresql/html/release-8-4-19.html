@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.155. Release 8.4.19</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-4-20.html" title="E.154. Release 8.4.20" /><link rel="next" href="release-8-4-18.html" title="E.156. Release 8.4.18" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.155. Release 8.4.19</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-4-20.html" title="E.154. Release 8.4.20">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-4-18.html" title="E.156. Release 8.4.18">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-4-19"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.155. Release 8.4.19</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-4-19.html#id-1.11.6.159.4">E.155.1. Migration to Version 8.4.19</a></span></dt><dt><span class="sect2"><a href="release-8-4-19.html#id-1.11.6.159.5">E.155.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2013-12-05</p><p>   This release contains a variety of fixes from 8.4.18.
+   For information about new features in the 8.4 major release, see
+   <a class="xref" href="release-8-4.html" title="E.174. Release 8.4">Section E.174</a>.
+  </p><div class="sect2" id="id-1.11.6.159.4"><div class="titlepage"><div><div><h3 class="title">E.155.1. Migration to Version 8.4.19</h3></div></div></div><p>    A dump/restore is not required for those running 8.4.X.
+   </p><p>    However, this release corrects a potential data corruption
+    issue.  See the first changelog entry below to find out whether
+    your installation has been affected and what steps you can take if so.
+   </p><p>    Also, if you are upgrading from a version earlier than 8.4.17,
+    see <a class="xref" href="release-8-4-17.html" title="E.157. Release 8.4.17">Section E.157</a>.
+   </p></div><div class="sect2" id="id-1.11.6.159.5"><div class="titlepage"><div><div><h3 class="title">E.155.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix <code class="command">VACUUM</code>'s tests to see whether it can
+      update <code class="structfield">relfrozenxid</code> (Andres Freund)
+     </p><p>      In some cases <code class="command">VACUUM</code> (either manual or autovacuum) could
+      incorrectly advance a table's <code class="structfield">relfrozenxid</code> value,
+      allowing tuples to escape freezing, causing those rows to become
+      invisible once 2^31 transactions have elapsed.  The probability of
+      data loss is fairly low since multiple incorrect advancements would
+      need to happen before actual loss occurs, but it's not zero.  Users
+      upgrading from release 8.4.8 or earlier are not affected, but all later
+      versions contain the bug.
+     </p><p>      The issue can be ameliorated by, after upgrading, vacuuming all tables
+      in all databases while having <a class="link" href="runtime-config-client.html#GUC-VACUUM-FREEZE-TABLE-AGE"><code class="varname">vacuum_freeze_table_age</code></a>
+      set to zero.  This will fix any latent corruption but will not be able
+      to fix all pre-existing data errors.  However, an installation can be
+      presumed safe after performing this vacuuming if it has executed fewer
+      than 2^31 update transactions in its lifetime (check this with
+      <code class="literal">SELECT txid_current() &lt; 2^31</code>).
+     </p></li><li class="listitem"><p>      Fix race condition in GIN index posting tree page deletion (Heikki
+      Linnakangas)
+     </p><p>      This could lead to transient wrong answers or query failures.
+     </p></li><li class="listitem"><p>      Avoid flattening a subquery whose <code class="literal">SELECT</code> list contains a
+      volatile function wrapped inside a sub-<code class="literal">SELECT</code> (Tom Lane)
+     </p><p>      This avoids unexpected results due to extra evaluations of the
+      volatile function.
+     </p></li><li class="listitem"><p>      Fix planner's processing of non-simple-variable subquery outputs
+      nested within outer joins (Tom Lane)
+     </p><p>      This error could lead to incorrect plans for queries involving
+      multiple levels of subqueries within <code class="literal">JOIN</code> syntax.
+     </p></li><li class="listitem"><p>      Fix premature deletion of temporary files (Andres Freund)
+     </p></li><li class="listitem"><p>      Fix possible read past end of memory in rule printing (Peter Eisentraut)
+     </p></li><li class="listitem"><p>      Fix array slicing of <code class="type">int2vector</code> and <code class="type">oidvector</code> values
+      (Tom Lane)
+     </p><p>      Expressions of this kind are now implicitly promoted to
+      regular <code class="type">int2</code> or <code class="type">oid</code> arrays.
+     </p></li><li class="listitem"><p>      Fix incorrect behaviors when using a SQL-standard, simple GMT offset
+      timezone (Tom Lane)
+     </p><p>      In some cases, the system would use the simple GMT offset value when
+      it should have used the regular timezone setting that had prevailed
+      before the simple offset was selected.  This change also causes
+      the <code class="function">timeofday</code> function to honor the simple GMT offset
+      zone.
+     </p></li><li class="listitem"><p>      Prevent possible misbehavior when logging translations of Windows
+      error codes (Tom Lane)
+     </p></li><li class="listitem"><p>      Properly quote generated command lines in <span class="application">pg_ctl</span>
+      (Naoya Anzai and Tom Lane)
+     </p><p>      This fix applies only to Windows.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dumpall</span> to work when a source database
+      sets <a class="link" href="runtime-config-client.html#GUC-DEFAULT-TRANSACTION-READ-ONLY"><code class="varname">default_transaction_read_only</code></a>
+      via <code class="command">ALTER DATABASE SET</code> (Kevin Grittner)
+     </p><p>      Previously, the generated script would fail during restore.
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span>'s processing of lists of variables
+      declared <code class="type">varchar</code> (Zoltán Böszörményi)
+     </p></li><li class="listitem"><p>      Make <code class="filename">contrib/lo</code> defend against incorrect trigger definitions
+      (Marc Cousin)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2013h
+      for DST law changes in Argentina, Brazil, Jordan, Libya,
+      Liechtenstein, Morocco, and Palestine.  Also, new timezone
+      abbreviations WIB, WIT, WITA for Indonesia.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-4-20.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-4-18.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.154. Release 8.4.20 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.156. Release 8.4.18</td></tr></table></div></body></html>

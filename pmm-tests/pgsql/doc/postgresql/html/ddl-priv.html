@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>5.6. Privileges</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="ddl-alter.html" title="5.5. Modifying Tables" /><link rel="next" href="ddl-rowsecurity.html" title="5.7. Row Security Policies" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">5.6. Privileges</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="ddl-alter.html" title="5.5. Modifying Tables">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="ddl.html" title="Chapter 5. Data Definition">Up</a></td><th width="60%" align="center">Chapter 5. Data Definition</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="ddl-rowsecurity.html" title="5.7. Row Security Policies">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="DDL-PRIV"><div class="titlepage"><div><div><h2 class="title" style="clear: both">5.6. Privileges</h2></div></div></div><a id="id-1.5.4.8.2" class="indexterm"></a><a id="id-1.5.4.8.3" class="indexterm"></a><a id="id-1.5.4.8.4" class="indexterm"></a><a id="id-1.5.4.8.5" class="indexterm"></a><a id="id-1.5.4.8.6" class="indexterm"></a><p>   When an object is created, it is assigned an owner. The
+   owner is normally the role that executed the creation statement.
+   For most kinds of objects, the initial state is that only the owner
+   (or a superuser) can do anything with the object. To allow
+   other roles to use it, <em class="firstterm">privileges</em> must be
+   granted.
+  </p><p>   There are different kinds of privileges: <code class="literal">SELECT</code>,
+   <code class="literal">INSERT</code>, <code class="literal">UPDATE</code>, <code class="literal">DELETE</code>,
+   <code class="literal">TRUNCATE</code>, <code class="literal">REFERENCES</code>, <code class="literal">TRIGGER</code>,
+   <code class="literal">CREATE</code>, <code class="literal">CONNECT</code>, <code class="literal">TEMPORARY</code>,
+   <code class="literal">EXECUTE</code>, and <code class="literal">USAGE</code>.
+   The privileges applicable to a particular
+   object vary depending on the object's type (table, function, etc).
+   For complete information on the different types of privileges
+   supported by <span class="productname">PostgreSQL</span>, refer to the
+   <a class="xref" href="sql-grant.html" title="GRANT"><span class="refentrytitle">GRANT</span></a> reference
+   page.  The following sections and chapters will also show you how
+   those privileges are used.
+  </p><p>   The right to modify or destroy an object is always the privilege of
+   the owner only.
+  </p><p>   An object can be assigned to a new owner with an <code class="command">ALTER</code>
+   command of the appropriate kind for the object, e.g. <a class="xref" href="sql-altertable.html" title="ALTER TABLE"><span class="refentrytitle">ALTER TABLE</span></a>.  Superusers can always do
+   this; ordinary roles can only do it if they are both the current owner
+   of the object (or a member of the owning role) and a member of the new
+   owning role.
+  </p><p>   To assign privileges, the <code class="command">GRANT</code> command is
+   used. For example, if <code class="literal">joe</code> is an existing role, and
+   <code class="literal">accounts</code> is an existing table, the privilege to
+   update the table can be granted with:
+</p><pre class="programlisting">GRANT UPDATE ON accounts TO joe;</pre><p>
+   Writing <code class="literal">ALL</code> in place of a specific privilege grants all
+   privileges that are relevant for the object type.
+  </p><p>   The special <span class="quote">“<span class="quote">role</span>”</span> name <code class="literal">PUBLIC</code> can
+   be used to grant a privilege to every role on the system.  Also,
+   <span class="quote">“<span class="quote">group</span>”</span> roles can be set up to help manage privileges when
+   there are many users of a database — for details see
+   <a class="xref" href="user-manag.html" title="Chapter 21. Database Roles">Chapter 21</a>.
+  </p><p>   To revoke a privilege, use the fittingly named
+   <code class="command">REVOKE</code> command:
+</p><pre class="programlisting">REVOKE ALL ON accounts FROM PUBLIC;</pre><p>
+   The special privileges of the object owner (i.e., the right to do
+   <code class="command">DROP</code>, <code class="command">GRANT</code>, <code class="command">REVOKE</code>, etc.)
+   are always implicit in being the owner,
+   and cannot be granted or revoked.  But the object owner can choose
+   to revoke their own ordinary privileges, for example to make a
+   table read-only for themselves as well as others.
+  </p><p>   Ordinarily, only the object's owner (or a superuser) can grant or
+   revoke privileges on an object.  However, it is possible to grant a
+   privilege <span class="quote">“<span class="quote">with grant option</span>”</span>, which gives the recipient
+   the right to grant it in turn to others.  If the grant option is
+   subsequently revoked then all who received the privilege from that
+   recipient (directly or through a chain of grants) will lose the
+   privilege.  For details see the <a class="xref" href="sql-grant.html" title="GRANT"><span class="refentrytitle">GRANT</span></a> and
+   <a class="xref" href="sql-revoke.html" title="REVOKE"><span class="refentrytitle">REVOKE</span></a> reference pages.
+  </p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ddl-alter.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="ddl.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ddl-rowsecurity.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">5.5. Modifying Tables </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 5.7. Row Security Policies</td></tr></table></div></body></html>

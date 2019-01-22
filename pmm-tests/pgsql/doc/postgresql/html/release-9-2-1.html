@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.101. Release 9.2.1</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-2-2.html" title="E.100. Release 9.2.2" /><link rel="next" href="release-9-2.html" title="E.102. Release 9.2" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.101. Release 9.2.1</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-2-2.html" title="E.100. Release 9.2.2">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-2.html" title="E.102. Release 9.2">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-2-1"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.101. Release 9.2.1</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-2-1.html#id-1.11.6.105.4">E.101.1. Migration to Version 9.2.1</a></span></dt><dt><span class="sect2"><a href="release-9-2-1.html#id-1.11.6.105.5">E.101.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2012-09-24</p><p>   This release contains a variety of fixes from 9.2.0.
+   For information about new features in the 9.2 major release, see
+   <a class="xref" href="release-9-2.html" title="E.102. Release 9.2">Section E.102</a>.
+  </p><div class="sect2" id="id-1.11.6.105.4"><div class="titlepage"><div><div><h3 class="title">E.101.1. Migration to Version 9.2.1</h3></div></div></div><p>    A dump/restore is not required for those running 9.2.X.
+   </p><p>    However, you may need to perform <code class="command">REINDEX</code> and/or
+    <code class="command">VACUUM</code> operations to recover from the effects of the data
+    corruption bug described in the first changelog item below.
+   </p></div><div class="sect2" id="id-1.11.6.105.5"><div class="titlepage"><div><div><h3 class="title">E.101.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix persistence marking of shared buffers during WAL replay
+      (Jeff Davis)
+     </p><p>      This mistake can result in buffers not being written out during
+      checkpoints, resulting in data corruption if the server later crashes
+      without ever having written those buffers.  Corruption can occur on
+      any server following crash recovery, but it is significantly more
+      likely to occur on standby slave servers since those perform much
+      more WAL replay.  There is a low probability of corruption of btree
+      and GIN indexes.  There is a much higher probability of corruption
+      of table <span class="quote">“<span class="quote">visibility maps</span>”</span>, which might lead to wrong answers
+      from index-only scans.  Table data proper cannot be corrupted by this
+      bug.
+     </p><p>      While no index corruption due to this bug is known to have occurred
+      in the field, as a precautionary measure it is recommended that
+      production installations <code class="command">REINDEX</code> all btree and GIN
+      indexes at a convenient time after upgrading to 9.2.1.
+     </p><p>      Also, it is recommended to perform a <code class="command">VACUUM</code> of all tables
+      while having <a class="link" href="runtime-config-client.html#GUC-VACUUM-FREEZE-TABLE-AGE"><code class="varname">vacuum_freeze_table_age</code></a>
+      set to zero.  This will fix any incorrect visibility map data.  <a class="link" href="runtime-config-resource.html#GUC-VACUUM-COST-DELAY"><code class="varname">vacuum_cost_delay</code></a>
+      can be adjusted to reduce the performance impact of vacuuming, while
+      causing it to take longer to finish.
+     </p></li><li class="listitem"><p>      Fix possible incorrect sorting of output from queries involving
+      <code class="literal">WHERE <em class="replaceable"><code>indexed_column</code></em> IN
+      (<em class="replaceable"><code>list_of_values</code></em>)</code> (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix planner failure for queries involving <code class="literal">GROUP BY</code>
+      expressions along with window functions and aggregates (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix planner's assignment of executor parameters (Tom Lane)
+     </p><p>      This error could result in wrong answers from queries that scan the
+      same <code class="literal">WITH</code> subquery multiple times.
+     </p></li><li class="listitem"><p>      Improve planner's handling of join conditions in index scans (Tom Lane)
+     </p></li><li class="listitem"><p>      Improve selectivity estimation for text search queries involving
+      prefixes, i.e. <em class="replaceable"><code>word</code></em><code class="literal">:*</code> patterns  (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix delayed recognition of permissions changes (Tom Lane)
+     </p><p>      A command that needed no locks other than ones its transaction already
+      had might fail to notice a concurrent <code class="command">GRANT</code> or
+      <code class="command">REVOKE</code> that committed since the start of its transaction.
+     </p></li><li class="listitem"><p>      Fix <code class="command">ANALYZE</code> to not fail when a column is a domain over an
+      array type (Tom Lane)
+     </p></li><li class="listitem"><p>      Prevent PL/Perl from crashing if a recursive PL/Perl function is
+      redefined while being executed (Tom Lane)
+     </p></li><li class="listitem"><p>      Work around possible misoptimization in PL/Perl (Tom Lane)
+     </p><p>      Some Linux distributions contain an incorrect version of
+      <code class="filename">pthread.h</code> that results in incorrect compiled code in
+      PL/Perl, leading to crashes if a PL/Perl function calls another one
+      that throws an error.
+     </p></li><li class="listitem"><p>      Remove unnecessary dependency on <span class="application">pg_config</span> from
+      <span class="application">pg_upgrade</span> (Peter Eisentraut)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2012f
+      for DST law changes in Fiji
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-2-2.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-2.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.100. Release 9.2.2 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.102. Release 9.2</td></tr></table></div></body></html>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>28.4. Progress Reporting</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="monitoring-locks.html" title="28.3. Viewing Locks" /><link rel="next" href="dynamic-trace.html" title="28.5. Dynamic Tracing" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">28.4. Progress Reporting</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="monitoring-locks.html" title="28.3. Viewing Locks">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="monitoring.html" title="Chapter 28. Monitoring Database Activity">Up</a></td><th width="60%" align="center">Chapter 28. Monitoring Database Activity</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="dynamic-trace.html" title="28.5. Dynamic Tracing">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="PROGRESS-REPORTING"><div class="titlepage"><div><div><h2 class="title" style="clear: both">28.4. Progress Reporting</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="progress-reporting.html#VACUUM-PROGRESS-REPORTING">28.4.1. VACUUM Progress Reporting</a></span></dt></dl></div><p>   <span class="productname">PostgreSQL</span> has the ability to report the progress of
+   certain commands during command execution.  Currently, the only command
+   which supports progress reporting is <code class="command">VACUUM</code>.  This may be
+   expanded in the future.
+  </p><div class="sect2" id="VACUUM-PROGRESS-REPORTING"><div class="titlepage"><div><div><h3 class="title">28.4.1. VACUUM Progress Reporting</h3></div></div></div><p>   Whenever <code class="command">VACUUM</code> is running, the
+   <code class="structname">pg_stat_progress_vacuum</code> view will contain
+   one row for each backend (including autovacuum worker processes) that is
+   currently vacuuming.  The tables below describe the information
+   that will be reported and provide information about how to interpret it.
+   Progress reporting is not currently supported for <code class="command">VACUUM FULL</code>
+   and backends running <code class="command">VACUUM FULL</code> will not be listed in this
+   view.
+  </p><div class="table" id="PG-STAT-PROGRESS-VACUUM-VIEW"><p class="title"><strong>Table 28.21. <code class="structname">pg_stat_progress_vacuum</code> View</strong></p><div class="table-contents"><table class="table" summary="pg_stat_progress_vacuum View" border="1"><colgroup><col /><col /><col /></colgroup><thead><tr><th>Column</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="structfield">pid</code></td><td><code class="type">integer</code></td><td>Process ID of backend.</td></tr><tr><td><code class="structfield">datid</code></td><td><code class="type">oid</code></td><td>OID of the database to which this backend is connected.</td></tr><tr><td><code class="structfield">datname</code></td><td><code class="type">name</code></td><td>Name of the database to which this backend is connected.</td></tr><tr><td><code class="structfield">relid</code></td><td><code class="type">oid</code></td><td>OID of the table being vacuumed.</td></tr><tr><td><code class="structfield">phase</code></td><td><code class="type">text</code></td><td>       Current processing phase of vacuum.  See <a class="xref" href="progress-reporting.html#VACUUM-PHASES" title="Table 28.22. VACUUM phases">Table 28.22</a>.
+     </td></tr><tr><td><code class="structfield">heap_blks_total</code></td><td><code class="type">bigint</code></td><td>       Total number of heap blocks in the table.  This number is reported
+       as of the beginning of the scan; blocks added later will not be (and
+       need not be) visited by this <code class="command">VACUUM</code>.
+     </td></tr><tr><td><code class="structfield">heap_blks_scanned</code></td><td><code class="type">bigint</code></td><td>       Number of heap blocks scanned.  Because the
+       <a class="link" href="storage-vm.html" title="66.4. Visibility Map">visibility map</a> is used to optimize scans,
+       some blocks will be skipped without inspection; skipped blocks are
+       included in this total, so that this number will eventually become
+       equal to <code class="structfield">heap_blks_total</code> when the vacuum is complete.
+       This counter only advances when the phase is <code class="literal">scanning heap</code>.
+     </td></tr><tr><td><code class="structfield">heap_blks_vacuumed</code></td><td><code class="type">bigint</code></td><td>       Number of heap blocks vacuumed.  Unless the table has no indexes, this
+       counter only advances when the phase is <code class="literal">vacuuming heap</code>.
+       Blocks that contain no dead tuples are skipped, so the counter may
+       sometimes skip forward in large increments.
+     </td></tr><tr><td><code class="structfield">index_vacuum_count</code></td><td><code class="type">bigint</code></td><td>       Number of completed index vacuum cycles.
+     </td></tr><tr><td><code class="structfield">max_dead_tuples</code></td><td><code class="type">bigint</code></td><td>      Number of dead tuples that we can store before needing to perform
+      an index vacuum cycle, based on
+      <a class="xref" href="runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM">maintenance_work_mem</a>.
+     </td></tr><tr><td><code class="structfield">num_dead_tuples</code></td><td><code class="type">bigint</code></td><td>       Number of dead tuples collected since the last index vacuum cycle.
+     </td></tr></tbody></table></div></div><br class="table-break" /><div class="table" id="VACUUM-PHASES"><p class="title"><strong>Table 28.22. VACUUM phases</strong></p><div class="table-contents"><table class="table" summary="VACUUM phases" border="1"><colgroup><col /><col /></colgroup><thead><tr><th>Phase</th><th>Description</th></tr></thead><tbody><tr><td><code class="literal">initializing</code></td><td>       <code class="command">VACUUM</code> is preparing to begin scanning the heap.  This
+       phase is expected to be very brief.
+     </td></tr><tr><td><code class="literal">scanning heap</code></td><td>       <code class="command">VACUUM</code> is currently scanning the heap.  It will prune and
+       defragment each page if required, and possibly perform freezing
+       activity.  The <code class="structfield">heap_blks_scanned</code> column can be used
+       to monitor the progress of the scan.
+     </td></tr><tr><td><code class="literal">vacuuming indexes</code></td><td>       <code class="command">VACUUM</code> is currently vacuuming the indexes.  If a table has
+       any indexes, this will happen at least once per vacuum, after the heap
+       has been completely scanned.  It may happen multiple times per vacuum
+       if <a class="xref" href="runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM">maintenance_work_mem</a> is insufficient to
+       store the number of dead tuples found.
+     </td></tr><tr><td><code class="literal">vacuuming heap</code></td><td>       <code class="command">VACUUM</code> is currently vacuuming the heap.  Vacuuming the heap
+       is distinct from scanning the heap, and occurs after each instance of
+       vacuuming indexes.  If <code class="structfield">heap_blks_scanned</code> is less than
+       <code class="structfield">heap_blks_total</code>, the system will return to scanning
+       the heap after this phase is completed; otherwise, it will begin
+       cleaning up indexes after this phase is completed.
+     </td></tr><tr><td><code class="literal">cleaning up indexes</code></td><td>       <code class="command">VACUUM</code> is currently cleaning up indexes.  This occurs after
+       the heap has been completely scanned and all vacuuming of the indexes
+       and the heap has been completed.
+     </td></tr><tr><td><code class="literal">truncating heap</code></td><td>       <code class="command">VACUUM</code> is currently truncating the heap so as to return
+       empty pages at the end of the relation to the operating system.  This
+       occurs after cleaning up indexes.
+     </td></tr><tr><td><code class="literal">performing final cleanup</code></td><td>       <code class="command">VACUUM</code> is performing final cleanup.  During this phase,
+       <code class="command">VACUUM</code> will vacuum the free space map, update statistics
+       in <code class="literal">pg_class</code>, and report statistics to the statistics
+       collector.  When this phase is completed, <code class="command">VACUUM</code> will end.
+     </td></tr></tbody></table></div></div><br class="table-break" /></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="monitoring-locks.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="monitoring.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="dynamic-trace.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">28.3. Viewing Locks </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 28.5. Dynamic Tracing</td></tr></table></div></body></html>

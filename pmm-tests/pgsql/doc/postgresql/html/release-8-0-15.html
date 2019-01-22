@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.258. Release 8.0.15</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-0-16.html" title="E.257. Release 8.0.16" /><link rel="next" href="release-8-0-14.html" title="E.259. Release 8.0.14" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.258. Release 8.0.15</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-0-16.html" title="E.257. Release 8.0.16">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-0-14.html" title="E.259. Release 8.0.14">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-0-15"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.258. Release 8.0.15</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-0-15.html#id-1.11.6.262.5">E.258.1. Migration to Version 8.0.15</a></span></dt><dt><span class="sect2"><a href="release-8-0-15.html#id-1.11.6.262.6">E.258.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2008-01-07</p><p>   This release contains a variety of fixes from 8.0.14,
+   including fixes for significant security issues.
+   For information about new features in the 8.0 major release, see
+   <a class="xref" href="release-8-0.html" title="E.273. Release 8.0">Section E.273</a>.
+  </p><p>   This is the last 8.0.X release for which the <span class="productname">PostgreSQL</span>
+   community will produce binary packages for <span class="productname">Windows</span>.
+   Windows users are encouraged to move to 8.2.X or later,
+   since there are Windows-specific fixes in 8.2.X that
+   are impractical to back-port.  8.0.X will continue to
+   be supported on other platforms.
+  </p><div class="sect2" id="id-1.11.6.262.5"><div class="titlepage"><div><div><h3 class="title">E.258.1. Migration to Version 8.0.15</h3></div></div></div><p>    A dump/restore is not required for those running 8.0.X.  However,
+    if you are upgrading from a version earlier than 8.0.6,
+    see <a class="xref" href="release-8-0-6.html" title="E.267. Release 8.0.6">Section E.267</a>.
+   </p></div><div class="sect2" id="id-1.11.6.262.6"><div class="titlepage"><div><div><h3 class="title">E.258.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Prevent functions in indexes from executing with the privileges of
+      the user running <code class="command">VACUUM</code>, <code class="command">ANALYZE</code>, etc (Tom)
+     </p><p>      Functions used in index expressions and partial-index
+      predicates are evaluated whenever a new table entry is made.  It has
+      long been understood that this poses a risk of trojan-horse code
+      execution if one modifies a table owned by an untrustworthy user.
+      (Note that triggers, defaults, check constraints, etc. pose the
+      same type of risk.)  But functions in indexes pose extra danger
+      because they will be executed by routine maintenance operations
+      such as <code class="command">VACUUM FULL</code>, which are commonly performed
+      automatically under a superuser account.  For example, a nefarious user
+      can execute code with superuser privileges by setting up a
+      trojan-horse index definition and waiting for the next routine vacuum.
+      The fix arranges for standard maintenance operations
+      (including <code class="command">VACUUM</code>, <code class="command">ANALYZE</code>, <code class="command">REINDEX</code>,
+      and <code class="command">CLUSTER</code>) to execute as the table owner rather than
+      the calling user, using the same privilege-switching mechanism already
+      used for <code class="literal">SECURITY DEFINER</code> functions.  To prevent bypassing
+      this security measure, execution of <code class="command">SET SESSION
+      AUTHORIZATION</code> and <code class="command">SET ROLE</code> is now forbidden within a
+      <code class="literal">SECURITY DEFINER</code> context.  (CVE-2007-6600)
+     </p></li><li class="listitem"><p>      Repair assorted bugs in the regular-expression package (Tom, Will Drewry)
+     </p><p>      Suitably crafted regular-expression patterns could cause crashes,
+      infinite or near-infinite looping, and/or massive memory consumption,
+      all of which pose denial-of-service hazards for applications that
+      accept regex search patterns from untrustworthy sources.
+      (CVE-2007-4769, CVE-2007-4772, CVE-2007-6067)
+     </p></li><li class="listitem"><p>      Require non-superusers who use <code class="filename">/contrib/dblink</code> to use only
+      password authentication, as a security measure (Joe)
+     </p><p>      The fix that appeared for this in 8.0.14 was incomplete, as it plugged
+      the hole for only some <code class="filename">dblink</code> functions.  (CVE-2007-6601,
+      CVE-2007-3278)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2007k
+      (in particular, recent Argentina changes) (Tom)
+     </p></li><li class="listitem"><p>      Fix planner failure in some cases of <code class="literal">WHERE false AND var IN
+      (SELECT ...)</code> (Tom)
+     </p></li><li class="listitem"><p>      Preserve the tablespace of indexes that are
+      rebuilt by <code class="command">ALTER TABLE ... ALTER COLUMN TYPE</code> (Tom)
+     </p></li><li class="listitem"><p>      Make archive recovery always start a new WAL timeline, rather than only
+      when a recovery stop time was used (Simon)
+     </p><p>      This avoids a corner-case risk of trying to overwrite an existing
+      archived copy of the last WAL segment, and seems simpler and cleaner
+      than the original definition.
+     </p></li><li class="listitem"><p>      Make <code class="command">VACUUM</code> not use all of <code class="varname">maintenance_work_mem</code>
+      when the table is too small for it to be useful (Alvaro)
+     </p></li><li class="listitem"><p>      Fix potential crash in <code class="function">translate()</code> when using a multibyte
+      database encoding (Tom)
+     </p></li><li class="listitem"><p>      Fix PL/Perl to cope when platform's Perl defines type <code class="literal">bool</code>
+      as <code class="literal">int</code> rather than <code class="literal">char</code> (Tom)
+     </p><p>      While this could theoretically happen anywhere, no standard build of
+      Perl did things this way ... until <span class="productname">macOS</span> 10.5.
+     </p></li><li class="listitem"><p>      Fix PL/Python to not crash on long exception messages (Alvaro)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to correctly handle inheritance child tables
+      that have default expressions different from their parent's (Tom)
+     </p></li><li class="listitem"><p>      <span class="application">ecpg</span> parser fixes (Michael)
+     </p></li><li class="listitem"><p>      Make <code class="filename">contrib/tablefunc</code>'s <code class="function">crosstab()</code> handle
+      NULL rowid as a category in its own right, rather than crashing (Joe)
+     </p></li><li class="listitem"><p>      Fix <code class="type">tsvector</code> and <code class="type">tsquery</code> output routines to
+      escape backslashes correctly (Teodor, Bruce)
+     </p></li><li class="listitem"><p>      Fix crash of <code class="function">to_tsvector()</code> on huge input strings (Teodor)
+     </p></li><li class="listitem"><p>      Require a specific version of <span class="productname">Autoconf</span> to be used
+      when re-generating the <code class="command">configure</code> script (Peter)
+     </p><p>      This affects developers and packagers only.  The change was made
+      to prevent accidental use of untested combinations of
+      <span class="productname">Autoconf</span> and <span class="productname">PostgreSQL</span> versions.
+      You can remove the version check if you really want to use a
+      different <span class="productname">Autoconf</span> version, but it's
+      your responsibility whether the result works or not.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-0-16.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-0-14.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.257. Release 8.0.16 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.259. Release 8.0.14</td></tr></table></div></body></html>

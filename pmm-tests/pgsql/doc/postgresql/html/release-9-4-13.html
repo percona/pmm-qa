@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.39. Release 9.4.13</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-4-14.html" title="E.38. Release 9.4.14" /><link rel="next" href="release-9-4-12.html" title="E.40. Release 9.4.12" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.39. Release 9.4.13</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-4-14.html" title="E.38. Release 9.4.14">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-4-12.html" title="E.40. Release 9.4.12">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-4-13"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.39. Release 9.4.13</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-4-13.html#id-1.11.6.43.4">E.39.1. Migration to Version 9.4.13</a></span></dt><dt><span class="sect2"><a href="release-9-4-13.html#id-1.11.6.43.5">E.39.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2017-08-10</p><p>   This release contains a variety of fixes from 9.4.12.
+   For information about new features in the 9.4 major release, see
+   <a class="xref" href="release-9-4.html" title="E.52. Release 9.4">Section E.52</a>.
+  </p><div class="sect2" id="id-1.11.6.43.4"><div class="titlepage"><div><div><h3 class="title">E.39.1. Migration to Version 9.4.13</h3></div></div></div><p>    A dump/restore is not required for those running 9.4.X.
+   </p><p>    However, if you use foreign data servers that make use of user
+    passwords for authentication, see the first changelog entry below.
+   </p><p>    Also, if you are upgrading from a version earlier than 9.4.12,
+    see <a class="xref" href="release-9-4-12.html" title="E.40. Release 9.4.12">Section E.40</a>.
+   </p></div><div class="sect2" id="id-1.11.6.43.5"><div class="titlepage"><div><div><h3 class="title">E.39.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Further restrict visibility
+      of <code class="structname">pg_user_mappings</code>.<code class="structfield">umoptions</code>, to
+      protect passwords stored as user mapping options
+      (Noah Misch)
+     </p><p>      The fix for CVE-2017-7486 was incorrect: it allowed a user
+      to see the options in her own user mapping, even if she did not
+      have <code class="literal">USAGE</code> permission on the associated foreign server.
+      Such options might include a password that had been provided by the
+      server owner rather than the user herself.
+      Since <code class="structname">information_schema.user_mapping_options</code> does not
+      show the options in such cases, <code class="structname">pg_user_mappings</code>
+      should not either.
+      (CVE-2017-7547)
+     </p><p>      By itself, this patch will only fix the behavior in newly initdb'd
+      databases.  If you wish to apply this change in an existing database,
+      you will need to do the following:
+     </p><div class="procedure"><ol class="procedure" type="1"><li class="step"><p>        Restart the postmaster after adding <code class="literal">allow_system_table_mods
+        = true</code> to <code class="filename">postgresql.conf</code>.  (In versions
+        supporting <code class="command">ALTER SYSTEM</code>, you can use that to make the
+        configuration change, but you'll still need a restart.)
+       </p></li><li class="step"><p>        In <span class="emphasis"><em>each</em></span> database of the cluster,
+        run the following commands as superuser:
+</p><pre class="programlisting">SET search_path = pg_catalog;
+CREATE OR REPLACE VIEW pg_user_mappings AS
+    SELECT
+        U.oid       AS umid,
+        S.oid       AS srvid,
+        S.srvname   AS srvname,
+        U.umuser    AS umuser,
+        CASE WHEN U.umuser = 0 THEN
+            'public'
+        ELSE
+            A.rolname
+        END AS usename,
+        CASE WHEN (U.umuser &lt;&gt; 0 AND A.rolname = current_user
+                     AND (pg_has_role(S.srvowner, 'USAGE')
+                          OR has_server_privilege(S.oid, 'USAGE')))
+                    OR (U.umuser = 0 AND pg_has_role(S.srvowner, 'USAGE'))
+                    OR (SELECT rolsuper FROM pg_authid WHERE rolname = current_user)
+                    THEN U.umoptions
+                 ELSE NULL END AS umoptions
+    FROM pg_user_mapping U
+         LEFT JOIN pg_authid A ON (A.oid = U.umuser) JOIN
+        pg_foreign_server S ON (U.umserver = S.oid);</pre><p>
+       </p></li><li class="step"><p>        Do not forget to include the <code class="literal">template0</code>
+        and <code class="literal">template1</code> databases, or the vulnerability will still
+        exist in databases you create later.  To fix <code class="literal">template0</code>,
+        you'll need to temporarily make it accept connections.
+        In <span class="productname">PostgreSQL</span> 9.5 and later, you can use
+</p><pre class="programlisting">ALTER DATABASE template0 WITH ALLOW_CONNECTIONS true;</pre><p>
+        and then after fixing <code class="literal">template0</code>, undo that with
+</p><pre class="programlisting">ALTER DATABASE template0 WITH ALLOW_CONNECTIONS false;</pre><p>
+        In prior versions, instead use
+</p><pre class="programlisting">UPDATE pg_database SET datallowconn = true WHERE datname = 'template0';
+UPDATE pg_database SET datallowconn = false WHERE datname = 'template0';</pre><p>
+       </p></li><li class="step"><p>        Finally, remove the <code class="literal">allow_system_table_mods</code> configuration
+        setting, and again restart the postmaster.
+       </p></li></ol></div></li><li class="listitem"><p>      Disallow empty passwords in all password-based authentication methods
+      (Heikki Linnakangas)
+     </p><p>      <span class="application">libpq</span> ignores empty password specifications, and does
+      not transmit them to the server.  So, if a user's password has been
+      set to the empty string, it's impossible to log in with that password
+      via <span class="application">psql</span> or other <span class="application">libpq</span>-based
+      clients.  An administrator might therefore believe that setting the
+      password to empty is equivalent to disabling password login.
+      However, with a modified or non-<span class="application">libpq</span>-based client,
+      logging in could be possible, depending on which authentication
+      method is configured.  In particular the most common
+      method, <code class="literal">md5</code>, accepted empty passwords.
+      Change the server to reject empty passwords in all cases.
+      (CVE-2017-7546)
+     </p></li><li class="listitem"><p>      Make <code class="function">lo_put()</code> check for <code class="literal">UPDATE</code> privilege on
+      the target large object (Tom Lane, Michael Paquier)
+     </p><p>      <code class="function">lo_put()</code> should surely require the same permissions
+      as <code class="function">lowrite()</code>, but the check was missing, allowing any
+      user to change the data in a large object.
+      (CVE-2017-7548)
+     </p></li><li class="listitem"><p>      Fix concurrent locking of tuple update chains (Álvaro Herrera)
+     </p><p>      If several sessions concurrently lock a tuple update chain with
+      nonconflicting lock modes using an old snapshot, and they all
+      succeed, it was possible for some of them to nonetheless fail (and
+      conclude there is no live tuple version) due to a race condition.
+      This had consequences such as foreign-key checks failing to see a
+      tuple that definitely exists but is being updated concurrently.
+     </p></li><li class="listitem"><p>      Fix potential data corruption when freezing a tuple whose XMAX is a
+      multixact with exactly one still-interesting member (Teodor Sigaev)
+     </p></li><li class="listitem"><p>      Avoid integer overflow and ensuing crash when sorting more than one
+      billion tuples in-memory (Sergey Koposov)
+     </p></li><li class="listitem"><p>      On Windows, retry process creation if we fail to reserve the address
+      range for our shared memory in the new process (Tom Lane, Amit
+      Kapila)
+     </p><p>      This is expected to fix infrequent child-process-launch failures that
+      are probably due to interference from antivirus products.
+     </p></li><li class="listitem"><p>      Fix low-probability corruption of shared predicate-lock hash table
+      in Windows builds (Thomas Munro, Tom Lane)
+     </p></li><li class="listitem"><p>      Avoid logging clean closure of an SSL connection as though
+      it were a connection reset (Michael Paquier)
+     </p></li><li class="listitem"><p>      Prevent sending SSL session tickets to clients (Tom Lane)
+     </p><p>      This fix prevents reconnection failures with ticket-aware client-side
+      SSL code.
+     </p></li><li class="listitem"><p>      Fix code for setting <a class="xref" href="runtime-config-connection.html#GUC-TCP-KEEPALIVES-IDLE">tcp_keepalives_idle</a> on
+      Solaris (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix statistics collector to honor inquiry messages issued just after
+      a postmaster shutdown and immediate restart (Tom Lane)
+     </p><p>      Statistics inquiries issued within half a second of the previous
+      postmaster shutdown were effectively ignored.
+     </p></li><li class="listitem"><p>      Ensure that the statistics collector's receive buffer size is at
+      least 100KB (Tom Lane)
+     </p><p>      This reduces the risk of dropped statistics data on older platforms
+      whose default receive buffer size is less than that.
+     </p></li><li class="listitem"><p>      Fix possible creation of an invalid WAL segment when a standby is
+      promoted just after it processes an <code class="literal">XLOG_SWITCH</code> WAL
+      record (Andres Freund)
+     </p></li><li class="listitem"><p>      Fix <span class="application">walsender</span> to exit promptly when client requests
+      shutdown (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <span class="systemitem">SIGHUP</span> and <span class="systemitem">SIGUSR1</span> handling in
+      walsender processes (Petr Jelinek, Andres Freund)
+     </p></li><li class="listitem"><p>      Prevent walsender-triggered panics during shutdown checkpoints
+      (Andres Freund, Michael Paquier)
+     </p></li><li class="listitem"><p>      Fix unnecessarily slow restarts of <span class="application">walreceiver</span>
+      processes due to race condition in postmaster (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix logical decoding failure with very wide tuples (Andres Freund)
+     </p><p>      Logical decoding crashed on tuples that are wider than 64KB (after
+      compression, but with all data in-line).  The case arises only
+      when <code class="literal">REPLICA IDENTITY FULL</code> is enabled for a table
+      containing such tuples.
+     </p></li><li class="listitem"><p>      Fix leakage of small subtransactions spilled to disk during logical
+      decoding (Andres Freund)
+     </p><p>      This resulted in temporary files consuming excessive disk space.
+     </p></li><li class="listitem"><p>      Reduce the work needed to build snapshots during creation of
+      logical-decoding slots (Andres Freund, Petr Jelinek)
+     </p><p>      The previous algorithm was infeasibly expensive on a server with a
+      lot of open transactions.
+     </p></li><li class="listitem"><p>      Fix race condition that could indefinitely delay creation of
+      logical-decoding slots (Andres Freund, Petr Jelinek)
+     </p></li><li class="listitem"><p>      Reduce overhead in processing syscache invalidation events (Tom Lane)
+     </p><p>      This is particularly helpful for logical decoding, which triggers
+      frequent cache invalidation.
+     </p></li><li class="listitem"><p>      Fix cases where an <code class="command">INSERT</code> or <code class="command">UPDATE</code> assigns
+      to more than one element of a column that is of domain-over-array
+      type (Tom Lane)
+     </p></li><li class="listitem"><p>      Allow window functions to be used in sub-<code class="literal">SELECT</code>s that
+      are within the arguments of an aggregate function (Tom Lane)
+     </p></li><li class="listitem"><p>      Move autogenerated array types out of the way during
+      <code class="command">ALTER ... RENAME</code> (Vik Fearing)
+     </p><p>      Previously, we would rename a conflicting autogenerated array type
+      out of the way during <code class="command">CREATE</code>; this fix extends that
+      behavior to renaming operations.
+     </p></li><li class="listitem"><p>      Ensure that <code class="command">ALTER USER ... SET</code> accepts all the syntax
+      variants that <code class="command">ALTER ROLE ... SET</code> does (Peter Eisentraut)
+     </p></li><li class="listitem"><p>      Properly update dependency info when changing a datatype I/O
+      function's argument or return type from <code class="type">opaque</code> to the
+      correct type (Heikki Linnakangas)
+     </p><p>      <code class="command">CREATE TYPE</code> updates I/O functions declared in this
+      long-obsolete style, but it forgot to record a dependency on the
+      type, allowing a subsequent <code class="command">DROP TYPE</code> to leave broken
+      function definitions behind.
+     </p></li><li class="listitem"><p>      Reduce memory usage when <code class="command">ANALYZE</code> processes
+      a <code class="type">tsvector</code> column (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Fix unnecessary precision loss and sloppy rounding when multiplying
+      or dividing <code class="type">money</code> values by integers or floats (Tom Lane)
+     </p></li><li class="listitem"><p>      Tighten checks for whitespace in functions that parse identifiers,
+      such as <code class="function">regprocedurein()</code> (Tom Lane)
+     </p><p>      Depending on the prevailing locale, these functions could
+      misinterpret fragments of multibyte characters as whitespace.
+     </p></li><li class="listitem"><p>      Use relevant <code class="literal">#define</code> symbols from Perl while
+      compiling <span class="application">PL/Perl</span> (Ashutosh Sharma, Tom Lane)
+     </p><p>      This avoids portability problems, typically manifesting as
+      a <span class="quote">“<span class="quote">handshake</span>”</span> mismatch during library load, when working with
+      recent Perl versions.
+     </p></li><li class="listitem"><p>      In <span class="application">libpq</span>, reset GSS/SASL and SSPI authentication
+      state properly after a failed connection attempt (Michael Paquier)
+     </p><p>      Failure to do this meant that when falling back from SSL to non-SSL
+      connections, a GSS/SASL failure in the SSL attempt would always cause
+      the non-SSL attempt to fail.  SSPI did not fail, but it leaked memory.
+     </p></li><li class="listitem"><p>      In <span class="application">psql</span>, fix failure when <code class="command">COPY FROM STDIN</code>
+      is ended with a keyboard EOF signal and then another <code class="command">COPY
+      FROM STDIN</code> is attempted (Thomas Munro)
+     </p><p>      This misbehavior was observed on BSD-derived platforms (including
+      macOS), but not on most others.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> and <span class="application">pg_restore</span> to
+      emit <code class="command">REFRESH MATERIALIZED VIEW</code> commands last (Tom Lane)
+     </p><p>      This prevents errors during dump/restore when a materialized view
+      refers to tables owned by a different user.
+     </p></li><li class="listitem"><p>      Improve <span class="application">pg_dump</span>/<span class="application">pg_restore</span>'s
+      reporting of error conditions originating in <span class="application">zlib</span>
+      (Vladimir Kunschikov, Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> with the <code class="option">--clean</code> option to
+      drop event triggers as expected (Tom Lane)
+     </p><p>      It also now correctly assigns ownership of event triggers; before,
+      they were restored as being owned by the superuser running the
+      restore script.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to not emit invalid SQL for an empty
+      operator class (Daniel Gustafsson)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> output to stdout on Windows (Kuntal Ghosh)
+     </p><p>      A compressed plain-text dump written to stdout would contain corrupt
+      data due to failure to put the file descriptor into binary mode.
+     </p></li><li class="listitem"><p>      Fix <code class="function">pg_get_ruledef()</code> to print correct output for
+      the <code class="literal">ON SELECT</code> rule of a view whose columns have been
+      renamed (Tom Lane)
+     </p><p>      In some corner cases, <span class="application">pg_dump</span> relies
+      on <code class="function">pg_get_ruledef()</code> to dump views, so that this error
+      could result in dump/reload failures.
+     </p></li><li class="listitem"><p>      Fix dumping of outer joins with empty constraints, such as the result
+      of a <code class="literal">NATURAL LEFT JOIN</code> with no common columns (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix dumping of function expressions in the <code class="literal">FROM</code> clause in
+      cases where the expression does not deparse into something that looks
+      like a function call (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_basebackup</span> output to stdout on Windows
+      (Haribabu Kommi)
+     </p><p>      A backup written to stdout would contain corrupt data due to failure
+      to put the file descriptor into binary mode.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_upgrade</span> to ensure that the ending WAL record
+      does not have <a class="xref" href="runtime-config-wal.html#GUC-WAL-LEVEL">wal_level</a> = <code class="literal">minimum</code>
+      (Bruce Momjian)
+     </p><p>      This condition could prevent upgraded standby servers from
+      reconnecting.
+     </p></li><li class="listitem"><p>      In <code class="filename">postgres_fdw</code>, re-establish connections to remote
+      servers after <code class="command">ALTER SERVER</code> or <code class="command">ALTER USER
+      MAPPING</code> commands (Kyotaro Horiguchi)
+     </p><p>      This ensures that option changes affecting connection parameters will
+      be applied promptly.
+     </p></li><li class="listitem"><p>      In <code class="filename">postgres_fdw</code>, allow cancellation of remote
+      transaction control commands (Robert Haas, Rafia Sabih)
+     </p><p>      This change allows us to quickly escape a wait for an unresponsive
+      remote server in many more cases than previously.
+     </p></li><li class="listitem"><p>      Increase <code class="literal">MAX_SYSCACHE_CALLBACKS</code> to provide more room for
+      extensions (Tom Lane)
+     </p></li><li class="listitem"><p>      Always use <code class="option">-fPIC</code>, not <code class="option">-fpic</code>, when building
+      shared libraries with gcc (Tom Lane)
+     </p><p>      This supports larger extension libraries on platforms where it makes
+      a difference.
+     </p></li><li class="listitem"><p>      Fix unescaped-braces issue in our build scripts for Microsoft MSVC,
+      to avoid a warning or error from recent Perl versions (Andrew
+      Dunstan)
+     </p></li><li class="listitem"><p>      In MSVC builds, handle the case where the <span class="application">openssl</span>
+      library is not within a <code class="filename">VC</code> subdirectory (Andrew Dunstan)
+     </p></li><li class="listitem"><p>      In MSVC builds, add proper include path for <span class="application">libxml2</span>
+      header files (Andrew Dunstan)
+     </p><p>      This fixes a former need to move things around in standard Windows
+      installations of <span class="application">libxml2</span>.
+     </p></li><li class="listitem"><p>      In MSVC builds, recognize a Tcl library that is
+      named <code class="filename">tcl86.lib</code> (Noah Misch)
+     </p></li><li class="listitem"><p>      In MSVC builds, honor <code class="literal">PROVE_FLAGS</code> settings
+      on <code class="filename">vcregress.pl</code>'s command line (Andrew Dunstan)
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-4-14.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-4-12.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.38. Release 9.4.14 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.40. Release 9.4.12</td></tr></table></div></body></html>

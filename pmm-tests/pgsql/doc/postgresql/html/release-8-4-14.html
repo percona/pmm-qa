@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.160. Release 8.4.14</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-4-15.html" title="E.159. Release 8.4.15" /><link rel="next" href="release-8-4-13.html" title="E.161. Release 8.4.13" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.160. Release 8.4.14</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-4-15.html" title="E.159. Release 8.4.15">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-4-13.html" title="E.161. Release 8.4.13">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-4-14"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.160. Release 8.4.14</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-4-14.html#id-1.11.6.164.4">E.160.1. Migration to Version 8.4.14</a></span></dt><dt><span class="sect2"><a href="release-8-4-14.html#id-1.11.6.164.5">E.160.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2012-09-24</p><p>   This release contains a variety of fixes from 8.4.13.
+   For information about new features in the 8.4 major release, see
+   <a class="xref" href="release-8-4.html" title="E.174. Release 8.4">Section E.174</a>.
+  </p><div class="sect2" id="id-1.11.6.164.4"><div class="titlepage"><div><div><h3 class="title">E.160.1. Migration to Version 8.4.14</h3></div></div></div><p>    A dump/restore is not required for those running 8.4.X.
+   </p><p>    However, if you are upgrading from a version earlier than 8.4.10,
+    see <a class="xref" href="release-8-4-10.html" title="E.164. Release 8.4.10">Section E.164</a>.
+   </p></div><div class="sect2" id="id-1.11.6.164.5"><div class="titlepage"><div><div><h3 class="title">E.160.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix planner's assignment of executor parameters, and fix executor's
+      rescan logic for CTE plan nodes (Tom Lane)
+     </p><p>      These errors could result in wrong answers from queries that scan the
+      same <code class="literal">WITH</code> subquery multiple times.
+     </p></li><li class="listitem"><p>      Improve page-splitting decisions in GiST indexes (Alexander Korotkov,
+      Robert Haas, Tom Lane)
+     </p><p>      Multi-column GiST indexes might suffer unexpected bloat due to this
+      error.
+     </p></li><li class="listitem"><p>      Fix cascading privilege revoke to stop if privileges are still held
+      (Tom Lane)
+     </p><p>      If we revoke a grant option from some role <em class="replaceable"><code>X</code></em>, but
+      <em class="replaceable"><code>X</code></em> still holds that option via a grant from someone
+      else, we should not recursively revoke the corresponding privilege
+      from role(s) <em class="replaceable"><code>Y</code></em> that <em class="replaceable"><code>X</code></em> had granted it
+      to.
+     </p></li><li class="listitem"><p>      Fix handling of <code class="literal">SIGFPE</code> when PL/Perl is in use (Andres Freund)
+     </p><p>      Perl resets the process's <code class="literal">SIGFPE</code> handler to
+      <code class="literal">SIG_IGN</code>, which could result in crashes later on.  Restore
+      the normal Postgres signal handler after initializing PL/Perl.
+     </p></li><li class="listitem"><p>      Prevent PL/Perl from crashing if a recursive PL/Perl function is
+      redefined while being executed (Tom Lane)
+     </p></li><li class="listitem"><p>      Work around possible misoptimization in PL/Perl (Tom Lane)
+     </p><p>      Some Linux distributions contain an incorrect version of
+      <code class="filename">pthread.h</code> that results in incorrect compiled code in
+      PL/Perl, leading to crashes if a PL/Perl function calls another one
+      that throws an error.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2012f
+      for DST law changes in Fiji
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-4-15.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-4-13.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.159. Release 8.4.15 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.161. Release 8.4.13</td></tr></table></div></body></html>

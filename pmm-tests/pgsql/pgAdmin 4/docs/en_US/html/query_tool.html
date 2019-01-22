@@ -1,0 +1,320 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Query tool &#8212; pgAdmin 4 3.2 documentation</title>
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/sidebar.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Reviewing and Editing Data" href="editgrid.html" />
+    <link rel="prev" title="pgAdmin Debugger" href="debugger.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="editgrid.html" title="Reviewing and Editing Data"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="debugger.html" title="pgAdmin Debugger"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pgAdmin 4 3.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="developer_tools.html" accesskey="U">Developer Tools</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="query-tool">
+<span id="id1"></span><h1><span class="target" id="index-0"></span>Query tool<a class="headerlink" href="#query-tool" title="Permalink to this headline">¶</a></h1>
+<p>The Query tool is a powerful, feature-rich environment that allows you to execute arbitrary SQL commands and review the result set.  You can access the Query tool via the <em>Query Tool</em> menu option on the <em>Tools</em> menu, or through the context menu of select nodes of the Browser tree control.  The Query Tool allows you to:</p>
+<ul class="simple">
+<li>Issue ad-hoc SQL queries.</li>
+<li>Execute arbitrary SQL commands.</li>
+<li>Displays current connection and transaction status as configured by the user.</li>
+<li>Save the data displayed in the output panel to a CSV file.</li>
+<li>Review the execution plan of a SQL statement in either a text or a graphical format.</li>
+<li>View analytical information about a SQL statement.</li>
+</ul>
+<img alt="Query tool window" src="_images/query_tool.png" />
+<p>You can open multiple copies of the Query tool in individual tabs simultaneously.  To close a copy of the Query tool, click the <em>X</em> in the upper-right hand corner of the tab bar.</p>
+<p>The Query Tool features two panels:</p>
+<ul class="simple">
+<li>The upper panel displays the <em>SQL Editor</em>.  You can use the panel to enter, edit, or execute a query.</li>
+<li>The lower panel displays the <em>Data Output</em> panel. The tabbed panel displays the result set returned by a query, information about a query’s execution plan, server messages related to the query’s execution, and a history of the queries invoked in the SQL Editor.</li>
+</ul>
+<p><strong>The Query Tool Toolbar</strong></p>
+<p>The <em>Query Tool</em> toolbar uses context-sensitive icons that provide shortcuts to frequently performed tasks. If an icon is highlighted, the option is enabled; if the icon is grayed-out, the task is disabled.  Please note that disabled icons may support functionality accessed via the <a class="reference internal" href="editgrid.html#editgrid"><span class="std std-ref">data editor</span></a>.</p>
+<img alt="Query tool toolbar" src="_images/query_toolbar.png" />
+<p>Hover over an icon to display a tooltip that describes the icon’s functionality:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="16%" />
+<col width="74%" />
+<col width="10%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Icon</th>
+<th class="head">Behavior</th>
+<th class="head">Shortcut</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><em>Open File</em></td>
+<td>Click the <em>Open File</em> icon to display a previously saved query in the SQL Editor.</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><em>Save</em></td>
+<td><p class="first">Click the <em>Save</em> icon to perform a quick-save of a previously saved query, or to access the
+<em>Save</em> menu:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>Select <em>Save</em> to save the selected content of the SQL Editor panel in a  file.</li>
+<li>Select <em>Save As</em> to open a new browser dialog and specify a new location to which to save the
+selected content of the SQL Editor panel.</li>
+</ul>
+</div></blockquote>
+</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><em>Find</em></td>
+<td><p class="first">Use the <em>Find</em> menu to search, replace, or navigate the code displayed in the SQL Editor:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>Select <em>Find</em> to provide a search target, and search the SQL Editor contents.</li>
+<li>Select <em>Find next</em> to locate the next occurrence of the search target.</li>
+<li>Select <em>Find previous</em> to move to the last occurrence of the search target.</li>
+<li>Select <em>Pesistent find</em> to identify all occurrences of the search target within the editor.</li>
+<li>Select <em>Replace</em> to locate and replace (with prompting) individual occurrences of the target.</li>
+<li>Select <em>Replace all</em> to locate and replace all occurrences of the target within the editor.</li>
+<li>Select <em>Jump</em> to navigate to the next occurrence of the search target.</li>
+</ul>
+</div></blockquote>
+</td>
+<td><p class="first">Cmd+F</p>
+<p>Cmd+G</p>
+<p>Cmd+Shift+G</p>
+<p>Cmd+Shift+F</p>
+<p class="last">Alt+G</p>
+</td>
+</tr>
+<tr class="row-odd"><td><em>Copy</em></td>
+<td>Click the <em>Copy</em> icon to copy the content that is currently highlighted in the Data Output panel.</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><em>Edit</em></td>
+<td><p class="first">Use options on the <em>Edit</em> menu to access text editing tools; the options operate on the text
+displayed in the SQL Editor panel:</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>Select <em>Indent Selection</em> to indent the currently selected text.</li>
+<li>Select <em>Unindent Selection</em> to remove indentation from the currently selected text.</li>
+<li>Select <em>Inline Comment Selection</em> to enclose any lines that contain the selection in
+SQL style comment notation.</li>
+<li>Select <em>Inline Uncomment Selection</em> to remove SQL style comment notation from the
+selected line.</li>
+<li>Select <em>Block Comment</em> to enclose all lines that contain the selection in C style
+comment notation.  This option acts as a toggle.</li>
+</ul>
+</div></blockquote>
+</td>
+<td><p class="first">Tab</p>
+<p>Shift+Tab</p>
+<p>Cmd+/</p>
+<p>Cmd+.</p>
+<p class="last">Shift+Cmd+/</p>
+</td>
+</tr>
+<tr class="row-odd"><td><em>Execute/Refresh</em></td>
+<td><p class="first">Click the <em>Execute/Refresh</em> icon to either execute or refresh the query highlighted in the SQL
+editor panel. Click the down arrow to access other execution options:</p>
+<blockquote class="last">
+<div><ul>
+<li><p class="first">Select <em>Execute/Refresh</em> to invoke the SQL command and refresh the result set.</p>
+</li>
+<li><p class="first">Select <em>Explain</em> to view an explanation plan for the current query.  The result of the
+EXPLAIN is displayed graphically on the <em>Explain</em> tab of the output panel, and in text
+form on the <em>Data Output</em> tab.</p>
+</li>
+<li><p class="first">Select <em>Explain analyze</em> to invoke an EXPLAIN ANALYZE command on the current query.</p>
+</li>
+<li><p class="first">Navigate through the <em>Explain Options</em> menu to select options for the EXPLAIN command:</p>
+<blockquote>
+<div><p>Select <em>Verbose</em> to display additional information regarding the query plan.</p>
+<p>Select <em>Costs</em> to include information on the estimated startup and total cost of each
+plan node, as well as the estimated number of rows and the estimated width of each
+row.</p>
+<p>Select <em>Buffers</em> to include information on buffer usage.</p>
+<p>Select <em>Timing</em> to include information about the startup time and the amount of time
+spent in each node of the query.</p>
+</div></blockquote>
+</li>
+<li><p class="first">Add a check next to <em>Auto-Rollback</em> to instruct the server to automatically roll back a
+transaction if an error occurs during the transaction.</p>
+</li>
+<li><p class="first">Add a check next to <em>Auto-Commit</em> to instruct the server to automatically commit each
+transaction.  Any changes made by the transaction will be visible to others, and
+durable in the event of a crash.</p>
+</li>
+</ul>
+</div></blockquote>
+</td>
+<td><p class="first">F5</p>
+<p>F7</p>
+<p class="last">Shift+F7</p>
+</td>
+</tr>
+<tr class="row-even"><td><em>Stop</em></td>
+<td>Click the <em>Stop</em> icon to cancel the execution of the currently running query.</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><em>Clear query window</em></td>
+<td><p class="first">Use options on the <em>Clear</em> drop-down menu to erase display contents:</p>
+<blockquote>
+<div><ul class="simple">
+<li>Select <em>Clear Query Window</em> to erase the content of the SQL Editor panel.</li>
+<li>Select <em>Explain analyze</em> to invoke an EXPLAIN ANALYZE command on the current query.</li>
+</ul>
+</div></blockquote>
+<p class="last">the SQL editor panel or the <em>History</em> tab.</p>
+</td>
+<td>Shift+F7</td>
+</tr>
+<tr class="row-even"><td><em>Download as CSV</em></td>
+<td>Click the <em>Download as CSV</em> icon to download the result set of the current query to a
+comma-separated list. You can specify the CSV settings through
+<em>Preferences -&gt; SQL Editor -&gt; CSV output</em> dialogue.</td>
+<td>F8</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The SQL Editor Panel</strong></p>
+<p>The <em>SQL editor</em> panel is a workspace where you can manually provide a query, copy a query from another source, or read a query from a file. The SQL editor features syntax coloring and autocompletion.</p>
+<img alt="Query tool editor" src="_images/query_sql_editor.png" />
+<p>To use autocomplete, begin typing your query; when you would like the Query editor to suggest object names or commands that might be next in your query, press the Control+Space key combination. For example, type “*SELECT * FROM* ” (without quotes, but with a trailing space), and then press the Control+Space key combination to select from a popup menu of autocomplete options.</p>
+<img alt="Query tool autocomplete feature" src="_images/query_autocomplete.png" />
+<p>After entering a query, select the <em>Execute/Refresh</em> icon from the toolbar. The complete contents of the SQL editor panel will be sent to the database server for execution. To execute only a section of the code that is displayed in the SQL editor, highlight the text that you want the server to execute, and click the <em>Execute/Refresh</em> icon.</p>
+<img alt="Query tool execute query section" src="_images/query_execute_section.png" />
+<p>The message returned by the server when a command executes is displayed on the <em>Messages</em> tab.  If the command is successful, the <em>Messages</em> tab displays execution details.</p>
+<img alt="Query tool message panel" src="_images/query_tool_message.png" />
+<p>Options on the <em>Edit</em> menu offer functionality that helps with code formatting and commenting:</p>
+<ul class="simple">
+<li>The auto-indent feature will automatically indent text to the same depth as the previous line when you press the Return key.</li>
+<li>Block indent text by selecting two or more lines and pressing the Tab key.</li>
+<li>Implement or remove SQL style or toggle C style comment notation within your code.</li>
+</ul>
+<p><strong>The Data Output Panel</strong></p>
+<p>The <em>Data Output</em> panel displays data and statistics generated by the most recently executed query.</p>
+<img alt="Query tool output panel" src="_images/query_output_data.png" />
+<p>The <em>Data Output</em> tab displays the result set of the query in a table format. You can:</p>
+<ul class="simple">
+<li>Select and copy from the displayed result set.</li>
+<li>Use the <em>Execute/Refresh</em> options to retrieve query execution information and set query execution options.</li>
+<li>Use the <em>Download as CSV</em> icon to download the content of the <em>Data Output</em> tab as a comma-delimited file.</li>
+</ul>
+<p>All rowsets from previous queries or commands that are displayed in the <em>Data Output</em> panel will be discarded when you invoke another query; open another query tool browser tab to keep your previous results available.</p>
+<p>Use the <em>Explain</em> tab to view a graphical representation of a query:</p>
+<img alt="Query tool explain panel" src="_images/query_output_explain.png" />
+<p>To generate a graphical explain diagram, open the <em>Explain</em> tab, and select <em>Explain</em>, <em>Explain Analyze</em>, or one or more options from the <em>Explain options</em> menu on the <em>Execute/Refresh</em> drop-down. Please note that <em>EXPLAIN VERBOSE</em> cannot be displayed graphically. Hover over an icon on the <em>Explain</em> tab to review information about that item; a popup window will display information about the selected object:</p>
+<img alt="Query tool graphical explain plan" src="_images/query_output_explain_details.png" />
+<p>Note that the query plan that accompanies the <em>Explain analyze</em> is available on the <em>Data Output</em> tab.</p>
+<p>Use the <em>Messages</em> tab to view information about the most recently executed query:</p>
+<img alt="Query tool output messages" src="_images/query_output_error.png" />
+<p>If the server returns an error, the error message will be displayed on the <em>Messages</em> tab, and the syntax that caused the error will be underlined in the SQL editor.  If a query succeeds, the <em>Messages</em> tab displays how long the query took to complete and how many rows were retrieved:</p>
+<img alt="Query tool output information" src="_images/query_output_messages.png" />
+<p>Use the <em>Query History</em> tab to review activity for the current session:</p>
+<img alt="Query tool history panel" src="_images/query_output_history.png" />
+<p>The Query History tab displays information about recent commands:</p>
+<ul class="simple">
+<li>The date and time that a query was invoked.</li>
+<li>The text of the query.</li>
+<li>The number of rows returned by the query.</li>
+<li>The amount of time it took the server to process the query and return a result set.</li>
+<li>Messages returned by the server (not noted on the <em>Messages</em> tab).</li>
+</ul>
+<p>To erase the content of the <em>Query History</em> tab, select <em>Clear history</em> from the <em>Clear</em> drop-down menu.</p>
+<p>Use the <em>Connection status</em> feature to view the current connection and transaction status by clicking on the status icon in query tool:</p>
+<img alt="Query tool connection and transaction statuses" src="_images/query_tool_connection_status.png" />
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h3><a href="index.html">Table Of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="connecting.html">Connecting to a Server</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing_cluster_objects.html">Managing Cluster Level Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="managing_database_objects.html">Managing Database Objects</a></li>
+<li class="toctree-l1"><a class="reference internal" href="modifying_tables.html">Creating or Modifying a Table</a></li>
+<li class="toctree-l1"><a class="reference internal" href="management_basics.html">Management Basics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="backup_and_restore.html">Backup and Restore</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="developer_tools.html">Developer Tools</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="debugger.html">pgAdmin Debugger</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Query tool</a></li>
+<li class="toctree-l2"><a class="reference internal" href="editgrid.html">Reviewing and Editing Data</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="deployment.html">pgAdmin Deployment</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributions.html">pgAdmin Project Contributions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pgagent.html">pgAgent</a></li>
+<li class="toctree-l1"><a class="reference internal" href="licence.html">Licence</a></li>
+<li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="editgrid.html" title="Reviewing and Editing Data"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="debugger.html" title="pgAdmin Debugger"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">pgAdmin 4 3.2 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="developer_tools.html" >Developer Tools</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2013 - 2018, The pgAdmin Development Team.
+    </div>
+  </body>
+</html>

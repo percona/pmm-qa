@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.196. Release 8.3.2</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-3-3.html" title="E.195. Release 8.3.3" /><link rel="next" href="release-8-3-1.html" title="E.197. Release 8.3.1" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.196. Release 8.3.2</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-3-3.html" title="E.195. Release 8.3.3">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-3-1.html" title="E.197. Release 8.3.1">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-3-2"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.196. Release 8.3.2</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-3-2.html#id-1.11.6.200.4">E.196.1. Migration to Version 8.3.2</a></span></dt><dt><span class="sect2"><a href="release-8-3-2.html#id-1.11.6.200.5">E.196.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>never released</p><p>   This release contains a variety of fixes from 8.3.1.
+   For information about new features in the 8.3 major release, see
+   <a class="xref" href="release-8-3.html" title="E.198. Release 8.3">Section E.198</a>.
+  </p><div class="sect2" id="id-1.11.6.200.4"><div class="titlepage"><div><div><h3 class="title">E.196.1. Migration to Version 8.3.2</h3></div></div></div><p>    A dump/restore is not required for those running 8.3.X.
+    However, if you are upgrading from a version earlier than 8.3.1,
+    see <a class="xref" href="release-8-3-1.html" title="E.197. Release 8.3.1">Section E.197</a>.
+   </p></div><div class="sect2" id="id-1.11.6.200.5"><div class="titlepage"><div><div><h3 class="title">E.196.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix <code class="literal">ERRORDATA_STACK_SIZE exceeded</code> crash that
+      occurred on Windows when using UTF-8 database encoding and a different
+      client encoding (Tom)
+     </p></li><li class="listitem"><p>      Fix incorrect archive truncation point calculation for the
+      <code class="literal">%r</code> macro in <code class="varname">restore_command</code> parameters
+      (Simon)
+     </p><p>      This could lead to data loss if a warm-standby script relied on
+      <code class="literal">%r</code> to decide when to throw away WAL segment files.
+     </p></li><li class="listitem"><p>      Fix <code class="command">ALTER TABLE ADD COLUMN ... PRIMARY KEY</code> so that the new
+      column is correctly checked to see if it's been initialized to all
+      non-nulls (Brendan Jurd)
+     </p><p>      Previous versions neglected to check this requirement at all.
+     </p></li><li class="listitem"><p>      Fix <code class="command">REASSIGN OWNED</code> so that it works on procedural
+      languages too (Alvaro)
+     </p></li><li class="listitem"><p>      Fix problems with <code class="command">SELECT FOR UPDATE/SHARE</code> occurring as a
+      subquery in a query with a non-<code class="command">SELECT</code> top-level operation
+      (Tom)
+     </p></li><li class="listitem"><p>      Fix possible <code class="command">CREATE TABLE</code> failure when inheriting the
+      <span class="quote">“<span class="quote">same</span>”</span> constraint from multiple parent relations that
+      inherited that constraint from a common ancestor (Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="function">pg_get_ruledef()</code> to show the alias, if any, attached
+      to the target table of an <code class="command">UPDATE</code> or <code class="command">DELETE</code>
+      (Tom)
+     </p></li><li class="listitem"><p>      Restore the pre-8.3 behavior that an out-of-range block number in a
+      TID being used in a TidScan plan results in silently not matching any
+      rows (Tom)
+     </p><p>      8.3.0 and 8.3.1 threw an error instead.
+     </p></li><li class="listitem"><p>      Fix GIN bug that could result in a <code class="literal">too many LWLocks
+      taken</code> failure (Teodor)
+     </p></li><li class="listitem"><p>      Fix broken GiST comparison function for <code class="type">tsquery</code> (Teodor)
+     </p></li><li class="listitem"><p>      Fix <code class="function">tsvector_update_trigger()</code> and <code class="function">ts_stat()</code>
+      to accept domains over the types they expect to work with (Tom)
+     </p></li><li class="listitem"><p>      Fix failure to support enum data types as foreign keys (Tom)
+     </p></li><li class="listitem"><p>      Avoid possible crash when decompressing corrupted data
+      (Zdenek Kotala)
+     </p></li><li class="listitem"><p>      Fix race conditions between delayed unlinks and <code class="command">DROP
+      DATABASE</code> (Heikki)
+     </p><p>      In the worst case this could result in deleting a newly created table
+      in a new database that happened to get the same OID as the
+      recently-dropped one; but of course that is an extremely
+      low-probability scenario.
+     </p></li><li class="listitem"><p>      Repair two places where SIGTERM exit of a backend could leave corrupted
+      state in shared memory (Tom)
+     </p><p>      Neither case is very important if SIGTERM is used to shut down the
+      whole database cluster together, but there was a problem if someone
+      tried to SIGTERM individual backends.
+     </p></li><li class="listitem"><p>      Fix possible crash due to incorrect plan generated for an
+      <code class="literal"><em class="replaceable"><code>x</code></em> IN (SELECT <em class="replaceable"><code>y</code></em>
+      FROM ...)</code> clause when <em class="replaceable"><code>x</code></em> and <em class="replaceable"><code>y</code></em>
+      have different data types; and make sure the behavior is semantically
+      correct when the conversion from <em class="replaceable"><code>y</code></em>'s type to
+      <em class="replaceable"><code>x</code></em>'s type is lossy (Tom)
+     </p></li><li class="listitem"><p>      Fix oversight that prevented the planner from substituting known Param
+      values as if they were constants (Tom)
+     </p><p>      This mistake partially disabled optimization of unnamed
+      extended-Query statements in 8.3.0 and 8.3.1: in particular the
+      LIKE-to-indexscan optimization would never be applied if the LIKE
+      pattern was passed as a parameter, and constraint exclusion
+      depending on a parameter value didn't work either.
+     </p></li><li class="listitem"><p>      Fix planner failure when an indexable <code class="function">MIN</code> or
+      <code class="function">MAX</code> aggregate is used with <code class="literal">DISTINCT</code> or
+      <code class="literal">ORDER BY</code> (Tom)
+     </p></li><li class="listitem"><p>      Fix planner to ensure it never uses a <span class="quote">“<span class="quote">physical tlist</span>”</span> for a
+      plan node that is feeding a Sort node (Tom)
+     </p><p>      This led to the sort having to push around more data than it really
+      needed to, since unused column values were included in the sorted
+      data.
+     </p></li><li class="listitem"><p>      Avoid unnecessary copying of query strings (Tom)
+     </p><p>      This fixes a performance problem introduced in 8.3.0 when a very large
+      number of commands are submitted as a single query string.
+     </p></li><li class="listitem"><p>      Make <code class="function">TransactionIdIsCurrentTransactionId()</code> use binary
+      search instead of linear search when checking child-transaction XIDs
+      (Heikki)
+     </p><p>      This fixes some cases in which 8.3.0 was significantly
+      slower than earlier releases.
+     </p></li><li class="listitem"><p>      Fix conversions between ISO-8859-5 and other encodings to handle
+      Cyrillic <span class="quote">“<span class="quote">Yo</span>”</span> characters (<code class="literal">e</code> and <code class="literal">E</code> with
+      two dots) (Sergey Burladyan)
+     </p></li><li class="listitem"><p>      Fix several datatype input functions, notably <code class="function">array_in()</code>,
+      that were allowing unused bytes in their results to contain
+      uninitialized, unpredictable values (Tom)
+     </p><p>      This could lead to failures in which two apparently identical literal
+      values were not seen as equal, resulting in the parser complaining
+      about unmatched <code class="literal">ORDER BY</code> and <code class="literal">DISTINCT</code>
+      expressions.
+     </p></li><li class="listitem"><p>      Fix a corner case in regular-expression substring matching
+      (<code class="literal">substring(<em class="replaceable"><code>string</code></em> from
+      <em class="replaceable"><code>pattern</code></em>)</code>) (Tom)
+     </p><p>      The problem occurs when there is a match to the pattern overall but
+      the user has specified a parenthesized subexpression and that
+      subexpression hasn't got a match.  An example is
+      <code class="literal">substring('foo' from 'foo(bar)?')</code>.
+      This should return NULL, since <code class="literal">(bar)</code> isn't matched, but
+      it was mistakenly returning the whole-pattern match instead (ie,
+      <code class="literal">foo</code>).
+     </p></li><li class="listitem"><p>      Prevent cancellation of an auto-vacuum that was launched to prevent
+      XID wraparound (Alvaro)
+     </p></li><li class="listitem"><p>      Improve <code class="command">ANALYZE</code>'s handling of in-doubt tuples (those
+      inserted or deleted by a not-yet-committed transaction) so that the
+      counts it reports to the stats collector are more likely to be correct
+      (Pavan Deolasee)
+     </p></li><li class="listitem"><p>      Fix <span class="application">initdb</span> to reject a relative path for its
+      <code class="literal">--xlogdir</code> (<code class="literal">-X</code>) option (Tom)
+     </p></li><li class="listitem"><p>      Make <span class="application">psql</span> print tab characters as an appropriate
+      number of spaces, rather than <code class="literal">\x09</code> as was done in
+      8.3.0 and 8.3.1 (Bruce)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2008c (for
+      DST law changes in Morocco, Iraq, Choibalsan, Pakistan, Syria, Cuba, and
+      Argentina/San_Luis)
+     </p></li><li class="listitem"><p>      Add <code class="function">ECPGget_PGconn()</code> function to
+      <span class="application">ecpglib</span> (Michael)
+     </p></li><li class="listitem"><p>      Fix incorrect result from <span class="application">ecpg</span>'s
+      <code class="function">PGTYPEStimestamp_sub()</code> function (Michael)
+     </p></li><li class="listitem"><p>      Fix handling of continuation line markers in <span class="application">ecpg</span>
+      (Michael)
+     </p></li><li class="listitem"><p>      Fix possible crashes in <code class="filename">contrib/cube</code> functions (Tom)
+     </p></li><li class="listitem"><p>      Fix core dump in <code class="filename">contrib/xml2</code>'s
+      <code class="function">xpath_table()</code> function when the input query returns a
+      NULL value (Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="filename">contrib/xml2</code>'s makefile to not override
+      <code class="literal">CFLAGS</code>, and make it auto-configure properly for
+      <span class="application">libxslt</span> present or not (Tom)
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-3-3.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-3-1.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.195. Release 8.3.3 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.197. Release 8.3.1</td></tr></table></div></body></html>

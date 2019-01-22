@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.128. Release 9.0.23</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-1.html" title="E.127. Release 9.1" /><link rel="next" href="release-9-0-22.html" title="E.129. Release 9.0.22" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.128. Release 9.0.23</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-1.html" title="E.127. Release 9.1">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-0-22.html" title="E.129. Release 9.0.22">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-0-23"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.128. Release 9.0.23</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-0-23.html#id-1.11.6.132.5">E.128.1. Migration to Version 9.0.23</a></span></dt><dt><span class="sect2"><a href="release-9-0-23.html#id-1.11.6.132.6">E.128.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2015-10-08</p><p>   This release contains a variety of fixes from 9.0.22.
+   For information about new features in the 9.0 major release, see
+   <a class="xref" href="release-9-0.html" title="E.151. Release 9.0">Section E.151</a>.
+  </p><p>   This is expected to be the last <span class="productname">PostgreSQL</span> release
+   in the 9.0.X series.  Users are encouraged to update to a newer
+   release branch soon.
+  </p><div class="sect2" id="id-1.11.6.132.5"><div class="titlepage"><div><div><h3 class="title">E.128.1. Migration to Version 9.0.23</h3></div></div></div><p>    A dump/restore is not required for those running 9.0.X.
+   </p><p>    However, if you are upgrading from a version earlier than 9.0.18,
+    see <a class="xref" href="release-9-0-18.html" title="E.133. Release 9.0.18">Section E.133</a>.
+   </p></div><div class="sect2" id="id-1.11.6.132.6"><div class="titlepage"><div><div><h3 class="title">E.128.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix <code class="filename">contrib/pgcrypto</code> to detect and report
+      too-short <code class="function">crypt()</code> salts (Josh Kupershmidt)
+     </p><p>      Certain invalid salt arguments crashed the server or disclosed a few
+      bytes of server memory.  We have not ruled out the viability of
+      attacks that arrange for presence of confidential information in the
+      disclosed bytes, but they seem unlikely.  (CVE-2015-5288)
+     </p></li><li class="listitem"><p>      Fix subtransaction cleanup after a portal (cursor) belonging to an
+      outer subtransaction fails (Tom Lane, Michael Paquier)
+     </p><p>      A function executed in an outer-subtransaction cursor could cause an
+      assertion failure or crash by referencing a relation created within an
+      inner subtransaction.
+     </p></li><li class="listitem"><p>      Fix insertion of relations into the relation cache <span class="quote">“<span class="quote">init file</span>”</span>
+      (Tom Lane)
+     </p><p>      An oversight in a patch in the most recent minor releases
+      caused <code class="structname">pg_trigger_tgrelid_tgname_index</code> to be omitted
+      from the init file.  Subsequent sessions detected this, then deemed the
+      init file to be broken and silently ignored it, resulting in a
+      significant degradation in session startup time.  In addition to fixing
+      the bug, install some guards so that any similar future mistake will be
+      more obvious.
+     </p></li><li class="listitem"><p>      Avoid O(N^2) behavior when inserting many tuples into a SPI query
+      result (Neil Conway)
+     </p></li><li class="listitem"><p>      Improve <code class="command">LISTEN</code> startup time when there are many unread
+      notifications (Matt Newell)
+     </p></li><li class="listitem"><p>      Disable SSL renegotiation by default (Michael Paquier, Andres Freund)
+     </p><p>      While use of SSL renegotiation is a good idea in theory, we have seen
+      too many bugs in practice, both in the underlying OpenSSL library and
+      in our usage of it.  Renegotiation will be removed entirely in 9.5 and
+      later.  In the older branches, just change the default value
+      of <code class="varname">ssl_renegotiation_limit</code> to zero (disabled).
+     </p></li><li class="listitem"><p>      Lower the minimum values of the <code class="literal">*_freeze_max_age</code> parameters
+      (Andres Freund)
+     </p><p>      This is mainly to make tests of related behavior less time-consuming,
+      but it may also be of value for installations with limited disk space.
+     </p></li><li class="listitem"><p>      Limit the maximum value of <code class="varname">wal_buffers</code> to 2GB to avoid
+      server crashes (Josh Berkus)
+     </p></li><li class="listitem"><p>      Fix rare internal overflow in multiplication of <code class="type">numeric</code> values
+      (Dean Rasheed)
+     </p></li><li class="listitem"><p>      Guard against hard-to-reach stack overflows involving record types,
+      range types, <code class="type">json</code>, <code class="type">jsonb</code>, <code class="type">tsquery</code>,
+      <code class="type">ltxtquery</code> and <code class="type">query_int</code> (Noah Misch)
+     </p></li><li class="listitem"><p>      Fix handling of <code class="literal">DOW</code> and <code class="literal">DOY</code> in datetime input
+      (Greg Stark)
+     </p><p>      These tokens aren't meant to be used in datetime values, but previously
+      they resulted in opaque internal error messages rather
+      than <span class="quote">“<span class="quote">invalid input syntax</span>”</span>.
+     </p></li><li class="listitem"><p>      Add more query-cancel checks to regular expression matching (Tom Lane)
+     </p></li><li class="listitem"><p>      Add recursion depth protections to regular expression, <code class="literal">SIMILAR
+      TO</code>, and <code class="literal">LIKE</code> matching (Tom Lane)
+     </p><p>      Suitable search patterns and a low stack depth limit could lead to
+      stack-overrun crashes.
+     </p></li><li class="listitem"><p>      Fix potential infinite loop in regular expression execution (Tom Lane)
+     </p><p>      A search pattern that can apparently match a zero-length string, but
+      actually doesn't match because of a back reference, could lead to an
+      infinite loop.
+     </p></li><li class="listitem"><p>      Fix low-memory failures in regular expression compilation
+      (Andreas Seltenreich)
+     </p></li><li class="listitem"><p>      Fix low-probability memory leak during regular expression execution
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix rare low-memory failure in lock cleanup during transaction abort
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <span class="quote">“<span class="quote">unexpected out-of-memory situation during sort</span>”</span> errors
+      when using tuplestores with small <code class="varname">work_mem</code> settings (Tom
+      Lane)
+     </p></li><li class="listitem"><p>      Fix very-low-probability stack overrun in <code class="function">qsort</code> (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <span class="quote">“<span class="quote">invalid memory alloc request size</span>”</span> failure in hash joins
+      with large <code class="varname">work_mem</code> settings (Tomas Vondra, Tom Lane)
+     </p></li><li class="listitem"><p>      Fix assorted planner bugs (Tom Lane)
+     </p><p>      These mistakes could lead to incorrect query plans that would give wrong
+      answers, or to assertion failures in assert-enabled builds, or to odd
+      planner errors such as <span class="quote">“<span class="quote">could not devise a query plan for the
+      given query</span>”</span>, <span class="quote">“<span class="quote">could not find pathkey item to
+      sort</span>”</span>, <span class="quote">“<span class="quote">plan should not reference subplan's variable</span>”</span>,
+      or <span class="quote">“<span class="quote">failed to assign all NestLoopParams to plan nodes</span>”</span>.
+      Thanks are due to Andreas Seltenreich and Piotr Stefaniak for fuzz
+      testing that exposed these problems.
+     </p></li><li class="listitem"><p>      Use fuzzy path cost tiebreaking rule in all supported branches (Tom Lane)
+     </p><p>      This change is meant to avoid platform-specific behavior when
+      alternative plan choices have effectively-identical estimated costs.
+     </p></li><li class="listitem"><p>      During postmaster shutdown, ensure that per-socket lock files are
+      removed and listen sockets are closed before we remove
+      the <code class="filename">postmaster.pid</code> file (Tom Lane)
+     </p><p>      This avoids race-condition failures if an external script attempts to
+      start a new postmaster as soon as <code class="literal">pg_ctl stop</code> returns.
+     </p></li><li class="listitem"><p>      Fix postmaster's handling of a startup-process crash during crash
+      recovery (Tom Lane)
+     </p><p>      If, during a crash recovery cycle, the startup process crashes without
+      having restored database consistency, we'd try to launch a new startup
+      process, which typically would just crash again, leading to an infinite
+      loop.
+     </p></li><li class="listitem"><p>      Do not print a <code class="literal">WARNING</code> when an autovacuum worker is already
+      gone when we attempt to signal it, and reduce log verbosity for such
+      signals (Tom Lane)
+     </p></li><li class="listitem"><p>      Prevent autovacuum launcher from sleeping unduly long if the server
+      clock is moved backwards a large amount (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Ensure that cleanup of a GIN index's pending-insertions list is
+      interruptable by cancel requests (Jeff Janes)
+     </p></li><li class="listitem"><p>      Allow all-zeroes pages in GIN indexes to be reused (Heikki Linnakangas)
+     </p><p>      Such a page might be left behind after a crash.
+     </p></li><li class="listitem"><p>      Fix off-by-one error that led to otherwise-harmless warnings
+      about <span class="quote">“<span class="quote">apparent wraparound</span>”</span> in subtrans/multixact truncation
+      (Thomas Munro)
+     </p></li><li class="listitem"><p>      Fix misreporting of <code class="command">CONTINUE</code> and <code class="command">MOVE</code> statement
+      types in <span class="application">PL/pgSQL</span>'s error context messages
+      (Pavel Stehule, Tom Lane)
+     </p></li><li class="listitem"><p>      Fix some places in <span class="application">PL/Tcl</span> that neglected to check for
+      failure of <code class="function">malloc()</code> calls (Michael Paquier, Álvaro
+      Herrera)
+     </p></li><li class="listitem"><p>      Improve <span class="application">libpq</span>'s handling of out-of-memory conditions
+      (Michael Paquier, Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Fix memory leaks and missing out-of-memory checks
+      in <span class="application">ecpg</span> (Michael Paquier)
+     </p></li><li class="listitem"><p>      Fix <span class="application">psql</span>'s code for locale-aware formatting of numeric
+      output (Tom Lane)
+     </p><p>      The formatting code invoked by <code class="literal">\pset numericlocale on</code>
+      did the wrong thing for some uncommon cases such as numbers with an
+      exponent but no decimal point.  It could also mangle already-localized
+      output from the <code class="type">money</code> data type.
+     </p></li><li class="listitem"><p>      Prevent crash in <span class="application">psql</span>'s <code class="command">\c</code> command when
+      there is no current connection (Noah Misch)
+     </p></li><li class="listitem"><p>      Ensure that temporary files created during a <span class="application">pg_dump</span>
+      run with <acronym class="acronym">tar</acronym>-format output are not world-readable (Michael
+      Paquier)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> and <span class="application">pg_upgrade</span> to support
+      cases where the <code class="literal">postgres</code> or <code class="literal">template1</code> database
+      is in a non-default tablespace (Marti Raudsepp, Bruce Momjian)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to handle object privileges sanely when
+      dumping from a server too old to have a particular privilege type
+      (Tom Lane)
+     </p><p>      When dumping functions or procedural languages from pre-7.3
+      servers, <span class="application">pg_dump</span> would
+      produce <code class="command">GRANT</code>/<code class="command">REVOKE</code> commands that revoked the
+      owner's grantable privileges and instead granted all privileges
+      to <code class="literal">PUBLIC</code>.  Since the privileges involved are
+      just <code class="literal">USAGE</code> and <code class="literal">EXECUTE</code>, this isn't a security
+      problem, but it's certainly a surprising representation of the older
+      systems' behavior.  Fix it to leave the default privilege state alone
+      in these cases.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to dump shell types (Tom Lane)
+     </p><p>      Shell types (that is, not-yet-fully-defined types) aren't useful for
+      much, but nonetheless <span class="application">pg_dump</span> should dump them.
+     </p></li><li class="listitem"><p>      Fix spinlock assembly code for PPC hardware to be compatible
+      with <acronym class="acronym">AIX</acronym>'s native assembler (Tom Lane)
+     </p><p>      Building with <span class="application">gcc</span> didn't work if <span class="application">gcc</span>
+      had been configured to use the native assembler, which is becoming more
+      common.
+     </p></li><li class="listitem"><p>      On <acronym class="acronym">AIX</acronym>, test the <code class="literal">-qlonglong</code> compiler option
+      rather than just assuming it's safe to use (Noah Misch)
+     </p></li><li class="listitem"><p>      On <acronym class="acronym">AIX</acronym>, use <code class="literal">-Wl,-brtllib</code> link option to allow
+      symbols to be resolved at runtime (Noah Misch)
+     </p><p>      Perl relies on this ability in 5.8.0 and later.
+     </p></li><li class="listitem"><p>      Avoid use of inline functions when compiling with
+      32-bit <span class="application">xlc</span>, due to compiler bugs (Noah Misch)
+     </p></li><li class="listitem"><p>      Use <code class="filename">librt</code> for <code class="function">sched_yield()</code> when necessary,
+      which it is on some Solaris versions (Oskari Saarenmaa)
+     </p></li><li class="listitem"><p>      Fix Windows <code class="filename">install.bat</code> script to handle target directory
+      names that contain spaces (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Make the numeric form of the <span class="productname">PostgreSQL</span> version number
+      (e.g., <code class="literal">90405</code>) readily available to extension Makefiles,
+      as a variable named <code class="varname">VERSION_NUM</code> (Michael Paquier)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2015g for
+      DST law changes in Cayman Islands, Fiji, Moldova, Morocco, Norfolk
+      Island, North Korea, Turkey, and Uruguay.  There is a new zone name
+      <code class="literal">America/Fort_Nelson</code> for the Canadian Northern Rockies.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-1.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-0-22.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.127. Release 9.1 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.129. Release 9.0.22</td></tr></table></div></body></html>

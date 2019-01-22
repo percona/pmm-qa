@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.207. Release 8.2.15</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-2-16.html" title="E.206. Release 8.2.16" /><link rel="next" href="release-8-2-14.html" title="E.208. Release 8.2.14" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.207. Release 8.2.15</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-2-16.html" title="E.206. Release 8.2.16">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-2-14.html" title="E.208. Release 8.2.14">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-2-15"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.207. Release 8.2.15</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-2-15.html#id-1.11.6.211.4">E.207.1. Migration to Version 8.2.15</a></span></dt><dt><span class="sect2"><a href="release-8-2-15.html#id-1.11.6.211.5">E.207.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2009-12-14</p><p>   This release contains a variety of fixes from 8.2.14.
+   For information about new features in the 8.2 major release, see
+   <a class="xref" href="release-8-2.html" title="E.222. Release 8.2">Section E.222</a>.
+  </p><div class="sect2" id="id-1.11.6.211.4"><div class="titlepage"><div><div><h3 class="title">E.207.1. Migration to Version 8.2.15</h3></div></div></div><p>    A dump/restore is not required for those running 8.2.X.
+    However, if you are upgrading from a version earlier than 8.2.14,
+    see <a class="xref" href="release-8-2-14.html" title="E.208. Release 8.2.14">Section E.208</a>.
+   </p></div><div class="sect2" id="id-1.11.6.211.5"><div class="titlepage"><div><div><h3 class="title">E.207.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Protect against indirect security threats caused by index functions
+      changing session-local state (Gurjeet Singh, Tom)
+     </p><p>      This change prevents allegedly-immutable index functions from possibly
+      subverting a superuser's session (CVE-2009-4136).
+     </p></li><li class="listitem"><p>      Reject SSL certificates containing an embedded null byte in the common
+      name (CN) field (Magnus)
+     </p><p>      This prevents unintended matching of a certificate to a server or client
+      name during SSL validation (CVE-2009-4034).
+     </p></li><li class="listitem"><p>      Fix possible crash during backend-startup-time cache initialization (Tom)
+     </p></li><li class="listitem"><p>      Prevent signals from interrupting <code class="literal">VACUUM</code> at unsafe times
+      (Alvaro)
+     </p><p>      This fix prevents a PANIC if a <code class="literal">VACUUM FULL</code> is canceled
+      after it's already committed its tuple movements, as well as transient
+      errors if a plain <code class="literal">VACUUM</code> is interrupted after having
+      truncated the table.
+     </p></li><li class="listitem"><p>      Fix possible crash due to integer overflow in hash table size
+      calculation (Tom)
+     </p><p>      This could occur with extremely large planner estimates for the size of
+      a hashjoin's result.
+     </p></li><li class="listitem"><p>      Fix very rare crash in <code class="type">inet</code>/<code class="type">cidr</code> comparisons (Chris
+      Mikkelson)
+     </p></li><li class="listitem"><p>      Ensure that shared tuple-level locks held by prepared transactions are
+      not ignored (Heikki)
+     </p></li><li class="listitem"><p>      Fix premature drop of temporary files used for a cursor that is accessed
+      within a subtransaction (Heikki)
+     </p></li><li class="listitem"><p>      Fix incorrect logic for GiST index page splits, when the split depends
+      on a non-first column of the index (Paul Ramsey)
+     </p></li><li class="listitem"><p>      Don't error out if recycling or removing an old WAL file fails at the
+      end of checkpoint (Heikki)
+     </p><p>      It's better to treat the problem as non-fatal and allow the checkpoint
+      to complete.  Future checkpoints will retry the removal.  Such problems
+      are not expected in normal operation, but have been seen to be
+      caused by misdesigned Windows anti-virus and backup software.
+     </p></li><li class="listitem"><p>      Ensure WAL files aren't repeatedly archived on Windows (Heikki)
+     </p><p>      This is another symptom that could happen if some other process
+      interfered with deletion of a no-longer-needed file.
+     </p></li><li class="listitem"><p>      Fix PAM password processing to be more robust (Tom)
+     </p><p>      The previous code is known to fail with the combination of the Linux
+      <code class="literal">pam_krb5</code> PAM module with Microsoft Active Directory as the
+      domain controller.  It might have problems elsewhere too, since it was
+      making unjustified assumptions about what arguments the PAM stack would
+      pass to it.
+     </p></li><li class="listitem"><p>      Fix processing of ownership dependencies during <code class="literal">CREATE OR
+      REPLACE FUNCTION</code> (Tom)
+     </p></li><li class="listitem"><p>      Fix bug with calling <code class="literal">plperl</code> from <code class="literal">plperlu</code> or vice
+      versa (Tom)
+     </p><p>      An error exit from the inner function could result in crashes due to
+      failure to re-select the correct Perl interpreter for the outer function.
+     </p></li><li class="listitem"><p>      Fix session-lifespan memory leak when a PL/Perl function is redefined
+      (Tom)
+     </p></li><li class="listitem"><p>      Ensure that Perl arrays are properly converted to
+      <span class="productname">PostgreSQL</span> arrays when returned by a set-returning
+      PL/Perl function (Andrew Dunstan, Abhijit Menon-Sen)
+     </p><p>      This worked correctly already for non-set-returning functions.
+     </p></li><li class="listitem"><p>      Fix rare crash in exception processing in PL/Python (Peter)
+     </p></li><li class="listitem"><p>      Ensure <span class="application">psql</span>'s flex module is compiled with the correct
+      system header definitions (Tom)
+     </p><p>      This fixes build failures on platforms where
+      <code class="literal">--enable-largefile</code> causes incompatible changes in the
+      generated code.
+     </p></li><li class="listitem"><p>      Make the postmaster ignore any <code class="literal">application_name</code> parameter in
+      connection request packets, to improve compatibility with future libpq
+      versions (Tom)
+     </p></li><li class="listitem"><p>      Update the timezone abbreviation files to match current reality (Joachim
+      Wieland)
+     </p><p>      This includes adding <code class="literal">IDT</code> and <code class="literal">SGT</code> to the default
+      timezone abbreviation set.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2009s
+      for DST law changes in Antarctica, Argentina, Bangladesh, Fiji,
+      Novokuznetsk, Pakistan, Palestine, Samoa, Syria; also historical
+      corrections for Hong Kong.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-2-16.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-2-14.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.206. Release 8.2.16 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.208. Release 8.2.14</td></tr></table></div></body></html>

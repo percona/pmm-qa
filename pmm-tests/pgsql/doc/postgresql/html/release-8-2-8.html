@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.214. Release 8.2.8</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-2-9.html" title="E.213. Release 8.2.9" /><link rel="next" href="release-8-2-7.html" title="E.215. Release 8.2.7" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.214. Release 8.2.8</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-2-9.html" title="E.213. Release 8.2.9">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-2-7.html" title="E.215. Release 8.2.7">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-2-8"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.214. Release 8.2.8</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-2-8.html#id-1.11.6.218.4">E.214.1. Migration to Version 8.2.8</a></span></dt><dt><span class="sect2"><a href="release-8-2-8.html#id-1.11.6.218.5">E.214.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>never released</p><p>   This release contains a variety of fixes from 8.2.7.
+   For information about new features in the 8.2 major release, see
+   <a class="xref" href="release-8-2.html" title="E.222. Release 8.2">Section E.222</a>.
+  </p><div class="sect2" id="id-1.11.6.218.4"><div class="titlepage"><div><div><h3 class="title">E.214.1. Migration to Version 8.2.8</h3></div></div></div><p>    A dump/restore is not required for those running 8.2.X.
+    However, if you are upgrading from a version earlier than 8.2.7,
+    see <a class="xref" href="release-8-2-7.html" title="E.215. Release 8.2.7">Section E.215</a>.
+   </p></div><div class="sect2" id="id-1.11.6.218.5"><div class="titlepage"><div><div><h3 class="title">E.214.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix <code class="literal">ERRORDATA_STACK_SIZE exceeded</code> crash that
+      occurred on Windows when using UTF-8 database encoding and a different
+      client encoding (Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="command">ALTER TABLE ADD COLUMN ... PRIMARY KEY</code> so that the new
+      column is correctly checked to see if it's been initialized to all
+      non-nulls (Brendan Jurd)
+     </p><p>      Previous versions neglected to check this requirement at all.
+     </p></li><li class="listitem"><p>      Fix possible <code class="command">CREATE TABLE</code> failure when inheriting the
+      <span class="quote">“<span class="quote">same</span>”</span> constraint from multiple parent relations that
+      inherited that constraint from a common ancestor (Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="function">pg_get_ruledef()</code> to show the alias, if any, attached
+      to the target table of an <code class="command">UPDATE</code> or <code class="command">DELETE</code>
+      (Tom)
+     </p></li><li class="listitem"><p>      Fix GIN bug that could result in a <code class="literal">too many LWLocks
+      taken</code> failure (Teodor)
+     </p></li><li class="listitem"><p>      Avoid possible crash when decompressing corrupted data
+      (Zdenek Kotala)
+     </p></li><li class="listitem"><p>      Repair two places where SIGTERM exit of a backend could leave corrupted
+      state in shared memory (Tom)
+     </p><p>      Neither case is very important if SIGTERM is used to shut down the
+      whole database cluster together, but there was a problem if someone
+      tried to SIGTERM individual backends.
+     </p></li><li class="listitem"><p>      Fix conversions between ISO-8859-5 and other encodings to handle
+      Cyrillic <span class="quote">“<span class="quote">Yo</span>”</span> characters (<code class="literal">e</code> and <code class="literal">E</code> with
+      two dots) (Sergey Burladyan)
+     </p></li><li class="listitem"><p>      Fix several datatype input functions, notably <code class="function">array_in()</code>,
+      that were allowing unused bytes in their results to contain
+      uninitialized, unpredictable values (Tom)
+     </p><p>      This could lead to failures in which two apparently identical literal
+      values were not seen as equal, resulting in the parser complaining
+      about unmatched <code class="literal">ORDER BY</code> and <code class="literal">DISTINCT</code>
+      expressions.
+     </p></li><li class="listitem"><p>      Fix a corner case in regular-expression substring matching
+      (<code class="literal">substring(<em class="replaceable"><code>string</code></em> from
+      <em class="replaceable"><code>pattern</code></em>)</code>) (Tom)
+     </p><p>      The problem occurs when there is a match to the pattern overall but
+      the user has specified a parenthesized subexpression and that
+      subexpression hasn't got a match.  An example is
+      <code class="literal">substring('foo' from 'foo(bar)?')</code>.
+      This should return NULL, since <code class="literal">(bar)</code> isn't matched, but
+      it was mistakenly returning the whole-pattern match instead (ie,
+      <code class="literal">foo</code>).
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2008c (for
+      DST law changes in Morocco, Iraq, Choibalsan, Pakistan, Syria, Cuba, and
+      Argentina/San_Luis)
+     </p></li><li class="listitem"><p>      Fix incorrect result from <span class="application">ecpg</span>'s
+      <code class="function">PGTYPEStimestamp_sub()</code> function (Michael)
+     </p></li><li class="listitem"><p>      Fix broken GiST comparison function for <code class="filename">contrib/tsearch2</code>'s
+      <code class="type">tsquery</code> type (Teodor)
+     </p></li><li class="listitem"><p>      Fix possible crashes in <code class="filename">contrib/cube</code> functions (Tom)
+     </p></li><li class="listitem"><p>      Fix core dump in <code class="filename">contrib/xml2</code>'s
+      <code class="function">xpath_table()</code> function when the input query returns a
+      NULL value (Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="filename">contrib/xml2</code>'s makefile to not override
+      <code class="literal">CFLAGS</code> (Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="literal">DatumGetBool</code> macro to not fail with <span class="application">gcc</span>
+      4.3 (Tom)
+     </p><p>      This problem affects <span class="quote">“<span class="quote">old style</span>”</span> (V0) C functions that
+      return boolean.  The fix is already in 8.3, but the need to
+      back-patch it was not realized at the time.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-2-9.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-2-7.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.213. Release 8.2.9 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.215. Release 8.2.7</td></tr></table></div></body></html>

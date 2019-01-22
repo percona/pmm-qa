@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.72. Release 9.3.5</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-3-6.html" title="E.71. Release 9.3.6" /><link rel="next" href="release-9-3-4.html" title="E.73. Release 9.3.4" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.72. Release 9.3.5</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-3-6.html" title="E.71. Release 9.3.6">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-3-4.html" title="E.73. Release 9.3.4">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-3-5"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.72. Release 9.3.5</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-3-5.html#id-1.11.6.76.4">E.72.1. Migration to Version 9.3.5</a></span></dt><dt><span class="sect2"><a href="release-9-3-5.html#id-1.11.6.76.5">E.72.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2014-07-24</p><p>   This release contains a variety of fixes from 9.3.4.
+   For information about new features in the 9.3 major release, see
+   <a class="xref" href="release-9-3.html" title="E.77. Release 9.3">Section E.77</a>.
+  </p><div class="sect2" id="id-1.11.6.76.4"><div class="titlepage"><div><div><h3 class="title">E.72.1. Migration to Version 9.3.5</h3></div></div></div><p>    A dump/restore is not required for those running 9.3.X.
+   </p><p>    However, this release corrects a logic error
+    in <span class="application">pg_upgrade</span>, as well as an index corruption problem in
+    some GiST indexes.  See the first two changelog entries below to find out
+    whether your installation has been affected and what steps you should take
+    if so.
+   </p><p>    Also, if you are upgrading from a version earlier than 9.3.4,
+    see <a class="xref" href="release-9-3-4.html" title="E.73. Release 9.3.4">Section E.73</a>.
+   </p></div><div class="sect2" id="id-1.11.6.76.5"><div class="titlepage"><div><div><h3 class="title">E.72.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      In <span class="application">pg_upgrade</span>, remove <code class="filename">pg_multixact</code> files
+      left behind by <span class="application">initdb</span> (Bruce Momjian)
+     </p><p>      If you used a pre-9.3.5 version of <span class="application">pg_upgrade</span> to
+      upgrade a database cluster to 9.3, it might have left behind a file
+      <code class="filename">$PGDATA/pg_multixact/offsets/0000</code> that should not be
+      there and will eventually cause problems in <code class="command">VACUUM</code>.
+      <span class="emphasis"><em>However, in common cases this file is actually valid and
+      must not be removed.</em></span>
+      To determine whether your installation has this problem, run this
+      query as superuser, in any database of the cluster:
+</p><pre class="programlisting">WITH list(file) AS (SELECT * FROM pg_ls_dir('pg_multixact/offsets'))
+SELECT EXISTS (SELECT * FROM list WHERE file = '0000') AND
+       NOT EXISTS (SELECT * FROM list WHERE file = '0001') AND
+       NOT EXISTS (SELECT * FROM list WHERE file = 'FFFF') AND
+       EXISTS (SELECT * FROM list WHERE file != '0000')
+       AS file_0000_removal_required;</pre><p>
+      If this query returns <code class="literal">t</code>, manually remove the file
+      <code class="filename">$PGDATA/pg_multixact/offsets/0000</code>.
+      Do nothing if the query returns <code class="literal">f</code>.
+     </p></li><li class="listitem"><p>      Correctly initialize padding bytes in <code class="filename">contrib/btree_gist</code>
+      indexes on <code class="type">bit</code> columns (Heikki Linnakangas)
+     </p><p>      This error could result in incorrect query results due to values that
+      should compare equal not being seen as equal.
+      Users with GiST indexes on <code class="type">bit</code> or <code class="type">bit varying</code>
+      columns should <code class="command">REINDEX</code> those indexes after installing this
+      update.
+     </p></li><li class="listitem"><p>      Protect against torn pages when deleting GIN list pages (Heikki
+      Linnakangas)
+     </p><p>      This fix prevents possible index corruption if a system crash occurs
+      while the page update is being written to disk.
+     </p></li><li class="listitem"><p>      Don't clear the right-link of a GiST index page while replaying
+      updates from WAL (Heikki Linnakangas)
+     </p><p>      This error could lead to transiently wrong answers from GiST index
+      scans performed in Hot Standby.
+     </p></li><li class="listitem"><p>      Fix corner-case infinite loop during insertion into an SP-GiST text
+      index (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix incorrect answers from SP-GiST index searches
+      with <code class="literal">-|-</code> (range adjacency) operator
+      (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Fix wraparound handling for <code class="filename">pg_multixact/members</code>
+      (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Truncate <code class="structname">pg_multixact</code> during checkpoints, not
+      during <code class="command">VACUUM</code> (Álvaro Herrera)
+     </p><p>      This change ensures that <code class="structname">pg_multixact</code> segments can't be
+      removed if they'd still be needed during WAL replay after a crash.
+     </p></li><li class="listitem"><p>      Fix possible inconsistency of all-visible flags after WAL recovery
+      (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Fix possibly-incorrect cache invalidation during nested calls
+      to <code class="function">ReceiveSharedInvalidMessages</code> (Andres Freund)
+     </p></li><li class="listitem"><p>      Fix race condition when updating a tuple concurrently locked by
+      another process (Andres Freund, Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Fix <span class="quote">“<span class="quote">could not find pathkey item to sort</span>”</span> planner failures
+      with <code class="literal">UNION ALL</code> over subqueries reading from tables with
+      inheritance children (Tom Lane)
+     </p></li><li class="listitem"><p>      Don't assume a subquery's output is unique if there's a set-returning
+      function in its targetlist (David Rowley)
+     </p><p>      This oversight could lead to misoptimization of constructs
+      like <code class="literal">WHERE x IN (SELECT y, generate_series(1,10) FROM t GROUP
+      BY y)</code>.
+     </p></li><li class="listitem"><p>      Improve planner to drop constant-NULL inputs
+      of <code class="literal">AND</code>/<code class="literal">OR</code> when possible (Tom Lane)
+     </p><p>      This change fixes some cases where the more aggressive parameter
+      substitution done by 9.2 and later can lead to a worse plan than
+      older versions produced.
+     </p></li><li class="listitem"><p>      Ensure that the planner sees equivalent <code class="literal">VARIADIC</code> and
+      non-<code class="literal">VARIADIC</code> function calls as equivalent (Tom Lane)
+     </p><p>      This bug could for example result in failure to use expression indexes
+      involving variadic functions.  It might be necessary to re-create such
+      indexes, and/or re-create views including variadic function calls that
+      should match the indexes, for the fix to be effective for existing 9.3
+      installations.
+     </p></li><li class="listitem"><p>      Fix handling of nested <code class="type">JSON</code> objects
+      in <code class="function">json_populate_recordset()</code> and friends
+      (Michael Paquier, Tom Lane)
+     </p><p>      A nested <code class="type">JSON</code> object could result in previous fields of the
+      parent object not being shown in the output.
+     </p></li><li class="listitem"><p>      Fix identification of input type category in <code class="function">to_json()</code>
+      and friends (Tom Lane)
+     </p><p>      This is known to have led to inadequate quoting of <code class="type">money</code>
+      fields in the <code class="type">JSON</code> result, and there may have been wrong
+      results for other data types as well.
+     </p></li><li class="listitem"><p>      Fix failure to detoast fields in composite elements of structured
+      types (Tom Lane)
+     </p><p>      This corrects cases where TOAST pointers could be copied into other
+      tables without being dereferenced.  If the original data is later
+      deleted, it would lead to errors like <span class="quote">“<span class="quote">missing chunk number 0
+      for toast value ...</span>”</span> when the now-dangling pointer is used.
+     </p></li><li class="listitem"><p>      Fix <span class="quote">“<span class="quote">record type has not been registered</span>”</span> failures with
+      whole-row references to the output of Append plan nodes (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix possible crash when invoking a user-defined function while
+      rewinding a cursor (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix query-lifespan memory leak while evaluating the arguments for a
+      function in <code class="literal">FROM</code> (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix session-lifespan memory leaks in regular-expression processing
+      (Tom Lane, Arthur O'Dwyer, Greg Stark)
+     </p></li><li class="listitem"><p>      Fix data encoding error in <code class="filename">hungarian.stop</code> (Tom Lane)
+     </p></li><li class="listitem"><p>      Prevent foreign tables from being created with OIDS
+      when <a class="xref" href="runtime-config-compatible.html#GUC-DEFAULT-WITH-OIDS">default_with_oids</a> is true
+      (Etsuro Fujita)
+     </p></li><li class="listitem"><p>      Fix liveness checks for rows that were inserted in the current
+      transaction and then deleted by a now-rolled-back subtransaction
+      (Andres Freund)
+     </p><p>      This could cause problems (at least spurious warnings, and at worst an
+      infinite loop) if <code class="command">CREATE INDEX</code> or <code class="command">CLUSTER</code> were
+      done later in the same transaction.
+     </p></li><li class="listitem"><p>      Clear <code class="structname">pg_stat_activity</code>.<code class="structfield">xact_start</code>
+      during <code class="command">PREPARE TRANSACTION</code> (Andres Freund)
+     </p><p>      After the <code class="command">PREPARE</code>, the originating session is no longer in
+      a transaction, so it should not continue to display a transaction
+      start time.
+     </p></li><li class="listitem"><p>      Fix <code class="command">REASSIGN OWNED</code> to not fail for text search objects
+      (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Prevent <code class="structname">pg_class</code>.<code class="structfield">relminmxid</code> values from
+      going backwards during <code class="command">VACUUM FULL</code> (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Reduce indentation in rule/view dumps to improve readability and avoid
+      excessive whitespace (Greg Stark, Tom Lane)
+     </p><p>      This change reduces the amount of indentation applied to nested
+      constructs, including some cases that the user probably doesn't think
+      of as nested, such as UNION lists.  Previously, deeply nested
+      constructs were printed with an amount of whitespace growing as
+      O(N^2), which created a performance problem and even risk of
+      out-of-memory failures.  Now the indentation is reduced modulo 40,
+      which is initially odd to look at but seems to preserve readability
+      better than simply limiting the indentation would do.
+      Redundant parenthesization of UNION lists has been reduced as well.
+     </p></li><li class="listitem"><p>      Fix dumping of rules/views when subsequent addition of a column has
+      resulted in multiple input columns matching a <code class="literal">USING</code>
+      specification (Tom Lane)
+     </p></li><li class="listitem"><p>      Repair view printing for some cases involving functions
+      in <code class="literal">FROM</code> that return a composite type containing dropped
+      columns (Tom Lane)
+     </p></li><li class="listitem"><p>      Block signals during postmaster startup (Tom Lane)
+     </p><p>      This ensures that the postmaster will properly clean up after itself
+      if, for example, it receives <span class="systemitem">SIGINT</span> while still
+      starting up.
+     </p></li><li class="listitem"><p>      Fix client host name lookup when processing <code class="filename">pg_hba.conf</code>
+      entries that specify host names instead of IP addresses (Tom Lane)
+     </p><p>      Ensure that reverse-DNS lookup failures are reported, instead of just
+      silently not matching such entries.  Also ensure that we make only
+      one reverse-DNS lookup attempt per connection, not one per host name
+      entry, which is what previously happened if the lookup attempts failed.
+     </p></li><li class="listitem"><p>      Allow the root user to use <code class="literal">postgres -C variable</code> and
+      <code class="literal">postgres --describe-config</code> (MauMau)
+     </p><p>      The prohibition on starting the server as root does not need to extend
+      to these operations, and relaxing it prevents failure
+      of <span class="application">pg_ctl</span> in some scenarios.
+     </p></li><li class="listitem"><p>      Secure Unix-domain sockets of temporary postmasters started during
+      <code class="literal">make check</code> (Noah Misch)
+     </p><p>      Any local user able to access the socket file could connect as the
+      server's bootstrap superuser, then proceed to execute arbitrary code as
+      the operating-system user running the test, as we previously noted in
+      CVE-2014-0067.  This change defends against that risk by placing the
+      server's socket in a temporary, mode 0700 subdirectory
+      of <code class="filename">/tmp</code>.  The hazard remains however on platforms where
+      Unix sockets are not supported, notably Windows, because then the
+      temporary postmaster must accept local TCP connections.
+     </p><p>      A useful side effect of this change is to simplify
+      <code class="literal">make check</code> testing in builds that
+      override <code class="literal">DEFAULT_PGSOCKET_DIR</code>.  Popular non-default values
+      like <code class="filename">/var/run/postgresql</code> are often not writable by the
+      build user, requiring workarounds that will no longer be necessary.
+     </p></li><li class="listitem"><p>      Fix tablespace creation WAL replay to work on Windows (MauMau)
+     </p></li><li class="listitem"><p>      Fix detection of socket creation failures on Windows (Bruce Momjian)
+     </p></li><li class="listitem"><p>      On Windows, allow new sessions to absorb values of PGC_BACKEND
+      parameters (such as <a class="xref" href="runtime-config-logging.html#GUC-LOG-CONNECTIONS">log_connections</a>) from the
+      configuration file (Amit Kapila)
+     </p><p>      Previously, if such a parameter were changed in the file post-startup,
+      the change would have no effect.
+     </p></li><li class="listitem"><p>      Properly quote executable path names on Windows (Nikhil Deshpande)
+     </p><p>      This oversight could cause <span class="application">initdb</span>
+      and <span class="application">pg_upgrade</span> to fail on Windows, if the installation
+      path contained both spaces and <code class="literal">@</code> signs.
+     </p></li><li class="listitem"><p>      Fix linking of <span class="application">libpython</span> on macOS (Tom Lane)
+     </p><p>      The method we previously used can fail with the Python library
+      supplied by Xcode 5.0 and later.
+     </p></li><li class="listitem"><p>      Avoid buffer bloat in <span class="application">libpq</span> when the server
+      consistently sends data faster than the client can absorb it
+      (Shin-ichi Morita, Tom Lane)
+     </p><p>      <span class="application">libpq</span> could be coerced into enlarging its input buffer
+      until it runs out of memory (which would be reported misleadingly
+      as <span class="quote">“<span class="quote">lost synchronization with server</span>”</span>).  Under ordinary
+      circumstances it's quite far-fetched that data could be continuously
+      transmitted more quickly than the <code class="function">recv()</code> loop can
+      absorb it, but this has been observed when the client is artificially
+      slowed by scheduler constraints.
+     </p></li><li class="listitem"><p>      Ensure that LDAP lookup attempts in <span class="application">libpq</span> time out as
+      intended (Laurenz Albe)
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span> to do the right thing when an array
+      of <code class="type">char *</code> is the target for a FETCH statement returning more
+      than one row, as well as some other array-handling fixes
+      (Ashutosh Bapat)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to cope with a materialized view that
+      depends on a table's primary key (Tom Lane)
+     </p><p>      This occurs if the view's query relies on functional dependency to
+      abbreviate a <code class="literal">GROUP BY</code> list.  <span class="application">pg_dump</span> got
+      sufficiently confused that it dumped the materialized view as a
+      regular view.
+     </p></li><li class="listitem"><p>      Fix parsing of <span class="application">pg_dumpall</span>'s <code class="option">-i</code> switch
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_restore</span>'s processing of old-style large object
+      comments (Tom Lane)
+     </p><p>      A direct-to-database restore from an archive file generated by a
+      pre-9.0 version of <span class="application">pg_dump</span> would usually fail if the
+      archive contained more than a few comments for large objects.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_upgrade</span> for cases where the new server creates
+      a TOAST table but the old version did not (Bruce Momjian)
+     </p><p>      This rare situation would manifest as <span class="quote">“<span class="quote">relation OID mismatch</span>”</span>
+      errors.
+     </p></li><li class="listitem"><p>      In <span class="application">pg_upgrade</span>,
+      preserve <code class="structname">pg_database</code>.<code class="structfield">datminmxid</code>
+      and <code class="structname">pg_class</code>.<code class="structfield">relminmxid</code> values from the
+      old cluster, or insert reasonable values when upgrading from pre-9.3;
+      also defend against unreasonable values in the core server
+      (Bruce Momjian, Álvaro Herrera, Tom Lane)
+     </p><p>      These changes prevent scenarios in which autovacuum might insist on
+      scanning the entire cluster's contents immediately upon starting the
+      new cluster, or in which tracking of unfrozen MXID values might be
+      disabled completely.
+     </p></li><li class="listitem"><p>      Prevent <code class="filename">contrib/auto_explain</code> from changing the output of
+      a user's <code class="command">EXPLAIN</code> (Tom Lane)
+     </p><p>      If <code class="filename">auto_explain</code> is active, it could cause
+      an <code class="literal">EXPLAIN (ANALYZE, TIMING OFF)</code> command to nonetheless
+      print timing information.
+     </p></li><li class="listitem"><p>      Fix query-lifespan memory leak in <code class="filename">contrib/dblink</code>
+      (MauMau, Joe Conway)
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/pgcrypto</code> functions, ensure sensitive
+      information is cleared from stack variables before returning
+      (Marko Kreen)
+     </p></li><li class="listitem"><p>      Prevent use of already-freed memory in
+      <code class="filename">contrib/pgstattuple</code>'s <code class="function">pgstat_heap()</code>
+      (Noah Misch)
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/uuid-ossp</code>, cache the state of the OSSP UUID
+      library across calls (Tom Lane)
+     </p><p>      This improves the efficiency of UUID generation and reduces the amount
+      of entropy drawn from <code class="filename">/dev/urandom</code>, on platforms that
+      have that.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2014e
+      for DST law changes in Crimea, Egypt, and Morocco.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-3-6.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-3-4.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.71. Release 9.3.6 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.73. Release 9.3.4</td></tr></table></div></body></html>

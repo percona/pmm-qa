@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>18.2. Creating a Database Cluster</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="postgres-user.html" title="18.1. The PostgreSQL User Account" /><link rel="next" href="server-start.html" title="18.3. Starting the Database Server" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">18.2. Creating a Database Cluster</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="postgres-user.html" title="18.1. The PostgreSQL User Account">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="runtime.html" title="Chapter 18. Server Setup and Operation">Up</a></td><th width="60%" align="center">Chapter 18. Server Setup and Operation</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="server-start.html" title="18.3. Starting the Database Server">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="CREATING-CLUSTER"><div class="titlepage"><div><div><h2 class="title" style="clear: both">18.2. Creating a Database Cluster</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="creating-cluster.html#CREATING-CLUSTER-MOUNT-POINTS">18.2.1. Use of Secondary File Systems</a></span></dt><dt><span class="sect2"><a href="creating-cluster.html#CREATING-CLUSTER-NFS">18.2.2. Use of Network File Systems</a></span></dt></dl></div><a id="id-1.6.5.4.2" class="indexterm"></a><a id="id-1.6.5.4.3" class="indexterm"></a><p>   Before you can do anything, you must initialize a database storage
+   area on disk. We call this a <em class="firstterm">database cluster</em>.
+   (The <acronym class="acronym">SQL</acronym> standard uses the term catalog cluster.) A
+   database cluster is a collection of databases that is managed by a
+   single instance of a running database server. After initialization, a
+   database cluster will contain a database named <code class="literal">postgres</code>,
+   which is meant as a default database for use by utilities, users and third
+   party applications.  The database server itself does not require the
+   <code class="literal">postgres</code> database to exist, but many external utility
+   programs assume it exists.  Another database created within each cluster
+   during initialization is called
+   <code class="literal">template1</code>.  As the name suggests, this will be used
+   as a template for subsequently created databases; it should not be
+   used for actual work.  (See <a class="xref" href="managing-databases.html" title="Chapter 22. Managing Databases">Chapter 22</a> for
+   information about creating new databases within a cluster.)
+  </p><p>   In file system terms, a database cluster is a single directory
+   under which all data will be stored. We call this the <em class="firstterm">data
+   directory</em> or <em class="firstterm">data area</em>. It is
+   completely up to you where you choose to store your data.  There is no
+   default, although locations such as
+   <code class="filename">/usr/local/pgsql/data</code> or
+   <code class="filename">/var/lib/pgsql/data</code> are popular. To initialize a
+   database cluster, use the command <a class="xref" href="app-initdb.html" title="initdb"><span class="refentrytitle">initdb</span></a>,<a id="id-1.6.5.4.5.6" class="indexterm"></a> which is
+   installed with <span class="productname">PostgreSQL</span>. The desired
+   file system location of your database cluster is indicated by the
+   <code class="option">-D</code> option, for example:
+</p><pre class="screen"><code class="prompt">$</code> <strong class="userinput"><code>initdb -D /usr/local/pgsql/data</code></strong></pre><p>
+   Note that you must execute this command while logged into the
+   <span class="productname">PostgreSQL</span> user account, which is
+   described in the previous section.
+  </p><div class="tip"><h3 class="title">Tip</h3><p>    As an alternative to the <code class="option">-D</code> option, you can set
+    the environment variable <code class="envar">PGDATA</code>.
+    <a id="id-1.6.5.4.6.1.3" class="indexterm"></a>
+   </p></div><p>   Alternatively, you can run <code class="command">initdb</code> via
+   the <a class="xref" href="app-pg-ctl.html" title="pg_ctl"><span class="refentrytitle"><span class="application">pg_ctl</span></span></a>
+   program<a id="id-1.6.5.4.7.3" class="indexterm"></a> like so:
+</p><pre class="screen"><code class="prompt">$</code> <strong class="userinput"><code>pg_ctl -D /usr/local/pgsql/data initdb</code></strong></pre><p>
+   This may be more intuitive if you are
+   using <code class="command">pg_ctl</code> for starting and stopping the
+   server (see <a class="xref" href="server-start.html" title="18.3. Starting the Database Server">Section 18.3</a>), so
+   that <code class="command">pg_ctl</code> would be the sole command you use
+   for managing the database server instance.
+  </p><p>   <code class="command">initdb</code> will attempt to create the directory you
+   specify if it does not already exist.  Of course, this will fail if
+   <code class="command">initdb</code> does not have permissions to write in the
+   parent directory.  It's generally recommendable that the
+   <span class="productname">PostgreSQL</span> user own not just the data
+   directory but its parent directory as well, so that this should not
+   be a problem.  If the desired parent directory doesn't exist either,
+   you will need to create it first, using root privileges if the
+   grandparent directory isn't writable.  So the process might look
+   like this:
+</p><pre class="screen">root# <strong class="userinput"><code>mkdir /usr/local/pgsql</code></strong>
+root# <strong class="userinput"><code>chown postgres /usr/local/pgsql</code></strong>
+root# <strong class="userinput"><code>su postgres</code></strong>
+postgres$ <strong class="userinput"><code>initdb -D /usr/local/pgsql/data</code></strong></pre><p>
+  </p><p>   <code class="command">initdb</code> will refuse to run if the data directory
+   exists and already contains files; this is to prevent accidentally
+   overwriting an existing installation.
+  </p><p>   Because the data directory contains all the data stored in the
+   database, it is essential that it be secured from unauthorized
+   access. <code class="command">initdb</code> therefore revokes access
+   permissions from everyone but the
+   <span class="productname">PostgreSQL</span> user.
+  </p><p>   However, while the directory contents are secure, the default
+   client authentication setup allows any local user to connect to the
+   database and even become the database superuser. If you do not
+   trust other local users, we recommend you use one of
+   <code class="command">initdb</code>'s <code class="option">-W</code>, <code class="option">--pwprompt</code>
+   or <code class="option">--pwfile</code> options to assign a password to the
+   database superuser.<a id="id-1.6.5.4.11.5" class="indexterm"></a>
+   Also, specify <code class="option">-A md5</code> or
+   <code class="option">-A password</code> so that the default <code class="literal">trust</code> authentication
+   mode is not used; or modify the generated <code class="filename">pg_hba.conf</code>
+   file after running <code class="command">initdb</code>, but
+   <span class="emphasis"><em>before</em></span> you start the server for the first time. (Other
+   reasonable approaches include using <code class="literal">peer</code> authentication
+   or file system permissions to restrict connections. See <a class="xref" href="client-authentication.html" title="Chapter 20. Client Authentication">Chapter 20</a> for more information.)
+  </p><p>   <code class="command">initdb</code> also initializes the default
+   locale<a id="id-1.6.5.4.12.2" class="indexterm"></a> for the database cluster.
+   Normally, it will just take the locale settings in the environment
+   and apply them to the initialized database.  It is possible to
+   specify a different locale for the database; more information about
+   that can be found in <a class="xref" href="locale.html" title="23.1. Locale Support">Section 23.1</a>.  The default sort order used
+   within the particular database cluster is set by
+   <code class="command">initdb</code>, and while you can create new databases using
+   different sort order, the order used in the template databases that initdb
+   creates cannot be changed without dropping and recreating them.
+   There is also a performance impact for using locales
+   other than <code class="literal">C</code> or <code class="literal">POSIX</code>. Therefore, it is
+   important to make this choice correctly the first time.
+  </p><p>   <code class="command">initdb</code> also sets the default character set encoding
+   for the database cluster.  Normally this should be chosen to match the
+   locale setting.  For details see <a class="xref" href="multibyte.html" title="23.3. Character Set Support">Section 23.3</a>.
+  </p><p>   Non-<code class="literal">C</code> and non-<code class="literal">POSIX</code> locales rely on the
+   operating system's collation library for character set ordering.
+   This controls the ordering of keys stored in indexes.  For this reason,
+   a cluster cannot switch to an incompatible collation library version,
+   either through snapshot restore, binary streaming replication, a
+   different operating system, or an operating system upgrade.
+  </p><div class="sect2" id="CREATING-CLUSTER-MOUNT-POINTS"><div class="titlepage"><div><div><h3 class="title">18.2.1. Use of Secondary File Systems</h3></div></div></div><a id="id-1.6.5.4.15.2" class="indexterm"></a><p>    Many installations create their database clusters on file systems
+    (volumes) other than the machine's <span class="quote">“<span class="quote">root</span>”</span> volume.  If you
+    choose to do this, it is not advisable to try to use the secondary
+    volume's topmost directory (mount point) as the data directory.
+    Best practice is to create a directory within the mount-point
+    directory that is owned by the <span class="productname">PostgreSQL</span>
+    user, and then create the data directory within that.  This avoids
+    permissions problems, particularly for operations such
+    as <span class="application">pg_upgrade</span>, and it also ensures clean failures if
+    the secondary volume is taken offline.
+   </p></div><div class="sect2" id="CREATING-CLUSTER-NFS"><div class="titlepage"><div><div><h3 class="title">18.2.2. Use of Network File Systems</h3></div></div></div><a id="id-1.6.5.4.16.2" class="indexterm"></a><a id="id-1.6.5.4.16.3" class="indexterm"></a><a id="id-1.6.5.4.16.4" class="indexterm"></a><p>    Many installations create their database clusters on network file
+    systems.  Sometimes this is done via <acronym class="acronym">NFS</acronym>, or by using a
+    Network Attached Storage (<acronym class="acronym">NAS</acronym>) device that uses
+    <acronym class="acronym">NFS</acronym> internally.  <span class="productname">PostgreSQL</span> does nothing
+    special for <acronym class="acronym">NFS</acronym> file systems, meaning it assumes
+    <acronym class="acronym">NFS</acronym> behaves exactly like locally-connected drives.
+    If the client or server <acronym class="acronym">NFS</acronym> implementation does not
+    provide standard file system semantics, this can
+    cause reliability problems (see <a class="ulink" href="http://www.time-travellers.org/shane/papers/NFS_considered_harmful.html" target="_top">http://www.time-travellers.org/shane/papers/NFS_considered_harmful.html</a>).
+    Specifically, delayed (asynchronous) writes to the <acronym class="acronym">NFS</acronym>
+    server can cause data corruption problems.  If possible, mount the
+    <acronym class="acronym">NFS</acronym> file system synchronously (without caching) to avoid
+    this hazard.  Also, soft-mounting the <acronym class="acronym">NFS</acronym> file system is
+    not recommended.
+   </p><p>    Storage Area Networks (<acronym class="acronym">SAN</acronym>) typically use communication
+    protocols other than <acronym class="acronym">NFS</acronym>, and may or may not be subject
+    to hazards of this sort.  It's advisable to consult the vendor's
+    documentation concerning data consistency guarantees.
+    <span class="productname">PostgreSQL</span> cannot be more reliable than
+    the file system it's using.
+   </p></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="postgres-user.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="runtime.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="server-start.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">18.1. The <span class="productname">PostgreSQL</span> User Account </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 18.3. Starting the Database Server</td></tr></table></div></body></html>

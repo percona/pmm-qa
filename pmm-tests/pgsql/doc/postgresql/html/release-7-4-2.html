@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.302. Release 7.4.2</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-7-4-3.html" title="E.301. Release 7.4.3" /><link rel="next" href="release-7-4-1.html" title="E.303. Release 7.4.1" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.302. Release 7.4.2</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-7-4-3.html" title="E.301. Release 7.4.3">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-7-4-1.html" title="E.303. Release 7.4.1">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-7-4-2"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.302. Release 7.4.2</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-7-4-2.html#id-1.11.6.306.4">E.302.1. Migration to Version 7.4.2</a></span></dt><dt><span class="sect2"><a href="release-7-4-2.html#id-1.11.6.306.5">E.302.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2004-03-08</p><p>   This release contains a variety of fixes from 7.4.1.
+   For information about new features in the 7.4 major release, see
+   <a class="xref" href="release-7-4.html" title="E.304. Release 7.4">Section E.304</a>.
+  </p><div class="sect2" id="id-1.11.6.306.4"><div class="titlepage"><div><div><h3 class="title">E.302.1. Migration to Version 7.4.2</h3></div></div></div><p>    A dump/restore is not required for those running 7.4.X.  However,
+    it might be advisable as the easiest method of incorporating fixes for
+    two errors that have been found in the initial contents of 7.4.X system
+    catalogs.  A dump/initdb/reload sequence using 7.4.2's initdb will
+    automatically correct these problems.
+   </p><p>    The more severe of the two errors is that data type <code class="type">anyarray</code>
+    has the wrong alignment label; this is a problem because the
+    <code class="structname">pg_statistic</code> system catalog uses <code class="type">anyarray</code>
+    columns.  The mislabeling can cause planner misestimations and even
+    crashes when planning queries that involve <code class="literal">WHERE</code> clauses on
+    double-aligned columns (such as <code class="type">float8</code> and <code class="type">timestamp</code>).
+    It is strongly recommended that all installations repair this error,
+    either by initdb or by following the manual repair procedure given
+    below.
+   </p><p>    The lesser error is that the system view <code class="structname">pg_settings</code>
+    ought to be marked as having public update access, to allow
+    <code class="literal">UPDATE pg_settings</code> to be used as a substitute for
+    <code class="command">SET</code>.  This can also be fixed either by initdb or manually,
+    but it is not necessary to fix unless you want to use <code class="literal">UPDATE
+    pg_settings</code>.
+   </p><p>    If you wish not to do an initdb, the following procedure will work
+    for fixing <code class="structname">pg_statistic</code>.  As the database superuser,
+    do:
+
+</p><pre class="programlisting">-- clear out old data in pg_statistic:
+DELETE FROM pg_statistic;
+VACUUM pg_statistic;
+-- this should update 1 row:
+UPDATE pg_type SET typalign = 'd' WHERE oid = 2277;
+-- this should update 6 rows:
+UPDATE pg_attribute SET attalign = 'd' WHERE atttypid = 2277;
+--
+-- At this point you MUST start a fresh backend to avoid a crash!
+--
+-- repopulate pg_statistic:
+ANALYZE;</pre><p>
+
+    This can be done in a live database, but beware that all backends
+    running in the altered database must be restarted before it is safe to
+    repopulate <code class="structname">pg_statistic</code>.
+   </p><p>    To repair the <code class="structname">pg_settings</code> error, simply do:
+</p><pre class="programlisting">GRANT SELECT, UPDATE ON pg_settings TO PUBLIC;</pre><p>
+   </p><p>    The above procedures must be carried out in <span class="emphasis"><em>each</em></span> database
+    of an installation, including <code class="literal">template1</code>, and ideally
+    including <code class="literal">template0</code> as well.  If you do not fix the
+    template databases then any subsequently created databases will contain
+    the same errors.  <code class="literal">template1</code> can be fixed in the same way
+    as any other database, but fixing <code class="literal">template0</code> requires
+    additional steps.  First, from any database issue:
+</p><pre class="programlisting">UPDATE pg_database SET datallowconn = true WHERE datname = 'template0';</pre><p>
+     Next connect to <code class="literal">template0</code> and perform the above repair
+     procedures.  Finally, do:
+</p><pre class="programlisting">-- re-freeze template0:
+VACUUM FREEZE;
+-- and protect it against future alterations:
+UPDATE pg_database SET datallowconn = false WHERE datname = 'template0';</pre><p>
+   </p></div><div class="sect2" id="id-1.11.6.306.5"><div class="titlepage"><div><div><h3 class="title">E.302.2. Changes</h3></div></div></div><p>   Release 7.4.2 incorporates all the fixes included in release 7.3.6,
+   plus the following fixes:</p><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Fix <code class="structname">pg_statistic</code> alignment bug that could crash optimizer</p><p>See above for details about this problem.</p></li><li class="listitem"><p>Allow non-super users to update <code class="structname">pg_settings</code></p></li><li class="listitem"><p>Fix several optimizer bugs, most of which led to
+<span class="quote">“<span class="quote">variable not found in subplan target lists</span>”</span> errors</p></li><li class="listitem"><p>Avoid out-of-memory failure during startup of large multiple
+index scan</p></li><li class="listitem"><p>Fix multibyte problem that could lead to <span class="quote">“<span class="quote">out of
+memory</span>”</span> error during <code class="command">COPY IN</code></p></li><li class="listitem"><p>Fix problems with <code class="command">SELECT INTO</code> / <code class="command">CREATE
+TABLE AS</code> from tables without OIDs</p></li><li class="listitem"><p>Fix problems with <code class="filename">alter_table</code> regression test
+during parallel testing</p></li><li class="listitem"><p>Fix problems with hitting open file limit, especially on macOS (Tom)</p></li><li class="listitem"><p>Partial fix for Turkish-locale issues</p><p>initdb will succeed now in Turkish locale, but there are still some
+inconveniences associated with the <code class="literal">i/I</code> problem.</p></li><li class="listitem"><p>Make pg_dump set client encoding on restore</p></li><li class="listitem"><p>Other minor pg_dump fixes</p></li><li class="listitem"><p>Allow ecpg to again use C keywords as column names (Michael)</p></li><li class="listitem"><p>Added ecpg <code class="literal">WHENEVER NOT_FOUND</code> to
+<code class="literal">SELECT/INSERT/UPDATE/DELETE</code> (Michael)</p></li><li class="listitem"><p>Fix ecpg crash for queries calling set-returning functions (Michael)</p></li><li class="listitem"><p>Various other ecpg fixes (Michael)</p></li><li class="listitem"><p>Fixes for Borland compiler</p></li><li class="listitem"><p>Thread build improvements (Bruce)</p></li><li class="listitem"><p>Various other build fixes</p></li><li class="listitem"><p>Various JDBC fixes</p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-7-4-3.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-7-4-1.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.301. Release 7.4.3 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.303. Release 7.4.1</td></tr></table></div></body></html>

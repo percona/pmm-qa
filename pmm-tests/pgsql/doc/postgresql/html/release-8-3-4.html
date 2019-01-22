@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.194. Release 8.3.4</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-3-5.html" title="E.193. Release 8.3.5" /><link rel="next" href="release-8-3-3.html" title="E.195. Release 8.3.3" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.194. Release 8.3.4</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-3-5.html" title="E.193. Release 8.3.5">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-3-3.html" title="E.195. Release 8.3.3">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-3-4"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.194. Release 8.3.4</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-3-4.html#id-1.11.6.198.4">E.194.1. Migration to Version 8.3.4</a></span></dt><dt><span class="sect2"><a href="release-8-3-4.html#id-1.11.6.198.5">E.194.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2008-09-22</p><p>   This release contains a variety of fixes from 8.3.3.
+   For information about new features in the 8.3 major release, see
+   <a class="xref" href="release-8-3.html" title="E.198. Release 8.3">Section E.198</a>.
+  </p><div class="sect2" id="id-1.11.6.198.4"><div class="titlepage"><div><div><h3 class="title">E.194.1. Migration to Version 8.3.4</h3></div></div></div><p>    A dump/restore is not required for those running 8.3.X.
+    However, if you are upgrading from a version earlier than 8.3.1,
+    see <a class="xref" href="release-8-3-1.html" title="E.197. Release 8.3.1">Section E.197</a>.
+   </p></div><div class="sect2" id="id-1.11.6.198.5"><div class="titlepage"><div><div><h3 class="title">E.194.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix bug in btree WAL recovery code (Heikki)
+     </p><p>      Recovery failed if the WAL ended partway through a page split operation.
+     </p></li><li class="listitem"><p>      Fix potential use of wrong cutoff XID for HOT page pruning (Alvaro)
+     </p><p>      This error created a risk of corruption in system
+      catalogs that are consulted by <code class="command">VACUUM</code>: dead tuple versions
+      might be removed too soon.  The impact of this on actual database
+      operations would be minimal, since the system doesn't follow MVCC
+      rules while examining catalogs, but it might result in transiently
+      wrong output from <span class="application">pg_dump</span> or other client programs.
+     </p></li><li class="listitem"><p>      Fix potential miscalculation of <code class="structfield">datfrozenxid</code> (Alvaro)
+     </p><p>      This error may explain some recent reports of failure to remove old
+      <code class="structname">pg_clog</code> data.
+     </p></li><li class="listitem"><p>      Fix incorrect HOT updates after <code class="structname">pg_class</code> is reindexed
+      (Tom)
+     </p><p>      Corruption of <code class="structname">pg_class</code> could occur if <code class="literal">REINDEX
+      TABLE pg_class</code> was followed in the same session by an <code class="literal">ALTER
+      TABLE RENAME</code> or <code class="literal">ALTER TABLE SET SCHEMA</code> command.
+     </p></li><li class="listitem"><p>      Fix missed <span class="quote">“<span class="quote">combo cid</span>”</span> case (Karl Schnaitter)
+     </p><p>      This error made rows incorrectly invisible to a transaction in which they
+      had been deleted by multiple subtransactions that all aborted.
+     </p></li><li class="listitem"><p>      Prevent autovacuum from crashing if the table it's currently
+      checking is deleted at just the wrong time (Alvaro)
+     </p></li><li class="listitem"><p>      Widen local lock counters from 32 to 64 bits (Tom)
+     </p><p>      This responds to reports that the counters could overflow in
+      sufficiently long transactions, leading to unexpected <span class="quote">“<span class="quote">lock is
+      already held</span>”</span> errors.
+     </p></li><li class="listitem"><p>      Fix possible duplicate output of tuples during a GiST index scan (Teodor)
+     </p></li><li class="listitem"><p>      Regenerate foreign key checking queries from scratch when either
+      table is modified (Tom)
+     </p><p>      Previously, 8.3 would attempt to replan the query, but would work from
+      previously generated query text.  This led to failures if a
+      table or column was renamed.
+     </p></li><li class="listitem"><p>      Fix missed permissions checks when a view contains a simple
+      <code class="literal">UNION ALL</code> construct (Heikki)
+     </p><p>      Permissions for the referenced tables were checked properly, but not
+      permissions for the view itself.
+     </p></li><li class="listitem"><p>      Add checks in executor startup to ensure that the tuples produced by an
+      <code class="command">INSERT</code> or <code class="command">UPDATE</code> will match the target table's
+      current rowtype (Tom)
+     </p><p>      This situation is believed to be impossible in 8.3, but it can happen in
+      prior releases, so a check seems prudent.
+     </p></li><li class="listitem"><p>      Fix possible repeated drops during <code class="command">DROP OWNED</code> (Tom)
+     </p><p>      This would typically result in strange errors such as <span class="quote">“<span class="quote">cache
+      lookup failed for relation NNN</span>”</span>.
+     </p></li><li class="listitem"><p>      Fix several memory leaks in XML operations (Kris Jurka, Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="function">xmlserialize()</code> to raise error properly for
+      unacceptable target data type (Tom)
+     </p></li><li class="listitem"><p>      Fix a couple of places that mis-handled multibyte characters in text
+      search configuration file parsing (Tom)
+     </p><p>      Certain characters occurring in configuration files would always cause
+      <span class="quote">“<span class="quote">invalid byte sequence for encoding</span>”</span> failures.
+     </p></li><li class="listitem"><p>      Provide file name and line number location for all errors reported
+      in text search configuration files (Tom)
+     </p></li><li class="listitem"><p>      Fix <code class="literal">AT TIME ZONE</code> to first try to interpret its timezone
+      argument as a timezone abbreviation, and only try it as a full timezone
+      name if that fails, rather than the other way around as formerly (Tom)
+     </p><p>      The timestamp input functions have always resolved ambiguous zone names
+      in this order.  Making <code class="literal">AT TIME ZONE</code> do so as well improves
+      consistency, and fixes a compatibility bug introduced in 8.1:
+      in ambiguous cases we now behave the same as 8.0 and before did,
+      since in the older versions <code class="literal">AT TIME ZONE</code> accepted
+      <span class="emphasis"><em>only</em></span> abbreviations.
+     </p></li><li class="listitem"><p>      Fix datetime input functions to correctly detect integer overflow when
+      running on a 64-bit platform (Tom)
+     </p></li><li class="listitem"><p>      Prevent integer overflows during units conversion when displaying a
+      configuration parameter that has units (Tom)
+     </p></li><li class="listitem"><p>      Improve performance of writing very long log messages to syslog (Tom)
+     </p></li><li class="listitem"><p>      Allow spaces in the suffix part of an LDAP URL in
+      <code class="filename">pg_hba.conf</code> (Tom)
+     </p></li><li class="listitem"><p>      Fix bug in backwards scanning of a cursor on a <code class="literal">SELECT DISTINCT
+      ON</code> query (Tom)
+     </p></li><li class="listitem"><p>      Fix planner bug that could improperly push down <code class="literal">IS NULL</code>
+      tests below an outer join (Tom)
+     </p><p>      This was triggered by occurrence of <code class="literal">IS NULL</code> tests for
+      the same relation in all arms of an upper <code class="literal">OR</code> clause.
+     </p></li><li class="listitem"><p>      Fix planner bug with nested sub-select expressions (Tom)
+     </p><p>      If the outer sub-select has no direct dependency on the parent query,
+      but the inner one does, the outer value might not get recalculated
+      for new parent query rows.
+     </p></li><li class="listitem"><p>      Fix planner to estimate that <code class="literal">GROUP BY</code> expressions yielding
+      boolean results always result in two groups, regardless of the
+      expressions' contents (Tom)
+     </p><p>      This is very substantially more accurate than the regular <code class="literal">GROUP
+      BY</code> estimate for certain boolean tests like <em class="replaceable"><code>col</code></em>
+      <code class="literal">IS NULL</code>.
+     </p></li><li class="listitem"><p>      Fix PL/pgSQL to not fail when a <code class="literal">FOR</code> loop's target variable
+      is a record containing composite-type fields (Tom)
+     </p></li><li class="listitem"><p>      Fix PL/Tcl to behave correctly with Tcl 8.5, and to be more careful
+      about the encoding of data sent to or from Tcl (Tom)
+     </p></li><li class="listitem"><p>      Improve performance of <code class="function">PQescapeBytea()</code> (Rudolf Leitgeb)
+     </p></li><li class="listitem"><p>      On Windows, work around a Microsoft bug by preventing
+      <span class="application">libpq</span> from trying to send more than 64kB per system call
+      (Magnus)
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span> to handle variables properly in <code class="command">SET</code>
+      commands (Michael)
+     </p></li><li class="listitem"><p>      Improve <span class="application">pg_dump</span> and <span class="application">pg_restore</span>'s
+      error reporting after failure to send a SQL command (Tom)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_ctl</span> to properly preserve postmaster
+      command-line arguments across a <code class="literal">restart</code> (Bruce)
+     </p></li><li class="listitem"><p>      Fix erroneous WAL file cutoff point calculation in
+      <span class="application">pg_standby</span> (Simon)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2008f (for
+      DST law changes in Argentina, Bahamas, Brazil, Mauritius, Morocco,
+      Pakistan, Palestine, and Paraguay)
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-3-5.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-3-3.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.193. Release 8.3.5 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.195. Release 8.3.3</td></tr></table></div></body></html>

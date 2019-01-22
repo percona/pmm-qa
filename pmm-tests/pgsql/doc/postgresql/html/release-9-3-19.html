@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.58. Release 9.3.19</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-3-20.html" title="E.57. Release 9.3.20" /><link rel="next" href="release-9-3-18.html" title="E.59. Release 9.3.18" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.58. Release 9.3.19</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-3-20.html" title="E.57. Release 9.3.20">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-3-18.html" title="E.59. Release 9.3.18">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-3-19"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.58. Release 9.3.19</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-3-19.html#id-1.11.6.62.4">E.58.1. Migration to Version 9.3.19</a></span></dt><dt><span class="sect2"><a href="release-9-3-19.html#id-1.11.6.62.5">E.58.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2017-08-31</p><p>   This release contains a small number of fixes from 9.3.18.
+   For information about new features in the 9.3 major release, see
+   <a class="xref" href="release-9-3.html" title="E.77. Release 9.3">Section E.77</a>.
+  </p><div class="sect2" id="id-1.11.6.62.4"><div class="titlepage"><div><div><h3 class="title">E.58.1. Migration to Version 9.3.19</h3></div></div></div><p>    A dump/restore is not required for those running 9.3.X.
+   </p><p>    However, if you are upgrading from a version earlier than 9.3.18,
+    see <a class="xref" href="release-9-3-18.html" title="E.59. Release 9.3.18">Section E.59</a>.
+   </p></div><div class="sect2" id="id-1.11.6.62.5"><div class="titlepage"><div><div><h3 class="title">E.58.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Show foreign tables
+      in <code class="structname">information_schema</code>.<code class="structname">table_privileges</code>
+      view (Peter Eisentraut)
+     </p><p>      All other relevant <code class="structname">information_schema</code> views include
+      foreign tables, but this one ignored them.
+     </p><p>      Since this view definition is installed by <span class="application">initdb</span>,
+      merely upgrading will not fix the problem.  If you need to fix this
+      in an existing installation, you can, as a superuser, do this
+      in <span class="application">psql</span>:
+</p><pre class="programlisting">SET search_path TO information_schema;
+CREATE OR REPLACE VIEW table_privileges AS
+    SELECT CAST(u_grantor.rolname AS sql_identifier) AS grantor,
+           CAST(grantee.rolname AS sql_identifier) AS grantee,
+           CAST(current_database() AS sql_identifier) AS table_catalog,
+           CAST(nc.nspname AS sql_identifier) AS table_schema,
+           CAST(c.relname AS sql_identifier) AS table_name,
+           CAST(c.prtype AS character_data) AS privilege_type,
+           CAST(
+             CASE WHEN
+                  -- object owner always has grant options
+                  pg_has_role(grantee.oid, c.relowner, 'USAGE')
+                  OR c.grantable
+                  THEN 'YES' ELSE 'NO' END AS yes_or_no) AS is_grantable,
+           CAST(CASE WHEN c.prtype = 'SELECT' THEN 'YES' ELSE 'NO' END AS yes_or_no) AS with_hierarchy
+
+    FROM (
+            SELECT oid, relname, relnamespace, relkind, relowner, (aclexplode(coalesce(relacl, acldefault('r', relowner)))).* FROM pg_class
+         ) AS c (oid, relname, relnamespace, relkind, relowner, grantor, grantee, prtype, grantable),
+         pg_namespace nc,
+         pg_authid u_grantor,
+         (
+           SELECT oid, rolname FROM pg_authid
+           UNION ALL
+           SELECT 0::oid, 'PUBLIC'
+         ) AS grantee (oid, rolname)
+
+    WHERE c.relnamespace = nc.oid
+          AND c.relkind IN ('r', 'v', 'f')
+          AND c.grantee = grantee.oid
+          AND c.grantor = u_grantor.oid
+          AND c.prtype IN ('INSERT', 'SELECT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER')
+          AND (pg_has_role(u_grantor.oid, 'USAGE')
+               OR pg_has_role(grantee.oid, 'USAGE')
+               OR grantee.rolname = 'PUBLIC');</pre><p>
+      This must be repeated in each database to be fixed,
+      including <code class="literal">template0</code>.
+     </p></li><li class="listitem"><p>      Clean up handling of a fatal exit (e.g., due to receipt
+      of <span class="systemitem">SIGTERM</span>) that occurs while trying to execute
+      a <code class="command">ROLLBACK</code> of a failed transaction (Tom Lane)
+     </p><p>      This situation could result in an assertion failure.  In production
+      builds, the exit would still occur, but it would log an unexpected
+      message about <span class="quote">“<span class="quote">cannot drop active portal</span>”</span>.
+     </p></li><li class="listitem"><p>      Remove assertion that could trigger during a fatal exit (Tom Lane)
+     </p></li><li class="listitem"><p>      Correctly identify columns that are of a range type or domain type over
+      a composite type or domain type being searched for (Tom Lane)
+     </p><p>      Certain <code class="command">ALTER</code> commands that change the definition of a
+      composite type or domain type are supposed to fail if there are any
+      stored values of that type in the database, because they lack the
+      infrastructure needed to update or check such values.  Previously,
+      these checks could miss relevant values that are wrapped inside range
+      types or sub-domains, possibly allowing the database to become
+      inconsistent.
+     </p></li><li class="listitem"><p>      Fix crash in <span class="application">pg_restore</span> when using parallel mode and
+      using a list file to select a subset of items to restore
+      (Fabrízio de Royes Mello)
+     </p></li><li class="listitem"><p>      Change <span class="application">ecpg</span>'s parser to allow <code class="literal">RETURNING</code>
+      clauses without attached C variables (Michael Meskes)
+     </p><p>      This allows <span class="application">ecpg</span> programs to contain SQL constructs
+      that use <code class="literal">RETURNING</code> internally (for example, inside a CTE)
+      rather than using it to define values to be returned to the client.
+     </p></li><li class="listitem"><p>      Improve selection of compiler flags for PL/Perl on Windows (Tom Lane)
+     </p><p>      This fix avoids possible crashes of PL/Perl due to inconsistent
+      assumptions about the width of <code class="type">time_t</code> values.
+      A side-effect that may be visible to extension developers is
+      that <code class="literal">_USE_32BIT_TIME_T</code> is no longer defined globally
+      in <span class="productname">PostgreSQL</span> Windows builds.  This is not expected
+      to cause problems, because type <code class="type">time_t</code> is not used
+      in any <span class="productname">PostgreSQL</span> API definitions.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-3-20.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-3-18.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.57. Release 9.3.20 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.59. Release 9.3.18</td></tr></table></div></body></html>

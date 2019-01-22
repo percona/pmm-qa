@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.362. Release 1.0</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-1-01.html" title="E.361. Release 1.01" /><link rel="next" href="release-0-03.html" title="E.363. Postgres95 Release 0.03" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.362. Release 1.0</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-1-01.html" title="E.361. Release 1.01">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-0-03.html" title="E.363. Postgres95 Release 0.03">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-1-0"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.362. Release 1.0</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-1-0.html#id-1.11.6.366.3">E.362.1. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>1995-09-05</p><div class="sect2" id="id-1.11.6.366.3"><div class="titlepage"><div><div><h3 class="title">E.362.1. Changes</h3></div></div></div><pre class="programlisting">Copyright change:
+ * The copyright of <span class="productname">Postgres</span> 1.0 has been loosened to be freely modifiable
+   and modifiable for any purpose.  Please read the COPYRIGHT file.
+   Thanks to Professor Michael Stonebraker for making this possible.
+
+Incompatibilities:
+ *  date formats have to be MM-DD-YYYY (or DD-MM-YYYY if you're using
+   EUROPEAN STYLE).  This follows SQL-92 specs.
+ *  "delimiters" is now a key word
+
+Enhancements:
+ *  sql LIKE syntax has been added
+ *  copy command now takes an optional USING DELIMITER specification.
+   delimiters can be any single-character string.
+ *  IRIX 5.3 port has been added.
+   Thanks to Paul Walmsley and others.
+ *  updated pg_dump to work with new libpq
+ *  \d has been added psql
+   Thanks to Keith Parks
+ *  regexp performance for architectures that use POSIX regex has been
+   improved due to caching of precompiled patterns.
+   Thanks to Alistair Crooks
+ *  a new version of libpq++
+   Thanks to William Wanders
+
+Bug fixes:
+ *  arbitrary userids can be specified in the createuser script
+ *  \c to connect to other databases in psql now works.
+ *  bad pg_proc entry for float4inc() is fixed
+ *  users with usecreatedb field set can now create databases without
+   having to be usesuper
+ *  remove access control entries when the entry no longer has any
+   privileges
+ *  fixed non-portable datetimes implementation
+ *  added kerberos flags to the src/backend/Makefile
+ *  libpq now works with kerberos
+ *  typographic errors in the user manual have been corrected.
+ *  btrees with multiple index never worked, now we tell you they don't
+   work when you try to use them</pre></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-1-01.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-0-03.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.361. Release 1.01 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.363. <span class="productname">Postgres95</span> Release 0.03</td></tr></table></div></body></html>

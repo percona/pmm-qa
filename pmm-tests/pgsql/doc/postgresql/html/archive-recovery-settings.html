@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>27.1. Archive Recovery Settings</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="recovery-config.html" title="Chapter 27. Recovery Configuration" /><link rel="next" href="recovery-target-settings.html" title="27.2. Recovery Target Settings" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">27.1. Archive Recovery Settings</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="recovery-config.html" title="Chapter 27. Recovery Configuration">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="recovery-config.html" title="Chapter 27. Recovery Configuration">Up</a></td><th width="60%" align="center">Chapter 27. Recovery Configuration</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="recovery-target-settings.html" title="27.2. Recovery Target Settings">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="ARCHIVE-RECOVERY-SETTINGS"><div class="titlepage"><div><div><h2 class="title" style="clear: both">27.1. Archive Recovery Settings</h2></div></div></div><div class="variablelist"><dl class="variablelist"><dt id="RESTORE-COMMAND"><span class="term"><code class="varname">restore_command</code> (<code class="type">string</code>)
+      <a id="id-1.6.14.6.2.1.1.3" class="indexterm"></a>
+      </span></dt><dd><p>        The local shell command to execute to retrieve an archived segment of
+        the WAL file series. This parameter is required for archive recovery,
+        but optional for streaming replication.
+        Any <code class="literal">%f</code> in the string is
+        replaced by the name of the file to retrieve from the archive,
+        and any <code class="literal">%p</code> is replaced by the copy destination path name
+        on the server.
+        (The path name is relative to the current working directory,
+        i.e., the cluster's data directory.)
+        Any <code class="literal">%r</code> is replaced by the name of the file containing the
+        last valid restart point. That is the earliest file that must be kept
+        to allow a restore to be restartable, so this information can be used
+        to truncate the archive to just the minimum required to support
+        restarting from the current restore. <code class="literal">%r</code> is typically only
+        used by warm-standby configurations
+        (see <a class="xref" href="warm-standby.html" title="26.2. Log-Shipping Standby Servers">Section 26.2</a>).
+        Write <code class="literal">%%</code> to embed an actual <code class="literal">%</code> character.
+       </p><p>        It is important for the command to return a zero exit status
+        only if it succeeds.  The command <span class="emphasis"><em>will</em></span> be asked for file
+        names that are not present in the archive; it must return nonzero
+        when so asked.  Examples:
+</p><pre class="programlisting">restore_command = 'cp /mnt/server/archivedir/%f "%p"'
+restore_command = 'copy "C:\\server\\archivedir\\%f" "%p"'  # Windows</pre><p>
+        An exception is that if the command was terminated by a signal (other
+        than <span class="systemitem">SIGTERM</span>, which is used as part of a
+        database server shutdown) or an error by the shell (such as command
+        not found), then recovery will abort and the server will not start up.
+       </p></dd><dt id="ARCHIVE-CLEANUP-COMMAND"><span class="term"><code class="varname">archive_cleanup_command</code> (<code class="type">string</code>)
+      <a id="id-1.6.14.6.2.2.1.3" class="indexterm"></a>
+      </span></dt><dd><p>        This optional parameter specifies a shell command that will be executed
+        at every restartpoint.  The purpose of
+        <code class="varname">archive_cleanup_command</code> is to provide a mechanism for
+        cleaning up old archived WAL files that are no longer needed by the
+        standby server.
+        Any <code class="literal">%r</code> is replaced by the name of the file containing the
+        last valid restart point.
+        That is the earliest file that must be <span class="emphasis"><em>kept</em></span> to allow a
+        restore to be restartable, and so all files earlier than <code class="literal">%r</code>
+        may be safely removed.
+        This information can be used to truncate the archive to just the
+        minimum required to support restart from the current restore.
+        The <a class="xref" href="pgarchivecleanup.html" title="pg_archivecleanup"><span class="refentrytitle"><span class="application">pg_archivecleanup</span></span></a> module
+        is often used in <code class="varname">archive_cleanup_command</code> for
+        single-standby configurations, for example:
+</p><pre class="programlisting">archive_cleanup_command = 'pg_archivecleanup /mnt/server/archivedir %r'</pre><p>
+        Note however that if multiple standby servers are restoring from the
+        same archive directory, you will need to ensure that you do not delete
+        WAL files until they are no longer needed by any of the servers.
+        <code class="varname">archive_cleanup_command</code> would typically be used in a
+        warm-standby configuration (see <a class="xref" href="warm-standby.html" title="26.2. Log-Shipping Standby Servers">Section 26.2</a>).
+        Write <code class="literal">%%</code> to embed an actual <code class="literal">%</code> character in the
+        command.
+       </p><p>        If the command returns a nonzero exit status then a warning log
+        message will be written.  An exception is that if the command was
+        terminated by a signal or an error by the shell (such as command not
+        found), a fatal error will be raised.
+       </p></dd><dt id="RECOVERY-END-COMMAND"><span class="term"><code class="varname">recovery_end_command</code> (<code class="type">string</code>)
+      <a id="id-1.6.14.6.2.3.1.3" class="indexterm"></a>
+      </span></dt><dd><p>        This parameter specifies a shell command that will be executed once only
+        at the end of recovery. This parameter is optional. The purpose of the
+        <code class="varname">recovery_end_command</code> is to provide a mechanism for cleanup
+        following replication or recovery.
+        Any <code class="literal">%r</code> is replaced by the name of the file containing the
+        last valid restart point, like in <a class="xref" href="archive-recovery-settings.html#ARCHIVE-CLEANUP-COMMAND">archive_cleanup_command</a>.
+       </p><p>        If the command returns a nonzero exit status then a warning log
+        message will be written and the database will proceed to start up
+        anyway.  An exception is that if the command was terminated by a
+        signal or an error by the shell (such as command not found), the
+        database will not proceed with startup.
+       </p></dd></dl></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="recovery-config.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="recovery-config.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="recovery-target-settings.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">Chapter 27. Recovery Configuration </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 27.2. Recovery Target Settings</td></tr></table></div></body></html>

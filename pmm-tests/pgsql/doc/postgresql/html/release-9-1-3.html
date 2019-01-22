@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.124. Release 9.1.3</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-1-4.html" title="E.123. Release 9.1.4" /><link rel="next" href="release-9-1-2.html" title="E.125. Release 9.1.2" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.124. Release 9.1.3</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-1-4.html" title="E.123. Release 9.1.4">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-1-2.html" title="E.125. Release 9.1.2">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-1-3"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.124. Release 9.1.3</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-1-3.html#id-1.11.6.128.4">E.124.1. Migration to Version 9.1.3</a></span></dt><dt><span class="sect2"><a href="release-9-1-3.html#id-1.11.6.128.5">E.124.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2012-02-27</p><p>   This release contains a variety of fixes from 9.1.2.
+   For information about new features in the 9.1 major release, see
+   <a class="xref" href="release-9-1.html" title="E.127. Release 9.1">Section E.127</a>.
+  </p><div class="sect2" id="id-1.11.6.128.4"><div class="titlepage"><div><div><h3 class="title">E.124.1. Migration to Version 9.1.3</h3></div></div></div><p>    A dump/restore is not required for those running 9.1.X.
+   </p><p>    However, if you are upgrading from a version earlier than 9.1.2,
+    see <a class="xref" href="release-9-1-2.html" title="E.125. Release 9.1.2">Section E.125</a>.
+   </p></div><div class="sect2" id="id-1.11.6.128.5"><div class="titlepage"><div><div><h3 class="title">E.124.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Require execute permission on the trigger function for
+      <code class="command">CREATE TRIGGER</code> (Robert Haas)
+     </p><p>      This missing check could allow another user to execute a trigger
+      function with forged input data, by installing it on a table he owns.
+      This is only of significance for trigger functions marked
+      <code class="literal">SECURITY DEFINER</code>, since otherwise trigger functions run
+      as the table owner anyway.  (CVE-2012-0866)
+     </p></li><li class="listitem"><p>      Remove arbitrary limitation on length of common name in SSL
+      certificates (Heikki Linnakangas)
+     </p><p>      Both <span class="application">libpq</span> and the server truncated the common name
+      extracted from an SSL certificate at 32 bytes.  Normally this would
+      cause nothing worse than an unexpected verification failure, but there
+      are some rather-implausible scenarios in which it might allow one
+      certificate holder to impersonate another.  The victim would have to
+      have a common name exactly 32 bytes long, and the attacker would have
+      to persuade a trusted CA to issue a certificate in which the common
+      name has that string as a prefix.  Impersonating a server would also
+      require some additional exploit to redirect client connections.
+      (CVE-2012-0867)
+     </p></li><li class="listitem"><p>      Convert newlines to spaces in names written in <span class="application">pg_dump</span>
+      comments (Robert Haas)
+     </p><p>      <span class="application">pg_dump</span> was incautious about sanitizing object names
+      that are emitted within SQL comments in its output script.  A name
+      containing a newline would at least render the script syntactically
+      incorrect.  Maliciously crafted object names could present a SQL
+      injection risk when the script is reloaded.  (CVE-2012-0868)
+     </p></li><li class="listitem"><p>      Fix btree index corruption from insertions concurrent with vacuuming
+      (Tom Lane)
+     </p><p>      An index page split caused by an insertion could sometimes cause a
+      concurrently-running <code class="command">VACUUM</code> to miss removing index entries
+      that it should remove.  After the corresponding table rows are removed,
+      the dangling index entries would cause errors (such as <span class="quote">“<span class="quote">could not
+      read block N in file ...</span>”</span>) or worse, silently wrong query results
+      after unrelated rows are re-inserted at the now-free table locations.
+      This bug has been present since release 8.2, but occurs so infrequently
+      that it was not diagnosed until now.  If you have reason to suspect
+      that it has happened in your database, reindexing the affected index
+      will fix things.
+     </p></li><li class="listitem"><p>      Fix transient zeroing of shared buffers during WAL replay (Tom Lane)
+     </p><p>      The replay logic would sometimes zero and refill a shared buffer, so
+      that the contents were transiently invalid.  In hot standby mode this
+      can result in a query that's executing in parallel seeing garbage data.
+      Various symptoms could result from that, but the most common one seems
+      to be <span class="quote">“<span class="quote">invalid memory alloc request size</span>”</span>.
+     </p></li><li class="listitem"><p>      Fix handling of data-modifying <code class="literal">WITH</code> subplans in
+      <code class="literal">READ COMMITTED</code> rechecking (Tom Lane)
+     </p><p>      A <code class="literal">WITH</code> clause containing
+      <code class="command">INSERT</code>/<code class="command">UPDATE</code>/<code class="command">DELETE</code> would crash
+      if the parent <code class="command">UPDATE</code> or <code class="command">DELETE</code> command needed
+      to be re-evaluated at one or more rows due to concurrent updates
+      in <code class="literal">READ COMMITTED</code> mode.
+     </p></li><li class="listitem"><p>      Fix corner case in SSI transaction cleanup
+      (Dan Ports)
+     </p><p>      When finishing up a read-write serializable transaction,
+      a crash could occur if all remaining active serializable transactions
+      are read-only.
+     </p></li><li class="listitem"><p>      Fix postmaster to attempt restart after a hot-standby crash (Tom Lane)
+     </p><p>      A logic error caused the postmaster to terminate, rather than attempt
+      to restart the cluster, if any backend process crashed while operating
+      in hot standby mode.
+     </p></li><li class="listitem"><p>      Fix <code class="command">CLUSTER</code>/<code class="command">VACUUM FULL</code> handling of toast
+      values owned by recently-updated rows (Tom Lane)
+     </p><p>      This oversight could lead to <span class="quote">“<span class="quote">duplicate key value violates unique
+      constraint</span>”</span> errors being reported against the toast table's index
+      during one of these commands.
+     </p></li><li class="listitem"><p>      Update per-column permissions, not only per-table permissions, when
+      changing table owner (Tom Lane)
+     </p><p>      Failure to do this meant that any previously granted column permissions
+      were still shown as having been granted by the old owner.  This meant
+      that neither the new owner nor a superuser could revoke the
+      now-untraceable-to-table-owner permissions.
+     </p></li><li class="listitem"><p>      Support foreign data wrappers and foreign servers in
+      <code class="command">REASSIGN OWNED</code> (Alvaro Herrera)
+     </p><p>      This command failed with <span class="quote">“<span class="quote">unexpected classid</span>”</span> errors if
+      it needed to change the ownership of any such objects.
+     </p></li><li class="listitem"><p>      Allow non-existent values for some settings in <code class="command">ALTER
+      USER/DATABASE SET</code> (Heikki Linnakangas)
+     </p><p>      Allow <code class="varname">default_text_search_config</code>,
+      <code class="varname">default_tablespace</code>, and <code class="varname">temp_tablespaces</code> to be
+      set to names that are not known.  This is because they might be known
+      in another database where the setting is intended to be used, or for the
+      tablespace cases because the tablespace might not be created yet.  The
+      same issue was previously recognized for <code class="varname">search_path</code>, and
+      these settings now act like that one.
+     </p></li><li class="listitem"><p>      Fix <span class="quote">“<span class="quote">unsupported node type</span>”</span> error caused by <code class="literal">COLLATE</code>
+      in an <code class="command">INSERT</code> expression (Tom Lane)
+     </p></li><li class="listitem"><p>      Avoid crashing when we have problems deleting table files post-commit
+      (Tom Lane)
+     </p><p>      Dropping a table should lead to deleting the underlying disk files only
+      after the transaction commits.  In event of failure then (for instance,
+      because of wrong file permissions) the code is supposed to just emit a
+      warning message and go on, since it's too late to abort the
+      transaction.  This logic got broken as of release 8.4, causing such
+      situations to result in a PANIC and an unrestartable database.
+     </p></li><li class="listitem"><p>      Recover from errors occurring during WAL replay of <code class="command">DROP
+      TABLESPACE</code> (Tom Lane)
+     </p><p>      Replay will attempt to remove the tablespace's directories, but there
+      are various reasons why this might fail (for example, incorrect
+      ownership or permissions on those directories).  Formerly the replay
+      code would panic, rendering the database unrestartable without manual
+      intervention.  It seems better to log the problem and continue, since
+      the only consequence of failure to remove the directories is some
+      wasted disk space.
+     </p></li><li class="listitem"><p>      Fix race condition in logging AccessExclusiveLocks for hot standby
+      (Simon Riggs)
+     </p><p>      Sometimes a lock would be logged as being held by <span class="quote">“<span class="quote">transaction
+      zero</span>”</span>.  This is at least known to produce assertion failures on
+      slave servers, and might be the cause of more serious problems.
+     </p></li><li class="listitem"><p>      Track the OID counter correctly during WAL replay, even when it wraps
+      around (Tom Lane)
+     </p><p>      Previously the OID counter would remain stuck at a high value until the
+      system exited replay mode.  The practical consequences of that are
+      usually nil, but there are scenarios wherein a standby server that's
+      been promoted to master might take a long time to advance the OID
+      counter to a reasonable value once values are needed.
+     </p></li><li class="listitem"><p>      Prevent emitting misleading <span class="quote">“<span class="quote">consistent recovery state reached</span>”</span>
+      log message at the beginning of crash recovery (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Fix initial value of
+      <code class="structname">pg_stat_replication</code>.<code class="structfield">replay_location</code>
+      (Fujii Masao)
+     </p><p>      Previously, the value shown would be wrong until at least one WAL
+      record had been replayed.
+     </p></li><li class="listitem"><p>      Fix regular expression back-references with <code class="literal">*</code> attached
+      (Tom Lane)
+     </p><p>      Rather than enforcing an exact string match, the code would effectively
+      accept any string that satisfies the pattern sub-expression referenced
+      by the back-reference symbol.
+     </p><p>      A similar problem still afflicts back-references that are embedded in a
+      larger quantified expression, rather than being the immediate subject
+      of the quantifier.  This will be addressed in a future
+      <span class="productname">PostgreSQL</span> release.
+     </p></li><li class="listitem"><p>      Fix recently-introduced memory leak in processing of
+      <code class="type">inet</code>/<code class="type">cidr</code> values (Heikki Linnakangas)
+     </p><p>      A patch in the December 2011 releases of <span class="productname">PostgreSQL</span>
+      caused memory leakage in these operations, which could be significant
+      in scenarios such as building a btree index on such a column.
+     </p></li><li class="listitem"><p>      Fix planner's ability to push down index-expression restrictions
+      through <code class="literal">UNION ALL</code> (Tom Lane)
+     </p><p>      This type of optimization was inadvertently disabled by a fix for
+      another problem in 9.1.2.
+     </p></li><li class="listitem"><p>      Fix planning of <code class="literal">WITH</code> clauses referenced in
+      <code class="command">UPDATE</code>/<code class="command">DELETE</code> on an inherited table
+      (Tom Lane)
+     </p><p>      This bug led to <span class="quote">“<span class="quote">could not find plan for CTE</span>”</span> failures.
+     </p></li><li class="listitem"><p>      Fix GIN cost estimation to handle <code class="literal">column IN (...)</code>
+      index conditions (Marti Raudsepp)
+     </p><p>      This oversight would usually lead to crashes if such a condition could
+      be used with a GIN index.
+     </p></li><li class="listitem"><p>      Prevent assertion failure when exiting a session with an open, failed
+      transaction (Tom Lane)
+     </p><p>      This bug has no impact on normal builds with asserts not enabled.
+     </p></li><li class="listitem"><p>      Fix dangling pointer after <code class="command">CREATE TABLE AS</code>/<code class="command">SELECT
+      INTO</code> in a SQL-language function (Tom Lane)
+     </p><p>      In most cases this only led to an assertion failure in assert-enabled
+      builds, but worse consequences seem possible.
+     </p></li><li class="listitem"><p>      Avoid double close of file handle in syslogger on Windows (MauMau)
+     </p><p>      Ordinarily this error was invisible, but it would cause an exception
+      when running on a debug version of Windows.
+     </p></li><li class="listitem"><p>      Fix I/O-conversion-related memory leaks in plpgsql
+      (Andres Freund, Jan Urbanski, Tom Lane)
+     </p><p>      Certain operations would leak memory until the end of the current
+      function.
+     </p></li><li class="listitem"><p>      Work around bug in perl's SvPVutf8() function (Andrew Dunstan)
+     </p><p>      This function crashes when handed a typeglob or certain read-only
+      objects such as <code class="literal">$^V</code>.  Make plperl avoid passing those to
+      it.
+     </p></li><li class="listitem"><p>      In <span class="application">pg_dump</span>, don't dump contents of an extension's
+      configuration tables if the extension itself is not being dumped
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Improve <span class="application">pg_dump</span>'s handling of inherited table columns
+      (Tom Lane)
+     </p><p>      <span class="application">pg_dump</span> mishandled situations where a child column has
+      a different default expression than its parent column.  If the default
+      is textually identical to the parent's default, but not actually the
+      same (for instance, because of schema search path differences) it would
+      not be recognized as different, so that after dump and restore the
+      child would be allowed to inherit the parent's default.  Child columns
+      that are <code class="literal">NOT NULL</code> where their parent is not could also be
+      restored subtly incorrectly.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_restore</span>'s direct-to-database mode for
+      INSERT-style table data (Tom Lane)
+     </p><p>      Direct-to-database restores from archive files made with
+      <code class="option">--inserts</code> or <code class="option">--column-inserts</code> options fail when
+      using <span class="application">pg_restore</span> from a release dated September or
+      December 2011, as a result of an oversight in a fix for another
+      problem.  The archive file itself is not at fault, and text-mode
+      output is okay.
+     </p></li><li class="listitem"><p>      Teach <span class="application">pg_upgrade</span> to handle renaming of
+      <span class="application">plpython</span>'s shared library (Bruce Momjian)
+     </p><p>      Upgrading a pre-9.1 database that included plpython would fail because
+      of this oversight.
+     </p></li><li class="listitem"><p>      Allow <span class="application">pg_upgrade</span> to process tables containing
+      <code class="type">regclass</code> columns (Bruce Momjian)
+     </p><p>      Since <span class="application">pg_upgrade</span> now takes care to preserve
+      <code class="structname">pg_class</code> OIDs, there was no longer any reason for this
+      restriction.
+     </p></li><li class="listitem"><p>      Make <span class="application">libpq</span> ignore <code class="literal">ENOTDIR</code> errors
+      when looking for an SSL client certificate file
+      (Magnus Hagander)
+     </p><p>      This allows SSL connections to be established, though without a
+      certificate, even when the user's home directory is set to something
+      like <code class="literal">/dev/null</code>.
+     </p></li><li class="listitem"><p>      Fix some more field alignment issues in <span class="application">ecpg</span>'s SQLDA area
+      (Zoltan Boszormenyi)
+     </p></li><li class="listitem"><p>      Allow <code class="literal">AT</code> option in <span class="application">ecpg</span>
+      <code class="literal">DEALLOCATE</code> statements (Michael Meskes)
+     </p><p>      The infrastructure to support this has been there for awhile, but
+      through an oversight there was still an error check rejecting the case.
+     </p></li><li class="listitem"><p>      Do not use the variable name when defining a varchar structure in ecpg
+      (Michael Meskes)
+     </p></li><li class="listitem"><p>      Fix <code class="filename">contrib/auto_explain</code>'s JSON output mode to produce
+      valid JSON (Andrew Dunstan)
+     </p><p>      The output used brackets at the top level, when it should have used
+      braces.
+     </p></li><li class="listitem"><p>      Fix error in <code class="filename">contrib/intarray</code>'s <code class="literal">int[] &amp;
+      int[]</code> operator (Guillaume Lelarge)
+     </p><p>      If the smallest integer the two input arrays have in common is 1,
+      and there are smaller values in either array, then 1 would be
+      incorrectly omitted from the result.
+     </p></li><li class="listitem"><p>      Fix error detection in <code class="filename">contrib/pgcrypto</code>'s
+      <code class="function">encrypt_iv()</code> and <code class="function">decrypt_iv()</code>
+      (Marko Kreen)
+     </p><p>      These functions failed to report certain types of invalid-input errors,
+      and would instead return random garbage values for incorrect input.
+     </p></li><li class="listitem"><p>      Fix one-byte buffer overrun in <code class="filename">contrib/test_parser</code>
+      (Paul Guyot)
+     </p><p>      The code would try to read one more byte than it should, which would
+      crash in corner cases.
+      Since <code class="filename">contrib/test_parser</code> is only example code, this is
+      not a security issue in itself, but bad example code is still bad.
+     </p></li><li class="listitem"><p>      Use <code class="function">__sync_lock_test_and_set()</code> for spinlocks on ARM, if
+      available (Martin Pitt)
+     </p><p>      This function replaces our previous use of the <code class="literal">SWPB</code>
+      instruction, which is deprecated and not available on ARMv6 and later.
+      Reports suggest that the old code doesn't fail in an obvious way on
+      recent ARM boards, but simply doesn't interlock concurrent accesses,
+      leading to bizarre failures in multiprocess operation.
+     </p></li><li class="listitem"><p>      Use <code class="option">-fexcess-precision=standard</code> option when building with
+      gcc versions that accept it (Andrew Dunstan)
+     </p><p>      This prevents assorted scenarios wherein recent versions of gcc will
+      produce creative results.
+     </p></li><li class="listitem"><p>      Allow use of threaded Python on FreeBSD (Chris Rees)
+     </p><p>      Our configure script previously believed that this combination wouldn't
+      work; but FreeBSD fixed the problem, so remove that error check.
+     </p></li><li class="listitem"><p>      Allow MinGW builds to use standardly-named OpenSSL libraries
+      (Tomasz Ostrowski)
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-1-4.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-1-2.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.123. Release 9.1.4 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.125. Release 9.1.2</td></tr></table></div></body></html>

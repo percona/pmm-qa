@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.107. Release 9.1.20</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-1-21.html" title="E.106. Release 9.1.21" /><link rel="next" href="release-9-1-19.html" title="E.108. Release 9.1.19" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.107. Release 9.1.20</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-1-21.html" title="E.106. Release 9.1.21">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-1-19.html" title="E.108. Release 9.1.19">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-1-20"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.107. Release 9.1.20</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-1-20.html#id-1.11.6.111.4">E.107.1. Migration to Version 9.1.20</a></span></dt><dt><span class="sect2"><a href="release-9-1-20.html#id-1.11.6.111.5">E.107.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2016-02-11</p><p>   This release contains a variety of fixes from 9.1.19.
+   For information about new features in the 9.1 major release, see
+   <a class="xref" href="release-9-1.html" title="E.127. Release 9.1">Section E.127</a>.
+  </p><div class="sect2" id="id-1.11.6.111.4"><div class="titlepage"><div><div><h3 class="title">E.107.1. Migration to Version 9.1.20</h3></div></div></div><p>    A dump/restore is not required for those running 9.1.X.
+   </p><p>    However, if you are upgrading from a version earlier than 9.1.16,
+    see <a class="xref" href="release-9-1-16.html" title="E.111. Release 9.1.16">Section E.111</a>.
+   </p></div><div class="sect2" id="id-1.11.6.111.5"><div class="titlepage"><div><div><h3 class="title">E.107.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix infinite loops and buffer-overrun problems in regular expressions
+      (Tom Lane)
+     </p><p>      Very large character ranges in bracket expressions could cause
+      infinite loops in some cases, and memory overwrites in other cases.
+      (CVE-2016-0773)
+     </p></li><li class="listitem"><p>      Perform an immediate shutdown if the <code class="filename">postmaster.pid</code> file
+      is removed (Tom Lane)
+     </p><p>      The postmaster now checks every minute or so
+      that <code class="filename">postmaster.pid</code> is still there and still contains its
+      own PID.  If not, it performs an immediate shutdown, as though it had
+      received <span class="systemitem">SIGQUIT</span>.  The main motivation for this change
+      is to ensure that failed buildfarm runs will get cleaned up without
+      manual intervention; but it also serves to limit the bad effects if a
+      DBA forcibly removes <code class="filename">postmaster.pid</code> and then starts a new
+      postmaster.
+     </p></li><li class="listitem"><p>      In <code class="literal">SERIALIZABLE</code> transaction isolation mode, serialization
+      anomalies could be missed due to race conditions during insertions
+      (Kevin Grittner, Thomas Munro)
+     </p></li><li class="listitem"><p>      Fix failure to emit appropriate WAL records when doing <code class="literal">ALTER
+      TABLE ... SET TABLESPACE</code> for unlogged relations (Michael Paquier,
+      Andres Freund)
+     </p><p>      Even though the relation's data is unlogged, the move must be logged or
+      the relation will be inaccessible after a standby is promoted to master.
+     </p></li><li class="listitem"><p>      Fix possible misinitialization of unlogged relations at the end of
+      crash recovery (Andres Freund, Michael Paquier)
+     </p></li><li class="listitem"><p>      Fix <code class="command">ALTER COLUMN TYPE</code> to reconstruct inherited check
+      constraints properly (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <code class="command">REASSIGN OWNED</code> to change ownership of composite types
+      properly (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Fix <code class="command">REASSIGN OWNED</code> and <code class="command">ALTER OWNER</code> to correctly
+      update granted-permissions lists when changing owners of data types,
+      foreign data wrappers, or foreign servers (Bruce Momjian,
+      Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Fix <code class="command">REASSIGN OWNED</code> to ignore foreign user mappings,
+      rather than fail (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Add more defenses against bad planner cost estimates for GIN index
+      scans when the index's internal statistics are very out-of-date
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Make planner cope with hypothetical GIN indexes suggested by an index
+      advisor plug-in (Julien Rouhaud)
+     </p></li><li class="listitem"><p>      Fix dumping of whole-row Vars in <code class="literal">ROW()</code>
+      and <code class="literal">VALUES()</code> lists (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix possible internal overflow in <code class="type">numeric</code> division
+      (Dean Rasheed)
+     </p></li><li class="listitem"><p>      Fix enforcement of restrictions inside parentheses within regular
+      expression lookahead constraints (Tom Lane)
+     </p><p>      Lookahead constraints aren't allowed to contain backrefs, and
+      parentheses within them are always considered non-capturing, according
+      to the manual.  However, the code failed to handle these cases properly
+      inside a parenthesized subexpression, and would give unexpected
+      results.
+     </p></li><li class="listitem"><p>      Conversion of regular expressions to indexscan bounds could produce
+      incorrect bounds from regexps containing lookahead constraints
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix regular-expression compiler to handle loops of constraint arcs
+      (Tom Lane)
+     </p><p>      The code added for CVE-2007-4772 was both incomplete, in that it didn't
+      handle loops involving more than one state, and incorrect, in that it
+      could cause assertion failures (though there seem to be no bad
+      consequences of that in a non-assert build).  Multi-state loops would
+      cause the compiler to run until the query was canceled or it reached
+      the too-many-states error condition.
+     </p></li><li class="listitem"><p>      Improve memory-usage accounting in regular-expression compiler
+      (Tom Lane)
+     </p><p>      This causes the code to emit <span class="quote">“<span class="quote">regular expression is too
+      complex</span>”</span> errors in some cases that previously used unreasonable
+      amounts of time and memory.
+     </p></li><li class="listitem"><p>      Improve performance of regular-expression compiler (Tom Lane)
+     </p></li><li class="listitem"><p>      Make <code class="literal">%h</code> and <code class="literal">%r</code> escapes
+      in <code class="varname">log_line_prefix</code> work for messages emitted due
+      to <code class="varname">log_connections</code> (Tom Lane)
+     </p><p>      Previously, <code class="literal">%h</code>/<code class="literal">%r</code> started to work just after a
+      new session had emitted the <span class="quote">“<span class="quote">connection received</span>”</span> log message;
+      now they work for that message too.
+     </p></li><li class="listitem"><p>      On Windows, ensure the shared-memory mapping handle gets closed in
+      child processes that don't need it (Tom Lane, Amit Kapila)
+     </p><p>      This oversight resulted in failure to recover from crashes
+      whenever <code class="varname">logging_collector</code> is turned on.
+     </p></li><li class="listitem"><p>      Fix possible failure to detect socket EOF in non-blocking mode on
+      Windows (Tom Lane)
+     </p><p>      It's not entirely clear whether this problem can happen in pre-9.5
+      branches, but if it did, the symptom would be that a walsender process
+      would wait indefinitely rather than noticing a loss of connection.
+     </p></li><li class="listitem"><p>      Avoid leaking a token handle during SSPI authentication
+      (Christian Ullrich)
+     </p></li><li class="listitem"><p>      In <span class="application">psql</span>, ensure that <span class="application">libreadline</span>'s idea
+      of the screen size is updated when the terminal window size changes
+      (Merlin Moncure)
+     </p><p>      Previously, <span class="application">libreadline</span> did not notice if the window
+      was resized during query output, leading to strange behavior during
+      later input of multiline queries.
+     </p></li><li class="listitem"><p>      Fix <span class="application">psql</span>'s <code class="literal">\det</code> command to interpret its
+      pattern argument the same way as other <code class="literal">\d</code> commands with
+      potentially schema-qualified patterns do (Reece Hart)
+     </p></li><li class="listitem"><p>      Avoid possible crash in <span class="application">psql</span>'s <code class="literal">\c</code> command
+      when previous connection was via Unix socket and command specifies a
+      new hostname and same username (Tom Lane)
+     </p></li><li class="listitem"><p>      In <code class="literal">pg_ctl start -w</code>, test child process status directly
+      rather than relying on heuristics (Tom Lane, Michael Paquier)
+     </p><p>      Previously, <span class="application">pg_ctl</span> relied on an assumption that the new
+      postmaster would always create <code class="filename">postmaster.pid</code> within five
+      seconds.  But that can fail on heavily-loaded systems,
+      causing <span class="application">pg_ctl</span> to report incorrectly that the
+      postmaster failed to start.
+     </p><p>      Except on Windows, this change also means that a <code class="literal">pg_ctl start
+      -w</code> done immediately after another such command will now reliably
+      fail, whereas previously it would report success if done within two
+      seconds of the first command.
+     </p></li><li class="listitem"><p>      In <code class="literal">pg_ctl start -w</code>, don't attempt to use a wildcard listen
+      address to connect to the postmaster (Kondo Yuta)
+     </p><p>      On Windows, <span class="application">pg_ctl</span> would fail to detect postmaster
+      startup if <code class="varname">listen_addresses</code> is set to <code class="literal">0.0.0.0</code>
+      or <code class="literal">::</code>, because it would try to use that value verbatim as
+      the address to connect to, which doesn't work.  Instead assume
+      that <code class="literal">127.0.0.1</code> or <code class="literal">::1</code>, respectively, is the
+      right thing to use.
+     </p></li><li class="listitem"><p>      In <span class="application">pg_ctl</span> on Windows, check service status to decide
+      where to send output, rather than checking if standard output is a
+      terminal (Michael Paquier)
+     </p></li><li class="listitem"><p>      In <span class="application">pg_dump</span> and <span class="application">pg_basebackup</span>, adopt
+      the GNU convention for handling tar-archive members exceeding 8GB
+      (Tom Lane)
+     </p><p>      The POSIX standard for <code class="literal">tar</code> file format does not allow
+      archive member files to exceed 8GB, but most modern implementations
+      of <span class="application">tar</span> support an extension that fixes that.  Adopt
+      this extension so that <span class="application">pg_dump</span> with <code class="option">-Ft</code> no
+      longer fails on tables with more than 8GB of data, and so
+      that <span class="application">pg_basebackup</span> can handle files larger than 8GB.
+      In addition, fix some portability issues that could cause failures for
+      members between 4GB and 8GB on some platforms.  Potentially these
+      problems could cause unrecoverable data loss due to unreadable backup
+      files.
+     </p></li><li class="listitem"><p>      Fix assorted corner-case bugs in <span class="application">pg_dump</span>'s processing
+      of extension member objects (Tom Lane)
+     </p></li><li class="listitem"><p>      Make <span class="application">pg_dump</span> mark a view's triggers as needing to be
+      processed after its rule, to prevent possible failure during
+      parallel <span class="application">pg_restore</span> (Tom Lane)
+     </p></li><li class="listitem"><p>      Ensure that relation option values are properly quoted
+      in <span class="application">pg_dump</span> (Kouhei Sutou, Tom Lane)
+     </p><p>      A reloption value that isn't a simple identifier or number could lead
+      to dump/reload failures due to syntax errors in CREATE statements
+      issued by <span class="application">pg_dump</span>.  This is not an issue with any
+      reloption currently supported by core <span class="productname">PostgreSQL</span>, but
+      extensions could allow reloptions that cause the problem.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_upgrade</span>'s file-copying code to handle errors
+      properly on Windows (Bruce Momjian)
+     </p></li><li class="listitem"><p>      Install guards in <span class="application">pgbench</span> against corner-case overflow
+      conditions during evaluation of script-specified division or modulo
+      operators (Fabien Coelho, Michael Paquier)
+     </p></li><li class="listitem"><p>      Prevent certain <span class="application">PL/Java</span> parameters from being set by
+      non-superusers (Noah Misch)
+     </p><p>      This change mitigates a <span class="application">PL/Java</span> security bug
+      (CVE-2016-0766), which was fixed in <span class="application">PL/Java</span> by marking
+      these parameters as superuser-only.  To fix the security hazard for
+      sites that update <span class="productname">PostgreSQL</span> more frequently
+      than <span class="application">PL/Java</span>, make the core code aware of them also.
+     </p></li><li class="listitem"><p>      Improve <span class="application">libpq</span>'s handling of out-of-memory situations
+      (Michael Paquier, Amit Kapila, Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Fix order of arguments
+      in <span class="application">ecpg</span>-generated <code class="literal">typedef</code> statements
+      (Michael Meskes)
+     </p></li><li class="listitem"><p>      Use <code class="literal">%g</code> not <code class="literal">%f</code> format
+      in <span class="application">ecpg</span>'s <code class="function">PGTYPESnumeric_from_double()</code>
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span>-supplied header files to not contain comments
+      continued from a preprocessor directive line onto the next line
+      (Michael Meskes)
+     </p><p>      Such a comment is rejected by <span class="application">ecpg</span>.  It's not yet clear
+      whether <span class="application">ecpg</span> itself should be changed.
+     </p></li><li class="listitem"><p>      Ensure that <code class="filename">contrib/pgcrypto</code>'s <code class="function">crypt()</code>
+      function can be interrupted by query cancel (Andreas Karlsson)
+     </p></li><li class="listitem"><p>      Accept <span class="application">flex</span> versions later than 2.5.x
+      (Tom Lane, Michael Paquier)
+     </p><p>      Now that flex 2.6.0 has been released, the version checks in our build
+      scripts needed to be adjusted.
+     </p></li><li class="listitem"><p>      Install our <code class="filename">missing</code> script where PGXS builds can find it
+      (Jim Nasby)
+     </p><p>      This allows sane behavior in a PGXS build done on a machine where build
+      tools such as <span class="application">bison</span> are missing.
+     </p></li><li class="listitem"><p>      Ensure that <code class="filename">dynloader.h</code> is included in the installed
+      header files in MSVC builds (Bruce Momjian, Michael Paquier)
+     </p></li><li class="listitem"><p>      Add variant regression test expected-output file to match behavior of
+      current <span class="application">libxml2</span> (Tom Lane)
+     </p><p>      The fix for <span class="application">libxml2</span>'s CVE-2015-7499 causes it not to
+      output error context reports in some cases where it used to do so.
+      This seems to be a bug, but we'll probably have to live with it for
+      some time, so work around it.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2016a for
+      DST law changes in Cayman Islands, Metlakatla, and Trans-Baikal
+      Territory (Zabaykalsky Krai), plus historical corrections for Pakistan.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-1-21.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-1-19.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.106. Release 9.1.21 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.108. Release 9.1.19</td></tr></table></div></body></html>

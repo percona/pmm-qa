@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.51. Release 9.4.1</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-4-2.html" title="E.50. Release 9.4.2" /><link rel="next" href="release-9-4.html" title="E.52. Release 9.4" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.51. Release 9.4.1</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-4-2.html" title="E.50. Release 9.4.2">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-4.html" title="E.52. Release 9.4">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-4-1"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.51. Release 9.4.1</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-4-1.html#id-1.11.6.55.4">E.51.1. Migration to Version 9.4.1</a></span></dt><dt><span class="sect2"><a href="release-9-4-1.html#id-1.11.6.55.5">E.51.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2015-02-05</p><p>   This release contains a variety of fixes from 9.4.0.
+   For information about new features in the 9.4 major release, see
+   <a class="xref" href="release-9-4.html" title="E.52. Release 9.4">Section E.52</a>.
+  </p><div class="sect2" id="id-1.11.6.55.4"><div class="titlepage"><div><div><h3 class="title">E.51.1. Migration to Version 9.4.1</h3></div></div></div><p>    A dump/restore is not required for those running 9.4.X.
+   </p><p>    However, if you are a Windows user and are using the <span class="quote">“<span class="quote">Norwegian
+    (Bokmål)</span>”</span> locale, manual action is needed after the upgrade to
+    replace any <span class="quote">“<span class="quote">Norwegian (Bokmål)_Norway</span>”</span>
+    or <span class="quote">“<span class="quote">norwegian-bokmal</span>”</span> locale names stored
+    in <span class="productname">PostgreSQL</span> system catalogs with the plain-ASCII
+    alias <span class="quote">“<span class="quote">Norwegian_Norway</span>”</span>.  For details see
+    <a class="ulink" href="http://wiki.postgresql.org/wiki/Changes_To_Norwegian_Locale" target="_top">http://wiki.postgresql.org/wiki/Changes_To_Norwegian_Locale</a>
+   </p></div><div class="sect2" id="id-1.11.6.55.5"><div class="titlepage"><div><div><h3 class="title">E.51.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix buffer overruns in <code class="function">to_char()</code>
+      (Bruce Momjian)
+     </p><p>      When <code class="function">to_char()</code> processes a numeric formatting template
+      calling for a large number of digits, <span class="productname">PostgreSQL</span>
+      would read past the end of a buffer.  When processing a crafted
+      timestamp formatting template, <span class="productname">PostgreSQL</span> would write
+      past the end of a buffer.  Either case could crash the server.
+      We have not ruled out the possibility of attacks that lead to
+      privilege escalation, though they seem unlikely.
+      (CVE-2015-0241)
+     </p></li><li class="listitem"><p>      Fix buffer overrun in replacement <code class="function">*printf()</code> functions
+      (Tom Lane)
+     </p><p>      <span class="productname">PostgreSQL</span> includes a replacement implementation
+      of <code class="function">printf</code> and related functions.  This code will overrun
+      a stack buffer when formatting a floating point number (conversion
+      specifiers <code class="literal">e</code>, <code class="literal">E</code>, <code class="literal">f</code>, <code class="literal">F</code>,
+      <code class="literal">g</code> or <code class="literal">G</code>) with requested precision greater than
+      about 500.  This will crash the server, and we have not ruled out the
+      possibility of attacks that lead to privilege escalation.
+      A database user can trigger such a buffer overrun through
+      the <code class="function">to_char()</code> SQL function.  While that is the only
+      affected core <span class="productname">PostgreSQL</span> functionality, extension
+      modules that use printf-family functions may be at risk as well.
+     </p><p>      This issue primarily affects <span class="productname">PostgreSQL</span> on Windows.
+      <span class="productname">PostgreSQL</span> uses the system implementation of these
+      functions where adequate, which it is on other modern platforms.
+      (CVE-2015-0242)
+     </p></li><li class="listitem"><p>      Fix buffer overruns in <code class="filename">contrib/pgcrypto</code>
+      (Marko Tiikkaja, Noah Misch)
+     </p><p>      Errors in memory size tracking within the <code class="filename">pgcrypto</code>
+      module permitted stack buffer overruns and improper dependence on the
+      contents of uninitialized memory.  The buffer overrun cases can
+      crash the server, and we have not ruled out the possibility of
+      attacks that lead to privilege escalation.
+      (CVE-2015-0243)
+     </p></li><li class="listitem"><p>      Fix possible loss of frontend/backend protocol synchronization after
+      an error
+      (Heikki Linnakangas)
+     </p><p>      If any error occurred while the server was in the middle of reading a
+      protocol message from the client, it could lose synchronization and
+      incorrectly try to interpret part of the message's data as a new
+      protocol message.  An attacker able to submit crafted binary data
+      within a command parameter might succeed in injecting his own SQL
+      commands this way.  Statement timeout and query cancellation are the
+      most likely sources of errors triggering this scenario.  Particularly
+      vulnerable are applications that use a timeout and also submit
+      arbitrary user-crafted data as binary query parameters.  Disabling
+      statement timeout will reduce, but not eliminate, the risk of
+      exploit.  Our thanks to Emil Lenngren for reporting this issue.
+      (CVE-2015-0244)
+     </p></li><li class="listitem"><p>      Fix information leak via constraint-violation error messages
+      (Stephen Frost)
+     </p><p>      Some server error messages show the values of columns that violate
+      a constraint, such as a unique constraint.  If the user does not have
+      <code class="literal">SELECT</code> privilege on all columns of the table, this could
+      mean exposing values that the user should not be able to see.  Adjust
+      the code so that values are displayed only when they came from the SQL
+      command or could be selected by the user.
+      (CVE-2014-8161)
+     </p></li><li class="listitem"><p>      Lock down regression testing's temporary installations on Windows
+      (Noah Misch)
+     </p><p>      Use SSPI authentication to allow connections only from the OS user
+      who launched the test suite.  This closes on Windows the same
+      vulnerability previously closed on other platforms, namely that other
+      users might be able to connect to the test postmaster.
+      (CVE-2014-0067)
+     </p></li><li class="listitem"><p>      Cope with the Windows locale named <span class="quote">“<span class="quote">Norwegian (Bokmål)</span>”</span>
+      (Heikki Linnakangas)
+     </p><p>      Non-ASCII locale names are problematic since it's not clear what
+      encoding they should be represented in.  Map the troublesome locale
+      name to a plain-ASCII alias, <span class="quote">“<span class="quote">Norwegian_Norway</span>”</span>.
+     </p><p>      9.4.0 mapped the troublesome name to <span class="quote">“<span class="quote">norwegian-bokmal</span>”</span>,
+      but that turns out not to work on all Windows configurations.
+      <span class="quote">“<span class="quote">Norwegian_Norway</span>”</span> is now recommended instead.
+     </p></li><li class="listitem"><p>      Fix use-of-already-freed-memory problem in EvalPlanQual processing
+      (Tom Lane)
+     </p><p>      In <code class="literal">READ COMMITTED</code> mode, queries that lock or update
+      recently-updated rows could crash as a result of this bug.
+     </p></li><li class="listitem"><p>      Avoid possible deadlock while trying to acquire tuple locks
+      in EvalPlanQual processing (Álvaro Herrera, Mark Kirkwood)
+     </p></li><li class="listitem"><p>      Fix failure to wait when a transaction tries to acquire a <code class="literal">FOR
+      NO KEY EXCLUSIVE</code> tuple lock, while multiple other transactions
+      currently hold <code class="literal">FOR SHARE</code> locks (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Improve performance of <code class="command">EXPLAIN</code> with large range tables
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix <code class="type">jsonb</code> Unicode escape processing, and in consequence
+      disallow <code class="literal">\u0000</code> (Tom Lane)
+     </p><p>      Previously, the JSON Unicode escape <code class="literal">\u0000</code> was accepted
+      and was stored as those six characters; but that is indistinguishable
+      from what is stored for the input <code class="literal">\\u0000</code>, resulting in
+      ambiguity.  Moreover, in cases where de-escaped textual output is
+      expected, such as the <code class="literal">-&gt;&gt;</code> operator, the sequence was
+      printed as <code class="literal">\u0000</code>, which does not meet the expectation
+      that JSON escaping would be removed.  (Consistent behavior would
+      require emitting a zero byte, but <span class="productname">PostgreSQL</span> does not
+      support zero bytes embedded in text strings.)  9.4.0 included an
+      ill-advised attempt to improve this situation by adjusting JSON output
+      conversion rules; but of course that could not fix the fundamental
+      ambiguity, and it turned out to break other usages of Unicode escape
+      sequences.  Revert that, and to avoid the core problem,
+      reject <code class="literal">\u0000</code> in <code class="type">jsonb</code> input.
+     </p><p>      If a <code class="type">jsonb</code> column contains a <code class="literal">\u0000</code> value stored
+      with 9.4.0, it will henceforth read out as though it
+      were <code class="literal">\\u0000</code>, which is the other valid interpretation of
+      the data stored by 9.4.0 for this case.
+     </p><p>      The <code class="type">json</code> type did not have the storage-ambiguity problem, but
+      it did have the problem of inconsistent de-escaped textual output.
+      Therefore <code class="literal">\u0000</code> will now also be rejected
+      in <code class="type">json</code> values when conversion to de-escaped form is
+      required.  This change does not break the ability to
+      store <code class="literal">\u0000</code> in <code class="type">json</code> columns so long as no
+      processing is done on the values.  This is exactly parallel to the
+      cases in which non-ASCII Unicode escapes are allowed when the database
+      encoding is not UTF8.
+     </p></li><li class="listitem"><p>      Fix namespace handling in <code class="function">xpath()</code> (Ali Akbar)
+     </p><p>      Previously, the <code class="type">xml</code> value resulting from
+      an <code class="function">xpath()</code> call would not have namespace declarations if
+      the namespace declarations were attached to an ancestor element in the
+      input <code class="type">xml</code> value, rather than to the specific element being
+      returned.  Propagate the ancestral declaration so that the result is
+      correct when considered in isolation.
+     </p></li><li class="listitem"><p>      Fix assorted oversights in range-operator selectivity estimation
+      (Emre Hasegeli)
+     </p><p>      This patch fixes corner-case <span class="quote">“<span class="quote">unexpected operator NNNN</span>”</span> planner
+      errors, and improves the selectivity estimates for some other cases.
+     </p></li><li class="listitem"><p>      Revert unintended reduction in maximum size of a GIN index item
+      (Heikki Linnakangas)
+     </p><p>      9.4.0 could fail with <span class="quote">“<span class="quote">index row size exceeds maximum</span>”</span> errors
+      for data that previous versions would accept.
+     </p></li><li class="listitem"><p>      Fix query-duration memory leak during repeated GIN index rescans
+      (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Fix possible crash when using
+      nonzero <code class="varname">gin_fuzzy_search_limit</code> (Heikki Linnakangas)
+     </p></li><li class="listitem"><p>      Assorted fixes for logical decoding (Andres Freund)
+     </p></li><li class="listitem"><p>      Fix incorrect replay of WAL parameter change records that report
+      changes in the <code class="varname">wal_log_hints</code> setting (Petr Jelinek)
+     </p></li><li class="listitem"><p>      Change <span class="quote">“<span class="quote">pgstat wait timeout</span>”</span> warning message to be LOG level,
+      and rephrase it to be more understandable (Tom Lane)
+     </p><p>      This message was originally thought to be essentially a can't-happen
+      case, but it occurs often enough on our slower buildfarm members to be
+      a nuisance.  Reduce it to LOG level, and expend a bit more effort on
+      the wording: it now reads <span class="quote">“<span class="quote">using stale statistics instead of
+      current ones because stats collector is not responding</span>”</span>.
+     </p></li><li class="listitem"><p>      Warn if macOS's <code class="function">setlocale()</code> starts an unwanted extra
+      thread inside the postmaster (Noah Misch)
+     </p></li><li class="listitem"><p>      Fix <span class="application">libpq</span>'s behavior when <code class="filename">/etc/passwd</code>
+      isn't readable (Tom Lane)
+     </p><p>      While doing <code class="function">PQsetdbLogin()</code>, <span class="application">libpq</span>
+      attempts to ascertain the user's operating system name, which on most
+      Unix platforms involves reading <code class="filename">/etc/passwd</code>.  As of 9.4,
+      failure to do that was treated as a hard error.  Restore the previous
+      behavior, which was to fail only if the application does not provide a
+      database role name to connect as.  This supports operation in chroot
+      environments that lack an <code class="filename">/etc/passwd</code> file.
+     </p></li><li class="listitem"><p>      Improve consistency of parsing of <span class="application">psql</span>'s special
+      variables (Tom Lane)
+     </p><p>      Allow variant spellings of <code class="literal">on</code> and <code class="literal">off</code> (such
+      as <code class="literal">1</code>/<code class="literal">0</code>) for <code class="literal">ECHO_HIDDEN</code>
+      and <code class="literal">ON_ERROR_ROLLBACK</code>.  Report a warning for unrecognized
+      values for <code class="literal">COMP_KEYWORD_CASE</code>, <code class="literal">ECHO</code>,
+      <code class="literal">ECHO_HIDDEN</code>, <code class="literal">HISTCONTROL</code>,
+      <code class="literal">ON_ERROR_ROLLBACK</code>, and <code class="literal">VERBOSITY</code>.  Recognize
+      all values for all these variables case-insensitively; previously
+      there was a mishmash of case-sensitive and case-insensitive behaviors.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to handle comments on event triggers
+      without failing (Tom Lane)
+     </p></li><li class="listitem"><p>      Allow parallel <span class="application">pg_dump</span> to
+      use <code class="option">--serializable-deferrable</code> (Kevin Grittner)
+     </p></li><li class="listitem"><p>      Prevent WAL files created by <code class="literal">pg_basebackup -x/-X</code> from
+      being archived again when the standby is promoted (Andres Freund)
+     </p></li><li class="listitem"><p>      Handle unexpected query results, especially NULLs, safely in
+      <code class="filename">contrib/tablefunc</code>'s <code class="function">connectby()</code>
+      (Michael Paquier)
+     </p><p>      <code class="function">connectby()</code> previously crashed if it encountered a NULL
+      key value.  It now prints that row but doesn't recurse further.
+     </p></li><li class="listitem"><p>      Numerous cleanups of warnings from Coverity static code analyzer
+      (Andres Freund, Tatsuo Ishii, Marko Kreen, Tom Lane, Michael Paquier)
+     </p><p>      These changes are mostly cosmetic but in some cases fix corner-case
+      bugs, for example a crash rather than a proper error report after an
+      out-of-memory failure.  None are believed to represent security
+      issues.
+     </p></li><li class="listitem"><p>      Allow <code class="varname">CFLAGS</code> from <span class="application">configure</span>'s environment
+      to override automatically-supplied <code class="varname">CFLAGS</code> (Tom Lane)
+     </p><p>      Previously, <span class="application">configure</span> would add any switches that it
+      chose of its own accord to the end of the
+      user-specified <code class="varname">CFLAGS</code> string.  Since most compilers
+      process switches left-to-right, this meant that configure's choices
+      would override the user-specified flags in case of conflicts.  That
+      should work the other way around, so adjust the logic to put the
+      user's string at the end not the beginning.
+     </p></li><li class="listitem"><p>      Make <span class="application">pg_regress</span> remove any temporary installation it
+      created upon successful exit (Tom Lane)
+     </p><p>      This results in a very substantial reduction in disk space usage
+      during <code class="literal">make check-world</code>, since that sequence involves
+      creation of numerous temporary installations.
+     </p></li><li class="listitem"><p>      Add CST (China Standard Time) to our lists of timezone abbreviations
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2015a
+      for DST law changes in Chile and Mexico, plus historical changes in
+      Iceland.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-4-2.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-4.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.50. Release 9.4.2 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.52. Release 9.4</td></tr></table></div></body></html>

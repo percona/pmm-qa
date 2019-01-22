@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.311. Release 7.3.15</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-7-3-16.html" title="E.310. Release 7.3.16" /><link rel="next" href="release-7-3-14.html" title="E.312. Release 7.3.14" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.311. Release 7.3.15</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-7-3-16.html" title="E.310. Release 7.3.16">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-7-3-14.html" title="E.312. Release 7.3.14">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-7-3-15"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.311. Release 7.3.15</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-7-3-15.html#id-1.11.6.315.4">E.311.1. Migration to Version 7.3.15</a></span></dt><dt><span class="sect2"><a href="release-7-3-15.html#id-1.11.6.315.5">E.311.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2006-05-23</p><p>   This release contains a variety of fixes from 7.3.14,
+   including patches for extremely serious security issues.
+  </p><div class="sect2" id="id-1.11.6.315.4"><div class="titlepage"><div><div><h3 class="title">E.311.1. Migration to Version 7.3.15</h3></div></div></div><p>    A dump/restore is not required for those running 7.3.X.  However,
+    if you are upgrading from a version earlier than 7.3.13,
+    see <a class="xref" href="release-7-3-13.html" title="E.313. Release 7.3.13">Section E.313</a>.
+   </p><p>    Full security against the SQL-injection attacks described in
+    CVE-2006-2313 and CVE-2006-2314 might require changes in application
+    code.  If you have applications that embed untrustworthy strings
+    into SQL commands, you should examine them as soon as possible to
+    ensure that they are using recommended escaping techniques.  In
+    most cases, applications should be using subroutines provided by
+    libraries or drivers (such as <span class="application">libpq</span>'s
+    <code class="function">PQescapeStringConn()</code>) to perform string escaping,
+    rather than relying on <span class="foreignphrase"><em class="foreignphrase">ad hoc</em></span> code to do it.
+   </p></div><div class="sect2" id="id-1.11.6.315.5"><div class="titlepage"><div><div><h3 class="title">E.311.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Change the server to reject invalidly-encoded multibyte
+characters in all cases (Tatsuo, Tom)</p><p>While <span class="productname">PostgreSQL</span> has been moving in this direction for
+some time, the checks are now applied uniformly to all encodings and all
+textual input, and are now always errors not merely warnings.  This change
+defends against SQL-injection attacks of the type described in CVE-2006-2313.</p></li><li class="listitem"><p>Reject unsafe uses of <code class="literal">\'</code> in string literals</p><p>As a server-side defense against SQL-injection attacks of the type
+described in CVE-2006-2314, the server now only accepts <code class="literal">''</code> and not
+<code class="literal">\'</code> as a representation of ASCII single quote in SQL string
+literals.  By default, <code class="literal">\'</code> is rejected only when
+<code class="varname">client_encoding</code> is set to a client-only encoding (SJIS, BIG5, GBK,
+GB18030, or UHC), which is the scenario in which SQL injection is possible.
+A new configuration parameter <code class="varname">backslash_quote</code> is available to
+adjust this behavior when needed.  Note that full security against
+CVE-2006-2314 might require client-side changes; the purpose of
+<code class="varname">backslash_quote</code> is in part to make it obvious that insecure
+clients are insecure.</p></li><li class="listitem"><p>Modify <span class="application">libpq</span>'s string-escaping routines to be
+aware of encoding considerations</p><p>This fixes <span class="application">libpq</span>-using applications for the security
+issues described in CVE-2006-2313 and CVE-2006-2314.
+Applications that use multiple <span class="productname">PostgreSQL</span> connections
+concurrently should migrate to <code class="function">PQescapeStringConn()</code> and
+<code class="function">PQescapeByteaConn()</code> to ensure that escaping is done correctly
+for the settings in use in each database connection.  Applications that
+do string escaping <span class="quote">“<span class="quote">by hand</span>”</span> should be modified to rely on library
+routines instead.</p></li><li class="listitem"><p>Fix some incorrect encoding conversion functions</p><p><code class="function">win1251_to_iso</code>, <code class="function">alt_to_iso</code>,
+<code class="function">euc_tw_to_big5</code>, <code class="function">euc_tw_to_mic</code>,
+<code class="function">mic_to_euc_tw</code> were all broken to varying
+extents.</p></li><li class="listitem"><p>Clean up stray remaining uses of <code class="literal">\'</code> in strings
+(Bruce, Jan)</p></li><li class="listitem"><p>Fix server to use custom DH SSL parameters correctly (Michael
+Fuhr)</p></li><li class="listitem"><p>Fix various minor memory leaks</p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-7-3-16.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-7-3-14.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.310. Release 7.3.16 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.312. Release 7.3.14</td></tr></table></div></body></html>

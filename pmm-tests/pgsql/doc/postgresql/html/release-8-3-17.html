@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.181. Release 8.3.17</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-3-18.html" title="E.180. Release 8.3.18" /><link rel="next" href="release-8-3-16.html" title="E.182. Release 8.3.16" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.181. Release 8.3.17</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-3-18.html" title="E.180. Release 8.3.18">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-3-16.html" title="E.182. Release 8.3.16">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-3-17"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.181. Release 8.3.17</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-3-17.html#id-1.11.6.185.4">E.181.1. Migration to Version 8.3.17</a></span></dt><dt><span class="sect2"><a href="release-8-3-17.html#id-1.11.6.185.5">E.181.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2011-12-05</p><p>   This release contains a variety of fixes from 8.3.16.
+   For information about new features in the 8.3 major release, see
+   <a class="xref" href="release-8-3.html" title="E.198. Release 8.3">Section E.198</a>.
+  </p><div class="sect2" id="id-1.11.6.185.4"><div class="titlepage"><div><div><h3 class="title">E.181.1. Migration to Version 8.3.17</h3></div></div></div><p>    A dump/restore is not required for those running 8.3.X.
+   </p><p>    However, a longstanding error was discovered in the definition of the
+    <code class="literal">information_schema.referential_constraints</code> view.  If you
+    rely on correct results from that view, you should replace its
+    definition as explained in the first changelog item below.
+   </p><p>    Also, if you are upgrading from a version earlier than 8.3.8,
+    see <a class="xref" href="release-8-3-8.html" title="E.190. Release 8.3.8">Section E.190</a>.
+   </p></div><div class="sect2" id="id-1.11.6.185.5"><div class="titlepage"><div><div><h3 class="title">E.181.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix bugs in <code class="literal">information_schema.referential_constraints</code> view
+      (Tom Lane)
+     </p><p>      This view was being insufficiently careful about matching the
+      foreign-key constraint to the depended-on primary or unique key
+      constraint.  That could result in failure to show a foreign key
+      constraint at all, or showing it multiple times, or claiming that it
+      depends on a different constraint than the one it really does.
+     </p><p>      Since the view definition is installed by <span class="application">initdb</span>,
+      merely upgrading will not fix the problem.  If you need to fix this
+      in an existing installation, you can (as a superuser) drop the
+      <code class="literal">information_schema</code> schema then re-create it by sourcing
+      <code class="filename"><em class="replaceable"><code>SHAREDIR</code></em>/information_schema.sql</code>.
+      (Run <code class="literal">pg_config --sharedir</code> if you're uncertain where
+      <em class="replaceable"><code>SHAREDIR</code></em> is.)  This must be repeated in each database
+      to be fixed.
+     </p></li><li class="listitem"><p>      Fix TOAST-related data corruption during <code class="literal">CREATE TABLE dest AS
+      SELECT * FROM src</code> or <code class="literal">INSERT INTO dest SELECT * FROM src</code>
+      (Tom Lane)
+     </p><p>      If a table has been modified by <code class="command">ALTER TABLE ADD COLUMN</code>,
+      attempts to copy its data verbatim to another table could produce
+      corrupt results in certain corner cases.
+      The problem can only manifest in this precise form in 8.4 and later,
+      but we patched earlier versions as well in case there are other code
+      paths that could trigger the same bug.
+     </p></li><li class="listitem"><p>      Fix race condition during toast table access from stale syscache entries
+      (Tom Lane)
+     </p><p>      The typical symptom was transient errors like <span class="quote">“<span class="quote">missing chunk
+      number 0 for toast value NNNNN in pg_toast_2619</span>”</span>, where the cited
+      toast table would always belong to a system catalog.
+     </p></li><li class="listitem"><p>      Make <code class="function">DatumGetInetP()</code> unpack inet datums that have a 1-byte
+      header, and add a new macro, <code class="function">DatumGetInetPP()</code>, that does
+      not (Heikki Linnakangas)
+     </p><p>      This change affects no core code, but might prevent crashes in add-on
+      code that expects <code class="function">DatumGetInetP()</code> to produce an unpacked
+      datum as per usual convention.
+     </p></li><li class="listitem"><p>      Improve locale support in <code class="type">money</code> type's input and output
+      (Tom Lane)
+     </p><p>      Aside from not supporting all standard
+      <a class="link" href="runtime-config-client.html#GUC-LC-MONETARY"><code class="varname">lc_monetary</code></a>
+      formatting options, the input and output functions were inconsistent,
+      meaning there were locales in which dumped <code class="type">money</code> values could
+      not be re-read.
+     </p></li><li class="listitem"><p>      Don't let <a class="link" href="runtime-config-compatible.html#GUC-TRANSFORM-NULL-EQUALS"><code class="varname">transform_null_equals</code></a>
+      affect <code class="literal">CASE foo WHEN NULL ...</code> constructs
+      (Heikki Linnakangas)
+     </p><p>      <code class="varname">transform_null_equals</code> is only supposed to affect
+      <code class="literal">foo = NULL</code> expressions written directly by the user, not
+      equality checks generated internally by this form of <code class="literal">CASE</code>.
+     </p></li><li class="listitem"><p>      Change foreign-key trigger creation order to better support
+      self-referential foreign keys (Tom Lane)
+     </p><p>      For a cascading foreign key that references its own table, a row update
+      will fire both the <code class="literal">ON UPDATE</code> trigger and the
+      <code class="literal">CHECK</code> trigger as one event.  The <code class="literal">ON UPDATE</code>
+      trigger must execute first, else the <code class="literal">CHECK</code> will check a
+      non-final state of the row and possibly throw an inappropriate error.
+      However, the firing order of these triggers is determined by their
+      names, which generally sort in creation order since the triggers have
+      auto-generated names following the convention
+      <span class="quote">“<span class="quote">RI_ConstraintTrigger_NNNN</span>”</span>.  A proper fix would require
+      modifying that convention, which we will do in 9.2, but it seems risky
+      to change it in existing releases.  So this patch just changes the
+      creation order of the triggers.  Users encountering this type of error
+      should drop and re-create the foreign key constraint to get its
+      triggers into the right order.
+     </p></li><li class="listitem"><p>      Avoid floating-point underflow while tracking buffer allocation rate
+      (Greg Matthews)
+     </p><p>      While harmless in itself, on certain platforms this would result in
+      annoying kernel log messages.
+     </p></li><li class="listitem"><p>      Preserve blank lines within commands in <span class="application">psql</span>'s command
+      history (Robert Haas)
+     </p><p>      The former behavior could cause problems if an empty line was removed
+      from within a string literal, for example.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to dump user-defined casts between
+      auto-generated types, such as table rowtypes (Tom Lane)
+     </p></li><li class="listitem"><p>      Use the preferred version of <span class="application">xsubpp</span> to build PL/Perl,
+      not necessarily the operating system's main copy
+      (David Wheeler and Alex Hunsaker)
+     </p></li><li class="listitem"><p>      Fix incorrect coding in <code class="filename">contrib/dict_int</code> and
+      <code class="filename">contrib/dict_xsyn</code> (Tom Lane)
+     </p><p>      Some functions incorrectly assumed that memory returned by
+      <code class="function">palloc()</code> is guaranteed zeroed.
+     </p></li><li class="listitem"><p>      Honor query cancel interrupts promptly in <code class="function">pgstatindex()</code>
+      (Robert Haas)
+     </p></li><li class="listitem"><p>      Ensure VPATH builds properly install all server header files
+      (Peter Eisentraut)
+     </p></li><li class="listitem"><p>      Shorten file names reported in verbose error messages (Peter Eisentraut)
+     </p><p>      Regular builds have always reported just the name of the C file
+      containing the error message call, but VPATH builds formerly
+      reported an absolute path name.
+     </p></li><li class="listitem"><p>      Fix interpretation of Windows timezone names for Central America
+      (Tom Lane)
+     </p><p>      Map <span class="quote">“<span class="quote">Central America Standard Time</span>”</span> to <code class="literal">CST6</code>, not
+      <code class="literal">CST6CDT</code>, because DST is generally not observed anywhere in
+      Central America.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2011n
+      for DST law changes in Brazil, Cuba, Fiji, Palestine, Russia, and Samoa;
+      also historical corrections for Alaska and British East Africa.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-3-18.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-3-16.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.180. Release 8.3.18 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.182. Release 8.3.16</td></tr></table></div></body></html>

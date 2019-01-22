@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.60. Release 9.3.17</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-3-18.html" title="E.59. Release 9.3.18" /><link rel="next" href="release-9-3-16.html" title="E.61. Release 9.3.16" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.60. Release 9.3.17</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-3-18.html" title="E.59. Release 9.3.18">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-3-16.html" title="E.61. Release 9.3.16">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-3-17"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.60. Release 9.3.17</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-3-17.html#id-1.11.6.64.4">E.60.1. Migration to Version 9.3.17</a></span></dt><dt><span class="sect2"><a href="release-9-3-17.html#id-1.11.6.64.5">E.60.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2017-05-11</p><p>   This release contains a variety of fixes from 9.3.16.
+   For information about new features in the 9.3 major release, see
+   <a class="xref" href="release-9-3.html" title="E.77. Release 9.3">Section E.77</a>.
+  </p><div class="sect2" id="id-1.11.6.64.4"><div class="titlepage"><div><div><h3 class="title">E.60.1. Migration to Version 9.3.17</h3></div></div></div><p>    A dump/restore is not required for those running 9.3.X.
+   </p><p>    However, if you use foreign data servers that make use of user
+    passwords for authentication, see the first changelog entry below.
+   </p><p>    Also, if you are upgrading from a version earlier than 9.3.16,
+    see <a class="xref" href="release-9-3-16.html" title="E.61. Release 9.3.16">Section E.61</a>.
+   </p></div><div class="sect2" id="id-1.11.6.64.5"><div class="titlepage"><div><div><h3 class="title">E.60.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Restrict visibility
+      of <code class="structname">pg_user_mappings</code>.<code class="structfield">umoptions</code>, to
+      protect passwords stored as user mapping options
+      (Michael Paquier, Feike Steenbergen)
+     </p><p>      The previous coding allowed the owner of a foreign server object,
+      or anyone he has granted server <code class="literal">USAGE</code> permission to,
+      to see the options for all user mappings associated with that server.
+      This might well include passwords for other users.
+      Adjust the view definition to match the behavior of
+      <code class="structname">information_schema.user_mapping_options</code>, namely that
+      these options are visible to the user being mapped, or if the mapping
+      is for <code class="literal">PUBLIC</code> and the current user is the server
+      owner, or if the current user is a superuser.
+      (CVE-2017-7486)
+     </p><p>      By itself, this patch will only fix the behavior in newly initdb'd
+      databases.  If you wish to apply this change in an existing database,
+      follow the corrected procedure shown in the changelog entry for
+      CVE-2017-7547, in <a class="xref" href="release-9-3-18.html" title="E.59. Release 9.3.18">Section E.59</a>.
+     </p></li><li class="listitem"><p>      Prevent exposure of statistical information via leaky operators
+      (Peter Eisentraut)
+     </p><p>      Some selectivity estimation functions in the planner will apply
+      user-defined operators to values obtained
+      from <code class="structname">pg_statistic</code>, such as most common values and
+      histogram entries.  This occurs before table permissions are checked,
+      so a nefarious user could exploit the behavior to obtain these values
+      for table columns he does not have permission to read.  To fix,
+      fall back to a default estimate if the operator's implementation
+      function is not certified leak-proof and the calling user does not have
+      permission to read the table column whose statistics are needed.
+      At least one of these criteria is satisfied in most cases in practice.
+      (CVE-2017-7484)
+     </p></li><li class="listitem"><p>      Restore <span class="application">libpq</span>'s recognition of
+      the <code class="envar">PGREQUIRESSL</code> environment variable (Daniel Gustafsson)
+     </p><p>      Processing of this environment variable was unintentionally dropped
+      in <span class="productname">PostgreSQL</span> 9.3, but its documentation remained.
+      This creates a security hazard, since users might be relying on the
+      environment variable to force SSL-encrypted connections, but that
+      would no longer be guaranteed.  Restore handling of the variable,
+      but give it lower priority than <code class="envar">PGSSLMODE</code>, to avoid
+      breaking configurations that work correctly with post-9.3 code.
+      (CVE-2017-7485)
+     </p></li><li class="listitem"><p>      Fix possible corruption of <span class="quote">“<span class="quote">init forks</span>”</span> of unlogged indexes
+      (Robert Haas, Michael Paquier)
+     </p><p>      This could result in an unlogged index being set to an invalid state
+      after a crash and restart.  Such a problem would persist until the
+      index was dropped and rebuilt.
+     </p></li><li class="listitem"><p>      Fix incorrect reconstruction of <code class="structname">pg_subtrans</code> entries
+      when a standby server replays a prepared but uncommitted two-phase
+      transaction (Tom Lane)
+     </p><p>      In most cases this turned out to have no visible ill effects, but in
+      corner cases it could result in circular references
+      in <code class="structname">pg_subtrans</code>, potentially causing infinite loops
+      in queries that examine rows modified by the two-phase transaction.
+     </p></li><li class="listitem"><p>      Ensure parsing of queries in extension scripts sees the results of
+      immediately-preceding DDL (Julien Rouhaud, Tom Lane)
+     </p><p>      Due to lack of a cache flush step between commands in an extension
+      script file, non-utility queries might not see the effects of an
+      immediately preceding catalog change, such as <code class="command">ALTER TABLE
+      ... RENAME</code>.
+     </p></li><li class="listitem"><p>      Skip tablespace privilege checks when <code class="command">ALTER TABLE ... ALTER
+      COLUMN TYPE</code> rebuilds an existing index (Noah Misch)
+     </p><p>      The command failed if the calling user did not currently have
+      <code class="literal">CREATE</code> privilege for the tablespace containing the index.
+      That behavior seems unhelpful, so skip the check, allowing the
+      index to be rebuilt where it is.
+     </p></li><li class="listitem"><p>      Fix <code class="command">ALTER TABLE ... VALIDATE CONSTRAINT</code> to not recurse
+      to child tables when the constraint is marked <code class="literal">NO INHERIT</code>
+      (Amit Langote)
+     </p><p>      This fix prevents unwanted <span class="quote">“<span class="quote">constraint does not exist</span>”</span> failures
+      when no matching constraint is present in the child tables.
+     </p></li><li class="listitem"><p>      Fix <code class="command">VACUUM</code> to account properly for pages that could not
+      be scanned due to conflicting page pins (Andrew Gierth)
+     </p><p>      This tended to lead to underestimation of the number of tuples in
+      the table.  In the worst case of a small heavily-contended
+      table, <code class="command">VACUUM</code> could incorrectly report that the table
+      contained no tuples, leading to very bad planning choices.
+     </p></li><li class="listitem"><p>      Ensure that bulk-tuple-transfer loops within a hash join are
+      interruptible by query cancel requests (Tom Lane, Thomas Munro)
+     </p></li><li class="listitem"><p>      Fix <code class="function">cursor_to_xml()</code> to produce valid output
+      with <em class="replaceable"><code>tableforest</code></em> = false
+      (Thomas Munro, Peter Eisentraut)
+     </p><p>      Previously it failed to produce a wrapping <code class="literal">&lt;table&gt;</code>
+      element.
+     </p></li><li class="listitem"><p>      Improve performance of <code class="structname">pg_timezone_names</code> view
+      (Tom Lane, David Rowley)
+     </p></li><li class="listitem"><p>      Fix sloppy handling of corner-case errors from <code class="function">lseek()</code>
+      and <code class="function">close()</code> (Tom Lane)
+     </p><p>      Neither of these system calls are likely to fail in typical situations,
+      but if they did, <code class="filename">fd.c</code> could get quite confused.
+     </p></li><li class="listitem"><p>      Fix incorrect check for whether postmaster is running as a Windows
+      service (Michael Paquier)
+     </p><p>      This could result in attempting to write to the event log when that
+      isn't accessible, so that no logging happens at all.
+     </p></li><li class="listitem"><p>      Fix <span class="application">ecpg</span> to support <code class="command">COMMIT PREPARED</code>
+      and <code class="command">ROLLBACK PREPARED</code> (Masahiko Sawada)
+     </p></li><li class="listitem"><p>      Fix a double-free error when processing dollar-quoted string literals
+      in <span class="application">ecpg</span> (Michael Meskes)
+     </p></li><li class="listitem"><p>      In <span class="application">pg_dump</span>, fix incorrect schema and owner marking for
+      comments and security labels of some types of database objects
+      (Giuseppe Broccolo, Tom Lane)
+     </p><p>      In simple cases this caused no ill effects; but for example, a
+      schema-selective restore might omit comments it should include, because
+      they were not marked as belonging to the schema of their associated
+      object.
+     </p></li><li class="listitem"><p>      Avoid emitting an invalid list file in <code class="literal">pg_restore -l</code>
+      when SQL object names contain newlines (Tom Lane)
+     </p><p>      Replace newlines by spaces, which is sufficient to make the output
+      valid for <code class="literal">pg_restore -L</code>'s purposes.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_upgrade</span> to transfer comments and security labels
+      attached to <span class="quote">“<span class="quote">large objects</span>”</span> (blobs) (Stephen Frost)
+     </p><p>      Previously, blobs were correctly transferred to the new database, but
+      any comments or security labels attached to them were lost.
+     </p></li><li class="listitem"><p>      Improve error handling
+      in <code class="filename">contrib/adminpack</code>'s <code class="function">pg_file_write()</code>
+      function (Noah Misch)
+     </p><p>      Notably, it failed to detect errors reported
+      by <code class="function">fclose()</code>.
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/dblink</code>, avoid leaking the previous unnamed
+      connection when establishing a new unnamed connection (Joe Conway)
+     </p></li><li class="listitem"><p>      Fix <code class="filename">contrib/pg_trgm</code>'s extraction of trigrams from regular
+      expressions (Tom Lane)
+     </p><p>      In some cases it would produce a broken data structure that could never
+      match anything, leading to GIN or GiST indexscans that use a trigram
+      index not finding any matches to the regular expression.
+     </p></li><li class="listitem"><p>      In <code class="filename">contrib/postgres_fdw</code>,
+      transmit query cancellation requests to the remote server
+      (Michael Paquier, Etsuro Fujita)
+     </p><p>      Previously, a local query cancellation request did not cause an
+      already-sent remote query to terminate early.  This is a back-patch
+      of work originally done for 9.6.
+     </p></li><li class="listitem"><p>      Support OpenSSL 1.1.0 (Heikki Linnakangas, Andreas Karlsson, Tom Lane)
+     </p><p>      This is a back-patch of work previously done in newer branches;
+      it's needed since many platforms are adopting newer OpenSSL versions.
+     </p></li><li class="listitem"><p>      Support Tcl 8.6 in MSVC builds (Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Sync our copy of the timezone library with IANA release tzcode2017b
+      (Tom Lane)
+     </p><p>      This fixes a bug affecting some DST transitions in January 2038.
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2017b
+      for DST law changes in Chile, Haiti, and Mongolia, plus historical
+      corrections for Ecuador, Kazakhstan, Liberia, and Spain.
+      Switch to numeric abbreviations for numerous time zones in South
+      America, the Pacific and Indian oceans, and some Asian and Middle
+      Eastern countries.
+     </p><p>      The IANA time zone database previously provided textual abbreviations
+      for all time zones, sometimes making up abbreviations that have little
+      or no currency among the local population.  They are in process of
+      reversing that policy in favor of using numeric UTC offsets in zones
+      where there is no evidence of real-world use of an English
+      abbreviation.  At least for the time being, <span class="productname">PostgreSQL</span>
+      will continue to accept such removed abbreviations for timestamp input.
+      But they will not be shown in the <code class="structname">pg_timezone_names</code>
+      view nor used for output.
+     </p></li><li class="listitem"><p>      Use correct daylight-savings rules for POSIX-style time zone names
+      in MSVC builds (David Rowley)
+     </p><p>      The Microsoft MSVC build scripts neglected to install
+      the <code class="filename">posixrules</code> file in the timezone directory tree.
+      This resulted in the timezone code falling back to its built-in
+      rule about what DST behavior to assume for a POSIX-style time zone
+      name.  For historical reasons that still corresponds to the DST rules
+      the USA was using before 2007 (i.e., change on first Sunday in April
+      and last Sunday in October).  With this fix, a POSIX-style zone name
+      will use the current and historical DST transition dates of
+      the <code class="literal">US/Eastern</code> zone.  If you don't want that, remove
+      the <code class="filename">posixrules</code> file, or replace it with a copy of some
+      other zone file (see <a class="xref" href="datatype-datetime.html#DATATYPE-TIMEZONES" title="8.5.3. Time Zones">Section 8.5.3</a>).  Note that
+      due to caching, you may need to restart the server to get such changes
+      to take effect.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-3-18.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-3-16.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.59. Release 9.3.18 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.61. Release 9.3.16</td></tr></table></div></body></html>

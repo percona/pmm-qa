@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.16. Release 9.6.1</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-9-6-2.html" title="E.15. Release 9.6.2" /><link rel="next" href="release-9-6.html" title="E.17. Release 9.6" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.16. Release 9.6.1</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-9-6-2.html" title="E.15. Release 9.6.2">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-9-6.html" title="E.17. Release 9.6">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-9-6-1"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.16. Release 9.6.1</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-9-6-1.html#id-1.11.6.20.4">E.16.1. Migration to Version 9.6.1</a></span></dt><dt><span class="sect2"><a href="release-9-6-1.html#id-1.11.6.20.5">E.16.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2016-10-27</p><p>   This release contains a variety of fixes from 9.6.0.
+   For information about new features in the 9.6 major release, see
+   <a class="xref" href="release-9-6.html" title="E.17. Release 9.6">Section E.17</a>.
+  </p><div class="sect2" id="id-1.11.6.20.4"><div class="titlepage"><div><div><h3 class="title">E.16.1. Migration to Version 9.6.1</h3></div></div></div><p>    A dump/restore is not required for those running 9.6.X.
+   </p><p>    However, if your installation has been affected by the bugs described in
+    the first two changelog entries below, then after updating you may need
+    to take action to repair corrupted free space maps and/or visibility
+    maps.
+   </p></div><div class="sect2" id="id-1.11.6.20.5"><div class="titlepage"><div><div><h3 class="title">E.16.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>      Fix WAL-logging of truncation of relation free space maps and
+      visibility maps (Pavan Deolasee, Heikki Linnakangas)
+     </p><p>      It was possible for these files to not be correctly restored during
+      crash recovery, or to be written incorrectly on a standby server.
+      Bogus entries in a free space map could lead to attempts to access
+      pages that have been truncated away from the relation itself, typically
+      producing errors like <span class="quote">“<span class="quote">could not read block <em class="replaceable"><code>XXX</code></em>:
+      read only 0 of 8192 bytes</span>”</span>.  Checksum failures in the
+      visibility map are also possible, if checksumming is enabled.
+     </p><p>      Procedures for determining whether there is a problem and repairing it
+      if so are discussed at
+      <a class="ulink" href="https://wiki.postgresql.org/wiki/Free_Space_Map_Problems" target="_top">https://wiki.postgresql.org/wiki/Free_Space_Map_Problems</a>.
+     </p></li><li class="listitem"><p>      Fix possible data corruption when <span class="application">pg_upgrade</span> rewrites
+      a relation visibility map into 9.6 format (Tom Lane)
+     </p><p>      On big-endian machines, bytes of the new visibility map were written
+      in the wrong order, leading to a completely incorrect map.  On
+      Windows, the old map was read using text mode, leading to incorrect
+      results if the map happened to contain consecutive bytes that matched
+      a carriage return/line feed sequence.  The latter error would almost
+      always lead to a <span class="application">pg_upgrade</span> failure due to the map
+      file appearing to be the wrong length.
+     </p><p>      If you are using a big-endian machine (many non-Intel architectures
+      are big-endian) and have used <span class="application">pg_upgrade</span> to upgrade
+      from a pre-9.6 release, you should assume that all visibility maps are
+      incorrect and need to be regenerated.  It is sufficient to truncate
+      each relation's visibility map
+      with <code class="filename">contrib/pg_visibility</code>'s
+      <code class="function">pg_truncate_visibility_map()</code> function.
+      For more information see
+      <a class="ulink" href="https://wiki.postgresql.org/wiki/Visibility_Map_Problems" target="_top">https://wiki.postgresql.org/wiki/Visibility_Map_Problems</a>.
+     </p></li><li class="listitem"><p>      Don't throw serialization errors for self-conflicting insertions
+      in <code class="command">INSERT ... ON CONFLICT</code> (Thomas Munro, Peter Geoghegan)
+     </p></li><li class="listitem"><p>      Fix use-after-free hazard in execution of aggregate functions
+      using <code class="literal">DISTINCT</code> (Peter Geoghegan)
+     </p><p>      This could lead to a crash or incorrect query results.
+     </p></li><li class="listitem"><p>      Fix incorrect handling of polymorphic aggregates used as window
+      functions (Tom Lane)
+     </p><p>      The aggregate's transition function was told that its first argument
+      and result were of the aggregate's output type, rather than the
+      state type.  This led to errors or crashes with
+      polymorphic transition functions.
+     </p></li><li class="listitem"><p>      Fix <code class="command">COPY</code> with a column name list from a table that has
+      row-level security enabled (Adam Brightwell)
+     </p></li><li class="listitem"><p>      Fix <code class="command">EXPLAIN</code> to emit valid XML when
+      <a class="xref" href="runtime-config-statistics.html#GUC-TRACK-IO-TIMING">track_io_timing</a> is on (Markus Winand)
+     </p><p>      Previously the XML output-format option produced syntactically invalid
+      tags such as <code class="literal">&lt;I/O-Read-Time&gt;</code>.  That is now
+      rendered as <code class="literal">&lt;I-O-Read-Time&gt;</code>.
+     </p></li><li class="listitem"><p>      Fix statistics update for <code class="command">TRUNCATE</code> in a prepared
+      transaction (Stas Kelvich)
+     </p></li><li class="listitem"><p>      Fix bugs in merging inherited <code class="literal">CHECK</code> constraints while
+      creating or altering a table (Tom Lane, Amit Langote)
+     </p><p>      Allow identical <code class="literal">CHECK</code> constraints to be added to a parent
+      and child table in either order.  Prevent merging of a valid
+      constraint from the parent table with a <code class="literal">NOT VALID</code>
+      constraint on the child.  Likewise, prevent merging of a <code class="literal">NO
+      INHERIT</code> child constraint with an inherited constraint.
+     </p></li><li class="listitem"><p>      Show a sensible value
+      in <code class="structname">pg_settings</code>.<code class="structfield">unit</code>
+      for <code class="varname">min_wal_size</code> and <code class="varname">max_wal_size</code> (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix replacement of array elements in <code class="function">jsonb_set()</code>
+      (Tom Lane)
+     </p><p>      If the target is an existing JSON array element, it got deleted
+      instead of being replaced with a new value.
+     </p></li><li class="listitem"><p>      Avoid very-low-probability data corruption due to testing tuple
+      visibility without holding buffer lock (Thomas Munro, Peter Geoghegan,
+      Tom Lane)
+     </p></li><li class="listitem"><p>      Preserve commit timestamps across server restart
+      (Julien Rouhaud, Craig Ringer)
+     </p><p>      With <a class="xref" href="runtime-config-replication.html#GUC-TRACK-COMMIT-TIMESTAMP">track_commit_timestamp</a> turned on, old
+      commit timestamps became inaccessible after a clean server restart.
+     </p></li><li class="listitem"><p>      Fix logical WAL decoding to work properly when a subtransaction's WAL
+      output is large enough to spill to disk (Andres Freund)
+     </p></li><li class="listitem"><p>      Fix dangling-pointer problem in logical WAL decoding (Stas Kelvich)
+     </p></li><li class="listitem"><p>      Round shared-memory allocation request to a multiple of the actual
+      huge page size when attempting to use huge pages on Linux (Tom Lane)
+     </p><p>      This avoids possible failures during <code class="function">munmap()</code> on systems
+      with atypical default huge page sizes.  Except in crash-recovery
+      cases, there were no ill effects other than a log message.
+     </p></li><li class="listitem"><p>      Don't try to share SSL contexts across multiple connections
+      in <span class="application">libpq</span> (Heikki Linnakangas)
+     </p><p>      This led to assorted corner-case bugs, particularly when trying to use
+      different SSL parameters for different connections.
+     </p></li><li class="listitem"><p>      Avoid corner-case memory leak in <span class="application">libpq</span> (Tom Lane)
+     </p><p>      The reported problem involved leaking an error report
+      during <code class="function">PQreset()</code>, but there might be related cases.
+     </p></li><li class="listitem"><p>      In <span class="application">pg_upgrade</span>, check library loadability in name order
+      (Tom Lane)
+     </p><p>      This is a workaround to deal with cross-extension dependencies from
+      language transform modules to their base language and data type
+      modules.
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_upgrade</span> to work correctly for extensions
+      containing index access methods (Tom Lane)
+     </p><p>      To allow this, the server has been extended to support <code class="command">ALTER
+      EXTENSION ADD/DROP ACCESS METHOD</code>.  That functionality should have
+      been included in the original patch to support dynamic creation of
+      access methods, but it was overlooked.
+     </p></li><li class="listitem"><p>      Improve error reporting in <span class="application">pg_upgrade</span>'s file
+      copying/linking/rewriting steps (Tom Lane, Álvaro Herrera)
+     </p></li><li class="listitem"><p>      Fix <span class="application">pg_dump</span> to work against pre-7.4 servers
+      (Amit Langote, Tom Lane)
+     </p></li><li class="listitem"><p>      Disallow specifying both <code class="option">--source-server</code>
+      and <code class="option">--source-target</code> options to <span class="application">pg_rewind</span>
+      (Michael Banck)
+     </p></li><li class="listitem"><p>      Make <span class="application">pg_rewind</span> turn off <code class="varname">synchronous_commit</code>
+      in its session on the source server (Michael Banck, Michael Paquier)
+     </p><p>      This allows <span class="application">pg_rewind</span> to work even when the source
+      server is using synchronous replication that is not working for some
+      reason.
+     </p></li><li class="listitem"><p>      In <span class="application">pg_xlogdump</span>, retry opening new WAL segments when
+      using <code class="option">--follow</code> option (Magnus Hagander)
+     </p><p>      This allows for a possible delay in the server's creation of the next
+      segment.
+     </p></li><li class="listitem"><p>      Fix <code class="filename">contrib/pg_visibility</code> to report the correct TID for
+      a corrupt tuple that has been the subject of a rolled-back update
+      (Tom Lane)
+     </p></li><li class="listitem"><p>      Fix makefile dependencies so that parallel make
+      of <span class="application">PL/Python</span> by itself will succeed reliably
+      (Pavel Raiskup)
+     </p></li><li class="listitem"><p>      Update time zone data files to <span class="application">tzdata</span> release 2016h
+      for DST law changes in Palestine and Turkey, plus historical
+      corrections for Turkey and some regions of Russia.
+      Switch to numeric abbreviations for some time zones in Antarctica,
+      the former Soviet Union, and Sri Lanka.
+     </p><p>      The IANA time zone database previously provided textual abbreviations
+      for all time zones, sometimes making up abbreviations that have little
+      or no currency among the local population.  They are in process of
+      reversing that policy in favor of using numeric UTC offsets in zones
+      where there is no evidence of real-world use of an English
+      abbreviation.  At least for the time being, <span class="productname">PostgreSQL</span>
+      will continue to accept such removed abbreviations for timestamp input.
+      But they will not be shown in the <code class="structname">pg_timezone_names</code>
+      view nor used for output.
+     </p><p>      In this update, <code class="literal">AMT</code> is no longer shown as being in use to
+      mean Armenia Time.  Therefore, we have changed the <code class="literal">Default</code>
+      abbreviation set to interpret it as Amazon Time, thus UTC-4 not UTC+4.
+     </p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-9-6-2.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-9-6.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.15. Release 9.6.2 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.17. Release 9.6</td></tr></table></div></body></html>

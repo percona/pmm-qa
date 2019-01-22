@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.265. Release 8.0.8</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-8-0-9.html" title="E.264. Release 8.0.9" /><link rel="next" href="release-8-0-7.html" title="E.266. Release 8.0.7" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.265. Release 8.0.8</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-8-0-9.html" title="E.264. Release 8.0.9">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-8-0-7.html" title="E.266. Release 8.0.7">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-8-0-8"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.265. Release 8.0.8</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-8-0-8.html#id-1.11.6.269.4">E.265.1. Migration to Version 8.0.8</a></span></dt><dt><span class="sect2"><a href="release-8-0-8.html#id-1.11.6.269.5">E.265.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>2006-05-23</p><p>   This release contains a variety of fixes from 8.0.7,
+   including patches for extremely serious security issues.
+   For information about new features in the 8.0 major release, see
+   <a class="xref" href="release-8-0.html" title="E.273. Release 8.0">Section E.273</a>.
+  </p><div class="sect2" id="id-1.11.6.269.4"><div class="titlepage"><div><div><h3 class="title">E.265.1. Migration to Version 8.0.8</h3></div></div></div><p>    A dump/restore is not required for those running 8.0.X.  However,
+    if you are upgrading from a version earlier than 8.0.6,
+    see <a class="xref" href="release-8-0-6.html" title="E.267. Release 8.0.6">Section E.267</a>.
+   </p><p>    Full security against the SQL-injection attacks described in
+    CVE-2006-2313 and CVE-2006-2314 might require changes in application
+    code.  If you have applications that embed untrustworthy strings
+    into SQL commands, you should examine them as soon as possible to
+    ensure that they are using recommended escaping techniques.  In
+    most cases, applications should be using subroutines provided by
+    libraries or drivers (such as <span class="application">libpq</span>'s
+    <code class="function">PQescapeStringConn()</code>) to perform string escaping,
+    rather than relying on <span class="foreignphrase"><em class="foreignphrase">ad hoc</em></span> code to do it.
+   </p></div><div class="sect2" id="id-1.11.6.269.5"><div class="titlepage"><div><div><h3 class="title">E.265.2. Changes</h3></div></div></div><div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; "><li class="listitem"><p>Change the server to reject invalidly-encoded multibyte
+characters in all cases (Tatsuo, Tom)</p><p>While <span class="productname">PostgreSQL</span> has been moving in this direction for
+some time, the checks are now applied uniformly to all encodings and all
+textual input, and are now always errors not merely warnings.  This change
+defends against SQL-injection attacks of the type described in CVE-2006-2313.</p></li><li class="listitem"><p>Reject unsafe uses of <code class="literal">\'</code> in string literals</p><p>As a server-side defense against SQL-injection attacks of the type
+described in CVE-2006-2314, the server now only accepts <code class="literal">''</code> and not
+<code class="literal">\'</code> as a representation of ASCII single quote in SQL string
+literals.  By default, <code class="literal">\'</code> is rejected only when
+<code class="varname">client_encoding</code> is set to a client-only encoding (SJIS, BIG5, GBK,
+GB18030, or UHC), which is the scenario in which SQL injection is possible.
+A new configuration parameter <code class="varname">backslash_quote</code> is available to
+adjust this behavior when needed.  Note that full security against
+CVE-2006-2314 might require client-side changes; the purpose of
+<code class="varname">backslash_quote</code> is in part to make it obvious that insecure
+clients are insecure.</p></li><li class="listitem"><p>Modify <span class="application">libpq</span>'s string-escaping routines to be
+aware of encoding considerations and
+<code class="varname">standard_conforming_strings</code></p><p>This fixes <span class="application">libpq</span>-using applications for the security
+issues described in CVE-2006-2313 and CVE-2006-2314, and also future-proofs
+them against the planned changeover to SQL-standard string literal syntax.
+Applications that use multiple <span class="productname">PostgreSQL</span> connections
+concurrently should migrate to <code class="function">PQescapeStringConn()</code> and
+<code class="function">PQescapeByteaConn()</code> to ensure that escaping is done correctly
+for the settings in use in each database connection.  Applications that
+do string escaping <span class="quote">“<span class="quote">by hand</span>”</span> should be modified to rely on library
+routines instead.</p></li><li class="listitem"><p>Fix some incorrect encoding conversion functions</p><p><code class="function">win1251_to_iso</code>, <code class="function">alt_to_iso</code>,
+<code class="function">euc_tw_to_big5</code>, <code class="function">euc_tw_to_mic</code>,
+<code class="function">mic_to_euc_tw</code> were all broken to varying
+extents.</p></li><li class="listitem"><p>Clean up stray remaining uses of <code class="literal">\'</code> in strings
+(Bruce, Jan)</p></li><li class="listitem"><p>Fix bug that sometimes caused OR'd index scans to
+miss rows they should have returned</p></li><li class="listitem"><p>Fix WAL replay for case where a btree index has been
+truncated</p></li><li class="listitem"><p>Fix <code class="literal">SIMILAR TO</code> for patterns involving
+<code class="literal">|</code> (Tom)</p></li><li class="listitem"><p>Fix <code class="command">SELECT INTO</code> and <code class="command">CREATE TABLE AS</code> to
+create tables in the default tablespace, not the base directory (Kris
+Jurka)</p></li><li class="listitem"><p>Fix server to use custom DH SSL parameters correctly (Michael
+Fuhr)</p></li><li class="listitem"><p>Fix for Bonjour on Intel Macs (Ashley Clark)</p></li><li class="listitem"><p>Fix various minor memory leaks</p></li><li class="listitem"><p>Fix problem with password prompting on some Win32 systems
+(Robert Kinberg)</p></li></ul></div></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-8-0-9.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-8-0-7.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.264. Release 8.0.9 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.266. Release 8.0.7</td></tr></table></div></body></html>

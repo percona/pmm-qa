@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>E.357. Release 6.1</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="release-6-1-1.html" title="E.356. Release 6.1.1" /><link rel="next" href="release-6-0.html" title="E.358. Release 6.0" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">E.357. Release 6.1</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="release-6-1-1.html" title="E.356. Release 6.1.1">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="release.html" title="Appendix E. Release Notes">Up</a></td><th width="60%" align="center">Appendix E. Release Notes</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="release-6-0.html" title="E.358. Release 6.0">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="RELEASE-6-1"><div class="titlepage"><div><div><h2 class="title" style="clear: both">E.357. Release 6.1</h2></div></div></div><div class="toc"><dl class="toc"><dt><span class="sect2"><a href="release-6-1.html#id-1.11.6.361.9">E.357.1. Migration to Version 6.1</a></span></dt><dt><span class="sect2"><a href="release-6-1.html#id-1.11.6.361.10">E.357.2. Changes</a></span></dt></dl></div><p><strong>Release date: </strong>1997-06-08</p><p> The regression tests have been adapted and extensively modified for the
+ 6.1 release of <span class="productname">PostgreSQL</span>.</p><p> Three new data types (<code class="type">datetime</code>, <code class="type">timespan</code>, and <code class="type">circle</code>) have been added to
+ the native set of <span class="productname">PostgreSQL</span> types. Points, boxes, paths, and polygons
+ have had their output formats made consistent across the data types.
+ The polygon output in misc.out has only been spot-checked for correctness
+ relative to the original regression output.</p><p> <span class="productname">PostgreSQL</span> 6.1 introduces a new, alternate
+optimizer which uses <em class="firstterm">genetic</em>
+ algorithms. These algorithms introduce a random behavior in the ordering
+ of query results when the query contains multiple qualifiers or multiple
+ tables (giving the optimizer a choice on order of evaluation). Several
+ regression tests have been modified to explicitly order the results, and
+ hence are insensitive to optimizer choices. A few regression tests are
+ for data types which are inherently unordered (e.g. points and time
+ intervals) and tests involving those types are explicitly bracketed with
+ <code class="command">set geqo to 'off'</code> and <code class="command">reset geqo</code>.</p><p> The interpretation of array specifiers (the curly braces around atomic
+ values) appears to have changed sometime after the original regression
+ tests were generated. The current <code class="filename">./expected/*.out</code> files reflect this
+ new interpretation, which might not be correct!</p><p> The float8 regression test fails on at least some platforms. This is due
+ to differences in implementations of <code class="function">pow()</code> and <code class="function">exp()</code> and the signaling
+ mechanisms used for overflow and underflow conditions.</p><p> The <span class="quote">“<span class="quote">random</span>”</span> results in the random test should cause the
+ <span class="quote">“<span class="quote">random</span>”</span> test to be <span class="quote">“<span class="quote">failed</span>”</span>, since the
+ regression tests are evaluated using a simple diff. However,
+ <span class="quote">“<span class="quote">random</span>”</span> does not seem to produce random results on my test
+ machine (Linux/<span class="application">gcc</span>/i686).</p><div class="sect2" id="id-1.11.6.361.9"><div class="titlepage"><div><div><h3 class="title">E.357.1. Migration to Version 6.1</h3></div></div></div><p>This migration requires a complete dump of the 6.0 database and a
+restore of the database in 6.1.</p><p>Those migrating from earlier 1.* releases should first upgrade to 1.09
+because the COPY output format was improved from the 1.02 release.</p></div><div class="sect2" id="id-1.11.6.361.10"><div class="titlepage"><div><div><h3 class="title">E.357.2. Changes</h3></div></div></div><pre class="programlisting">Bug Fixes
+---------
+packet length checking in library routines
+lock manager priority patch
+check for under/over flow of float8(Bruce)
+multitable join fix(Vadim)
+SIGPIPE crash fix(Darren)
+large object fixes(Sven)
+allow btree indexes to handle NULLs(Vadim)
+timezone fixes(D'Arcy)
+select SUM(x) can return NULL on no rows(Thomas)
+internal optimizer, executor bug fixes(Vadim)
+fix problem where inner loop in &lt; or &lt;= has no rows(Vadim)
+prevent re-commuting join index clauses(Vadim)
+fix join clauses for multiple tables(Vadim)
+fix hash, hashjoin for arrays(Vadim)
+fix btree for abstime type(Vadim)
+large object fixes(Raymond)
+fix buffer leak in hash indexes (Vadim)
+fix rtree for use in inner scan (Vadim)
+fix gist for use in inner scan, cleanups (Vadim, Andrea)
+avoid unnecessary local buffers allocation (Vadim, Massimo)
+fix local buffers leak in transaction aborts (Vadim)
+fix file manager memory leaks, cleanups (Vadim, Massimo)
+fix storage manager memory leaks (Vadim)
+fix btree duplicates handling (Vadim)
+fix deleted rows reincarnation caused by vacuum (Vadim)
+fix SELECT varchar()/char() INTO TABLE made zero-length fields(Bruce)
+many psql, pg_dump, and libpq memory leaks fixed using Purify (Igor)
+
+Enhancements
+------------
+attribute optimization statistics(Bruce)
+much faster new btree bulk load code(Paul)
+BTREE UNIQUE added to bulk load code(Vadim)
+new lock debug code(Massimo)
+massive changes to libpg++(Leo)
+new GEQO optimizer speeds table multitable optimization(Martin)
+new WARN message for non-unique insert into unique key(Marc)
+update x=-3, no spaces, now valid(Bruce)
+remove case-sensitive identifier handling(Bruce,Thomas,Dan)
+debug backend now pretty-prints tree(Darren)
+new Oracle character functions(Edmund)
+new plaintext password functions(Dan)
+no such class or insufficient privilege changed to distinct messages(Dan)
+new ANSI timestamp function(Dan)
+new ANSI Time and Date types (Thomas)
+move large chunks of data in backend(Martin)
+multicolumn btree indexes(Vadim)
+new SET var TO value command(Martin)
+update transaction status on reads(Dan)
+new locale settings for character types(Oleg)
+new SEQUENCE serial number generator(Vadim)
+GROUP BY function now possible(Vadim)
+re-organize regression test(Thomas,Marc)
+new optimizer operation weights(Vadim)
+new psql \z grant/permit option(Marc)
+new MONEY data type(D'Arcy,Thomas)
+tcp socket communication speed improved(Vadim)
+new VACUUM option for attribute statistics, and for certain columns (Vadim)
+many geometric type improvements(Thomas,Keith)
+additional regression tests(Thomas)
+new datestyle variable(Thomas,Vadim,Martin)
+more comparison operators for sorting types(Thomas)
+new conversion functions(Thomas)
+new more compact btree format(Vadim)
+allow pg_dumpall to preserve database ownership(Bruce)
+new SET GEQO=# and R_PLANS variable(Vadim)
+old (!GEQO) optimizer can use right-sided plans (Vadim)
+typechecking improvement in SQL parser(Bruce)
+new SET, SHOW, RESET commands(Thomas,Vadim)
+new \connect database USER option
+new destroydb -i option (Igor)
+new \dt and \di psql commands (Darren)
+SELECT "\n" now escapes newline (A. Duursma)
+new geometry conversion functions from old format (Thomas)
+
+Source tree changes
+-------------------
+new configuration script(Marc)
+readline configuration option added(Marc)
+OS-specific configuration options removed(Marc)
+new OS-specific template files(Marc)
+no more need to edit Makefile.global(Marc)
+re-arrange include files(Marc)
+nextstep patches (Gregor Hoffleit)
+removed Windows-specific code(Bruce)
+removed postmaster -e option, now only postgres -e option (Bruce)
+merge duplicate library code in front/backends(Martin)
+now works with eBones, international Kerberos(Jun)
+more shared library support
+c++ include file cleanup(Bruce)
+warn about buggy flex(Bruce)
+DG/UX, Ultrix, IRIX, AIX portability fixes</pre></div></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="release-6-1-1.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="release.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="release-6-0.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">E.356. Release 6.1.1 </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> E.358. Release 6.0</td></tr></table></div></body></html>

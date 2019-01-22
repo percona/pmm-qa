@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /><title>32.5. Test Coverage Examination</title><link rel="stylesheet" type="text/css" href="stylesheet.css" /><link rev="made" href="pgsql-docs@postgresql.org" /><meta name="generator" content="DocBook XSL Stylesheets V1.79.1" /><link rel="prev" href="regress-tap.html" title="32.4. TAP Tests" /><link rel="next" href="client-interfaces.html" title="Part IV. Client Interfaces" /></head><body><div xmlns="http://www.w3.org/TR/xhtml1/transitional" class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="5" align="center">32.5. Test Coverage Examination</th></tr><tr><td width="10%" align="left"><a accesskey="p" href="regress-tap.html" title="32.4. TAP Tests">Prev</a> </td><td width="10%" align="left"><a accesskey="u" href="regress.html" title="Chapter 32. Regression Tests">Up</a></td><th width="60%" align="center">Chapter 32. Regression Tests</th><td width="10%" align="right"><a accesskey="h" href="index.html" title="PostgreSQL 10.5 Documentation">Home</a></td><td width="10%" align="right"> <a accesskey="n" href="client-interfaces.html" title="Part IV. Client Interfaces">Next</a></td></tr></table><hr></hr></div><div class="sect1" id="REGRESS-COVERAGE"><div class="titlepage"><div><div><h2 class="title" style="clear: both">32.5. Test Coverage Examination</h2></div></div></div><p>    The PostgreSQL source code can be compiled with coverage testing
+    instrumentation, so that it becomes possible to examine which
+    parts of the code are covered by the regression tests or any other
+    test suite that is run with the code.  This is currently supported
+    when compiling with GCC and requires the <code class="command">gcov</code>
+    and <code class="command">lcov</code> programs.
+   </p><p>    A typical workflow would look like this:
+</p><pre class="screen">./configure --enable-coverage ... OTHER OPTIONS ...
+make
+make check # or other test suite
+make coverage-html</pre><p>
+    Then point your HTML browser
+    to <code class="filename">coverage/index.html</code>.
+    The <code class="command">make</code> commands also work in subdirectories.
+   </p><p>    To reset the execution counts between test runs, run:
+</p><pre class="screen">make coverage-clean</pre><p>
+   </p></div><div class="navfooter"><hr /><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="regress-tap.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="regress.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="client-interfaces.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">32.4. TAP Tests </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> Part IV. Client Interfaces</td></tr></table></div></body></html>
