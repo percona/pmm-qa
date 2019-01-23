@@ -9,7 +9,7 @@ GUI tests are created for testing frontend of PMM. They include tests for Query 
 4. Make sure to update URL of the application in the `webdriver` helper in the configuration file (codecept.json)
 5. Install latest version of JDK on your system
 6. Install Selenium Standalone server via npm globally using `npm install selenium-standalone -g`
-7. Run the following `selenium-standalone install && selenium-standalone start`
+7. Run the following `selenium-standalone start`
 8. Inside the root folder for `pmm-qa` run `npm install` this will install all required packages
 
 ## How to use
