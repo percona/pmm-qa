@@ -9,7 +9,8 @@ module.exports = {
         navigation: "//div[@class='navbar']//a",
         timePickerMenu: "//button[@ng-click='ctrl.openDropdown()']",
         fromTime: "(//input[@input-datetime])[1]",
-        applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]"
+        applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]",
+        backToDashboard: "//button[@ng-click='ctrl.close()']"
     },
 
     // introducing methods
@@ -43,8 +44,8 @@ module.exports = {
 
     viewMetric (metricName) {
         I.click("//span[contains(text(), '"+ metricName +"')]");
-        I.waitForElement("//span[@class='dropdown-item-text' and contains(text(), 'View')]", 30);
-        I.click("//span[@class='dropdown-item-text' and contains(text(), 'View')]");
+        I.waitForElement("//span[contains(text(), '" + metricName + "')]/../span/ul/li[1]", 30);
+        I.click("//span[contains(text(), '" + metricName + "')]/../span/ul/li[1]");
         I.wait(10);
     }
 }
