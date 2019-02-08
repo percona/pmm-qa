@@ -2,7 +2,7 @@
   "output": "tests/output",
   "helpers": {
     "WebDriverIO": {
-      "url": "http://localhost:8080/",
+      "url": "{PMM_URL_HERE}",
       "browser": "chrome",
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}",
