@@ -10,7 +10,7 @@ function pmm_framework_setup() {
 }
 
 function pmm_framework_add_clients() {
-  ${DIRNAME}/pmm-framework.sh --addclient=$1,$2 --download
+  ${DIRNAME}/pmm-framework.sh --addclient=$1,$2 --${1}-version=$3
 }
 
 function pmm_wipe_all() {
@@ -23,6 +23,10 @@ function pmm_wipe_clients() {
 
 function  pmm_wipe_server() {
   ${DIRNAME}/pmm-framework.sh --wipe-server
+}
+
+function pmm_remove_packages() {
+  ${DIRNAME}/pmm-framework.sh --delete-package --package-name=$1 --${1}-version=$2
 }
 
 # functions for some env setup
@@ -151,11 +155,11 @@ function run_pmm_slow_log_rotation_check() {
 }
 # Additional functions
 function run_create_table() {
-  bash ${DIRNAME}/create_table.sh $1 $2
+  bash ${DIRNAME}/create_table.sh $1 $2 $3
 }
 
 function run_populate_table() {
-  bash ${DIRNAME}/populate_table.sh $1 $2 $3
+  bash ${DIRNAME}/populate_table.sh $1 $2 $3 $4
 }
 
 # Setting up the PMM using pmm_framework_setup() here
@@ -182,7 +186,7 @@ echo "Wipe clients"
 pmm_wipe_clients
 
 echo "Adding clients"
-pmm_framework_add_clients $instance_t $instance_c
+pmm_framework_add_clients $instance_t $instance_c $version
 
 if [[ $instance_t != "mo" ]] ; then
   echo "Running linux metrics tests"
@@ -224,10 +228,10 @@ run_external_exporters_tests
 
 if [[ $stress == "1" && $table_c != "0" && -z $table_size ]] ; then
   echo "WARN: Running stress tests; creating empty tables"
-  run_create_table $instance_t $table_c
+  run_create_table $instance_t $table_c $version
 elif [[ $stress == "1" && $table_c != "0" && $table_size != "0" ]] ; then
   echo "WARN: Running stress tests; creating tables and inserting using sysbench"
-  run_populate_table $instance_t $table_c $table_size
+  run_populate_table $instance_t $table_c $table_size $version
 else
   echo "Skipping stress test!"
 fi
@@ -272,3 +276,6 @@ run_pmm_summary
 
 echo "Wipe clients"
 pmm_wipe_clients
+
+echo "Deleting Installed Packages"
+pmm_remove_packages $instance_t $version
