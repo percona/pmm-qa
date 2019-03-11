@@ -312,6 +312,9 @@ check_script(){
   if [ ${MPID} -ne 0 ]; then echo "Assert! ${MPID}. Terminating!"; exit 1; fi
 }
 
+mongo_sysbench(){
+
+}
 # Add check for --pmm-server-memory
 if [[ -z "$MEMORY" ]]; then
   PMM_METRICS_MEMORY=""
