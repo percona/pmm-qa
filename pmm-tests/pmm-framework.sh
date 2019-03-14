@@ -54,6 +54,7 @@ usage () {
   echo " --replcount                    You can configure multiple mongodb replica sets with this oprion"
   echo " --with-replica                 This will configure mongodb replica setup"
   echo " --with-sharding                This will configure mongodb sharding setup"
+  echo " --mongo-sysbench               This option initiates sysbench oltp prepare and run for MongoDB instance"
   echo " --add-docker-client            Add docker pmm-clients with percona server to the currently live PMM server"
   echo " --list                         List all client information as obtained from pmm-admin"
   echo " --wipe-clients                 This will stop all client instances and remove all clients from pmm-admin"
@@ -80,7 +81,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -265,6 +266,10 @@ do
     storage_engine="$2"
     shift 2
     ;;
+    --mongo-sysbench )
+    shift
+    mongo_sysbench=1
+    ;;
     --compare-query-count )
     shift
     compare_query_count=1
@@ -312,6 +317,20 @@ check_script(){
   if [ ${MPID} -ne 0 ]; then echo "Assert! ${MPID}. Terminating!"; exit 1; fi
 }
 
+mongo_sysbench(){
+  SYSBENCH=$(which sysbench)
+  if [[ -z "SYSBENCH" ]];then
+    echo "ERROR! 'sysbench' is not installed. Please install sysbench. Terminating."
+    exit 1
+  fi
+  wget https://raw.githubusercontent.com/Percona-Lab/sysbench-mongodb-lua/master/oltp-mongo.lua
+  PORT=$(sudo pmm-admin list  | awk -F '[: ]+' '/mongodb:metrics/{print $7}'| head -n1) 
+  echo "PORT "$PORT
+  sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=1000000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=${PORT}  --rand-type=pareto prepare > $WORKDIR/logs/mongo_sysbench_prepare.txt 2>&1 &
+  sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=1000000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=${PORT} --time=1200 --report-interval=1 --rand-type=pareto run > $WORKDIR/logs/mongo_sysbench_run.txt 2>&1 &
+  check_script $? "Failed to run sysbench for MongoDB dataload"
+
+}
 # Add check for --pmm-server-memory
 if [[ -z "$MEMORY" ]]; then
   PMM_METRICS_MEMORY=""
@@ -1467,6 +1486,9 @@ if [ ! -z $sysbench_oltp_run ]; then
   sysbench_run
 fi
 
+if [ ! -z $mongo_sysbench ]; then
+  mongo_sysbench
+fi
 if [ ! -z $add_docker_client ]; then
   sanity_check
   pmm_docker_client_startup
