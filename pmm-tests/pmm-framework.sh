@@ -266,9 +266,9 @@ do
     storage_engine="$2"
     shift 2
     ;;
-     --mongo_sysbench )
-      shift
-      mongo_sysbench=1
+    --mongo-sysbench )
+    shift
+    mongo_sysbench=1
     ;;
     --compare-query-count )
     shift
@@ -324,8 +324,10 @@ mongo_sysbench(){
     exit 1
   fi
   wget https://raw.githubusercontent.com/Percona-Lab/sysbench-mongodb-lua/master/oltp-mongo.lua
-  sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=100000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=$1  --rand-type=pareto prepare > $WORKDIR/logs/mongo_sysbench_prepare.txt 2>&1 &
-  sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=100000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=$1 --time=1200 --report-interval=1 --rand-type=pareto run > $WORKDIR/logs/mongo_sysbench_run.txt 2>&1 &
+  PORT=$(sudo pmm-admin list  | awk -F '[: ]+' '/mongodb:metrics/{print $7}'| head -n1) 
+  echo "PORT "$PORT
+  sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=1000000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=${PORT}  --rand-type=pareto prepare > $WORKDIR/logs/mongo_sysbench_prepare.txt 2>&1 &
+  sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=1000000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=${PORT} --time=1200 --report-interval=1 --rand-type=pareto run > $WORKDIR/logs/mongo_sysbench_run.txt 2>&1 &
   check_script $? "Failed to run sysbench for MongoDB dataload"
 
 }
