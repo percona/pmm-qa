@@ -38,7 +38,7 @@ db_password=$5
 which_db=$2
 
 node_name=node$((1 + RANDOM % 100))
-json=`curl -d '{"address": "'${pmm_server}'", "custom_labels": {"custom_label": "for_node"}, "node_name": "'$node_name'"}' http://$pmm_server:$pmm_server_port/v1/inventory/Nodes/AddGeneric`
+json=`curl -d '{"address": "'$pmm_server:$pmm_server_port'", "custom_labels": {"custom_label": "for_node"}, "node_name": "'$node_name'"}' http://$pmm_server:$pmm_server_port/v1/inventory/Nodes/AddGeneric`
 prop='node_id'
 node_id=`jsonval`
 
