@@ -36,7 +36,9 @@ db_server_port=${db_server_with_port[1]}
 db_user=$4
 db_password=$5
 which_db=$2
-
+if [ -z "$pmm_server_port" ]
+    then
+fi
 node_name=node$((1 + RANDOM % 100))
 json=`curl -d '{"address": "'${pmm_server}'", "custom_labels": {"custom_label": "for_node"}, "node_name": "'$node_name'"}' http://$pmm_server:$pmm_server_port/v1/inventory/Nodes/AddGeneric`
 prop='node_id'
@@ -48,7 +50,7 @@ agent_id=`jsonval`
 echo $agent_id
 echo $node_id
 
-pmm-agent --address=$pmm_server:443 --insecure-tls --id=$agent_id & > /dev/null 2>&1
+pmm-agent --address=$pmm_server:443 --insecure-tls --id=$agent_id --trace & > /dev/null 2>&1
 
 sleep 10
 
@@ -71,6 +73,9 @@ then
 	prop='runs_on_node_id'
 	runs_on_node_id=`jsonval`
 	echo $runs_on_node_id
+
+  json=`curl -d '{"custom_labels": {"custom_label5": "for_perfschemaAgent"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
+  http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddQANMySQLPerfSchemaAgent
 fi
 
 if [ $which_db == "mongodb" ]
