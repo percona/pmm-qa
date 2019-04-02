@@ -36,9 +36,7 @@ db_server_port=${db_server_with_port[1]}
 db_user=$4
 db_password=$5
 which_db=$2
-if [ -z "$pmm_server_port" ]
-    then
-fi
+
 node_name=node$((1 + RANDOM % 100))
 json=`curl -d '{"address": "'${pmm_server}'", "custom_labels": {"custom_label": "for_node"}, "node_name": "'$node_name'"}' http://$pmm_server:$pmm_server_port/v1/inventory/Nodes/AddGeneric`
 prop='node_id'
