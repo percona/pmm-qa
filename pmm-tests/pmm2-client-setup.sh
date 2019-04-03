@@ -78,9 +78,9 @@ then
 	echo $runs_on_node_id
 
   json=`curl -d '{"custom_labels": {"custom_label5": "for_node_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'"}' \
-      http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddNodeExporter`
-#  json=`curl -d '{"custom_labels": {"custom_label6": "for_perfschemaAgent"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
-#  http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddQANMySQLPerfSchemaAgent`
+     http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddNodeExporter`
+  json=`curl -d '{"custom_labels": {"custom_label6": "for_perfschemaAgent"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
+  http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddQANMySQLPerfSchemaAgent`
 fi
 
 if [ $which_db == "mongodb" ]
