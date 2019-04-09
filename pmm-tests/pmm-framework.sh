@@ -32,6 +32,7 @@ usage () {
   echo " --setup                        This will setup and configure a PMM server"
   echo " --dev                          When this option is specified, PMM framework will use the latest PMM development version. Otherwise, the latest 1.x version is used"
   echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
+  echo " --pmm2                         When this option is specified, PMM framework will use the latest PMM 2.x development version."
   echo " --link-client                  Pass URL to download pmm-client"
   echo " --addclient=ps,2               Add Percona (ps), MySQL (ms), MariaDB (md), Percona XtraDB Cluster (pxc), and/or mongodb (mo) pmm-clients to the currently live PMM server (as setup by --setup)"
   echo "                                You can add multiple client instances simultaneously. eg : --addclient=ps,2  --addclient=ms,2 --addclient=md,2 --addclient=mo,2 --addclient=pxc,3"
@@ -81,7 +82,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -213,6 +214,10 @@ do
     --setup )
     shift
     setup=1
+    ;;
+    --pmm2 )
+    shift
+    pmm2=1
     ;;
     --list )
     shift
