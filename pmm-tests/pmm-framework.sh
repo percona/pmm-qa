@@ -32,7 +32,7 @@ usage () {
   echo " --setup                        This will setup and configure a PMM server"
   echo " --dev                          When this option is specified, PMM framework will use the latest PMM development version. Otherwise, the latest 1.x version is used"
   echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
-  echo " --pmm2                         When this option is specified, PMM framework will use the latest PMM 2.x development version."
+  echo " --pmm2                         When this option is specified, PMM framework will use specified PMM 2.x development version. Must be used with pmm-server-version option"
   echo " --link-client                  Pass URL to download pmm-client"
   echo " --addclient=ps,2               Add Percona (ps), MySQL (ms), MariaDB (md), Percona XtraDB Cluster (pxc), and/or mongodb (mo) pmm-clients to the currently live PMM server (as setup by --setup)"
   echo "                                You can add multiple client instances simultaneously. eg : --addclient=ps,2  --addclient=ms,2 --addclient=md,2 --addclient=mo,2 --addclient=pxc,3"
@@ -217,7 +217,7 @@ do
     ;;
     --pmm2 )
     shift
-    pmm2=1
+    PMM2=1
     ;;
     --list )
     shift
@@ -519,10 +519,15 @@ setup(){
 	    aws ec2 describe-instance-status --instance-ids  $INSTANCE_ID | grep "Code" | sed 's/[^0-9]//g'
     fi
     echo "Initiating PMM configuration"
+    if [ ! -z $PMM2 ]; then
+      sudo docker create -v /srv    --name pmm-data    perconalab/pmm-server:$PMM_VERSION  /bin/true
+      sudo docker run -d  -p $PMM_PORT:80 -p 443:443 -p 9000:9000  --name pmm-server perconalab/pmm-server:$PMM_VERSION
+    else
     if [ ! -z $DEV_FB ]; then
-     sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
+      sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
       sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always perconalab/pmm-server-fb:$DEV_FB 2>/dev/null
     else
+
       if [ -z $dev ]; then
         sudo docker create -v /opt/prometheus/data -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data percona/pmm-server:$PMM_VERSION /bin/true 2>/dev/null
       else
@@ -542,6 +547,7 @@ setup(){
         fi
      fi
    fi
+ fi
   elif [[ "$pmm_server" == "ami" ]] ; then
     if [[ ! -e $(which aws 2> /dev/null) ]] ;then
       echo "ERROR! AWS client program is currently not installed. Please install awscli. Terminating"
@@ -616,6 +622,10 @@ setup(){
       sudo ./install
       popd > /dev/null
     else
+      if [ ! -z $PMM2 ]; then
+        install_client
+        configure_client
+      else  
       if [ ! -z $dev ]; then
         if [  -z $link_client]; then
          PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
@@ -642,6 +652,7 @@ setup(){
         popd > /dev/null
       fi
     fi
+  fi
   else
     pushd $PMM_CLIENT_BASEDIR > /dev/null
     sudo ./install
@@ -709,6 +720,23 @@ setup(){
     ) | column -t -s $'\t'
   fi
   echo -e "******************************************************************"
+}
+
+#Download and install PMM2.x client
+install_client(){
+ PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+  echo "PMM2 client  $PMM_CLIENT_TAR_URL"
+  wget $PMM_CLIENT_TAR_URL
+  PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TAR_URL | grep -o '[^/]*$')
+  tar -xzf $PMM_CLIENT_TAR
+  PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client-* 2>/dev/null | grep -v ".tar" | head -n1)
+  pushd $PMM_CLIENT_BASEDIR > /dev/null
+  export PATH="$PWD/$PMM_CLIENT_BASEDIR/bin:$PATH"
+
+}
+
+configure_client() {
+ 
 }
 
 #Get PMM client basedir.
