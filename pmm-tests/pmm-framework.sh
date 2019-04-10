@@ -624,7 +624,6 @@ setup(){
     else
       if [ ! -z $PMM2 ]; then
         install_client
-        configure_client
       else  
       if [ ! -z $dev ]; then
         if [  -z $link_client]; then
@@ -664,12 +663,19 @@ setup(){
     PMM_MYEXTRA=""
   fi
   if [[ ! -e $(which pmm-admin 2> /dev/null) ]] ;then
-    echo "ERROR! The pmm-admin client binary was not found, please install the pmm-admin client package"
+    echo "ERROR! The pmm-admin client binary was not found, please install the pmm-client package"
     exit 1
   else
     sleep 10
+  if [[ ! -e $(which pmm-agent 2> /dev/null) ]] ;then
+    echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
+    exit 1
+  fi
 	#Cleaning existing PMM server configuration.
-	sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
+	if [ ! -z $PMM2 ]; then
+    configure_client
+  else
+  sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
     if [[ "$pmm_server" == "ami" ]]; then
 	  sudo pmm-admin config --server $AWS_PUBLIC_IP --client-address $IP_ADDRESS $PMM_MYEXTRA
 	  echo "Alert! Password protection is not enabled in ami image, Please configure it manually"
@@ -683,6 +689,8 @@ setup(){
 	  SERVER_IP=$IP_ADDRESS
     fi
   fi
+fi
+
   echo -e "******************************************************************"
   if [[ "$pmm_server" == "docker" ]]; then
     echo -e "Please execute below command to access docker container"
@@ -731,12 +739,14 @@ install_client(){
   tar -xzf $PMM_CLIENT_TAR
   PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client-* 2>/dev/null | grep -v ".tar" | head -n1)
   pushd $PMM_CLIENT_BASEDIR > /dev/null
-  export PATH="$PWD/$PMM_CLIENT_BASEDIR/bin:$PATH"
+  export PATH="$PWD/bin:$PATH"
 
 }
 
 configure_client() {
- 
+  agent_id=$(pmm-admin register --server-url="http://"$IP_ADDRESS:$PMM_PORT  --server-insecure-tls|sed -n 's/.*agent_id//p') 
+ sudo pmm-agent  --insecure-tls --id="/agent_id$agent_id" --address=$IP_ADDRESS:443 > $PWD/pmm-agent.logs &
+ sleep 5
 }
 
 #Get PMM client basedir.
@@ -917,7 +927,7 @@ add_clients(){
     if [[ "${CLIENT_NAME}" == "ps" ]]; then
       PORT_CHECK=101
       NODE_NAME="PS_NODE"
-      get_basedir ps "[Pp]ercona-[Ss]erver-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
+      get_basedir ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
       MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1"
     elif [[ "${CLIENT_NAME}" == "psmyr" ]]; then
       PORT_CHECK=601
