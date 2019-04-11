@@ -667,7 +667,7 @@ setup(){
     exit 1
   else
     sleep 10
-  if [[ ! -e $(which pmm-agent 2> /dev/null) ]] ;then
+  if [[ ! -e $(which pmm-agent 2> /dev/null) ]] && [ ! -z $PMM2 ] ;then
     echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
     exit 1
   fi
