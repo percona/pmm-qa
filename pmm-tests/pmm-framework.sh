@@ -732,7 +732,7 @@ fi
 
 #Download and install PMM2.x client
 install_client(){
- PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+  PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
   echo "PMM2 client  $PMM_CLIENT_TAR_URL"
   wget $PMM_CLIENT_TAR_URL
   PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TAR_URL | grep -o '[^/]*$')
@@ -740,7 +740,6 @@ install_client(){
   PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client-* 2>/dev/null | grep -v ".tar" | head -n1)
   pushd $PMM_CLIENT_BASEDIR > /dev/null
   export PATH="$PWD/bin:$PATH"
-
 }
 
 configure_client() {
