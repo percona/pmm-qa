@@ -107,7 +107,7 @@ if [ $which_db == "postgresql" ]
 then
 	service_name=postgres-$((1 + RANDOM % 100))
 	json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label6": "for_postgres_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddPostgres`
+	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddPostgreSQL`
  	prop='service_id'
 	service_id=`jsonval`
 	echo $service_id
