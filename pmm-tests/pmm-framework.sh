@@ -32,6 +32,7 @@ usage () {
   echo " --setup                        This will setup and configure a PMM server"
   echo " --dev                          When this option is specified, PMM framework will use the latest PMM development version. Otherwise, the latest 1.x version is used"
   echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
+  echo " --pmm2                         When this option is specified, PMM framework will use specified PMM 2.x development version. Must be used with pmm-server-version option"
   echo " --link-client                  Pass URL to download pmm-client"
   echo " --addclient=ps,2               Add Percona (ps), MySQL (ms), MariaDB (md), Percona XtraDB Cluster (pxc), and/or mongodb (mo) pmm-clients to the currently live PMM server (as setup by --setup)"
   echo "                                You can add multiple client instances simultaneously. eg : --addclient=ps,2  --addclient=ms,2 --addclient=md,2 --addclient=mo,2 --addclient=pxc,3"
@@ -81,7 +82,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -213,6 +214,10 @@ do
     --setup )
     shift
     setup=1
+    ;;
+    --pmm2 )
+    shift
+    PMM2=1
     ;;
     --list )
     shift
@@ -514,10 +519,15 @@ setup(){
 	    aws ec2 describe-instance-status --instance-ids  $INSTANCE_ID | grep "Code" | sed 's/[^0-9]//g'
     fi
     echo "Initiating PMM configuration"
+    if [ ! -z $PMM2 ]; then
+      sudo docker create -v /srv    --name pmm-data    perconalab/pmm-server:$PMM_VERSION  /bin/true
+      sudo docker run -d  -p $PMM_PORT:80 -p 443:443 -p 9000:9000  --name pmm-server perconalab/pmm-server:$PMM_VERSION
+    else
     if [ ! -z $DEV_FB ]; then
-     sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
+      sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
       sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always perconalab/pmm-server-fb:$DEV_FB 2>/dev/null
     else
+
       if [ -z $dev ]; then
         sudo docker create -v /opt/prometheus/data -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data percona/pmm-server:$PMM_VERSION /bin/true 2>/dev/null
       else
@@ -537,6 +547,7 @@ setup(){
         fi
      fi
    fi
+ fi
   elif [[ "$pmm_server" == "ami" ]] ; then
     if [[ ! -e $(which aws 2> /dev/null) ]] ;then
       echo "ERROR! AWS client program is currently not installed. Please install awscli. Terminating"
@@ -611,6 +622,9 @@ setup(){
       sudo ./install
       popd > /dev/null
     else
+      if [ ! -z $PMM2 ]; then
+        install_client
+      else  
       if [ ! -z $dev ]; then
         if [  -z $link_client]; then
          PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
@@ -637,6 +651,7 @@ setup(){
         popd > /dev/null
       fi
     fi
+  fi
   else
     pushd $PMM_CLIENT_BASEDIR > /dev/null
     sudo ./install
@@ -648,12 +663,19 @@ setup(){
     PMM_MYEXTRA=""
   fi
   if [[ ! -e $(which pmm-admin 2> /dev/null) ]] ;then
-    echo "ERROR! The pmm-admin client binary was not found, please install the pmm-admin client package"
+    echo "ERROR! The pmm-admin client binary was not found, please install the pmm-client package"
     exit 1
   else
     sleep 10
+  if [[ ! -e $(which pmm-agent 2> /dev/null) ]] && [ ! -z $PMM2 ] ;then
+    echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
+    exit 1
+  fi
 	#Cleaning existing PMM server configuration.
-	sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
+	if [ ! -z $PMM2 ]; then
+    configure_client
+  else
+  sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
     if [[ "$pmm_server" == "ami" ]]; then
 	  sudo pmm-admin config --server $AWS_PUBLIC_IP --client-address $IP_ADDRESS $PMM_MYEXTRA
 	  echo "Alert! Password protection is not enabled in ami image, Please configure it manually"
@@ -667,6 +689,8 @@ setup(){
 	  SERVER_IP=$IP_ADDRESS
     fi
   fi
+fi
+
   echo -e "******************************************************************"
   if [[ "$pmm_server" == "docker" ]]; then
     echo -e "Please execute below command to access docker container"
@@ -704,6 +728,24 @@ setup(){
     ) | column -t -s $'\t'
   fi
   echo -e "******************************************************************"
+}
+
+#Download and install PMM2.x client
+install_client(){
+  PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+  echo "PMM2 client  $PMM_CLIENT_TAR_URL"
+  wget $PMM_CLIENT_TAR_URL
+  PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TAR_URL | grep -o '[^/]*$')
+  tar -xzf $PMM_CLIENT_TAR
+  PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client-* 2>/dev/null | grep -v ".tar" | head -n1)
+  pushd $PMM_CLIENT_BASEDIR > /dev/null
+  export PATH="$PWD/bin:$PATH"
+}
+
+configure_client() {
+  agent_id=$(pmm-admin register --server-url="http://"$IP_ADDRESS:$PMM_PORT  --server-insecure-tls|sed -n 's/.*agent_id//p') 
+ sudo pmm-agent  --insecure-tls --id="/agent_id$agent_id" --address=$IP_ADDRESS:443 > $PWD/pmm-agent.logs &
+ sleep 5
 }
 
 #Get PMM client basedir.
@@ -884,7 +926,7 @@ add_clients(){
     if [[ "${CLIENT_NAME}" == "ps" ]]; then
       PORT_CHECK=101
       NODE_NAME="PS_NODE"
-      get_basedir ps "[Pp]ercona-[Ss]erver-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
+      get_basedir ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
       MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1"
     elif [[ "${CLIENT_NAME}" == "psmyr" ]]; then
       PORT_CHECK=601
