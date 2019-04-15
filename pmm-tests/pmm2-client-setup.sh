@@ -8,7 +8,7 @@ function jsonval {
 display_usage() { 
 	echo "Please make sure to pass atleast pmm_server, db, db_server, db_user"
 	echo "1) pmm_server ------------------localhost:80"
-	echo "2) which_db   ------------------mysql/mongodb"
+	echo "2) which_db   ------------------mysql/mongodb/postgresql"
 	echo "3) db_server  ------------------localhost:3306"
 	echo "4) db_user    ------------------root"
 	echo "5) db_password------------------secret"
@@ -58,6 +58,12 @@ pmm-agent --address=$pmm_server:443 --insecure-tls --id=$agent_id --trace  > $PW
 sleep 10
 
 
+json=`curl -d '{"custom_labels": {"custom_label5": "for_node_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'"}' \
+     http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddNodeExporter`
+prop='runs_on_node_id'
+runs_on_node_id=`jsonval`
+echo $runs_on_node_id
+
 if [ $which_db == "mysql" ]
 then
 	if [ -z "$db_server_port" ]
@@ -71,14 +77,12 @@ then
 	service_id=`jsonval`
 	echo $service_id
 
-	json=`curl -d '{"custom_labels": {"custom_label4": "for_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
+	json=`curl -d '{"custom_labels": {"custom_label4": "for_mysql_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
 	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddMySQLdExporter`
 	prop='runs_on_node_id'
 	runs_on_node_id=`jsonval`
 	echo $runs_on_node_id
 
-  json=`curl -d '{"custom_labels": {"custom_label5": "for_node_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'"}' \
-     http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddNodeExporter`
   json=`curl -d '{"custom_labels": {"custom_label6": "for_perfschemaAgent"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
   http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddQANMySQLPerfSchemaAgent`
 fi
@@ -94,6 +98,22 @@ then
 
 	json=`curl -d '{"custom_labels": {"custom_label4": "for_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
 	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddMongoDBExporter`
+	prop='runs_on_node_id'
+	runs_on_node_id=`jsonval`
+	echo $runs_on_node_id
+fi
+
+if [ $which_db == "postgresql" ]
+then
+	service_name=postgres-$((1 + RANDOM % 100))
+	json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label6": "for_postgres_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
+	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddPostgreSQL`
+ 	prop='service_id'
+	service_id=`jsonval`
+	echo $service_id
+
+	json=`curl -d '{"custom_labels": {"custom_label4": "for_postgres_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
+	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddPostgresExporter`
 	prop='runs_on_node_id'
 	runs_on_node_id=`jsonval`
 	echo $runs_on_node_id
