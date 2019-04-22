@@ -53,7 +53,7 @@ agent_id=`jsonval`
 echo $agent_id
 echo $node_id
 
-pmm-agent --server-address=$pmm_server:443 --insecure-tls --id=$agent_id --trace  > $PWD/pmm-agent.logs 2>&1 &
+pmm-agent --server-address=$pmm_server:443 --server-insecure-tls --id=$agent_id --trace  > $PWD/pmm-agent.logs 2>&1 &
 
 sleep 10
 
