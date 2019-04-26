@@ -37,8 +37,10 @@ usage () {
   echo " --addclient=ps,2               Add Percona (ps), MySQL (ms), MariaDB (md), Percona XtraDB Cluster (pxc), and/or mongodb (mo) pmm-clients to the currently live PMM server (as setup by --setup)"
   echo "                                You can add multiple client instances simultaneously. eg : --addclient=ps,2  --addclient=ms,2 --addclient=md,2 --addclient=mo,2 --addclient=pxc,3"
   echo " --download                     This will help us to download pmm client binary tar balls"
+  echo " --dbdeployer                   This option will use dbdeployer tool for deploying PS, MS Databases"
   echo " --pmm-server-version           Pass PMM version"
   echo " --pmm-port                     Pass port for PMM docker"
+  echo " --pmm2-server-ip               Pass Address for PMM2-Server"
   echo " --package-name                 Name of the Server package installed"
   echo " --ps-version                   Pass Percona Server version info"
   echo " --ms-version                   Pass MySQL Server version info"
@@ -82,7 +84,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -145,6 +147,10 @@ do
     ;;
     --pmm-port )
     PMM_PORT="$2"
+    shift 2
+    ;;
+    --pmm2-server-ip )
+    IP_ADDRESS="$2"
     shift 2
     ;;
     --package-name )
@@ -218,6 +224,10 @@ do
     --pmm2 )
     shift
     PMM2=1
+    ;;
+    --dbdeployer )
+    shift
+    use_dbdeployer=1
     ;;
     --list )
     shift
@@ -743,11 +753,28 @@ install_client(){
 }
 
 configure_client() {
-  agent_id=$(pmm-admin register --server-url="http://"$IP_ADDRESS:$PMM_PORT  --server-insecure-tls|sed -n 's/.*agent_id//p') 
- sudo pmm-agent  --insecure-tls --id="/agent_id$agent_id" --address=$IP_ADDRESS:443 > $PWD/pmm-agent.logs &
- sleep 5
+  sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443 --debug
+  sleep 5
 }
 
+setup_db_tar(){
+  PRODUCT_NAME=$1
+  SERVER_STRING=$2
+  CLIENT_MSG=$3
+  VERSION=$4
+  if cat /etc/os-release | grep rhel >/dev/null ; then
+   DISTRUBUTION=centos
+  fi
+  LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
+  echo "Downloading $CLIENT_MSG(Version : $VERSION)"
+  FILE=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"/" '{print $7}'`
+  if [ ! -f $FILE ]; then
+    wget $LINK 2>/dev/null
+  fi
+  VERSION_ACCURATE=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"-" '{ print $3 }'`
+  PORT_NUMBER=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"-" '{ print $3 }' | tr -d .`
+  BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
+}
 #Get PMM client basedir.
 get_basedir(){
   PRODUCT_NAME=$1
@@ -918,323 +945,356 @@ remove_packages(){
   fi
 }
 
-#Percona Server configuration.
-add_clients(){
+add_clients_pmm2(){
   mkdir -p $WORKDIR/logs
   for i in ${ADDCLIENT[@]};do
     CLIENT_NAME=$(echo $i | grep -o  '[[:alpha:]]*')
-    if [[ "${CLIENT_NAME}" == "ps" ]]; then
-      PORT_CHECK=101
-      NODE_NAME="PS_NODE"
-      get_basedir ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
-      MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1"
-    elif [[ "${CLIENT_NAME}" == "psmyr" ]]; then
-      PORT_CHECK=601
-      NODE_NAME="PSMR_NODE"
-      get_basedir ps "[Pp]ercona-[Ss]erver-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
-      MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1 --plugin-load-add=rocksdb=ha_rocksdb.so --default-storage-engine=rocksdb"
-    elif [[ "${CLIENT_NAME}" == "ms" ]]; then
-      PORT_CHECK=201
-      NODE_NAME="MS_NODE"
-      get_basedir mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
-      MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --innodb_monitor_enable=all --performance_schema=ON"
-    elif [[ "${CLIENT_NAME}" == "pgsql" ]]; then
-      PORT_CHECK=501
-      NODE_NAME="PGSQL_NODE"
-      get_basedir postgresql "postgresql-${pgsql_version}*" "Postgre SQL Binary tar ball" ${pgsql_version}
-    elif [[ "${CLIENT_NAME}" == "md" ]]; then
-      PORT_CHECK=301
-      NODE_NAME="MD_NODE"
-      get_basedir mariadb "mariadb-${md_version}*" "MariaDB Server binary tar ball" ${md_version}
-      MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql  --innodb_monitor_enable=all --performance_schema=ON"
-    elif [[ "${CLIENT_NAME}" == "pxc" ]]; then
-      PORT_CHECK=401
-      NODE_NAME="PXC_NODE"
-      get_basedir pxc "Percona-XtraDB-Cluster-${pxc_version}*" "Percona XtraDB Cluster binary tar ball" ${pxc_version}
-      MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1"
-    elif [[ "${CLIENT_NAME}" == "mo" ]]; then
-      get_basedir psmdb "percona-server-mongodb-${mo_version}*" "Percona Server Mongodb binary tar ball" ${mo_version}
-    fi
-    if [[ "${CLIENT_NAME}" != "md"  && "${CLIENT_NAME}" != "mo" && "${CLIENT_NAME}" != "pgsql" ]]; then
-      VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
-    if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
-        MID="${BASEDIR}/bin/mysqld   --default-authentication-plugin=mysql_native_password --initialize-insecure --basedir=${BASEDIR}"
-      else
-        MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
-      fi
-    else
-      if [[ "${CLIENT_NAME}" != "mo" ]]; then
-        MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
-      fi
-    fi
-
     ADDCLIENTS_COUNT=$(echo "${i}" | sed 's|[^0-9]||g')
-    if  [[ "${CLIENT_NAME}" == "mo" ]]; then
-      rm -rf $BASEDIR/data
-      for k in `seq 1  ${REPLCOUNT}`;do
-        PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
-        PSMDB_PORTS+=($PSMDB_PORT)
-          for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-            PORT=$(( $PSMDB_PORT + $j - 1 ))
-            mkdir -p ${BASEDIR}/data/rpldb${k}_${j}
-            $BASEDIR/bin/mongod --profile 2 --slowms 1  $mongo_storage_engine  --replSet r${k} --dbpath=$BASEDIR/data/rpldb${k}_${j} --logpath=$BASEDIR/data/rpldb${k}_${j}/mongod.log --port=$PORT --logappend --fork &
-            sleep 10
+    if [[ "${CLIENT_NAME}" == "ms" ]]; then
+      setup_db_tar mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
+      if [ -d "$WORKDIR/mysql" ]; then
+        rm -Rf $WORKDIR/mysql;
+      fi
+      mkdir $WORKDIR/mysql
+      dbdeployer unpack mysql-${ms_version}* --sandbox-binary $WORKDIR/mysql --overwrite
+      if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
+        dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
+        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+        pmm-admin add mysql --use-perfschema --username=root --password=msandbox 127.0.0.1:$node_port mysql-single
+      else
+        dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
+        for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+          node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
+          pmm-admin add mysql --use-perfschema --username=root --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j --debug
+        done
+      fi
+    fi
+  done
+}
+
+#Percona Server configuration.
+add_clients(){
+  if [ ! -z $use_dbdeployer ] && [ ! -z $PMM2 ]; then
+    configure_client
+    check_dbdeployer
+    add_clients_pmm2
+  else
+    mkdir -p $WORKDIR/logs
+    for i in ${ADDCLIENT[@]};do
+      CLIENT_NAME=$(echo $i | grep -o  '[[:alpha:]]*')
+      if [[ "${CLIENT_NAME}" == "ps" ]]; then
+        PORT_CHECK=101
+        NODE_NAME="PS_NODE"
+        get_basedir ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
+        MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1"
+      elif [[ "${CLIENT_NAME}" == "psmyr" ]]; then
+        PORT_CHECK=601
+        NODE_NAME="PSMR_NODE"
+        get_basedir ps "[Pp]ercona-[Ss]erver-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
+        MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1 --plugin-load-add=rocksdb=ha_rocksdb.so --default-storage-engine=rocksdb"
+      elif [[ "${CLIENT_NAME}" == "ms" ]]; then
+        PORT_CHECK=201
+        NODE_NAME="MS_NODE"
+        get_basedir mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
+        MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --innodb_monitor_enable=all --performance_schema=ON"
+      elif [[ "${CLIENT_NAME}" == "pgsql" ]]; then
+        PORT_CHECK=501
+        NODE_NAME="PGSQL_NODE"
+        get_basedir postgresql "postgresql-${pgsql_version}*" "Postgre SQL Binary tar ball" ${pgsql_version}
+      elif [[ "${CLIENT_NAME}" == "md" ]]; then
+        PORT_CHECK=301
+        NODE_NAME="MD_NODE"
+        get_basedir mariadb "mariadb-${md_version}*" "MariaDB Server binary tar ball" ${md_version}
+        MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql  --innodb_monitor_enable=all --performance_schema=ON"
+      elif [[ "${CLIENT_NAME}" == "pxc" ]]; then
+        PORT_CHECK=401
+        NODE_NAME="PXC_NODE"
+        get_basedir pxc "Percona-XtraDB-Cluster-${pxc_version}*" "Percona XtraDB Cluster binary tar ball" ${pxc_version}
+        MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1"
+      elif [[ "${CLIENT_NAME}" == "mo" ]]; then
+        get_basedir psmdb "percona-server-mongodb-${mo_version}*" "Percona Server Mongodb binary tar ball" ${mo_version}
+      fi
+      if [[ "${CLIENT_NAME}" != "md"  && "${CLIENT_NAME}" != "mo" && "${CLIENT_NAME}" != "pgsql" ]]; then
+        VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
+      if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
+          MID="${BASEDIR}/bin/mysqld   --default-authentication-plugin=mysql_native_password --initialize-insecure --basedir=${BASEDIR}"
+        else
+          MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
+        fi
+      else
+        if [[ "${CLIENT_NAME}" != "mo" ]]; then
+          MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
+        fi
+      fi
+
+      ADDCLIENTS_COUNT=$(echo "${i}" | sed 's|[^0-9]||g')
+      if  [[ "${CLIENT_NAME}" == "mo" ]]; then
+        rm -rf $BASEDIR/data
+        for k in `seq 1  ${REPLCOUNT}`;do
+          PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
+          PSMDB_PORTS+=($PSMDB_PORT)
+            for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+              PORT=$(( $PSMDB_PORT + $j - 1 ))
+              mkdir -p ${BASEDIR}/data/rpldb${k}_${j}
+              $BASEDIR/bin/mongod --profile 2 --slowms 1  $mongo_storage_engine  --replSet r${k} --dbpath=$BASEDIR/data/rpldb${k}_${j} --logpath=$BASEDIR/data/rpldb${k}_${j}/mongod.log --port=$PORT --logappend --fork &
+              sleep 10
+              if [ $disable_ssl -eq 1 ]; then
+                sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j} --disable-ssl
+                check_disable_ssl mongodb_inst_rpl${k}_${j}
+              else
+                sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j}
+              fi
+            done
+        done
+        create_replset_js(){
+          REPLSET_COUNT=$(( ${ADDCLIENTS_COUNT} - 1 ))
+          rm -rf /tmp/config_replset.js
+          echo "port=parseInt(db.adminCommand(\"getCmdLineOpts\").parsed.net.port)" >> /tmp/config_replset.js
+          for i in `seq 1  ${REPLSET_COUNT}`;do
+            echo "port${i}=port+${i};" >> /tmp/config_replset.js
+          done
+          echo "conf = {" >> /tmp/config_replset.js
+          echo "_id : replSet," >> /tmp/config_replset.js
+          echo "members: [" >> /tmp/config_replset.js
+          echo "  { _id:0 , host:\"localhost:\"+port,priority:10}," >> /tmp/config_replset.js
+          for i in `seq 1  ${REPLSET_COUNT}`;do
+            echo "  { _id:${i} , host:\"localhost:\"+port${i}}," >> /tmp/config_replset.js
+          done
+          echo "  ]" >> /tmp/config_replset.js
+          echo "};" >> /tmp/config_replset.js
+
+          echo "printjson(conf)" >> /tmp/config_replset.js
+          echo "printjson(rs.initiate(conf));" >> /tmp/config_replset.js
+    	  }
+  	    create_replset_js
+        if [[ "$with_replica" == "1" ]]; then
+          for k in `seq 1  ${REPLCOUNT}`;do
+  	        n=$(( $k - 1 ))
+  		      echo "Configuring replicaset"
+            sudo $BASEDIR/bin/mongo --quiet --port ${PSMDB_PORTS[$n]} --eval "var replSet='r${k}'" "/tmp/config_replset.js"
+            sleep 5
+  	      done
+  	    fi
+
+        if [[ "$with_sharding" == "1" ]]; then
+      	  #config
+          CONFIG_MONGOD_PORT=$(( (RANDOM%21 + 10) * 1001 ))
+          CONFIG_MONGOS_PORT=$(( (RANDOM%21 + 10) * 1001 ))
+          for m in `seq 1 ${ADDCLIENTS_COUNT}`;do
+            PORT=$(( $CONFIG_MONGOD_PORT + $m - 1 ))
+            mkdir -p $BASEDIR/data/confdb${m}
+            $BASEDIR/bin/mongod --profile 2 --slowms 1 --fork --logpath $BASEDIR/data/confdb${m}/config_mongo.log --dbpath=$BASEDIR/data/confdb${m} --port $PORT --configsvr --replSet config &
+            sleep 15
             if [ $disable_ssl -eq 1 ]; then
-              sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j} --disable-ssl
+              sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m} --disable-ssl
               check_disable_ssl mongodb_inst_rpl${k}_${j}
             else
-              sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j}
+              sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m}
             fi
+            MONGOS_STARTUP_CMD="localhost:$PORT,$MONGOS_STARTUP_CMD"
           done
-      done
-      create_replset_js(){
-        REPLSET_COUNT=$(( ${ADDCLIENTS_COUNT} - 1 ))
-        rm -rf /tmp/config_replset.js
-        echo "port=parseInt(db.adminCommand(\"getCmdLineOpts\").parsed.net.port)" >> /tmp/config_replset.js
-        for i in `seq 1  ${REPLSET_COUNT}`;do
-          echo "port${i}=port+${i};" >> /tmp/config_replset.js
-        done
-        echo "conf = {" >> /tmp/config_replset.js
-        echo "_id : replSet," >> /tmp/config_replset.js
-        echo "members: [" >> /tmp/config_replset.js
-        echo "  { _id:0 , host:\"localhost:\"+port,priority:10}," >> /tmp/config_replset.js
-        for i in `seq 1  ${REPLSET_COUNT}`;do
-          echo "  { _id:${i} , host:\"localhost:\"+port${i}}," >> /tmp/config_replset.js
-        done
-        echo "  ]" >> /tmp/config_replset.js
-        echo "};" >> /tmp/config_replset.js
 
-        echo "printjson(conf)" >> /tmp/config_replset.js
-        echo "printjson(rs.initiate(conf));" >> /tmp/config_replset.js
-  	  }
-	    create_replset_js
-      if [[ "$with_replica" == "1" ]]; then
-        for k in `seq 1  ${REPLCOUNT}`;do
-	        n=$(( $k - 1 ))
-		      echo "Configuring replicaset"
-          sudo $BASEDIR/bin/mongo --quiet --port ${PSMDB_PORTS[$n]} --eval "var replSet='r${k}'" "/tmp/config_replset.js"
+          echo "Configuring replicaset"
+          $BASEDIR/bin/mongo --quiet --port ${CONFIG_MONGOD_PORT} --eval "var replSet='config'" "/tmp/config_replset.js"
+          sleep 20
+
+          MONGOS_STARTUP_CMD="${MONGOS_STARTUP_CMD::-1}"
+          mkdir $BASEDIR/data/mongos
+          #Removing default mongodb socket file
+          sudo rm -rf /tmp/mongodb-27017.sock
+          $BASEDIR/bin/mongos --fork --logpath $BASEDIR/data/mongos/mongos.log --configdb config/$MONGOS_STARTUP_CMD  &
           sleep 5
-	      done
-	    fi
-
-      if [[ "$with_sharding" == "1" ]]; then
-    	  #config
-        CONFIG_MONGOD_PORT=$(( (RANDOM%21 + 10) * 1001 ))
-        CONFIG_MONGOS_PORT=$(( (RANDOM%21 + 10) * 1001 ))
-        for m in `seq 1 ${ADDCLIENTS_COUNT}`;do
-          PORT=$(( $CONFIG_MONGOD_PORT + $m - 1 ))
-          mkdir -p $BASEDIR/data/confdb${m}
-          $BASEDIR/bin/mongod --profile 2 --slowms 1 --fork --logpath $BASEDIR/data/confdb${m}/config_mongo.log --dbpath=$BASEDIR/data/confdb${m} --port $PORT --configsvr --replSet config &
-          sleep 15
           if [ $disable_ssl -eq 1 ]; then
-            sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m} --disable-ssl
-            check_disable_ssl mongodb_inst_rpl${k}_${j}
+            sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOD_PORT mongod_config_inst --disable-ssl
           else
-            sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m}
+            sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOS_PORT mongos_config_inst
           fi
-          MONGOS_STARTUP_CMD="localhost:$PORT,$MONGOS_STARTUP_CMD"
-        done
-
-        echo "Configuring replicaset"
-        $BASEDIR/bin/mongo --quiet --port ${CONFIG_MONGOD_PORT} --eval "var replSet='config'" "/tmp/config_replset.js"
-        sleep 20
-
-        MONGOS_STARTUP_CMD="${MONGOS_STARTUP_CMD::-1}"
-        mkdir $BASEDIR/data/mongos
-        #Removing default mongodb socket file
-        sudo rm -rf /tmp/mongodb-27017.sock
-        $BASEDIR/bin/mongos --fork --logpath $BASEDIR/data/mongos/mongos.log --configdb config/$MONGOS_STARTUP_CMD  &
-        sleep 5
-        if [ $disable_ssl -eq 1 ]; then
-          sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOD_PORT mongod_config_inst --disable-ssl
-        else
-          sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOS_PORT mongos_config_inst
-        fi
-        echo "Adding Shards"
-		    sleep 20
-        for k in `seq 1  ${REPLCOUNT}`;do
-          n=$(( $k - 1 ))
-          $BASEDIR/bin/mongo --quiet --eval "printjson(db.getSisterDB('admin').runCommand({addShard: 'r${k}/localhost:${PSMDB_PORTS[$n]}'}))"
-        done
-	    fi
-    elif [[ "${CLIENT_NAME}" == "pgsql" ]]; then
-      if [ $create_pgsql_user -eq 1 ]; then
-        PGSQL_USER=psql
-        echo "Creating postgresql Dedicated User psql"
-        if id psql >/dev/null 2>&1; then
-          echo "yes the user psql exists"
-        else
-          echo "No, the user psql does not exist, Adding"
-          sudo adduser --disabled-password --gecos "" psql
-        fi
-      else
-        PGSQL_USER=nobody
-      fi
-      PGSQL_PORT=5431
-      cd ${BASEDIR}/..
-      result=pgsql
-      sudo cp -u -R ${result} /home/
-      BASEDIR=/home/pgsql
-      cd ${BASEDIR}/bin
-      sudo chmod +x .
-      for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        PGSQL_PORT=$((PGSQL_PORT+j))
-        echo "Current Path is $(pwd)"
-        if [ -d ${BASEDIR}/${NODE_NAME}_${j}/data ]; then
-          echo "PGSQL Data Directory Exist, Removing old Directory, Stopping already running Server and creating a new one"
-          sudo -H -u ${PGSQL_USER} bash -c "./pg_ctl -D ${BASEDIR}/${NODE_NAME}_${j}/data -l ${BASEDIR}/${NODE_NAME}_${j}/data/logfile -o '-F -p ${PGSQL_PORT}' stop" > /dev/null 2>&1;
-          sudo rm -r ${BASEDIR}/${NODE_NAME}_${j}
-          sudo mkdir -p ${BASEDIR}/${NODE_NAME}_${j}/data
-        else
-          sudo mkdir -p ${BASEDIR}/${NODE_NAME}_${j}/data
-        fi
-        sudo_check ${PGSQL_USER}
-        sudo chown -R ${PGSQL_USER} ${BASEDIR}/${NODE_NAME}_${j}/data
-        echo "Starting PGSQL server at port ${PGSQL_PORT}"
-        sudo -H -u ${PGSQL_USER} bash -c "./initdb -D ${BASEDIR}/${NODE_NAME}_${j}/data --username=postgres" > /dev/null 2>&1;
-        sudo -H -u ${PGSQL_USER} bash -c "./pg_ctl -D ${BASEDIR}/${NODE_NAME}_${j}/data -l ${BASEDIR}/${NODE_NAME}_${j}/data/logfile -o '-F -p ${PGSQL_PORT}' start" > /dev/null 2>&1;
-        sudo -H -u ${PGSQL_USER} bash -c "./createdb psql --username=postgres"
-        if [ $disable_ssl -eq 1 ]; then
-          sudo pmm-admin add postgresql --user postgres --host localhost --port ${PGSQL_PORT} --disable-ssl PGSQL-${NODE_NAME}-${j}
-          check_disable_ssl PGSQL-${NODE_NAME}-${j}
-        else
-          sudo pmm-admin add postgresql --user postgres --host localhost --port ${PGSQL_PORT} PGSQL-${NODE_NAME}-${j}
-        fi
-      done
-    else
-      if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
-        TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
-      else
-        TOKUDB_STARTUP=""
-      fi
-      if [ -r ${BASEDIR}/lib/mysql/plugin/ha_rocksdb.so ]; then
-        ROCKSDB_STARTUP="--plugin-load-add=rocksdb=ha_rocksdb.so"
-      else
-        ROCKSDB_STARTUP=""
-      fi
-      for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        RBASE1="$(( RBASE + ( $PORT_CHECK * $j ) ))"
-        LADDR1="$ADDR:$(( RBASE1 + 8 ))"
-        node="${BASEDIR}/node$j"
-        if ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
-          echo "WARNING! Another mysqld process using /tmp/${NODE_NAME}_${j}.sock"
-          if ! sudo pmm-admin list | grep "/tmp/${NODE_NAME}_${j}.sock" > /dev/null ; then
-            if [ $disable_ssl -eq 1 ]; then
-              sudo pmm-admin add mysql ${NODE_NAME}-${j} --socket=/tmp/${NODE_NAME}_${j}.sock --user=root --query-source=$query_source --disable-ssl
-              check_disable_ssl ${NODE_NAME}-${j}
-            else
-              sudo pmm-admin add mysql ${NODE_NAME}-${j} --socket=/tmp/${NODE_NAME}_${j}.sock --user=root --query-source=$query_source
-            fi
-          fi
-          continue
-        fi
-        VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
-        if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
-          mkdir -p $node
-          ${MID} --datadir=$node  > ${BASEDIR}/startup_node$j.err 2>&1
-        else
-          if [ ! -d $node ]; then
-            ${MID} --datadir=$node  > ${BASEDIR}/startup_node$j.err 2>&1
-          fi
-        fi
-        if  [[ "${CLIENT_NAME}" == "pxc" ]]; then
-          WSREP_CLUSTER="${WSREP_CLUSTER}gcomm://$LADDR1,"
-          if [ $j -eq 1 ]; then
-            WSREP_CLUSTER_ADD="--wsrep_cluster_address=gcomm:// "
-          else
-            WSREP_CLUSTER_ADD="--wsrep_cluster_address=$WSREP_CLUSTER"
-          fi
-          MYEXTRA="--no-defaults --wsrep-provider=${BASEDIR}/lib/libgalera_smm.so $WSREP_CLUSTER_ADD --wsrep_provider_options=gmcast.listen_addr=tcp://$LADDR1 --wsrep_sst_method=rsync --wsrep_sst_auth=root: --max-connections=30000"
-        else
-          MYEXTRA="--no-defaults --max-connections=30000"
-        fi
-        if [[ "${CLIENT_NAME}" == "md" ]]; then
-          MYEXTRA+=" --gtid-strict-mode=ON "
-        else
-          MYEXTRA+=" --gtid-mode=ON --enforce-gtid-consistency "
-        fi
-        ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
-          --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
-          --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
-          --server-id=10${j} > $node/error.err 2>&1 &
-        function startup_chk(){
-          for X in $(seq 0 ${SERVER_START_TIMEOUT}); do
-            sleep 1
-            if ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
-              ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL query_response_time_stats=ON;" > /dev/null 2>&1
-              check_user=`${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SELECT user,host FROM mysql.user where user='$OUSER' and host='%';"`
-              if [[ -z "$check_user" ]]; then
-                ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "CREATE USER '$OUSER'@'%' IDENTIFIED BY '$OPASS';GRANT SUPER, PROCESS, REPLICATION SLAVE, RELOAD ON *.* TO '$OUSER'@'%'"
-                (
-                printf "%s\t%s\n" "Orchestrator username :" "admin"
-                printf "%s\t%s\n" "Orchestrator password :" "passw0rd"
-                ) | column -t -s $'\t'
-              else
-                echo "User '$OUSER' is already present in MySQL server. Please create Orchestrator user manually."
-              fi
-              break
-            fi
+          echo "Adding Shards"
+  		    sleep 20
+          for k in `seq 1  ${REPLCOUNT}`;do
+            n=$(( $k - 1 ))
+            $BASEDIR/bin/mongo --quiet --eval "printjson(db.getSisterDB('admin').runCommand({addShard: 'r${k}/localhost:${PSMDB_PORTS[$n]}'}))"
           done
-        }
-        startup_chk
-        if ! ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
-          if grep -q "TCP/IP port: Address already in use" $node/error.err; then
-            echo "TCP/IP port: Address already in use, restarting ${NODE_NAME}_${j} mysqld daemon with different port"
-            RBASE1="$(( RBASE1 - 1 ))"
-            ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
-               --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
-               --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
-               --server-id=10${j} > $node/error.err 2>&1 &
-            startup_chk
-            if ! ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
+  	    fi
+      elif [[ "${CLIENT_NAME}" == "pgsql" ]]; then
+        if [ $create_pgsql_user -eq 1 ]; then
+          PGSQL_USER=psql
+          echo "Creating postgresql Dedicated User psql"
+          if id psql >/dev/null 2>&1; then
+            echo "yes the user psql exists"
+          else
+            echo "No, the user psql does not exist, Adding"
+            sudo adduser --disabled-password --gecos "" psql
+          fi
+        else
+          PGSQL_USER=nobody
+        fi
+        PGSQL_PORT=5431
+        cd ${BASEDIR}/..
+        result=pgsql
+        sudo cp -u -R ${result} /home/
+        BASEDIR=/home/pgsql
+        cd ${BASEDIR}/bin
+        sudo chmod +x .
+        for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+          PGSQL_PORT=$((PGSQL_PORT+j))
+          echo "Current Path is $(pwd)"
+          if [ -d ${BASEDIR}/${NODE_NAME}_${j}/data ]; then
+            echo "PGSQL Data Directory Exist, Removing old Directory, Stopping already running Server and creating a new one"
+            sudo -H -u ${PGSQL_USER} bash -c "./pg_ctl -D ${BASEDIR}/${NODE_NAME}_${j}/data -l ${BASEDIR}/${NODE_NAME}_${j}/data/logfile -o '-F -p ${PGSQL_PORT}' stop" > /dev/null 2>&1;
+            sudo rm -r ${BASEDIR}/${NODE_NAME}_${j}
+            sudo mkdir -p ${BASEDIR}/${NODE_NAME}_${j}/data
+          else
+            sudo mkdir -p ${BASEDIR}/${NODE_NAME}_${j}/data
+          fi
+          sudo_check ${PGSQL_USER}
+          sudo chown -R ${PGSQL_USER} ${BASEDIR}/${NODE_NAME}_${j}/data
+          echo "Starting PGSQL server at port ${PGSQL_PORT}"
+          sudo -H -u ${PGSQL_USER} bash -c "./initdb -D ${BASEDIR}/${NODE_NAME}_${j}/data --username=postgres" > /dev/null 2>&1;
+          sudo -H -u ${PGSQL_USER} bash -c "./pg_ctl -D ${BASEDIR}/${NODE_NAME}_${j}/data -l ${BASEDIR}/${NODE_NAME}_${j}/data/logfile -o '-F -p ${PGSQL_PORT}' start" > /dev/null 2>&1;
+          sudo -H -u ${PGSQL_USER} bash -c "./createdb psql --username=postgres"
+          if [ $disable_ssl -eq 1 ]; then
+            sudo pmm-admin add postgresql --user postgres --host localhost --port ${PGSQL_PORT} --disable-ssl PGSQL-${NODE_NAME}-${j}
+            check_disable_ssl PGSQL-${NODE_NAME}-${j}
+          else
+            sudo pmm-admin add postgresql --user postgres --host localhost --port ${PGSQL_PORT} PGSQL-${NODE_NAME}-${j}
+          fi
+        done
+      else
+        if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
+          TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
+        else
+          TOKUDB_STARTUP=""
+        fi
+        if [ -r ${BASEDIR}/lib/mysql/plugin/ha_rocksdb.so ]; then
+          ROCKSDB_STARTUP="--plugin-load-add=rocksdb=ha_rocksdb.so"
+        else
+          ROCKSDB_STARTUP=""
+        fi
+        for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+          RBASE1="$(( RBASE + ( $PORT_CHECK * $j ) ))"
+          LADDR1="$ADDR:$(( RBASE1 + 8 ))"
+          node="${BASEDIR}/node$j"
+          if ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
+            echo "WARNING! Another mysqld process using /tmp/${NODE_NAME}_${j}.sock"
+            if ! sudo pmm-admin list | grep "/tmp/${NODE_NAME}_${j}.sock" > /dev/null ; then
+              if [ $disable_ssl -eq 1 ]; then
+                sudo pmm-admin add mysql ${NODE_NAME}-${j} --socket=/tmp/${NODE_NAME}_${j}.sock --user=root --query-source=$query_source --disable-ssl
+                check_disable_ssl ${NODE_NAME}-${j}
+              else
+                sudo pmm-admin add mysql ${NODE_NAME}-${j} --socket=/tmp/${NODE_NAME}_${j}.sock --user=root --query-source=$query_source
+              fi
+            fi
+            continue
+          fi
+          VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
+          if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
+            mkdir -p $node
+            ${MID} --datadir=$node  > ${BASEDIR}/startup_node$j.err 2>&1
+          else
+            if [ ! -d $node ]; then
+              ${MID} --datadir=$node  > ${BASEDIR}/startup_node$j.err 2>&1
+            fi
+          fi
+          if  [[ "${CLIENT_NAME}" == "pxc" ]]; then
+            WSREP_CLUSTER="${WSREP_CLUSTER}gcomm://$LADDR1,"
+            if [ $j -eq 1 ]; then
+              WSREP_CLUSTER_ADD="--wsrep_cluster_address=gcomm:// "
+            else
+              WSREP_CLUSTER_ADD="--wsrep_cluster_address=$WSREP_CLUSTER"
+            fi
+            MYEXTRA="--no-defaults --wsrep-provider=${BASEDIR}/lib/libgalera_smm.so $WSREP_CLUSTER_ADD --wsrep_provider_options=gmcast.listen_addr=tcp://$LADDR1 --wsrep_sst_method=rsync --wsrep_sst_auth=root: --max-connections=30000"
+          else
+            MYEXTRA="--no-defaults --max-connections=30000"
+          fi
+          if [[ "${CLIENT_NAME}" == "md" ]]; then
+            MYEXTRA+=" --gtid-strict-mode=ON "
+          else
+            MYEXTRA+=" --gtid-mode=ON --enforce-gtid-consistency "
+          fi
+          ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
+            --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
+            --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
+            --server-id=10${j} > $node/error.err 2>&1 &
+          function startup_chk(){
+            for X in $(seq 0 ${SERVER_START_TIMEOUT}); do
+              sleep 1
+              if ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
+                ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL query_response_time_stats=ON;" > /dev/null 2>&1
+                check_user=`${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SELECT user,host FROM mysql.user where user='$OUSER' and host='%';"`
+                if [[ -z "$check_user" ]]; then
+                  ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "CREATE USER '$OUSER'@'%' IDENTIFIED BY '$OPASS';GRANT SUPER, PROCESS, REPLICATION SLAVE, RELOAD ON *.* TO '$OUSER'@'%'"
+                  (
+                  printf "%s\t%s\n" "Orchestrator username :" "admin"
+                  printf "%s\t%s\n" "Orchestrator password :" "passw0rd"
+                  ) | column -t -s $'\t'
+                else
+                  echo "User '$OUSER' is already present in MySQL server. Please create Orchestrator user manually."
+                fi
+                break
+              fi
+            done
+          }
+          startup_chk
+          if ! ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
+            if grep -q "TCP/IP port: Address already in use" $node/error.err; then
+              echo "TCP/IP port: Address already in use, restarting ${NODE_NAME}_${j} mysqld daemon with different port"
+              RBASE1="$(( RBASE1 - 1 ))"
+              ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
+                 --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
+                 --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
+                 --server-id=10${j} > $node/error.err 2>&1 &
+              startup_chk
+              if ! ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
+                echo "ERROR! ${NODE_NAME} startup failed. Please check error log $node/error.err"
+                exit 1
+              fi
+            else
               echo "ERROR! ${NODE_NAME} startup failed. Please check error log $node/error.err"
               exit 1
             fi
-          else
-            echo "ERROR! ${NODE_NAME} startup failed. Please check error log $node/error.err"
-            exit 1
           fi
-        fi
-        if [ $disable_ssl -eq 1 ]; then
-          sudo pmm-admin add mysql ${NODE_NAME}-${j} --socket=/tmp/${NODE_NAME}_${j}.sock --user=root --query-source=$query_source --disable-ssl
-          check_disable_ssl ${NODE_NAME}-${j}
-        else
-          sudo pmm-admin add mysql ${NODE_NAME}-${j} --socket=/tmp/${NODE_NAME}_${j}.sock --user=root --query-source=$query_source
-        fi
-      done
-      pxc_proxysql_setup(){
-        if  [[ "${CLIENT_NAME}" == "pxc" ]]; then
-          if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
-            echo "The program 'proxysql' is currently not installed. Installing proxysql from percona repository"
-            if grep -iq "ubuntu"  /etc/os-release ; then
-              sudo apt install -y proxysql
-            fi
-            if grep -iq "centos"  /etc/os-release ; then
-              sudo yum install -y proxysql
-            fi
-            if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
-              echo "ERROR! Could not install proxysql on CentOS/Ubuntu machine. Terminating"
-              exit 1
-            fi
-          fi
-          PXC_SOCKET=$(sudo pmm-admin list | grep "mysql:metrics[ \t]*PXC_NODE-1" | awk -F[\(\)] '{print $2}')
-          PXC_BASE_PORT=$(${BASEDIR}/bin/mysql -uroot --socket=$PXC_SOCKET -Bse"select @@port")
-          ${BASEDIR}/bin/mysql -uroot --socket=$PXC_SOCKET -e"grant all on *.* to admin@'%' identified by 'admin'"
-          sudo sed -i "s/3306/${PXC_BASE_PORT}/" /etc/proxysql-admin.cnf
-          sudo proxysql-admin -e > $WORKDIR/logs/proxysql-admin.log
           if [ $disable_ssl -eq 1 ]; then
-            sudo pmm-admin add proxysql:metrics --disable-ssl
+            sudo pmm-admin add mysql ${NODE_NAME}-${j} --socket=/tmp/${NODE_NAME}_${j}.sock --user=root --query-source=$query_source --disable-ssl
+            check_disable_ssl ${NODE_NAME}-${j}
           else
-            sudo pmm-admin add proxysql:metrics
+            sudo pmm-admin add mysql ${NODE_NAME}-${j} --socket=/tmp/${NODE_NAME}_${j}.sock --user=root --query-source=$query_source
           fi
-        else
-          echo "Could not find PXC nodes. Skipping proxysql setup"
-        fi
-      }
+        done
+        pxc_proxysql_setup(){
+          if  [[ "${CLIENT_NAME}" == "pxc" ]]; then
+            if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
+              echo "The program 'proxysql' is currently not installed. Installing proxysql from percona repository"
+              if grep -iq "ubuntu"  /etc/os-release ; then
+                sudo apt install -y proxysql
+              fi
+              if grep -iq "centos"  /etc/os-release ; then
+                sudo yum install -y proxysql
+              fi
+              if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
+                echo "ERROR! Could not install proxysql on CentOS/Ubuntu machine. Terminating"
+                exit 1
+              fi
+            fi
+            PXC_SOCKET=$(sudo pmm-admin list | grep "mysql:metrics[ \t]*PXC_NODE-1" | awk -F[\(\)] '{print $2}')
+            PXC_BASE_PORT=$(${BASEDIR}/bin/mysql -uroot --socket=$PXC_SOCKET -Bse"select @@port")
+            ${BASEDIR}/bin/mysql -uroot --socket=$PXC_SOCKET -e"grant all on *.* to admin@'%' identified by 'admin'"
+            sudo sed -i "s/3306/${PXC_BASE_PORT}/" /etc/proxysql-admin.cnf
+            sudo proxysql-admin -e > $WORKDIR/logs/proxysql-admin.log
+            if [ $disable_ssl -eq 1 ]; then
+              sudo pmm-admin add proxysql:metrics --disable-ssl
+            else
+              sudo pmm-admin add proxysql:metrics
+            fi
+          else
+            echo "Could not find PXC nodes. Skipping proxysql setup"
+          fi
+        }
+      fi
+    done
+    if [ ! -z $compare_query_count ]; then
+      compare_query
     fi
-  done
-  if [ ! -z $compare_query_count ]; then
-    compare_query
   fi
 }
 
@@ -1318,6 +1378,7 @@ pmm_docker_client_startup(){
   centos_docker_client
   ubuntu_docker_client
 }
+
 clean_clients(){
   if [[ ! -e $(which mysqladmin 2> /dev/null) ]] ;then
     MYSQLADMIN_CLIENT=$(find . -name mysqladmin | head -n1)
@@ -1464,6 +1525,21 @@ sysbench_run(){
     sysbench /usr/share/sysbench/oltp_read_write.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=root  --mysql-storage-engine=$storage_engine --threads=16 --time=3600 --events=1870000000 --db-driver=mysql --db-ps-mode=disable --mysql-socket=${i} run  > $WORKDIR/logs/sysbench_run_${DB_NAME}.txt 2>&1 &
     check_script $? "Failed to run sysbench oltp"
   done
+}
+
+check_dbdeployer(){
+  if ! dbdeployer --version | grep 'dbdeployer version 1.' > /dev/null ; then
+      echo "ERROR! dbdeployer not installed attempting to install"
+      install_dbdeployer
+  fi
+  dbdeployer delete all --skip-confirm
+}
+
+install_dbdeployer(){
+  wget https://github.com/datacharmer/dbdeployer/releases/download/v1.28.1/dbdeployer-1.28.1.linux.tar.gz
+  tar -xzf dbdeployer-1.28.1.linux.tar.gz
+  chmod +x dbdeployer-1.28.1.linux
+  sudo mv dbdeployer-1.28.1.linux /usr/local/bin/dbdeployer
 }
 
 if [ ! -z $wipe_clients ]; then
