@@ -753,7 +753,6 @@ install_client(){
 }
 
 configure_client() {
-  sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443 --debug
   sleep 5
 }
 
@@ -957,10 +956,11 @@ add_clients_pmm2(){
       fi
       mkdir $WORKDIR/mysql
       dbdeployer unpack mysql-${ms_version}* --sandbox-binary $WORKDIR/mysql --overwrite
+      rm -Rf mysql-${ms_version}*
       if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
         dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
-        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        pmm-admin add mysql --use-perfschema --username=root --password=msandbox 127.0.0.1:$node_port mysql-single
+        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $2}'`
+        pmm-admin add mysql --use-perfschema --username=root 127.0.0.1:$node_port mysql-single
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
