@@ -969,12 +969,32 @@ add_clients_pmm2(){
         done
       fi
     fi
+    if [[ "${CLIENT_NAME}" == "mo" ]]; then
+      setup_db_tar psmdb "percona-server-mongodb-${mo_version}*" "Percona Server Mongodb binary tar ball" ${mo_version}
+      rm -rf $BASEDIR/data
+      for k in `seq 1  ${REPLCOUNT}`;do
+          PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
+          PSMDB_PORTS+=($PSMDB_PORT)
+          for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+            PORT=$(( $PSMDB_PORT + $j - 1 ))
+            mkdir -p ${BASEDIR}/data/rpldb${k}_${j}
+            $BASEDIR/bin/mongod --profile 2 --slowms 1  $mongo_storage_engine  --replSet r${k} --dbpath=$BASEDIR/data/rpldb${k}_${j} --logpath=$BASEDIR/data/rpldb${k}_${j}/mongod.log --port=$PORT --logappend --fork &
+            sleep 10
+            if [ $disable_ssl -eq 1 ]; then
+              pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j} --disable-ssl
+              check_disable_ssl mongodb_inst_rpl${k}_${j}
+            else
+              pmm-admin add mongodb --cluster mongodb_cluster --use-profiler --use-exporter --uri localhost:$PORT mongodb_inst_rpl${k}_${j}
+            fi
+          done
+      done
+    fi
   done
 }
 
 #Percona Server configuration.
 add_clients(){
-  if [ ! -z $use_dbdeployer ] && [ ! -z $PMM2 ]; then
+  if [ ! -z $PMM2 ]; then
     configure_client
     check_dbdeployer
     add_clients_pmm2
