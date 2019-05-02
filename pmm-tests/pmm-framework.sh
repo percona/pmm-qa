@@ -970,7 +970,7 @@ add_clients_pmm2(){
       fi
     fi
     if [[ "${CLIENT_NAME}" == "mo" ]]; then
-      setup_db_tar psmdb "percona-server-mongodb-${mo_version}*" "Percona Server Mongodb binary tar ball" ${mo_version}
+      get_basedir psmdb "percona-server-mongodb-${mo_version}*" "Percona Server Mongodb binary tar ball" ${mo_version}
       rm -rf $BASEDIR/data
       for k in `seq 1  ${REPLCOUNT}`;do
           PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
@@ -984,7 +984,7 @@ add_clients_pmm2(){
               pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j} --disable-ssl
               check_disable_ssl mongodb_inst_rpl${k}_${j}
             else
-              pmm-admin add mongodb --cluster mongodb_cluster --use-profiler --use-exporter --uri localhost:$PORT mongodb_inst_rpl${k}_${j}
+              pmm-admin add mongodb --use-profiler --use-exporter localhost:$PORT mongodb_inst_rpl${k}_${j}
             fi
           done
       done
