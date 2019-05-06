@@ -753,6 +753,7 @@ install_client(){
 }
 
 configure_client() {
+  sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
   sleep 5
 }
 
