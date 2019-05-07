@@ -960,13 +960,15 @@ add_clients_pmm2(){
       rm -Rf mysql-${ms_version}*
       if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
         dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
-        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $2}'`
-        pmm-admin add mysql --use-perfschema --username=root 127.0.0.1:$node_port mysql-single
+        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+        pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
+        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
         for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-          node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
-          pmm-admin add mysql --use-perfschema --username=root --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j --debug
+          #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
+          pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j --debug
+          node_port=$(($node_port + 1))
         done
       fi
     fi
@@ -985,7 +987,7 @@ add_clients_pmm2(){
               pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j} --disable-ssl
               check_disable_ssl mongodb_inst_rpl${k}_${j}
             else
-              pmm-admin add mongodb --use-profiler --use-exporter localhost:$PORT mongodb_inst_rpl${k}_${j}
+              pmm-admin add mongodb --use-profiler --use-exporter --debug localhost:$PORT mongodb_inst_rpl${k}_${j}
             fi
           done
       done
