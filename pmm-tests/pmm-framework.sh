@@ -1015,7 +1015,7 @@ add_clients(){
       NODE_NAME="PSMR_NODE"
       get_basedir ps "[Pp]ercona-[Ss]erver-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
       MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --log_output=file --slow_query_log=ON --long_query_time=0 --log_slow_rate_limit=100 --log_slow_rate_type=query --log_slow_verbosity=full --log_slow_admin_statements=ON --log_slow_slave_statements=ON --slow_query_log_always_write_time=1 --slow_query_log_use_global_control=all --innodb_monitor_enable=all --userstat=1 --plugin-load-add=rocksdb=ha_rocksdb.so --default-storage-engine=rocksdb"
-    elif [[ "${CLIENT_NAME}" == "ms"  && ]]; then
+    elif [[ "${CLIENT_NAME}" == "ms" && -z $PMM2 ]]; then
       PORT_CHECK=201
       NODE_NAME="MS_NODE"
       get_basedir mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
