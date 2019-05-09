@@ -1209,13 +1209,13 @@ add_clients(){
       if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
         dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single-$IP_ADDRESS
+        pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single-$IP_ADDRESS
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
         for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
           #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
-          pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
+          pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
           node_port=$(($node_port + 1))
         done
       fi
