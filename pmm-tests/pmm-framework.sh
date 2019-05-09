@@ -1005,7 +1005,7 @@ add_clients(){
   mkdir -p $WORKDIR/logs
   for i in ${ADDCLIENT[@]};do
     CLIENT_NAME=$(echo $i | grep -o  '[[:alpha:]]*')
-    if [[ "${CLIENT_NAME}" == "ps" ]]; then
+    if [[ "${CLIENT_NAME}" == "ps" && -z $PMM2 ]]; then
       PORT_CHECK=101
       NODE_NAME="PS_NODE"
       get_basedir ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
@@ -1066,7 +1066,7 @@ add_clients(){
               check_disable_ssl mongodb_inst_rpl${k}_${j}
             else
               if [ ! -z $PMM2 ]; then
-                pmm-admin add mongodb --use-profiler --use-exporter --debug localhost:$PORT mongodb_inst_rpl${k}_${j}
+                pmm-admin add mongodb --use-profiler --use-exporter --debug localhost:$PORT mongodb_inst_rpl${k}_${j}_$IP_ADDRESS
               else
                 sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j}
               fi
@@ -1119,7 +1119,7 @@ add_clients(){
             check_disable_ssl mongodb_inst_rpl${k}_${j}
           else
             if [ ! -z $PMM2 ]; then
-              pmm-admin add mongodb --use-profiler --use-exporter --debug localhost:$PORT mongodb_inst_config_rpl${m}
+              pmm-admin add mongodb --use-profiler --use-exporter --debug localhost:$PORT mongodb_inst_config_rpl${m}_$IP_ADDRESS
             else
               sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m}
             fi
@@ -1140,7 +1140,11 @@ add_clients(){
         if [ $disable_ssl -eq 1 ]; then
           sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOD_PORT mongod_config_inst --disable-ssl
         else
-          sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOS_PORT mongos_config_inst
+          if [ ! -z $PMM2 ]; then
+            pmm-admin add mongodb --cluster mongodb_cluster --debug localhost:$CONFIG_MONGOS_PORT mongos_config_inst_$IP_ADDRESS
+          else
+            sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOS_PORT mongos_config_inst
+          fi
         fi
         echo "Adding Shards"
 		    sleep 20
@@ -1205,13 +1209,35 @@ add_clients(){
       if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
         dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single
+        pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single-$IP_ADDRESS
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
         for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
           #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
-          pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j --debug
+          pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
+          node_port=$(($node_port + 1))
+        done
+      fi
+    elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
+      check_dbdeployer
+      setup_db_tar ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
+      if [ -d "$WORKDIR/ps" ]; then
+        rm -Rf $WORKDIR/ps;
+      fi
+      mkdir $WORKDIR/ps
+      dbdeployer unpack Percona-Server-${ps_version}* --sandbox-binary $WORKDIR/ps --overwrite
+      rm -Rf Percona-Server-${ps_version}*
+      if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
+        dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/ps --force
+        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+        pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port ps-single
+      else
+        dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/ps --nodes $ADDCLIENTS_COUNT --force
+        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+        for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+          #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
+          pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port ps-multiple-node-$j --debug
           node_port=$(($node_port + 1))
         done
       fi
