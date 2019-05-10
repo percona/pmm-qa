@@ -1067,7 +1067,7 @@ add_clients(){
               check_disable_ssl mongodb_inst_rpl${k}_${j}
             else
               if [ ! -z $PMM2 ]; then
-                pmm-admin add mongodb --use-profiler --use-exporter --debug localhost:$PORT mongodb_inst_rpl${k}_${j}_$IP_ADDRESS
+                pmm-admin add mongodb --use-profiler --debug localhost:$PORT mongodb_inst_rpl${k}_${j}_$IP_ADDRESS
               else
                 sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j}
               fi
@@ -1120,7 +1120,7 @@ add_clients(){
             check_disable_ssl mongodb_inst_rpl${k}_${j}
           else
             if [ ! -z $PMM2 ]; then
-              pmm-admin add mongodb --use-profiler --use-exporter --debug localhost:$PORT mongodb_inst_config_rpl${m}_$IP_ADDRESS
+              pmm-admin add mongodb --use-profiler --debug localhost:$PORT mongodb_inst_config_rpl${m}_$IP_ADDRESS
             else
               sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m}
             fi
