@@ -20,6 +20,7 @@ ADDR="127.0.0.1"
 download_link=0
 disable_ssl=0
 create_pgsql_user=0
+PGSQL_PORT=5432
 
 mkdir -p $WORKDIR/logs
 # User configurable variables
@@ -459,7 +460,7 @@ if [[ -z "${md_version}" ]]; then md_version="10.3"; fi
 if [[ -z "${mo_version}" ]]; then mo_version="4.0"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
 if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
-if [[ -z "${pgsql_version}" ]]; then pgsql_version="10.7";fi
+if [[ -z "${pgsql_version}" ]]; then pgsql_version="10.8";fi
 
 if [[ -z "$query_source" ]];then
   query_source=perfschema
@@ -1020,7 +1021,7 @@ add_clients(){
       NODE_NAME="MS_NODE"
       get_basedir mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
       MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql --innodb_monitor_enable=all --performance_schema=ON"
-    elif [[ "${CLIENT_NAME}" == "pgsql" ]]; then
+    elif [[ "${CLIENT_NAME}" == "pgsql" && -z $PMM2 ]]; then
       PORT_CHECK=501
       NODE_NAME="PGSQL_NODE"
       get_basedir postgresql "postgresql-${pgsql_version}*" "Postgre SQL Binary tar ball" ${pgsql_version}
@@ -1153,7 +1154,7 @@ add_clients(){
           $BASEDIR/bin/mongo --quiet --eval "printjson(db.getSisterDB('admin').runCommand({addShard: 'r${k}/localhost:${PSMDB_PORTS[$n]}'}))"
         done
 	    fi
-    elif [[ "${CLIENT_NAME}" == "pgsql" ]]; then
+    elif [[ -z $PMM2 && "${CLIENT_NAME}" == "pgsql" ]]; then
       if [ $create_pgsql_user -eq 1 ]; then
         PGSQL_USER=psql
         echo "Creating postgresql Dedicated User psql"
@@ -1196,6 +1197,15 @@ add_clients(){
         else
           sudo pmm-admin add postgresql --user postgres --host localhost --port ${PGSQL_PORT} PGSQL-${NODE_NAME}-${j}
         fi
+      done
+    elif [[ "${CLIENT_NAME}" == "pgsql" && ! -z $PMM2 ]]; then
+      PGSQL_PORT=5432
+      docker pull postgres:${pgsql_version}
+      for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+        check_port $PGSQL_PORT
+        docker run --name pgsql_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version}
+        pmm-admin add postgresql localhost:$PGSQL_PORT pgsql_${pgsql_version}_${IP_ADDRESS}_$j
+        PGSQL_PORT=$((PGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
       check_dbdeployer
@@ -1375,6 +1385,14 @@ add_clients(){
   done
   if [ ! -z $compare_query_count ]; then
     compare_query
+  fi
+}
+
+check_port (){
+  PORT=$1
+  if [[ $(docker ps | grep postgres | grep 0.0.0.0:$PORT) ]]; then
+    PGSQL_PORT=$((PGSQL_PORT+j))
+    check_port $PGSQL_PORT
   fi
 }
 
