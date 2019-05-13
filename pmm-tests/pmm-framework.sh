@@ -21,6 +21,7 @@ download_link=0
 disable_ssl=0
 create_pgsql_user=0
 PGSQL_PORT=5432
+PS_PORT=43306
 
 mkdir -p $WORKDIR/logs
 # User configurable variables
@@ -1202,7 +1203,7 @@ add_clients(){
       PGSQL_PORT=5432
       docker pull postgres:${pgsql_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        check_port $PGSQL_PORT
+        check_port $PGSQL_PORT postgres
         docker run --name pgsql_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version}
         pmm-admin add postgresql localhost:$PGSQL_PORT pgsql_${pgsql_version}_${IP_ADDRESS}_$j
         PGSQL_PORT=$((PGSQL_PORT+j))
@@ -1230,27 +1231,14 @@ add_clients(){
         done
       fi
     elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
-      check_dbdeployer
-      setup_db_tar ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
-      if [ -d "$WORKDIR/ps" ]; then
-        rm -Rf $WORKDIR/ps;
-      fi
-      mkdir $WORKDIR/ps
-      dbdeployer unpack Percona-Server-${ps_version}* --sandbox-binary $WORKDIR/ps --overwrite
-      rm -Rf Percona-Server-${ps_version}*
-      if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
-        dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/ps --force
-        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port ps-single
-      else
-        dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/ps --nodes $ADDCLIENTS_COUNT --force
-        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-          #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
-          pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port ps-multiple-node-$j --debug
-          node_port=$(($node_port + 1))
-        done
-      fi
+      PS_PORT=43306
+      docker pull percona:${ps_version}
+      for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+        check_port $PS_PORT percona
+        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps_${ps_version} -d percona:${ps_version}
+        pmm-admin add mysql --use-$query_source --username=root --password=ps_${ps_version} localhost:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+        PS_PORT=$((PS_PORT+j))
+      done
     else
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
@@ -1390,9 +1378,16 @@ add_clients(){
 
 check_port (){
   PORT=$1
-  if [[ $(docker ps | grep postgres | grep 0.0.0.0:$PORT) ]]; then
-    PGSQL_PORT=$((PGSQL_PORT+j))
-    check_port $PGSQL_PORT
+  DB=$2
+  if [[ $(docker ps | grep $DB | grep 0.0.0.0:$PORT) ]]; then
+    if [[ $DB == "postgres" ]]; then
+      PGSQL_PORT=$((PGSQL_PORT+j))
+      check_port $PGSQL_PORT postgres
+    fi
+    if [[ $DB == "percona" ]]; then
+      PS_PORT=$((PS_PORT+j))
+      check_port $PS_PORT percona
+    fi
   fi
 }
 
