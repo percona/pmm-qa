@@ -751,7 +751,8 @@ install_client(){
   tar -xzf $PMM_CLIENT_TAR
   PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client-* 2>/dev/null | grep -v ".tar" | head -n1)
   pushd $PMM_CLIENT_BASEDIR > /dev/null
-  export PATH="$PWD/bin:$PATH"
+  echo "export PATH=$PATH:$PWD/bin" >> ~/.bash_profile
+  source ~/.bash_profile
   pmm-admin --version
 }
 
