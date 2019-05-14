@@ -1236,7 +1236,7 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PS_PORT percona
         docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps_${ps_version} -d percona:${ps_version}
-        pmm-admin add mysql --use-$query_source --username=root --password=ps_${ps_version} localhost:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+        pmm-admin add mysql --use-$query_source --username=root --password=ps_${ps_version} 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
         PS_PORT=$((PS_PORT+j))
       done
     else
@@ -1379,7 +1379,7 @@ add_clients(){
 check_port (){
   PORT=$1
   DB=$2
-  if [[ $(docker ps | grep $DB | grep 0.0.0.0:$PORT) ]]; then
+  if [[ $(sudo docker ps | grep $DB | grep 0.0.0.0:$PORT) ]]; then
     if [[ $DB == "postgres" ]]; then
       PGSQL_PORT=$((PGSQL_PORT+j))
       check_port $PGSQL_PORT postgres
