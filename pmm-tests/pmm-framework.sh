@@ -559,7 +559,7 @@ setup(){
         fi
      fi
    fi
- fi
+  fi
   elif [[ "$pmm_server" == "ami" ]] ; then
     if [[ ! -e $(which aws 2> /dev/null) ]] ;then
       echo "ERROR! AWS client program is currently not installed. Please install awscli. Terminating"
@@ -687,7 +687,7 @@ setup(){
 	if [ ! -z $PMM2 ]; then
     configure_client
   else
-  sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
+    sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
     if [[ "$pmm_server" == "ami" ]]; then
 	  sudo pmm-admin config --server $AWS_PUBLIC_IP --client-address $IP_ADDRESS $PMM_MYEXTRA
 	  echo "Alert! Password protection is not enabled in ami image, Please configure it manually"
@@ -752,13 +752,16 @@ install_client(){
   PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client-* 2>/dev/null | grep -v ".tar" | head -n1)
   pushd $PMM_CLIENT_BASEDIR > /dev/null
   export PATH="$PWD/bin:$PATH"
+  pmm-admin --version
 }
 
 configure_client() {
   if [ ! -z $IP_ADDRESS ]; then
     sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+    SERVER_IP=$IP_ADDRESS
   else
     IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+    SERVER_IP=$IP_ADDRESS
     sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
   fi
   sleep 5
@@ -1661,12 +1664,12 @@ if [ ! -z $list ]; then
   sudo pmm-admin list
 fi
 
-if [ ! -z $PMM2 ]; then
-  configure_client;
-fi
-
 if [ ! -z $setup ]; then
   setup
+fi
+
+if [ ! -z $PMM2 ]; then
+  configure_client;
 fi
 
 if [ ! -z $upgrade_server ]; then
