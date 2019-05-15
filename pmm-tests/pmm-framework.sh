@@ -758,12 +758,20 @@ install_client(){
 
 configure_client() {
   if [ ! -z $IP_ADDRESS ]; then
-    sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+    if [ ! -z $setup ]; then
+      pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+    else
+      sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+    fi
     SERVER_IP=$IP_ADDRESS
   else
     IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
     SERVER_IP=$IP_ADDRESS
-    sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+    if [ ! -z $setup ]; then
+      pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+    else
+      sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+    fi
   fi
   sleep 5
 }
