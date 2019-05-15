@@ -536,7 +536,7 @@ setup(){
 	    aws ec2 describe-instance-status --instance-ids  $INSTANCE_ID | grep "Code" | sed 's/[^0-9]//g'
     fi
     echo "Initiating PMM configuration"
-    if [ ! -z $PMM2  && -z $skip_docker_setup ]; then
+    if [[ ! -z $PMM2  && -z $skip_docker_setup ]]; then
       sudo docker create -v /srv    --name pmm-data    perconalab/pmm-server:$PMM_VERSION  /bin/true
       sudo docker run -d  -p $PMM_PORT:80 -p 443:443 -p 9000:9000  --name pmm-server perconalab/pmm-server:$PMM_VERSION
     else
@@ -749,7 +749,11 @@ fi
 
 #Download and install PMM2.x client
 install_client(){
-  PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+  if [ ! -z $link_client ]; then
+    PMM_CLIENT_TAR_URL=$link_client;
+  else
+    PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+  fi
   echo "PMM2 client  $PMM_CLIENT_TAR_URL"
   wget $PMM_CLIENT_TAR_URL
   PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TAR_URL | grep -o '[^/]*$')
