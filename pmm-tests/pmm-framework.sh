@@ -511,7 +511,9 @@ setup(){
     exit 1
   fi
   #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
-  IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+  if [ -z $IP_ADDRESS ]; then
+    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+  fi
   if [[ "$pmm_server" == "docker" ]];then
     #PMM configuration setup
     if [ -z $pmm_server_version ]; then
