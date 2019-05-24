@@ -771,7 +771,7 @@ install_client(){
   source ~/.bash_profile
   pmm-admin --version
   pmm-agent setup --config-file=$PWD/config/pmm-agent.yaml --server-insecure-tls --server-address=$IP_ADDRESS:443
-  pmm-agent --config-file=$PWD/config/pmm-agent.yaml 2> /dev/null &
+  pmm-agent --config-file=$PWD/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 }
 
 configure_client() {
@@ -1235,6 +1235,7 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
         docker run --name pgsql_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version}
+        sleep 20
         pmm-admin add postgresql localhost:$PGSQL_PORT pgsql_${pgsql_version}_${IP_ADDRESS}_$j
         PGSQL_PORT=$((PGSQL_PORT+j))
       done
@@ -1266,6 +1267,7 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PS_PORT percona
         docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps_${ps_version} -d percona:${ps_version}
+        sleep 20
         pmm-admin add mysql --use-$query_source --username=root --password=ps_${ps_version} 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
         PS_PORT=$((PS_PORT+j))
       done
