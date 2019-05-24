@@ -1136,7 +1136,7 @@ add_clients(){
         for p in `seq 1  ${REPLCOUNT}`;do
           n=$(( $p - 1 ))
           for r in `seq 1  ${ADDCLIENTS_COUNT}`;do
-            PORT=$(( $PSMDB_PORT[$n] + $r - 1 ))
+            PORT=$(( ${PSMDB_PORTS[$n]} + $r - 1 ))
             pmm-admin add mongodb --use-profiler --debug localhost:$PORT mongodb_inst_rpl${p}_${r}_$IP_ADDRESS --cluster mongodb_cluster
           done
         done
