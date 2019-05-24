@@ -22,6 +22,7 @@ disable_ssl=0
 create_pgsql_user=0
 PGSQL_PORT=5432
 PS_PORT=43306
+with_replica=1
 
 mkdir -p $WORKDIR/logs
 # User configurable variables
@@ -1097,11 +1098,7 @@ add_clients(){
               sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j} --disable-ssl
               check_disable_ssl mongodb_inst_rpl${k}_${j}
             else
-              if [ ! -z $PMM2 ]; then
-                pmm-admin add mongodb --use-profiler --debug localhost:$PORT mongodb_inst_rpl${k}_${j}_$IP_ADDRESS
-              else
-                sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j}
-              fi
+              sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j}
             fi
           done
       done
@@ -1126,8 +1123,7 @@ add_clients(){
         echo "printjson(conf)" >> /tmp/config_replset.js
         echo "printjson(rs.initiate(conf));" >> /tmp/config_replset.js
       }
-
-	    create_replset_js
+      create_replset_js
       if [[ "$with_replica" == "1" ]]; then
         for k in `seq 1  ${REPLCOUNT}`;do
 	        n=$(( $k - 1 ))
@@ -1136,7 +1132,13 @@ add_clients(){
           sleep 5
 	      done
 	    fi
-
+      if [ ! -z $PMM2 ]; then
+        for p in `seq 1  ${REPLCOUNT}`;do
+          for r in `seq 1  ${ADDCLIENTS_COUNT}`;do
+            pmm-admin add mongodb --use-profiler --debug localhost:$PORT mongodb_inst_rpl${p}_${r}_$IP_ADDRESS --cluster mongodb_cluster
+          done
+        done
+      fi
       if [[ "$with_sharding" == "1" ]]; then
         #config
         CONFIG_MONGOD_PORT=$(( (RANDOM%21 + 10) * 1001 ))
