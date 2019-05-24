@@ -1129,7 +1129,7 @@ add_clients(){
 	        n=$(( $k - 1 ))
 		      echo "Configuring replicaset"
           sudo $BASEDIR/bin/mongo --quiet --port ${PSMDB_PORTS[$n]} --eval "var replSet='r${k}'" "/tmp/config_replset.js"
-          sleep 5
+          sleep 20
 	      done
 	    fi
       if [ ! -z $PMM2 ]; then
