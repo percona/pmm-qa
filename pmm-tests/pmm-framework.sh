@@ -1092,7 +1092,7 @@ add_clients(){
             PORT=$(( $PSMDB_PORT + $j - 1 ))
             mkdir -p ${BASEDIR}/data/rpldb${k}_${j}
             $BASEDIR/bin/mongod --profile 2 --slowms 1  $mongo_storage_engine  --replSet r${k} --dbpath=$BASEDIR/data/rpldb${k}_${j} --logpath=$BASEDIR/data/rpldb${k}_${j}/mongod.log --port=$PORT --logappend --fork &
-            sleep 10
+            sleep 20
             if [ $disable_ssl -eq 1 ]; then
               sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j} --disable-ssl
               check_disable_ssl mongodb_inst_rpl${k}_${j}
