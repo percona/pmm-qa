@@ -1386,13 +1386,19 @@ add_clients(){
             if grep -iq "centos"  /etc/os-release ; then
               sudo yum install -y proxysql
             fi
+            if grep -iq "rhel"  /etc/os-release ; then
+              sudo yum install -y proxysql
+            fi
             if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
               echo "ERROR! Could not install proxysql on CentOS/Ubuntu machine. Terminating"
               exit 1
             fi
           fi
-          ${BASEDIR}/bin/mysql -uroot --port=${RBASE1} -e"grant all on *.* to admin@'%' identified by 'admin'"
-          sudo sed -i "s/3306/${RBASE1}/" /etc/proxysql-admin.cnf
+          sudo service proxysql start
+          sleep 5
+          PXC_PORT=$(pmm-admin list | grep "PXC_NODE-1" | awk -F":" '{print $2}' | awk -F" " '{print $1}')
+          ${BASEDIR}/bin/mysql -uroot --port=${PXC_PORT} -e"grant all on *.* to admin@'%' identified by 'admin'"
+          sudo sed -i "s/3306/${PXC_PORT}/" /etc/proxysql-admin.cnf
           sudo proxysql-admin -e > $WORKDIR/logs/proxysql-admin.log
           if [ $disable_ssl -eq 1 ]; then
             sudo pmm-admin add proxysql --disable-ssl
@@ -1514,11 +1520,16 @@ add_clients(){
             if grep -iq "centos"  /etc/os-release ; then
               sudo yum install -y proxysql
             fi
+            if grep -iq "rhel"  /etc/os-release ; then
+              sudo yum install -y proxysql
+            fi
             if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
               echo "ERROR! Could not install proxysql on CentOS/Ubuntu machine. Terminating"
               exit 1
             fi
           fi
+          sleep 5
+          sudo service proxysql start
           PXC_SOCKET=$(sudo pmm-admin list | grep "mysql:metrics[ \t]*PXC_NODE-1" | awk -F[\(\)] '{print $2}')
           PXC_BASE_PORT=$(${BASEDIR}/bin/mysql -uroot --socket=$PXC_SOCKET -Bse"select @@port")
           ${BASEDIR}/bin/mysql -uroot --socket=$PXC_SOCKET -e"grant all on *.* to admin@'%' identified by 'admin'"
