@@ -1275,6 +1275,134 @@ add_clients(){
         pmm-admin add mysql --use-$query_source --username=root --password=ps_${ps_version} 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
         PS_PORT=$((PS_PORT+j))
       done
+    elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
+      if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
+        TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
+      else
+        TOKUDB_STARTUP=""
+      fi
+      if [ -r ${BASEDIR}/lib/mysql/plugin/ha_rocksdb.so ]; then
+        ROCKSDB_STARTUP="--plugin-load-add=rocksdb=ha_rocksdb.so"
+      else
+        ROCKSDB_STARTUP=""
+      fi
+      for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+        RBASE1="$(( RBASE + ( $PORT_CHECK * $j ) ))"
+        LADDR1="$ADDR:$(( RBASE1 + 8 ))"
+        node="${BASEDIR}/node$j"
+        if ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} > /dev/null 2>&1; then
+          echo "WARNING! Another mysqld process using Port -P${RBASE1}"
+          if ! pmm-admin list | grep "${RBASE1}" > /dev/null ; then
+            if [ $disable_ssl -eq 1 ]; then
+              pmm-admin add mysql --username=root --use-$query_source --disable-ssl localhost:${RBASE1} ${NODE_NAME}-${j}
+              check_disable_ssl ${NODE_NAME}-${j}
+            else
+              pmm-admin add mysql --username=root --use-$query_source localhost:${RBASE1} ${NODE_NAME}-${j}
+            fi
+          fi
+          continue
+        fi
+        VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
+        if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
+          mkdir -p $node
+          ${MID} --datadir=$node  > ${BASEDIR}/startup_node$j.err 2>&1
+        else
+          if [ ! -d $node ]; then
+            ${MID} --datadir=$node  > ${BASEDIR}/startup_node$j.err 2>&1
+          fi
+        fi
+        if  [[ "${CLIENT_NAME}" == "pxc" ]]; then
+          WSREP_CLUSTER="${WSREP_CLUSTER}gcomm://$LADDR1,"
+          if [ $j -eq 1 ]; then
+            WSREP_CLUSTER_ADD="--wsrep_cluster_address=gcomm:// "
+          else
+            WSREP_CLUSTER_ADD="--wsrep_cluster_address=$WSREP_CLUSTER"
+          fi
+          MYEXTRA="--no-defaults --wsrep-provider=${BASEDIR}/lib/libgalera_smm.so $WSREP_CLUSTER_ADD --wsrep_provider_options=gmcast.listen_addr=tcp://$LADDR1 --wsrep_sst_method=rsync --wsrep_sst_auth=root: --max-connections=30000"
+        else
+          MYEXTRA="--no-defaults --max-connections=30000"
+        fi
+        if [[ "${CLIENT_NAME}" == "md" ]]; then
+          MYEXTRA+=" --gtid-strict-mode=ON "
+        else
+          MYEXTRA+=" --gtid-mode=ON --enforce-gtid-consistency "
+        fi
+        ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
+          --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
+          --port=$RBASE1 --log-slave-updates \
+          --server-id=10${j} > $node/error.err 2>&1 &
+        function startup_chk(){
+          for X in $(seq 0 ${SERVER_START_TIMEOUT}); do
+            sleep 1
+            if ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} ping > /dev/null 2>&1; then
+              ${BASEDIR}/bin/mysql  -uroot -P${RBASE1} -e "SET GLOBAL query_response_time_stats=ON;" > /dev/null 2>&1
+              check_user=`${BASEDIR}/bin/mysql  -uroot -P${RBASE1} -e "SELECT user,host FROM mysql.user where user='$OUSER' and host='%';"`
+              if [[ -z "$check_user" ]]; then
+                ${BASEDIR}/bin/mysql  -uroot -P${RBASE1} -e "CREATE USER '$OUSER'@'%' IDENTIFIED BY '$OPASS';GRANT SUPER, PROCESS, REPLICATION SLAVE, RELOAD ON *.* TO '$OUSER'@'%'"
+                (
+                printf "%s\t%s\n" "Orchestrator username :" "admin"
+                printf "%s\t%s\n" "Orchestrator password :" "passw0rd"
+                ) | column -t -s $'\t'
+              else
+                echo "User '$OUSER' is already present in MySQL server. Please create Orchestrator user manually."
+              fi
+              break
+            fi
+          done
+        }
+        startup_chk
+        if ! ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} ping > /dev/null 2>&1; then
+          if grep -q "TCP/IP port: Address already in use" $node/error.err; then
+            echo "TCP/IP port: Address already in use, restarting ${NODE_NAME}_${j} mysqld daemon with different port"
+            RBASE1="$(( RBASE1 - 1 ))"
+            ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
+               --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
+               --port=$RBASE1 --log-slave-updates \
+               --server-id=10${j} > $node/error.err 2>&1 &
+            startup_chk
+            if ! ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} ping > /dev/null 2>&1; then
+              echo "ERROR! ${NODE_NAME} startup failed. Please check error log $node/error.err"
+              exit 1
+            fi
+          else
+            echo "ERROR! ${NODE_NAME} startup failed. Please check error log $node/error.err"
+            exit 1
+          fi
+        fi
+        if [ $disable_ssl -eq 1 ]; then
+          pmm-admin add mysql --username=root --use-$query_source --disable-ssl localhost:${RBASE1} ${NODE_NAME}-${j}
+          check_disable_ssl ${NODE_NAME}-${j}
+        else
+          pmm-admin add mysql --username=root --use-$query_source localhost:${RBASE1} ${NODE_NAME}-${j}
+        fi
+      done
+      pxc_proxysql_setup_pmm2(){
+        if  [[ "${CLIENT_NAME}" == "pxc" ]]; then
+          if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
+            echo "The program 'proxysql' is currently not installed. Installing proxysql from percona repository"
+            if grep -iq "ubuntu"  /etc/os-release ; then
+              sudo apt install -y proxysql
+            fi
+            if grep -iq "centos"  /etc/os-release ; then
+              sudo yum install -y proxysql
+            fi
+            if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
+              echo "ERROR! Could not install proxysql on CentOS/Ubuntu machine. Terminating"
+              exit 1
+            fi
+          fi
+          ${BASEDIR}/bin/mysql -uroot --port=${RBASE1} -e"grant all on *.* to admin@'%' identified by 'admin'"
+          sudo sed -i "s/3306/${RBASE1}/" /etc/proxysql-admin.cnf
+          sudo proxysql-admin -e > $WORKDIR/logs/proxysql-admin.log
+          if [ $disable_ssl -eq 1 ]; then
+            sudo pmm-admin add proxysql --disable-ssl
+          else
+            sudo pmm-admin add proxysql
+          fi
+        else
+          echo "Could not find PXC nodes. Skipping proxysql setup"
+        fi
+      }
     else
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
@@ -1726,7 +1854,11 @@ if [ ${#ADDCLIENT[@]} -ne 0 ]; then
 fi
 
 if [ ! -z $with_proxysql ]; then
-  pxc_proxysql_setup
+  if [ ! -z $PMM2 ]; then
+    pxc_proxysql_setup_pmm2
+  else
+    pxc_proxysql_setup
+  fi
 fi
 
 if [ ! -z $sysbench_data_load ]; then
