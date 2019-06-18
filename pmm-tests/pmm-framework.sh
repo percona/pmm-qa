@@ -1290,7 +1290,7 @@ add_clients(){
         RBASE1="$(( RBASE + ( $PORT_CHECK * $j ) ))"
         LADDR1="$ADDR:$(( RBASE1 + 8 ))"
         node="${BASEDIR}/node$j"
-        if ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} > /dev/null 2>&1; then
+        if ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock > /dev/null 2>&1; then
           echo "WARNING! Another mysqld process using Port -P${RBASE1}"
           if ! pmm-admin list | grep "${RBASE1}" > /dev/null ; then
             if [ $disable_ssl -eq 1 ]; then
@@ -1334,11 +1334,11 @@ add_clients(){
         function startup_chk(){
           for X in $(seq 0 ${SERVER_START_TIMEOUT}); do
             sleep 1
-            if ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} ping > /dev/null 2>&1; then
-              ${BASEDIR}/bin/mysql  -uroot -P${RBASE1} -e "SET GLOBAL query_response_time_stats=ON;" > /dev/null 2>&1
-              check_user=`${BASEDIR}/bin/mysql  -uroot -P${RBASE1} -e "SELECT user,host FROM mysql.user where user='$OUSER' and host='%';"`
+            if ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
+              ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL query_response_time_stats=ON;" > /dev/null 2>&1
+              check_user=`${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SELECT user,host FROM mysql.user where user='$OUSER' and host='%';"`
               if [[ -z "$check_user" ]]; then
-                ${BASEDIR}/bin/mysql  -uroot -P${RBASE1} -e "CREATE USER '$OUSER'@'%' IDENTIFIED BY '$OPASS';GRANT SUPER, PROCESS, REPLICATION SLAVE, RELOAD ON *.* TO '$OUSER'@'%'"
+                ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "CREATE USER '$OUSER'@'%' IDENTIFIED BY '$OPASS';GRANT SUPER, PROCESS, REPLICATION SLAVE, RELOAD ON *.* TO '$OUSER'@'%'"
                 (
                 printf "%s\t%s\n" "Orchestrator username :" "admin"
                 printf "%s\t%s\n" "Orchestrator password :" "passw0rd"
@@ -1351,7 +1351,7 @@ add_clients(){
           done
         }
         startup_chk
-        if ! ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} ping > /dev/null 2>&1; then
+        if ! ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
           if grep -q "TCP/IP port: Address already in use" $node/error.err; then
             echo "TCP/IP port: Address already in use, restarting ${NODE_NAME}_${j} mysqld daemon with different port"
             RBASE1="$(( RBASE1 - 1 ))"
@@ -1360,7 +1360,7 @@ add_clients(){
                --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
                --server-id=10${j} > $node/error.err 2>&1 &
             startup_chk
-            if ! ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} ping > /dev/null 2>&1; then
+            if ! ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
               echo "ERROR! ${NODE_NAME} startup failed. Please check error log $node/error.err"
               exit 1
             fi
