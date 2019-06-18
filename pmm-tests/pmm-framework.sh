@@ -1329,7 +1329,7 @@ add_clients(){
         fi
         ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
           --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
-          --port=$RBASE1 --log-slave-updates \
+          --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
           --server-id=10${j} > $node/error.err 2>&1 &
         function startup_chk(){
           for X in $(seq 0 ${SERVER_START_TIMEOUT}); do
@@ -1357,7 +1357,7 @@ add_clients(){
             RBASE1="$(( RBASE1 - 1 ))"
             ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
                --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
-               --port=$RBASE1 --log-slave-updates \
+               --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
                --server-id=10${j} > $node/error.err 2>&1 &
             startup_chk
             if ! ${BASEDIR}/bin/mysqladmin -uroot -P${RBASE1} ping > /dev/null 2>&1; then
