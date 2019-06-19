@@ -1397,7 +1397,7 @@ add_clients(){
           sudo service proxysql start
           sleep 5
           PXC_PORT=$(pmm-admin list | grep "PXC_NODE-1" | awk -F":" '{print $2}' | awk -F" " '{print $1}')
-          ${BASEDIR}/bin/mysql -uroot --socket=/tmp/PXC_NODE-1.sock -e"grant all on *.* to admin@'%' identified by 'admin'"
+          ${BASEDIR}/bin/mysql -uroot --socket=/tmp/PXC_NODE_1.sock -e"grant all on *.* to admin@'%' identified by 'admin'"
           sudo sed -i "s/3306/${PXC_PORT}/" /etc/proxysql-admin.cnf
           sudo proxysql-admin -e > $WORKDIR/logs/proxysql-admin.log
           if [ $disable_ssl -eq 1 ]; then
