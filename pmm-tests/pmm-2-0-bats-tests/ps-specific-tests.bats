@@ -70,11 +70,11 @@ echo "$output"
 @test "run pmm-admin remove mysql again" {
         COUNTER=0
         IFS=$'\n'
-        for i in $(pmm-admin list | grep "mysql_" ) ; do
+        for i in $(pmm-admin list | grep "MySQL" ) ; do
                 let COUNTER=COUNTER+1
                 run pmm-admin remove mysql mysql_$COUNTER
                 echo "$output"
-                        [ "$status" -eq 0 ]
+                        [ "$status" -eq 1 ]
                         echo "${output}" | grep "not found."
         done
 }
