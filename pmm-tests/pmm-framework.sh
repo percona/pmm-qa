@@ -1240,7 +1240,7 @@ add_clients(){
         check_port $PGSQL_PORT postgres
         docker run --name pgsql_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version}
         sleep 20
-        pmm-admin add postgresql localhost:$PGSQL_PORT pgsql_${pgsql_version}_${IP_ADDRESS}_$j
+        pmm-admin add postgresql localhost:$PGSQL_PORT PGSQL_${pgsql_version}_${IP_ADDRESS}_$j
         PGSQL_PORT=$((PGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
