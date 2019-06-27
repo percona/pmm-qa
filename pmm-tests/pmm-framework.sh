@@ -1238,7 +1238,8 @@ add_clients(){
       docker pull postgres:${pgsql_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
-        docker run --name pgsql_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version}
+        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version}
+        docker exec -it PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c "create extension pg_stat_statements"
         sleep 20
         pmm-admin add postgresql localhost:$PGSQL_PORT PGSQL_${pgsql_version}_${IP_ADDRESS}_$j
         PGSQL_PORT=$((PGSQL_PORT+j))
