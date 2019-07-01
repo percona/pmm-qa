@@ -1,107 +1,77 @@
+#!/usr/bin/env bats
+
+## mongodb
+
 @test "run pmm-admin under regular(non-root) user privileges" {
 if [[ $(id -u) -eq 0 ]] ; then
-	skip "Skipping this test, because you are running under root"
+        skip "Skipping this test, because you are running under root"
 fi
 run pmm-admin
 echo "$output"
-    [ "$status" -eq 1 ]
-    [ "${lines[0]}" = "pmm-admin requires superuser privileges to manage system services." ]
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
 }
-
 
 @test "run pmm-admin under root privileges" {
 if [[ $(id -u) -ne 0 ]] ; then
-	skip "Skipping this test, because you are NOT running under root"
+        skip "Skipping this test, because you are NOT running under root"
 fi
-run pmm-admin
+run sudo pmm-admin
 echo "$output"
-    [ "$status" -eq 1 ]
-    [ "${lines[0]}" = "Usage:" ]
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
 }
+
 
 @test "run pmm-admin add mongodb based on running instances" {
 	COUNTER=0
-  for i in $(sudo pmm-admin list | grep "mongodb:queries" | awk '{print $5}' | grep -v '-'| sort -u) ; do
+	IFS=$'\n'
+  for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
 		let COUNTER=COUNTER+1
-		URI=${i}
-	  run sudo pmm-admin add mongodb --uri ${URI} mongodb_instance_${COUNTER}
+		MONGO_IP_PORT=${i}
+		run pmm-admin add mongodb --use-profiler ${MONGO_IP_PORT} mongo_inst_${COUNTER}
 	  [ "$status" -eq 0 ]
-	  echo "${lines[1]}" | grep "OK, now monitoring"
+	  echo "${lines[0]}" | grep "MongoDB Service added"
   done
 }
 
 @test "run pmm-admin add mongodb again based on running instances" {
 	COUNTER=0
-	for i in $(sudo pmm-admin list | grep "mongodb:queries" | awk '{print $5}' | grep -v '-'| sort -u) ; do
+	IFS=$'\n'
+	for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
 		let COUNTER=COUNTER+1
-		URI=${i}
-		run sudo pmm-admin add mongodb --uri ${URI} mongodb_instance_${COUNTER}
-		[ "$status" -eq 0 ]
-		echo "${lines[1]}" | grep "OK, already"
+		MONGO_IP_PORT=${i}
+		run pmm-admin add mongodb --use-profiler ${MONGO_IP_PORT} mongo_inst_${COUNTER}
+		[ "$status" -eq 1 ]
+		echo "${lines[0]}" | grep "already exists."
 	done
 }
 
-# @test "run pmm-admin add mongodb named" {
-#   run sudo pmm-admin add mongodb mymongo1
-#   [ "$status" -eq 0 ]
-#   echo "${lines[0]}" | grep "OK, already"
-#   echo "${lines[1]}" | grep "OK, now monitoring"
-# }
-#
-# @test "run pmm-admin add mongodb name again" {
-#   run sudo pmm-admin add mongodb mymongo1
-#   [ "$status" -eq 0 ]
-#   echo "${lines[0]}" | grep "OK, already"
-#   echo "${lines[1]}" | grep "OK, already"
-# }
-
-@test "run pmm-admin purge mongodb" {
-COUNTER=0
-for i in $(sudo pmm-admin list | grep "mongodb_instance_" | awk '{print $5}' | grep -v '-'|sort -u) ; do
-	let COUNTER=COUNTER+1
-	run sudo pmm-admin purge mongodb:metrics mongodb_instance_${COUNTER}
-  [ "$status" -eq 0 ]
-  echo "${lines[0]}"
-  echo "${lines[0]}" | grep "OK, data purged"
-done
-}
-
-@test "run pmm-admin rm mongodb" {
-COUNTER=0
-for i in $(sudo pmm-admin list | grep "mongodb_instance_" | awk '{print $5}' | grep -v '-'|sort -u) ; do
-	let COUNTER=COUNTER+1
-	run sudo pmm-admin rm mongodb mongodb_instance_${COUNTER}
-  [ "$status" -eq 0 ]
-  echo "${lines[1]}" 
-  echo "${lines[1]}" | grep "OK, removed"
-done
-}
-
-# @test "run pmm-admin rm mongodb named" {
-#   run sudo pmm-admin rm mongodb mymongo1
-#   [ "$status" -eq 0 ]
-#   echo "${lines[0]}" | grep "OK, no system"
-#   echo "${lines[1]}" | grep "OK, removed"
-# }
-
-@test "run pmm-admin add mongodb queries" {
+@test "run pmm-admin remove mongodb" {
 	COUNTER=0
-  for i in $(sudo pmm-admin list | grep "mongo" | awk '{print $5}' | grep -v '-') ; do
+	IFS=$'\n'
+	for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
 		let COUNTER=COUNTER+1
-		URI=${i}
-	  run sudo pmm-admin add mongodb:queries --uri ${URI}  mongo_queries_${COUNTER} 
+		MONGO_IP_PORT=${i}
+		run pmm-admin remove mongodb mongo_inst_${COUNTER}
 	  [ "$status" -eq 0 ]
-	  echo "${lines[0]}" | grep "OK, now monitoring"
-  done
+	  echo "${lines[0]}"
+	  echo "${lines[0]}" | grep "Service removed."
+	done
 }
 
-@test "run pmm-admin rm mongodb queries" {
-	COUNTER=0
-  for i in $(sudo pmm-admin list | grep "mongo_queries_" | awk '{print $5}' | grep -v '-') ; do
-		let COUNTER=COUNTER+1
-		URI=${i}
-	  run sudo pmm-admin rm mongodb:queries mongo_queries_${COUNTER} 
-	  [ "$status" -eq 0 ]
-	  echo "${lines[0]}" | grep "OK, removed"
-  done
+@test "run pmm-admin remove mongodb again" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
+                let COUNTER=COUNTER+1
+                run pmm-admin remove mongodb mongo_inst_$COUNTER
+                echo "$output"
+                        [ "$status" -eq 1 ]
+                        echo "${output}" | grep "not found."
+        done
+}
+
+function teardown() {
+        echo "$output"
 }
