@@ -1659,22 +1659,42 @@ clean_clients(){
    exit 1
   fi
   #Shutdown all mysql client instances
-  for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
-    echo -e "Shutting down mysql instance (--socket=${i})"
-    ${MYSQLADMIN_CLIENT} -uroot --socket=${i} shutdown
-    sleep 2
-  done
-  #Kills mongodb processes
-  sudo killall mongod 2> /dev/null
-  sudo killall mongos 2> /dev/null
-  sleep 5
-  if sudo pmm-admin list | grep -q 'No services under monitoring' ; then
-    echo -e "No services under pmm monitoring"
-  else
+  if [[ -z $PMM2 ]]; then
+    for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
+      echo -e "Shutting down mysql instance (--socket=${i})"
+      ${MYSQLADMIN_CLIENT} -uroot --socket=${i} shutdown
+     sleep 2
+    done
+    if sudo pmm-admin list | grep -q 'No services under monitoring' ; then
+      echo -e "No services under pmm monitoring"
+    else
     #Remove all client instances
-    echo -e "Removing all local pmm client instances"
-    sudo pmm-admin remove --all 2&>/dev/null
-  fi
+      echo -e "Removing all local pmm client instances"
+      sudo pmm-admin remove --all 2&>/dev/null
+    fi
+ else 
+    for i in $(pmm-admin list | grep -E "MySQL" | awk -F " " '{print $2}'  | sort -r) ; do
+      pmm-admin remove mysql $i
+    
+    done
+    for i in $(pmm-admin list | grep -E "MongoDB" | awk -F " " '{print $2}'  | sort -r) ; do
+      pmm-admin remove mongodb $i
+    done
+     
+    for i in $(pmm-admin list | grep -E "PostgreSQL" | awk -F " " '{print $2}'  | sort -r) ; do
+      pmm-admin remove postgresql $i
+    done 
+   #Remove PS and PostgreSQL  docker containers
+    for i in $(docker ps -f name=ps -f name=PGS -q) ; do
+      docker rm -f $i
+    done
+   #Kill mongodb processes
+    sudo killall mongod 2> /dev/null
+    sudo killall mongos 2> /dev/null
+    sleep 5
+    docker_name=$(docker ps -name=ps -q)
+     
+ fi
 }
 
 clean_docker_clients(){
