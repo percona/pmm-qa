@@ -696,8 +696,8 @@ setup(){
     echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
     exit 1
   fi
-	#Cleaning existing PMM server configuration.
-	if [ ! -z $PMM2 ]; then
+   #Cleaning existing PMM server configuration
+  if [ ! -z $PMM2 ]; then
     configure_client
   else
     sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
@@ -1688,13 +1688,12 @@ clean_clients(){
     for i in $(docker ps -f name=ps -f name=PGS -q) ; do
       docker rm -f $i
     done
+    dbdeployer delete all --skip-confirm 
+ fi
    #Kill mongodb processes
     sudo killall mongod 2> /dev/null
     sudo killall mongos 2> /dev/null
     sleep 5
-    docker_name=$(docker ps -name=ps -q)
-     
- fi
 }
 
 clean_docker_clients(){
@@ -1861,9 +1860,9 @@ if [ ! -z $setup ]; then
   setup
 fi
 
-if [ ! -z $PMM2 ]; then
-  configure_client;
-fi
+#if [ ! -z $PMM2 ]; then
+#  configure_client;
+#fi
 
 if [ ! -z $upgrade_server ]; then
   upgrade_server
