@@ -6,27 +6,27 @@ DIRNAME=$(dirname "$0")
 # pmm-framework.sh functions
 
 function pmm_framework_setup() {
-  ${DIRNAME}/pmm-framework.sh --setup
+  ${DIRNAME}/../pmm-framework.sh --setup
 }
 
 function pmm_framework_add_clients() {
-  ${DIRNAME}/pmm-framework.sh --addclient=$1,$2 --${1}-version=$3 --pmm2 --dbdeployer
+  ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --${1}-version=$3 --pmm2 --dbdeployer --download
 }
 
 function pmm_wipe_all() {
-  ${DIRNAME}/pmm-framework.sh --wipe
+  ${DIRNAME}/../pmm-framework.sh --wipe
 }
 
 function pmm_wipe_clients() {
-  ${DIRNAME}/pmm-framework.sh --wipe-clients
+  ${DIRNAME}/../pmm-framework.sh --wipe-clients
 }
 
 function  pmm_wipe_server() {
-  ${DIRNAME}/pmm-framework.sh --wipe-server
+  ${DIRNAME}/../pmm-framework.sh --wipe-server
 }
 
 function pmm_remove_packages() {
-  ${DIRNAME}/pmm-framework.sh --delete-package --package-name=$1 --${1}-version=$2
+  ${DIRNAME}/../pmm-framework.sh --delete-package --package-name=$1 --${1}-version=$2
 }
 
 # functions for some env setup
