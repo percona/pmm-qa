@@ -10,7 +10,7 @@ function pmm_framework_setup() {
 }
 
 function pmm_framework_add_clients() {
-  ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --${1}-version=$3 --pmm2 --dbdeployer --download
+  ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --${1}-version=$3 --pmm2 --dbdeployer --download --pmm2-server-ip=$4
 }
 
 function pmm_wipe_all() {
@@ -174,7 +174,7 @@ function run_populate_table() {
 # fi
 
 echo "Adding clients"
-pmm_framework_add_clients $instance_t $instance_c $version
+pmm_framework_add_clients $instance_t $instance_c $version $pmm_server_ip
 
 echo "Running generic tests"
 run_generic_tests
