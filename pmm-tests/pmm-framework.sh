@@ -1271,9 +1271,9 @@ add_clients(){
       docker pull percona:${ps_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PS_PORT percona
-        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps_${ps_version} -d percona:${ps_version}
+        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
         sleep 20
-        pmm-admin add mysql --use-$query_source --username=root --password=ps_${ps_version} 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+        pmm-admin add mysql --use-$query_source --username=root --password=ps 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
         PS_PORT=$((PS_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
