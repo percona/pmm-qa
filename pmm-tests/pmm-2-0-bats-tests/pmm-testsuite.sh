@@ -18,7 +18,7 @@ function pmm_wipe_all() {
 }
 
 function pmm_wipe_clients() {
-  ${DIRNAME}/../pmm-framework.sh --wipe-clients
+  ${DIRNAME}/../pmm-framework.sh --wipe-pmm2-clients
 }
 
 function  pmm_wipe_server() {
@@ -172,6 +172,10 @@ function run_populate_table() {
 #     pmm_framework_setup ""
 #   fi
 # fi
+
+# Running tests
+echo "Wipe clients"
+pmm_wipe_clients
 
 echo "Adding clients"
 pmm_framework_add_clients $instance_t $instance_c $version $pmm_server_ip

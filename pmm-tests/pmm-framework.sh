@@ -66,6 +66,7 @@ usage () {
   echo " --add-docker-client            Add docker pmm-clients with percona server to the currently live PMM server"
   echo " --list                         List all client information as obtained from pmm-admin"
   echo " --wipe-clients                 This will stop all client instances and remove all clients from pmm-admin"
+  echo " --wipe-pmm2-clients            This will stop all pmm-server from monitoring client instances"
   echo " --wipe-docker-clients          This will stop all docker client instances and remove all clients from docker container"
   echo " --wipe-server                  This will stop pmm-server container and remove all pmm containers"
   echo " --wipe                         This will wipe all pmm configuration"
@@ -89,7 +90,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,wipe-pmm2-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -249,6 +250,10 @@ do
     --wipe-clients )
     shift
     wipe_clients=1
+    ;;
+    --wipe-pmm2-clients )
+    shift
+    wipe_pmm2_clients=1
     ;;
     --delete-package )
     shift
@@ -1766,6 +1771,34 @@ upgrade_client(){
   fi
 }
 
+wipe_pmm2_clients () {
+
+  if [[ $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ; do
+        echo "$i"
+        MYSQL_SERVICE_ID=${i}
+        pmm-admin remove mysql ${MYSQL_SERVICE_ID}
+    done
+  fi
+  if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ; do
+        echo "$i"
+        PGSQL_SERVICE_ID=${i}
+        pmm-admin remove postgresql ${PGSQL_SERVICE_ID}
+    done
+  fi
+  if [[ $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ; do
+        echo "$i"
+        MONGODB_SERVICE_ID=${i}
+        pmm-admin remove mongodb ${MONGODB_SERVICE_ID}
+    done
+  fi
+}
+
 sysbench_prepare(){
   if [[ ! -e $(which mysql 2> /dev/null) ]] ;then
     MYSQL_CLIENT=$(find . -type f -name mysql | head -n1)
@@ -1813,6 +1846,10 @@ install_dbdeployer(){
 
 if [ ! -z $wipe_clients ]; then
   clean_clients
+fi
+
+if [ ! -z $wipe_pmm2_clients ]; then
+  wipe_pmm2_clients
 fi
 
 if [ ! -z $delete_package ]; then
