@@ -6,11 +6,11 @@ module.exports = {
     // setting locators
     url: "graph/d/Fxvd1timk/home-dashboard?orgId=1",
     fields: {
-        navigation: "//div[@class='navbar']//a",
-        timePickerMenu: "//button[@ng-click='ctrl.openDropdown()']",
+        navigation: "//div[@class='navbar']//a[2]", // /html/body/grafana-app/div/div/div/react-container/div/div[1]/div[1]/div/a[2]
+        timePickerMenu: "/html/body/grafana-app/div/div/div/react-container/div/div[1]/div[5]/div[1]/gf-time-picker/button[1]",// //button[@ng-click='ctrl.openDropdown()
         fromTime: "(//input[@input-datetime])[1]",
         applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]",
-        backToDashboard: "//button[@ng-click='ctrl.close()']"
+        backToDashboard: "/html/body/grafana-app/div/div/div/react-container/div/div[1]/div[1]/button" // //button[@ng-click='ctrl.close()']
     },
 
     // introducing methods
@@ -48,4 +48,4 @@ module.exports = {
         I.click("//span[contains(text(), '" + metricName + "')]/../span/ul/li[1]");
         I.wait(10);
     }
-}
+};

@@ -2,7 +2,6 @@
 Feature('to verify Compare System Parameters Dashboards');
 
 Before((I, loginPage) => {
-    I.amOnPage('/');
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
 });

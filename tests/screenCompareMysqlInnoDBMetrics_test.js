@@ -1,10 +1,15 @@
 Feature('To compare Mysql InnoDB Metrics visual testing');
 
 Scenario('Open the Mysql InnoDB Metrics Dashboard and take screenshot @visual-test', async (I, adminPage, loginPage) => {
-    I.amOnPage('/');
-    I.wait(20);
+    I.amOnPage(loginPage.url);
+    loginPage.login("admin", "admin");
     adminPage.navigateToDashboard("MySQL", "MySQL InnoDB Metrics");
     adminPage.applyTimer("3m");
+
+    I.click("/html/body/grafana-app/div/div/div/react-container/div/div[2]/div/div[1]/div/div[1]/dashboard-submenu/div/div[6]/dash-links-container/dash-link[2]/div/a");
+    for(let i=0; i<300; i++)
+        I.pressKey("ArrowDown")
+
     adminPage.viewMetric("InnoDB Checkpoint Age");
     I.saveScreenshot("mysql_innodb_checkpoint_age.png");
     I.click(adminPage.fields.backToDashboard);

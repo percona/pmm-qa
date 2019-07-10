@@ -1,18 +1,10 @@
 {
   "output": "tests/output",
   "helpers": {
-    "WebDriverIO": {
-      "url": "{PMM_URL_HERE}",
+    "WebDriver": {
+      "url": "https://18.224.200.209/",
       "browser": "chrome",
-      "user": "pmm_qa",
-      "key": "{SAUCE_USER_KEY}",
-      "host": "ondemand.saucelabs.com",
       "windowSize": "maximize"
-    },
-    "SauceHelper": {
-      "require": "codeceptjs-saucehelper",
-      "user": "pmm_qa",
-      "key": "{SAUCE_USER_KEY}"
     },
     "ResembleHelper" : {
       "require": "codeceptjs-resemblehelper",

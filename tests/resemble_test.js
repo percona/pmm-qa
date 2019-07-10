@@ -1,7 +1,7 @@
 Feature('To test screen comparison with resemble Js Example test');
 
 Scenario('Open the System Overview Dashboard and take CPU Usage Screenshot @visual-test', async (I, adminPage, loginPage) => {
-    I.amOnPage('/');
+    // I.amOnPage('/');
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
     adminPage.navigateToDashboard("OS", "System Overview");

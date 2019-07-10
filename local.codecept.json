@@ -1,7 +1,7 @@
 {
   "output": "tests/output",
   "helpers": {
-    "WebDriverIO": {
+    "WebDriver": {
       "url": "http://localhost:8080/",
       "browser": "chrome",
       "windowSize": "maximize"
