@@ -21,9 +21,9 @@ module.exports = {
         for(let i=0; i<300; i++)
             I.pressKey("ArrowDown")
 
-        for (var i in this.metrics) {
+        for (let i in this.metrics) {
             I.seeElement(this.graphsLocator(this.metrics[i]));
         }
         I.dontSeeElement(this.fields.notAvailableMetrics);
     }
-}
+};

@@ -7,7 +7,7 @@ module.exports = {
     url: "graph/d/Fxvd1timk/home-dashboard?orgId=1",
     fields: {
         navigation: "//div[@class='navbar']//a[2]", // /html/body/grafana-app/div/div/div/react-container/div/div[1]/div[1]/div/a[2]
-        timePickerMenu: "/html/body/grafana-app/div/div/div/react-container/div/div[1]/div[5]/div[1]/gf-time-picker/button[1]",// //button[@ng-click='ctrl.openDropdown()
+        timePickerMenu: "//button[@ng-click='ctrl.openDropdown()", // /html/body/grafana-app/div/div/div/react-container/div/div[1]/div[5]/div[1]/gf-time-picker/button[1]
         fromTime: "(//input[@input-datetime])[1]",
         applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]",
         backToDashboard: "/html/body/grafana-app/div/div/div/react-container/div/div[1]/div[1]/button" // //button[@ng-click='ctrl.close()']

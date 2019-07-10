@@ -2,9 +2,14 @@
   "output": "tests/output",
   "helpers": {
     "WebDriver": {
-      "url": "https://18.224.200.209/",
+      "url": "{PMM_URL_HERE}",
       "browser": "chrome",
       "windowSize": "maximize"
+    },
+    "SauceHelper": {
+      "require": "codeceptjs-saucehelper",
+      "user": "pmm_qa",
+      "key": "{SAUCE_USER_KEY}"
     },
     "ResembleHelper" : {
       "require": "codeceptjs-resemblehelper",
