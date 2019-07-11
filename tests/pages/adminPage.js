@@ -6,20 +6,27 @@ module.exports = {
     // setting locators
     url: "graph/d/Fxvd1timk/home-dashboard?orgId=1",
     fields: {
-        navigation: "//div[@class='navbar']//a",
+        navigation: "//i[contains(@class, 'navbar-page-btn__search')]",
         timePickerMenu: "//button[@ng-click='ctrl.openDropdown()']",
         fromTime: "(//input[@input-datetime])[1]",
         applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]",
-        backToDashboard: "//button[@ng-click='ctrl.close()']"
+        backToDashboard: "//button[@ng-click='ctrl.close()']",
+        discardChanges: "//button[@ng-click='ctrl.discard()']",
+        metricTitle: "//span[@class='panel-title']"
     },
 
     // introducing methods
-    navigateToDashboard (folderName, dashboardName) {
+    async navigateToDashboard (folderName, dashboardName) {
         I.click(this.fields.navigation);
         I.waitForElement(this.prepareFolderLocator(folderName), 30);
         I.click(this.prepareFolderLocator(folderName));
         I.waitForElement(this.prepareDashboardLocator(dashboardName), 30);
         I.click(this.prepareDashboardLocator(dashboardName));
+        let numOfElements = await I.grabNumberOfVisibleElements(this.fields.discardChanges);
+        if(numOfElements > 0)
+        {
+            I.click('Discard');
+        }
         I.wait(10);
         I.see(dashboardName);
     },
@@ -47,5 +54,16 @@ module.exports = {
         I.waitForElement("//span[contains(text(), '" + metricName + "')]/../span/ul/li[1]", 30);
         I.click("//span[contains(text(), '" + metricName + "')]/../span/ul/li[1]");
         I.wait(10);
+    },
+
+    async handleLazyLoading (timesPageDown) {
+        I.click(this.fields.metricTitle);
+        I.wait(10);
+        I.click(this.fields.metricTitle);
+        for (var i = 0; i < timesPageDown; i++)
+        {
+            I.pressKey('PageDown');
+            I.wait(2);
+        }
     }
 }

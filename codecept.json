@@ -1,7 +1,7 @@
 {
   "output": "tests/output",
   "helpers": {
-    "WebDriverIO": {
+    "WebDriver": {
       "url": "{PMM_URL_HERE}",
       "browser": "chrome",
       "user": "pmm_qa",
@@ -10,9 +10,7 @@
       "windowSize": "maximize"
     },
     "SauceHelper": {
-      "require": "codeceptjs-saucehelper",
-      "user": "pmm_qa",
-      "key": "{SAUCE_USER_KEY}"
+      "require": "codeceptjs-saucehelper"
     },
     "ResembleHelper" : {
       "require": "codeceptjs-resemblehelper",
@@ -20,7 +18,8 @@
       "baseFolder": "./tests/screenshots/base/",
       "diffFolder": "./tests/screenshots/diff/"
     },
-    "FileSystem": {}
+    "FileSystem": {},
+    "REST": {}
   },
   "include": {
     "loginPage": "./tests/pages/loginPage.js",
