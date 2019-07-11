@@ -1,0 +1,37 @@
+{
+  "name": "pmm-qa",
+  "version": "2.0.0",
+  "description": "PMM-QA UI Tests, PMM2.x version",
+  "main": "conf_local.js",
+  "directories": {
+    "test": "tests"
+  },
+  "dependencies": {
+    "codeceptjs": "^2.2.0",
+    "codeceptjs-resemblehelper": "^1.5.0",
+    "codeceptjs-saucehelper": "^1.3.0",
+    "mocha-junit-reporter": "^1.23.0",
+    "mocha-multi": "^1.1.0",
+    "mochawesome": "^4.0.1",
+    "webdriverio": "^5.11.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "./node_modules/.bin/codeceptjs run tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/percona/pmm-qa.git"
+  },
+  "keywords": [
+    "UI-tests",
+    "codeceptjs",
+    "acceptance-tests"
+  ],
+  "author": "PMM-QA Team",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/percona/pmm-qa/issues"
+  },
+  "homepage": "https://github.com/percona/pmm-qa#readme"
+}
