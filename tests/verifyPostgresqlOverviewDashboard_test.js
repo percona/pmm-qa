@@ -7,7 +7,8 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open the PostgreSQL Overview Dashboard', async (I, adminPage, postgresqlOverviewPage) => {
-    adminPage.navigateToDashboard("PostgreSQL", "PostgreSQL Overview");
+    await adminPage.navigateToDashboard("PostgreSQL", "PostgreSQL Overview");
     adminPage.applyTimer("1m");
+    await adminPage.handleLazyLoading(10);
     postgresqlOverviewPage.verifyMetricsExistence();
 });

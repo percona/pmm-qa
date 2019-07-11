@@ -66,6 +66,7 @@ usage () {
   echo " --add-docker-client            Add docker pmm-clients with percona server to the currently live PMM server"
   echo " --list                         List all client information as obtained from pmm-admin"
   echo " --wipe-clients                 This will stop all client instances and remove all clients from pmm-admin"
+  echo " --wipe-pmm2-clients            This will stop all pmm-server from monitoring client instances"
   echo " --wipe-docker-clients          This will stop all docker client instances and remove all clients from docker container"
   echo " --wipe-server                  This will stop pmm-server container and remove all pmm containers"
   echo " --wipe                         This will wipe all pmm configuration"
@@ -89,7 +90,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,wipe-pmm2-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -249,6 +250,10 @@ do
     --wipe-clients )
     shift
     wipe_clients=1
+    ;;
+    --wipe-pmm2-clients )
+    shift
+    wipe_pmm2_clients=1
     ;;
     --delete-package )
     shift
@@ -696,8 +701,8 @@ setup(){
     echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
     exit 1
   fi
-	#Cleaning existing PMM server configuration.
-	if [ ! -z $PMM2 ]; then
+   #Cleaning existing PMM server configuration
+  if [ ! -z $PMM2 ]; then
     configure_client
   else
     sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
@@ -1239,8 +1244,8 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
         docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
-        bash -c "docker exec -it PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'"
         sleep 20
+        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
         pmm-admin add postgresql localhost:$PGSQL_PORT PGSQL_${pgsql_version}_${IP_ADDRESS}_$j
         PGSQL_PORT=$((PGSQL_PORT+j))
       done
@@ -1271,9 +1276,9 @@ add_clients(){
       docker pull percona:${ps_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PS_PORT percona
-        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps_${ps_version} -d percona:${ps_version}
+        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
         sleep 20
-        pmm-admin add mysql --use-$query_source --username=root --password=ps_${ps_version} 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+        pmm-admin add mysql --use-$query_source --username=root --password=ps 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
         PS_PORT=$((PS_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
@@ -1659,22 +1664,41 @@ clean_clients(){
    exit 1
   fi
   #Shutdown all mysql client instances
-  for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
-    echo -e "Shutting down mysql instance (--socket=${i})"
-    ${MYSQLADMIN_CLIENT} -uroot --socket=${i} shutdown
-    sleep 2
-  done
-  #Kills mongodb processes
-  sudo killall mongod 2> /dev/null
-  sudo killall mongos 2> /dev/null
-  sleep 5
-  if sudo pmm-admin list | grep -q 'No services under monitoring' ; then
-    echo -e "No services under pmm monitoring"
-  else
+  if [[ -z $PMM2 ]]; then
+    for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
+      echo -e "Shutting down mysql instance (--socket=${i})"
+      ${MYSQLADMIN_CLIENT} -uroot --socket=${i} shutdown
+     sleep 2
+    done
+    if sudo pmm-admin list | grep -q 'No services under monitoring' ; then
+      echo -e "No services under pmm monitoring"
+    else
     #Remove all client instances
-    echo -e "Removing all local pmm client instances"
-    sudo pmm-admin remove --all 2&>/dev/null
-  fi
+      echo -e "Removing all local pmm client instances"
+      sudo pmm-admin remove --all 2&>/dev/null
+    fi
+ else 
+    for i in $(pmm-admin list | grep -E "MySQL" | awk -F " " '{print $2}'  | sort -r) ; do
+      pmm-admin remove mysql $i
+    
+    done
+    for i in $(pmm-admin list | grep -E "MongoDB" | awk -F " " '{print $2}'  | sort -r) ; do
+      pmm-admin remove mongodb $i
+    done
+     
+    for i in $(pmm-admin list | grep -E "PostgreSQL" | awk -F " " '{print $2}'  | sort -r) ; do
+      pmm-admin remove postgresql $i
+    done 
+   #Remove PS and PostgreSQL  docker containers
+    for i in $(docker ps -f name=ps -f name=PGS -q) ; do
+      docker rm -f $i
+    done
+    dbdeployer delete all --skip-confirm 
+ fi
+   #Kill mongodb processes
+    sudo killall mongod 2> /dev/null
+    sudo killall mongos 2> /dev/null
+    sleep 5
 }
 
 clean_docker_clients(){
@@ -1766,6 +1790,34 @@ upgrade_client(){
   fi
 }
 
+wipe_pmm2_clients () {
+
+  if [[ $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ; do
+        echo "$i"
+        MYSQL_SERVICE_ID=${i}
+        pmm-admin remove mysql ${MYSQL_SERVICE_ID}
+    done
+  fi
+  if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ; do
+        echo "$i"
+        PGSQL_SERVICE_ID=${i}
+        pmm-admin remove postgresql ${PGSQL_SERVICE_ID}
+    done
+  fi
+  if [[ $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ; do
+        echo "$i"
+        MONGODB_SERVICE_ID=${i}
+        pmm-admin remove mongodb ${MONGODB_SERVICE_ID}
+    done
+  fi
+}
+
 sysbench_prepare(){
   if [[ ! -e $(which mysql 2> /dev/null) ]] ;then
     MYSQL_CLIENT=$(find . -type f -name mysql | head -n1)
@@ -1815,6 +1867,10 @@ if [ ! -z $wipe_clients ]; then
   clean_clients
 fi
 
+if [ ! -z $wipe_pmm2_clients ]; then
+  wipe_pmm2_clients
+fi
+
 if [ ! -z $delete_package ]; then
   remove_packages
 fi
@@ -1841,9 +1897,9 @@ if [ ! -z $setup ]; then
   setup
 fi
 
-if [ ! -z $PMM2 ]; then
-  configure_client;
-fi
+#if [ ! -z $PMM2 ]; then
+#  configure_client;
+#fi
 
 if [ ! -z $upgrade_server ]; then
   upgrade_server

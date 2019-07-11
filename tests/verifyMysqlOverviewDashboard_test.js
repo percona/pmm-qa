@@ -7,7 +7,8 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open the MySQL Overview Dashboard', async (I, adminPage, mysqlOverviewPage) => {
-    adminPage.navigateToDashboard("MySQL", "MySQL Overview");
+    await adminPage.navigateToDashboard("MySQL", "MySQL Overview");
     adminPage.applyTimer("1m");
+    await adminPage.handleLazyLoading(10);
     mysqlOverviewPage.verifyMetricsExistence();
 });

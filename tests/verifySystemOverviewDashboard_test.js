@@ -7,7 +7,8 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open the System Overview Dashboard', async (I, adminPage, systemOverviewPage) => {
-    adminPage.navigateToDashboard("OS", "System Overview");
+    await adminPage.navigateToDashboard("OS", "System Overview");
     adminPage.applyTimer("1m");
+    await adminPage.handleLazyLoading(10);
     systemOverviewPage.verifyMetricsExistence();
 });
