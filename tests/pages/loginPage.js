@@ -10,12 +10,16 @@ module.exports = {
         password: "//input[@name='password']"
     },
     loginButton: "//button[@type='submit']",
+    skipLink: "//a[@ng-click='skip();']",
 
     // introducing methods
     login (username, password) {
         I.fillField(this.fields.username, username);
         I.fillField(this.fields.password, password);
         I.click(this.loginButton);
+        I.wait(10);
+        I.waitForElement(this.skipLink, 30);
+        I.click(this.skipLink);
         I.wait(10);
     }
 }
