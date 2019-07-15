@@ -9,5 +9,5 @@ Before((I, loginPage) => {
 
 Scenario('open the Remote and RDS Instances Listing Page', async (I, adminPage, remoteInstancesPage) => {
     I.amOnPage(remoteInstancesPage.url);
-    I.see(remoteInstancesPage.fields.pageHeaderText)
+    I.dontSee(remoteInstancesPage.fields.pageHeaderText)
 });
