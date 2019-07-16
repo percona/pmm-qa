@@ -17,10 +17,13 @@ module.exports = {
 
     // introducing methods
     async navigateToDashboard (folderName, dashboardName) {
+        I.waitForElement(this.fields.navigation, 30);
         I.click(this.fields.navigation);
         I.waitForElement(this.prepareFolderLocator(folderName), 30);
         I.click(this.prepareFolderLocator(folderName));
         I.waitForElement(this.prepareDashboardLocator(dashboardName), 30);
+        I.waitForVisible(this.prepareDashboardLocator(dashboardName), 30);
+        I.wait(5);
         I.click(this.prepareDashboardLocator(dashboardName));
         let numOfElements = await I.grabNumberOfVisibleElements(this.fields.discardChanges);
         if(numOfElements > 0)
@@ -37,7 +40,7 @@ module.exports = {
     },
 
     prepareDashboardLocator (dashboardName) {
-        locator = "(//a[@ng-repeat]//div[contains(text(),'" + dashboardName + "') and @class='search-item__body-title'])[1]";
+        locator = "(//div[contains(text(), '" + dashboardName + "')])[1]";
         return locator;
     },
 

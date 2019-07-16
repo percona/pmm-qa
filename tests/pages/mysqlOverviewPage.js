@@ -8,7 +8,8 @@ module.exports = {
     urlWithRecent: "graph/d/MQWgroiiz/mysql-overview?refresh=1m&orgId=1&from=now-1m&to=now",
     fields: {
         pageHeaderText: "MySQL Overview",
-        notAvailableMetrics: "//span[contains(text(), 'N/A')]"
+        notAvailableMetrics: "//span[contains(text(), 'N/A')]",
+        systemChartsToggle: "//a[contains(text(), 'System Charts')]"
     },
     metrics: ["MySQL Uptime", "Current QPS", "InnoDB Buffer Pool Size", "Buffer Pool Size of Total RAM",
         "MySQL Connections", "MySQL Client Thread Activity", "MySQL Questions", "MySQL Thread Cache",
