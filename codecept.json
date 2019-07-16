@@ -4,6 +4,9 @@
     "WebDriver": {
       "url": "{PMM_URL_HERE}",
       "browser": "chrome",
+      "user": "pmm_qa",
+      "key": "{SAUCE_USER_KEY}",
+      "host": "ondemand.saucelabs.com",
       "windowSize": "maximize"
     },
     "SauceHelper": {
