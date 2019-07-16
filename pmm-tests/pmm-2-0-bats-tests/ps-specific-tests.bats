@@ -33,7 +33,7 @@ echo "$output"
                 echo "$i"
                 let COUNTER=COUNTER+1
                 MYSQL_IP_PORT=${i}
-                run pmm-admin add mysql --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_IP_PORT} mysql_$COUNTER
+                run pmm-admin add mysql --use-perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_IP_PORT} mysql_$COUNTER
                 echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "MySQL Service added."
@@ -47,7 +47,7 @@ echo "$output"
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_" | awk -F" " '{print $3}') ; do
                 let COUNTER=COUNTER+1
                 MYSQL_IP_PORT=${i}
-                run pmm-admin add mysql --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_IP_PORT} mysql_$COUNTER
+                run pmm-admin add mysql --use-perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${MYSQL_IP_PORT} mysql_$COUNTER
                 echo "$output"
                         [ "$status" -eq 1 ]
                         echo "${lines[0]}" | grep "already exists."
