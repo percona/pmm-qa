@@ -1408,9 +1408,9 @@ add_clients(){
           sudo sed -i "s/3306/${PXC_PORT}/" /etc/proxysql-admin.cnf
           sudo proxysql-admin -e > $WORKDIR/logs/proxysql-admin.log
           if [ $disable_ssl -eq 1 ]; then
-            sudo pmm-admin add proxysql --disable-ssl
+            pmm-admin add proxysql --disable-ssl
           else
-            sudo pmm-admin add proxysql
+            pmm-admin add proxysql
           fi
         else
           echo "Could not find PXC nodes. Skipping proxysql setup"
