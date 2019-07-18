@@ -32,7 +32,8 @@
     "postgresqlOverviewPage": "./tests/pages/postgresqlOverviewPage.js",
     "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js",
     "summaryDashboardPage": "./tests/pages/summaryDashboardPage.js",
-    "trendsDashboardPage": "./tests/pages/trendsDashboardPage.js"
+    "trendsDashboardPage": "./tests/pages/trendsDashboardPage.js",
+    "proxysqlOverviewPage": "./tests/pages/proxysqlOverviewPage.js"
   },
   "multiple": {
     "parallel": {
