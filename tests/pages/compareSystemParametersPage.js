@@ -9,7 +9,7 @@ module.exports = {
         pageHeaderText: "Compare System Parameters",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]"
     },
-    metrics: ["System Info", "System Uptime", "CPU Cores", "RAM", "Saturation Metrics", "CPU Usage", "Network Traffic", "Load Average", "I/O Activity"],
+    metrics: ["System Info", "System Uptime", "CPU Cores", "RAM", "Saturation Metrics", "Load Average", "CPU Usage", "Interrupts", "Context Switches", "Memory  Usage", "Swap Usage", "Swap Activity", "Mountpoint Usage", "Free Space", "Disk Operations", "Disk Bandwidth", "Disk IO Utilization", "Disk Latency", "Disk Load", "Network Traffic", "Network Utilization Hourly", "Load Average", "I/O Activity"],
 
     graphsLocator (metricName){
         locator = "//span[contains(text(), '"+ metricName +"')]";
@@ -17,9 +17,9 @@ module.exports = {
     },
 
     verifyMetricsExistence () {
-        for (var i in this.metrics) {
+        for (let i in this.metrics) {
             I.seeElement(this.graphsLocator(this.metrics[i]));
         }
         I.dontSeeElement(this.fields.notAvailableMetrics);
     }
-}
+};
