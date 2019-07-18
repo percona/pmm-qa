@@ -13,8 +13,9 @@ module.exports = {
     },
     metrics: ["Version", "Max Connections", "Shared Buffers", "Disk-Page Buffers", "Memory Size for each Sort",
         "Disk Cache Size", "Autovacuum", "PostgreSQL Connections", "Active Connections",
-        "Tuples", "Read Tuple Activity", "Transactions", "Duration of Transactions", "Checkpoint stats",
-        "Number of Locks", "Conflicts/Deadlocks"],
+        "Tuples", "Read Tuple Activity", "Transactions", "Duration of Transactions", "Number of Temp Files", "Size of Temp Files",
+        "Conflicts/Deadlocks", "Number of Locks", "Operations with Blocks", "Buffers", "Canceled Queries", "Cache Hit Ratio",
+        "Checkpoint stats", "Number of Locks"],
 
     graphsLocator (metricName){
         locator = "//span[contains(text(), '"+ metricName +"')]";
