@@ -25,6 +25,5 @@ module.exports = {
             I.seeElement(this.graphsLocator(this.metrics[i]));
         }
         I.dontSeeElement(this.fields.notAvailableMetrics);
-        I.dontSeeElement(this.fields.notAvailableDataPoints);
     }
 };
