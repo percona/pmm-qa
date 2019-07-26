@@ -33,7 +33,12 @@
     "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js",
     "summaryDashboardPage": "./tests/pages/summaryDashboardPage.js",
     "trendsDashboardPage": "./tests/pages/trendsDashboardPage.js",
-    "proxysqlOverviewPage": "./tests/pages/proxysqlOverviewPage.js"
+    "proxysqlOverviewPage": "./tests/pages/proxysqlOverviewPage.js",
+    "advancedDataExplorationPage": "./tests/pages/advancedDataExplorationPage.js",
+    "crossServerGraphsPage": "/tests/pages/crossServerGraphsPage.js",
+    "prometheusPage": "./tests/pages/prometheusPage.js",
+    "prometheusExporterStatusPage": "/tests/pages/prometheusExporterStatusPage.js",
+    "prometheusExporterOverviewPage": "/tests/pages/prometheusExporterOverviewPage.js"
   },
   "multiple": {
     "parallel": {

@@ -59,6 +59,10 @@ module.exports = {
         I.wait(10);
     },
 
+    openPanel(panelName) {
+        I.click("//a[contains(text(), '"+ panelName +"')]");
+    },
+
     async handleLazyLoading (timesPageDown) {
         I.click(this.fields.metricTitle);
         I.wait(10);
