@@ -8,7 +8,8 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open the Trends Dashboard', async (I, adminPage, trendsDashboardPage) => {
-    await adminPage.navigateToDashboard("Insight", "Trends Dashboard");
+    I.amOnPage(trendsDashboardPage.url);
+    I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(10);
     trendsDashboardPage.verifyMetricsExistence();

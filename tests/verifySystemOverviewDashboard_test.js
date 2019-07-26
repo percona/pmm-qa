@@ -8,7 +8,8 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open the System Overview Dashboard', async (I, adminPage, systemOverviewPage) => {
-    await adminPage.navigateToDashboard("OS", "System Overview");
+    I.amOnPage(systemOverviewPage.url);
+    I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(10);
     systemOverviewPage.verifyMetricsExistence();

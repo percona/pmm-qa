@@ -8,7 +8,8 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open the Summary Dashboard', async (I, adminPage, summaryDashboardPage) => {
-    await adminPage.navigateToDashboard("Insight", "Summary Dashboard");
+    I.amOnPage(summaryDashboardPage.url);
+    I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(10);
     summaryDashboardPage.verifyMetricsExistence();
