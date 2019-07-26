@@ -38,7 +38,9 @@
     "crossServerGraphsPage": "/tests/pages/crossServerGraphsPage.js",
     "prometheusPage": "./tests/pages/prometheusPage.js",
     "prometheusExporterStatusPage": "/tests/pages/prometheusExporterStatusPage.js",
-    "prometheusExporterOverviewPage": "/tests/pages/prometheusExporterOverviewPage.js"
+    "prometheusExporterOverviewPage": "/tests/pages/prometheusExporterOverviewPage.js",
+    "pxcGaleraClusterOverviewPage": "/tests/pages/pxcGaleraClusterOverviewPage.js",
+    "mondodbClusterSummaryPage": "/tests/pages/mondodbClusterSummaryPage.js"
   },
   "multiple": {
     "parallel": {
