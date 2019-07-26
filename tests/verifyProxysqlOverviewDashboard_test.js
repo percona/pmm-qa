@@ -8,7 +8,8 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open the ProxySQL Overview Dashboard', async (I, adminPage, proxysqlOverviewPage) => {
-    await adminPage.navigateToDashboard("HA", "ProxySQL Overview");
+    I.amOnPage(proxysqlOverviewPage.url);
+    I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(5);
     proxysqlOverviewPage.verifyMetricsExistence();
