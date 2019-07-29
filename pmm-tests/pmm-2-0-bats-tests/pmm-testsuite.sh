@@ -10,7 +10,11 @@ function pmm_framework_setup() {
 }
 
 function pmm_framework_add_clients() {
-  ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --${1}-version=$3 --pmm2 --dbdeployer --download --pmm2-server-ip=$4
+  if [[ $1 == "pxc" ]]; then
+    ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --with-proxysql --${1}-version=$3 --pmm2 --download --pmm2-server-ip=$4
+  else
+    ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --${1}-version=$3 --pmm2 --dbdeployer --download --pmm2-server-ip=$4
+  fi
 }
 
 function pmm_wipe_all() {
@@ -100,9 +104,9 @@ function run_mongodb_specific_tests() {
 
 function run_proxysql_tests() {
   if [[ $tap == 1 ]] ; then
-    bats --tap ${DIRNAME}/proxysql-tests.bats
+    bats --tap ${DIRNAME}/proxysql-specific-tests.bats
   else
-    bats ${DIRNAME}/proxysql-tests.bats
+    bats ${DIRNAME}/proxysql-specific-tests.bats
   fi
 }
 
@@ -196,7 +200,6 @@ if [[ $instance_t == "mo" ]] ; then
   run_mongodb_specific_tests
 fi
 
-
 if [[ $instance_t == "ps" ]]; then
   echo "Running PS specific tests"
   run_ps_specific_tests
@@ -210,6 +213,11 @@ fi
 if [[ $instance_t == "pgsql" ]]; then
   echo "Running Postgre SQL specific tests"
   run_postgresql_specific_tests
+fi
+
+if [[ $instance_t == "pxc" ]]; then
+  echo "Running Postgre SQL specific tests"
+  run_proxysql_tests
 fi
 
 echo "Finished Checking Testsuite"
