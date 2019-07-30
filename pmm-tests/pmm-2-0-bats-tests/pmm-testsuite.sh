@@ -18,7 +18,7 @@ function pmm_wipe_all() {
 }
 
 function pmm_wipe_clients() {
-  ${DIRNAME}/../pmm-framework.sh --wipe-pmm2-clients
+  ${DIRNAME}/../pmm-framework.sh --wipe-clients --pmm2
 }
 
 function  pmm_wipe_server() {
@@ -71,6 +71,14 @@ function run_ps_specific_tests() {
     bats --tap ${DIRNAME}/ps-specific-tests.bats
   else
     bats ${DIRNAME}/ps-specific-tests.bats
+  fi
+}
+
+function run_ms_specific_tests() {
+  if [[ $tap == 1 ]] ; then
+    bats --tap ${DIRNAME}/ms-specific-tests.bats
+  else
+    bats ${DIRNAME}/ms-specific-tests.bats
   fi
 }
 
@@ -192,6 +200,11 @@ fi
 if [[ $instance_t == "ps" ]]; then
   echo "Running PS specific tests"
   run_ps_specific_tests
+fi
+
+if [[ $instance_t == "ms" ]]; then
+  echo "Running MS specific tests"
+  run_ms_specific_tests
 fi
 
 if [[ $instance_t == "pgsql" ]]; then

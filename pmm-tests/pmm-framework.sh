@@ -23,6 +23,7 @@ create_pgsql_user=0
 PGSQL_PORT=5432
 PS_PORT=43306
 with_replica=1
+mysqld_startup_options="--user=root"
 
 mkdir -p $WORKDIR/logs
 # User configurable variables
@@ -776,25 +777,25 @@ install_client(){
   echo "export PATH=$PATH:$PWD/bin" >> ~/.bash_profile
   source ~/.bash_profile
   pmm-admin --version
-  pmm-agent setup --config-file=$PWD/config/pmm-agent.yaml --server-insecure-tls --server-address=$IP_ADDRESS:443
+  pmm-agent setup --config-file=$PWD/config/pmm-agent.yaml --server-address=$IP_ADDRESS:443 --server-insecure-tls  --server-username=admin --server-password=admin --trace
   pmm-agent --config-file=$PWD/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 }
 
 configure_client() {
   if [ ! -z $IP_ADDRESS ]; then
     if [ ! -z $setup ]; then
-      pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+      pmm-agent setup --server-address=$IP_ADDRESS:443 --server-insecure-tls  --server-username=admin --server-password=admin --trace
     else
-      sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+      sudo pmm-agent setup --server-address=$IP_ADDRESS:443 --server-insecure-tls  --server-username=admin --server-password=admin --trace
     fi
     SERVER_IP=$IP_ADDRESS
   else
     IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
     SERVER_IP=$IP_ADDRESS
     if [ ! -z $setup ]; then
-      pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+      pmm-agent setup --server-address=$IP_ADDRESS:443 --server-insecure-tls  --server-username=admin --server-password=admin --trace
     else
-      sudo pmm-agent setup --server-insecure-tls --server-address=$IP_ADDRESS:443
+      sudo pmm-agent setup --server-address=$IP_ADDRESS:443 --server-insecure-tls  --server-username=admin --server-password=admin --trace
     fi
   fi
   sleep 5
@@ -1407,9 +1408,9 @@ add_clients(){
           sudo sed -i "s/3306/${PXC_PORT}/" /etc/proxysql-admin.cnf
           sudo proxysql-admin -e > $WORKDIR/logs/proxysql-admin.log
           if [ $disable_ssl -eq 1 ]; then
-            sudo pmm-admin add proxysql --disable-ssl
+            pmm-admin add proxysql --disable-ssl
           else
-            sudo pmm-admin add proxysql
+            pmm-admin add proxysql
           fi
         else
           echo "Could not find PXC nodes. Skipping proxysql setup"
@@ -1688,8 +1689,13 @@ clean_clients(){
      
     for i in $(pmm-admin list | grep -E "PostgreSQL" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove postgresql $i
-    done 
-   #Remove PS and PostgreSQL  docker containers
+    done
+
+    for i in $(pmm-admin list | grep -E "ProxySQL" | awk -F " " '{print $2}'  | sort -r) ; do
+      pmm-admin remove proxysql $i
+    done
+
+    #Remove PS and PostgreSQL  docker containers
     for i in $(docker ps -f name=ps -f name=PGS -q) ; do
       docker rm -f $i
     done

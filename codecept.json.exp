@@ -4,13 +4,14 @@
     "WebDriver": {
       "url": "{PMM_URL_HERE}",
       "browser": "chrome",
-      "user": "pmm_qa",
-      "key": "{SAUCE_USER_KEY}",
-      "host": "ondemand.saucelabs.com",
-      "windowSize": "maximize"
-    },
-    "SauceHelper": {
-      "require": "codeceptjs-saucehelper"
+      "windowSize": "maximize",
+      "restart": true,
+      "keepCookies": true,
+      "desiredCapabilities": {
+        "chromeOptions": {
+          "args": [ "--headless", "--disable-gpu", "--window-size=1920,1680", "--no-sandbox" ]
+        }
+      }
     },
     "ResembleHelper" : {
       "require": "codeceptjs-resemblehelper",
@@ -33,12 +34,11 @@
     "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js",
     "summaryDashboardPage": "./tests/pages/summaryDashboardPage.js",
     "trendsDashboardPage": "./tests/pages/trendsDashboardPage.js",
-    "proxysqlOverviewPage": "./tests/pages/proxysqlOverviewPage.js",
-    "qanPage" : "./tests/pages/qanPage.js"
+    "proxysqlOverviewPage": "./tests/pages/proxysqlOverviewPage.js"
   },
   "multiple": {
     "parallel": {
-      "chunks": 3,
+      "chunks": 4,
       "browsers": ["chrome"]
     }
   },

@@ -8,7 +8,8 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open the MongoDB Overview Dashboard', async (I, adminPage, mongodbOverviewPage) => {
-    await adminPage.navigateToDashboard("MongoDB", "MongoDB Overview");
+    I.amOnPage(mongodbOverviewPage.url);
+    I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(10);
     mongodbOverviewPage.verifyMetricsExistence();
