@@ -1,0 +1,76 @@
+{
+  "output": "tests/output",
+  "helpers": {
+    "WebDriver": {
+      "url": "{PMM_URL_HERE}",
+      "browser": "chrome",
+      "windowSize": "maximize",
+      "restart": true,
+      "keepCookies": true,
+      "desiredCapabilities": {
+        "chromeOptions": {
+          "args": [ "--headless", "--disable-gpu", "--window-size=1920,1680", "--no-sandbox" ]
+        }
+      }
+    },
+    "ResembleHelper" : {
+      "require": "codeceptjs-resemblehelper",
+      "screenshotFolder": "./tests/output/",
+      "baseFolder": "./tests/screenshots/base/",
+      "diffFolder": "./tests/screenshots/diff/"
+    },
+    "FileSystem": {},
+    "REST": {}
+  },
+  "include": {
+    "loginPage": "./tests/pages/loginPage.js",
+    "homePage": "./tests/pages/homePage.js",
+    "remoteInstancesPage" : "./tests/pages/remoteInstancesPage.js",
+    "adminPage" : "./tests/pages/adminPage.js",
+    "systemOverviewPage" : "./tests/pages/systemOverviewPage.js",
+    "compareSystemParametersPage" : "./tests/pages/compareSystemParametersPage.js",
+    "mysqlOverviewPage": "./tests/pages/mysqlOverviewPage.js",
+    "postgresqlOverviewPage": "./tests/pages/postgresqlOverviewPage.js",
+    "mongodbOverviewPage": "./tests/pages/mongodbOverviewPage.js",
+    "summaryDashboardPage": "./tests/pages/summaryDashboardPage.js",
+    "trendsDashboardPage": "./tests/pages/trendsDashboardPage.js",
+    "proxysqlOverviewPage": "./tests/pages/proxysqlOverviewPage.js"
+  },
+  "multiple": {
+    "parallel": {
+      "chunks": 4,
+      "browsers": ["chrome"]
+    }
+  },
+  "mocha": {
+    "reporterOptions": {
+      "codeceptjs-cli-reporter": {
+        "stdout": "-",
+        "options": {
+          "verbose": false,
+          "steps": true
+        }
+      },
+      "mocha-junit-reporter": {
+        "stdout": "./tests/output/console.log",
+        "options": {
+          "mochaFile": "./tests/output/result.xml"
+        }
+      },
+      "mochawesome": {
+        "stdout": "./tests/output/mocharesult.log",
+        "options": {
+          "reportDir": "tests/output",
+          "reportFilename": "result.html"
+        }
+      }
+    }
+  },
+  "bootstrap": false,
+  "teardown": null,
+  "hooks": [],
+  "gherkin": {},
+  "tests": "tests/*_test.js",
+  "timeout": 10000,
+  "name": "pmm-qa"
+}
