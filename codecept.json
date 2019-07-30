@@ -7,7 +7,9 @@
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}",
       "host": "ondemand.saucelabs.com",
-      "windowSize": "maximize"
+      "windowSize": "maximize",
+      "restart": false,
+      "keepCookies": true
     },
     "SauceHelper": {
       "require": "codeceptjs-saucehelper"
