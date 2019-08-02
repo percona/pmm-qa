@@ -20,6 +20,6 @@ Scenario('Open the QAN Dashboard and Test for Elements', async (I, adminPage, qa
     qanPage.checkSparkLines();
     qanPage.checkPagination();
     qanPage.checkTableHeaders();
-    qanPage.checkServerList();
+    //qanPage.checkServerList();
     I.switchTo();
 });

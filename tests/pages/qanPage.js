@@ -3,8 +3,7 @@ var assert = require('assert');
 module.exports = {
     url: "graph/d/7w6Q3PJmz/pmm-query-analytics",
     filterGroups: [
-        "Environment", "Cluster", "Replication Set", "Database", "Schema", "Server", "Client Host", "Availability Zone",
-        "Container Name", "Node Model", "Region Name", "Service Type", "User Name", "Machine ID"
+        "Database", "User Name", "Node ID", "Node Name", "Node Type", "service_name", "Service Type", "Service ID"
     ],
     tableHeader: [
         "Query", "Load", "Query Count", "Query Time"
