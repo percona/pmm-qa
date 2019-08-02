@@ -87,7 +87,7 @@ module.exports = {
         I.click("//ng-select//span[contains(text(), '" + count + "')]");
         I.wait(10);
         I.waitForVisible(this.fields.table, 30);
-        I.waitForVisible(this.filterGroupLocator(this.filterGroups[6]), 30);
+        I.waitForVisible(this.filterGroupLocator(this.filterGroups[5]), 30);
     },
 
     applyFilter(filterValue){
