@@ -2,7 +2,6 @@
 Feature('to verify MySQL Overview Dashboards');
 
 Before((I, loginPage) => {
-    I.amOnPage('/');
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
 });
