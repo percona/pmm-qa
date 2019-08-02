@@ -43,6 +43,7 @@ module.exports = {
         I.click(this.fields.nextPageNavigation);
         I.wait(10);
         I.waitForVisible(this.fields.nextPageNavigation, 30);
+        this._selectDetails(2);
         I.seeElement(this.fields.nextPageNavigation);
         I.click(this.fields.previousPageNavigation);
         I.waitForVisible(this.fields.previousPageNavigation, 30);
@@ -64,8 +65,14 @@ module.exports = {
         }
     },
 
-    checkSparkLines() {
+    async checkSparkLines() {
         I.seeNumberOfVisibleElements("//table//tr//app-qan-table-cell[1]//div[1]//div[1]", 11);
+        // await I.screenshotElement("(//table//tr//app-qan-table-cell[1]//div[1]//div[1])[1]", "sparkline_qan");
+        // I.seeVisualDiff("sparkline_qan.png", {tolerance: 50, prepareBaseImage: true});
+        // for (let i = 0; i < 11; i++) {
+        //     await I.screenshotElement("(//table//tr//app-qan-table-cell[1]//div[1]//div[1])[" + (i+1) +"]", "sparkline_qan");
+        //     I.seeVisualDiff("sparkline_qan.png", {tolerance: 50, prepareBaseImage: false});
+        // }
     },
 
     checkFilterGroups() {
@@ -84,6 +91,11 @@ module.exports = {
     },
 
     applyFilter(filterValue){
+        for (var i = 0; i < 2; i++)
+        {
+            I.pressKey('PageDown');
+            I.wait(2);
+        }
         I.click("//section[@class='aside__filter-group']//span[contains(text(), '" + filterValue + "')]/../span[@class='checkbox-container__checkmark']");
         I.waitForVisible(this.fields.table, 30);
     },

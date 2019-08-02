@@ -8,6 +8,7 @@ Before((I, loginPage) => {
 Scenario('Open the QAN Dashboard and Test for Elements', async (I, adminPage, qanPage) => {
     I.amOnPage(qanPage.url);
     await I.waitForElement(qanPage.fields.iframe, 60);
+    adminPage.applyTimer("5m");
     await I.switchTo(qanPage.fields.iframe); // switch to first iframe
     I.wait(10);
     qanPage.changeResultsPerPage(50);
@@ -17,8 +18,8 @@ Scenario('Open the QAN Dashboard and Test for Elements', async (I, adminPage, qa
     await qanPage.verifyDataSet(2);
     qanPage.applyFilter("mysql");
     qanPage.changeResultsPerPage(10);
-    qanPage.checkSparkLines();
     qanPage.checkPagination();
+    await qanPage.checkSparkLines();
     qanPage.checkTableHeaders();
     //qanPage.checkServerList();
     I.switchTo();
