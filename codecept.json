@@ -9,9 +9,9 @@
       "key": "{SAUCE_USER_KEY}",
       "host": "ondemand.saucelabs.com",
       "desiredCapabilities": {
-        "screenResolution": "1920x1200",
+        "screenResolution": "2560x1600",
         "chromeOptions": {
-          "args": [ "--disable-gpu", "--window-size=1920x1200", "--no-sandbox" ]
+          "args": [ "--disable-gpu", "--window-size=2560x1600", "--no-sandbox" ]
         }
       }
     },
