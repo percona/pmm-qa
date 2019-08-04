@@ -117,13 +117,17 @@ module.exports = {
 
     async verifyDataSet(row){
         var queryCountData = await this._getData(row, 2);
+        console.log("Query Count Data values " + queryCountData.percentage + " & " + queryCountData.val);
         var queryTimeData = await this._getData(row, 3);
+        console.log("Query Time Data values " + queryTimeData.percentage + " & " + queryTimeData.val);
         this._selectDetails(row);
         var detailsQueryCountData = await this.getDetailsData(1);
+        console.log("Query Count Details Values " + detailsQueryCountData.percentage  + " & " +  detailsQueryCountData.val);
         var detailsQueryTimeData = await this.getDetailsData(2);
-        assert.equal(detailsQueryCountData.percentage.indexOf(queryCountData.percentage) > -1, true, "Details Query Count Percentage Doesn't Match");
-        assert.equal(detailsQueryCountData.val.indexOf(queryCountData.val) > -1, true, "Details Query Count Value Doesn't Match");
-        assert.equal(detailsQueryTimeData.percentage.indexOf(queryTimeData.percentage) > -1, true, "Details Query Time Percentage Doesn't Match");
-        assert.equal(detailsQueryTimeData.val.indexOf(queryTimeData.val) > -1, true, "Details Query Time value Doesn't Match");
+        console.log("Query Count Details Values " + detailsQueryCountData.percentage  + " & " +  detailsQueryCountData.val);
+        assert.equal(detailsQueryCountData.percentage.indexOf(queryCountData.percentage) > -1, true, "Details Query Count Percentage Doesn't Match expected "  + detailsQueryCountData.percentage + " to contain " + queryCountData.percentage);
+        assert.equal(detailsQueryCountData.val.indexOf(queryCountData.val) > -1, true, "Details Query Count Value Doesn't Match expected " + detailsQueryCountData.val + " to contain " + queryCountData.val);
+        assert.equal(detailsQueryTimeData.percentage.indexOf(queryTimeData.percentage) > -1, true, "Details Query Time Percentage Doesn't Match expected " + detailsQueryTimeData.percentage + " to contain " + queryTimeData.percentage);
+        assert.equal(detailsQueryTimeData.val.indexOf(queryTimeData.val) > -1, true, "Details Query Time value Doesn't Match expected "  + detailsQueryTimeData.val + " to contain " + queryTimeData.val);
     }
 };
