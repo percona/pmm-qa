@@ -91,11 +91,6 @@ module.exports = {
     },
 
     applyFilter(filterValue){
-        for (var i = 0; i < 2; i++)
-        {
-            I.pressKey('PageDown');
-            I.wait(2);
-        }
         I.click("//section[@class='aside__filter-group']//span[contains(text(), '" + filterValue + "')]/../span[@class='checkbox-container__checkmark']");
         I.waitForVisible(this.fields.table, 30);
     },
