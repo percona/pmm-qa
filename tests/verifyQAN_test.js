@@ -13,10 +13,10 @@ Scenario('Open the QAN Dashboard and Test for Elements', async (I, adminPage, qa
     I.wait(10);
     qanPage.changeResultsPerPage(50);
     qanPage.checkFilterGroups();
-    qanPage.applyFilter("mysql");
+    qanPage.applyFilter("ps");
     await qanPage.verifyDataSet(1);
     await qanPage.verifyDataSet(2);
-    qanPage.applyFilter("mysql");
+    qanPage.applyFilter("ps");
     qanPage.changeResultsPerPage(10);
     qanPage.checkPagination();
     await qanPage.checkSparkLines();
