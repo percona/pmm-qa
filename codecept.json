@@ -4,12 +4,18 @@
     "WebDriver": {
       "url": "{PMM_URL_HERE}",
       "browser": "chrome",
+      "windowSize": "2560x1600",
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}",
       "host": "ondemand.saucelabs.com",
-      "windowSize": "maximize",
       "restart": false,
-      "keepCookies": true
+      "keepCookies": true,
+      "desiredCapabilities": {
+        "screenResolution": "2560x1600",
+        "chromeOptions": {
+          "args": [ "--disable-gpu", "--window-size=2560x1600", "--no-sandbox" ]
+        }
+      }
     },
     "SauceHelper": {
       "require": "codeceptjs-saucehelper"
