@@ -1,7 +1,7 @@
 
 Feature('to verify MongoDB Dashboards');
 
-Scenario('Open the MongoDB Overview Dashboard', async (I, adminPage, mongodbOverviewPage, mongodbClusterSummaryPage) => {
+Scenario('Open the MongoDB Dashboards', async (I, loginPage, adminPage, mongodbOverviewPage, mongodbClusterSummaryPage) => {
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
     I.amOnPage(mongodbOverviewPage.url);
