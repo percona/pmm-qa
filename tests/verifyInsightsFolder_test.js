@@ -2,14 +2,13 @@
 Feature("Test Dashboards inside the Insights Folder");
 
 Scenario('Open the Advanced Data Exploration Dashboard', async (I, loginPage, adminPage, advancedDataExplorationPage) => {
-    I.amOnPage('/');
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
 
     I.amOnPage(advancedDataExplorationPage.url);
     I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(3);
+    await adminPage.handleLazyLoading(10);
     advancedDataExplorationPage.verifyMetricsExistence();
 });
 
@@ -17,7 +16,7 @@ Scenario('Open the Cross Server Graphs Dashboard', async (I, adminPage, crossSer
     I.amOnPage(crossServerGraphsPage.url);
     I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(3);
+    await adminPage.handleLazyLoading(10);
     crossServerGraphsPage.verifyMetricsExistence();
 });
 
@@ -39,7 +38,7 @@ Scenario('Open the Prometheus Exporter Status Dashboard', async (I, adminPage, p
     for (let i in prometheusExporterStatusPage.panels) {
         adminPage.openPanel(prometheusExporterStatusPage.panels[i]);
     }
-    await adminPage.handleLazyLoading(4);
+    await adminPage.handleLazyLoading(10);
     prometheusExporterStatusPage.verifyMetricsExistence();
 });
 
@@ -47,7 +46,7 @@ Scenario('Open the Prometheus Exporter Overview Dashboard', async (I, adminPage,
     I.amOnPage(prometheusExporterOverviewPage.url);
     I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(4);
+    await adminPage.handleLazyLoading(10);
     prometheusExporterOverviewPage.verifyMetricsExistence();
 });
 
