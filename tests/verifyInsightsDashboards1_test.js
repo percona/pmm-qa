@@ -1,7 +1,7 @@
 
 Feature("Test Dashboards inside the Insights Folder");
 
-Scenario('Open the Advanced Data Exploration Dashboard', async (I, loginPage, adminPage, advancedDataExplorationPage) => {
+Scenario('Open Advanced Exploration, Cross ServerGraph, Prometheus Page', async (I, loginPage, adminPage, advancedDataExplorationPage, prometheusPage, crossServerGraphsPage) => {
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
 
@@ -10,17 +10,11 @@ Scenario('Open the Advanced Data Exploration Dashboard', async (I, loginPage, ad
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(10);
     advancedDataExplorationPage.verifyMetricsExistence();
-});
-
-Scenario('Open the Cross Server Graphs Dashboard', async (I, adminPage, crossServerGraphsPage) => {
     I.amOnPage(crossServerGraphsPage.url);
     I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(10);
     crossServerGraphsPage.verifyMetricsExistence();
-});
-
-Scenario('Open the Prometheus Dashboard', async (I, adminPage, prometheusPage) => {
     I.amOnPage(prometheusPage.url);
     I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");

@@ -1,6 +1,6 @@
 Feature("Test Dashboards inside the Insights Folder");
 
-Scenario('Open the Prometheus Exporter Status Dashboard', async (I, adminPage, prometheusExporterStatusPage) => {
+Scenario('Open the Prometheus Exporters, Summary Dashboard, Trends Dashboard, Prometheus Exporters Overview', async (I, adminPage, summaryDashboardPage, trendsDashboardPage, prometheusExporterStatusPage, prometheusExporterOverviewPage) => {
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
 
@@ -12,28 +12,19 @@ Scenario('Open the Prometheus Exporter Status Dashboard', async (I, adminPage, p
     }
     await adminPage.handleLazyLoading(10);
     prometheusExporterStatusPage.verifyMetricsExistence();
-});
-
-Scenario('Open the Prometheus Exporter Overview Dashboard', async (I, adminPage, prometheusExporterOverviewPage) => {
-    I.amOnPage(prometheusExporterOverviewPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(10);
-    prometheusExporterOverviewPage.verifyMetricsExistence();
-});
-
-Scenario('Open the Summary Dashboard', async (I, adminPage, summaryDashboardPage) => {
-    I.amOnPage(summaryDashboardPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(10);
-    summaryDashboardPage.verifyMetricsExistence();
-});
-
-Scenario('Open the Trends Dashboard', async (I, adminPage, trendsDashboardPage) => {
     I.amOnPage(trendsDashboardPage.url);
     I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(10);
     trendsDashboardPage.verifyMetricsExistence();
+    I.amOnPage(summaryDashboardPage.url);
+    I.waitForElement(adminPage.fields.metricTitle, 30);
+    adminPage.applyTimer("1m");
+    await adminPage.handleLazyLoading(10);
+    summaryDashboardPage.verifyMetricsExistence();
+    I.amOnPage(prometheusExporterOverviewPage.url);
+    I.waitForElement(adminPage.fields.metricTitle, 30);
+    adminPage.applyTimer("1m");
+    await adminPage.handleLazyLoading(10);
+    prometheusExporterOverviewPage.verifyMetricsExistence();
 });
