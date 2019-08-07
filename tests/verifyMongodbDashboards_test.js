@@ -2,7 +2,6 @@
 Feature('to verify MongoDB Cluster Summary Dashboard');
 
 Before((I, loginPage) => {
-    I.amOnPage('/');
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
 });
