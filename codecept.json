@@ -8,7 +8,6 @@
       "user": "pmm_qa",
       "key": "{SAUCE_USER_KEY}",
       "host": "ondemand.saucelabs.com",
-      "keepCookies": true,
       "desiredCapabilities": {
         "screenResolution": "2560x1600",
         "chromeOptions": {
@@ -47,7 +46,7 @@
     "prometheusExporterStatusPage": "/tests/pages/prometheusExporterStatusPage.js",
     "prometheusExporterOverviewPage": "/tests/pages/prometheusExporterOverviewPage.js",
     "pxcGaleraClusterOverviewPage": "/tests/pages/pxcGaleraClusterOverviewPage.js",
-    "mondodbClusterSummaryPage": "/tests/pages/mondodbClusterSummaryPage.js",
+    "mongodbClusterSummaryPage": "/tests/pages/mongodbClusterSummaryPage.js",
     "qanPage" : "./tests/pages/qanPage.js"
   },
   "multiple": {

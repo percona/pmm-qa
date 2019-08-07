@@ -1,6 +1,6 @@
 Feature("Test Dashboards inside the Insights Folder");
 
-Scenario('Open the Prometheus Exporters, Summary Dashboard, Trends Dashboard, Prometheus Exporters Overview', async (I, adminPage, summaryDashboardPage, trendsDashboardPage, prometheusExporterStatusPage, prometheusExporterOverviewPage) => {
+Scenario('Open the Prometheus Exporters, Summary Dashboard, Trends Dashboard, Prometheus Exporters Overview', async (I, loginPage, adminPage, summaryDashboardPage, trendsDashboardPage, prometheusExporterStatusPage, prometheusExporterOverviewPage) => {
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
 
