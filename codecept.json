@@ -41,13 +41,13 @@
     "trendsDashboardPage": "./tests/pages/trendsDashboardPage.js",
     "proxysqlOverviewPage": "./tests/pages/proxysqlOverviewPage.js",
     "advancedDataExplorationPage": "./tests/pages/advancedDataExplorationPage.js",
-    "crossServerGraphsPage": "/tests/pages/crossServerGraphsPage.js",
+    "crossServerGraphsPage": "./tests/pages/crossServerGraphsPage.js",
     "prometheusPage": "./tests/pages/prometheusPage.js",
-    "prometheusExporterStatusPage": "/tests/pages/prometheusExporterStatusPage.js",
-    "prometheusExporterOverviewPage": "/tests/pages/prometheusExporterOverviewPage.js",
-    "pxcGaleraClusterOverviewPage": "/tests/pages/pxcGaleraClusterOverviewPage.js",
-    "mongodbClusterSummaryPage": "/tests/pages/mongodbClusterSummaryPage.js",
-    "qanPage" : "./tests/pages/qanPage.js"
+    "prometheusExporterStatusPage": "./tests/pages/prometheusExporterStatusPage.js",
+    "prometheusExporterOverviewPage": "./tests/pages/prometheusExporterOverviewPage.js",
+    "pxcGaleraClusterOverviewPage": "./tests/pages/pxcGaleraClusterOverviewPage.js",
+    "qanPage" : "./tests/pages/qanPage.js",
+    "mongoDbClusterSummaryPage": "./tests/pages/mongoDbClusterSummaryPage.js"
   },
   "multiple": {
     "parallel": {
