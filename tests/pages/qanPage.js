@@ -27,7 +27,8 @@ module.exports = {
         results: "//ng-select[@ng-reflect-items='10,50,100']",
         fifty: "//div[@id='ad0800a556c8']/span",
         hundred: "//div[@id='a305c6a9fc9e']",
-        iframe: "//div[@class='panel-content']//iframe"
+        iframe: "//div[@class='panel-content']//iframe",
+        filterSelection: "(//div[@class='chips']//button)"
     },
 
     filterGroupLocator (filterName) {
@@ -129,5 +130,13 @@ module.exports = {
         assert.equal(detailsQueryCountData.val.indexOf(queryCountData.val) > -1, true, "Details Query Count Value Doesn't Match expected " + detailsQueryCountData.val + " to contain " + queryCountData.val);
         assert.equal(detailsQueryTimeData.percentage.indexOf(queryTimeData.percentage) > -1, true, "Details Query Time Percentage Doesn't Match expected " + detailsQueryTimeData.percentage + " to contain " + queryTimeData.percentage);
         assert.equal(detailsQueryTimeData.val.indexOf(queryTimeData.val) > -1, true, "Details Query Time value Doesn't Match expected "  + detailsQueryTimeData.val + " to contain " + queryTimeData.val);
+    },
+
+    async clearFilters(){
+        let numOfElements = await I.grabNumberOfVisibleElements(this.fields.filterSelection);
+        for (let i = 1; i <= numOfElements; i++) {
+            I.click(this.fields.filterSelection + [i]);
+            I.waitForVisible(this.fields.detailsTable, 30);
+        }
     }
 };
