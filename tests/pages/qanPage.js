@@ -135,7 +135,7 @@ module.exports = {
     async clearFilters(){
         let numOfElements = await I.grabNumberOfVisibleElements(this.fields.filterSelection);
         for (let i = 1; i <= numOfElements; i++) {
-            I.click(this.fields.filterSelection + [i]);
+            I.click(this.fields.filterSelection + "[" + i + "]");
             I.waitForVisible(this.fields.detailsTable, 30);
         }
     }

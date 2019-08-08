@@ -1282,7 +1282,7 @@ add_clients(){
         pmm-admin add mysql --use-$query_source --username=root --password=ps 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
         PS_PORT=$((PS_PORT+j))
       done
-    elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
+    elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]] || [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
       else
