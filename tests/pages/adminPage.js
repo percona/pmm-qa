@@ -7,7 +7,7 @@ module.exports = {
     url: "graph/d/Fxvd1timk/home-dashboard?orgId=1",
     fields: {
         navigation: "//i[contains(@class, 'navbar-page-btn__search')]",
-        timePickerMenu: "//button[@ng-click='ctrl.openDropdown()']",
+        timePickerMenu: "//button[contains(@class, 'time-picker-button-select')]",
         fromTime: "(//input[@input-datetime])[1]",
         applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]",
         backToDashboard: "//button[@ng-click='ctrl.close()']",
@@ -46,9 +46,8 @@ module.exports = {
 
     applyTimer (timeDiff) {
         I.click(this.fields.timePickerMenu);
-        I.waitForElement(this.fields.fromTime, 30);
-        I.fillField(this.fields.fromTime, "now-" + timeDiff);
-        I.click(this.fields.applyCustomTimer);
+        I.waitForVisible("//div[contains(text(), 'Last 5 minutes')]", 30);
+        I.click("//div[contains(text(), 'Last 5 minutes')]");
         I.wait(5);
     },
 
