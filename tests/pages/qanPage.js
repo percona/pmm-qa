@@ -3,7 +3,7 @@ var assert = require('assert');
 module.exports = {
     url: "graph/d/7w6Q3PJmz/pmm-query-analytics",
     filterGroups: [
-        "Database", "User Name", "Node ID", "Node Name", "Node Type", "service_name", "Service Type", "Service ID"
+        "Database", "User Name", "Node ID", "Node Name", "Node Type", "Service Name", "Service Type", "Service ID"
     ],
     tableHeader: [
         "Query", "Load", "Query Count", "Query Time"
@@ -88,6 +88,7 @@ module.exports = {
         I.click("//ng-select//span[contains(text(), '" + count + "')]");
         I.wait(10);
         I.waitForVisible(this.fields.table, 30);
+        I.wait(10);
     },
 
     applyFilter(filterValue){
