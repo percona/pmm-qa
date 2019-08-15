@@ -1262,14 +1262,21 @@ add_clients(){
       if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
         dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+        if [[ "${query_source}" == "slowlog" ]]; then
+          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
+        fi
         pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single-$IP_ADDRESS
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
         for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
           #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
+          if [[ "${query_source}" == "slowlog" ]]; then
+            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
+          fi
           pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
           node_port=$(($node_port + 1))
+          sleep 20
         done
       fi
     elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
