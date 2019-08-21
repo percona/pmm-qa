@@ -82,7 +82,16 @@ module.exports = {
         }
     },
 
-    changeResultsPerPage(count) {
+    async changeResultsPerPage(count) {
+        let numOfElements = await I.grabNumberOfVisibleElements("//ng-select[@ng-reflect-items='10,50,100']");
+        if(numOfElements = 0){
+            for (var i = 0; i < 5; i++)
+            {
+                I.pressKey('PageDown');
+                I.wait(2);
+            }
+        }
+        I.waitForVisible("//ng-select[@ng-reflect-items='10,50,100']", 30);
         I.click("//ng-select[@ng-reflect-items='10,50,100']");
         I.waitForVisible("//ng-select//span[contains(text(), '" + count + "')]", 30);
         I.click("//ng-select//span[contains(text(), '" + count + "')]");
