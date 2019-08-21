@@ -11,13 +11,13 @@ Scenario('Open the QAN Dashboard and Test for Elements', async (I, adminPage, qa
     adminPage.applyTimer("5m");
     await I.switchTo(qanPage.fields.iframe); // switch to first iframe
     I.wait(10);
-    qanPage.changeResultsPerPage(50);
+    await qanPage.changeResultsPerPage(50);
     qanPage.checkFilterGroups();
     qanPage.applyFilter("ps");
     await qanPage.verifyDataSet(1);
     await qanPage.verifyDataSet(2);
     await qanPage.clearFilters();
-    qanPage.changeResultsPerPage(10);
+    await qanPage.changeResultsPerPage(10);
     qanPage.checkPagination();
     await qanPage.checkSparkLines();
     qanPage.checkTableHeaders();
