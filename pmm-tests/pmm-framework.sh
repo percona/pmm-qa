@@ -1264,6 +1264,7 @@ add_clients(){
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
         if [[ "${query_source}" == "slowlog" ]]; then
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
+          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
         fi
         pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single-$IP_ADDRESS
       else
@@ -1273,6 +1274,7 @@ add_clients(){
           #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
           if [[ "${query_source}" == "slowlog" ]]; then
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
+            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
           fi
           pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
           node_port=$(($node_port + 1))
@@ -1311,6 +1313,8 @@ add_clients(){
               pmm-admin add mysql --username=root --use-$query_source --disable-ssl localhost:${RBASE1} ${NODE_NAME}-${j}
               check_disable_ssl ${NODE_NAME}-${j}
             else
+              ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL slow_query_log='ON';"
+              ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL long_query_time=0;"
               pmm-admin add mysql --username=root --use-$query_source localhost:${RBASE1} ${NODE_NAME}-${j}
             fi
           fi
@@ -1387,6 +1391,8 @@ add_clients(){
           pmm-admin add mysql --username=root --use-$query_source --disable-ssl localhost:${RBASE1} ${NODE_NAME}-${j}
           check_disable_ssl ${NODE_NAME}-${j}
         else
+          ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL slow_query_log='ON';"
+          ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL long_query_time=0;"
           pmm-admin add mysql --username=root --use-$query_source localhost:${RBASE1} ${NODE_NAME}-${j}
         fi
       done
