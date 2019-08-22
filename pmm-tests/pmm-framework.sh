@@ -1286,8 +1286,12 @@ add_clients(){
       docker pull percona:${ps_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PS_PORT percona
-        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
+        sudo chmod 777 -R /var/log
+        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
         sleep 20
+        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log='ON';"
+        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
+        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
         pmm-admin add mysql --use-$query_source --username=root --password=ps 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
         PS_PORT=$((PS_PORT+j))
       done
