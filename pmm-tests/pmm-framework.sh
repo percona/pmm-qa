@@ -477,7 +477,7 @@ sudo_check(){
 }
 
 if [[ -z "${ps_version}" ]]; then ps_version="5.7"; fi
-if [[ -z "${modb_version}" ]]l then modb_version="4.2.0"; fi
+if [[ -z "${modb_version}" ]]; then modb_version="4.2.0"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.3"; fi
