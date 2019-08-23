@@ -49,6 +49,7 @@ usage () {
   echo " --pmm2-server-ip               Pass Address for PMM2-Server"
   echo " --package-name                 Name of the Server package installed"
   echo " --ps-version                   Pass Percona Server version info"
+  echo " --modb-version                 Pass MongoDB version info, from MongoDB!!"
   echo " --ms-version                   Pass MySQL Server version info"
   echo " --pgsql-version                Pass Postgre SQL server version Info"
   echo " --md-version                   Pass MariaDB Server version info"
@@ -91,7 +92,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,wipe-pmm2-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,wipe-pmm2-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -190,6 +191,10 @@ do
     ;;
     --ps-version )
     ps_version="$2"
+    shift 2
+    ;;
+    --modb-version )
+    modb_version="$2"
     shift 2
     ;;
     --ms-version )
@@ -472,6 +477,7 @@ sudo_check(){
 }
 
 if [[ -z "${ps_version}" ]]; then ps_version="5.7"; fi
+if [[ -z "${modb_version}" ]]l then modb_version="4.2.0"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.3"; fi
@@ -1295,6 +1301,18 @@ add_clients(){
         pmm-admin add mysql --use-$query_source --username=root --password=ps 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
         PS_PORT=$((PS_PORT+j))
       done
+    elif [[ "${CLIENT_NAME}" == "modb" && ! -z $PMM2 ]]; then
+      MODB_PORT=27017
+      MODB_PORT_NEXT=$((MODB_PORT+2))
+      docker pull mongo:${modb_version}
+      for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+        check_port $MODB_PORT mongodb
+        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 --name mongodb_node_$j mongo:${modb_version}
+        sleep 20
+        docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2,1)'
+        pmm-admin add mongodb --cluster mongodb_node_$j --use-profiler localhost:$MODB_PORT mongodb_node_$j --debug
+        MODB_PORT=$((MODB_PORT+j+3))
+      done
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]] || [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
@@ -1587,6 +1605,9 @@ check_port (){
       PS_PORT=$((PS_PORT+j))
       check_port $PS_PORT percona
     fi
+    if [[ $DB == "mongodb" ]]; then
+      MODB_PORT=$((MODB_PORT+3+j))
+      check_port $MODB_PORT mongodb
   fi
 }
 
