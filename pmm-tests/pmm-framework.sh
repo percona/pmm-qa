@@ -1608,6 +1608,7 @@ check_port (){
     if [[ $DB == "mongodb" ]]; then
       MODB_PORT=$((MODB_PORT+3+j))
       check_port $MODB_PORT mongodb
+    fi
   fi
 }
 
