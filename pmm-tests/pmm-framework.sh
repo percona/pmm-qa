@@ -1735,7 +1735,7 @@ clean_clients(){
     done
 
     #Remove PS and PostgreSQL  docker containers
-    for i in $(docker ps -f name=ps -f name=PGS -q) ; do
+    for i in $(docker ps -f name=ps -f name=PGS -f name=mongo -q) ; do
       docker rm -f $i
     done
     dbdeployer delete all --skip-confirm 
