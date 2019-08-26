@@ -200,6 +200,11 @@ if [[ $instance_t == "mo" ]] ; then
   run_mongodb_specific_tests
 fi
 
+if [[ $instance_t == "modb" ]] ; then
+  echo "Running MongoDB specific tests"
+  run_mongodb_specific_tests
+fi
+
 if [[ $instance_t == "ps" ]]; then
   echo "Running PS specific tests"
   run_ps_specific_tests
