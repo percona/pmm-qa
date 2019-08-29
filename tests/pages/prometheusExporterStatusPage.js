@@ -28,6 +28,5 @@ module.exports = {
         for (let i in this.metrics) {
             I.seeElement(this.graphsLocator(this.metrics[i]));
         }
-        I.dontSeeElement(this.fields.notAvailableMetrics);
     }
 };

@@ -995,56 +995,6 @@ remove_packages(){
   fi
 }
 
-add_clients_pmm2(){
-  mkdir -p $WORKDIR/logs
-  for i in ${ADDCLIENT[@]};do
-    CLIENT_NAME=$(echo $i | grep -o  '[[:alpha:]]*')
-    ADDCLIENTS_COUNT=$(echo "${i}" | sed 's|[^0-9]||g')
-    if [[ "${CLIENT_NAME}" == "ms" ]]; then
-      setup_db_tar mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
-      if [ -d "$WORKDIR/mysql" ]; then
-        rm -Rf $WORKDIR/mysql;
-      fi
-      mkdir $WORKDIR/mysql
-      dbdeployer unpack mysql-${ms_version}* --sandbox-binary $WORKDIR/mysql --overwrite
-      rm -Rf mysql-${ms_version}*
-      if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
-        dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
-        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single
-      else
-        dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
-        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-          #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
-          pmm-admin add mysql --use-perfschema --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j --debug
-          node_port=$(($node_port + 1))
-        done
-      fi
-    fi
-    if [[ "${CLIENT_NAME}" == "mo" ]]; then
-      get_basedir psmdb "percona-server-mongodb-${mo_version}*" "Percona Server Mongodb binary tar ball" ${mo_version}
-      rm -rf $BASEDIR/data
-      for k in `seq 1  ${REPLCOUNT}`;do
-          PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
-          PSMDB_PORTS+=($PSMDB_PORT)
-          for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-            PORT=$(( $PSMDB_PORT + $j - 1 ))
-            mkdir -p ${BASEDIR}/data/rpldb${k}_${j}
-            $BASEDIR/bin/mongod --profile 2 --slowms 1  $mongo_storage_engine  --replSet r${k} --dbpath=$BASEDIR/data/rpldb${k}_${j} --logpath=$BASEDIR/data/rpldb${k}_${j}/mongod.log --port=$PORT --logappend --fork &
-            sleep 10
-            if [ $disable_ssl -eq 1 ]; then
-              pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_rpl${k}_${j} --disable-ssl
-              check_disable_ssl mongodb_inst_rpl${k}_${j}
-            else
-              pmm-admin add mongodb --use-profiler --use-exporter --debug localhost:$PORT mongodb_inst_rpl${k}_${j}
-            fi
-          done
-      done
-    fi
-  done
-}
-
 #Percona Server configuration.
 add_clients(){
   mkdir -p $WORKDIR/logs
@@ -1253,7 +1203,11 @@ add_clients(){
         docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
         sleep 20
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
-        pmm-admin add postgresql localhost:$PGSQL_PORT PGSQL_${pgsql_version}_${IP_ADDRESS}_$j
+        if [ $(( ${j} % 2 )) -eq 0 ]; then
+          pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replica_set=pgsql-repl2 localhost:$PGSQL_PORT PGSQL_${pgsql_version}_${IP_ADDRESS}_$j
+        else
+          pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --replica_set=pgsql-repl1 localhost:$PGSQL_PORT PGSQL_${pgsql_version}_${IP_ADDRESS}_$j
+        fi
         PGSQL_PORT=$((PGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
@@ -1272,7 +1226,7 @@ add_clients(){
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
         fi
-        pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-single-$IP_ADDRESS
+        pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replica_set=repl1 127.0.0.1:$node_port mysql-single-$IP_ADDRESS
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
@@ -1282,7 +1236,11 @@ add_clients(){
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
           fi
-          pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
+          if [ $(( ${j} % 2 )) -eq 0 ]; then
+            pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replica_set=ms-repl2 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
+          else
+            pmm-admin add mysql --use-$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replica_set=ms-repl1 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
+          fi
           node_port=$(($node_port + 1))
           sleep 20
         done
@@ -1298,7 +1256,11 @@ add_clients(){
         mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log='ON';"
         mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
         mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
-        pmm-admin add mysql --use-$query_source --username=root --password=ps 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+        if [ $(( ${j} % 2 )) -eq 0 ]; then
+          pmm-admin add mysql --use-$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replica_set=ps-repl2 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+        else
+          pmm-admin add mysql --use-$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replica_set=ps-repl1 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+        fi
         PS_PORT=$((PS_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "modb" && ! -z $PMM2 ]]; then
@@ -1310,7 +1272,11 @@ add_clients(){
         docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 --name mongodb_node_$j mongo:${modb_version}
         sleep 20
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2,1)'
-        pmm-admin add mongodb --cluster mongodb_node_$j --use-profiler localhost:$MODB_PORT mongodb_node_$j --debug
+        if [ $(( ${j} % 2 )) -eq 0 ]; then
+          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod --use-profiler localhost:$MODB_PORT mongodb_node_$j --debug
+        else
+          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev --use-profiler localhost:$MODB_PORT mongodb_node_$j --debug
+        fi
         MODB_PORT=$((MODB_PORT+j+3))
       done
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]] || [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
