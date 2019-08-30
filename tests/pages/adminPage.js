@@ -59,7 +59,8 @@ module.exports = {
     },
 
     openPanel(panelName) {
-        I.click("//a[contains(text(), '"+ panelName +"')]");
+        I.click("//div[contains(@class,'dashboard-row')]//a[contains(text(), '"+ panelName +"')]");
+        I.wait(2);
     },
 
     async handleLazyLoading (timesPageDown) {
