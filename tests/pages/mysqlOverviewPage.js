@@ -9,7 +9,7 @@ module.exports = {
     fields: {
         pageHeaderText: "MySQL Overview",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]",
-        systemChartsToggle: "//a[contains(text(), 'System Charts')]"
+        systemChartsToggle: "//a[contains(text(), 'Node Summary')]"
     },
     metrics: ["MySQL Uptime", "Current QPS", "InnoDB Buffer Pool Size", "Buffer Pool Size of Total RAM",
         "MySQL Connections", "MySQL Client Thread Activity", "MySQL Questions", "MySQL Thread Cache",
