@@ -4,7 +4,7 @@ module.exports = {
 
     /// insert your locators and methods here
     // setting locators
-    url: "graph/d/n9z9QGNiz/mongodb-cluster-summary",
+    url: "graph/d/mongodb-cluster-summary/mongodb-cluster-summary",
     urlWithRecent: "graph/d/n9z9QGNiz/mongodb-cluster-summary?refresh=1m&orgId=1&from=now-1m&to=now",
     fields: {
         pageHeaderText: "MongoDB Cluster Summary",

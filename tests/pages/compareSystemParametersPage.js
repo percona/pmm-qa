@@ -4,7 +4,7 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/000000205/compare-system-parameters",
+    url: "graph/d/node-instance-compare/nodes-compare",
     fields: {
         pageHeaderText: "Compare System Parameters",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]"

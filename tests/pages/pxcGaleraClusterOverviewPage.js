@@ -4,7 +4,7 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/s_k9wGNiz/pxc-galera-cluster-overview",
+    url: "graph/d/pxc-cluster-summary/pxc-galera-cluster-summary",
     urlWithRecent: "graph/d/s_k9wGNiz/pxc-galera-cluster-overview?refresh=1m&orgId=1&from=now-1m&to=now",
     fields: {
         pageHeaderText: "PXC/Galera Cluster Overview",

@@ -4,7 +4,7 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/Fxvd1timk/home-dashboard?orgId=1",
+    url: "graph/d/pmm-home/home-dashboard?orgId=1",
     fields: {
         navigation: "//i[contains(@class, 'navbar-page-btn__search')]",
         timePickerMenu: "//button[contains(@class, 'time-picker-button-select')]",

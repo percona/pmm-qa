@@ -4,7 +4,7 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/qBWRrTiik/summary-dashboard",
+    url: "graph/d/node-instance-overview/nodes-overview",
     fields: {
         pageHeaderText: "Summary Dashboard",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]"
