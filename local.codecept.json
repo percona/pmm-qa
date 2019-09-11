@@ -9,6 +9,9 @@
       "path": "/wd/hub",
       "windowSize": "maximize",
       "desiredCapabilities": {
+        "chromeOptions": {
+          "args": [ "--headless", "--disable-gpu", "--window-size=2560,1600", "--no-sandbox" ]
+        },
         "selenoidOptions": {
           "enableVNC": true,
           "browserName": "chrome",
