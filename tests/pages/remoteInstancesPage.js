@@ -4,7 +4,7 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/pmm-list/_pmm-rds-and-remote-instances?orgId=1",
+    url: "graph/d/pmm-add-instance/pmm-add-instance",
     fields: {
         pageHeaderText: "_PMM Amazon RDS and Remote Instances"
     }

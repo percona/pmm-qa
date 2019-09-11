@@ -4,7 +4,7 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/fwWR9oiiz/proxysql-overview",
+    url: "graph/d/proxysql-instance-summary/proxysql-instance-summary",
     urlWithRecent: "graph/d/fwWR9oiiz/proxysql-overview?refresh=1m&orgId=1&from=now-1m&to=now",
     fields: {
         pageHeaderText: "ProxySQL Overview",

@@ -4,7 +4,7 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/IvhES05ik/postgresql-overview",
+    url: "graph/d/postgresql-instance-summary/postgresql-instance-summary",
     urlWithRecent: "graph/d/IvhES05ik/postgresql-overview?refresh=1m&orgId=1&from=now-1m&to=now",
     fields: {
         pageHeaderText: "PostgreSQL Overview",

@@ -1,7 +1,7 @@
 const I = actor();
 var assert = require('assert');
 module.exports = {
-    url: "graph/d/7w6Q3PJmz/pmm-query-analytics",
+    url: "graph/d/pmm-qan/pmm-query-analytics",
     filterGroups: [
         "Environment", "Cluster", "Replication Set", "Database", "Node Name", "Service Name", "User Name", "Node Type", "Service Type"
     ],
