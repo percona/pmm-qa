@@ -1,7 +1,7 @@
 {
   "output": "tests/output",
   "helpers": {
-    "WebDriverIO": {
+    "WebDriver": {
       "url": "http://localhost/",
       "browser": "chrome",
       "host": "localhost",
