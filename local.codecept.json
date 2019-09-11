@@ -2,9 +2,19 @@
   "output": "tests/output",
   "helpers": {
     "WebDriverIO": {
-      "url": "http://localhost:8080/",
+      "url": "http://localhost/",
       "browser": "chrome",
-      "windowSize": "maximize"
+      "host": "localhost",
+      "port": 4444,
+      "path": "/wd/hub",
+      "windowSize": "maximize",
+      "desiredCapabilities": {
+        "selenoidOptions": {
+          "enableVNC": true,
+          "browserName": "chrome",
+          "version": "76.0"
+        }
+      }
     },
     "ResembleHelper" : {
       "require": "codeceptjs-resemblehelper",
@@ -29,7 +39,7 @@
   },
   "multiple": {
     "parallel": {
-      "chunks": 3,
+      "chunks": 4,
       "browsers": ["chrome"]
     }
   },
