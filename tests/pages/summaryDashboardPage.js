@@ -9,7 +9,7 @@ module.exports = {
         pageHeaderText: "Summary Dashboard",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]"
     },
-    metrics: ["CPU Usage", "Processes", "Network Traffic", "I/O Activity", "Disk Latency", "MySQL Queries", "InnoDB Row Operations", "Top MySQL Commands", "Top MySQL Handlers"],
+    metrics: ["CPU Usage", "Processes", "Network Traffic", "I/O Activity", "Disk IO Latency"],
 
     graphsLocator (metricName){
         locator = "//span[contains(text(), '"+ metricName +"')]";
