@@ -134,8 +134,16 @@ module.exports = {
         this._selectDetails(row);
         var detailsQueryCountData = await this.getDetailsData(1);
         console.log("Query Count Details Values " + detailsQueryCountData.percentage  + " & " +  detailsQueryCountData.val);
-        var detailsQueryTimeData = await this.getDetailsData(2);
-        console.log("Query Count Details Values " + detailsQueryCountData.percentage  + " & " +  detailsQueryCountData.val);
+        if (row === 1)
+        {
+            var detailsQueryTimeData = await this.getDetailsData(3);
+            console.log("Query Count Details Values " + detailsQueryCountData.percentage  + " & " +  detailsQueryCountData.val);
+        }
+        else
+        {
+            var detailsQueryTimeData = await this.getDetailsData(2);
+            console.log("Query Count Details Values " + detailsQueryCountData.percentage  + " & " +  detailsQueryCountData.val);
+        }
         assert.equal(detailsQueryCountData.percentage.indexOf(queryCountData.percentage) > -1, true, "Details Query Count Percentage Doesn't Match expected "  + detailsQueryCountData.percentage + " to contain " + queryCountData.percentage);
         assert.equal(detailsQueryCountData.val.indexOf(queryCountData.val) > -1, true, "Details Query Count Value Doesn't Match expected " + detailsQueryCountData.val + " to contain " + queryCountData.val);
         assert.equal(detailsQueryTimeData.percentage.indexOf(queryTimeData.percentage) > -1, true, "Details Query Time Percentage Doesn't Match expected " + detailsQueryTimeData.percentage + " to contain " + queryTimeData.percentage);
