@@ -65,5 +65,5 @@ echo "$output"
 run pmm-admin config
 echo "$output"
 	[ "$status" -eq 1 ]
-	[ "${lines[0]}" = "Using /usr/local/percona/pmm2/exporters/node_exporter" ]
+	echo "${output}" | grep "Using /usr/local/percona/pmm2/exporters/node_exporter"
 }
