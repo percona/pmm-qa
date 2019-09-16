@@ -1099,7 +1099,7 @@ add_clients(){
           n=$(( $p - 1 ))
           for r in `seq 1  ${ADDCLIENTS_COUNT}`;do
             PORT=$(( ${PSMDB_PORTS[$n]} + $r - 1 ))
-            pmm-admin add mongodb --use-profiler --debug localhost:$PORT mongodb_inst_rpl${p}_${r}_$IP_ADDRESS --cluster mongodb_cluster
+            pmm-admin add mongodb --debug localhost:$PORT mongodb_inst_rpl${p}_${r}_$IP_ADDRESS --cluster mongodb_cluster
           done
         done
       fi
@@ -1117,7 +1117,7 @@ add_clients(){
             check_disable_ssl mongodb_inst_rpl${k}_${j}
           else
             if [ ! -z $PMM2 ]; then
-              pmm-admin add mongodb --use-profiler --debug localhost:$PORT mongodb_inst_config_rpl${m}_$IP_ADDRESS
+              pmm-admin add mongodb --debug localhost:$PORT mongodb_inst_config_rpl${m}_$IP_ADDRESS
             else
               sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m}
             fi
@@ -1273,9 +1273,9 @@ add_clients(){
         sleep 20
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2,1)'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod --use-profiler localhost:$MODB_PORT mongodb_node_$j --debug
+          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod localhost:$MODB_PORT mongodb_node_$j --debug
         else
-          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev --use-profiler localhost:$MODB_PORT mongodb_node_$j --debug
+          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev localhost:$MODB_PORT mongodb_node_$j --debug
         fi
         MODB_PORT=$((MODB_PORT+j+3))
       done
