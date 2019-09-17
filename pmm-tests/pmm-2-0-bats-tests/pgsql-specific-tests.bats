@@ -32,7 +32,7 @@ echo "$output"
         for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
                 let COUNTER=COUNTER+1
                 PGSQL_IP_PORT=${i}
-                run pmm-admin add postgresql ${PGSQL_IP_PORT} pgsql_$COUNTER
+                run pmm-admin add postgresql pgsql_$COUNTER ${PGSQL_IP_PORT}
                 echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "PostgreSQL Service added."
@@ -45,7 +45,7 @@ echo "$output"
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_" | awk -F" " '{print $3}') ; do
                 let COUNTER=COUNTER+1
                 PGSQL_IP_PORT=${i}
-                run pmm-admin add postgresql ${PGSQL_IP_PORT} pgsql_$COUNTER
+                run pmm-admin add postgresql pgsql_$COUNTER ${PGSQL_IP_PORT}
                 echo "$output"
                         [ "$status" -eq 1 ]
                         echo "${output}" | grep "already exists."

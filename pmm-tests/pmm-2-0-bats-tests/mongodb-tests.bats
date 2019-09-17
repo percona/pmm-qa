@@ -29,7 +29,7 @@ echo "$output"
   for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
 		let COUNTER=COUNTER+1
 		MONGO_IP_PORT=${i}
-		run pmm-admin add mongodb --use-profiler ${MONGO_IP_PORT} mongo_inst_${COUNTER}
+		run pmm-admin add mongodb mongo_inst_${COUNTER} ${MONGO_IP_PORT}
 	  [ "$status" -eq 0 ]
 	  echo "${lines[0]}" | grep "MongoDB Service added"
   done
@@ -41,7 +41,7 @@ echo "$output"
 	for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
 		let COUNTER=COUNTER+1
 		MONGO_IP_PORT=${i}
-		run pmm-admin add mongodb --use-profiler ${MONGO_IP_PORT} mongo_inst_${COUNTER}
+		run pmm-admin add mongodb mongo_inst_${COUNTER} ${MONGO_IP_PORT}
 		[ "$status" -eq 1 ]
 		echo "${lines[0]}" | grep "already exists."
 	done

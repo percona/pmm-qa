@@ -33,7 +33,7 @@ echo "$output"
                 echo "$i"
                 let COUNTER=COUNTER+1
                 ProxySQL_IP_PORT=${i}
-                run pmm-admin add proxysql ${ProxySQL_IP_PORT} proxysql_$COUNTER
+                run pmm-admin add proxysql proxysql_$COUNTER ${ProxySQL_IP_PORT}
                 echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "ProxySQL Service added."
@@ -47,7 +47,7 @@ echo "$output"
         for i in $(pmm-admin list | grep "ProxySQL" | grep "proxysql_" | awk -F" " '{print $3}') ; do
                 let COUNTER=COUNTER+1
                 ProxySQL_IP_PORT=${i}
-                run pmm-admin add proxysql ${ProxySQL_IP_PORT} proxysql_$COUNTER
+                run pmm-admin add proxysql proxysql_$COUNTER ${ProxySQL_IP_PORT}
                 echo "$output"
                         [ "$status" -eq 1 ]
                         echo "${lines[0]}" | grep "already exists."
