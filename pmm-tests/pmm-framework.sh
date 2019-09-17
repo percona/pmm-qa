@@ -1099,7 +1099,7 @@ add_clients(){
           n=$(( $p - 1 ))
           for r in `seq 1  ${ADDCLIENTS_COUNT}`;do
             PORT=$(( ${PSMDB_PORTS[$n]} + $r - 1 ))
-            pmm-admin add mongodb --debug localhost:$PORT mongodb_inst_rpl${p}_${r}_$IP_ADDRESS --cluster mongodb_cluster
+            pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_rpl${p}_${r}_$IP_ADDRESS localhost:$PORT
           done
         done
       fi
@@ -1117,9 +1117,9 @@ add_clients(){
             check_disable_ssl mongodb_inst_rpl${k}_${j}
           else
             if [ ! -z $PMM2 ]; then
-              pmm-admin add mongodb --debug localhost:$PORT mongodb_inst_config_rpl${m}_$IP_ADDRESS
+              pmm-admin add mongodb --debug mongodb_inst_config_rpl${m}_$IP_ADDRESS localhost:$PORT
             else
-              sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m}
+              sudo pmm-admin add mongodb --cluster mongodb_cluster --uri mongodb_inst_config_rpl${m} localhost:$PORT
             fi
           fi
           MONGOS_STARTUP_CMD="localhost:$PORT,$MONGOS_STARTUP_CMD"
@@ -1139,7 +1139,7 @@ add_clients(){
           sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOD_PORT mongod_config_inst --disable-ssl
         else
           if [ ! -z $PMM2 ]; then
-            pmm-admin add mongodb --cluster mongodb_cluster --debug localhost:$CONFIG_MONGOS_PORT mongos_config_inst_$IP_ADDRESS
+            pmm-admin add mongodb --cluster mongodb_cluster --debug mongos_config_inst_$IP_ADDRESS localhost:$CONFIG_MONGOS_PORT
           else
             sudo pmm-admin add mongodb --cluster mongodb_cluster --uri localhost:$CONFIG_MONGOS_PORT mongos_config_inst
           fi
@@ -1204,9 +1204,9 @@ add_clients(){
         sleep 20
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 localhost:$PGSQL_PORT PGSQL_${pgsql_version}_${IP_ADDRESS}_$j
+          pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
         else
-          pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --replication-set=pgsql-repl1 localhost:$PGSQL_PORT PGSQL_${pgsql_version}_${IP_ADDRESS}_$j
+          pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
         fi
         PGSQL_PORT=$((PGSQL_PORT+j))
       done
@@ -1226,7 +1226,7 @@ add_clients(){
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
         fi
-        pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 127.0.0.1:$node_port mysql-single-$IP_ADDRESS
+        pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 mysql-single-$IP_ADDRESS 127.0.0.1:$node_port
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
@@ -1237,9 +1237,9 @@ add_clients(){
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
           fi
           if [ $(( ${j} % 2 )) -eq 0 ]; then
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
+            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 mysql-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
           else
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 127.0.0.1:$node_port mysql-multiple-node-$j-$IP_ADDRESS --debug
+            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 mysql-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
           fi
           node_port=$(($node_port + 1))
           sleep 20
@@ -1257,9 +1257,9 @@ add_clients(){
         mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
         mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
         if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
         else
-          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 127.0.0.1:$PS_PORT ps_${ps_version}_${IP_ADDRESS}_$j --debug
+          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
         fi
         PS_PORT=$((PS_PORT+j))
       done
@@ -1273,9 +1273,9 @@ add_clients(){
         sleep 20
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2,1)'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod localhost:$MODB_PORT mongodb_node_$j --debug
+          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
         else
-          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev localhost:$MODB_PORT mongodb_node_$j --debug
+          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
         fi
         MODB_PORT=$((MODB_PORT+j+3))
       done
@@ -1298,12 +1298,12 @@ add_clients(){
           echo "WARNING! Another mysqld process using Port -P${RBASE1}"
           if ! pmm-admin list | grep "${RBASE1}" > /dev/null ; then
             if [ $disable_ssl -eq 1 ]; then
-              pmm-admin add mysql --username=root --query-source=$query_source --disable-ssl localhost:${RBASE1} ${NODE_NAME}-${j}
+              pmm-admin add mysql --username=root --query-source=$query_source --disable-ssl ${NODE_NAME}-${j} localhost:${RBASE1}
               check_disable_ssl ${NODE_NAME}-${j}
             else
               ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL slow_query_log='ON';"
               ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL long_query_time=0;"
-              pmm-admin add mysql --username=root --query-source=$query_source localhost:${RBASE1} ${NODE_NAME}-${j}
+              pmm-admin add mysql --username=root --query-source=$query_source ${NODE_NAME}-${j} localhost:${RBASE1}
             fi
           fi
           continue
@@ -1376,7 +1376,7 @@ add_clients(){
           fi
         fi
         if [ $disable_ssl -eq 1 ]; then
-          pmm-admin add mysql --username=root --query-source=$query_source --disable-ssl localhost:${RBASE1} ${NODE_NAME}-${j}
+          pmm-admin add mysql --username=root --query-source=$query_source --disable-ssl ${NODE_NAME}-${j} localhost:${RBASE1}
           check_disable_ssl ${NODE_NAME}-${j}
         else
           ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL slow_query_log='ON';"
