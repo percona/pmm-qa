@@ -1381,7 +1381,7 @@ add_clients(){
         else
           ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL slow_query_log='ON';"
           ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL long_query_time=0;"
-          pmm-admin add mysql --username=root --query-source=$query_source localhost:${RBASE1} ${NODE_NAME}-${j}
+          pmm-admin add mysql --username=root --query-source=$query_source ${NODE_NAME}-${j} localhost:${RBASE1}
         fi
       done
       pxc_proxysql_setup_pmm2(){
