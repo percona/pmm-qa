@@ -10,7 +10,7 @@ module.exports = {
         password: "//input[@name='password']"
     },
     loginButton: "//button[@type='submit']",
-    skipLink: "//a[@ng-click='skip();']",
+    skipLink: "//a[contains(text(), 'Skip')]",
 
     // introducing methods
     login (username, password) {
