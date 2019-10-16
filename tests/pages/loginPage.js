@@ -6,7 +6,7 @@ module.exports = {
     // setting locators
     url: "graph/login",
     fields: {
-        username: "//input[@name='username']",
+        username: "//input[@name='user']",
         password: "//input[@name='password']"
     },
     loginButton: "//button[@type='submit']",
