@@ -59,8 +59,8 @@ usage () {
   echo " --sysbench-data-load           This will initiate sysbench data load on mysql instances"
   echo " --sysbench-oltp-run            This will initiate sysbench oltp run on mysql instances"
   echo " --storage-engine               This will create sysbench tables with specific storage engine"
+  echo " --mongo-storage-engine         Pass storage engine for MongoDB"
   echo " --mo-version                   Pass MongoDB Server version info"
-  echo " --mongo-with-rocksdb           This will start mongodb with rocksdb engine"
   echo " --replcount                    You can configure multiple mongodb replica sets with this oprion"
   echo " --with-replica                 This will configure mongodb replica setup"
   echo " --with-sharding                This will configure mongodb sharding setup"
@@ -92,7 +92,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,mongo-with-rocksdb,add-docker-client,list,wipe-clients,wipe-pmm2-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -226,8 +226,8 @@ do
     shift 2
     ;;
     --mongo-storage-engine )
-    shift
     mongo_storage_engine="--storageEngine  $2"
+    shift 2
     ;;
     --add-docker-client )
     shift
