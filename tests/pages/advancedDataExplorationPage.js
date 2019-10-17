@@ -9,7 +9,7 @@ module.exports = {
     fields: {
         pageHeaderText: "Advanced Data Exploration",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]",
-        notAvailableDataPoints: "//div[contains(text(),'No data points')]"
+        notAvailableDataPoints: "//div[contains(text(),'No data')]"
     },
     metrics: ["View Actual Metric Values (Gauge)", "View Metric Rate of Change (Counter)", "Metric Rates", "Metric Data Table",],
 
