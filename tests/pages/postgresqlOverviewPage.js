@@ -9,7 +9,7 @@ module.exports = {
     fields: {
         pageHeaderText: "PostgreSQL Overview",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]",
-        notAvailableDataPoints: "//div[contains(text(),'No data points')]"
+        notAvailableDataPoints: "//div[contains(text(),'No data')]"
     },
     metrics: ["Version", "Max Connections", "Shared Buffers", "Disk-Page Buffers", "Memory Size for each Sort",
         "Disk Cache Size", "Autovacuum", "PostgreSQL Connections", "Active Connections",
