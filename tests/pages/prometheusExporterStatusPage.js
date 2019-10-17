@@ -9,7 +9,7 @@ module.exports = {
     fields: {
         pageHeaderText: "Prometheus Exporter Status",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]",
-        notAvailableDataPoints: "//div[contains(text(),'No data points')]"
+        notAvailableDataPoints: "//div[contains(text(),'No data')]"
     },
     metrics: ["CPU Usage", "Memory Usage", "File Descriptors Used", "Exporter Uptime", "Collector Scrape Successful", "Collector Execution Time  (Log Scale)",
         "Collector Execution Time", "MySQL Exporter Errors", "Rate of  Scrapes", "MySQL up",
