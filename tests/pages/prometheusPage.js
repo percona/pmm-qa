@@ -9,7 +9,7 @@ module.exports = {
     fields: {
         pageHeaderText: "Prometheus",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]",
-        notAvailableDataPoints: "//div[contains(text(),'No data points')]"
+        notAvailableDataPoints: "//div[contains(text(),'No data')]"
     },
     metrics: ["Prometheus Process CPU Usage", "Prometheus Process  Memory Usage", "Disk Space Utilization", "Time before run out of space",
         "Avg Chunk Time", "Samples Per Chunk", "Avg Chunk Size", "Bytes/Sample", "Head Block Size", "Avg Compaction Time", "WAL Fsync Time", "Head GC Latency",

@@ -9,7 +9,7 @@ module.exports = {
     fields: {
         pageHeaderText: "Prometheus Exporter Overview",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]",
-        notAvailableDataPoints: "//div[contains(text(),'No data points')]"
+        notAvailableDataPoints: "//div[contains(text(),'No data')]"
     },
     metrics: ["Avg CPU Usage per Host", "Avg Memory Usage per Host", "Monitored Hosts", "Exporters Running",
         "CPU Usage", "Memory Usage", "CPU Cores Used",
