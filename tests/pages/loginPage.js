@@ -6,10 +6,10 @@ module.exports = {
     // setting locators
     url: "graph/login",
     fields: {
-        username: "//input[@name='user']",
-        password: "//input[@name='password']"
+        username: "//input[@placeholder='email or username']",
+        password: "//input[@placeholder='password']"
     },
-    loginButton: "//button[@type='submit']",
+    loginButton: "Log In",
     skipLink: "//a[contains(text(), 'Skip')]",
 
     // introducing methods
