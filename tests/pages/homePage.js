@@ -33,9 +33,6 @@ module.exports = {
         I.waitForText("Successfully updated", 240, this.fields.updateProgressModal);
         I.click(this.fields.reloadButtonAfterUpgrade);
         I.wait(10);
-        I.waitForElement(this.fields.triggerUpdate, 30);
-        I.seeElement(this.fields.triggerUpdate);
-        I.click(this.fields.triggerUpdate);
         I.see("You are up to date", this.fields.pmmUpdateWidget);
     }
 }
