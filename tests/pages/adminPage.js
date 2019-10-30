@@ -7,7 +7,7 @@ module.exports = {
     url: "graph/d/pmm-home/home-dashboard?orgId=1",
     fields: {
         navigation: "//i[contains(@class, 'navbar-page-btn__search')]",
-        timePickerMenu: "//div[contains(@class, 'time-picker-button-select')]",
+        timePickerMenu: "//div[@class='time-picker-buttons']//div//span[@class='select-button-value']",
         fromTime: "(//input[@input-datetime])[1]",
         applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]",
         backToDashboard: "//button[@ng-click='ctrl.close()']",
