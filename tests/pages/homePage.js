@@ -33,6 +33,13 @@ module.exports = {
         I.waitForText("Successfully updated", 240, this.fields.updateProgressModal);
         I.click(this.fields.reloadButtonAfterUpgrade);
         I.wait(10);
+        I.refreshPage();
+        let numOfElements = await I.grabNumberOfVisibleElements(this.fields.checkUpdateButton);
+        if (numOfElements == 1)
+        {
+            I.click(this.fields.checkUpdateButton);
+        }
+        I.wait(60);
         I.see("You are up to date", this.fields.pmmUpdateWidget);
     }
 }
