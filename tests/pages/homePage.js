@@ -25,7 +25,7 @@ module.exports = {
     async upgradePMM(){
         I.click(this.fields.checkUpdateButton);
         I.wait(5);
-        I.waitForElement(this.fields.triggerUpdate, 30);
+        I.waitForElement(this.fields.triggerUpdate, 90);
         I.seeElement(this.fields.triggerUpdate);
         I.click(this.fields.triggerUpdate);
         I.waitForElement(this.fields.updateProgressModal, 30);
