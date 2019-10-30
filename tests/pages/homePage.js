@@ -30,7 +30,7 @@ module.exports = {
         I.click(this.fields.triggerUpdate);
         I.waitForElement(this.fields.updateProgressModal, 30);
         I.waitForText("Update in progress", 30, this.fields.updateProgressModal);
-        I.waitForText("Successfully updated", 240, this.fields.updateProgressModal);
+        I.waitForText("Successfully updated", 600, this.fields.updateProgressModal);
         I.click(this.fields.reloadButtonAfterUpgrade);
         I.wait(10);
         I.refreshPage();
