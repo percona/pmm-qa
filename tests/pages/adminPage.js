@@ -72,5 +72,13 @@ module.exports = {
             I.pressKey('PageDown');
             I.wait(2);
         }
+    },
+
+    async peformPageDown (timesPagesDown) {
+        for (var i = 0; i < timesPagesDown; i++)
+        {
+            I.pressKey('PageDown');
+            I.wait(2);
+        }
     }
 }
