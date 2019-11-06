@@ -6,7 +6,7 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open Remote Instance Page and Add mysql & MongoDB instances @pre-pmm-update', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+Scenario('Open Remote Instance Page and Add mysql & MongoDB instances @pre-pmm-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_test";
     I.amOnPage(remoteInstancesPage.url);
     I.waitForText(remoteInstancesPage.fields.pageHeaderText, 60);
