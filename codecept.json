@@ -47,7 +47,8 @@
     "prometheusExporterOverviewPage": "./tests/pages/prometheusExporterOverviewPage.js",
     "pxcGaleraClusterOverviewPage": "./tests/pages/pxcGaleraClusterOverviewPage.js",
     "qanPage" : "./tests/pages/qanPage.js",
-    "mongoDbClusterSummaryPage": "./tests/pages/mongoDbClusterSummaryPage.js"
+    "mongoDbClusterSummaryPage": "./tests/pages/mongoDbClusterSummaryPage.js",
+    "pmmInventoryPage": "./tests/pages/pmmInventoryPage.js"
   },
   "multiple": {
     "parallel": {

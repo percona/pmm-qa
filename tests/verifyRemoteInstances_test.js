@@ -6,7 +6,20 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('open the Remote and RDS Instances Listing Page', async (I, adminPage, remoteInstancesPage) => {
+Scenario('Open Remote Instance Page and Add mysql & MongoDB instances @pmm-pre-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+    let mysql_service_name = "mysql_remote_test";
     I.amOnPage(remoteInstancesPage.url);
-    I.dontSee(remoteInstancesPage.fields.pageHeaderText)
+    I.waitForText(remoteInstancesPage.fields.pageHeaderText, 60);
+    I.see(remoteInstancesPage.fields.pageHeaderText);
+    await I.waitForElement(remoteInstancesPage.fields.iframe, 60);
+    await I.switchTo(remoteInstancesPage.fields.iframe); // switch to first iframe
+    I.waitForText(remoteInstancesPage.fields.remoteInstanceTitle, 60);
+    remoteInstancesPage.addMySQLRemote(mysql_service_name);
+    I.waitForElement(pmmInventoryPage.fields.iframe, 60);
+    await I.switchTo(pmmInventoryPage.fields.iframe);
+    I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
+    adminPage.peformPageDown(5);
+    I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);
+    let serviceID = await pmmInventoryPage.getServiceId(mysql_service_name);
+    await pmmInventoryPage.checkAgentStatus(serviceID);
 });

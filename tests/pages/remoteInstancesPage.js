@@ -1,11 +1,41 @@
-const I = actor();
+const { I, adminPage } = inject();
 
 module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/pmm-add-instance/pmm-add-instance",
+    url: "graph/d/pmm-add-instance/pmm-add-instance?orgId=1",
     fields: {
-        pageHeaderText: "_PMM Amazon RDS and Remote Instances"
+        pageHeaderText: "PMM Add Instance",
+        iframe: "//div[@class='panel-content']//iframe",
+        remoteInstanceTitle: "How to Add an Instance",
+        addMongoDBRemote: "//a[contains(text(), 'Add a Remote MongoDB Instance')]",
+        addMySqlRemote: "//a[contains(text(), 'Add a Remote MySQL Instance')]",
+        hostName: "//input[contains(@placeholder,'*Hostname')]",
+        serviceName: "//input[@placeholder='Service name (default: Hostname)']",
+        portNumber: "//input[contains(@placeholder, 'Port')]",
+        userName: "//input[contains(@placeholder, 'Username')]",
+        password: "//input[contains(@placeholder, 'Password')]",
+        environment: "//input[contains(@placeholder, 'Environment')]",
+        addService: "#addInstance",
+        skipTLS: "//input[@name='tls_skip_verify']",
+        usePerformanceSchema: "//input[@name='qan_mysql_perfschema']"
+    },
+
+    async addMySQLRemote (serviceName) {
+        remoteInstancesPage = this;
+        I.click(remoteInstancesPage.fields.addMySqlRemote);
+        I.waitForElement(remoteInstancesPage.fields.serviceName, 60);
+        I.fillField(remoteInstancesPage.fields.hostName, "{remote_mysql_host}");
+        I.fillField(remoteInstancesPage.fields.serviceName, serviceName);
+        I.fillField(remoteInstancesPage.fields.userName, "{remote_mysql_user}");
+        I.fillField(remoteInstancesPage.fields.password, "{remote_mysql_user_password}");
+        I.fillField(remoteInstancesPage.fields.environment, "Remote Node MySQL");
+        I.wait(5);
+        adminPage.peformPageDown(5);
+        I.click(remoteInstancesPage.fields.skipTLS);
+        I.click(remoteInstancesPage.fields.usePerformanceSchema);
+        I.click(remoteInstancesPage.fields.addService);
+        I.wait(10);
     }
 }
