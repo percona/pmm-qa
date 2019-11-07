@@ -26,10 +26,10 @@ module.exports = {
         remoteInstancesPage = this;
         I.click(remoteInstancesPage.fields.addMySqlRemote);
         I.waitForElement(remoteInstancesPage.fields.serviceName, 60);
-        I.fillField(remoteInstancesPage.fields.hostName, "{remote_mysql_host}");
+        I.fillField(remoteInstancesPage.fields.hostName, process.env.REMOTE_MYSQL_HOST);
         I.fillField(remoteInstancesPage.fields.serviceName, serviceName);
-        I.fillField(remoteInstancesPage.fields.userName, "{remote_mysql_user}");
-        I.fillField(remoteInstancesPage.fields.password, "{remote_mysql_user_password}");
+        I.fillField(remoteInstancesPage.fields.userName, process.env.REMOTE_MYSQL_USER);
+        I.fillField(remoteInstancesPage.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
         I.fillField(remoteInstancesPage.fields.environment, "Remote Node MySQL");
         I.wait(5);
         adminPage.peformPageDown(5);
