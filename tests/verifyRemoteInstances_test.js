@@ -23,3 +23,16 @@ Scenario('Open Remote Instance Page and Add mysql & MongoDB instances @pmm-pre-u
     let serviceID = await pmmInventoryPage.getServiceId(mysql_service_name);
     await pmmInventoryPage.checkAgentStatus(serviceID);
 });
+
+
+Scenario('Verify is the remote instances are in Running Status @pmm-post-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+    let mysql_service_name = "mysql_remote_test";
+    I.amOnPage(pmmInventoryPage.url);
+    I.waitForElement(pmmInventoryPage.fields.iframe, 60);
+    await I.switchTo(pmmInventoryPage.fields.iframe);
+    I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
+    await adminPage.peformPageDown(5);
+    I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);
+    let serviceID = await pmmInventoryPage.getServiceId(mysql_service_name);
+    await pmmInventoryPage.checkAgentStatus(serviceID);
+});
