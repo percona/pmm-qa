@@ -6,5 +6,5 @@ Before((I, loginPage) => {
 });
 
 Scenario('Open Home Dashboard, upgrade PMM version @visual-test @pmm-update', async (I, adminPage, homePage) => {
-    homePage.upgradePMM();
+    await homePage.upgradePMM();
 });
