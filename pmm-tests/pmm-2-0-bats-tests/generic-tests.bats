@@ -58,12 +58,12 @@ echo "$output"
  run pmm-admin --version
  echo "$output"
  	[ "$status" -eq 0 ]
- 	echo "$output" | grep "Version: 2.0"
+	echo "$output" | grep "Version: 2.2"
 }
 
 @test "run pmm-admin config without parameters" {
 run pmm-admin config
 echo "$output"
 	[ "$status" -eq 1 ]
-	echo "${output}" | grep "Using /usr/local/percona/pmm2/exporters/node_exporter"
+	echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name"
 }
