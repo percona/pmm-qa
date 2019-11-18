@@ -1110,7 +1110,7 @@ add_clients(){
         for m in `seq 1 ${ADDCLIENTS_COUNT}`;do
           PORT=$(( $CONFIG_MONGOD_PORT + $m - 1 ))
           mkdir -p $BASEDIR/data/confdb${m}
-          $BASEDIR/bin/mongod --profile 2 --slowms 1 --fork --logpath $BASEDIR/data/confdb${m}/config_mongo.log --dbpath=$BASEDIR/data/confdb${m} --port $PORT --configsvr --replSet config &
+          $BASEDIR/bin/mongod --profile 2 --fork --logpath $BASEDIR/data/confdb${m}/config_mongo.log --dbpath=$BASEDIR/data/confdb${m} --port $PORT --configsvr --replSet config &
           sleep 15
           if [ $disable_ssl -eq 1 ]; then
             sudo pmm-admin add mongodb --cluster mongodb_cluster  --uri localhost:$PORT mongodb_inst_config_rpl${m} --disable-ssl
@@ -1253,9 +1253,11 @@ add_clients(){
         sudo chmod 777 -R /var/log
         docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
         sleep 20
-        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log='ON';"
-        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
-        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
+        if [[ "$query_source" != "perfschema" ]]; then
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log='ON';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
+        fi
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
         else
@@ -1271,7 +1273,7 @@ add_clients(){
         MODB_PORT_NEXT=$((MODB_PORT+2))
         docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 --name mongodb_node_$j mongo:${modb_version}
         sleep 20
-        docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2,1)'
+        docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
         else
