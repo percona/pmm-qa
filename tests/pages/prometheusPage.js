@@ -4,7 +4,7 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/SK8vJ2Hiz/prometheus",
+    url: "graph/d/prometheus/prometheus",
     urlWithRecent: "graph/d/SK8vJ2Hiz/prometheus?refresh=1m&orgId=1&from=now-1m&to=now",
     fields: {
         pageHeaderText: "Prometheus",
