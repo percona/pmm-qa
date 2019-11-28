@@ -9,7 +9,8 @@
       "windowSize": "2560x6120",
       "chrome": {
         "args": [ "--disable-gpu", "--window-size=2560,6120", "--no-sandbox" ],
-        "ignoreHTTPSErrors": true
+        "ignoreHTTPSErrors": true,
+        "executablePath": "/usr/bin/chromium"
       }
     },
     "ResembleHelper" : {
