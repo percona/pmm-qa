@@ -10,5 +10,5 @@ Scenario('Compare Mysql Overview Dashboard @visual-test', async (I, adminPage, l
     I.wait(5);
     I.saveScreenshot("mysql_overview_dashboard.png", true);
     I.click(mysqlOverviewPage.fields.systemChartsToggle);
-    I.seeVisualDiff("mysql_overview_dashboard.png", {tolerance: 5, prepareBaseImage: true});
+    I.seeVisualDiff("mysql_overview_dashboard.png", {tolerance: 10, prepareBaseImage: false});
 });
