@@ -20,7 +20,7 @@
       "diffFolder": "./tests/screenshots/diff/"
     },
     "Mochawesome": {
-      "uniqueScreenshotNames": "false"
+      "uniqueScreenshotNames": false
     },
     "FileSystem": {},
     "REST": {}
