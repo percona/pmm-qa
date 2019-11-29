@@ -1,6 +1,6 @@
 Feature('To test screen comparison with resemble Js Example test');
 
-Scenario('Compare Mysql Overview Dashboard @visual-test', async (I, adminPage, loginPage, mysqlOverviewPage) => {
+Scenario('Compare Mysql Overview Dashboard', async (I, adminPage, loginPage, mysqlOverviewPage) => {
     I.amOnPage('/');
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
