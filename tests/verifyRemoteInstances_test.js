@@ -6,7 +6,7 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open Remote Instance Page and Add mysql & MongoDB instances @pmm-pre-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+Scenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_test";
     I.amOnPage(remoteInstancesPage.url);
     I.waitForText(remoteInstancesPage.fields.pageHeaderText, 60);
@@ -32,6 +32,22 @@ Scenario('Verify is the remote instances are in Running Status @pmm-post-update 
     await I.switchTo(pmmInventoryPage.fields.iframe);
     I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
     await adminPage.peformPageDown(5);
+    I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);
+    let serviceID = await pmmInventoryPage.getServiceId(mysql_service_name);
+    await pmmInventoryPage.checkAgentStatus(serviceID);
+});
+
+Scenario('Open Remote Instance Page and Add mysql instances PMM Latest @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+    let mysql_service_name = "mysql_remote_test_2";
+    I.amOnPage(remoteInstancesPage.url);
+    I.waitForText(remoteInstancesPage.fields.pageHeaderText, 60);
+    I.see(remoteInstancesPage.fields.pageHeaderText);
+    I.waitForText(remoteInstancesPage.fields.remoteInstanceTitle, 60);
+    remoteInstancesPage.addMySQLRemoteLatest(mysql_service_name);
+    I.waitForElement(pmmInventoryPage.fields.iframe, 60);
+    await I.switchTo(pmmInventoryPage.fields.iframe);
+    I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
+    adminPage.peformPageDown(5);
     I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);
     let serviceID = await pmmInventoryPage.getServiceId(mysql_service_name);
     await pmmInventoryPage.checkAgentStatus(serviceID);

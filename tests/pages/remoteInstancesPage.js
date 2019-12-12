@@ -19,7 +19,9 @@ module.exports = {
         environment: "//input[contains(@placeholder, 'Environment')]",
         addService: "#addInstance",
         skipTLS: "//input[@name='tls_skip_verify']",
-        usePerformanceSchema: "//input[@name='qan_mysql_perfschema']"
+        usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
+        skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[1]",
+        availabilityZone: '//input[@placeholder="Availability Zone"]'
     },
 
     async addMySQLRemote (serviceName) {
@@ -35,6 +37,23 @@ module.exports = {
         adminPage.peformPageDown(5);
         I.click(remoteInstancesPage.fields.skipTLS);
         I.click(remoteInstancesPage.fields.usePerformanceSchema);
+        I.click(remoteInstancesPage.fields.addService);
+        I.wait(10);
+    },
+
+    async addMySQLRemoteLatest (serviceName) {
+        remoteInstancesPage = this;
+        I.click(remoteInstancesPage.fields.addMySqlRemote);
+        I.waitForElement(remoteInstancesPage.fields.serviceName, 60);
+        I.fillField(remoteInstancesPage.fields.hostName,  process.env.REMOTE_MYSQL_HOST);
+        I.fillField(remoteInstancesPage.fields.serviceName, serviceName);
+        I.fillField(remoteInstancesPage.fields.userName, process.env.REMOTE_MYSQL_USER);
+        I.fillField(remoteInstancesPage.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
+        I.fillField(remoteInstancesPage.fields.environment, "Remote Node MySQL");
+        I.fillField(remoteInstancesPage.fields.availabilityZone, "World");
+        I.wait(5);
+        adminPage.peformPageDown(5);
+        I.click(remoteInstancesPage.fields.skipTLSL);
         I.click(remoteInstancesPage.fields.addService);
         I.wait(10);
     }
