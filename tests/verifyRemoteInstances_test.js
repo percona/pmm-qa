@@ -37,7 +37,7 @@ Scenario('Verify is the remote instances are in Running Status @pmm-post-update 
     await pmmInventoryPage.checkAgentStatus(serviceID);
 });
 
-Scenario('Open Remote Instance Page and Add mysql instances PMM Latest @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+Scenario('Open Remote Instance Page and Add mysql instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_test_2";
     I.amOnPage(remoteInstancesPage.url);
     I.waitForText(remoteInstancesPage.fields.pageHeaderText, 60);
