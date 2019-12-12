@@ -10,6 +10,8 @@
       "host": "ondemand.saucelabs.com",
       "desiredCapabilities": {
         "screenResolution": "2560x1600",
+        "ignoreHTTPSErrors": true,
+        "acceptInsecureCerts": true,
         "chromeOptions": {
           "args": [ "--disable-gpu", "--window-size=2560x1600", "--no-sandbox" ]
         }
