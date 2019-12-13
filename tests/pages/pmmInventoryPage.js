@@ -12,7 +12,7 @@ module.exports = {
         inventoryTableColumn: "//table//td",
         agentsLink: "//div[@role='tab'][contains(text(),'Agents')]",
         nodesLink: "//div[@role='tab'][contains(text(),'Nodes')]",
-        pmmAgentLocator: "//table//td[contains(text(), 'PMM Agent')]",
+        pmmAgentLocator: "//table//td[contains(text(), 'PMM Agent')]"
     },
 
     async getServiceId (serviceName)
