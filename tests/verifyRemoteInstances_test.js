@@ -28,8 +28,6 @@ Scenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update @vis
 Scenario('Verify is the remote instances are in Running Status @pmm-post-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_test";
     I.amOnPage(pmmInventoryPage.url);
-    I.waitForElement(pmmInventoryPage.fields.iframe, 60);
-    await I.switchTo(pmmInventoryPage.fields.iframe);
     I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
     await adminPage.peformPageDown(5);
     I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);
@@ -44,8 +42,6 @@ Scenario('Open Remote Instance Page and Add mysql instances PMM Latest', async (
     I.see(remoteInstancesPage.fields.pageHeaderText);
     I.waitForText(remoteInstancesPage.fields.remoteInstanceTitle, 60);
     remoteInstancesPage.addMySQLRemoteLatest(mysql_service_name);
-    I.waitForElement(pmmInventoryPage.fields.iframe, 60);
-    await I.switchTo(pmmInventoryPage.fields.iframe);
     I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
     adminPage.peformPageDown(5);
     I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);

@@ -7,19 +7,19 @@ module.exports = {
     url: "graph/d/pmm-inventory/pmm-inventory?orgId=1",
     fields: {
         iframe: "//div[@class='panel-content']//iframe",
-        inventoryTable: "//table[@class='inventory-table']",
-        inventoryTableRows: "//table[@class='inventory-table']//tr",
-        inventoryTableColumn: "//table[@class='inventory-table']//td",
-        agentsLink: "//a[contains(text(), 'Agents')]",
-        nodesLink: "//a[contains(text(), 'Nodes')]",
-        pmmAgentLocator: "//table[@class='inventory-table']//td[contains(text(), 'PMM Agent')]"
+        inventoryTable: "//table",
+        inventoryTableRows: "//table//tr",
+        inventoryTableColumn: "//table//td",
+        agentsLink: "//div[@role='tab'][contains(text(),'Agents')]",
+        nodesLink: "//div[@role='tab'][contains(text(),'Nodes')]",
+        pmmAgentLocator: "//table//td[contains(text(), 'PMM Agent')]",
     },
 
     async getServiceId (serviceName)
     {
         let totalServices = await I.grabNumberOfVisibleElements(this.fields.inventoryTableRows);
         var matchedServices = 0;
-        for (var i = 2; i <= totalServices; i++)
+        for (var i = 1; i < totalServices; i++)
         {
             var currentServiceName = await I.grabTextFrom(this.fields.inventoryTableRows + "[" + i + "]/" + "td[3]");
             if (serviceName == currentServiceName) {
@@ -38,7 +38,7 @@ module.exports = {
         I.waitForElement(this.fields.inventoryTable, 60);
         let totalAgents = await I.grabNumberOfVisibleElements(this.fields.inventoryTableRows);
         var agentMatched = 0;
-        for (var i = 2; i <= totalAgents; i++)
+        for (var i = 1; i < totalAgents; i++)
         {
             var agentForServiceId = await I.grabNumberOfVisibleElements(this.fields.inventoryTableRows + "[" + i + "]/" + "td[3]//span[contains(text(), '" + serviceId + "')]");
             if (agentForServiceId == 1){
