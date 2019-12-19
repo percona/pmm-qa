@@ -21,7 +21,7 @@ module.exports = {
         skipTLS: "//input[@name='tls_skip_verify']",
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
         skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[1]",
-        availabilityZone: '//input[@placeholder="Availability Zone"]'
+        availabilityZone: '//input[@placeholder="*Availability Zone"]'
     },
 
     async addMySQLRemote (serviceName) {
