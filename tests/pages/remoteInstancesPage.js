@@ -50,7 +50,6 @@ module.exports = {
         I.fillField(remoteInstancesPage.fields.userName, process.env.REMOTE_MYSQL_USER);
         I.fillField(remoteInstancesPage.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
         I.fillField(remoteInstancesPage.fields.environment, "Remote Node MySQL");
-        I.fillField(remoteInstancesPage.fields.availabilityZone, "World");
         I.wait(5);
         adminPage.peformPageDown(5);
         I.click(remoteInstancesPage.fields.skipTLSL);
