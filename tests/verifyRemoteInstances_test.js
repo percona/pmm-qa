@@ -20,8 +20,8 @@ Scenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update @vis
     I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
     adminPage.peformPageDown(5);
     I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);
-    let serviceID = await pmmInventoryPage.getServiceId(mysql_service_name);
-    await pmmInventoryPage.checkAgentStatus(serviceID);
+    let serviceID = await pmmInventoryPage.getServiceIdOld(mysql_service_name);
+    await pmmInventoryPage.checkAgentStatusOld(serviceID);
 });
 
 
