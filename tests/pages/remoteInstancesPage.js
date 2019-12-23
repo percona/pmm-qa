@@ -20,7 +20,7 @@ module.exports = {
         addService: "#addInstance",
         skipTLS: "//input[@name='tls_skip_verify']",
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
-        skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[1]",
+        skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[2]",
         availabilityZone: '//input[@placeholder="*Availability Zone"]'
     },
 
