@@ -101,7 +101,6 @@ module.exports = {
     },
 
     async createRemoteMySQL(serviceName, version) {
-        this.fillRemoteMySQLFields(serviceName);
         if (version == "old") {
             await this.createOldRemoteMySQL(serviceName);
         } else if (version == "new") {
