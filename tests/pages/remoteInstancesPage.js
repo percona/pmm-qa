@@ -1,5 +1,6 @@
-const { I, adminPage } = inject();
+let {I, adminPage, pmmInventoryPage} = inject();
 
+let suffix;
 module.exports = {
 
     // insert your locators and methods here
@@ -8,7 +9,9 @@ module.exports = {
     fields: {
         pageHeaderText: "PMM Add Instance",
         iframe: "//div[@class='panel-content']//iframe",
+        remoteInstanceTitleLocator: "//section[@class='content-wrapper']/h3",
         remoteInstanceTitle: "How to Add an Instance",
+        addInstancesList: "//nav[@class='navigation']",
         addMongoDBRemote: "//a[contains(text(), 'Add a Remote MongoDB Instance')]",
         addMySqlRemote: "//a[contains(text(), 'Add a Remote MySQL Instance')]",
         hostName: "//input[contains(@placeholder,'*Hostname')]",
@@ -20,40 +23,91 @@ module.exports = {
         addService: "#addInstance",
         skipTLS: "//input[@name='tls_skip_verify']",
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
+        usePerformanceSchema2: "//input[@name='qan_mysql_perfschema']/following-sibling::span[2]",
         skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[2]",
-        availabilityZone: '//input[@placeholder="*Availability Zone"]'
+        availabilityZone: '//input[@placeholder="*Availability Zone"]',
+        addInstanceDiv: "//div[@class='view']"
     },
 
-    async addMySQLRemote (serviceName) {
-        remoteInstancesPage = this;
-        I.click(remoteInstancesPage.fields.addMySqlRemote);
-        I.waitForElement(remoteInstancesPage.fields.serviceName, 60);
-        I.fillField(remoteInstancesPage.fields.hostName, process.env.REMOTE_MYSQL_HOST);
-        I.fillField(remoteInstancesPage.fields.serviceName, serviceName);
-        I.fillField(remoteInstancesPage.fields.userName, process.env.REMOTE_MYSQL_USER);
-        I.fillField(remoteInstancesPage.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
-        I.fillField(remoteInstancesPage.fields.environment, "Remote Node MySQL");
-        I.wait(5);
-        adminPage.peformPageDown(5);
-        I.click(remoteInstancesPage.fields.skipTLS);
-        I.click(remoteInstancesPage.fields.usePerformanceSchema);
-        I.click(remoteInstancesPage.fields.addService);
-        I.wait(10);
+    // By using this getUpToDate() check we could use this method for both Old and New PMM versions in our tests
+    async waitUntilRemoteInstancesPageLoaded() {
+        if (await adminPage.getUpToDate()) {
+            this.waitUntilOldRemoteInstancesPageLoaded();
+        } else {
+            this.waitUntilNewRemoteInstancesPageLoaded();
+        }
+        ;
     },
 
-    async addMySQLRemoteLatest (serviceName) {
-        remoteInstancesPage = this;
-        I.click(remoteInstancesPage.fields.addMySqlRemote);
-        I.waitForElement(remoteInstancesPage.fields.serviceName, 60);
-        I.fillField(remoteInstancesPage.fields.hostName,  process.env.REMOTE_MYSQL_HOST);
-        I.fillField(remoteInstancesPage.fields.serviceName, serviceName);
-        I.fillField(remoteInstancesPage.fields.userName, process.env.REMOTE_MYSQL_USER);
-        I.fillField(remoteInstancesPage.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
-        I.fillField(remoteInstancesPage.fields.environment, "Remote Node MySQL");
-        I.wait(5);
-        adminPage.peformPageDown(5);
-        I.click(remoteInstancesPage.fields.skipTLSL);
-        I.click(remoteInstancesPage.fields.addService);
-        I.wait(10);
+    //method for generating unique suffix for test variables (same suffix for one session)
+    getSuffix() {
+        if (suffix === undefined) {
+            suffix = new Date();
+        }
+        return suffix.valueOf();
+    },
+
+    waitUntilOldRemoteInstancesPageLoaded() {
+        I.waitForElement(this.fields.iframe, 60);
+        I.switchTo(this.fields.iframe); // switch to first iframe
+        I.waitForText(this.fields.remoteInstanceTitle, 60, this.fields.remoteInstanceTitleLocator);
+        I.seeInTitle(this.fields.pageHeaderText);
+        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator);
+        return this;
+    },
+
+    waitUntilNewRemoteInstancesPageLoaded() {
+        I.waitForText(this.fields.remoteInstanceTitle, 60, this.fields.remoteInstanceTitleLocator);
+        I.seeInTitle(this.fields.pageHeaderText);
+        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator);
+        return this;
+    },
+
+    openAddRemoteMySQLPage() {
+        I.click(this.fields.addMySqlRemote);
+        I.waitForElement(this.fields.serviceName, 60);
+        return this;
+    },
+
+    fillRemoteMySQLFields(serviceName) {
+        I.waitForElement(this.fields.serviceName, 60);
+        I.fillField(this.fields.hostName, "142.93.239.151");
+        I.fillField(this.fields.serviceName, serviceName);
+        I.fillField(this.fields.userName, "app");
+        I.fillField(this.fields.password, "250ed094dc7d01cadfa91a048695634d0405e498e750e0de");
+        I.fillField(this.fields.environment, "Remote Node MySQL");
+        I.scrollPageToBottom();
+        adminPage.peformPageDown(1);
+    },
+
+    async createOldRemoteMySQL(serviceName) {
+        this.fillRemoteMySQLFields(serviceName);
+        I.click(this.fields.skipTLS);
+        I.click(this.fields.usePerformanceSchema);
+        I.click(this.fields.addService);
+        I.waitForVisible(pmmInventoryPage.fields.iframe, 30);
+        return pmmInventoryPage;
+    },
+
+    createNewRemoteMySQL(serviceName) {
+        this.fillRemoteMySQLFields(serviceName);
+        I.waitForVisible(this.fields.skipTLSL, 30);
+        I.waitForVisible(this.fields.addService, 30);
+        I.click(this.fields.skipTLSL);
+        I.click(this.fields.addService);
+        I.waitForVisible(pmmInventoryPage.fields.agentsLink, 30);
+        I.waitForClickable(pmmInventoryPage.fields.agentsLink, 30);
+        return pmmInventoryPage;
+    },
+
+    async createRemoteMySQL(serviceName, version) {
+        this.fillRemoteMySQLFields(serviceName);
+        if (version == "old") {
+            await this.createOldRemoteMySQL(serviceName);
+        } else if (version == "new") {
+            this.createNewRemoteMySQL(serviceName);
+        }
+        return pmmInventoryPage;
+
     }
 }
