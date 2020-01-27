@@ -19,6 +19,7 @@ module.exports = {
         I.fillField(this.fields.password, password);
         I.click(this.loginButton);
         I.waitForElement(this.skipLink, 30);
+        I.waitForClickable(this.skipLink, 30);
         I.click(this.skipLink);
         I.waitForVisible(homePage.fields.dashboardHeaderLocator, 30);
         I.see(homePage.fields.dashboardHeaderText, homePage.fields.dashboardHeaderLocator);
