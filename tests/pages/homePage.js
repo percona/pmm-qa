@@ -17,6 +17,7 @@ module.exports = {
         updateProgressModal: "//div[@class='modal-content']",
         reloadButtonAfterUpgrade: "//button[@ng-click='reloadAfterUpdate()']",
         pmmUpdateWidget: "//div[@id='pmm-update-widget']",
+        upToDateLocator: "//section[@class='state']/p[text() = 'You are up to date']",
         availableVersion: "//div[@id='available_version']/div/p",
         currentVersion: "//p[@id='current_version']/span"
     },
@@ -35,8 +36,7 @@ module.exports = {
         I.waitForText("Update in progress", 30, this.fields.updateProgressModal);
         I.waitForText("Successfully updated", 1200, this.fields.updateProgressModal);
         I.click(this.fields.reloadButtonAfterUpgrade);
-        I.waitForVisible(this.fields.pmmUpdateWidget, 30);
-        I.see("You are up to date", this.fields.pmmUpdateWidget);
+        I.waitForVisible(this.fields.upToDateLocator, 30);
         assert.equal(await I.grabTextFrom(this.fields.currentVersion), available_version, "Update operation failed");
     }
 }
