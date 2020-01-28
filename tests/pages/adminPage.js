@@ -1,4 +1,4 @@
-const I = actor();
+const {I} = inject();
 
 module.exports = {
 
@@ -12,7 +12,9 @@ module.exports = {
         applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]",
         backToDashboard: "//button[@ng-click='ctrl.close()']",
         discardChanges: "//button[@ng-click='ctrl.discard()']",
-        metricTitle: "//span[@class='panel-title']"
+        metricTitle: "//span[@class='panel-title']",
+        upToDateTextLocator: "//section[@class='state']/p[text() = 'You are up to date']",
+        upToDate:""
     },
 
     // introducing methods
@@ -32,6 +34,16 @@ module.exports = {
         }
         I.wait(10);
         I.see(dashboardName);
+    },
+    //method to set uptodate text
+    async setUpToDate () {
+        this.fields.upToDate = await I.grabNumberOfVisibleElements(this.fields.upToDateTextLocator);
+        console.log("---SETUPTODATE--- + " + this.fields.upToDate);
+    },
+
+    async getUpToDate () {
+        console.log("---GETUPTODATE--- = " + this.fields.upToDate);
+        return this.fields.upToDate;
     },
 
     prepareFolderLocator (folderName) {
@@ -74,8 +86,8 @@ module.exports = {
         }
     },
 
-    async peformPageDown (timesPagesDown) {
-        for (var i = 0; i < timesPagesDown; i++)
+    peformPageDown (timesPagesDown) {
+        for (let i = 0; i < timesPagesDown; i++)
         {
             I.pressKey('PageDown');
             I.wait(2);
