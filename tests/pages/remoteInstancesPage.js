@@ -29,24 +29,6 @@ module.exports = {
         addInstanceDiv: "//div[@class='view']"
     },
 
-    // By using this getUpToDate() check we could use this method for both Old and New PMM versions in our tests
-    async waitUntilRemoteInstancesPageLoaded() {
-        if (await adminPage.getUpToDate()) {
-            this.waitUntilOldRemoteInstancesPageLoaded();
-        } else {
-            this.waitUntilNewRemoteInstancesPageLoaded();
-        }
-        ;
-    },
-
-    //method for generating unique suffix for test variables (same suffix for one session)
-    getSuffix() {
-        if (suffix === undefined) {
-            suffix = new Date();
-        }
-        return suffix.valueOf();
-    },
-
     waitUntilOldRemoteInstancesPageLoaded() {
         I.waitForElement(this.fields.iframe, 60);
         I.switchTo(this.fields.iframe); // switch to first iframe
