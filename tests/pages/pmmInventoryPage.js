@@ -15,7 +15,7 @@ module.exports = {
         agentsLinkOld: "//a[contains(text(), 'Agents')]",
         nodesLinkOld: "//a[contains(text(), 'Nodes')]",
         pmmAgentLocator: "//table//td[contains(text(), 'PMM Agent')]",
-        serviceIdLocator: "//table//tr/td[3][contains(text(),'"
+        serviceIdLocatorPrefix: "//table//tr/td[3][contains(text(),'"
     },
 
     async verifyOldMySQLRemoteServiceIsDisplayed(serviceName) {
@@ -49,10 +49,10 @@ module.exports = {
     },
 
     async getServiceId(serviceName) {
-        let serviceIdLocatorBuilder = this.fields.serviceIdLocator + serviceName + "')]/preceding-sibling::td[2]";
-        let matchedServices = await I.grabNumberOfVisibleElements(serviceIdLocatorBuilder);
+        let serviceIdLocator = this.fields.serviceIdLocatorPrefix + serviceName + "')]/preceding-sibling::td[2]";
+        let matchedServices = await I.grabNumberOfVisibleElements(serviceIdLocator);
         await assert.equal(matchedServices, 1, "There must be only one entry for the newly added service with name " + serviceName);
-        let serviceId = await I.grabTextFrom(serviceIdLocatorBuilder);
+        let serviceId = await I.grabTextFrom(serviceIdLocator);
         return serviceId;
     }
 }
