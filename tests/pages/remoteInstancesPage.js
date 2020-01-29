@@ -71,10 +71,10 @@ module.exports = {
 
     fillRemoteMySQLFields(serviceName) {
         I.waitForElement(this.fields.serviceName, 60);
-        I.fillField(this.fields.hostName, "142.93.239.151");
+        I.fillField(this.fields.hostName, process.env.REMOTE_MYSQL_HOST);
         I.fillField(this.fields.serviceName, serviceName);
-        I.fillField(this.fields.userName, "app");
-        I.fillField(this.fields.password, "250ed094dc7d01cadfa91a048695634d0405e498e750e0de");
+        I.fillField(this.fields.userName, process.env.REMOTE_MYSQL_USER);
+        I.fillField(this.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
         I.fillField(this.fields.environment, "Remote Node MySQL");
         I.scrollPageToBottom();
         adminPage.peformPageDown(1);
