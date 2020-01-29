@@ -33,14 +33,14 @@ module.exports = {
     },
 
     async verifyAgentHasStatusRunning(service_name, version) {
-        let xpath;
+        let agentLinkLocator;
         let serviceId = await this.getServiceId(service_name);
         if (version == "old") {
-            xpath = this.fields.agentsLinkOld;
+            agentLinkLocator = this.fields.agentsLinkOld;
         } else if (version == "new") {
-            xpath = this.fields.agentsLink;
+            agentLinkLocator = this.fields.agentsLink;
         }
-        I.click(xpath);
+        I.click(agentLinkLocator);
         I.waitForElement(this.fields.pmmAgentLocator, 60);
         I.waitForElement(this.fields.inventoryTable, 60);
         let numberOfServices = await I.grabNumberOfVisibleElements("//span[contains(text(), '" + serviceId + "')]/following-sibling::span[contains(text(),'status: RUNNING')]");
