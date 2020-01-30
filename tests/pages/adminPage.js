@@ -1,4 +1,4 @@
-const I = actor();
+const {I} = inject();
 
 module.exports = {
 
@@ -74,8 +74,8 @@ module.exports = {
         }
     },
 
-    async peformPageDown (timesPagesDown) {
-        for (var i = 0; i < timesPagesDown; i++)
+    peformPageDown (timesPagesDown) {
+        for (let i = 0; i < timesPagesDown; i++)
         {
             I.pressKey('PageDown');
             I.wait(2);
