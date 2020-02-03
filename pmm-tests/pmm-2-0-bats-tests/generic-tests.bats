@@ -94,12 +94,28 @@ echo "$output"
     echo "$output" | grep "Version: 2.2"
 }
 
-
-@test "run pmm-admin summary --server-url" {
+@test "run pmm-admin summary --server-url with http" {
 run pmm-admin summary --server-url='http://admin:admin@localhost'
 echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "34 files"
+}
+
+@test "run pmm-admin summary --server-url with https and verify warning" {
+run pmm-admin summary --server-url='https://admin:admin@localhost'
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "certificate is not valid for any names"
+    echo "${lines[1]}" | grep ".zip created."
+}
+
+@test "run pmm-admin summary --server-url --server-insecure-tls with https" {
+run pmm-admin summary --server-url='https://admin:admin@localhost' --server-insecure-tls
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${lines[0]}" | grep ".zip created."
     checkZipFileContents
     echo "$output" | grep "34 files"
 }
