@@ -142,6 +142,51 @@ echo "$output"
     echo "$output" | grep "34 files"
 }
 
+@test "run pmm-admin summary --json" {
+run pmm-admin summary --json
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "{\"filename\":\""
+    echo "${lines[-1]}" | grep ".zip\"}"
+}
+
+@test "run pmm-admin summary --filename empty" {
+run pmm-admin summary --filename=""
+echo "$output"
+    [ "$status" -eq 1 ]
+    echo "$output" | grep "open : no such file or directory"
+}
+
+@test "run pmm-admin summary --filename " {
+run pmm-admin summary --filename="test.zip"
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "34 files"
+}
+
+@test "run pmm-admin summary --filename=testformat.txt and verify generated file is a ZIP archive " {
+    FILENAME='testformat.txt'
+run pmm-admin summary --filename="$FILENAME"
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${lines[-1]}" | grep "$FILENAME created."
+    checkZipFileContents
+    echo "$output" | grep "34 files"
+    run file $FILENAME
+    echo "$output" | grep "$FILENAME: Zip archive data, at least v2.0 to extract"
+}
+
+@test "run pmm-admin summary --filename --skip-server" {
+run pmm-admin summary --filename="test.zip" --skip-server
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "5 files"
+}
+
 function teardown() {
         echo "$output"
 }
