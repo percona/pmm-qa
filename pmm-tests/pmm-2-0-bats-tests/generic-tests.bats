@@ -151,10 +151,13 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --filename empty" {
+skip "now it returns no such file error, but it should generate .zip file with generated filename"
 run pmm-admin summary --filename=""
 echo "$output"
     [ "$status" -eq 1 ]
-    echo "$output" | grep "open : no such file or directory"
+    echo "${lines[-1]}" | grep ".zip created."
+         checkZipFileContents
+         echo "$output" | grep "34 files"
 }
 
 @test "run pmm-admin summary --filename " {
