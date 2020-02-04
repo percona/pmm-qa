@@ -1,7 +1,7 @@
 ## Generic bats tests
 
 function checkZipFileContents(){
-    ZIP_FILE_NAME=$(echo "$output" | awk '{ print $1 }')
+    ZIP_FILE_NAME=$(echo "${lines[-1]}" | awk '{ print $1 }')
     run unzip -l "$ZIP_FILE_NAME"
 }
 
@@ -116,6 +116,17 @@ run pmm-admin summary --server-url='https://admin:admin@localhost' --server-inse
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[0]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "34 files"
+}
+
+@test "run pmm-admin summary --debug" {
+run pmm-admin summary --debug
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
+    echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "${lines[-1]}" | grep ".zip created."
     checkZipFileContents
     echo "$output" | grep "34 files"
 }
