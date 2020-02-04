@@ -170,7 +170,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --filename=testformat.txt and verify generated file is a ZIP archive " {
-    FILENAME='testformat.txt'
+FILENAME='testformat.txt'
 run pmm-admin summary --filename="$FILENAME"
 echo "$output"
     [ "$status" -eq 0 ]
@@ -187,6 +187,49 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep ".zip created."
     checkZipFileContents
+    echo "$output" | grep "5 files"
+}
+
+@test "run pmm-admin summary --skip-server" {
+run pmm-admin summary --skip-server
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "5 files"
+}
+
+@test "run pmm-admin summary --skip-server --trace" {
+run pmm-admin summary --skip-server --trace
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Services/List HTTP/1.1"
+    echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "5 files"
+}
+
+@test "run pmm-admin summary --skip-server --debug" {
+run pmm-admin summary --skip-server --debug
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
+    echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "5 files"
+}
+
+@test "run pmm-admin summary --skip-server --json --debug --filename=json_export.zip" {
+ZIP_FILE_NAME='json_export.zip'
+run pmm-admin summary --skip-server --json --debug --filename=$ZIP_FILE_NAME
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
+    echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "${lines[-1]}" | grep "{\"filename\":\"$ZIP_FILE_NAME\"}"
+    run unzip -l $ZIP_FILE_NAME
     echo "$output" | grep "5 files"
 }
 
