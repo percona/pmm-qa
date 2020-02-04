@@ -131,6 +131,17 @@ echo "$output"
     echo "$output" | grep "34 files"
 }
 
+@test "run pmm-admin summary --trace" {
+run pmm-admin summary --trace
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Services/List HTTP/1.1"
+    echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "34 files"
+}
+
 function teardown() {
         echo "$output"
 }
