@@ -21,5 +21,5 @@ Scenario('Open the Prometheus Exporters, Summary Dashboard, Prometheus Exporters
     I.waitForElement(adminPage.fields.metricTitle, 30);
     adminPage.applyTimer("1m");
     await adminPage.handleLazyLoading(10);
-    prometheusExporterOverviewPage.verifyMetricsExistence();
+    await prometheusExporterOverviewPage.verifyMetricsExistence();
 });

@@ -1,5 +1,5 @@
 const {I} = inject();
-
+var assert = require('assert');
 module.exports = {
 
     // insert your locators and methods here
@@ -12,7 +12,8 @@ module.exports = {
         applyCustomTimer: "//button[@ng-click=\"ctrl.applyCustom();\"]",
         backToDashboard: "//button[@ng-click='ctrl.close()']",
         discardChanges: "//button[@ng-click='ctrl.discard()']",
-        metricTitle: "//span[@class='panel-title']"
+        metricTitle: "//span[@class='panel-title']",
+        reportTitleWithNA: "//span[contains(text(), 'N/A')]//ancestor::div[contains(@class,'panel-container')]//span[contains(@class,'panel-title-text')]"
     },
 
     // introducing methods
@@ -79,6 +80,15 @@ module.exports = {
         {
             I.pressKey('PageDown');
             I.wait(2);
+        }
+    },
+
+    async grabReportNameWithNA (number) {
+        let numOfElements = await I.grabNumberOfVisibleElements(this.fields.reportTitleWithNA);
+        if (numOfElements > number )
+        {
+            let reportTitle = await I.grabTextFrom(this.fields.reportTitleWithNA);
+            assert.equal(numOfElements > number, false, numOfElements + " Reports with N/A found on dashboard " + reportTitle);
         }
     }
 }

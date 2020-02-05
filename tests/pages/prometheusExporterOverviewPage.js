@@ -1,4 +1,4 @@
-const I = actor();
+const {I, adminPage} = inject();
 
 module.exports = {
 
@@ -20,10 +20,10 @@ module.exports = {
         return locator;
     },
 
-    verifyMetricsExistence () {
+    async verifyMetricsExistence () {
         for (let i in this.metrics) {
             I.seeElement(this.graphsLocator(this.metrics[i]));
         }
-        I.dontSeeElement(this.fields.notAvailableMetrics);
+        await adminPage.grabReportNameWithNA(2);
     }
 };
