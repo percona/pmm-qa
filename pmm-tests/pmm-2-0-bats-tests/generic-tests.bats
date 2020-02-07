@@ -234,6 +234,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof" {
+skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof
 echo "$output"
     [ "$status" -eq 0 ]
@@ -244,6 +245,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof --trace" {
+skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --trace
 echo "$output"
     [ "$status" -eq 0 ]
@@ -256,6 +258,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof --debug" {
+skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --debug
 echo "$output"
     [ "$status" -eq 0 ]
@@ -268,6 +271,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof --server-url with http" {
+skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --server-url='http://admin:admin@localhost'
 echo "$output"
     [ "$status" -eq 0 ]
@@ -278,6 +282,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof --json" {
+skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --json
 echo "$output"
     [ "$status" -eq 0 ]
@@ -286,6 +291,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof --filename " {
+skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --filename="test_pprof.zip"
 echo "$output"
     [ "$status" -eq 0 ]
@@ -296,6 +302,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof --skip-server" {
+skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --skip-server
 echo "$output"
     [ "$status" -eq 0 ]
@@ -306,6 +313,7 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof --debug --filename --skip-server" {
+skip "skipping because -pprof flag is not implemented yet"
 ZIP_FILE_NAME='test_pprof_complex.zip'
 run pmm-admin summary --pprof --debug --filename=$ZIP_FILE_NAME --skip-server
 echo "$output"
