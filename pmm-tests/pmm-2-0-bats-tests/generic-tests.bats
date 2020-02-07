@@ -233,6 +233,91 @@ echo "$output"
     echo "$output" | grep "5 files"
 }
 
+@test "run pmm-admin summary --pprof" {
+run pmm-admin summary --pprof
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "pprof/"
+    echo "$output" | grep "43 files"
+}
+
+@test "run pmm-admin summary --pprof --trace" {
+run pmm-admin summary --pprof --trace
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Services/List HTTP/1.1"
+    echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "pprof/"
+    echo "$output" | grep "43 files"
+}
+
+@test "run pmm-admin summary --pprof --debug" {
+run pmm-admin summary --pprof --debug
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
+    echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "pprof/"
+    echo "$output" | grep "43 files"
+}
+
+@test "run pmm-admin summary --pprof --server-url with http" {
+run pmm-admin summary --pprof --server-url='http://admin:admin@localhost'
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "pprof/"
+    echo "$output" | grep "43 files"
+}
+
+@test "run pmm-admin summary --pprof --json" {
+run pmm-admin summary --pprof --json
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "{\"filename\":\""
+    echo "${lines[-1]}" | grep ".zip\"}"
+}
+
+@test "run pmm-admin summary --pprof --filename " {
+run pmm-admin summary --pprof --filename="test_pprof.zip"
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${lines[-1]}" | grep "test_pprof.zip created."
+    checkZipFileContents
+    echo "$output" | grep "pprof/"
+    echo "$output" | grep "43 files"
+}
+
+@test "run pmm-admin summary --pprof --skip-server" {
+run pmm-admin summary --pprof --skip-server
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${lines[-1]}" | grep ".zip created."
+    checkZipFileContents
+    echo "$output" | grep "pprof/"
+    echo "$output" | grep "14 files"
+}
+
+@test "run pmm-admin summary --pprof --debug --filename --skip-server" {
+ZIP_FILE_NAME='test_pprof_complex.zip'
+run pmm-admin summary --pprof --debug --filename=$ZIP_FILE_NAME --skip-server
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
+    echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "${lines[-1]}" | grep "$ZIP_FILE_NAME created."
+    checkZipFileContents
+    echo "$output" | grep "pprof/"
+    echo "$output" | grep "14 files"
+}
+
 function teardown() {
         echo "$output"
 }
