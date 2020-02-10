@@ -1,4 +1,3 @@
-
 Feature('to verify monitoried Remote Db instances');
 
 Before((I, loginPage) => {
@@ -6,7 +5,7 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update @visual-test', async (I, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update @visual-test', async (I, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_test";
     let version = "old";
     I.amOnPage(remoteInstancesPage.url);
@@ -18,7 +17,7 @@ Scenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update @vis
 });
 
 
-Scenario('Verify is the remote instances are in Running Status @pmm-post-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Verify is the remote instances are in Running Status @pmm-post-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_test";
     let version = "new";
     I.amOnPage(pmmInventoryPage.url);
@@ -27,7 +26,7 @@ Scenario('Verify is the remote instances are in Running Status @pmm-post-update 
 
 });
 
-Scenario('Open Remote Instance Page and Add mysql instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Open Remote Instance Page and Add mysql instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_new";
     let version = "new";
     I.amOnPage(remoteInstancesPage.url);
