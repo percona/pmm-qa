@@ -42,7 +42,7 @@ module.exports = {
     checkPagination() {
         I.waitForElement(this.fields.nextPageNavigation, 30);
         I.click(this.fields.nextPageNavigation);
-        I.wait(10);
+        this.waitForQANPageLoaded();
         I.waitForVisible(this.fields.nextPageNavigation, 30);
         this._selectDetails(2);
         I.seeElement(this.fields.nextPageNavigation);
@@ -95,9 +95,7 @@ module.exports = {
         I.click("//ng-select[@ng-reflect-items='10,50,100']");
         I.waitForVisible("//ng-select//span[contains(text(), '" + count + "')]", 30);
         I.click("//ng-select//span[contains(text(), '" + count + "')]");
-        I.wait(10);
-        I.waitForVisible(this.fields.table, 30);
-        I.wait(10);
+        this.waitForQANPageLoaded();
     },
 
     applyFilter(filterValue){
@@ -118,6 +116,11 @@ module.exports = {
         let percentage = await I.grabTextFrom("//app-details-table//app-details-row[" + row +"]//div[3]//span[2]");
         let value = await I.grabTextFrom("//app-details-table//app-details-row[" + row +"]//div[3]//span[1]");
         return {percentage: percentage, val: value};
+    },
+
+    waitForQANPageLoaded(){
+        I.waitForVisible(this.fields.table, 30);
+        I.waitForClickable(this.fields.nextPageNavigation, 30);
     },
 
     _selectDetails(row) {
