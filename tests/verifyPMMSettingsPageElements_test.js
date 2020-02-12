@@ -17,7 +17,7 @@ Scenario('Open PMM Settings page and verify SSH Key Details Section', async (I, 
     let sectionNameToExpand = "SSH Key Details";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
-    await pmmSettingsPage.verifySectionExpanded(pmmSettingsPage.expandSection(sectionNameToExpand), pmmSettingsPage.sectionButtonText.applySSHKey);
+    await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.applySSHKey);
     pmmSettingsPage.verifySSHKeyDetailsSectionElements();
 });
 
@@ -25,7 +25,7 @@ Scenario('Open PMM Settings page and verify AlertManager integration Section', a
     let sectionNameToExpand = "AlertManager integration";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
-    await pmmSettingsPage.verifySectionExpanded(pmmSettingsPage.expandSection(sectionNameToExpand), pmmSettingsPage.sectionButtonText.addAlert);
+    await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.addAlert);
     pmmSettingsPage.verifyAlertManagerSectionElements();
 });
 
@@ -33,6 +33,6 @@ Scenario('Open PMM Settings page and verify Diagnostics Section', async (I, pmmS
     let sectionNameToExpand = "Diagnostics";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
-    await pmmSettingsPage.verifySectionExpanded(pmmSettingsPage.expandSection(sectionNameToExpand), pmmSettingsPage.sectionButtonText.downloadLogs);
+    await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.downloadLogs);
     pmmSettingsPage.verifyDiagnosticsElements();
 });

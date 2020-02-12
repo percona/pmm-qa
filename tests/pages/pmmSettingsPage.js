@@ -8,7 +8,7 @@ module.exports = {
     prometheusAlertUrl: "/prometheus/alerts",
     diagnosticsText: "You can download server logs to make the problem detection simpler. " +
         "Please include this file if you are submitting a bug report.",
-    succesAlertMessage: "Settings updated",
+    successAlertMessage: "Settings updated",
     sectionHeaderList: ["Settings", "Advanced settings", "SSH Key Details", "AlertManager integration", "Diagnostics"],
     sectionButtonText:{
         applyChanges: "Apply changes",
@@ -79,39 +79,38 @@ module.exports = {
         }
     },
 
-    waitForButton(sectionName, buttonLocator){
-        if (sectionName == "Diagnostics"){
-            I.waitForVisible(this.fields.downloadLogsButton, 30);
-            return this.fields.downloadLogsButton;
-        }else {
-            I.waitForVisible(buttonLocator, 30);
-            return buttonLocator;
-        }
+    waitForButton(contentLocator, contentLocatorText){
+        I.waitForVisible(contentLocator, 30);
+        return this.verifySectionExpanded(contentLocator, contentLocatorText);
     },
 
-    expandSection(sectionName){
+    expandSection(sectionName, contentLocatorText){
         let sectionExpandLocator = this.fields.sectionHeader + "[contains(text(), '"+ sectionName +"')]";
-        let buttonLocator = sectionExpandLocator + "/following-sibling::div" + this.fields.applyButton;
+        let contentLocator = sectionExpandLocator + `/following-sibling::div//span[text()='${contentLocatorText}']`;
+        console.log(contentLocator);
         I.click(sectionExpandLocator);
-        return this.waitForButton(sectionName, buttonLocator);
+        return this.waitForButton(contentLocator, contentLocatorText);
     },
 
-    collapseDefaultSection(){
-        let sectionName = "Settings";
+    collapseSection(sectionName){
         let sectionHeaderLocator = this.fields.sectionHeader + "[contains(text(), '"+ sectionName +"')]";
         I.click(sectionHeaderLocator);
         I.waitForInvisible(this.fields.applyButton, 30);
     },
 
-    async verifySectionExpanded(buttonLocator, buttonText){
-        let textInside = await I.grabTextFrom(buttonLocator);
-        await assert.equal(textInside, buttonText, "there is no" + buttonText + "button")
+    collapseDefaultSection(){
+        this.collapseSection("Settings");
+    },
+
+    async verifySectionExpanded(contentLocator, contentLocatorText){
+        let textInside = await I.grabTextFrom(contentLocator);
+        assert.equal(textInside, contentLocatorText, `there is no ${contentLocatorText} button`)
     },
 
     async waitForAlert() {
         I.waitForVisible(this.fields.alertTitle, 30);
         let alertText = await I.grabTextFrom(this.fields.alertTitle);
-        await assert.equal(alertText, this.succesAlertMessage, "Alert Message is not successful");
+        assert.equal(alertText, this.successAlertMessage, "Alert Message is not successful");
     },
 
     async selectMetricsResolution(resolution){
@@ -124,7 +123,7 @@ module.exports = {
         I.refreshPage();
         await this.waitForPmmSettingsPageLoaded();
         let selectedResolutionText = await I.grabTextFrom(this.fields.selectedResolution);
-        await assert.equal(selectedResolutionText, resolution, "Resolution " + resolution + " was not saved")
+        assert.equal(selectedResolutionText, resolution, "Resolution " + resolution + " was not saved")
 
     },
 
@@ -141,6 +140,6 @@ module.exports = {
         I.refreshPage();
         await this.waitForPmmSettingsPageLoaded();
         let selectedTimeValue = await I.grabAttributeFrom(this.fields.dataRetentionCount, 'value');
-        await assert.equal(selectedTimeValue, seconds, "Data Retention value " + seconds + " was not saved");
+        assert.equal(selectedTimeValue, seconds, "Data Retention value " + seconds + " was not saved");
     }
 }
