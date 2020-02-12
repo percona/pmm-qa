@@ -51,7 +51,8 @@
     "qanPage" : "./tests/pages/qanPage.js",
     "mongoDbClusterSummaryPage": "./tests/pages/mongoDbClusterSummaryPage.js",
     "pmmInventoryPage": "./tests/pages/pmmInventoryPage.js",
-    "amiInstanceSetupPage": "./tests/pages/amiInstanceSetupPage.js"
+    "amiInstanceSetupPage": "./tests/pages/amiInstanceSetupPage.js",
+    "pmmSettingsPage": "./tests/pages/pmmSettingsPage.js"
   },
   "multiple": {
     "parallel": {
