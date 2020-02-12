@@ -119,12 +119,27 @@ module.exports = {
         await this.waitForAlert();
     },
 
-    async verifyResolutionIsAppliedAfterPageReload(resolution){
+    async verifyResolutionIsApplied(resolution){
         I.refreshPage();
         await this.waitForPmmSettingsPageLoaded();
         let selectedResolutionText = await I.grabTextFrom(this.fields.selectedResolution);
-        console.log("actual resolution = " + selectedResolutionText);
         await assert.equal(selectedResolutionText, resolution, "Resolution " + resolution + " was not saved")
 
+    },
+
+    async changeDataRetentionValueTo(seconds){
+        I.appendField(this.fields.dataRetentionCount, '');
+        I.pressKey(['Shift', 'Home']);
+        I.pressKey('Backspace');
+        I.fillField(this.fields.dataRetentionCount, seconds);
+        I.click(this.fields.applyButton);
+        await this.waitForAlert();
+    },
+
+    async verifyDataRetentionValueApplied(seconds){
+        I.refreshPage();
+        await this.waitForPmmSettingsPageLoaded();
+        let selectedTimeValue = await I.grabAttributeFrom(this.fields.dataRetentionCount, 'value');
+        await assert.equal(selectedTimeValue, seconds, "Data Retention value " + seconds + " was not saved");
     }
 }
