@@ -30,6 +30,7 @@ module.exports = {
         alertRulesInput: "//textarea[@name='alert_manager_rules' and @placeholder='Alert manager rule']",
         downloadLogsButton: "//a[@class='ant-btn' and @href='/logs.zip']",
         metricsResolution: "//div[@class='ant-slider-mark']/span[text()='",
+        metricsResolutionSlider:"//div[@class='ant-slider-rail']",
         alertTitle: "//div[@class='alert-title']",
         selectedResolution: "//span[@class='ant-slider-mark-text ant-slider-mark-text-active']"
     },
@@ -45,7 +46,7 @@ module.exports = {
 
     verifySettingsSectionElements(){
         I.see("Metrics resolution", this.fields.sectionRow);
-        I.seeElement("//div[@class='ant-slider-rail']");
+        I.seeElement(this.fields.metricsResolutionSlider);
         I.see("Data retention", this.fields.sectionRow);
         I.seeElement(this.fields.dataRetentionCount);
         I.seeElement(this.fields.dataRetentionDropdown);
