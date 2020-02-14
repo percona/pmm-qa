@@ -23,11 +23,12 @@ Scenario('Open PMM Settings page and verify changing Data Retention', async (I, 
 });
 
 Scenario('Open PMM Settings page and verify adding AlertManager Rule', async (I, pmmSettingsPage) =>{
+    let scheme = "http://";
     let sectionNameToExpand = "AlertManager integration";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
     await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.addAlert);
-    pmmSettingsPage.addAlertManagerRule(pmmSettingsPage.alertManager.url + pmmSettingsPage.alertManager.service, pmmSettingsPage.alertManager.rule);
+    pmmSettingsPage.addAlertManagerRule(scheme + pmmSettingsPage.alertManager.ip + pmmSettingsPage.alertManager.service, pmmSettingsPage.alertManager.rule);
     await pmmSettingsPage.verifySuccessfulPopUp(pmmSettingsPage.popUpMessages.successAlertManagerMessage);
     pmmSettingsPage.openAlertsManagerUi();
     await pmmSettingsPage.verifyAlertManagerRuleAdded();
