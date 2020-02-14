@@ -1,3 +1,4 @@
+
 const {I} = inject();
 let assert = require('assert');
 module.exports = {
@@ -123,6 +124,7 @@ module.exports = {
         I.waitForInvisible(this.fields.applyButton, 30);
     },
 
+
     collapseDefaultSection(){
         this.collapseSection("Settings");
     },
@@ -160,6 +162,7 @@ module.exports = {
         I.refreshPage();
         await this.waitForPmmSettingsPageLoaded();
         let selectedResolutionText = await I.grabTextFrom(this.fields.selectedResolution);
+
         assert.equal(selectedResolutionText, resolution, `Resolution ${resolution} was not saved`)
     },
 
