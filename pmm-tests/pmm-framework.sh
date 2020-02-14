@@ -86,13 +86,14 @@ usage () {
   echo " --upgrade-server               When this option is specified, PMM Server will be updated to the last version"
   echo " --upgrade-client               When this option is specified, PMM client will be updated to the last version"
   echo " --query-source                 Set query source (perfschema or slowlog)"
+  echo " --setup-alertmanager           Start alert-manager on aws instance which runs on port 9093"
   echo " --compare-query-count          This will help us to compare the query count between PMM client instance and PMM QAN/Metrics page"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -260,6 +261,10 @@ do
     --wipe-pmm2-clients )
     shift
     wipe_pmm2_clients=1
+    ;;
+    --setup-alertmanager )
+    shift
+    setup_alertmanager=1
     ;;
     --delete-package )
     shift
@@ -1876,12 +1881,23 @@ install_dbdeployer(){
   sudo mv dbdeployer-1.28.1.linux /usr/local/bin/dbdeployer
 }
 
+setup_alertmanager() {
+  docker pull prom/alertmanager
+  docker run -d -p 9093:9093 --name alert-manager prom/alertmanager:latest
+  sleep 20
+  export SERVER_CONTAINER_NAME=$(docker ps | grep pmm-server | awk '{print $NF}')
+}
+
 if [ ! -z $wipe_clients ]; then
   clean_clients
 fi
 
 if [ ! -z $wipe_pmm2_clients ]; then
   wipe_pmm2_clients
+fi
+
+if [ ! -z $setup_alertmanager ]; then
+  setup_alertmanager
 fi
 
 if [ ! -z $delete_package ]; then
