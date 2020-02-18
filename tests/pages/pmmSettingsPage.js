@@ -53,7 +53,7 @@ module.exports = {
         addSSHKeyButton:"//span[text()='Apply SSH key']/parent::button",
         sshKeyInput: "//textarea[@name='ssh_key' and @placeholder='Enter ssh key']",
         alertURLInput: "//input[@name='alert_manager_url' and @placeholder='Enter URL']",
-        alertRulesInput: "//textarea[@name='alert_manager_rules' and @placeholder='Alert manager rule']",
+        alertRulesInput: "//textarea[@name='alert_manager_rules' and @placeholder='Alertmanager rules']",
         addAlertRuleButton: "//span[text()='Apply Alertmanager settings']/parent::button",
         downloadLogsButton: "//a[@class='ant-btn' and @href='/logs.zip']",
         metricsResolution: "//div[@class='ant-slider-mark']/span[text()='",
