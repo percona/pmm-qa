@@ -23,12 +23,12 @@ Scenario('Open PMM Settings page and verify SSH Key Details Section Elements', a
     pmmSettingsPage.verifySSHKeyDetailsSectionElements();
 });
 
-Scenario('Open PMM Settings page and verify AlertManager integration Section Elements', async (I, pmmSettingsPage) =>{
-    let sectionNameToExpand = "AlertManager integration";
+Scenario('Open PMM Settings page and verify Alertmanager integration Section Elements', async (I, pmmSettingsPage) =>{
+    let sectionNameToExpand = "Alertmanager integration";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
     await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.addAlert);
-    pmmSettingsPage.verifyAlertManagerSectionElements();
+    pmmSettingsPage.verifyAlertmanagerSectionElements();
 });
 
 Scenario('Open PMM Settings page and verify Diagnostics Section Elements', async (I, pmmSettingsPage) =>{
@@ -68,40 +68,40 @@ xScenario('Open PMM Settings page and verify validation for empty SSH Key', asyn
 
 xScenario('Open PMM Settings page and verify validation for empty Alert Manager fields', async (I, pmmSettingsPage) =>{
     let urlAndRule = "";
-    let sectionNameToExpand = "AlertManager integration";
+    let sectionNameToExpand = "Alertmanager integration";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
     await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.addAlert);
-    pmmSettingsPage.addAlertManagerRule(urlAndRule, urlAndRule);
-    // await pmmSettingsPage.verifyValidationPopUp(pmmSettingsPage.popUpMessages.invalidAlertManagerURLMessage);
+    pmmSettingsPage.addAlertmanagerRule(urlAndRule, urlAndRule);
+    // await pmmSettingsPage.verifyValidationPopUp(pmmSettingsPage.popUpMessages.invalidAlertmanagerURLMessage);
 });
 
-Scenario('Open PMM Settings page and verify validation for AlertManager URL without scheme', async (I, pmmSettingsPage) =>{
+Scenario('Open PMM Settings page and verify validation for Alertmanager URL without scheme', async (I, pmmSettingsPage) =>{
     let urlWithoutScheme = "invalid_url";
-    let sectionNameToExpand = "AlertManager integration";
+    let sectionNameToExpand = "Alertmanager integration";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
     await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.addAlert);
-    pmmSettingsPage.addAlertManagerRule(urlWithoutScheme, "");
-    await pmmSettingsPage.verifyValidationPopUp(pmmSettingsPage.popUpMessages.invalidAlertManagerMissingSchemeMessage);
+    pmmSettingsPage.addAlertmanagerRule(urlWithoutScheme, "");
+    await pmmSettingsPage.verifyValidationPopUp(pmmSettingsPage.popUpMessages.invalidAlertmanagerMissingSchemeMessage);
 });
 
-Scenario('Open PMM Settings page and verify validation for AlertManager URL without host', async (I, pmmSettingsPage) =>{
+Scenario('Open PMM Settings page and verify validation for Alertmanager URL without host', async (I, pmmSettingsPage) =>{
     let urlWithoutHost = "http://";
-    let sectionNameToExpand = "AlertManager integration";
+    let sectionNameToExpand = "Alertmanager integration";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
     await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.addAlert);
-    pmmSettingsPage.addAlertManagerRule(urlWithoutHost, "");
-    await pmmSettingsPage.verifyValidationPopUp(pmmSettingsPage.popUpMessages.invalidAlertManagerMissingHostMessage);
+    pmmSettingsPage.addAlertmanagerRule(urlWithoutHost, "");
+    await pmmSettingsPage.verifyValidationPopUp(pmmSettingsPage.popUpMessages.invalidAlertmanagerMissingHostMessage);
 });
 
-Scenario('Open PMM Settings page and verify validation for invalid AlertManager Rule', async (I, pmmSettingsPage) =>{
+Scenario('Open PMM Settings page and verify validation for invalid Alertmanager Rule', async (I, pmmSettingsPage) =>{
     let rule = "invalid_rule";
-    let sectionNameToExpand = "AlertManager integration";
+    let sectionNameToExpand = "Alertmanager integration";
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.collapseDefaultSection();
     await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.sectionButtonText.addAlert);
-    pmmSettingsPage.addAlertManagerRule("", rule);
-    await pmmSettingsPage.verifyValidationPopUp(pmmSettingsPage.popUpMessages.invalidAlertManagerRulesMessage);
+    pmmSettingsPage.addAlertmanagerRule("", rule);
+    await pmmSettingsPage.verifyValidationPopUp(pmmSettingsPage.popUpMessages.invalidAlertmanagerRulesMessage);
 });
