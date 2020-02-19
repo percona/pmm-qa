@@ -59,7 +59,8 @@ module.exports = {
         metricsResolution: "//div[@class='ant-slider-mark']/span[text()='",
         metricsResolutionSlider:"//div[@class='ant-slider-rail']",
         popUpTitle: "//div[@class='alert-title']",
-        selectedResolution: "//span[@class='ant-slider-mark-text ant-slider-mark-text-active']"
+        selectedResolution: "//span[@class='ant-slider-mark-text ant-slider-mark-text-active']",
+        mainFrame:"//div[@id='antd']"
     },
 
     async waitForPmmSettingsPageLoaded(){
