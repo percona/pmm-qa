@@ -72,6 +72,54 @@ echo "$output"
         done
 }
 
+@test "run pmm-admin add mongodb --help to check host" {
+    run pmm-admin add mongodb --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "host"
+}
+
+@test "run pmm-admin add mongodb --help to check port" {
+    run pmm-admin add mongodb --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "port"
+}
+
+@test "run pmm-admin add mongodb --help to check service-name" {
+    run pmm-admin add mongodb --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "service-name"
+}
+
+@test "run pmm-admin add mongodb based on running instances" {
+	COUNTER=0
+	IFS=$'\n'
+  for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
+		let COUNTER=COUNTER+1
+		MONGO_IP_PORT=${i}
+		export MONGO_IP=$(cut -d':' -f1 <<< $MONGO_IP_PORT)
+        export MONGO_PORT=$(cut -d':' -f2 <<< $MONGO_IP_PORT)
+		run pmm-admin add mongodb --host=${MONGO_IP} --port=${MONGO_PORT} --service-name=mongo_inst_${COUNTER}
+	  [ "$status" -eq 0 ]
+	  echo "${lines[0]}" | grep "MongoDB Service added"
+  done
+}
+
+@test "run pmm-admin remove mongodb" {
+	COUNTER=0
+	IFS=$'\n'
+	for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
+		let COUNTER=COUNTER+1
+		MONGO_IP_PORT=${i}
+		run pmm-admin remove mongodb mongo_inst_${COUNTER}
+	  [ "$status" -eq 0 ]
+	  echo "${lines[0]}"
+	  echo "${lines[0]}" | grep "Service removed."
+	done
+}
+
 function teardown() {
         echo "$output"
 }

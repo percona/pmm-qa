@@ -10,6 +10,8 @@
       "host": "ondemand.saucelabs.com",
       "desiredCapabilities": {
         "screenResolution": "2560x1600",
+        "ignoreHTTPSErrors": true,
+        "acceptInsecureCerts": true,
         "chromeOptions": {
           "args": [ "--disable-gpu", "--window-size=2560x1600", "--no-sandbox" ]
         }
@@ -48,7 +50,9 @@
     "pxcGaleraClusterOverviewPage": "./tests/pages/pxcGaleraClusterOverviewPage.js",
     "qanPage" : "./tests/pages/qanPage.js",
     "mongoDbClusterSummaryPage": "./tests/pages/mongoDbClusterSummaryPage.js",
-    "pmmInventoryPage": "./tests/pages/pmmInventoryPage.js"
+    "pmmInventoryPage": "./tests/pages/pmmInventoryPage.js",
+    "amiInstanceSetupPage": "./tests/pages/amiInstanceSetupPage.js",
+    "pmmSettingsPage": "./tests/pages/pmmSettingsPage.js"
   },
   "multiple": {
     "parallel": {

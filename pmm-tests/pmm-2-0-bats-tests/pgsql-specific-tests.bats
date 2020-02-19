@@ -65,6 +65,53 @@ echo "$output"
         done
 }
 
+@test "run pmm-admin add postgresql --help to check host" {
+    run pmm-admin add postgresql --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "host"
+}
+
+@test "run pmm-admin add postgresql --help to check port" {
+    run pmm-admin add postgresql --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "port"
+}
+
+@test "run pmm-admin add postgresql --help to check service-name" {
+    run pmm-admin add postgresql --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "service-name"
+}
+
+@test "run pmm-admin add postgresql based on running intsances using host, port and service name" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
+                let COUNTER=COUNTER+1
+                PGSQL_IP_PORT=${i}
+                export PGSQL_IP=$(cut -d':' -f1 <<< $PGSQL_IP_PORT)
+                export PGSQL_PORT=$(cut -d':' -f2 <<< $PGSQL_IP_PORT)
+                run pmm-admin add postgresql --host=${PGSQL_IP} --port=${PGSQL_PORT} --service-name=pgsql_$COUNTER
+                echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "PostgreSQL Service added."
+        done
+}
+
+@test "run pmm-admin remove postgresql" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
+                let COUNTER=COUNTER+1
+                run pmm-admin remove postgresql pgsql_$COUNTER
+                echo "$output"
+                        [ "$status" -eq 0 ]
+                        echo "${output}" | grep "Service removed."
+        done
+}
 
 @test "run pmm-admin remove postgresql again" {
         COUNTER=0

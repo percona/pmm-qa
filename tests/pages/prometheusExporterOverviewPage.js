@@ -1,4 +1,4 @@
-const I = actor();
+const {I, adminPage} = inject();
 
 module.exports = {
 
@@ -11,7 +11,7 @@ module.exports = {
         notAvailableMetrics: "//span[contains(text(), 'N/A')]",
         notAvailableDataPoints: "//div[contains(text(),'No data')]"
     },
-    metrics: ["Avg CPU Usage per Host", "Avg Memory Usage per Host", "Monitored Hosts", "Exporters Running",
+    metrics: ["Avg CPU Usage per Node", "Avg Memory Usage per Node", "Monitored Nodes", "Exporters Running",
         "CPU Usage", "Memory Usage", "CPU Cores Used",
         "CPU  Used", "Mem Used", "Virtual CPUs", "RAM", "File Descriptors Used"],
 
@@ -20,10 +20,10 @@ module.exports = {
         return locator;
     },
 
-    verifyMetricsExistence () {
+    async verifyMetricsExistence () {
         for (let i in this.metrics) {
             I.seeElement(this.graphsLocator(this.metrics[i]));
         }
-        I.dontSeeElement(this.fields.notAvailableMetrics);
+        await adminPage.grabReportNameWithNA(2);
     }
 };

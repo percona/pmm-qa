@@ -1,4 +1,3 @@
-
 Feature('to verify monitoried Remote Db instances');
 
 Before((I, loginPage) => {
@@ -6,33 +5,35 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open Remote Instance Page and Add mysql & MongoDB instances @pmm-pre-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update @visual-test', async (I, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_test";
+    let version = "old";
     I.amOnPage(remoteInstancesPage.url);
-    I.waitForText(remoteInstancesPage.fields.pageHeaderText, 60);
-    I.see(remoteInstancesPage.fields.pageHeaderText);
-    await I.waitForElement(remoteInstancesPage.fields.iframe, 60);
-    await I.switchTo(remoteInstancesPage.fields.iframe); // switch to first iframe
-    I.waitForText(remoteInstancesPage.fields.remoteInstanceTitle, 60);
-    remoteInstancesPage.addMySQLRemote(mysql_service_name);
-    I.waitForElement(pmmInventoryPage.fields.iframe, 60);
-    await I.switchTo(pmmInventoryPage.fields.iframe);
-    I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
-    adminPage.peformPageDown(5);
-    I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);
-    let serviceID = await pmmInventoryPage.getServiceId(mysql_service_name);
-    await pmmInventoryPage.checkAgentStatus(serviceID);
+    remoteInstancesPage.waitUntilOldRemoteInstancesPageLoaded()
+        .openAddRemoteMySQLPage()
+        .createRemoteMySQL(mysql_service_name, version);
+    await pmmInventoryPage.verifyOldMySQLRemoteServiceIsDisplayed(mysql_service_name);
+    await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
 });
 
 
-Scenario('Verify is the remote instances are in Running Status @pmm-post-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Verify is the remote instances are in Running Status @pmm-post-update @visual-test', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_test";
+    let version = "new";
     I.amOnPage(pmmInventoryPage.url);
-    I.waitForElement(pmmInventoryPage.fields.iframe, 60);
-    await I.switchTo(pmmInventoryPage.fields.iframe);
-    I.waitForElement(pmmInventoryPage.fields.inventoryTableColumn, 60);
-    await adminPage.peformPageDown(5);
-    I.see(mysql_service_name, pmmInventoryPage.fields.inventoryTableColumn);
-    let serviceID = await pmmInventoryPage.getServiceId(mysql_service_name);
-    await pmmInventoryPage.checkAgentStatus(serviceID);
+    pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(mysql_service_name);
+    await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
+
+});
+
+xScenario('Open Remote Instance Page and Add mysql instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+    let mysql_service_name = "mysql_remote_new";
+    let version = "new";
+    I.amOnPage(remoteInstancesPage.url);
+    remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded()
+        .openAddRemoteMySQLPage()
+        .createRemoteMySQL(mysql_service_name, version);
+    pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(mysql_service_name);
+    await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
+
 });
