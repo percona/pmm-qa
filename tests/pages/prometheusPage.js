@@ -31,6 +31,6 @@ module.exports = {
         for (let i in this.metrics) {
             I.seeElement(this.graphsLocator(this.metrics[i]));
         }
-        I.seeNumberOfVisibleElements(this.fields.notAvailableMetrics, 0);
+        I.seeNumberOfVisibleElements(this.fields.notAvailableMetrics, 8);
     }
 };
