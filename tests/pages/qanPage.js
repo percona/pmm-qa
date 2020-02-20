@@ -77,6 +77,7 @@ module.exports = {
     },
 
     checkFilterGroups() {
+        I.waitForVisible(this.filterGroupLocator(this.filterGroups[8]), 30);
         for (let i = 0; i < this.filterGroups.length; i++) {
             I.seeElement(this.filterGroupLocator(this.filterGroups[i]));
         }
