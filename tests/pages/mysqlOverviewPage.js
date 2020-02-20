@@ -1,4 +1,5 @@
 const {I, mysqlOverviewPage} = inject();
+let screenshots =[];
 
 module.exports = {
 
@@ -56,6 +57,7 @@ module.exports = {
     async waitForGraphLoaded() {
         await I.waitForVisible(this.fields.panelTitle, 30);
         await I.waitForVisible(this.fields.panelContent, 30);
+        I.wait(2);
     },
 
     async checkForGraph() {
@@ -74,11 +76,16 @@ module.exports = {
         for (let i = 0; i < ids.length; i++) {
             I.amOnPage(`${currentURL}&fullscreen&panelId=${ids[i]}`);
             await this.waitForGraphLoaded();
-            await this.checkForGraph();
             let title = await I.grabTextFrom(this.fields.panelTitle);
             let screenshotName = this.fields.dashboardName + title.toString().toLowerCase().replace(' ','_') + ".png";
             I.saveScreenshot(screenshotName);
+            screenshots.push(screenshotName);
         }
+    },
 
+    async compareEachScreenshot() {
+        for (let screenshot in screenshots) {
+            await I.seeVisualDiff(screenshots[screenshot], {tolerance: 10, prepareBaseImage:false});
+        }
     }
 }
