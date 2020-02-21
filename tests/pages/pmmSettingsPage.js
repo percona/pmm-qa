@@ -10,7 +10,7 @@ module.exports = {
     diagnosticsText: "You can download server logs to make the problem detection simpler. " +
         "Please include this file if you are submitting a bug report.",
     alertManager:{
-        ip: process.env.SERVER_IP,
+        ip: process.env.VM_IP,
         service:"/#/alerts",
         rule: "groups:\n" +
             "  - name: AutoTestAlerts\n" +
@@ -29,16 +29,16 @@ module.exports = {
         successPopUpMessage: "Settings updated",
         invalidDataDurationMessage: "bad Duration: time: invalid duration text s",
         invalidSSHKeyMessage: "Invalid SSH key.",
-        successAlertManagerMessage:"Alert manager settings updated",
-        invalidAlertManagerMissingSchemeMessage: "Invalid alert_manager_url: invalid_url - missing protocol scheme.",
-        invalidAlertManagerMissingHostMessage: "Invalid alert_manager_url: http:// - missing host.",
-        invalidAlertManagerRulesMessage: "Invalid Alert Manager rules."
+        successAlertmanagerMessage:"Alert manager settings updated",
+        invalidAlertmanagerMissingSchemeMessage: "Invalid alert_manager_url: invalid_url - missing protocol scheme.",
+        invalidAlertmanagerMissingHostMessage: "Invalid alert_manager_url: http:// - missing host.",
+        invalidAlertmanagerRulesMessage: "Invalid Alert Manager rules."
     },
-    sectionHeaderList: ["Settings", "Advanced settings", "SSH Key Details", "AlertManager integration", "Diagnostics"],
+    sectionHeaderList: ["Settings", "Advanced settings", "SSH Key Details", "Alertmanager integration", "Diagnostics"],
     sectionButtonText:{
         applyChanges: "Apply changes",
         applySSHKey: "Apply SSH key",
-        addAlert: "Apply AlertManager settings",
+        addAlert: "Apply Alertmanager settings",
         downloadLogs:"Download PMM Server Logs"
     },
     fields: {
@@ -53,8 +53,8 @@ module.exports = {
         addSSHKeyButton:"//span[text()='Apply SSH key']/parent::button",
         sshKeyInput: "//textarea[@name='ssh_key' and @placeholder='Enter ssh key']",
         alertURLInput: "//input[@name='alert_manager_url' and @placeholder='Enter URL']",
-        alertRulesInput: "//textarea[@name='alert_manager_rules' and @placeholder='Alert manager rule']",
-        addAlertRuleButton: "//span[text()='Apply AlertManager settings']/parent::button",
+        alertRulesInput: "//textarea[@name='alert_manager_rules' and @placeholder='Alertmanager rules']",
+        addAlertRuleButton: "//span[text()='Apply Alertmanager settings']/parent::button",
         downloadLogsButton: "//a[@class='ant-btn' and @href='/logs.zip']",
         metricsResolution: "//div[@class='ant-slider-mark']/span[text()='",
         metricsResolutionSlider:"//div[@class='ant-slider-rail']",
@@ -87,9 +87,9 @@ module.exports = {
         I.seeElement(this.fields.sshKeyInput);
     },
 
-    verifyAlertManagerSectionElements(){
-        I.see("AlertManager URL", this.fields.sectionRow);
-        I.see("AlertManager rules", this.fields.sectionRow);
+    verifyAlertmanagerSectionElements(){
+        I.see("Alertmanager URL", this.fields.sectionRow);
+        I.see("Alertmanager rules", this.fields.sectionRow);
         I.seeElement(this.fields.alertURLInput);
         I.seeElement(this.fields.alertRulesInput);
 
@@ -191,7 +191,7 @@ module.exports = {
         I.click(this.fields.addSSHKeyButton);
     },
 
-    addAlertManagerRule(url, rule){
+    addAlertmanagerRule(url, rule){
         this.customClearField(this.fields.alertURLInput);
         I.fillField(this.fields.alertURLInput, url);
         this.customClearField(this.fields.alertRulesInput);
@@ -203,7 +203,7 @@ module.exports = {
         I.amOnPage(this.prometheusAlertUrl);
     },
 
-    async verifyAlertManagerRuleAdded(){
+    async verifyAlertmanagerRuleAdded(){
         for (let i = 0; i<10; i++) {
             let notLoaded = await I.grabNumberOfVisibleElements(`//td[contains(text(), '${this.alertManager.ruleName}')]`);
             if (notLoaded) break;
