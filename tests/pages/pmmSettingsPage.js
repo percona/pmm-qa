@@ -10,7 +10,7 @@ module.exports = {
     diagnosticsText: "You can download server logs to make the problem detection simpler. " +
         "Please include this file if you are submitting a bug report.",
     alertManager:{
-        ip: process.env.SERVER_IP,
+        ip: process.env.VM_IP,
         service:"/#/alerts",
         rule: "groups:\n" +
             "  - name: AutoTestAlerts\n" +
