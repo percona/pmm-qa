@@ -17,7 +17,7 @@ module.exports = {
         "ProxySQL Scrape Performance", "ProxySQL Exporter Errors", "ProxySQL up",
         "Scrape Durations"],
 
-    panels: ["PostgreSQL Exporter", "ProxySQL Exporter", "MongoDB Exporter"],
+    panels: ["PostgreSQL Exporter", "ProxySQL Exporter", "MongoDB Exporter", "MySQL Exporter"],
 
     graphsLocator (metricName){
         locator = "//span[contains(text(), '"+ metricName +"')]";
