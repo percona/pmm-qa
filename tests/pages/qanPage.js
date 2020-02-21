@@ -24,7 +24,7 @@ module.exports = {
         total: "//span[contains(text(), 'TOTAL')]",
         columns: "//tbody//app-qan-table-header-cell",
 
-        results: "//ng-select[@ng-reflect-items='10,50,100']",
+        results: "//div[@class='results-per-page']",
         fifty: "//div[@id='ad0800a556c8']/span",
         hundred: "//div[@id='a305c6a9fc9e']",
         iframe: "//div[@class='panel-content']//iframe",
@@ -84,7 +84,7 @@ module.exports = {
     },
 
     async changeResultsPerPage(count) {
-        let numOfElements = await I.grabNumberOfVisibleElements("//ng-select[@ng-reflect-items='10,50,100']");
+        let numOfElements = await I.grabNumberOfVisibleElements(this.fields.results);
         if(numOfElements = 0){
             for (var i = 0; i < 5; i++)
             {
@@ -92,8 +92,8 @@ module.exports = {
                 I.wait(2);
             }
         }
-        I.waitForVisible("//ng-select[@ng-reflect-items='10,50,100']", 30);
-        I.click("//ng-select[@ng-reflect-items='10,50,100']");
+        I.waitForVisible(this.fields.results, 30);
+        I.click(this.fields.results);
         I.waitForVisible("//ng-select//span[contains(text(), '" + count + "')]", 30);
         I.click("//ng-select//span[contains(text(), '" + count + "')]");
         this.waitForQANPageLoaded();
