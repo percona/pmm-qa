@@ -1274,7 +1274,7 @@ add_clients(){
           pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
         fi
         if [[ ! -z $DISABLE_TABLESTATS ]]; then
-          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
+          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
         fi
         PS_PORT=$((PS_PORT+j))
       done
