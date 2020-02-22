@@ -52,7 +52,8 @@
     "mongoDbClusterSummaryPage": "./tests/pages/mongoDbClusterSummaryPage.js",
     "pmmInventoryPage": "./tests/pages/pmmInventoryPage.js",
     "amiInstanceSetupPage": "./tests/pages/amiInstanceSetupPage.js",
-    "pmmSettingsPage": "./tests/pages/pmmSettingsPage.js"
+    "pmmSettingsPage": "./tests/pages/pmmSettingsPage.js",
+    "mysqlTableDetailsPage": "./tests/pages/mysqlTableDetailsPage.js"
   },
   "multiple": {
     "parallel": {
