@@ -30,7 +30,7 @@ module.exports = {
         I.click(this.fields.disabledServiceName);
         I.waitForElement(this.fields.serviceName, 30);
         I.click(this.fields.serviceName);
-        I.wait(5);
+        I.waitForElement(this.graphsLocator(this.metrics[1]), 30);
         for (var i in this.metrics) {
             I.seeElement(this.graphsLocator(this.metrics[i]));
         }
