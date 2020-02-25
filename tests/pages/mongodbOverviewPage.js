@@ -5,6 +5,9 @@ module.exports = {
     // insert your locators and methods here
     // setting locators
     url: "graph/d/mongodb-instance-summary/mongodb-instance-summary",
+    instanceSummaryUrl: "graph/d/mongodb-instance-summary/mongodb-instance-summary",
+    instanceCompareUrl: "graph/d/mongodb-instance-compare/mongodb-instances-compare",
+    instanceOverviewUrl: "/graph/d/mongodb-instance-overview/mongodb-instances-overview",
     urlWithRecent: "graph/d/6Lk9wMHik/mongodb-overview?refresh=1m&orgId=1&from=now-1m&to=now",
     fields: {
         pageHeaderText: "MongoDB Overview",
