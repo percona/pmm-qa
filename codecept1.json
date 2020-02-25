@@ -2,22 +2,23 @@
   "output": "tests/output",
   "helpers": {
     "WebDriver": {
-      "url": "http://localhost/",
+      "url": "http://3.136.85.147",
       "browser": "chrome",
-      "host": "localhost",
-      "port": 4444,
-      "path": "/wd/hub",
-      "windowSize": "maximize",
+      "windowSize": "2560x1600",
+      "user": "pmm_qa",
+      "key": "a965f590-d452-429d-a484-3aca621de8f5",
+      "host": "ondemand.saucelabs.com",
       "desiredCapabilities": {
+        "screenResolution": "2560x1600",
+        "ignoreHTTPSErrors": true,
+        "acceptInsecureCerts": true,
         "chromeOptions": {
-          "args": [ "--headless", "--disable-gpu", "--window-size=2560,1600", "--no-sandbox" ]
-        },
-        "selenoidOptions": {
-          "enableVNC": true,
-          "browserName": "chrome",
-          "version": "76.0"
+          "args": [ "--disable-gpu", "--window-size=2560x1600", "--no-sandbox" ]
         }
       }
+    },
+    "SauceHelper": {
+      "require": "codeceptjs-saucehelper"
     },
     "ResembleHelper" : {
       "require": "codeceptjs-resemblehelper",
@@ -25,7 +26,8 @@
       "baseFolder": "./tests/screenshots/base/",
       "diffFolder": "./tests/screenshots/diff/"
     },
-    "FileSystem": {}
+    "FileSystem": {},
+    "REST": {}
   },
   "include": {
     "loginPage": "./tests/pages/loginPage.js",
@@ -54,7 +56,7 @@
   },
   "multiple": {
     "parallel": {
-      "chunks": 3,
+      "chunks": 2,
       "browsers": ["chrome"]
     }
   },
