@@ -11,7 +11,7 @@ module.exports = {
         "Please include this file if you are submitting a bug report.",
     alertManager:{
         ip: process.env.VM_IP,
-        service:"/#/alerts",
+        service:":9093/#/alerts",
         rule: "groups:\n" +
             "  - name: AutoTestAlerts\n" +
             "    rules:\n" +
