@@ -39,6 +39,13 @@ Scenario('Open PMM Settings page and verify Diagnostics Section Elements', async
     pmmSettingsPage.verifyDiagnosticsElements();
 });
 
+Scenario('Open PMM Settings page and verify validation for empty Data Retention value', async (I, pmmSettingsPage) =>{
+    let dataRetentionValue = "";
+    pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.customClearField(dataRetentionValue);
+    await pmmSettingsPage.verifyValidationMessage(pmmSettingsPage.messages.requiredFieldMessage);
+});
+
 Scenario('Open PMM Settings page and verify validation for invalid Data Retention value', async (I, pmmSettingsPage) =>{
     let dataRetentionValue = "text ";
     pmmSettingsPage.waitForPmmSettingsPageLoaded();
