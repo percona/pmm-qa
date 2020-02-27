@@ -28,6 +28,7 @@ module.exports = {
     messages:{
         successPopUpMessage: "Settings updated",
         invalidDataDurationMessage: "Value should be in range from 1 to 3650",
+        requiredFieldMessage:"Required field",
         invalidSSHKeyMessage: "Invalid SSH key.",
         successAlertmanagerMessage:"Alert manager settings updated",
         invalidAlertmanagerMissingSchemeMessage: "Invalid alert_manager_url: invalid_url - missing protocol scheme.",
@@ -188,11 +189,10 @@ module.exports = {
         I.pressKey('Backspace');
     },
 
-    async changeDataRetentionValueTo(seconds){
+    changeDataRetentionValueTo(seconds){
         this.customClearField(this.fields.dataRetentionCount);
         I.fillField(this.fields.dataRetentionCount, seconds);
         I.click(this.fields.applyButton);
-        await this.waitForValidationMessage();
     },
 
     async verifyDataRetentionValueApplied(seconds){
