@@ -25,9 +25,9 @@ module.exports = {
             "        description: \"{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 20 seconds.\"",
         ruleName: "AutoTestAlerts"
     },
-    popUpMessages:{
+    messages:{
         successPopUpMessage: "Settings updated",
-        invalidDataDurationMessage: "bad Duration: time: invalid duration text s",
+        invalidDataDurationMessage: "Value should be in range from 1 to 3650",
         invalidSSHKeyMessage: "Invalid SSH key.",
         successAlertmanagerMessage:"Alert manager settings updated",
         invalidAlertmanagerMissingSchemeMessage: "Invalid alert_manager_url: invalid_url - missing protocol scheme.",
@@ -44,9 +44,9 @@ module.exports = {
     fields: {
         iframe: "//div[@class='panel-content']//iframe",
         sectionHeader: "//div[@class='ant-collapse-header']",
-        sectionRow: "//div[@class='ant-row']",
+        sectionRow: "//strong",
+        diagnosticsSectionRow: "//div[@class='ant-row']",
         dataRetentionCount: "//input[@name='data_retention_count']",
-        dataRetentionDropdown:"//span//div[@class='select-item']",
         callHomeSwitch:"//button[@class='toggle-field ant-switch ant-switch-checked']",
         subSectionHeader: "/following-sibling::div//div[@class='ant-collapse-header']",
         applyButton: "//button[@type='submit']",
@@ -59,16 +59,16 @@ module.exports = {
         metricsResolution: "//div[@class='ant-slider-mark']/span[text()='",
         metricsResolutionSlider:"//div[@class='ant-slider-rail']",
         popUpTitle: "//div[@class='alert-title']",
+        validationMessage: "//span[@class='error-message']",
         selectedResolution: "//span[@class='ant-slider-mark-text ant-slider-mark-text-active']"
     },
 
-    async waitForPmmSettingsPageLoaded(){
+    waitForPmmSettingsPageLoaded(){
         I.waitForVisible(this.fields.applyButton, 30);
         I.waitForClickable(this.fields.applyButton, 30);
         I.waitForVisible(this.fields.sectionHeader, 30);
         I.waitForVisible(this.fields.callHomeSwitch, 30);
         I.waitForClickable(this.fields.callHomeSwitch, 30);
-        return this;
     },
 
     verifySettingsSectionElements(){
@@ -76,7 +76,6 @@ module.exports = {
         I.seeElement(this.fields.metricsResolutionSlider);
         I.see("Data retention", this.fields.sectionRow);
         I.seeElement(this.fields.dataRetentionCount);
-        I.seeElement(this.fields.dataRetentionDropdown);
         I.see("Call home", this.fields.sectionRow);
         I.seeElement(this.fields.callHomeSwitch);
         I.see("Check for updates", this.fields.sectionRow);
@@ -96,7 +95,7 @@ module.exports = {
     },
 
     verifyDiagnosticsElements(){
-        I.see(this.diagnosticsText, this.fields.sectionRow);
+        I.see(this.diagnosticsText, this.fields.diagnosticsSectionRow);
     },
 
     async verifySectionHeaders(){
@@ -138,10 +137,22 @@ module.exports = {
         I.waitForVisible(this.fields.popUpTitle, 30);
     },
 
+    waitForValidationMessage() {
+        I.waitForVisible(this.fields.validationMessage, 30);
+    },
+
     async verifyPopUpMessage(validationMessage) {
         let alertText = await I.grabTextFrom(this.fields.popUpTitle);
-        assert.equal(alertText.toString().split(',')[0], validationMessage, `Unexpected popup message! Expected to see ${validationMessage} instead of ${alertText}`);
+        assert.equal(alertText.toString().split(',')[0], validationMessage, `Unexpected popup message! 
+                        Expected to see ${validationMessage} instead of ${alertText}`);
     },
+
+    async verifyMessage(validationMessage) {
+        let validationText = await I.grabTextFrom(this.fields.validationMessage);
+        assert.equal(validationText.toString().split(',')[0], validationMessage, `Unexpected popup message! 
+                        Expected to see ${validationMessage} instead of ${validationText}`);
+    },
+
 
     async verifySuccessfulPopUp(successMessage){
         await this.waitForPopUp();
@@ -151,6 +162,11 @@ module.exports = {
     async verifyValidationPopUp(validationMessage){
         await this.waitForPopUp();
         await this.verifyPopUpMessage(validationMessage)
+    },
+
+    async verifyValidationMessage(validationMessage){
+        await this.waitForValidationMessage();
+        await this.verifyMessage(validationMessage)
     },
 
     async selectMetricsResolution(resolution){
@@ -176,7 +192,7 @@ module.exports = {
         this.customClearField(this.fields.dataRetentionCount);
         I.fillField(this.fields.dataRetentionCount, seconds);
         I.click(this.fields.applyButton);
-        await this.waitForPopUp();
+        await this.waitForValidationMessage();
     },
 
     async verifyDataRetentionValueApplied(seconds){
