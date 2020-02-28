@@ -100,7 +100,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "34 files"
+    echo "$output" | grep "40 files"
 }
 
 @test "run pmm-admin summary --server-url with https and verify warning" {
@@ -117,7 +117,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[0]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "34 files"
+    echo "$output" | grep "40 files"
 }
 
 @test "run pmm-admin summary --debug" {
@@ -127,8 +127,6 @@ echo "$output"
     echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
     echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
     echo "${lines[-1]}" | grep ".zip created."
-    checkZipFileContents
-    echo "$output" | grep "34 files"
 }
 
 @test "run pmm-admin summary --trace" {
@@ -138,8 +136,6 @@ echo "$output"
     echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Services/List HTTP/1.1"
     echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Agents/List HTTP/1.1"
     echo "${lines[-1]}" | grep ".zip created."
-    checkZipFileContents
-    echo "$output" | grep "34 files"
 }
 
 @test "run pmm-admin summary --json" {
@@ -156,8 +152,6 @@ run pmm-admin summary --filename=""
 echo "$output"
     [ "$status" -eq 1 ]
     echo "${lines[-1]}" | grep ".zip created."
-         checkZipFileContents
-         echo "$output" | grep "34 files"
 }
 
 @test "run pmm-admin summary --filename " {
@@ -165,8 +159,6 @@ run pmm-admin summary --filename="test.zip"
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep ".zip created."
-    checkZipFileContents
-    echo "$output" | grep "34 files"
 }
 
 @test "run pmm-admin summary --filename=testformat.txt and verify generated file is a ZIP archive " {
@@ -175,8 +167,6 @@ run pmm-admin summary --filename="$FILENAME"
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep "$FILENAME created."
-    checkZipFileContents
-    echo "$output" | grep "34 files"
     run file $FILENAME
     echo "$output" | grep "$FILENAME: Zip archive data, at least v2.0 to extract"
 }
@@ -195,8 +185,6 @@ run pmm-admin summary --skip-server
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep ".zip created."
-    checkZipFileContents
-    echo "$output" | grep "5 files"
 }
 
 @test "run pmm-admin summary --skip-server --trace" {
@@ -206,8 +194,6 @@ echo "$output"
     echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Services/List HTTP/1.1"
     echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Agents/List HTTP/1.1"
     echo "${lines[-1]}" | grep ".zip created."
-    checkZipFileContents
-    echo "$output" | grep "5 files"
 }
 
 @test "run pmm-admin summary --skip-server --debug" {
@@ -217,8 +203,6 @@ echo "$output"
     echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
     echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
     echo "${lines[-1]}" | grep ".zip created."
-    checkZipFileContents
-    echo "$output" | grep "5 files"
 }
 
 @test "run pmm-admin summary --skip-server --json --debug --filename=json_export.zip" {
@@ -228,24 +212,19 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
     echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
-    echo "${lines[-1]}" | grep "{\"filename\":\"$ZIP_FILE_NAME\"}"
-    run unzip -l $ZIP_FILE_NAME
-    echo "$output" | grep "5 files"
 }
 
 @test "run pmm-admin summary --pprof" {
-skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "pprof/"
+    echo "$output" | grep "client/pprof/"
     echo "$output" | grep "43 files"
 }
 
 @test "run pmm-admin summary --pprof --trace" {
-skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --trace
 echo "$output"
     [ "$status" -eq 0 ]
@@ -253,12 +232,10 @@ echo "$output"
     echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Agents/List HTTP/1.1"
     echo "${lines[-1]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "pprof/"
-    echo "$output" | grep "43 files"
+    echo "$output" | grep "client/pprof/"
 }
 
 @test "run pmm-admin summary --pprof --debug" {
-skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --debug
 echo "$output"
     [ "$status" -eq 0 ]
@@ -266,23 +243,20 @@ echo "$output"
     echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
     echo "${lines[-1]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "pprof/"
-    echo "$output" | grep "43 files"
+    echo "$output" | grep "client/pprof/"
 }
 
 @test "run pmm-admin summary --pprof --server-url with http" {
-skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --server-url='http://admin:admin@localhost'
 echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "pprof/"
+    echo "$output" | grep "client/pprof/"
     echo "$output" | grep "43 files"
 }
 
 @test "run pmm-admin summary --pprof --json" {
-skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --json
 echo "$output"
     [ "$status" -eq 0 ]
@@ -291,29 +265,25 @@ echo "$output"
 }
 
 @test "run pmm-admin summary --pprof --filename " {
-skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --filename="test_pprof.zip"
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep "test_pprof.zip created."
     checkZipFileContents
-    echo "$output" | grep "pprof/"
-    echo "$output" | grep "43 files"
+    echo "$output" | grep "client/pprof/"
 }
 
 @test "run pmm-admin summary --pprof --skip-server" {
-skip "skipping because -pprof flag is not implemented yet"
 run pmm-admin summary --pprof --skip-server
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "pprof/"
-    echo "$output" | grep "14 files"
+    echo "$output" | grep "client/pprof/"
+    echo "$output" | grep "8 files"
 }
 
 @test "run pmm-admin summary --pprof --debug --filename --skip-server" {
-skip "skipping because -pprof flag is not implemented yet"
 ZIP_FILE_NAME='test_pprof_complex.zip'
 run pmm-admin summary --pprof --debug --filename=$ZIP_FILE_NAME --skip-server
 echo "$output"
@@ -322,8 +292,8 @@ echo "$output"
     echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
     echo "${lines[-1]}" | grep "$ZIP_FILE_NAME created."
     checkZipFileContents
-    echo "$output" | grep "pprof/"
-    echo "$output" | grep "14 files"
+    echo "$output" | grep "client/pprof/"
+    echo "$output" | grep "8 files"
 }
 
 function teardown() {
