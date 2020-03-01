@@ -23,6 +23,9 @@
         }
       }
     },
+    "SelenoidHelper": {
+      "require": "./tests/helper/selenoid_helper.js"
+    },
     "ResembleHelper" : {
       "require": "codeceptjs-resemblehelper",
       "screenshotFolder": "./tests/output/",
