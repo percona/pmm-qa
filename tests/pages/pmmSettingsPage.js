@@ -106,16 +106,16 @@ module.exports = {
         }
     },
 
-    waitForButton(contentLocator, contentLocatorText){
+    async waitForButton(contentLocator, contentLocatorText){
         I.waitForVisible(contentLocator, 30);
-        return this.verifySectionExpanded(contentLocator, contentLocatorText);
+        await this.verifySectionExpanded(contentLocator, contentLocatorText);
     },
 
-    expandSection(sectionName, expectedContentLocatorText){
+    async expandSection(sectionName, expectedContentLocatorText){
         let sectionExpandLocator = this.fields.sectionHeader + `[contains(text(), '${sectionName}')]`;
         let contentLocator = sectionExpandLocator + `/following-sibling::div//span[text()='${expectedContentLocatorText}']`;
         I.click(sectionExpandLocator);
-        return this.waitForButton(contentLocator, expectedContentLocatorText);
+        await this.waitForButton(contentLocator, expectedContentLocatorText);
     },
 
     collapseSection(sectionName){
@@ -130,8 +130,9 @@ module.exports = {
     },
 
     async verifySectionExpanded(contentLocator, contentLocatorText){
+        I.waitForEnabled(contentLocator, 30);
         let textInside = await I.grabTextFrom(contentLocator);
-        assert.equal(textInside, contentLocatorText, `there is no ${contentLocatorText} button`)
+        assert.equal(textInside, contentLocatorText, `there is no ${contentLocatorText} button ,we have ${textInside}`)
     },
 
     waitForPopUp() {
@@ -177,10 +178,11 @@ module.exports = {
 
     async verifyResolutionIsApplied(resolution){
         I.refreshPage();
-        await this.waitForPmmSettingsPageLoaded();
+        this.waitForPmmSettingsPageLoaded();
         let selectedResolutionText = await I.grabTextFrom(this.fields.selectedResolution);
 
-        assert.equal(selectedResolutionText, resolution, `Resolution ${resolution} was not saved`)
+        assert.equal(selectedResolutionText, resolution, `Resolution ${resolution} was not saved,
+                        actual resolution is ${selectedResolutionText}`)
     },
 
     customClearField(field) {
@@ -197,9 +199,10 @@ module.exports = {
 
     async verifyDataRetentionValueApplied(seconds){
         I.refreshPage();
-        await this.waitForPmmSettingsPageLoaded();
+        this.waitForPmmSettingsPageLoaded();
         let selectedTimeValue = await I.grabAttributeFrom(this.fields.dataRetentionCount, 'value');
-        assert.equal(selectedTimeValue, seconds, `Data Retention value ${seconds} was not saved`);
+        assert.equal(selectedTimeValue, seconds, `Data Retention value ${seconds} was not saved, 
+                        actual value is ${selectedTimeValue}`);
     },
 
     addSSHKey(keyValue){
