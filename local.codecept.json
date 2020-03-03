@@ -66,6 +66,12 @@
       "browsers": ["chrome"]
     }
   },
+  "plugins": {
+    "allure": {},
+    "autoDelay": {
+      "enabled": true
+    }
+  },
   "mocha": {
     "reporterOptions": {
       "codeceptjs-cli-reporter": {
