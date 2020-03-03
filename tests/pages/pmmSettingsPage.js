@@ -102,13 +102,13 @@ module.exports = {
     async verifySectionHeaders(){
         for (let i = 0; i< this.sectionHeaderList.length; i++){
             let elementText = await I.grabTextFrom(this.fields.sectionHeader);
-            assert.equal(elementText[i], this.sectionHeaderList[i], `${elementText[i]}section does not exist"`);
+            assert.equal(elementText[i], this.sectionHeaderList[i], `${this.sectionHeaderList[i]} section does not exist"`);
         }
     },
 
     async waitForButton(contentLocator, contentLocatorText){
         I.waitForVisible(contentLocator, 30);
-        await this.verifySectionExpanded(contentLocator, contentLocatorText);
+        I.waitForEnabled(contentLocator, 30);
     },
 
     async expandSection(sectionName, expectedContentLocatorText){
@@ -130,9 +130,8 @@ module.exports = {
     },
 
     async verifySectionExpanded(contentLocator, contentLocatorText){
-        I.waitForEnabled(contentLocator, 30);
         let textInside = await I.grabTextFrom(contentLocator);
-        assert.equal(textInside, contentLocatorText, `there is no ${contentLocatorText} button ,we have ${textInside}`)
+        assert.equal(textInside, contentLocatorText, `there is no ${contentLocatorText} button, we have ${textInside}`);
     },
 
     waitForPopUp() {
@@ -194,6 +193,7 @@ module.exports = {
     changeDataRetentionValueTo(seconds){
         this.customClearField(this.fields.dataRetentionCount);
         I.fillField(this.fields.dataRetentionCount, seconds);
+        I.waitForClickable(this.fields.applyButton, 30);
         I.click(this.fields.applyButton);
     },
 
