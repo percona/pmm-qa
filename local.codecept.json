@@ -67,7 +67,6 @@
     }
   },
   "plugins": {
-    "allure": {},
     "autoDelay": {
       "enabled": true
     }
