@@ -17,7 +17,7 @@ module.exports = {
             "    rules:\n" +
             "    - alert: InstanceDown\n" +
             "      expr: up == 0\n" +
-            "      for: 20s\n" +
+            "      for: 60s\n" +
             "      labels:\n" +
             "        severity: critical\n" +
             "      annotations:\n" +
