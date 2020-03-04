@@ -193,7 +193,9 @@ module.exports = {
     changeDataRetentionValueTo(seconds){
         this.customClearField(this.fields.dataRetentionCount);
         I.fillField(this.fields.dataRetentionCount, seconds);
+        I.wait(2);
         I.waitForClickable(this.fields.applyButton, 30);
+        I.moveCursorTo(this.fields.applyButton);
         I.click(this.fields.applyButton);
     },
 
