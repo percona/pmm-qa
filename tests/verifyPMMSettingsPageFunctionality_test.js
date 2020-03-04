@@ -6,15 +6,17 @@ Before((I, loginPage, pmmSettingsPage) => {
     I.amOnPage(pmmSettingsPage.url);
 });
 
-Scenario('Open PMM Settings page and verify changing Metrics Resolution', async (I, pmmSettingsPage) =>{
+Scenario('Open PMM Settings page and verify changing Metrics Resolution and Data Retention', async (I, pmmSettingsPage) =>{
     let resolutionToApply = "Medium";
+    let dataRetentionValue = "1";
     pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    pmmSettingsPage.changeDataRetentionValue(dataRetentionValue);
     await pmmSettingsPage.selectMetricsResolution(resolutionToApply);
     await pmmSettingsPage.verifySuccessfulPopUp(pmmSettingsPage.messages.successPopUpMessage);
-    await pmmSettingsPage.verifyResolutionIsApplied(resolutionToApply);
+    await pmmSettingsPage.verifyResolutionAndDataRetentionApplied(resolutionToApply, dataRetentionValue);
 });
 
-Scenario('Open PMM Settings page and verify changing Data Retention', async (I, pmmSettingsPage) =>{
+xScenario('Open PMM Settings page and verify changing Data Retention', async (I, pmmSettingsPage) =>{
     let dataRetentionValue = "1";
     pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
@@ -22,7 +24,7 @@ Scenario('Open PMM Settings page and verify changing Data Retention', async (I, 
     await pmmSettingsPage.verifyDataRetentionValueApplied(dataRetentionValue);
 });
 
-Scenario('Open PMM Settings page and verify adding Alertmanager Rule', async (I, pmmSettingsPage) =>{
+xScenario('Open PMM Settings page and verify adding Alertmanager Rule', async (I, pmmSettingsPage) =>{
     let scheme = "http://";
     let sectionNameToExpand = "Alertmanager integration";
     pmmSettingsPage.waitForPmmSettingsPageLoaded();
