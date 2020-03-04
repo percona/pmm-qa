@@ -184,6 +184,11 @@ module.exports = {
                         actual resolution is ${selectedResolutionText}`)
     },
 
+    async verifyResolutionAndDataRetentionApplied(resolutionValue, dataRetentionValue) {
+        await this.verifyResolutionIsApplied(resolutionValue);
+        await this.verifyDataRetentionValueApplied(dataRetentionValue);
+    },
+
     customClearField(field) {
         I.appendField(field, '');
         I.pressKey(['Shift', 'Home']);
@@ -199,8 +204,13 @@ module.exports = {
         I.click(this.fields.applyButton);
     },
 
+    changeDataRetentionValue(seconds){
+        this.customClearField(this.fields.dataRetentionCount);
+        I.fillField(this.fields.dataRetentionCount, seconds);
+        I.wait(2);
+    },
+
     async verifyDataRetentionValueApplied(seconds){
-        I.refreshPage();
         this.waitForPmmSettingsPageLoaded();
         let selectedTimeValue = await I.grabAttributeFrom(this.fields.dataRetentionCount, 'value');
         assert.equal(selectedTimeValue, seconds, `Data Retention value ${seconds} was not saved, 
