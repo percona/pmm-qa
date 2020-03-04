@@ -24,7 +24,7 @@ xScenario('Open PMM Settings page and verify changing Data Retention', async (I,
     await pmmSettingsPage.verifyDataRetentionValueApplied(dataRetentionValue);
 });
 
-xScenario('Open PMM Settings page and verify adding Alertmanager Rule', async (I, pmmSettingsPage) =>{
+Scenario('Open PMM Settings page and verify adding Alertmanager Rule', async (I, pmmSettingsPage) =>{
     let scheme = "http://";
     let sectionNameToExpand = "Alertmanager integration";
     pmmSettingsPage.waitForPmmSettingsPageLoaded();
