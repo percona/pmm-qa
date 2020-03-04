@@ -77,7 +77,7 @@ module.exports = {
         I.seeElement(this.fields.metricsResolutionSlider);
         I.see("Data retention", this.fields.sectionRow);
         I.seeElement(this.fields.dataRetentionCount);
-        I.see("Call home", this.fields.sectionRow);
+        I.see("Telemetry", this.fields.sectionRow);
         I.seeElement(this.fields.callHomeSwitch);
         I.see("Check for updates", this.fields.sectionRow);
     },
