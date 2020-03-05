@@ -16,3 +16,4 @@ sleep 20
 ### Run tests with configuration file local.codecept.json, make sure PMM server url is mentioned correctly.
 echo "using local.codecept.json file for configuration";
 ./node_modules/.bin/codeceptjs run-multiple parallel --steps --debug --reporter mocha-multi -c local.codecept.json --grep '(?=.*)^(?!.*@visual-test)'
+echo "Please check Live test execution on localhost:8080"
