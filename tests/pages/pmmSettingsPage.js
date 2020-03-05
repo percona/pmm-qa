@@ -77,7 +77,7 @@ module.exports = {
         I.seeElement(this.fields.metricsResolutionSlider);
         I.see("Data retention", this.fields.sectionRow);
         I.seeElement(this.fields.dataRetentionCount);
-        I.see("Call home", this.fields.sectionRow);
+        I.see("Telemetry", this.fields.sectionRow);
         I.seeElement(this.fields.callHomeSwitch);
         I.see("Check for updates", this.fields.sectionRow);
     },
@@ -102,13 +102,13 @@ module.exports = {
     async verifySectionHeaders(){
         for (let i = 0; i< this.sectionHeaderList.length; i++){
             let elementText = await I.grabTextFrom(this.fields.sectionHeader);
-            assert.equal(elementText[i], this.sectionHeaderList[i], `${elementText[i]}section does not exist"`);
+            assert.equal(elementText[i], this.sectionHeaderList[i], `${this.sectionHeaderList[i]} section does not exist"`);
         }
     },
 
     async waitForButton(contentLocator, contentLocatorText){
         I.waitForVisible(contentLocator, 30);
-        await this.verifySectionExpanded(contentLocator, contentLocatorText);
+        I.waitForEnabled(contentLocator, 30);
     },
 
     async expandSection(sectionName, expectedContentLocatorText){
@@ -130,9 +130,8 @@ module.exports = {
     },
 
     async verifySectionExpanded(contentLocator, contentLocatorText){
-        I.waitForEnabled(contentLocator, 30);
         let textInside = await I.grabTextFrom(contentLocator);
-        assert.equal(textInside, contentLocatorText, `there is no ${contentLocatorText} button ,we have ${textInside}`)
+        assert.equal(textInside, contentLocatorText, `there is no ${contentLocatorText} button, we have ${textInside}`);
     },
 
     waitForPopUp() {
@@ -185,6 +184,11 @@ module.exports = {
                         actual resolution is ${selectedResolutionText}`)
     },
 
+    async verifyResolutionAndDataRetentionApplied(resolutionValue, dataRetentionValue) {
+        await this.verifyResolutionIsApplied(resolutionValue);
+        await this.verifyDataRetentionValueApplied(dataRetentionValue);
+    },
+
     customClearField(field) {
         I.appendField(field, '');
         I.pressKey(['Shift', 'Home']);
@@ -194,11 +198,19 @@ module.exports = {
     changeDataRetentionValueTo(seconds){
         this.customClearField(this.fields.dataRetentionCount);
         I.fillField(this.fields.dataRetentionCount, seconds);
+        I.wait(2);
+        I.waitForClickable(this.fields.applyButton, 30);
+        I.moveCursorTo(this.fields.applyButton);
         I.click(this.fields.applyButton);
     },
 
+    changeDataRetentionValue(seconds){
+        this.customClearField(this.fields.dataRetentionCount);
+        I.fillField(this.fields.dataRetentionCount, seconds);
+        I.wait(2);
+    },
+
     async verifyDataRetentionValueApplied(seconds){
-        I.refreshPage();
         this.waitForPmmSettingsPageLoaded();
         let selectedTimeValue = await I.grabAttributeFrom(this.fields.dataRetentionCount, 'value');
         assert.equal(selectedTimeValue, seconds, `Data Retention value ${seconds} was not saved, 
