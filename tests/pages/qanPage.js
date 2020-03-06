@@ -27,7 +27,13 @@ module.exports = {
         hundred: "//div[@id='a305c6a9fc9e']",
         iframe: "//div[@class='panel-content']//iframe",
         filterSelection: "(//div[@class='chips']//button)",
-        resultsPerPageDropDown: "//div[@class='results-per-page']/ng-select"
+        resultsPerPageDropDown: "//div[@class='results-per-page']/ng-select",
+        tablesTabInDetails: "//a[@id='tables']",
+        explainTabInDetails: "//a[@id='explain']",
+        classicSectionContents: "//div[@id='classicPanel']//span",
+        tablesTabContents: "//div[@class='card-body']//pre",
+        copyQueryButton: "//button[@id='copyQueryExample']"
+
     },
 
     filterGroupLocator (filterName) {
@@ -99,7 +105,9 @@ module.exports = {
     },
 
     applyFilter(filterValue){
-        I.click("//section[@class='aside__filter-group']//span[contains(text(), '" + filterValue + "')]/../span[@class='checkbox-container__checkmark']");
+        let filterLocator = "//section[@class='aside__filter-group']//span[contains(text(), '" + filterValue + "')]/../span[@class='checkbox-container__checkmark']";
+        I.waitForElement(filterLocator, 30);
+        I.click(filterLocator);
         I.waitForVisible(this.fields.table, 30);
     },
 
@@ -125,8 +133,37 @@ module.exports = {
 
     _selectDetails(row) {
         I.click("//table/tr["+ (row + 1) + "]//td[2]");
+        this.waitForDetailsSection();
+    },
+
+    selectSectionInDetails(section) {
+        I.waitForElement(section, 30);
+        I.click(section);
+    },
+
+    waitForTableTabContentsLoaded() {
+        I.waitForVisible(this.fields.tablesTabContents, 30);
+        I.waitForVisible(this.fields.copyQueryButton, 30);
+    },
+
+    waitForExplainTabContentsLoaded() {
+        I.waitForVisible(this.fields.classicSectionContents, 30);
+    },
+
+    waitForDetailsSection(){
         I.waitForVisible(this.fields.detailsTable, 30);
-        I.seeElement(this.fields.detailsTable);
+    },
+
+    async verifyDetailsSectionDataExists() {
+        this.waitForTableTabContentsLoaded();
+        let detailsText = await I.grabTextFrom(this.fields.tablesTabContents);
+        assert.equal(detailsText.length > 0, true, `Empty Table Section in Details`);
+    },
+
+    async verifyExplainDetailsSectionDataExists() {
+        this.waitForExplainTabContentsLoaded();
+        let detailsText = await I.grabTextFrom(this.fields.classicSectionContents);
+        assert.equal(detailsText, `Not implemented yet.`, `Empty Explain Section in Details`);
     },
 
     async verifyDataSet(row){
