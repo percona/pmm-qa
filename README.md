@@ -3,18 +3,18 @@ Automated tests for Percona Monitoring and Management
 GUI tests are created for testing frontend of PMM. They include tests for Query Analytics and for Grafana dashboards
 
 ## Using Selenoid for running tests in Local
-1. Install Nodejs and atleast npm 8.x on your system
+1. Install Node.js and atleast npm 8.x on your system
 2. Selenoid and Selenoid UI uses port 4444, 8080, make sure they are not being used, other change docker-compose.yml file.
 3. run npm install in project root.
 4. run prepare_ui_test.sh script in the root directory.
 `bash -x ./prepare_ui_test.sh`
-5. This should start running UI tests in 4 parallel browser session inside chrome container with selenoid
-6. Check live execution by going to localhost:8080 port.
+5. This should start running UI tests in 4 parallel browser sessions inside chrome containers with help of selenoid
+6. Check live execution by launching http://localhost:8080 in your browser.
 
-## Looking for a detailed and deeper way to run UI tests, checkout next sections.
+## If you'd like to have more control over the UI test framework parameters, please check out next sections
 
 ### Installation (UI tests version 2.0)
-1. Install Nodejs and atleast npm 8.x on your system
+1. Install Node.js and atleast npm 8.x on your system
 2. Checkout `master` branch for pmm-qa Repo
 3. To run tests on your local systems, delete `codecept.json` and rename `local.codecept.json` to `codecept.json`
 4. Make sure to update URL of the application in the `webdriver` helper in the configuration file (codecept.json)
