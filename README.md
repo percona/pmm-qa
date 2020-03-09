@@ -4,7 +4,8 @@ GUI tests are created for testing frontend of PMM. They include tests for Query 
 
 ## Using Selenoid for running tests in Local
 1. Install Node.js and atleast npm 8.x on your system
-2. Selenoid and Selenoid UI uses port 4444, 8080, make sure they are not being used, other change docker-compose.yml file.
+2. Selenoid and Selenoid UI use port 4444 and 8080 respectively,
+make sure they are not being used, otherwise update docker-compose.yml file
 3. run npm install in project root.
 4. run prepare_ui_test.sh script in the root directory.
 `bash -x ./prepare_ui_test.sh`
