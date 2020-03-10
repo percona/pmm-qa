@@ -46,8 +46,36 @@ Scenario('Open PMM Settings page and verify validation for empty Data Retention 
     await pmmSettingsPage.verifyValidationMessage(pmmSettingsPage.messages.requiredFieldMessage);
 });
 
-Scenario('Open PMM Settings page and verify validation for invalid Data Retention value', async (I, pmmSettingsPage) =>{
+Scenario('Open PMM Settings page and verify validation for text Data Retention value', async (I, pmmSettingsPage) =>{
     let dataRetentionValue = "text ";
+    pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
+    await pmmSettingsPage.verifyValidationMessage(pmmSettingsPage.messages.invalidDataDurationMessage);
+});
+
+xScenario('Open PMM Settings page and verify validation for decimal Data Retention value', async (I, pmmSettingsPage) =>{
+    let dataRetentionValue = "15.5";
+    pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
+    await pmmSettingsPage.verifyValidationMessage(pmmSettingsPage.messages.invalidDataDurationMessage);
+});
+
+Scenario('Open PMM Settings page and verify validation for out of range Data Retention value', async (I, pmmSettingsPage) =>{
+    let dataRetentionValue = "2147483648";
+    pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
+    await pmmSettingsPage.verifyValidationMessage(pmmSettingsPage.messages.invalidDataDurationMessage);
+});
+
+Scenario('Open PMM Settings page and verify validation for XSS Data Retention value', async (I, pmmSettingsPage) =>{
+    let dataRetentionValue = `<script>alert(test);</script>`;
+    pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
+    await pmmSettingsPage.verifyValidationMessage(pmmSettingsPage.messages.invalidDataDurationMessage);
+});
+
+Scenario('Open PMM Settings page and verify validation for negative Data Retention value', async (I, pmmSettingsPage) =>{
+    let dataRetentionValue = "-1";
     pmmSettingsPage.waitForPmmSettingsPageLoaded();
     await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
     await pmmSettingsPage.verifyValidationMessage(pmmSettingsPage.messages.invalidDataDurationMessage);

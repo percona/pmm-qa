@@ -12,6 +12,11 @@ module.exports = {
         tablesTab:["//div[@class='card-body']//pre", "//button[@id='copyQueryExample']"],
         explainTab:["//div[@id='classicPanel']//span"]
     },
+    urlParts:{
+        queryCountWithoutErrors: "num_queries_with_errors",
+        newMainMetric: "main_metric=lock_time",
+        pmmManaged: "var-database=pmm-managed"
+    },
     serverList: ["PMM Server PostgreSQL", "PGSQL_", "PXC_NODE", "mysql"],
     fields : {
         table: "//table/tr[2]",
@@ -25,6 +30,9 @@ module.exports = {
         pmmVersion: "//footer/small",
         paginationArrow: "(//ul[@class='ngx-pagination']/li)[last()]",
         addColumn: "//button[@class='add-column-btn']",
+        qanMainMetric:"//div[@class='ng-value-container'][div//span[text() = '",
+        searchForColumn: "//input[@placeholder='Type to search']",
+        searchResult: "//span[@class='pmm-select__option' and text()='",
         total: "//span[contains(text(), 'TOTAL')]",
         columns: "//tbody//app-qan-table-header-cell",
         fifty: "//div[@id='ad0800a556c8']/span",
@@ -132,7 +140,8 @@ module.exports = {
 
     waitForQANPageLoaded(){
         I.waitForVisible(this.fields.table, 30);
-        I.waitForClickable(this.fields.nextPageNavigation, 30);
+        // I.waitForClickable(this.fields.nextPageNavigation, 30);
+        I.waitForInvisible("//i[@class='fa fa-spinner fa-spin spinner']", 30);
     },
 
     _selectDetails(row) {
@@ -191,5 +200,30 @@ module.exports = {
             I.click(this.fields.filterSelection + "[" + i + "]");
             I.waitForInvisible(this.fields.detailsTable, 30);
         }
+    },
+
+    addColumnToQAN(columnName) {
+        let columnNameLocator = this.fields.searchResult + columnName + "']";
+        I.click(this.fields.addColumn);
+        I.waitForVisible(this.fields.searchForColumn, 30);
+        I.fillField(this.fields.searchForColumn, columnName);
+        I.waitForVisible(columnNameLocator, 30);
+        I.click(columnNameLocator);
+        this.waitForQANPageLoaded();
+    },
+
+    changeMetricTo(metricToReplace, newMetric) {
+        let currentMetric = this.fields.qanMainMetric + metricToReplace + "']]";
+        let metricToSelect = this.fields.searchResult + newMetric + "']";
+        I.click(currentMetric);
+        I.waitForVisible(this.fields.searchForColumn, 30);
+        I.fillField(this.fields.searchForColumn, newMetric);
+        I.click(metricToSelect);
+        this.waitForQANPageLoaded();
+    },
+
+    verifyURLContains(urlPart) {
+        I.waitInUrl('tz=browser', 30);
+        I.seeInCurrentUrl(urlPart);
     }
 };
