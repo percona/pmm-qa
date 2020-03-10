@@ -1,6 +1,0 @@
-{
-"tableValid":"mysql.user",
-"tableInvalid":"userr123",
-"selectExists":"select",
-"selectNotExist":"sellect"
-}

@@ -12,10 +12,10 @@ for k in `seq 1 ${Nodes}`;do
         if [[ "${DB}" == "ms" && "${ACTION}" != "delete" ]]; then
             if [ $(( ${k} % 2 )) -eq 0 ]; then	
                 echo "Adding Slow Log";
-                pmm-admin add mysql --query-source=slowlog --username=msandbox --password=msandbox --environment=slow-log-test ${MYSQL_IP_PORT} ms_sl_lt_${k}
+                pmm-admin add mysql --query-source=slowlog --username=msandbox --password=msandbox --environment=slow-log-test ms_sl_lt_${k} ${MYSQL_IP_PORT}
             else
                 echo "Adding Performance Schema";
-                pmm-admin add mysql --query-source=slowlog --username=msandbox --password=msandbox --environment=performance-schema-test ${MYSQL_IP_PORT} ms_ps_lt_${k}
+                pmm-admin add mysql --query-source=perfschema --username=msandbox --password=msandbox --environment=performance-schema-test ms_ps_lt_${k} ${MYSQL_IP_PORT}
             fi
         fi
         if [[ "${DB}" == "ms" && "${ACTION}" == "delete" ]]; then
