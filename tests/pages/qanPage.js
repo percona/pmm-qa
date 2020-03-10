@@ -8,6 +8,10 @@ module.exports = {
     tableHeader: [
         "Query", "Load", "Query Count", "Query Time"
     ],
+    tabs:{
+        tablesTab:["//div[@class='card-body']//pre", "//button[@id='copyQueryExample']"],
+        explainTab:["//div[@id='classicPanel']//span"]
+    },
     serverList: ["PMM Server PostgreSQL", "PGSQL_", "PXC_NODE", "mysql"],
     fields : {
         table: "//table/tr[2]",
@@ -141,29 +145,20 @@ module.exports = {
         I.click(section);
     },
 
-    waitForTableTabContentsLoaded() {
-        I.waitForVisible(this.fields.tablesTabContents, 30);
-        I.waitForVisible(this.fields.copyQueryButton, 30);
-    },
-
-    waitForExplainTabContentsLoaded() {
-        I.waitForVisible(this.fields.classicSectionContents, 30);
+    waitForTabContentsLoaded(tabElements) {
+        for (let i in tabElements) {
+            I.waitForVisible(tabElements[i], 30);
+        }
     },
 
     waitForDetailsSection(){
         I.waitForVisible(this.fields.detailsTable, 30);
     },
 
-    async verifyDetailsSectionDataExists() {
-        this.waitForTableTabContentsLoaded();
-        let detailsText = await I.grabTextFrom(this.fields.tablesTabContents);
-        assert.equal(detailsText.length > 0, true, `Empty Table Section in Details`);
-    },
-
-    async verifyExplainDetailsSectionDataExists() {
-        this.waitForExplainTabContentsLoaded();
-        let detailsText = await I.grabTextFrom(this.fields.classicSectionContents);
-        assert.equal(detailsText, `Not implemented yet.`, `Empty Explain Section in Details`);
+    async verifyDetailsSectionDataExists(tabElements) {
+        this.waitForTabContentsLoaded(tabElements);
+        let detailsText = await I.grabTextFrom(tabElements[0]);
+        assert.equal(detailsText.length > 0, true, `Empty Section in Details`);
     },
 
     async verifyDataSet(row){

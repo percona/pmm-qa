@@ -57,7 +57,7 @@ Scenario('Open the QAN Dashboard and verify Tables tab in Query Details for Data
     qanPage.applyFilter("postgres");
     qanPage._selectDetails(2);
     qanPage.selectSectionInDetails(qanPage.fields.tablesTabInDetails);
-    await qanPage.verifyDetailsSectionDataExists();
+    await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.tablesTab);
 });
 
 Scenario('Open the QAN Dashboard and verify Tables tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
@@ -69,7 +69,7 @@ Scenario('Open the QAN Dashboard and verify Tables tab in Query Details for Envi
     qanPage.applyFilter("pgsql-dev");
     qanPage._selectDetails(2);
     qanPage.selectSectionInDetails(qanPage.fields.tablesTabInDetails);
-    await qanPage.verifyDetailsSectionDataExists();
+    await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.tablesTab);
 });
 
 Scenario('Open the QAN Dashboard and verify Explain tab in Query Details for Database=postgres filter', async (I, adminPage, qanPage) => {
@@ -81,7 +81,7 @@ Scenario('Open the QAN Dashboard and verify Explain tab in Query Details for Dat
     qanPage.applyFilter("postgres");
     qanPage._selectDetails(2);
     qanPage.selectSectionInDetails(qanPage.fields.explainTabInDetails);
-    await qanPage.verifyExplainDetailsSectionDataExists();
+    await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.explainTab);
 });
 
 Scenario('Open the QAN Dashboard and verify Explain tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
@@ -93,5 +93,5 @@ Scenario('Open the QAN Dashboard and verify Explain tab in Query Details for Env
     qanPage.applyFilter("pgsql-dev");
     qanPage._selectDetails(2);
     qanPage.selectSectionInDetails(qanPage.fields.explainTabInDetails);
-    await qanPage.verifyExplainDetailsSectionDataExists();
+    await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.explainTab);
 });
