@@ -85,7 +85,7 @@ Scenario('Open the QAN Dashboard and verify Adding new Column reflects in URL', 
 });
 
 Scenario('Open the QAN Dashboard and verify Adding new Database Filter reflects in URL', async (I, adminPage, qanPage) => {
-    let filterToApply = 'pmm-managed';
+    let filterToApply = 'local';
     qanPage.waitForQANPageLoaded();
     qanPage.applyFilter(filterToApply);
     qanPage.verifyURLContains(qanPage.urlParts.pmmManaged);
@@ -96,5 +96,5 @@ Scenario('Open the QAN Dashboard and verify Main Metric change reflects in URL',
     let newMetricName = 'Lock Time';
     qanPage.waitForQANPageLoaded();
     qanPage.changeMetricTo(metricToReplace, newMetricName);
-    qanPage.verifyURLContains(qanPage.urlParts.newMainMetric);
+    qanPage.verifyURLContains(qanPage.urlParts.lockTime);
 });

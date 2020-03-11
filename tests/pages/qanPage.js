@@ -14,8 +14,8 @@ module.exports = {
     },
     urlParts:{
         queryCountWithoutErrors: "num_queries_with_errors",
-        newMainMetric: "main_metric=lock_time",
-        pmmManaged: "var-database=pmm-managed"
+        lockTime: "lock_time",
+        pmmManaged: "var-database=local"
     },
     serverList: ["PMM Server PostgreSQL", "PGSQL_", "PXC_NODE", "mysql"],
     fields : {
@@ -44,7 +44,8 @@ module.exports = {
         explainTabInDetails: "//a[@id='explain']",
         classicSectionContents: "//div[@id='classicPanel']//span",
         tablesTabContents: "//div[@class='card-body']//pre",
-        copyQueryButton: "//button[@id='copyQueryExample']"
+        copyQueryButton: "//button[@id='copyQueryExample']",
+        spinnerLocator: "//i[@class='fa fa-spinner fa-spin spinner']"
 
     },
 
@@ -93,8 +94,12 @@ module.exports = {
         // }
     },
 
-    checkFilterGroups() {
+    waitForFiltersLoad() {
         I.waitForVisible(this.filterGroupLocator(this.filterGroups[8]), 30);
+    },
+
+    checkFilterGroups() {
+        this.waitForFiltersLoad();
         for (let i = 0; i < this.filterGroups.length; i++) {
             I.seeElement(this.filterGroupLocator(this.filterGroups[i]));
         }
@@ -140,8 +145,7 @@ module.exports = {
 
     waitForQANPageLoaded(){
         I.waitForVisible(this.fields.table, 30);
-        // I.waitForClickable(this.fields.nextPageNavigation, 30);
-        I.waitForInvisible("//i[@class='fa fa-spinner fa-spin spinner']", 30);
+        I.waitForInvisible(this.fields.spinnerLocator, 30);
     },
 
     _selectDetails(row) {
@@ -223,7 +227,7 @@ module.exports = {
     },
 
     verifyURLContains(urlPart) {
-        I.waitInUrl('tz=browser', 30);
+        I.waitInUrl('tz=browser&theme=dark', 30);
         I.seeInCurrentUrl(urlPart);
     }
 };
