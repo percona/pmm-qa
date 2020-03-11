@@ -207,18 +207,17 @@ module.exports = {
         I.pressKey('Backspace');
     },
 
-    changeDataRetentionValueTo(seconds){
+    changeDataRetentionValueTo(days){
         this.customClearField(this.fields.dataRetentionCount);
-        I.fillField(this.fields.dataRetentionCount, seconds);
-        I.wait(2);
+        I.fillField(this.fields.dataRetentionCount, days);
         I.waitForClickable(this.fields.applyButton, 30);
         I.moveCursorTo(this.fields.applyButton);
         I.click(this.fields.applyButton);
     },
 
-    changeDataRetentionValue(seconds){
+    changeDataRetentionValue(days){
         this.customClearField(this.fields.dataRetentionCount);
-        I.fillField(this.fields.dataRetentionCount, seconds);
+        I.fillField(this.fields.dataRetentionCount, days);
         I.wait(2);
     },
 
