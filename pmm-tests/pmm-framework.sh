@@ -1237,14 +1237,17 @@ add_clients(){
       if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
         dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+        mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
         if [[ "${query_source}" == "slowlog" ]]; then
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
         fi
+        run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
         pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 mysql-single-$IP_ADDRESS 127.0.0.1:$node_port
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+        mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
         for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
           #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
           if [[ "${query_source}" == "slowlog" ]]; then
@@ -1256,6 +1259,7 @@ add_clients(){
           else
             pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 mysql-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
           fi
+          run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
           node_port=$(($node_port + 1))
           sleep 20
         done
@@ -1268,12 +1272,12 @@ add_clients(){
         sudo chmod 777 -R /var/log
         docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
         sleep 20
+        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'ps';"
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log='ON';"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
-
         fi
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
@@ -1283,13 +1287,14 @@ add_clients(){
         if [[ ! -z $DISABLE_TABLESTATS ]]; then
           pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
         fi
+        run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
         PS_PORT=$((PS_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
       MD_PORT=53306
       docker pull mariadb/server:${md_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        check_port $MD_PORT percona
+        check_port $MD_PORT mariadb
         sudo chmod 777 -R /var/log
         docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -d mariadb/server:${md_version}
         sleep 20
@@ -1304,6 +1309,7 @@ add_clients(){
         else
           pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
         fi
+        run_workload 127.0.0.1 root md $MD_PORT mysql md_${md_version}_${IP_ADDRESS}_$j
         MD_PORT=$((MD_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "modb" && ! -z $PMM2 ]]; then
@@ -1618,6 +1624,10 @@ check_port (){
       MODB_PORT=$((MODB_PORT+3+j))
       check_port $MODB_PORT mongodb
     fi
+    if [[ $DB == "mariadb" ]]; then
+      MD_PORT=$((MD_PORT+3+j))
+      check_port $MD_PORT mariadb
+    fi
   fi
 }
 
@@ -1930,7 +1940,6 @@ load_instances() {
       touch $WORKDIR/logs/sysbench_prepare_mysql_${i}.txt
       $MYSQL_CLIENT --user=msandbox --port=${i} -pmsandbox -h 127.0.0.1 -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
       $MYSQL_CLIENT --user=msandbox --port=${i} -pmsandbox -h 127.0.0.1 -e "drop database if exists ${DB_NAME};create database ${DB_NAME};"
-      sysbench /usr/share/sysbench/oltp_insert.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=msandbox --mysql-password=msandbox --mysql-host=127.0.0.1 --mysql-port=${i} --mysql-storage-engine=$storage_engine  --threads=16 --db-driver=mysql prepare  > $WORKDIR/logs/sysbench_prepare_mysql_${i}.txt 2>&1
       check_script $? "Failed to run sysbench dataload"
     done
 
@@ -1973,6 +1982,16 @@ setup_alertmanager() {
   docker run -d -p 9093:9093 --name alert-manager prom/alertmanager:latest
   sleep 20
   export SERVER_CONTAINER_NAME=$(docker ps | grep pmm-server | awk '{print $NF}')
+}
+
+run_workload() {
+  export MYSQL_HOST=$1
+  export MYSQL_USER=$2
+  export MYSQL_PASSWORD=$3
+  export MYSQL_PORT=$4
+  export MYSQL_DATABASE=$5
+  echo $6
+  (nohup php $SCRIPT_PWD/schema_table_query.php 2> /dev/null &)
 }
 
 if [ ! -z $wipe_clients ]; then
