@@ -79,7 +79,7 @@ module.exports = {
         for (let i = 0; i < timesPagesDown; i++)
         {
             I.pressKey('PageDown');
-            I.wait(2);
+            I.wait(1);
         }
     },
 

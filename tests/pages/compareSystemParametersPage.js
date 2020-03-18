@@ -9,7 +9,10 @@ module.exports = {
         pageHeaderText: "Compare System Parameters",
         notAvailableMetrics: "//span[contains(text(), 'N/A')]"
     },
-    metrics: ["System Info", "System Uptime", "CPU Cores", "RAM", "Saturation Metrics", "Load Average", "CPU Usage", "Interrupts", "Context Switches", "Memory  Usage", "Swap Usage", "Swap Activity", "Mountpoint Usage", "Free Space", "Disk Operations", "Disk Bandwidth", "Disk IO Utilization", "Disk Latency", "Disk Load", "Network Traffic", "Network Utilization Hourly", "Load Average", "I/O Activity"],
+    metrics: ["System Info", "System Uptime", "CPU Cores", "RAM", "Saturation Metrics", "Load Average", "CPU Usage",
+        "Interrupts", "Context Switches", "Memory  Usage", "Swap Usage", "Swap Activity", "Mountpoint Usage",
+        "Free Space", "Disk Operations", "Disk Bandwidth", "Disk IO Utilization", "Disk Latency", "Disk Load",
+        "Network Traffic", "Network Utilization Hourly", "Load Average", "I/O Activity"],
 
     panels: ["CPU", "Memory", "Disk partitions", "Disk performance", "Network"],
 

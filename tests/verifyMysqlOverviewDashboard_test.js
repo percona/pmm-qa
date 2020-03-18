@@ -6,11 +6,12 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open the MySQL Overview Dashboard', async (I, adminPage, mysqlOverviewPage) => {
+Scenario('Open the MySQL Overview Dashboard and verify Metrics are present and graphs are displayed', async (I, adminPage, dashboardPage, mysqlOverviewPage) => {
     I.amOnPage(mysqlOverviewPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(10);
-    I.click(mysqlOverviewPage.fields.systemChartsToggle);
-    mysqlOverviewPage.verifyMetricsExistence();
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.expandEachDashboardRow();
+    I.click(adminPage.fields.metricTitle);
+    adminPage.peformPageDown(2);
+    dashboardPage.verifyMetricsExistence(mysqlOverviewPage.metrics);
+    dashboardPage.verifyThereIsNoGraphsWithNA();
 });

@@ -7,26 +7,31 @@ module.exports = {
     url: "graph/login",
     fields: {
         notAvailableMetrics: "//span[contains(text(), 'N/A')]",
+        notAvailableDataPoints: "//div[contains(text(),'No data')]",
         metricTitle: "//span[@class='panel-title']",
         collapsedDashboardRow: "//div[@class='dashboard-row dashboard-row--collapsed']/a"
     },
 
     // introducing methods
     verifyMetricsExistence (metrics) {
-        for (var i in metrics) {
-            I.seeElement(this.graphsLocator(metrics));
+        for (let i in metrics) {
+            I.seeElement(this.graphsLocator(metrics[i]));
         }
-        I.dontSeeElement(this.fields.notAvailableMetrics);
     },
 
     graphsLocator (metricName){
-        let locator = "//span[contains(text(), '"+ metricName +"')]";
+        let locator = "//span[contains(text(), '" + metricName + "')]";
         return locator;
     },
 
     verifyThereIsNoGraphsWithNA() {
         I.dontSeeElement(this.fields.notAvailableMetrics);
         I.dontSeeElementInDOM(this.fields.notAvailableMetrics);
+    },
+
+    verifyThereIsNoGraphsWithoutData () {
+        I.dontSeeElement(this.fields.notAvailableDataPoints);
+        I.dontSeeElementInDOM(this.fields.notAvailableDataPoints);
     },
 
     async expandEachDashboardRow(halfToExpand) {
@@ -53,7 +58,7 @@ module.exports = {
             let sectionName = sections[i].toString().split("(");
             let rowToExpand = `${this.fields.collapsedDashboardRow}[contains(text(), '${sectionName[0]}')]`;
             I.click(rowToExpand);
-            I.wait(1);
+            I.wait(0.5);
         }
     },
     waitForDashboardOpened() {

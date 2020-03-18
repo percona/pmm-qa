@@ -1,25 +1,34 @@
 Feature("Test Dashboards inside the Insights Folder");
 
-Scenario('Open the Prometheus Exporters, Summary Dashboard, Prometheus Exporters Overview', async (I, loginPage, adminPage, summaryDashboardPage, trendsDashboardPage, prometheusExporterStatusPage, prometheusExporterOverviewPage) => {
+Before((I, loginPage) => {
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
+});
 
+Scenario('Open the Prometheus Exporters Status Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, dashboardPage, adminPage, prometheusExporterStatusPage) => {
     I.amOnPage(prometheusExporterStatusPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    for (let i in prometheusExporterStatusPage.panels) {
-        adminPage.openPanel(prometheusExporterStatusPage.panels[i]);
-    }
-    await adminPage.handleLazyLoading(10);
-    prometheusExporterStatusPage.verifyMetricsExistence();
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.expandEachDashboardRow();
+    dashboardPage.verifyMetricsExistence(prometheusExporterStatusPage.metrics);
+});
+
+Scenario('Open the Summary Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, dashboardPage, adminPage, summaryDashboardPage) => {
     I.amOnPage(summaryDashboardPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(10);
-    summaryDashboardPage.verifyMetricsExistence();
+    dashboardPage.waitForDashboardOpened();
+    I.click(adminPage.fields.metricTitle);
+    adminPage.peformPageDown(1);
+    dashboardPage.verifyMetricsExistence(summaryDashboardPage.metrics);
+    dashboardPage.verifyThereIsNoGraphsWithNA();
+    dashboardPage.verifyThereIsNoGraphsWithoutData();
+});
+
+Scenario('Open the Prometheus Exporters Overview Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, dashboardPage, adminPage, prometheusExporterOverviewPage) => {
     I.amOnPage(prometheusExporterOverviewPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(10);
-    await prometheusExporterOverviewPage.verifyMetricsExistence();
+    dashboardPage.waitForDashboardOpened();
+    dashboardPage.verifyMetricsExistence(prometheusExporterOverviewPage.metrics);
+    dashboardPage.verifyThereIsNoGraphsWithNA();
+    dashboardPage.verifyThereIsNoGraphsWithoutData();
 });
