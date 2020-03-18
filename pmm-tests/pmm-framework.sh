@@ -1992,7 +1992,8 @@ run_workload() {
   export MYSQL_DATABASE=$5
   echo $6
   touch $6.log
-  nohup php $SCRIPT_PWD/schema_table_query.php > $6.log 2>&1 &
+  export JENKINS_NODE_COOKIE=dontKillMe
+  JENKINS_NODE_COOKIE=dontKillMe nohup php $SCRIPT_PWD/schema_table_query.php > $6.log 2>&1 &
   echo "Load Triggered check nohup.out"
 }
 
