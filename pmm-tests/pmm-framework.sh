@@ -1991,7 +1991,7 @@ run_workload() {
   export MYSQL_PORT=$4
   export MYSQL_DATABASE=$5
   echo $6
-  (nohup php $SCRIPT_PWD/schema_table_query.php 2> /dev/null &)
+  (nohup bash -c 'php $SCRIPT_PWD/schema_table_query.php 2> /dev/null &')
 }
 
 if [ ! -z $wipe_clients ]; then
