@@ -1993,11 +1993,11 @@ run_workload() {
   echo $6
   touch $6.log
   sleep 5
-  exec nohup php $SCRIPT_PWD/schema_table_query.php &> $6.log &
+  php $SCRIPT_PWD/schema_table_query.php > $6.log 2>&1 &
   PHP_PID=$!
   echo $PHP_PID
   jobs -l
-  echo "Load Triggered check nohup.out"
+  echo "Load Triggered check log"
 }
 
 if [ ! -z $wipe_clients ]; then
