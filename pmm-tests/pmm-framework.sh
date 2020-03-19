@@ -1992,7 +1992,11 @@ run_workload() {
   export MYSQL_DATABASE=$5
   echo $6
   touch $6.log
-  nohup bash -c 'php $SCRIPT_PWD/schema_table_query.php > $6.log 2>&1 &'
+  sleep 5
+  exec nohup php $SCRIPT_PWD/schema_table_query.php &> $6.log &
+  PHP_PID=$!
+  echo $PHP_PID
+  jobs -l
   echo "Load Triggered check nohup.out"
 }
 
