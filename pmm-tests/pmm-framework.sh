@@ -1990,6 +1990,8 @@ run_workload() {
   export MYSQL_PASSWORD=$3
   export MYSQL_PORT=$4
   export MYSQL_DATABASE=$5
+  export TEST_TARGET_QPS=1000
+  export TEST_QUERIES=100
   echo $6
   touch $6.log
   sleep 5
