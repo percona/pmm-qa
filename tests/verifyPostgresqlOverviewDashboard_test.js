@@ -6,10 +6,12 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open the PostgreSQL Overview Dashboard', async (I, adminPage, postgresqlOverviewPage) => {
-    I.amOnPage(postgresqlOverviewPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(10);
-    postgresqlOverviewPage.verifyMetricsExistence();
+Scenario('Open the PostgreSQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, adminPage, dashboardPage) => {
+    I.amOnPage(dashboardPage.postgresqlInstanceSummaryDashboard.url);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.expandEachDashboardRow();
+    dashboardPage.verifyMetricsExistence(dashboardPage.postgresqlInstanceSummaryDashboard.metrics);
+    await dashboardPage.verifyThereIsNoGraphsWithNA();
+    await dashboardPage.verifyThereIsNoGraphsWithoutData(1);
 });

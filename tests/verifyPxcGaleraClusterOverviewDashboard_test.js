@@ -6,10 +6,13 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open the PXC/Galera Cluster Oveview Dashboard', async (I, adminPage, pxcGaleraClusterOverviewPage) => {
-    I.amOnPage(pxcGaleraClusterOverviewPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(4);
-    pxcGaleraClusterOverviewPage.verifyMetricsExistence();
+Scenario('Open the PXC/Galera Cluster Summary Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, adminPage, dashboardPage) => {
+    I.amOnPage(dashboardPage.pxcGaleraClusterSummaryDashboard.url);
+    dashboardPage.waitForDashboardOpened();
+    I.click(adminPage.fields.metricTitle);
+    adminPage.peformPageDown(1);
+    dashboardPage.verifyMetricsExistence(dashboardPage.pxcGaleraClusterSummaryDashboard.metrics);
+    await dashboardPage.verifyThereIsNoGraphsWithNA();
+    await dashboardPage.verifyThereIsNoGraphsWithoutData();
 });

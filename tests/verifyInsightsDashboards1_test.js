@@ -6,17 +6,21 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open Advanced Exploration Dashboard and verify Metrics are present and graphs are displayed', async (I, adminPage, advancedDataExplorationPage, dashboardPage) => {
-    I.amOnPage(advancedDataExplorationPage.url);
+Scenario('Open Advanced Exploration Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, dashboardPage) => {
+    I.amOnPage(dashboardPage.advancedDataExplorationDashboard.url);
     dashboardPage.waitForDashboardOpened();
-    dashboardPage.verifyMetricsExistence(advancedDataExplorationPage.metrics);
-    dashboardPage.verifyThereIsNoGraphsWithNA();
+    dashboardPage.verifyMetricsExistence(dashboardPage.advancedDataExplorationDashboard.metrics);
+    await dashboardPage.verifyThereIsNoGraphsWithNA();
+    await dashboardPage.verifyThereIsNoGraphsWithoutData();
 });
 
-Scenario('Open Prometheus Dashboard and verify Metrics are present and graphs are displayed', async (I, adminPage, prometheusPage, dashboardPage) => {
-    I.amOnPage(prometheusPage.url);
+Scenario('Open Prometheus Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, adminPage, dashboardPage) => {
+    I.amOnPage(dashboardPage.prometheusDashboard.url);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
-    dashboardPage.verifyMetricsExistence(prometheusPage.metrics);
-    dashboardPage.verifyThereIsNoGraphsWithNA();
+    dashboardPage.verifyMetricsExistence(dashboardPage.prometheusDashboard.metrics);
+    await dashboardPage.verifyThereIsNoGraphsWithNA(9);
+    await dashboardPage.verifyThereIsNoGraphsWithoutData();
 });

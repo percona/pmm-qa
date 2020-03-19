@@ -6,10 +6,13 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open the ProxySQL Overview Dashboard', async (I, adminPage, proxysqlOverviewPage) => {
-    I.amOnPage(proxysqlOverviewPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(5);
-    proxysqlOverviewPage.verifyMetricsExistence();
+Scenario('Open the ProxySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, adminPage, dashboardPage) => {
+    I.amOnPage(dashboardPage.proxysqlInstanceSummaryDashboard.url);
+    dashboardPage.waitForDashboardOpened();
+    I.click(adminPage.fields.metricTitle);
+    adminPage.peformPageDown(2);
+    await dashboardPage.verifyMetricsExistence(dashboardPage.proxysqlInstanceSummaryDashboard.metrics);
+    await dashboardPage.verifyThereIsNoGraphsWithNA();
+    await dashboardPage.verifyThereIsNoGraphsWithoutData(2);
 });
