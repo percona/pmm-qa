@@ -1247,8 +1247,8 @@ add_clients(){
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
         for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
+          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
           #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
           if [[ "${query_source}" == "slowlog" ]]; then
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
