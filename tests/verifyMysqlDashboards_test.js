@@ -25,7 +25,7 @@ Scenario('Open the ProxySQL Instance Summary Dashboard and verify Metrics are pr
     adminPage.peformPageDown(2);
     await dashboardPage.verifyMetricsExistence(dashboardPage.proxysqlInstanceSummaryDashboard.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithNA();
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(16);
 });
 
 Scenario('Open the PXC/Galera Cluster Summary Dashboard and verify Metrics are present and graphs are displayed',
@@ -36,7 +36,7 @@ Scenario('Open the PXC/Galera Cluster Summary Dashboard and verify Metrics are p
     adminPage.peformPageDown(1);
     dashboardPage.verifyMetricsExistence(dashboardPage.pxcGaleraClusterSummaryDashboard.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithNA();
-    await dashboardPage.verifyThereAreNoGraphsWithoutData();
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(16);
 });
 
 Scenario('Open the MySQL Table Details Dashboard and verify Disable Tablestats Report shows no Data',
