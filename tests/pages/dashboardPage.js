@@ -8,7 +8,7 @@ module.exports = {
     nodesCompareDashboard : {
         url: "graph/d/node-instance-compare/nodes-compare",
         metrics: ["System Info", "System Uptime", "CPU Cores", "RAM", "Saturation Metrics", "Load Average", "CPU Usage",
-            "Interrupts", "Context Switches", "Memory  Usage", "Swap Usage", "Swap Activity", "Mountpoint Usage",
+            "Interrupts", "Context Switches", "Memory Usage", "Swap Usage", "Swap Activity", "Mountpoint Usage",
             "Free Space", "Disk Operations", "Disk Bandwidth", "Disk IO Utilization", "Disk Latency", "Disk Load",
             "Network Traffic", "Network Utilization Hourly", "Load Average", "I/O Activity"]
     },
@@ -19,7 +19,7 @@ module.exports = {
     },
     prometheusDashboard: {
         url: "graph/d/prometheus/prometheus",
-        metrics: ["Prometheus Process CPU Usage", "Prometheus Process  Memory Usage", "Disk Space Utilization",
+        metrics: ["Prometheus Process CPU Usage", "Prometheus Process Memory Usage", "Disk Space Utilization",
             "Time before run out of space", "Avg Chunk Time", "Samples Per Chunk", "Avg Chunk Size", "Bytes/Sample",
             "Head Block Size", "Avg Compaction Time", "WAL Fsync Time", "Head GC Latency", "Active Data Blocks",
             "Head Block", "Chunk Activity", "Reload block data from disk", "Compactions", "Ingestion",
@@ -34,12 +34,12 @@ module.exports = {
     prometheusExporterStatusDashboard: {
         url: "graph/d/prometheus-status/prometheus-exporter-status",
         metrics: ["CPU Usage", "Memory Usage", "File Descriptors Used", "Exporter Uptime",
-            "Collector Scrape Successful", "Collector Execution Time  (Log Scale)", "Collector Execution Time",
-            "MySQL Exporter Errors", "Rate of  Scrapes", "MySQL up", "MongoDB Scrape Performance",
+            "Collector Scrape Successful", "Collector Execution Time (Log Scale)", "Collector Execution Time",
+            "MySQL Exporter Errors", "Rate of Scrapes", "MySQL up", "MongoDB Scrape Performance",
             "MongoDB Exporter Errors", "MongoDB up", "ProxySQL Scrape Performance", "ProxySQL Exporter Errors",
             "ProxySQL up", "Scrape Durations"]
     },
-    summaryDashboard: {
+    nodeSummaryDashboard: {
         url: "graph/d/node-instance-summary/node-summary",
         metrics: ["System Uptime", "Virtual CPUs", "Load Average", "RAM", "Memory Available", "CPU Usage",
             "CPU Saturation and Max Core Usage", "Interrupts and Context Switches", "Processes", "Memory Utilization",
@@ -49,7 +49,7 @@ module.exports = {
     prometheusExporterOverviewDashboard: {
         url: "graph/d/prometheus-overview/prometheus-exporters-overview",
         metrics: ["Avg CPU Usage per Node", "Avg Memory Usage per Node", "Monitored Nodes", "Exporters Running",
-            "CPU Usage", "Memory Usage", "CPU Cores Used", "CPU  Used", "Mem Used", "Virtual CPUs",
+            "CPU Usage", "Memory Usage", "CPU Cores Used", "CPU Used", "Mem Used", "Virtual CPUs",
             "RAM", "File Descriptors Used"]
     },
     proxysqlInstanceSummaryDashboard: {
@@ -64,7 +64,7 @@ module.exports = {
             "Writeset Inbound Traffic", "Writeset Outbound Traffic", "Receive Queue", "Send Queue",
             "Transactions Received", "Transactions Replicated", "Average Incoming Transaction Size",
             "Average Replicated Transaction Size", "FC Trigger Low Limit", "FC Trigger High Limit", "IST Progress",
-            "Average Galera Replication Latency", "Maximum  Galera Replication Latency"]
+            "Average Galera Replication Latency", "Maximum Galera Replication Latency"]
     },
     postgresqlInstanceSummaryDashboard: {
         url: "graph/d/postgresql-instance-summary/postgresql-instance-summary",
@@ -83,7 +83,7 @@ module.exports = {
     mongoDbClusterSummaryDashboard: {
         url: "graph/d/mongodb-cluster-summary/mongodb-cluster-summary",
         metrics: ["Unsharded DBs", "Sharded DBs", "Sharded Collections", "Shards", "Chunks", "Balancer Enabled",
-            "Chunks Balanced", "Mongos Operations Total", "Mongos  Connections", "Mongos  Cursors", "Chunk Split Events",
+            "Chunks Balanced", "Mongos Operations Total", "Mongos Connections", "Mongos Cursors", "Chunk Split Events",
             "Change Log Events", "Operations Per Shard", "Chunks by Shard", "Connections Per Shard", "Cursors Per Shard",
             "Replication Lag by Set", "Oplog Range by Set", "Shard Elections", "Collection Lock Time"]
     },
@@ -103,6 +103,8 @@ module.exports = {
         notAvailableDataPoints: "//div[contains(text(),'No data')]",
         metricTitle: "//span[@class='panel-title']",
         reportTitleWithNA: "//span[contains(text(), 'N/A')]//ancestor::div[contains(@class,'panel-container')]//span[contains(@class,'panel-title-text')]",
+        reportTitleWithNoData: "//div[contains(text(),'No data')]//ancestor::div[contains(@class,'panel-container')]//span[contains(@class,'panel-title-text')]",
+        otherReportTitleWithNoData: "//span[contains(text(),'No Data')]//ancestor::div[contains(@class,'panel-container')]//span[contains(@class,'panel-title-text')]",
         collapsedDashboardRow: "//div[@class='dashboard-row dashboard-row--collapsed']/a"
     },
 
@@ -117,24 +119,35 @@ module.exports = {
         return "//span[contains(text(), '" + metricName + "')]";
     },
 
-    async verifyThereIsNoGraphsWithNA(acceptableNACount) {
-        if (acceptableNACount) {
-            let numberOfNAElements = await I.grabNumberOfVisibleElements(this.fields.notAvailableMetrics);
-            assert.equal(numberOfNAElements <= acceptableNACount, true, 'Expected ' +
-                acceptableNACount + ' of N/As but found ' + numberOfNAElements);
-        } else {
-            I.dontSeeElement(this.fields.notAvailableMetrics);
+    async verifyThereAreNoGraphsWithNA (acceptableNACount = 0) {
+        let numberOfNAElements = await I.grabNumberOfVisibleElements(this.fields.notAvailableMetrics);
+        console.log('number of N/A elements is = ' + numberOfNAElements);
+        if (numberOfNAElements > acceptableNACount) {
+            let titles = await this.grabFailedReportTitles(this.fields.reportTitleWithNA);
+            await this.printFailedReportNames(acceptableNACount, numberOfNAElements, titles);
         }
     },
 
-    async verifyThereIsNoGraphsWithoutData (acceptableNoDataCount) {
-        if (acceptableNoDataCount) {
-            let numberOfNoDataElements = await I.grabNumberOfVisibleElements(this.fields.notAvailableDataPoints);
-            assert.equal(numberOfNoDataElements <= acceptableNoDataCount, true, 'Expected ' +
-                acceptableNoDataCount + ' of No Data but found ' + numberOfNoDataElements);
-        } else {
-            I.dontSeeElement(this.fields.notAvailableDataPoints);
+    async verifyThereAreNoGraphsWithoutData (acceptableNoDataCount= 0) {
+        let numberOfNoDataElements = await I.grabNumberOfVisibleElements(this.fields.notAvailableDataPoints);
+        console.log('number of No Data elements is = ' + numberOfNoDataElements);
+        if (numberOfNoDataElements > acceptableNoDataCount) {
+            let titles = await this.grabFailedReportTitles(this.fields.reportTitleWithNoData);
+            await this.printFailedReportNames(acceptableNoDataCount, numberOfNoDataElements, titles);
         }
+
+    },
+
+    async printFailedReportNames (expectedNumber, actualNumber, titles) {
+        assert.equal(actualNumber <= expectedNumber, true, 'Expected ' +
+            expectedNumber + ' Elements with but found ' + actualNumber +
+            '. Report Names are ' + titles);
+    },
+
+
+    async grabFailedReportTitles (selector) {
+        let reportNames = await I.grabTextFrom(selector);
+        return reportNames;
     },
 
     async expandEachDashboardRow(halfToExpand) {

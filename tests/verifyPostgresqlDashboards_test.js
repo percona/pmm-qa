@@ -1,5 +1,4 @@
-
-Feature('to verify PostgreSQL Overview Dashboards');
+Feature('Test Dashboards inside the PostgreSQL Folder');
 
 Before((I, loginPage) => {
     I.amOnPage(loginPage.url);
@@ -12,6 +11,6 @@ Scenario('Open the PostgreSQL Instance Summary Dashboard and verify Metrics are 
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.verifyMetricsExistence(dashboardPage.postgresqlInstanceSummaryDashboard.metrics);
-    await dashboardPage.verifyThereIsNoGraphsWithNA();
-    await dashboardPage.verifyThereIsNoGraphsWithoutData(1);
+    await dashboardPage.verifyThereAreNoGraphsWithNA();
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(1);
 });

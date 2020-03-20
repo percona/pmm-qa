@@ -5,7 +5,7 @@ Before((I, loginPage) => {
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open Remote Instances Page and verify Discovery and Adding AWS RDS MySQL 5.6 remote instance', async (I, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Open Remote Instances Page and verify Discovery and Adding AWS RDS MySQL 5.6 remote instance', async (I, remoteInstancesPage, pmmInventoryPage) => {
     let instanceIdToMonitor = "rds-mysql56";
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded()
@@ -20,14 +20,14 @@ Scenario('Open Remote Instances Page and verify Discovery and Adding AWS RDS MyS
     await pmmInventoryPage.verifyAgentHasStatusRunning(instanceIdToMonitor);
 });
 
-Scenario('Open Inventory Page and verify AWS RDS MySQL 5.6 instance has status running @pmm-post-update', async (I, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Open Inventory Page and verify AWS RDS MySQL 5.6 instance has status running @pmm-post-update', async (I, remoteInstancesPage, pmmInventoryPage) => {
     let serviceName = 'rds-mysql56';
     I.amOnPage(pmmInventoryPage.url);
     pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(serviceName);
     await pmmInventoryPage.verifyAgentHasStatusRunning(serviceName);
 });
 
-Scenario('Verify QAN Filters contain AWS RDS MySQL 5.6 after it was added for monitoring', async (I, qanPage, adminPage) => {
+xScenario('Verify QAN Filters contain AWS RDS MySQL 5.6 after it was added for monitoring', async (I, qanPage, adminPage) => {
     let environment = 'RDS MySQL 5.6';
     let filter = qanPage.getFilterLocator(environment);
     I.amOnPage(qanPage.url);
@@ -38,7 +38,7 @@ Scenario('Verify QAN Filters contain AWS RDS MySQL 5.6 after it was added for mo
     I.seeElement(filter);
 });
 
-Scenario('Verify MySQL Instances Overview Dashboard for AWS RDS MySQL 5.6 data after it was added for monitoring', async (I, remoteInstancesPage, dashboardPage) => {
+xScenario('Verify MySQL Instances Overview Dashboard for AWS RDS MySQL 5.6 data after it was added for monitoring', async (I, remoteInstancesPage, dashboardPage) => {
     I.amOnPage(remoteInstancesPage.dashboardMySQLOverviewWithFilters);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
