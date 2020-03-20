@@ -18,9 +18,9 @@ module.exports = {
         serviceIdLocatorPrefix: "//table//tr/td[3][contains(text(),'"
     },
 
-    async verifyOldMySQLRemoteServiceIsDisplayed(serviceName) {
-        await I.waitForElement(pmmInventoryPage.fields.iframe, 60);
-        await I.switchTo(pmmInventoryPage.fields.iframe);
+    verifyOldMySQLRemoteServiceIsDisplayed(serviceName) {
+        I.waitForElement(pmmInventoryPage.fields.iframe, 60);
+        I.switchTo(pmmInventoryPage.fields.iframe);
         I.waitForVisible(pmmInventoryPage.fields.inventoryTableColumn, 30);
         I.scrollPageToBottom();
         I.see(serviceName, pmmInventoryPage.fields.inventoryTableColumn);
@@ -37,7 +37,7 @@ module.exports = {
         let serviceId = await this.getServiceId(service_name);
         if (version == "old") {
             agentLinkLocator = this.fields.agentsLinkOld;
-        } else if (version == "new") {
+        } else {
             agentLinkLocator = this.fields.agentsLink;
         }
         I.click(agentLinkLocator);

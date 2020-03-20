@@ -121,8 +121,13 @@ module.exports = {
         this.waitForQANPageLoaded();
     },
 
-    applyFilter(filterValue){
+    getFilterLocator(filterValue) {
         let filterLocator = "//section[@class='aside__filter-group']//span[contains(text(), '" + filterValue + "')]/../span[@class='checkbox-container__checkmark']";
+        return filterLocator;
+    },
+
+    applyFilter(filterValue){
+        let filterLocator = this.getFilterLocator(filterValue);
         I.waitForElement(filterLocator, 30);
         I.click(filterLocator);
         I.waitForVisible(this.fields.table, 30);
@@ -143,7 +148,7 @@ module.exports = {
         return {percentage: percentage, val: value};
     },
 
-    waitForQANPageLoaded(){
+    waitForQANPageLoaded() {
         I.waitForVisible(this.fields.table, 30);
         I.waitForInvisible(this.fields.spinnerLocator, 30);
     },

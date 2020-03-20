@@ -38,7 +38,7 @@ Run all Tests:
 ```
 Run individual Tests:
 ```
-./node_modules/.bin/codeceptjs run --steps tests/verifyCompareSystemParametersDashboard_test.js
+./node_modules/.bin/codeceptjs run --steps tests/verifyMysqlDashboards_test.js
 ```
 
 We have implemented the tests to run in parallel chunks of 3, which will basically launch 3 browsers and execute different tests,

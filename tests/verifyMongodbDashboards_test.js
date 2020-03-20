@@ -1,17 +1,28 @@
+Feature('Test Dashboards inside the MongoDB Folder');
 
-Feature('to verify MongoDB Dashboards');
-
-Scenario('Open the MongoDB Dashboards', async (I, loginPage, adminPage, mongodbOverviewPage, mongoDbClusterSummaryPage) => {
+Before((I, loginPage) => {
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
-    I.amOnPage(mongodbOverviewPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(10);
-    mongodbOverviewPage.verifyMetricsExistence();
-    I.amOnPage(mongoDbClusterSummaryPage.url);
-    I.waitForElement(adminPage.fields.metricTitle, 30);
-    adminPage.applyTimer("1m");
-    await adminPage.handleLazyLoading(10);
-    mongoDbClusterSummaryPage.verifyMetricsExistence();
+});
+
+Scenario('Open the MongoDB Instance Summary Dashboard and verify Metrics are present and graphs are displayed',
+        async (I, dashboardPage) => {
+    I.amOnPage(dashboardPage.mongodbOverviewDashboard.url);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.expandEachDashboardRow();
+    await dashboardPage.verifyMetricsExistence(dashboardPage.mongodbOverviewDashboard.metrics);
+    await dashboardPage.verifyThereAreNoGraphsWithNA();
+    await dashboardPage.verifyThereAreNoGraphsWithoutData();
+});
+
+Scenario('Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed',
+        async (I,adminPage, dashboardPage) => {
+    I.amOnPage(dashboardPage.mongoDbClusterSummaryDashboard.url);
+    dashboardPage.waitForDashboardOpened();
+    I.click(adminPage.fields.metricTitle);
+    adminPage.peformPageDown(1);
+    await dashboardPage.expandEachDashboardRow();
+    dashboardPage.verifyMetricsExistence(dashboardPage.mongoDbClusterSummaryDashboard.metrics);
+    await dashboardPage.verifyThereAreNoGraphsWithNA();
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(10);
 });
