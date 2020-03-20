@@ -1034,7 +1034,7 @@ add_clients(){
       PORT_CHECK=501
       NODE_NAME="PGSQL_NODE"
       get_basedir postgresql "postgresql-${pgsql_version}*" "Postgre SQL Binary tar ball" ${pgsql_version}
-    elif [[ "${CLIENT_NAME}" == "md" ]]; then
+    elif [[ "${CLIENT_NAME}" == "md" && -z $PMM2 ]]; then
       PORT_CHECK=301
       NODE_NAME="MD_NODE"
       get_basedir mariadb "mariadb-${md_version}*" "MariaDB Server binary tar ball" ${md_version}
@@ -1296,7 +1296,7 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MD_PORT mariadb
         sudo chmod 777 -R /var/log
-        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -d mariadb/server:${md_version}
+        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -d mariadb/server:${md_version} --performance-schema=1
         sleep 20
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log='ON';"
