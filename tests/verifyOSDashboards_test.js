@@ -23,5 +23,5 @@ Scenario('Open the Nodes Compare Dashboard and verify Metrics are present and gr
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.verifyMetricsExistence(dashboardPage.nodesCompareDashboard.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithNA(1);
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(5);
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(19);
 });
