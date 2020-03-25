@@ -1,4 +1,4 @@
-Feature("To verify and test the QAN Dashboard");
+Feature("QAN Dashboard");
 
 Before( async(I, loginPage, qanPage, adminPage) => {
     I.amOnPage(loginPage.url);
@@ -9,18 +9,18 @@ Before( async(I, loginPage, qanPage, adminPage) => {
     await I.switchTo(qanPage.fields.iframe);
 });
 
-Scenario('Open the QAN Dashboard and verify Filter groups exist', async (I, adminPage, qanPage) => {
+Scenario('Verify QAN Filter groups exist', async (I, adminPage, qanPage) => {
     qanPage.waitForQANPageLoaded();
     await qanPage.changeResultsPerPage(50);
     qanPage.checkFilterGroups();
 });
 
-Scenario('Open the QAN Dashboard and verify Query Details section opened when user selects Query', async (I, adminPage, qanPage) => {
+Scenario('Verify QAN Query Details section opened when user selects Query', async (I, adminPage, qanPage) => {
     qanPage.waitForQANPageLoaded();
     qanPage._selectDetails(2);
 });
 
-xScenario('Open the QAN Dashboard and verify Data in Table and Query Details', async (I, adminPage, qanPage) => {
+xScenario('Verify data in Table and Query Details', async (I, adminPage, qanPage) => {
     I.amOnPage(qanPage.url);
     await I.waitForElement(qanPage.fields.iframe, 60);
     adminPage.applyTimer("5m");
@@ -32,7 +32,7 @@ xScenario('Open the QAN Dashboard and verify Data in Table and Query Details', a
     await qanPage.clearFilters();
 });
 
-Scenario('Open the QAN Dashboard and verify pagination', async (I, adminPage, qanPage) => {
+Scenario('Verify QAN pagination', async (I, adminPage, qanPage) => {
     qanPage.waitForQANPageLoaded();
     qanPage.checkPagination();
     await qanPage.checkSparkLines();
@@ -41,7 +41,7 @@ Scenario('Open the QAN Dashboard and verify pagination', async (I, adminPage, qa
     // I.switchTo();
 });
 
-xScenario('Open the QAN Dashboard and verify Tables tab in Query Details for Database=postgres filter', async (I, adminPage, qanPage) => {
+xScenario('Verify Tables tab in Query Details for Database=postgres filter', async (I, adminPage, qanPage) => {
     let filterToApply = 'postgres';
     qanPage.waitForQANPageLoaded();
     qanPage.applyFilter(filterToApply);
@@ -50,7 +50,7 @@ xScenario('Open the QAN Dashboard and verify Tables tab in Query Details for Dat
     await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.tablesTab);
 });
 
-Scenario('Open the QAN Dashboard and verify Tables tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
+Scenario('Verify Tables tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
     let filterToApply = 'pgsql-dev';
     qanPage.waitForQANPageLoaded();
     qanPage.applyFilter(filterToApply);
@@ -59,7 +59,7 @@ Scenario('Open the QAN Dashboard and verify Tables tab in Query Details for Envi
     await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.tablesTab);
 });
 
-xScenario('Open the QAN Dashboard and verify Explain tab in Query Details for Database=postgres filter', async (I, adminPage, qanPage) => {
+xScenario('Verify Explain tab in Query Details for Database=postgres filter', async (I, adminPage, qanPage) => {
     let filterToApply = 'postgres';
     qanPage.waitForQANPageLoaded();
     qanPage.applyFilter(filterToApply);
@@ -68,7 +68,7 @@ xScenario('Open the QAN Dashboard and verify Explain tab in Query Details for Da
     await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.explainTab);
 });
 
-Scenario('Open the QAN Dashboard and verify Explain tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
+Scenario('Verify Explain tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
     let filterToApply = 'pgsql-dev';
     qanPage.waitForQANPageLoaded();
     qanPage.applyFilter(filterToApply);
@@ -77,21 +77,22 @@ Scenario('Open the QAN Dashboard and verify Explain tab in Query Details for Env
     await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.explainTab);
 });
 
-Scenario('Open the QAN Dashboard and verify Adding new Column reflects in URL', async (I, adminPage, qanPage) => {
+Scenario('Verify adding new Column reflects in URL', async (I, adminPage, qanPage) => {
     let columnName = 'Query Count with errors';
     qanPage.waitForQANPageLoaded();
     qanPage.addColumnToQAN(columnName);
     qanPage.verifyURLContains(qanPage.urlParts.queryCountWithoutErrors);
 });
 
-Scenario('Open the QAN Dashboard and verify Adding new Database Filter reflects in URL', async (I, adminPage, qanPage) => {
+Scenario('Verify adding new Database Filter reflects in URL', async (I, adminPage, qanPage) => {
     let filterToApply = 'local';
     qanPage.waitForQANPageLoaded();
+    I.wait(2);
     qanPage.applyFilter(filterToApply);
     qanPage.verifyURLContains(qanPage.urlParts.pmmManaged);
 });
 
-Scenario('Open the QAN Dashboard and verify Main Metric change reflects in URL', async (I, adminPage, qanPage) => {
+Scenario('Verify Main Metric change reflects in URL', async (I, adminPage, qanPage) => {
     let metricToReplace = 'Load';
     let newMetricName = 'Lock Time';
     qanPage.waitForQANPageLoaded();
