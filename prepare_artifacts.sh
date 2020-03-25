@@ -14,3 +14,4 @@ do
     mv video/$(cat ${file} | jq -r '.sessionid').mp4 tests/output/video/$(cat ${file} | jq -r '.testName' | sed -e 's/ /_/g').mp4
   fi
 done
+
