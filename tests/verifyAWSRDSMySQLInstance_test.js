@@ -1,11 +1,11 @@
-Feature('To verify monitoried AWS RDS Db instance');
+Feature('Monitoring AWS RDS MySQL DB');
 
 Before((I, loginPage) => {
     I.amOnPage(loginPage.url);
     loginPage.login("admin", "admin");
 });
 
-Scenario('Open Remote Instances Page and verify Discovery and Adding AWS RDS MySQL 5.6 remote instance', async (I, remoteInstancesPage, pmmInventoryPage) => {
+Scenario('Verify Discovery and adding AWS RDS MySQL 5.6 instance for monitoring', async (I, remoteInstancesPage, pmmInventoryPage) => {
     let instanceIdToMonitor = "rds-mysql56";
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded()
@@ -20,7 +20,7 @@ Scenario('Open Remote Instances Page and verify Discovery and Adding AWS RDS MyS
     await pmmInventoryPage.verifyAgentHasStatusRunning(instanceIdToMonitor);
 });
 
-Scenario('Open Inventory Page and verify AWS RDS MySQL 5.6 instance has status running @pmm-post-update', async (I, remoteInstancesPage, pmmInventoryPage) => {
+Scenario('Verify AWS RDS MySQL 5.6 instance has status running @pmm-post-update', async (I, remoteInstancesPage, pmmInventoryPage) => {
     let serviceName = 'rds-mysql56';
     I.amOnPage(pmmInventoryPage.url);
     pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(serviceName);
