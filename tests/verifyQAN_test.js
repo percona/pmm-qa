@@ -77,7 +77,7 @@ Scenario('Verify Explain tab in Query Details for Environment=pgsql-dev filter',
     await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.explainTab);
 });
 
-Scenario('Verify adding new Column reflects in URL', async (I, adminPage, qanPage) => {
+xScenario('Verify adding new Column reflects in URL', async (I, adminPage, qanPage) => {
     let columnName = 'Query Count with errors';
     qanPage.waitForQANPageLoaded();
     qanPage.addColumnToQAN(columnName);
