@@ -1335,7 +1335,7 @@ add_clients(){
       cd ${BASEDIR}
       echo $node1_port
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        pmm-admin add mysql --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+        pmm-admin add mysql --query-source=$query_source --user=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
         sleep 5
       done
       cd $SCRIPT_PWD
