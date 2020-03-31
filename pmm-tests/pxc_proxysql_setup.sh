@@ -4,21 +4,17 @@ wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/pxc-tests/px
 sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
 wget https://www.percona.com/downloads/Percona-XtraDB-Cluster-80/Percona-XtraDB-Cluster-8.0.18-9.1.rc/binary/tarball/Percona-XtraDB-Cluster_8.0.18.9_Linux.x86_64.el7.tar.gz
 tar -xzf Percona-XtraDB-Cluster*
+rm -r Percona-XtraDB-Cluster*.tar.gz
 cd Percona-XtraDB-Cluster*
 bash ../pxc-startup.sh
-./start_pxc 3
-
-## Fetch Ports for each Node
-for j in {1..3}
-do
-	export node$j_port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}')
-done
+export number_of_nodes=$1
+./start_pxc $number_of_nodes
 
 ## Install proxysql2
 sudo yum install -y proxysql2
 
 ### enable slow log 
-for j in {1..3}
+for j in `seq 1  ${number_of_nodes}`;
 do
 	bin/mysql -A -uroot -Snode$j/socket.sock -e "SET GLOBAL slow_query_log='ON';"
 	bin/mysql -A -uroot -Snode$j/socket.sock -e "SET GLOBAL long_query_time=0;"
@@ -32,6 +28,7 @@ bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to sysbench@'%';"
 bin/mysql -A -uroot -Snode1/socket.sock -e "drop database if exists sbtest;create database sbtest;"
 
 ### update proxysql configuration use, correct port
+export node1_port=$(cat node1.cnf | grep port | awk -F"=" '{print $2}')
 sudo sed -i "s/3306/${node1_port}/" /etc/proxysql-admin.cnf
 
 sudo service proxysql start
