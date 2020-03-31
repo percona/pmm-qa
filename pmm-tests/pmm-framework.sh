@@ -1039,7 +1039,7 @@ add_clients(){
       NODE_NAME="MD_NODE"
       get_basedir mariadb "mariadb-${md_version}*" "MariaDB Server binary tar ball" ${md_version}
       MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql  --innodb_monitor_enable=all --performance_schema=ON"
-    elif [[ "${CLIENT_NAME}" == "pxc" ]]; then
+    elif [[ "${CLIENT_NAME}" == "pxc" && -z $PMM2 ]]; then
       PORT_CHECK=401
       NODE_NAME="PXC_NODE"
       get_basedir pxc "Percona-XtraDB-Cluster-${pxc_version}*" "Percona XtraDB Cluster binary tar ball" ${pxc_version}
@@ -1330,11 +1330,15 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
       echo "Running pxc_proxysql_setup script"
-      sh ./pxc_proxysql_setup.sh
-      echo node$j_port
+      sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT}
+      BASEDIR=$(ls -1td Percona-XtraDB-Cluster* 2>/dev/null | grep -v ".tar" | head -n1)
+      cd ${BASEDIR}
+      echo $node1_port
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        pmm-admin add mysql --port=node$j_port --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+        pmm-admin add mysql --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+        sleep 5
       done
+      cd $SCRIPT_PWD
       pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl proxysql_node
     else
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
