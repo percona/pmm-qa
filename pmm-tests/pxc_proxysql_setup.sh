@@ -9,6 +9,8 @@ cd Percona-XtraDB-Cluster*
 bash ../pxc-startup.sh
 export number_of_nodes=$1
 ./start_pxc $number_of_nodes
+touch sysbench_run_node1.txt
+
 
 ## Install proxysql2
 sudo yum install -y proxysql2
@@ -32,10 +34,10 @@ export node1_port=$(cat node1.cnf | grep port | awk -F"=" '{print $2}')
 sudo sed -i "s/3306/${node1_port}/" /etc/proxysql-admin.cnf
 
 sudo service proxysql start
-
+sleep 20
 sudo proxysql-admin -e
 
 ## Start Running Load
-sysbench /usr/share/sysbench/oltp_insert.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=node1/socket.sock --mysql-password=test --db-driver=mysql --threads=5 --tables=10 --table-size=1000 prepare 
-sysbench /usr/share/sysbench/oltp_read_only.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=node1/socket.sock --mysql-password=test --db-driver=mysql --threads=5 --tables=10 --table-size=1000 --time=600 run &
-sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=node1/socket.sock --mysql-password=test --db-driver=mysql --threads=5 --tables=10 --table-size=1000 --time=600 run &
+sysbench /usr/share/sysbench/oltp_insert.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=node1/socket.sock --mysql-password=test --db-driver=mysql --threads=5 --tables=10 --table-size=1000 prepare > sysbench_run_node1.txt 2>&1 &
+sysbench /usr/share/sysbench/oltp_read_only.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=node1/socket.sock --mysql-password=test --db-driver=mysql --threads=5 --tables=10 --table-size=1000 --time=600 run > sysbench_run_node1.txt 2>&1 &
+sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=node1/socket.sock --mysql-password=test --db-driver=mysql --threads=5 --tables=10 --table-size=1000 --time=600 run > sysbench_run_node1.txt 2>&1 &
