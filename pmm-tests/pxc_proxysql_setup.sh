@@ -4,7 +4,7 @@ export pxc_version=$2
 
 sudo yum install -y socat
 wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/pxc-tests/pxc-startup.sh
-
+sed -i 's/log-output=none/log-output=file/g' pxc-startup.sh
 ## Download right PXC version
 if [ "$pxc_version" == "5.7" ]; then
 	wget https://www.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.28-31.41/binary/tarball/Percona-XtraDB-Cluster-5.7.28-rel31-31.41.1.Linux.x86_64.ssl101.tar.gz
