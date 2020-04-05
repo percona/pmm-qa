@@ -1243,7 +1243,7 @@ add_clients(){
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
         fi
         run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
-        pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 mysql-single-$IP_ADDRESS 127.0.0.1:$node_port
+        pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
@@ -1255,11 +1255,11 @@ add_clients(){
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
           fi
           if [ $(( ${j} % 2 )) -eq 0 ]; then
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 mysql-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
           else
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 mysql-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
           fi
-          run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
+          #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
           node_port=$(($node_port + 1))
           sleep 20
         done
@@ -1287,7 +1287,7 @@ add_clients(){
         if [[ ! -z $DISABLE_TABLESTATS ]]; then
           pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
         fi
-        run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
+        #run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
         PS_PORT=$((PS_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
@@ -1309,7 +1309,7 @@ add_clients(){
         else
           pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
         fi
-        run_workload 127.0.0.1 root md $MD_PORT mysql md_${md_version}_${IP_ADDRESS}_$j
+        #run_workload 127.0.0.1 root md $MD_PORT mysql md_${md_version}_${IP_ADDRESS}_$j
         MD_PORT=$((MD_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "modb" && ! -z $PMM2 ]]; then
@@ -1338,7 +1338,7 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
         sleep 5
-        run_workload 127.0.0.1 sysbench test $(cat node$j.cnf | grep port | awk -F"=" '{print $2}') mysql pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+        #run_workload 127.0.0.1 sysbench test $(cat node$j.cnf | grep port | awk -F"=" '{print $2}') mysql pxc_node_${pxc_version}_${IP_ADDRESS}_$j
       done
       cd ../
       pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl proxysql_node
