@@ -89,7 +89,7 @@ usage () {
   echo " --setup-alertmanager           Start alert-manager on aws instance which runs on port 9093"
   echo " --compare-query-count          This will help us to compare the query count between PMM client instance and PMM QAN/Metrics page"
   echo " --disable-tablestats           Disable table statistics collection (only works with PS Node)"
-  echo " --run-load-pmm2             Run Load Tests on Percona Server Instances with PMM2"
+  echo " --run-load-pmm2                Run Load Tests on Percona Server Instances with PMM2"
 }
 
 # Check if we have a functional getopt(1)
@@ -1331,6 +1331,7 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
       echo "Running pxc_proxysql_setup script"
       sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT} ${pxc_version}
+      sleep 5
       BASEDIR=$(ls -1td Percona-XtraDB-Cluster* 2>/dev/null | grep -v ".tar" | head -n1)
       cd ${BASEDIR}
       echo $node1_port
@@ -1860,21 +1861,77 @@ setup_alertmanager() {
 }
 
 run_workload() {
-  export MYSQL_HOST=$1
-  export MYSQL_USER=$2
-  export MYSQL_PASSWORD=$3
-  export MYSQL_PORT=$4
-  export MYSQL_DATABASE=$5
-  export TEST_TARGET_QPS=1000
-  export TEST_QUERIES=100
-  echo $6
-  touch $6.log
-  sleep 5
-  php $SCRIPT_PWD/schema_table_query.php > $6.log 2>&1 &
-  PHP_PID=$!
-  echo $PHP_PID
-  jobs -l
-  echo "Load Triggered check log"
+  if [[ $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MySQL" | grep "ps" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MYSQL_PORT=${i}
+        export MYSQL_HOST=127.0.0.1
+        export MYSQL_PASSWORD=ps
+        export MYSQL_USER=root
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch ps_$i.log
+        sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > ps_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
+    done
+    for i in $(pmm-admin list | grep "MySQL" | grep "pxc" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MYSQL_PORT=${i}
+        export MYSQL_HOST=127.0.0.1
+        export MYSQL_PASSWORD=test
+        export MYSQL_USER=sysbench
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch pxc_${i}.log
+        sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > pxc_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
+    done
+    for i in $(pmm-admin list | grep "MySQL" | grep "md" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MYSQL_PORT=${i}
+        export MYSQL_HOST=127.0.0.1
+        export MYSQL_PASSWORD=md
+        export MYSQL_USER=root
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch md_${i}.log
+        sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > md_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
+    done
+    for i in $(pmm-admin list | grep "MySQL" | grep "ms" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MYSQL_PORT=${i}
+        export MYSQL_HOST=127.0.0.1
+        export MYSQL_PASSWORD=msandbox
+        export MYSQL_USER=msandbox
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch ms_${i}.log
+        sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > ms_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
+    done
+  fi
 }
 
 if [ ! -z $wipe_clients ]; then
@@ -1964,7 +2021,7 @@ if [ ! -z $add_docker_client ]; then
 fi
 
 if [ ! -z $run_load_pmm2 ]; then
-  load_instances
+  run_workload
 fi
 
 exit 0
