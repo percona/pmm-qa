@@ -23,7 +23,7 @@ cd Percona-XtraDB-Cluster*
 
 ## start PXC
 bash ../pxc-startup.sh
-./start_pxc $number_of_nodes
+bash ./start_pxc $number_of_nodes
 touch sysbench_run_node1_prepare.txt
 touch sysbench_run_node1_read_write.txt
 touch sysbench_run_node1_read_only.txt
