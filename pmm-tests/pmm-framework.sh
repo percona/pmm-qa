@@ -1998,7 +1998,7 @@ fi
 
 if [ ! -z $with_proxysql ]; then
   if [ ! -z $PMM2 ]; then
-    pxc_proxysql_setup_pmm2
+    echo "proxysql2 already setup with PXC";
   else
     pxc_proxysql_setup
   fi
