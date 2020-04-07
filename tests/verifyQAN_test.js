@@ -53,6 +53,7 @@ xScenario('Verify Tables tab in Query Details for Database=postgres filter', asy
 Scenario('Verify Tables tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
     let filterToApply = 'pgsql-dev';
     qanPage.waitForQANPageLoaded();
+    await qanPage.expandAllFilter();
     qanPage.applyFilter(filterToApply);
     qanPage._selectDetails(2);
     qanPage.selectSectionInDetails(qanPage.fields.tablesTabInDetails);
@@ -71,6 +72,7 @@ xScenario('Verify Explain tab in Query Details for Database=postgres filter', as
 Scenario('Verify Explain tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
     let filterToApply = 'pgsql-dev';
     qanPage.waitForQANPageLoaded();
+    await qanPage.expandAllFilter();
     qanPage.applyFilter(filterToApply);
     qanPage._selectDetails(2);
     qanPage.selectSectionInDetails(qanPage.fields.explainTabInDetails);
