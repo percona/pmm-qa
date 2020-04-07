@@ -35,6 +35,7 @@ Scenario('Verify QAN Filters contain AWS RDS MySQL 5.6 after it was added for mo
     adminPage.applyTimer("5m");
     await I.switchTo(qanPage.fields.iframe);
     qanPage.waitForQANPageLoaded();
+    await qanPage.expandAllFilter();
     I.seeElement(filter);
 });
 
