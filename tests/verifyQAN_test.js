@@ -86,7 +86,7 @@ xScenario('Verify adding new Column reflects in URL', async (I, adminPage, qanPa
     qanPage.verifyURLContains(qanPage.urlParts.queryCountWithoutErrors);
 });
 
-Scenario('Verify adding new Database Filter reflects in URL', async (I, adminPage, qanPage) => {
+xScenario('Verify adding new Database Filter reflects in URL', async (I, adminPage, qanPage) => {
     let filterToApply = 'local';
     qanPage.waitForQANPageLoaded();
     I.wait(2);
