@@ -133,6 +133,18 @@ module.exports = {
         I.waitForVisible(this.fields.table, 30);
     },
 
+    async expandAllFilter()
+    {
+        for (let i = 0; i < 4; i++) {
+            let numOfElements = await I.grabNumberOfVisibleElements("//section[@class='aside__filter-group']//span[contains(text(), '" + this.filterGroups[i] + "')]/../button[contains(text(), 'See all')]");
+            if (numOfElements == 1)
+            {
+                I.click("//section[@class='aside__filter-group']//span[contains(text(), '" + this.filterGroups[i] + "')]/../button[contains(text(), 'See all')]");
+                I.waitForVisible("//section[@class='aside__filter-group']//span[contains(text(), '" + this.filterGroups[i] + "')]/../button[contains(text(), 'Show top 5')]");
+            }
+        }
+    },
+
     async _getData(row, column)
     {
         let percentage = await I.grabTextFrom("//table//tr[@ng-reflect-router-link='details/," + (row - 1) + "']//app-qan-table-cell[" + column +"]//div[1]//div[3]");

@@ -89,7 +89,7 @@ usage () {
   echo " --setup-alertmanager           Start alert-manager on aws instance which runs on port 9093"
   echo " --compare-query-count          This will help us to compare the query count between PMM client instance and PMM QAN/Metrics page"
   echo " --disable-tablestats           Disable table statistics collection (only works with PS Node)"
-  echo " --run-load-pmm2             Run Load Tests on Percona Server Instances with PMM2"
+  echo " --run-load-pmm2                Run Load Tests on Percona Server Instances with PMM2"
 }
 
 # Check if we have a functional getopt(1)
@@ -1039,7 +1039,7 @@ add_clients(){
       NODE_NAME="MD_NODE"
       get_basedir mariadb "mariadb-${md_version}*" "MariaDB Server binary tar ball" ${md_version}
       MYSQL_CONFIG="--init-file ${SCRIPT_PWD}/QRT_Plugin.sql  --innodb_monitor_enable=all --performance_schema=ON"
-    elif [[ "${CLIENT_NAME}" == "pxc" ]]; then
+    elif [[ "${CLIENT_NAME}" == "pxc" && -z $PMM2 ]]; then
       PORT_CHECK=401
       NODE_NAME="PXC_NODE"
       get_basedir pxc "Percona-XtraDB-Cluster-${pxc_version}*" "Percona XtraDB Cluster binary tar ball" ${pxc_version}
@@ -1243,7 +1243,7 @@ add_clients(){
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
         fi
         run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
-        pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 mysql-single-$IP_ADDRESS 127.0.0.1:$node_port
+        pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
@@ -1255,11 +1255,11 @@ add_clients(){
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
           fi
           if [ $(( ${j} % 2 )) -eq 0 ]; then
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 mysql-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
           else
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 mysql-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
           fi
-          run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
+          #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
           node_port=$(($node_port + 1))
           sleep 20
         done
@@ -1287,7 +1287,7 @@ add_clients(){
         if [[ ! -z $DISABLE_TABLESTATS ]]; then
           pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
         fi
-        run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
+        #run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
         PS_PORT=$((PS_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
@@ -1309,7 +1309,7 @@ add_clients(){
         else
           pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
         fi
-        run_workload 127.0.0.1 root md $MD_PORT mysql md_${md_version}_${IP_ADDRESS}_$j
+        #run_workload 127.0.0.1 root md $MD_PORT mysql md_${md_version}_${IP_ADDRESS}_$j
         MD_PORT=$((MD_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "modb" && ! -z $PMM2 ]]; then
@@ -1329,143 +1329,19 @@ add_clients(){
         MODB_PORT=$((MODB_PORT+j+3))
       done
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
-      if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
-        TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
-      else
-        TOKUDB_STARTUP=""
-      fi
-      if [ -r ${BASEDIR}/lib/mysql/plugin/ha_rocksdb.so ]; then
-        ROCKSDB_STARTUP="--plugin-load-add=rocksdb=ha_rocksdb.so"
-      else
-        ROCKSDB_STARTUP=""
-      fi
+      echo "Running pxc_proxysql_setup script"
+      sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT} ${pxc_version}
+      sleep 5
+      BASEDIR=$(ls -1td Percona-XtraDB-Cluster* 2>/dev/null | grep -v ".tar" | head -n1)
+      cd ${BASEDIR}
+      echo $node1_port
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        RBASE1="$(( RBASE + ( $PORT_CHECK * $j ) ))"
-        LADDR1="$ADDR:$(( RBASE1 + 8 ))"
-        node="${BASEDIR}/node$j"
-        if ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock > /dev/null 2>&1; then
-          echo "WARNING! Another mysqld process using Port -P${RBASE1}"
-          if ! pmm-admin list | grep "${RBASE1}" > /dev/null ; then
-            if [ $disable_ssl -eq 1 ]; then
-              pmm-admin add mysql --username=root --query-source=$query_source --disable-ssl ${NODE_NAME}-${j} localhost:${RBASE1}
-              check_disable_ssl ${NODE_NAME}-${j}
-            else
-              ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL slow_query_log='ON';"
-              ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL long_query_time=0;"
-              pmm-admin add mysql --username=root --query-source=$query_source ${NODE_NAME}-${j} localhost:${RBASE1}
-            fi
-          fi
-          continue
-        fi
-        VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
-        if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
-          mkdir -p $node
-          ${MID} --datadir=$node  > ${BASEDIR}/startup_node$j.err 2>&1
-        else
-          if [ ! -d $node ]; then
-            ${MID} --datadir=$node  > ${BASEDIR}/startup_node$j.err 2>&1
-          fi
-        fi
-        if  [[ "${CLIENT_NAME}" == "pxc" ]]; then
-          WSREP_CLUSTER="${WSREP_CLUSTER}gcomm://$LADDR1,"
-          if [ $j -eq 1 ]; then
-            WSREP_CLUSTER_ADD="--wsrep_cluster_address=gcomm:// "
-          else
-            WSREP_CLUSTER_ADD="--wsrep_cluster_address=$WSREP_CLUSTER"
-          fi
-          MYEXTRA="--no-defaults --wsrep-provider=${BASEDIR}/lib/libgalera_smm.so $WSREP_CLUSTER_ADD --wsrep_provider_options=gmcast.listen_addr=tcp://$LADDR1 --wsrep_sst_method=rsync --wsrep_sst_auth=root: --max-connections=30000"
-        else
-          MYEXTRA="--no-defaults --max-connections=30000"
-        fi
-        if [[ "${CLIENT_NAME}" == "md" ]]; then
-          MYEXTRA+=" --gtid-strict-mode=ON "
-        else
-          MYEXTRA+=" --gtid-mode=ON --enforce-gtid-consistency "
-        fi
-        ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
-          --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
-          --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
-          --server-id=10${j} > $node/error.err 2>&1 &
-        function startup_chk(){
-          for X in $(seq 0 ${SERVER_START_TIMEOUT}); do
-            sleep 1
-            if ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
-              ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL query_response_time_stats=ON;" > /dev/null 2>&1
-              check_user=`${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SELECT user,host FROM mysql.user where user='$OUSER' and host='%';"`
-              if [[ -z "$check_user" ]]; then
-                ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "CREATE USER '$OUSER'@'%' IDENTIFIED BY '$OPASS';GRANT SUPER, PROCESS, REPLICATION SLAVE, RELOAD ON *.* TO '$OUSER'@'%'"
-                (
-                printf "%s\t%s\n" "Orchestrator username :" "admin"
-                printf "%s\t%s\n" "Orchestrator password :" "passw0rd"
-                ) | column -t -s $'\t'
-              else
-                echo "User '$OUSER' is already present in MySQL server. Please create Orchestrator user manually."
-              fi
-              break
-            fi
-          done
-        }
-        startup_chk
-        if ! ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
-          if grep -q "TCP/IP port: Address already in use" $node/error.err; then
-            echo "TCP/IP port: Address already in use, restarting ${NODE_NAME}_${j} mysqld daemon with different port"
-            RBASE1="$(( RBASE1 - 1 ))"
-            ${BASEDIR}/bin/mysqld $MYEXTRA $MYSQL_CONFIG $TOKUDB_STARTUP $ROCKSDB_STARTUP $mysqld_startup_options --basedir=${BASEDIR} \
-               --datadir=$node --log-error=$node/error.err --log-bin=mysql-bin \
-               --socket=/tmp/${NODE_NAME}_${j}.sock --port=$RBASE1 --log-slave-updates \
-               --server-id=10${j} > $node/error.err 2>&1 &
-            startup_chk
-            if ! ${BASEDIR}/bin/mysqladmin -uroot -S/tmp/${NODE_NAME}_${j}.sock ping > /dev/null 2>&1; then
-              echo "ERROR! ${NODE_NAME} startup failed. Please check error log $node/error.err"
-              exit 1
-            fi
-          else
-            echo "ERROR! ${NODE_NAME} startup failed. Please check error log $node/error.err"
-            exit 1
-          fi
-        fi
-        if [ $disable_ssl -eq 1 ]; then
-          pmm-admin add mysql --username=root --query-source=$query_source --disable-ssl ${NODE_NAME}-${j} localhost:${RBASE1}
-          check_disable_ssl ${NODE_NAME}-${j}
-        else
-          ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL slow_query_log='ON';"
-          ${BASEDIR}/bin/mysql  -uroot -S/tmp/${NODE_NAME}_${j}.sock -e "SET GLOBAL long_query_time=0;"
-          pmm-admin add mysql --username=root --query-source=$query_source ${NODE_NAME}-${j} localhost:${RBASE1}
-        fi
+        pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+        sleep 5
+        #run_workload 127.0.0.1 sysbench test $(cat node$j.cnf | grep port | awk -F"=" '{print $2}') mysql pxc_node_${pxc_version}_${IP_ADDRESS}_$j
       done
-      pxc_proxysql_setup_pmm2(){
-        if  [[ "${CLIENT_NAME}" == "pxc" ]]; then
-          if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
-            echo "The program 'proxysql' is currently not installed. Installing proxysql from percona repository"
-            if grep -iq "ubuntu"  /etc/os-release ; then
-              sudo apt install -y proxysql
-            fi
-            if grep -iq "centos"  /etc/os-release ; then
-              sudo yum install -y proxysql
-            fi
-            if grep -iq "rhel"  /etc/os-release ; then
-              sudo yum install -y proxysql
-            fi
-            if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
-              echo "ERROR! Could not install proxysql on CentOS/Ubuntu machine. Terminating"
-              exit 1
-            fi
-          fi
-          sudo service proxysql start
-          sleep 5
-          PXC_PORT=$(pmm-admin list | grep "PXC_NODE-1" | awk -F":" '{print $2}' | awk -F" " '{print $1}')
-          ${BASEDIR}/bin/mysql -uroot --socket=/tmp/PXC_NODE_1.sock -e"grant all on *.* to admin@'%' identified by 'admin'"
-          sudo sed -i "s/3306/${PXC_PORT}/" /etc/proxysql-admin.cnf
-          sudo proxysql-admin -e > $WORKDIR/logs/proxysql-admin.log
-          if [ $disable_ssl -eq 1 ]; then
-            pmm-admin add proxysql --disable-ssl
-          else
-            pmm-admin add proxysql
-          fi
-        else
-          echo "Could not find PXC nodes. Skipping proxysql setup"
-        fi
-      }
+      cd ../
+      pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl
     else
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
@@ -1985,21 +1861,77 @@ setup_alertmanager() {
 }
 
 run_workload() {
-  export MYSQL_HOST=$1
-  export MYSQL_USER=$2
-  export MYSQL_PASSWORD=$3
-  export MYSQL_PORT=$4
-  export MYSQL_DATABASE=$5
-  export TEST_TARGET_QPS=1000
-  export TEST_QUERIES=100
-  echo $6
-  touch $6.log
-  sleep 5
-  php $SCRIPT_PWD/schema_table_query.php > $6.log 2>&1 &
-  PHP_PID=$!
-  echo $PHP_PID
-  jobs -l
-  echo "Load Triggered check log"
+  if [[ $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MySQL" | grep "ps" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MYSQL_PORT=${i}
+        export MYSQL_HOST=127.0.0.1
+        export MYSQL_PASSWORD=ps
+        export MYSQL_USER=root
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch ps_$i.log
+        sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > ps_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
+    done
+    for i in $(pmm-admin list | grep "MySQL" | grep "pxc" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MYSQL_PORT=${i}
+        export MYSQL_HOST=127.0.0.1
+        export MYSQL_PASSWORD=test
+        export MYSQL_USER=sysbench
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch pxc_${i}.log
+        sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > pxc_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
+    done
+    for i in $(pmm-admin list | grep "MySQL" | grep "md" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MYSQL_PORT=${i}
+        export MYSQL_HOST=127.0.0.1
+        export MYSQL_PASSWORD=md
+        export MYSQL_USER=root
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch md_${i}.log
+        sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > md_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
+    done
+    for i in $(pmm-admin list | grep "MySQL" | grep "ms" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MYSQL_PORT=${i}
+        export MYSQL_HOST=127.0.0.1
+        export MYSQL_PASSWORD=msandbox
+        export MYSQL_USER=msandbox
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch ms_${i}.log
+        sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > ms_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
+    done
+  fi
 }
 
 if [ ! -z $wipe_clients ]; then
@@ -2066,7 +1998,7 @@ fi
 
 if [ ! -z $with_proxysql ]; then
   if [ ! -z $PMM2 ]; then
-    pxc_proxysql_setup_pmm2
+    echo "proxysql2 already setup with PXC";
   else
     pxc_proxysql_setup
   fi
@@ -2089,7 +2021,7 @@ if [ ! -z $add_docker_client ]; then
 fi
 
 if [ ! -z $run_load_pmm2 ]; then
-  load_instances
+  run_workload
 fi
 
 exit 0
