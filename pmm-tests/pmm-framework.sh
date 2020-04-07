@@ -1341,7 +1341,7 @@ add_clients(){
         #run_workload 127.0.0.1 sysbench test $(cat node$j.cnf | grep port | awk -F"=" '{print $2}') mysql pxc_node_${pxc_version}_${IP_ADDRESS}_$j
       done
       cd ../
-      pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl proxysql_node
+      pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl
     else
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
