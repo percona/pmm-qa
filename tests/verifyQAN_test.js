@@ -53,6 +53,7 @@ xScenario('Verify Tables tab in Query Details for Database=postgres filter', asy
 Scenario('Verify Tables tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
     let filterToApply = 'pgsql-dev';
     qanPage.waitForQANPageLoaded();
+    await qanPage.expandAllFilter();
     qanPage.applyFilter(filterToApply);
     qanPage._selectDetails(2);
     qanPage.selectSectionInDetails(qanPage.fields.tablesTabInDetails);
@@ -71,20 +72,21 @@ xScenario('Verify Explain tab in Query Details for Database=postgres filter', as
 Scenario('Verify Explain tab in Query Details for Environment=pgsql-dev filter', async (I, adminPage, qanPage) => {
     let filterToApply = 'pgsql-dev';
     qanPage.waitForQANPageLoaded();
+    await qanPage.expandAllFilter();
     qanPage.applyFilter(filterToApply);
     qanPage._selectDetails(2);
     qanPage.selectSectionInDetails(qanPage.fields.explainTabInDetails);
     await qanPage.verifyDetailsSectionDataExists(qanPage.tabs.explainTab);
 });
 
-Scenario('Verify adding new Column reflects in URL', async (I, adminPage, qanPage) => {
+xScenario('Verify adding new Column reflects in URL', async (I, adminPage, qanPage) => {
     let columnName = 'Query Count with errors';
     qanPage.waitForQANPageLoaded();
     qanPage.addColumnToQAN(columnName);
     qanPage.verifyURLContains(qanPage.urlParts.queryCountWithoutErrors);
 });
 
-Scenario('Verify adding new Database Filter reflects in URL', async (I, adminPage, qanPage) => {
+xScenario('Verify adding new Database Filter reflects in URL', async (I, adminPage, qanPage) => {
     let filterToApply = 'local';
     qanPage.waitForQANPageLoaded();
     I.wait(2);
