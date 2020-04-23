@@ -17,7 +17,7 @@ xScenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update', a
     await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
 });
 
-Scenario('Open Remote Instance Page and Add mysql instances PMM Latest @pmm-pre-update', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Open Remote Instance Page and Add mysql instances PMM Latest @pmm-pre-update', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_new";
     let version = "new";
     I.amOnPage(remoteInstancesPage.url);
@@ -30,7 +30,7 @@ Scenario('Open Remote Instance Page and Add mysql instances PMM Latest @pmm-pre-
 
 });
 
-Scenario('Verify is the remote instances are in Running Status @pmm-post-update', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+xScenario('Verify is the remote instances are in Running Status @pmm-post-update', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_new";
     let version = "new";
     I.amOnPage(pmmInventoryPage.url);
