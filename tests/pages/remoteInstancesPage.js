@@ -24,6 +24,8 @@ module.exports = {
         addInstancesList: "//nav[@class='navigation']",
         addMongoDBRemote: "//a[contains(text(), 'Add a Remote MongoDB Instance')]",
         addMySqlRemote: "//a[contains(text(), 'Add a Remote MySQL Instance')]",
+        addPostgreSQLRemote: "//a[contains(text(), 'Add a Remote PostgreSQL Instance')]",
+        addProxySQLRemote: "//a[contains(text(), 'Add a Remote ProxySQL Instance')]",
         hostName: "//input[contains(@placeholder,'*Hostname')]",
         serviceName: "//input[@placeholder='Service name (default: Hostname)']",
         portNumber: "//input[contains(@placeholder, 'Port')]",
@@ -65,8 +67,21 @@ module.exports = {
         return this;
     },
 
-    openAddRemoteMySQLPage() {
-        I.click(this.fields.addMySqlRemote);
+    openAddRemotePage(instanceType) {
+        switch(instanceType){
+            case 'mysql':
+                I.click(this.fields.addMySqlRemote);
+                break;
+            case 'mongodb':
+                I.click(this.fields.addMongoDBRemote);
+                break;
+            case 'postgresql':
+                I.click(this.fields.addPostgreSQLRemote);
+                break;
+            case 'proxysql':
+                I.click(this.fields.addProxySQLRemote);
+                break;
+        }
         I.waitForElement(this.fields.serviceName, 60);
         return this;
     },
