@@ -39,6 +39,7 @@ module.exports = {
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
         usePerformanceSchema2: "//input[@name='qan_mysql_perfschema']/following-sibling::span[2]",
         skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[2]",
+        skipConnectioCheck: "//*[@id='antd']/form/div[4]/label[1]/span[2]",
         availabilityZone: '//input[@placeholder="*Availability Zone"]',
         addInstanceDiv: "//div[@class='view']",
         addAWSRDSMySQLbtn: "//a[contains(text(), ' Add an AWS RDS MySQL or Aurora MySQL Instance')]",
@@ -48,7 +49,6 @@ module.exports = {
         discoveryResults: "//tbody[@class='ant-table-tbody']",
         discoveryRowWithId: "//tr/td[text()='",
         startMonitoring: "/following-sibling::td/a"
-
     },
 
     waitUntilOldRemoteInstancesPageLoaded() {
@@ -63,7 +63,7 @@ module.exports = {
     waitUntilNewRemoteInstancesPageLoaded() {
         I.waitForText(this.fields.remoteInstanceTitle, 60, this.fields.remoteInstanceTitleLocator);
         I.seeInTitle(this.fields.pageHeaderText);
-        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator);
+        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator); 
         return this;
     },
 
@@ -97,6 +97,17 @@ module.exports = {
         adminPage.peformPageDown(1);
     },
 
+    fillRemoteProxySQLFields(serviceName) {
+        I.waitForElement(this.fields.serviceName, 60);
+        I.fillField(this.fields.hostName, /*globalProxyHost*/ );
+        I.fillField(this.fields.serviceName, serviceName);
+        I.fillField(this.fields.userName, /*globalProxyUsername*/);
+        I.fillField(this.fields.password, /*globalProxyPassword*/);
+        I.fillField(this.fields.environment, "Remote Node ProxySQL");
+        I.scrollPageToBottom();
+        adminPage.peformPageDown(1);
+    },
+
     createOldRemoteMySQL(serviceName) {
         this.fillRemoteMySQLFields(serviceName);
         I.click(this.fields.skipTLS);
@@ -106,21 +117,22 @@ module.exports = {
         return pmmInventoryPage;
     },
 
-    createNewRemoteMySQL() {
+    createNewRemoteInstance() {
         I.waitForVisible(this.fields.skipTLSL, 30);
         I.waitForVisible(this.fields.addService, 30);
         I.click(this.fields.skipTLSL);
+        I.click(this.fields.skipConnectioCheck);
         I.click(this.fields.addService);
         I.waitForVisible(pmmInventoryPage.fields.agentsLink, 30);
         I.waitForClickable(pmmInventoryPage.fields.agentsLink, 30);
         return pmmInventoryPage;
     },
 
-    createRemoteMySQL(serviceName, version) {
+    createRemoteInstance(serviceName, version) {
         if (version == "old") {
             this.createOldRemoteMySQL(serviceName);
         } else if (version == "new") {
-            this.createNewRemoteMySQL(serviceName);
+            this.createNewRemoteInstance(serviceName);
         }
         return pmmInventoryPage;
 

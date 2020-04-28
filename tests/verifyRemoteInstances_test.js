@@ -12,7 +12,7 @@ xScenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update', a
     remoteInstancesPage.waitUntilOldRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('mysql');
     remoteInstancesPage.fillRemoteMySQLFields(mysql_service_name);
-    remoteInstancesPage.createRemoteMySQL(mysql_service_name, version);
+    remoteInstancesPage.createNewRemoteInstance(mysql_service_name, version);
     pmmInventoryPage.verifyOldMySQLRemoteServiceIsDisplayed(mysql_service_name);
     await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
 });
@@ -33,7 +33,7 @@ xScenario('Open Remote Instance Page and Add mysql instances PMM Latest', async 
     remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('mysql');
     remoteInstancesPage.fillRemoteMySQLFields(mysql_service_name);
-    remoteInstancesPage.createRemoteMySQL(mysql_service_name, version);
+    remoteInstancesPage.createNewRemoteInstance(mysql_service_name, version);
     pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(mysql_service_name);
     await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
 
@@ -55,10 +55,14 @@ xScenario('Open Remote Instance Page and Add PostgreSQL instances PMM Latest', a
     //need to be add methods for create and verification after I got credentials
 });
 
-Scenario('Open Remote Instance Page and Add ProxySQL instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
-    let mysql_service_name = "proxysql_remote_new";
+xScenario('Open Remote Instance Page and Add ProxySQL instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+    let proxysql_service_name = "proxysql_remote_new";
+    let version = "new";
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('proxysql');
-    //need to be add methods for create and verification after I got credentials
+    remoteInstancesPage.fillRemoteProxySQLFields(proxysql_service_name);
+    remoteInstancesPage.createNewRemoteInstance(proxysql_service_name, version);
+    pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(proxysql_service_name);
+    await pmmInventoryPage.verifyAgentHasStatusRunning(proxysql_service_name, version);
 });

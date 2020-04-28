@@ -44,7 +44,12 @@ module.exports = {
         I.waitForElement(this.fields.pmmAgentLocator, 60);
         I.waitForElement(this.fields.inventoryTable, 60);
         let numberOfServices = await I.grabNumberOfVisibleElements("//span[contains(text(), '" + serviceId + "')]/following-sibling::span[contains(text(),'status: RUNNING')]");
-        assert.equal(numberOfServices, 2, " Service ID must have only 2 Agents running for different services" + serviceId);
+        if(service_name == "postgresql_remote_new" || service_name == "mysql_remote_new"){
+            assert.equal(numberOfServices, 2, " Service ID must have only 2 Agents running for different services" + serviceId);
+        } else {
+            assert.equal(numberOfServices, 1, " Service ID must have only 1 Agent running" + serviceId);
+        }
+
 
     },
 
