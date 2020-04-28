@@ -39,7 +39,7 @@ module.exports = {
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
         usePerformanceSchema2: "//input[@name='qan_mysql_perfschema']/following-sibling::span[2]",
         skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[2]",
-        skipConnectioCheck: "//*[@id='antd']/form/div[4]/label[1]/span[2]",
+        skipConnectionCheck: "//*[@id='antd']/form/div[4]/label[1]/span[2]",
         availabilityZone: '//input[@placeholder="*Availability Zone"]',
         addInstanceDiv: "//div[@class='view']",
         addAWSRDSMySQLbtn: "//a[contains(text(), ' Add an AWS RDS MySQL or Aurora MySQL Instance')]",
@@ -121,7 +121,7 @@ module.exports = {
         I.waitForVisible(this.fields.skipTLSL, 30);
         I.waitForVisible(this.fields.addService, 30);
         I.click(this.fields.skipTLSL);
-        I.click(this.fields.skipConnectioCheck);
+        I.click(this.fields.skipConnectionCheck);
         I.click(this.fields.addService);
         I.waitForVisible(pmmInventoryPage.fields.agentsLink, 30);
         I.waitForClickable(pmmInventoryPage.fields.agentsLink, 30);
