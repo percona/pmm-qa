@@ -86,30 +86,38 @@ module.exports = {
         return this;
     },
 
-    fillRemoteMySQLFields(serviceName) {
+    fillRemoteFields(serviceName) {
+        switch(serviceName){
+            case 'mysql_remote_new':
+                I.fillField(this.fields.hostName, process.env.REMOTE_MYSQL_HOST);
+                I.fillField(this.fields.userName, process.env.REMOTE_MYSQL_USER);
+                I.fillField(this.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
+                break;
+            case 'mongodb_remote_new':
+                I.fillField(this.fields.hostName, /*globalMongoHost*/);
+                I.fillField(this.fields.userName, /*globalMongoUsername*/);
+                I.fillField(this.fields.password, /*globalMognoPassword*/);
+                break;
+            case 'postgresql_remote_new':
+                I.fillField(this.fields.hostName, /*globalPostgreHost*/);
+                I.fillField(this.fields.userName, /*globalPostgreUsername*/);
+                I.fillField(this.fields.password, /*globalPostgrePassword*/);
+                break;
+            case 'proxysql_remote_new':
+                I.fillField(this.fields.hostName, /*globalProxyHost*/);
+                I.fillField(this.fields.userName, /*globalProxyusername*/);
+                I.fillField(this.fields.password, /*globalProxyPassword*/);
+                break;
+        }
         I.waitForElement(this.fields.serviceName, 60);
-        I.fillField(this.fields.hostName, process.env.REMOTE_MYSQL_HOST);
         I.fillField(this.fields.serviceName, serviceName);
-        I.fillField(this.fields.userName, process.env.REMOTE_MYSQL_USER);
-        I.fillField(this.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
         I.fillField(this.fields.environment, "Remote Node MySQL");
         I.scrollPageToBottom();
         adminPage.peformPageDown(1);
     },
 
-    fillRemoteProxySQLFields(serviceName) {
-        I.waitForElement(this.fields.serviceName, 60);
-        I.fillField(this.fields.hostName, /*globalProxyHost*/ );
-        I.fillField(this.fields.serviceName, serviceName);
-        I.fillField(this.fields.userName, /*globalProxyUsername*/);
-        I.fillField(this.fields.password, /*globalProxyPassword*/);
-        I.fillField(this.fields.environment, "Remote Node ProxySQL");
-        I.scrollPageToBottom();
-        adminPage.peformPageDown(1);
-    },
-
     createOldRemoteMySQL(serviceName) {
-        this.fillRemoteMySQLFields(serviceName);
+        this.fillRemoteFields(serviceName);
         I.click(this.fields.skipTLS);
         I.click(this.fields.usePerformanceSchema);
         I.click(this.fields.addService);

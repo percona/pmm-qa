@@ -11,7 +11,7 @@ xScenario('Open Remote Instance Page and Add mysql instances @pmm-pre-update', a
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilOldRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('mysql');
-    remoteInstancesPage.fillRemoteMySQLFields(mysql_service_name);
+    remoteInstancesPage.fillRemoteFields(mysql_service_name);
     remoteInstancesPage.createNewRemoteInstance(mysql_service_name, version);
     pmmInventoryPage.verifyOldMySQLRemoteServiceIsDisplayed(mysql_service_name);
     await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
@@ -26,13 +26,13 @@ xScenario('Verify is the remote instances are in Running Status @pmm-post-update
 
 });
 
-xScenario('Open Remote Instance Page and Add mysql instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
+Scenario('Open Remote Instance Page and Add mysql instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
     let mysql_service_name = "mysql_remote_new";
     let version = "new";
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('mysql');
-    remoteInstancesPage.fillRemoteMySQLFields(mysql_service_name);
+    remoteInstancesPage.fillRemoteFields(mysql_service_name);
     remoteInstancesPage.createNewRemoteInstance(mysql_service_name, version);
     pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(mysql_service_name);
     await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
@@ -40,7 +40,7 @@ xScenario('Open Remote Instance Page and Add mysql instances PMM Latest', async 
 });
 
 xScenario('Open Remote Instance Page and Add MongoDB instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
-    let mysql_service_name = "mongodb_remote_new";
+    let mongodb_service_name = "mongodb_remote_new";
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('mongodb');
@@ -48,7 +48,7 @@ xScenario('Open Remote Instance Page and Add MongoDB instances PMM Latest', asyn
 });
 
 xScenario('Open Remote Instance Page and Add PostgreSQL instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
-    let mysql_service_name = "postgresql_remote_new";
+    let postgresql_service_name = "postgresql_remote_new";
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('postgresql');
@@ -61,7 +61,7 @@ xScenario('Open Remote Instance Page and Add ProxySQL instances PMM Latest', asy
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('proxysql');
-    remoteInstancesPage.fillRemoteProxySQLFields(proxysql_service_name);
+    remoteInstancesPage.fillRemoteFields(proxysql_service_name);
     remoteInstancesPage.createNewRemoteInstance(proxysql_service_name, version);
     pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(proxysql_service_name);
     await pmmInventoryPage.verifyAgentHasStatusRunning(proxysql_service_name, version);
