@@ -39,7 +39,7 @@ module.exports = {
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
         usePerformanceSchema2: "//input[@name='qan_mysql_perfschema']/following-sibling::span[2]",
         skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[2]",
-        skipConnectionCheck: "//*[@id='antd']/form/div[4]/label[1]/span[2]",
+        skipConnectionCheck: "//[@id='antd']/form/div[4]/label[1]/span[2]",
         availabilityZone: '//input[@placeholder="*Availability Zone"]',
         addInstanceDiv: "//div[@class='view']",
         addAWSRDSMySQLbtn: "//a[contains(text(), ' Add an AWS RDS MySQL or Aurora MySQL Instance')]",
@@ -94,19 +94,19 @@ module.exports = {
                 I.fillField(this.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
                 break;
             case 'mongodb_remote_new':
-                I.fillField(this.fields.hostName, /*globalMongoHost*/);
-                I.fillField(this.fields.userName, /*globalMongoUsername*/);
-                I.fillField(this.fields.password, /*globalMognoPassword*/);
+                I.fillField(this.fields.hostName, process.env.REMOTE_MONGODB_HOST);
+                I.fillField(this.fields.userName, process.env.REMOTE_MONGODB_USER);
+                I.fillField(this.fields.password, process.env.REMOTE_MONGODB_PASSWORD);
                 break;
             case 'postgresql_remote_new':
-                I.fillField(this.fields.hostName, /*globalPostgreHost*/);
-                I.fillField(this.fields.userName, /*globalPostgreUsername*/);
-                I.fillField(this.fields.password, /*globalPostgrePassword*/);
+                I.fillField(this.fields.hostName, process.env.REMOTE_POSTGRESQL_HOST);
+                I.fillField(this.fields.userName, process.env.REMOTE_POSTGRESQL_USER);
+                I.fillField(this.fields.password, process.env.REMOTE_POSTGRESSQL_PASSWORD);
                 break;
             case 'proxysql_remote_new':
-                I.fillField(this.fields.hostName, /*globalProxyHost*/);
-                I.fillField(this.fields.userName, /*globalProxyusername*/);
-                I.fillField(this.fields.password, /*globalProxyPassword*/);
+                I.fillField(this.fields.hostName, process.env.REMOTE_PROXYSQL_HOST);
+                I.fillField(this.fields.userName, process.env.REMOTE_PROXYSQL_USER);
+                I.fillField(this.fields.password, process.env.REMOTE_PROXYSQL_PASSWORD);
                 break;
         }
         I.waitForElement(this.fields.serviceName, 60);
