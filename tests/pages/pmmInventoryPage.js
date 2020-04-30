@@ -26,7 +26,7 @@ module.exports = {
         I.see(serviceName, pmmInventoryPage.fields.inventoryTableColumn);
     },
 
-    verifyMySQLRemoteServiceIsDisplayed(serviceName) {
+    verifyRemoteServiceIsDisplayed(serviceName) {
         I.waitForVisible(pmmInventoryPage.fields.inventoryTableColumn, 30);
         I.scrollPageToBottom();
         I.see(serviceName, pmmInventoryPage.fields.inventoryTableColumn);

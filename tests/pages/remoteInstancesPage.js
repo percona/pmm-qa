@@ -39,7 +39,7 @@ module.exports = {
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
         usePerformanceSchema2: "//input[@name='qan_mysql_perfschema']/following-sibling::span[2]",
         skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[2]",
-        skipConnectionCheck: "//[@id='antd']/form/div[4]/label[1]/span[2]",
+        skipConnectionCheck: "//input[@name='skip_connection_check']/following-sibling::span[2]",
         availabilityZone: '//input[@placeholder="*Availability Zone"]',
         addInstanceDiv: "//div[@class='view']",
         addAWSRDSMySQLbtn: "//a[contains(text(), ' Add an AWS RDS MySQL or Aurora MySQL Instance')]",
