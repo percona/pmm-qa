@@ -23,7 +23,6 @@ xScenario('Verify is the remote instances are in Running Status @pmm-post-update
     I.amOnPage(pmmInventoryPage.url);
     pmmInventoryPage.verifyRemoteServiceIsDisplayed(mysql_service_name);
     await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
-
 });
 
 xScenario('Open Remote Instance Page and Add mysql instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
@@ -36,7 +35,6 @@ xScenario('Open Remote Instance Page and Add mysql instances PMM Latest', async 
     remoteInstancesPage.createNewRemoteInstance(mysql_service_name, version);
     pmmInventoryPage.verifyRemoteServiceIsDisplayed(mysql_service_name);
     await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name, version);
-
 });
 
 xScenario('Open Remote Instance Page and Add MongoDB instances PMM Latest', async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {

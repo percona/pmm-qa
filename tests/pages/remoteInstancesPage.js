@@ -143,7 +143,6 @@ module.exports = {
             this.createNewRemoteInstance(serviceName);
         }
         return pmmInventoryPage;
-
     },
 
     openAddAWSRDSMySQLPage () {

@@ -49,8 +49,6 @@ module.exports = {
         } else {
             assert.equal(numberOfServices, 1, " Service ID must have only 1 Agent running" + serviceId);
         }
-
-
     },
 
     async getServiceId(serviceName) {
