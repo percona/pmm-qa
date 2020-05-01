@@ -36,6 +36,9 @@ module.exports = {
         replicationSet: "//input[contains(@placeholder, 'Replication set')]",
         addService: "#addInstance",
         skipTLS: "//input[@name='tls_skip_verify']",
+        useTLS: "//input[@name='tls']",
+        usePgStatStatements: "//input[@name='qan_postgresql_pgstatements_agent']",
+        useQANMongoDBProfiler: "//input[@name='qan_mongodb_profiler']",
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
         usePerformanceSchema2: "//input[@name='qan_mysql_perfschema']/following-sibling::span[2]",
         skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[2]",
@@ -51,16 +54,7 @@ module.exports = {
         startMonitoring: "/following-sibling::td/a"
     },
 
-    waitUntilOldRemoteInstancesPageLoaded() {
-        I.waitForElement(this.fields.iframe, 60);
-        I.switchTo(this.fields.iframe); // switch to first iframe
-        I.waitForText(this.fields.remoteInstanceTitle, 60, this.fields.remoteInstanceTitleLocator);
-        I.seeInTitle(this.fields.pageHeaderText);
-        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator);
-        return this;
-    },
-
-    waitUntilNewRemoteInstancesPageLoaded() {
+    waitUntilRemoteInstancesPageLoaded() {
         I.waitForText(this.fields.remoteInstanceTitle, 60, this.fields.remoteInstanceTitleLocator);
         I.seeInTitle(this.fields.pageHeaderText);
         I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator); 
@@ -92,56 +86,59 @@ module.exports = {
                 I.fillField(this.fields.hostName, process.env.REMOTE_MYSQL_HOST);
                 I.fillField(this.fields.userName, process.env.REMOTE_MYSQL_USER);
                 I.fillField(this.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
+                I.appendField(this.fields.portNumber, '');
+                I.pressKey(['Shift', 'Home']);
+                I.pressKey('Backspace');
+                I.fillField(this.fields.portNumber,'3307');
+                I.fillField(this.fields.serviceName, serviceName);
+                I.fillField(this.fields.environment, "remote-mysql");
+                I.fillField(this.fields.cluster, "remote-mysql-cluster");
                 break;
             case 'mongodb_remote_new':
                 I.fillField(this.fields.hostName, process.env.REMOTE_MONGODB_HOST);
                 I.fillField(this.fields.userName, process.env.REMOTE_MONGODB_USER);
                 I.fillField(this.fields.password, process.env.REMOTE_MONGODB_PASSWORD);
+                I.fillField(this.fields.serviceName, serviceName);
+                I.fillField(this.fields.environment, "remote-mongodb");
+                I.fillField(this.fields.cluster, "remote-mongodb-cluster");
                 break;
             case 'postgresql_remote_new':
                 I.fillField(this.fields.hostName, process.env.REMOTE_POSTGRESQL_HOST);
                 I.fillField(this.fields.userName, process.env.REMOTE_POSTGRESQL_USER);
                 I.fillField(this.fields.password, process.env.REMOTE_POSTGRESSQL_PASSWORD);
+                I.fillField(this.fields.serviceName, serviceName);
+                I.fillField(this.fields.environment, "remote-postgres");
+                I.fillField(this.fields.cluster, "remote-postgres-cluster");
                 break;
             case 'proxysql_remote_new':
                 I.fillField(this.fields.hostName, process.env.REMOTE_PROXYSQL_HOST);
                 I.fillField(this.fields.userName, process.env.REMOTE_PROXYSQL_USER);
                 I.fillField(this.fields.password, process.env.REMOTE_PROXYSQL_PASSWORD);
+                I.fillField(this.fields.serviceName, serviceName);
+                I.fillField(this.fields.environment, "remote-proxysql");
+                I.fillField(this.fields.cluster, "remote-proxysql-cluster");
                 break;
         }
-        I.waitForElement(this.fields.serviceName, 60);
-        I.fillField(this.fields.serviceName, serviceName);
-        I.fillField(this.fields.environment, "Remote Node MySQL");
-        I.scrollPageToBottom();
         adminPage.peformPageDown(1);
     },
 
-    createOldRemoteMySQL(serviceName) {
-        this.fillRemoteFields(serviceName);
-        I.click(this.fields.skipTLS);
-        I.click(this.fields.usePerformanceSchema);
-        I.click(this.fields.addService);
-        I.waitForVisible(pmmInventoryPage.fields.iframe, 30);
-        return pmmInventoryPage;
-    },
-
-    createNewRemoteInstance() {
+    createRemoteInstance(serviceName) {
         I.waitForVisible(this.fields.skipTLSL, 30);
         I.waitForVisible(this.fields.addService, 30);
         I.click(this.fields.skipTLSL);
-        I.click(this.fields.skipConnectionCheck);
+        switch(serviceName) {
+            case 'mongodb_remote_new':
+                I.click(this.fields.useTLS);
+                I.click(this.fields.useQANMongoDBProfiler);
+                break;
+            case 'postgresql_remote_new':
+                I.click(this.fields.useTLS);
+                I.click(this.fields.usePgStatStatements);
+                break;
+        }
         I.click(this.fields.addService);
         I.waitForVisible(pmmInventoryPage.fields.agentsLink, 30);
         I.waitForClickable(pmmInventoryPage.fields.agentsLink, 30);
-        return pmmInventoryPage;
-    },
-
-    createRemoteInstance(serviceName, version) {
-        if (version == "old") {
-            this.createOldRemoteMySQL(serviceName);
-        } else if (version == "new") {
-            this.createNewRemoteInstance(serviceName);
-        }
         return pmmInventoryPage;
     },
 
