@@ -32,19 +32,15 @@ module.exports = {
         I.see(serviceName, pmmInventoryPage.fields.inventoryTableColumn);
     },
 
-    async verifyAgentHasStatusRunning(service_name, version) {
+    async verifyAgentHasStatusRunning(service_name) {
         let agentLinkLocator;
         let serviceId = await this.getServiceId(service_name);
-        if (version == "old") {
-            agentLinkLocator = this.fields.agentsLinkOld;
-        } else {
-            agentLinkLocator = this.fields.agentsLink;
-        }
+        agentLinkLocator = this.fields.agentsLink;
         I.click(agentLinkLocator);
         I.waitForElement(this.fields.pmmAgentLocator, 60);
         I.waitForElement(this.fields.inventoryTable, 60);
         let numberOfServices = await I.grabNumberOfVisibleElements("//span[contains(text(), '" + serviceId + "')]/following-sibling::span[contains(text(),'status: RUNNING')]");
-        if(service_name == "postgresql_remote_new" || service_name == "mysql_remote_new"){
+        if( service_name === "mongodb_remote_new" || service_name === "postgresql_remote_new" || service_name === "mysql_remote_new" ){
             assert.equal(numberOfServices, 2, " Service ID must have only 2 Agents running for different services" + serviceId);
         } else {
             assert.equal(numberOfServices, 1, " Service ID must have only 1 Agent running" + serviceId);

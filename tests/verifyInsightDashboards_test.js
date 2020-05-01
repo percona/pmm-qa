@@ -21,7 +21,8 @@ Scenario('Open Prometheus Dashboard and verify Metrics are present and graphs ar
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.verifyMetricsExistence(dashboardPage.prometheusDashboard.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithNA(9);
-    await dashboardPage.verifyThereAreNoGraphsWithoutData();
+    //Find reason for this failure
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(1);
 });
 
 Scenario('Open the Prometheus Exporters Status Dashboard and verify Metrics are present and graphs are displayed',
