@@ -24,6 +24,8 @@ module.exports = {
         addInstancesList: "//nav[@class='navigation']",
         addMongoDBRemote: "//a[contains(text(), 'Add a Remote MongoDB Instance')]",
         addMySqlRemote: "//a[contains(text(), 'Add a Remote MySQL Instance')]",
+        addPostgreSQLRemote: "//a[contains(text(), 'Add a Remote PostgreSQL Instance')]",
+        addProxySQLRemote: "//a[contains(text(), 'Add a Remote ProxySQL Instance')]",
         hostName: "//input[contains(@placeholder,'*Hostname')]",
         serviceName: "//input[@placeholder='Service name (default: Hostname)']",
         portNumber: "//input[contains(@placeholder, 'Port')]",
@@ -37,6 +39,7 @@ module.exports = {
         usePerformanceSchema: "//input[@name='qan_mysql_perfschema']",
         usePerformanceSchema2: "//input[@name='qan_mysql_perfschema']/following-sibling::span[2]",
         skipTLSL: "//input[@name='tls_skip_verify']/following-sibling::span[2]",
+        skipConnectionCheck: "//input[@name='skip_connection_check']/following-sibling::span[2]",
         availabilityZone: '//input[@placeholder="*Availability Zone"]',
         addInstanceDiv: "//div[@class='view']",
         addAWSRDSMySQLbtn: "//a[contains(text(), ' Add an AWS RDS MySQL or Aurora MySQL Instance')]",
@@ -46,7 +49,6 @@ module.exports = {
         discoveryResults: "//tbody[@class='ant-table-tbody']",
         discoveryRowWithId: "//tr/td[text()='",
         startMonitoring: "/following-sibling::td/a"
-
     },
 
     waitUntilOldRemoteInstancesPageLoaded() {
@@ -61,29 +63,61 @@ module.exports = {
     waitUntilNewRemoteInstancesPageLoaded() {
         I.waitForText(this.fields.remoteInstanceTitle, 60, this.fields.remoteInstanceTitleLocator);
         I.seeInTitle(this.fields.pageHeaderText);
-        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator);
+        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator); 
         return this;
     },
 
-    openAddRemoteMySQLPage() {
-        I.click(this.fields.addMySqlRemote);
+    openAddRemotePage(instanceType) {
+        switch(instanceType){
+            case 'mysql':
+                I.click(this.fields.addMySqlRemote);
+                break;
+            case 'mongodb':
+                I.click(this.fields.addMongoDBRemote);
+                break;
+            case 'postgresql':
+                I.click(this.fields.addPostgreSQLRemote);
+                break;
+            case 'proxysql':
+                I.click(this.fields.addProxySQLRemote);
+                break;
+        }
         I.waitForElement(this.fields.serviceName, 60);
         return this;
     },
 
-    fillRemoteMySQLFields(serviceName) {
+    fillRemoteFields(serviceName) {
+        switch(serviceName){
+            case 'mysql_remote_new':
+                I.fillField(this.fields.hostName, process.env.REMOTE_MYSQL_HOST);
+                I.fillField(this.fields.userName, process.env.REMOTE_MYSQL_USER);
+                I.fillField(this.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
+                break;
+            case 'mongodb_remote_new':
+                I.fillField(this.fields.hostName, process.env.REMOTE_MONGODB_HOST);
+                I.fillField(this.fields.userName, process.env.REMOTE_MONGODB_USER);
+                I.fillField(this.fields.password, process.env.REMOTE_MONGODB_PASSWORD);
+                break;
+            case 'postgresql_remote_new':
+                I.fillField(this.fields.hostName, process.env.REMOTE_POSTGRESQL_HOST);
+                I.fillField(this.fields.userName, process.env.REMOTE_POSTGRESQL_USER);
+                I.fillField(this.fields.password, process.env.REMOTE_POSTGRESSQL_PASSWORD);
+                break;
+            case 'proxysql_remote_new':
+                I.fillField(this.fields.hostName, process.env.REMOTE_PROXYSQL_HOST);
+                I.fillField(this.fields.userName, process.env.REMOTE_PROXYSQL_USER);
+                I.fillField(this.fields.password, process.env.REMOTE_PROXYSQL_PASSWORD);
+                break;
+        }
         I.waitForElement(this.fields.serviceName, 60);
-        I.fillField(this.fields.hostName, process.env.REMOTE_MYSQL_HOST);
         I.fillField(this.fields.serviceName, serviceName);
-        I.fillField(this.fields.userName, process.env.REMOTE_MYSQL_USER);
-        I.fillField(this.fields.password, process.env.REMOTE_MYSQL_PASSWORD);
         I.fillField(this.fields.environment, "Remote Node MySQL");
         I.scrollPageToBottom();
         adminPage.peformPageDown(1);
     },
 
     createOldRemoteMySQL(serviceName) {
-        this.fillRemoteMySQLFields(serviceName);
+        this.fillRemoteFields(serviceName);
         I.click(this.fields.skipTLS);
         I.click(this.fields.usePerformanceSchema);
         I.click(this.fields.addService);
@@ -91,24 +125,24 @@ module.exports = {
         return pmmInventoryPage;
     },
 
-    createNewRemoteMySQL() {
+    createNewRemoteInstance() {
         I.waitForVisible(this.fields.skipTLSL, 30);
         I.waitForVisible(this.fields.addService, 30);
         I.click(this.fields.skipTLSL);
+        I.click(this.fields.skipConnectionCheck);
         I.click(this.fields.addService);
         I.waitForVisible(pmmInventoryPage.fields.agentsLink, 30);
         I.waitForClickable(pmmInventoryPage.fields.agentsLink, 30);
         return pmmInventoryPage;
     },
 
-    createRemoteMySQL(serviceName, version) {
+    createRemoteInstance(serviceName, version) {
         if (version == "old") {
             this.createOldRemoteMySQL(serviceName);
         } else if (version == "new") {
-            this.createNewRemoteMySQL(serviceName);
+            this.createNewRemoteInstance(serviceName);
         }
         return pmmInventoryPage;
-
     },
 
     openAddAWSRDSMySQLPage () {
