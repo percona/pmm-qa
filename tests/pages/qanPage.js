@@ -126,6 +126,12 @@ module.exports = {
         return filterLocator;
     },
 
+    getFilterLocatorN(filterValue) {
+        return (
+            "//span[@class='checkbox-container__checkmark']/../span[contains(text(),'" + filterValue + "')]"
+        );
+    },
+
     applyFilter(filterValue){
         let filterLocator = this.getFilterLocator(filterValue);
         I.waitForElement(filterLocator, 30);
