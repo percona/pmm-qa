@@ -1,7 +1,6 @@
-let {I, adminPage, pmmInventoryPage} = inject();
+const { I, adminPage, pmmInventoryPage } = inject();
 
 module.exports = {
-
     accessKey: process.env.AWS_ACCESS_KEY_ID,
     secretKey: process.env.AWS_SECRET_ACCESS_KEY,
     usernameRDSMySQL: process.env.REMOTE_AWS_MYSQL_USER,
@@ -9,18 +8,19 @@ module.exports = {
 
     // insert your locators and methods here
     // setting locators
-    url: "graph/d/pmm-add-instance/pmm-add-instance?orgId=1",
-    addMySQLRemoteURL: "graph/d/pmm-add-instance/pmm-add-instance?instance_type=mysql",
-    dashboardMySQLOverviewWithFilters: 'graph/d/mysql-instance-overview/mysql-instances-overview?orgId=1&' +
+    url: 'graph/d/pmm-add-instance/pmm-add-instance?orgId=1',
+    addMySQLRemoteURL: 'graph/d/pmm-add-instance/pmm-add-instance?instance_type=mysql',
+    dashboardMySQLOverviewWithFilters:
+        'graph/d/mysql-instance-overview/mysql-instances-overview?orgId=1&' +
         'from=now-5m&to=now&refresh=1m&var-interval=$__auto_interval_interval&var-region=us-east-1&var-environment=' +
         'RDS%20MySQL%205.6&var-cluster=rds56-cluster&var-replication_set=rds56-replication&var-node_name=rds-mysql56' +
         '&var-service_name=rds-mysql56&&var-az=us-east-1c&var-node_type=remote_rds&var-node_model=&var-database=All' +
         '&var-service_type=&var-schema=',
     fields: {
-        pageHeaderText: "PMM Add Instance",
+        pageHeaderText: 'PMM Add Instance',
         iframe: "//div[@class='panel-content']//iframe",
         remoteInstanceTitleLocator: "//section[@class='content-wrapper']/h3",
-        remoteInstanceTitle: "How to Add an Instance",
+        remoteInstanceTitle: 'How to Add an Instance',
         addInstancesList: "//nav[@class='navigation']",
         addMongoDBRemote: "//a[contains(text(), 'Add a Remote MongoDB Instance')]",
         addMySqlRemote: "//a[contains(text(), 'Add a Remote MySQL Instance')]",
@@ -34,7 +34,7 @@ module.exports = {
         environment: "//input[contains(@placeholder, 'Environment')]",
         cluster: "//input[contains(@placeholder, 'Cluster')]",
         replicationSet: "//input[contains(@placeholder, 'Replication set')]",
-        addService: "#addInstance",
+        addService: '#addInstance',
         skipTLS: "//input[@name='tls_skip_verify']",
         useTLS: "//input[@name='tls']",
         usePgStatStatements: "//input[@name='qan_postgresql_pgstatements_agent']",
@@ -48,21 +48,21 @@ module.exports = {
         addAWSRDSMySQLbtn: "//a[contains(text(), ' Add an AWS RDS MySQL or Aurora MySQL Instance')]",
         accessKeyInput: "//input[@name='aws_access_key']",
         secretKeyInput: "//input[@name='aws_secret_key']",
-        discoverBtn: "#addInstance",
+        discoverBtn: '#addInstance',
         discoveryResults: "//tbody[@class='ant-table-tbody']",
         discoveryRowWithId: "//tr/td[text()='",
-        startMonitoring: "/following-sibling::td/a"
+        startMonitoring: '/following-sibling::td/a',
     },
 
     waitUntilRemoteInstancesPageLoaded() {
         I.waitForText(this.fields.remoteInstanceTitle, 60, this.fields.remoteInstanceTitleLocator);
         I.seeInTitle(this.fields.pageHeaderText);
-        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator); 
+        I.see(this.fields.remoteInstanceTitle, this.fields.remoteInstanceTitleLocator);
         return this;
     },
 
     openAddRemotePage(instanceType) {
-        switch(instanceType){
+        switch (instanceType) {
             case 'mysql':
                 I.click(this.fields.addMySqlRemote);
                 break;
@@ -81,7 +81,7 @@ module.exports = {
     },
 
     fillRemoteFields(serviceName) {
-        switch(serviceName){
+        switch (serviceName) {
             case 'mysql_remote_new':
                 I.fillField(this.fields.hostName, process.env.REMOTE_MYSQL_HOST);
                 I.fillField(this.fields.userName, process.env.REMOTE_MYSQL_USER);
@@ -89,34 +89,34 @@ module.exports = {
                 I.appendField(this.fields.portNumber, '');
                 I.pressKey(['Shift', 'Home']);
                 I.pressKey('Backspace');
-                I.fillField(this.fields.portNumber,'3307');
+                I.fillField(this.fields.portNumber, '3307');
                 I.fillField(this.fields.serviceName, serviceName);
-                I.fillField(this.fields.environment, "remote-mysql");
-                I.fillField(this.fields.cluster, "remote-mysql-cluster");
+                I.fillField(this.fields.environment, 'remote-mysql');
+                I.fillField(this.fields.cluster, 'remote-mysql-cluster');
                 break;
             case 'mongodb_remote_new':
                 I.fillField(this.fields.hostName, process.env.REMOTE_MONGODB_HOST);
                 I.fillField(this.fields.userName, process.env.REMOTE_MONGODB_USER);
                 I.fillField(this.fields.password, process.env.REMOTE_MONGODB_PASSWORD);
                 I.fillField(this.fields.serviceName, serviceName);
-                I.fillField(this.fields.environment, "remote-mongodb");
-                I.fillField(this.fields.cluster, "remote-mongodb-cluster");
+                I.fillField(this.fields.environment, 'remote-mongodb');
+                I.fillField(this.fields.cluster, 'remote-mongodb-cluster');
                 break;
             case 'postgresql_remote_new':
                 I.fillField(this.fields.hostName, process.env.REMOTE_POSTGRESQL_HOST);
                 I.fillField(this.fields.userName, process.env.REMOTE_POSTGRESQL_USER);
                 I.fillField(this.fields.password, process.env.REMOTE_POSTGRESSQL_PASSWORD);
                 I.fillField(this.fields.serviceName, serviceName);
-                I.fillField(this.fields.environment, "remote-postgres");
-                I.fillField(this.fields.cluster, "remote-postgres-cluster");
+                I.fillField(this.fields.environment, 'remote-postgres');
+                I.fillField(this.fields.cluster, 'remote-postgres-cluster');
                 break;
             case 'proxysql_remote_new':
                 I.fillField(this.fields.hostName, process.env.REMOTE_PROXYSQL_HOST);
                 I.fillField(this.fields.userName, process.env.REMOTE_PROXYSQL_USER);
                 I.fillField(this.fields.password, process.env.REMOTE_PROXYSQL_PASSWORD);
                 I.fillField(this.fields.serviceName, serviceName);
-                I.fillField(this.fields.environment, "remote-proxysql");
-                I.fillField(this.fields.cluster, "remote-proxysql-cluster");
+                I.fillField(this.fields.environment, 'remote-proxysql');
+                I.fillField(this.fields.cluster, 'remote-proxysql-cluster');
                 break;
         }
         adminPage.peformPageDown(1);
@@ -126,7 +126,7 @@ module.exports = {
         I.waitForVisible(this.fields.skipTLSL, 30);
         I.waitForVisible(this.fields.addService, 30);
         I.click(this.fields.skipTLSL);
-        switch(serviceName) {
+        switch (serviceName) {
             case 'mongodb_remote_new':
                 I.click(this.fields.useTLS);
                 I.click(this.fields.useQANMongoDBProfiler);
@@ -142,32 +142,32 @@ module.exports = {
         return pmmInventoryPage;
     },
 
-    openAddAWSRDSMySQLPage () {
+    openAddAWSRDSMySQLPage() {
         I.click(this.fields.addAWSRDSMySQLbtn);
         I.waitForVisible(this.fields.accessKeyInput, 30);
         I.waitForVisible(this.fields.secretKeyInput, 30);
         I.waitForClickable(this.fields.discoverBtn, 30);
     },
 
-    discoverRDS () {
+    discoverRDS() {
         I.fillField(this.fields.accessKeyInput, this.accessKey);
         I.fillField(this.fields.secretKeyInput, this.secretKey);
         I.click(this.fields.discoverBtn);
         this.waitForDiscovery();
     },
 
-    waitForDiscovery () {
+    waitForDiscovery() {
         I.waitForVisible(this.fields.discoveryResults, 30);
     },
 
-    verifyInstanceIsDiscovered (instanceIdToMonitor) {
-        let instanceIdLocator = `${this.fields.discoveryRowWithId}${instanceIdToMonitor}']`;
+    verifyInstanceIsDiscovered(instanceIdToMonitor) {
+        const instanceIdLocator = `${this.fields.discoveryRowWithId}${instanceIdToMonitor}']`;
         I.seeElement(instanceIdLocator);
     },
 
     startMonitoringOfInstance(instanceIdToMonitor) {
-        let instanceIdLocator = `${this.fields.discoveryRowWithId}${instanceIdToMonitor}']`;
-        let startMonitoringInstanceBtn = `${instanceIdLocator}${this.fields.startMonitoring}`;
+        const instanceIdLocator = `${this.fields.discoveryRowWithId}${instanceIdToMonitor}']`;
+        const startMonitoringInstanceBtn = `${instanceIdLocator}${this.fields.startMonitoring}`;
         I.waitForVisible(instanceIdLocator, 30);
         I.click(startMonitoringInstanceBtn);
     },
@@ -184,5 +184,5 @@ module.exports = {
         I.fillField(this.fields.cluster, 'rds56-cluster');
         I.fillField(this.fields.replicationSet, 'rds56-replication');
         I.scrollPageToBottom();
-    }
-}
+    },
+};
