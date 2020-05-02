@@ -14,15 +14,15 @@ Scenario('Verify Discovery and adding AWS RDS MySQL 5.6 instance for monitoring'
     remoteInstancesPage.startMonitoringOfInstance(instanceIdToMonitor);
     remoteInstancesPage.verifyAddInstancePageOpened();
     remoteInstancesPage.fillRemoteRDSMySQLFields();
-    remoteInstancesPage.createNewRemoteMySQL();
-    pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(instanceIdToMonitor);
+    remoteInstancesPage.createRemoteInstance();
+    pmmInventoryPage.verifyRemoteServiceIsDisplayed(instanceIdToMonitor);
     await pmmInventoryPage.verifyAgentHasStatusRunning(instanceIdToMonitor);
 });
 
 Scenario('Verify AWS RDS MySQL 5.6 instance has status running @pmm-post-update', async (I, remoteInstancesPage, pmmInventoryPage) => {
     let serviceName = 'rds-mysql56';
     I.amOnPage(pmmInventoryPage.url);
-    pmmInventoryPage.verifyMySQLRemoteServiceIsDisplayed(serviceName);
+    pmmInventoryPage.verifyRemoteServiceIsDisplayed(serviceName);
     await pmmInventoryPage.verifyAgentHasStatusRunning(serviceName);
 });
 
