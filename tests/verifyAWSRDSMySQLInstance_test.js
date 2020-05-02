@@ -8,8 +8,7 @@ Before((I, loginPage) => {
 Scenario('Verify Discovery and adding AWS RDS MySQL 5.6 instance for monitoring', async (I, remoteInstancesPage, pmmInventoryPage) => {
     let instanceIdToMonitor = "rds-mysql56";
     I.amOnPage(remoteInstancesPage.url);
-    remoteInstancesPage.waitUntilNewRemoteInstancesPageLoaded()
-        .openAddAWSRDSMySQLPage();
+    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded().openAddAWSRDSMySQLPage();
     remoteInstancesPage.discoverRDS();
     remoteInstancesPage.verifyInstanceIsDiscovered(instanceIdToMonitor);
     remoteInstancesPage.startMonitoringOfInstance(instanceIdToMonitor);
