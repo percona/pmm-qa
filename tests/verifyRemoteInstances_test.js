@@ -22,7 +22,7 @@ Scenario(
 Scenario(
     'Verify is the remote instances are in Running Status @pmm-post-update',
     async (I, adminPage, remoteInstancesPage, pmmInventoryPage) => {
-        const mysql_service_name = 'mysql_remote_test';
+        const mysql_service_name = 'mysql_remote_new';
         I.amOnPage(pmmInventoryPage.url);
         pmmInventoryPage.verifyRemoteServiceIsDisplayed(mysql_service_name);
         await pmmInventoryPage.verifyAgentHasStatusRunning(mysql_service_name);
