@@ -126,6 +126,12 @@ module.exports = {
         return filterLocator;
     },
 
+    getFilterLocatorN(filterValue) {
+        return (
+            "//span[@class='checkbox-container__checkmark']/../span[contains(text(),'" + filterValue + "')]"
+        );
+    },
+
     applyFilter(filterValue){
         let filterLocator = this.getFilterLocator(filterValue);
         I.waitForElement(filterLocator, 30);
@@ -246,5 +252,10 @@ module.exports = {
     verifyURLContains(urlPart) {
         I.waitInUrl('tz=browser&theme=dark', 30);
         I.seeInCurrentUrl(urlPart);
+    },
+
+    verifyExitingFilter(filterValue) {
+        let filter = this.getFilterLocatorN(filterValue);
+        I.waitForVisible(filter, 30);
     }
 };
