@@ -252,5 +252,10 @@ module.exports = {
     verifyURLContains(urlPart) {
         I.waitInUrl('tz=browser&theme=dark', 30);
         I.seeInCurrentUrl(urlPart);
+    },
+
+    verifyExitingFilter(filterValue) {
+        let filter = this.getFilterLocatorN(filterValue);
+        I.waitForVisible(filter, 30);
     }
 };

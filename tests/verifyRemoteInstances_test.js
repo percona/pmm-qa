@@ -70,3 +70,14 @@ xScenario(
         await pmmInventoryPage.verifyAgentHasStatusRunning(proxysql_service_name);
     }
 );
+
+xScenario(
+    'Verify created filters for Cluster and Environment in QAN',
+    async (I, adminPage, remoteInstancesPage, pmmInventoryPage, qanPage) => {
+        I.amOnPage(qanPage.url);
+        qanPage.verifyExitingFilter("remote-postgres");
+        qanPage.verifyExitingFilter("remote-postgres-cluster");
+        qanPage.verifyExitingFilter("remote-mysql");
+        qanPage.verifyExitingFilter("remote-mysql-cluster");
+    }
+);
