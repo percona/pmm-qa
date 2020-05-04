@@ -37,7 +37,7 @@ Scenario('Open the PXCGalera Cluster Summary Dashboard and verify Metrics are pr
     dashboardPage.verifyMetricsExistence(dashboardPage.pxcGaleraClusterSummaryDashboard.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithNA();
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
-});
+}).retry(2);
 
 Scenario('Open the MySQL Table Details Dashboard and verify Disable Tablestats Report shows no Data',
             async (I, adminPage, mysqlTableDetailsPage) => {

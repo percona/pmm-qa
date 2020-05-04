@@ -17,7 +17,7 @@ module.exports = {
     metrics: ["Largest Tables by Row Count", "Largest Tables by Size", "Most Fragmented Tables by Freeable Size"],
 
     graphsLocator (metricName){
-        locator = "//span[text()='" + metricName + "']//ancestor::grafana-panel//span[contains(text(), 'No data to show')]";
+        locator = "//span[text()='" + metricName + "']//ancestor::div[contains(@class, 'panel-container')]//span[contains(text(), 'No data to show')]";
         return locator;
     },
 
