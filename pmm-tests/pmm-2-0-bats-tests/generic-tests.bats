@@ -304,6 +304,51 @@ echo "$output"
     echo "$output" | grep "8 files"
 }
 
+@test "run pmm-admin annotate --help" {
+run pmm-admin annotate --help
+echo "$output"
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} =~ "usage: pmm-admin annotate [<flags>] <text>" ]]
+    [[ ${lines[16]} =~ "<text>  Text of annotation" ]]
+    [[ ${lines[1]} =~ "Add an annotation to Grafana charts" ]]
+}
+
+@test "run pmm-admin annotate 'pmm-testing-check'" {
+run pmm-admin annotate "pmm-testing-check"
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "Annotation added."
+}
+
+@test "run pmm-admin annotate with text and tags, verify that it should work" {
+run pmm-admin annotate --tags="testing" "testing-annotate"
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "$output" | grep "Annotation added."
+}
+
+@test "run pmm-admin --help to check if Annotation exist in help output" {
+run pmm-admin --help
+echo "$output"
+    [ "$status" -eq 0 ]
+    [[ ${lines[16]} =~ "annotate [<flags>] <text>" ]]
+    [[ ${lines[17]} =~ "Add an annotation to Grafana charts" ]]
+}
+
+@test "run pmm-admin annotate without any text and verify it should not work" {
+run pmm-admin annotate
+echo "$output"
+    [ "$status" -eq 1 ]
+    echo "$output" | grep "pmm-admin: error: required argument 'text' not provided, try --help"
+}
+
+@test "run pmm-admin annotate with tags without text cannot be added" {
+run pmm-admin annotate --tags="testing"
+echo "$output"
+    [ "$status" -eq 1 ]
+    echo "$output" | grep "pmm-admin: error: required argument 'text' not provided, try --help"
+}
+
 function teardown() {
         echo "$output"
 }
