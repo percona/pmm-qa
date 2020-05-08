@@ -303,6 +303,10 @@ do
     --dev )
     shift
     dev=1
+    if [[ -z $pmm_server_version ]];then
+    	pmm_server_version="dev-latest"
+    	PMM_VERSION=$pmm_server_version
+    fi
     ;;
     --with-proxysql )
     shift
