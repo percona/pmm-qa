@@ -24,7 +24,6 @@ PGSQL_PORT=5432
 PS_PORT=43306
 with_replica=1
 mysqld_startup_options="--user=root"
-add_annotation=1
 
 mkdir -p $WORKDIR/logs
 # User configurable variables
