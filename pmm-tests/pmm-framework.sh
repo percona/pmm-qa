@@ -90,12 +90,13 @@ usage () {
   echo " --compare-query-count          This will help us to compare the query count between PMM client instance and PMM QAN/Metrics page"
   echo " --disable-tablestats           Disable table statistics collection (only works with PS Node)"
   echo " --run-load-pmm2                Run Load Tests on Percona Server Instances with PMM2"
+  echo " --add-annotation               Pass this to add Annotation to All reports and dashboard"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -271,6 +272,10 @@ do
     --run-load-pmm2 )
     shift
     run_load_pmm2=1
+    ;;
+    --add-annotation )
+    shift
+    add_annotation=1
     ;;
     --setup-alertmanager )
     shift
@@ -1934,6 +1939,12 @@ run_workload() {
   fi
 }
 
+add_annotation_pmm2 () {
+  pmm-admin annotate "pmm-annotate-without-tags"
+  sleep 20
+  pmm-admin annotate "pmm-annotate-tags" --tags="pmm-testing-tag1,pmm-testing-tag2"
+}
+
 if [ ! -z $wipe_clients ]; then
   clean_clients
 fi
@@ -2022,6 +2033,10 @@ fi
 
 if [ ! -z $run_load_pmm2 ]; then
   run_workload
+fi
+
+if [ ! -z $add_annotation ]; then
+  add_annotation_pmm2
 fi
 
 exit 0
