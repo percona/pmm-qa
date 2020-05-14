@@ -91,12 +91,13 @@ usage () {
   echo " --disable-tablestats           Disable table statistics collection (only works with PS Node)"
   echo " --run-load-pmm2                Run Load Tests on Percona Server Instances with PMM2"
   echo " --add-annotation               Pass this to add Annotation to All reports and dashboard"
+  echo " --use-socket                   Use DB Socket for PMM Client Connection"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -276,6 +277,10 @@ do
     --add-annotation )
     shift
     add_annotation=1
+    ;;
+    --use-socket )
+    shift
+    use_socket=1
     ;;
     --setup-alertmanager )
     shift
@@ -1248,7 +1253,11 @@ add_clients(){
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
         fi
         run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
-        pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
+        if [[ -z $use_socket ]]; then
+          pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
+        else
+          pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
+        fi
       else
         dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
         node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
@@ -1259,10 +1268,18 @@ add_clients(){
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
           fi
-          if [ $(( ${j} % 2 )) -eq 0 ]; then
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+          if [[ -z $use_socket ]]; then
+            if [ $(( ${j} % 2 )) -eq 0 ]; then
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            else
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            fi
           else
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            if [ $(( ${j} % 2 )) -eq 0 ]; then
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
+            else
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
+            fi
           fi
           #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
           node_port=$(($node_port + 1))
@@ -1275,7 +1292,9 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PS_PORT percona
         sudo chmod 777 -R /var/log
-        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
+        mkdir ps_socket_${PS_PORT}
+        sudo chmod 777 -R ps_socket_${PS_PORT}
+        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
         sleep 20
         mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'ps';"
         if [[ "$query_source" != "perfschema" ]]; then
@@ -1284,13 +1303,24 @@ add_clients(){
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
         fi
-        if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+        if [[ -z $use_socket ]]; then
+          if [ $(( ${j} % 2 )) -eq 0 ]; then
+            pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+          else
+            pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+          fi
+          if [[ ! -z $DISABLE_TABLESTATS ]]; then
+            pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
+          fi
         else
-          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
-        fi
-        if [[ ! -z $DISABLE_TABLESTATS ]]; then
-          pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
+          if [ $(( ${j} % 2 )) -eq 0 ]; then
+            pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+          else
+            pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+          fi
+          if [[ ! -z $DISABLE_TABLESTATS ]]; then
+            pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug
+          fi
         fi
         #run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
         PS_PORT=$((PS_PORT+j))
@@ -1301,7 +1331,9 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MD_PORT mariadb
         sudo chmod 777 -R /var/log
-        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -d mariadb/server:${md_version} --performance-schema=1
+        mkdir md_socket_${MD_PORT}
+        sudo chmod 777 -R md_socket_${MD_PORT}
+        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -d mariadb/server:${md_version} --performance-schema=1
         sleep 20
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log='ON';"
@@ -1309,10 +1341,18 @@ add_clients(){
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log_file='/var/log/md_${j}_slowlog.log';"
         fi
-        if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-prod --cluster=md-prod-cluster --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+        if [[ -z $use_socket ]]; then
+          if [ $(( ${j} % 2 )) -eq 0 ]; then
+            pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-prod --cluster=md-prod-cluster --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+          else
+            pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+          fi
         else
-          pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+          if [ $(( ${j} % 2 )) -eq 0 ]; then
+            pmm-admin add mysql --query-source=$query_source --username=root --password=md --socket=${WORKDIR}/md_socket_${MD_PORT}/mysqld.sock --environment=md-prod --cluster=md-prod-cluster --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug
+          else
+            pmm-admin add mysql --query-source=$query_source --username=root --password=md --socket=${WORKDIR}/md_socket_${MD_PORT}/mysqld.sock --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug
+          fi
         fi
         #run_workload 127.0.0.1 root md $MD_PORT mysql md_${md_version}_${IP_ADDRESS}_$j
         MD_PORT=$((MD_PORT+j))
@@ -1341,7 +1381,11 @@ add_clients(){
       cd ${BASEDIR}
       echo $node1_port
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+        if [[ -z $use_socket ]]; then
+          pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+        else
+          pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+        fi
         sleep 5
         #run_workload 127.0.0.1 sysbench test $(cat node$j.cnf | grep port | awk -F"=" '{print $2}') mysql pxc_node_${pxc_version}_${IP_ADDRESS}_$j
       done
