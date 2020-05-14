@@ -122,6 +122,74 @@ echo "$output"
         done
 }
 
+@test "User can't use both socket and address while using pmm-admin add mysql" {
+    COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $3}') ; do
+                echo "$i"
+                let COUNTER=COUNTER+1
+                MYSQL_IP_PORT=${i}
+                export MYSQL_IP=$(cut -d':' -f1 <<< $MYSQL_IP_PORT)
+                export MYSQL_PORT=$(cut -d':' -f2 <<< $MYSQL_IP_PORT)
+                run pmm-admin add mysql --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} --host=${MYSQL_IP} --socket=/tmp/mysql_sandbox${MYSQL_PORT}.sock --service-name=mysql_$COUNTER
+                echo "$output"
+                [ "$status" -eq 1 ]
+                echo "${lines[0]}" | grep "Socket and address cannot be specified together."
+        done
+}
+
+@test "User can't use both socket and port while using pmm-admin add mysql" {
+    COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $3}') ; do
+                echo "$i"
+                let COUNTER=COUNTER+1
+                MYSQL_IP_PORT=${i}
+                export MYSQL_IP=$(cut -d':' -f1 <<< $MYSQL_IP_PORT)
+                export MYSQL_PORT=$(cut -d':' -f2 <<< $MYSQL_IP_PORT)
+                run pmm-admin add mysql --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} --port=${MYSQL_PORT} --socket=/tmp/mysql_sandbox${MYSQL_PORT}.sock --service-name=mysql_$COUNTER
+                echo "$output"
+                [ "$status" -eq 1 ]
+                echo "${lines[0]}" | grep "Socket and port cannot be specified together."
+        done
+}
+
+@test "Adding MySQL with specified socket" {
+    COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $3}') ; do
+                echo "$i"
+                let COUNTER=COUNTER+1
+                MYSQL_IP_PORT=${i}
+                export MYSQL_IP=$(cut -d':' -f1 <<< $MYSQL_IP_PORT)
+                export MYSQL_PORT=$(cut -d':' -f2 <<< $MYSQL_IP_PORT)
+                run pmm-admin add mysql --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} --socket=/tmp/mysql_sandbox${MYSQL_PORT}.sock --service-name=mysql_$COUNTER
+                echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "MySQL Service added."
+        done
+}
+
+@test "run pmm-admin remove mysql" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
+                let COUNTER=COUNTER+1
+                run pmm-admin remove mysql mysql_$COUNTER
+                echo "$output"
+                        [ "$status" -eq 0 ]
+                        echo "${output}" | grep "Service removed."
+        done
+}
+
+@test "run pmm-admin mysql --help check for socket" {
+    run pmm-admin add mysql --help
+    echo "$output"
+        [ "$status" -eq 0 ]
+        [[ ${lines[0]} =~ "usage: pmm-admin add mysql [<flags>] [<name>] [<address>]" ]]
+        [[ ${lines[13]} =~ "--socket=SOCKET" ]]
+}
+
 @test "run pmm-admin add mysql --help to check disable-tablestats-limit" {
     run pmm-admin add mysql --help
     echo "$output"
