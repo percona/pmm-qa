@@ -122,7 +122,7 @@ echo "$output"
         done
 }
 
-@test "User can't use both socket and address while using pmm-admin add mysql" {
+@test "PMM-T160 User can't use both socket and address while using pmm-admin add mysql" {
     COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $3}') ; do
@@ -138,7 +138,7 @@ echo "$output"
         done
 }
 
-@test "User can't use both socket and port while using pmm-admin add mysql" {
+@test "PMM-T159 User can't use both socket and port while using pmm-admin add mysql" {
     COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $3}') ; do
@@ -154,7 +154,7 @@ echo "$output"
         done
 }
 
-@test "Adding MySQL with specified socket" {
+@test "PMM-T157 PMM-T161 Adding MySQL with specified socket" {
     COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $3}') ; do
