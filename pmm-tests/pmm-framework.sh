@@ -92,12 +92,13 @@ usage () {
   echo " --run-load-pmm2                Run Load Tests on Percona Server Instances with PMM2"
   echo " --add-annotation               Pass this to add Annotation to All reports and dashboard"
   echo " --use-socket                   Use DB Socket for PMM Client Connection"
+  echo " --mongomagic                   Use this option for experimental MongoDB setup with PMM2"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -245,6 +246,10 @@ do
     --pmm2 )
     shift
     PMM2=1
+    ;;
+    --mongomagic )
+    shift
+    MONGOMAGIC=1
     ;;
     --disable-tablestats )
     shift
@@ -1071,7 +1076,7 @@ add_clients(){
     fi
 
     ADDCLIENTS_COUNT=$(echo "${i}" | sed 's|[^0-9]||g')
-    if  [[ "${CLIENT_NAME}" == "mo" ]]; then
+    if  [[ "${CLIENT_NAME}" == "mo" && -z $MONGOMAGIC ]]; then
       rm -rf $BASEDIR/data
       for k in `seq 1  ${REPLCOUNT}`;do
         PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
@@ -1373,6 +1378,31 @@ add_clients(){
         fi
         MODB_PORT=$((MODB_PORT+j+3))
       done
+    elif [[ "${CLIENT_NAME}" == "mo" && ! -z $PMM2  && ! -z $MONGOMAGIC ]]; then
+      echo "Running MongoDB setup script, using MONGOMAGIC"
+      sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
+      sudo chmod +x mongo_startup.sh
+      echo ${BASEDIR}
+      ## Download right PXC version
+      if [ "$mo_version" == "3.6" ]; then
+        bash ./mongo_startup.sh -s -e rocksdb --b=${BASEDIR}/bin
+      fi
+      if [ "$mo_version" == "4.0" ]; then
+        bash ./mongo_startup.sh -s -e mmapv1 --b=${BASEDIR}/bin
+      fi
+      if [ "$mo_version" == "4.2" ]; then
+        bash ./mongo_startup.sh -s -e inMemory --b=${BASEDIR}/bin
+      fi
+      pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_rs_config_1 --debug 127.0.0.1:27027
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_rs_config_2 --debug 127.0.0.1:27028
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_rs_config_3 --debug 127.0.0.1:27029
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27018
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27019
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27020
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --debug 127.0.0.1:28018
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --debug 127.0.0.1:28019
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --debug 127.0.0.1:28020
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
       echo "Running pxc_proxysql_setup script"
       sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT} ${pxc_version} ${query_source}
