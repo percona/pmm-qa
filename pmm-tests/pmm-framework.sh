@@ -1228,9 +1228,10 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "pgsql" && ! -z $PMM2 ]]; then
       PGSQL_PORT=5432
       docker pull postgres:${pgsql_version}
+      docker build --tag php-postgresql $SCRIPT_PWD/
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
-        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
+        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
         sleep 20
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
@@ -1940,8 +1941,8 @@ setup_alertmanager() {
 }
 
 run_workload() {
+  IFS=$'\n'
   if [[ $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ]]; then
-    IFS=$'\n'
     for i in $(pmm-admin list | grep "MySQL" | grep "ps" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
         echo "$i"
         export MYSQL_PORT=${i}
@@ -2008,6 +2009,22 @@ run_workload() {
         PHP_PID=$!
         echo $PHP_PID
         jobs -l
+        echo "Load Triggered check log"
+    done
+  fi
+  if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
+    for i in $(pmm-admin list | grep "PostgreSQL" | grep "PGSQL" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export PGSQL_PORT=${i}
+        export PGSQL_HOST=localhost
+        export PGSQL_USER=postgres
+        export MYSQL_DATABASE=mysql
+        export TEST_TARGET_QPS=1000
+        export TEST_QUERIES=100
+        touch pgsql_$i.log
+        docker run --rm --name pgsql_php_$i -d -e PGSQL_PORT=${PGSQL_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_QUERIES=${TEST_QUERIES} -d --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-postgresql php pgsql_schema_table_query.php
+        sleep 5
+        docker logs pgsql_php_$i
         echo "Load Triggered check log"
     done
   fi
