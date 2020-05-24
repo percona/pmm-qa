@@ -1228,7 +1228,6 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "pgsql" && ! -z $PMM2 ]]; then
       PGSQL_PORT=5432
       docker pull postgres:${pgsql_version}
-      docker build --tag php-postgresql $SCRIPT_PWD/
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
         docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
@@ -1386,18 +1385,18 @@ add_clients(){
       echo ${BASEDIR}
       ## Download right PXC version
       if [ "$mo_version" == "3.6" ]; then
-        bash ./mongo_startup.sh -s -e rocksdb --mongosExtra="--profile 2 --slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        bash ./mongo_startup.sh -s -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
       fi
       if [ "$mo_version" == "4.0" ]; then
-        bash ./mongo_startup.sh -s -e mmapv1 --mongosExtra="--profile 2 --slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        bash ./mongo_startup.sh -s -e mmapv1 --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
       fi
       if [ "$mo_version" == "4.2" ]; then
-        bash ./mongo_startup.sh -s -e inMemory --mongosExtra="--profile 2 --slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        bash ./mongo_startup.sh -s -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
       fi
       pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
-      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_rs_config_1 --debug 127.0.0.1:27027
-      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_rs_config_2 --debug 127.0.0.1:27028
-      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_rs_config_3 --debug 127.0.0.1:27029
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --debug 127.0.0.1:27027
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --debug 127.0.0.1:27028
+      pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --debug 127.0.0.1:27029
       pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27018
       pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27019
       pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27020
@@ -1941,6 +1940,7 @@ setup_alertmanager() {
 }
 
 run_workload() {
+  docker build --tag php-db $SCRIPT_PWD/
   IFS=$'\n'
   if [[ $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ]]; then
     for i in $(pmm-admin list | grep "MySQL" | grep "ps" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
@@ -2018,14 +2018,27 @@ run_workload() {
         export PGSQL_PORT=${i}
         export PGSQL_HOST=localhost
         export PGSQL_USER=postgres
-        export MYSQL_DATABASE=mysql
-        export TEST_TARGET_QPS=1000
-        export TEST_QUERIES=100
+        export TEST_TARGET_QPS=100
+        export TEST_QUERIES=1000
         touch pgsql_$i.log
-        docker run --rm --name pgsql_php_$i -d -e PGSQL_PORT=${PGSQL_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_QUERIES=${TEST_QUERIES} -d --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-postgresql php pgsql_schema_table_query.php
+        docker run --rm --name pgsql_php_$i -d -e PGSQL_PORT=${PGSQL_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_QUERIES=${TEST_QUERIES} -d --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db php pgsql_schema_table_query.php
         sleep 5
         docker logs pgsql_php_$i
         echo "Load Triggered check log"
+    done
+  fi
+  if [[ $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ]]; then
+    for i in $(pmm-admin list | grep "MongoDB" | grep "mongodb_rs" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MONGODB_PORT=${i}
+        export TEST_TARGET_QPS=100
+        export TEST_COLLECTION=1000
+        export TEST_DB=10
+        touch mongodb_$i.log
+        docker run --rm --name mongodb_$i -d -e MONGODB_PORT=${MONGODB_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_COLLECTION=${TEST_COLLECTION} -e TEST_DB=${TEST_DB} -d --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
+        sleep 5
+        docker logs mongodb_$i
+        echo "Load Triggered check Docker logs, load should run only for Primary Nodes"
     done
   fi
 }
