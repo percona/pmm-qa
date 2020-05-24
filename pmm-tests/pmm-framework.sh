@@ -1386,13 +1386,13 @@ add_clients(){
       echo ${BASEDIR}
       ## Download right PXC version
       if [ "$mo_version" == "3.6" ]; then
-        bash ./mongo_startup.sh -s -e rocksdb --b=${BASEDIR}/bin
+        bash ./mongo_startup.sh -s -e rocksdb --mongosExtra="--profile 2 --slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
       fi
       if [ "$mo_version" == "4.0" ]; then
-        bash ./mongo_startup.sh -s -e mmapv1 --b=${BASEDIR}/bin
+        bash ./mongo_startup.sh -s -e mmapv1 --mongosExtra="--profile 2 --slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
       fi
       if [ "$mo_version" == "4.2" ]; then
-        bash ./mongo_startup.sh -s -e inMemory --b=${BASEDIR}/bin
+        bash ./mongo_startup.sh -s -e inMemory --mongosExtra="--profile 2 --slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
       fi
       pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
       pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_rs_config_1 --debug 127.0.0.1:27027
