@@ -64,7 +64,6 @@ usage () {
   echo " --replcount                    You can configure multiple mongodb replica sets with this oprion"
   echo " --with-replica                 This will configure mongodb replica setup"
   echo " --with-sharding                This will configure mongodb sharding setup"
-  echo " --with-arbiter                 This will configure mongodb with with-arbiter"
   echo " --mongo-sysbench               This option initiates sysbench oltp prepare and run for MongoDB instance"
   echo " --add-docker-client            Add docker pmm-clients with percona server to the currently live PMM server"
   echo " --list                         List all client information as obtained from pmm-admin"
@@ -1419,16 +1418,9 @@ add_clients(){
         if [ "$mo_version" == "4.2" ]; then
           bash ./mongo_startup.sh -r -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
-      elif [[ "$with_arbiter" == "1" ]]; then
-        if [ "$mo_version" == "3.6" ]; then
-          bash ./mongo_startup.sh -a -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
-        fi
-        if [ "$mo_version" == "4.0" ]; then
-          bash ./mongo_startup.sh -a -e mmapv1 --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
-        fi
-        if [ "$mo_version" == "4.2" ]; then
-          bash ./mongo_startup.sh -a -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
-        fi
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27019
       else
         if [ "$mo_version" == "3.6" ]; then
           bash ./mongo_startup.sh -m -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
@@ -1439,6 +1431,7 @@ add_clients(){
         if [ "$mo_version" == "4.2" ]; then
           bash ./mongo_startup.sh -m -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
+        pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single --debug 127.0.0.1:27017
       fi
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
       echo "Running pxc_proxysql_setup script"
@@ -1977,7 +1970,8 @@ setup_alertmanager() {
 }
 
 run_workload() {
-  docker build --tag php-db $SCRIPT_PWD/
+  touch docker-build.log
+  docker build --tag php-db $SCRIPT_PWD/ > docker-build.log 2>&1
   IFS=$'\n'
   if [[ $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ]]; then
     for i in $(pmm-admin list | grep "MySQL" | grep "ps" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
