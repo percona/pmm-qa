@@ -113,6 +113,17 @@ echo $runs_on_node_id
 
 install() {
 	echo "Installing PMM2-Client..."
+	if grep -iq "ubuntu"  /etc/os-release ; then
+		wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+  	sudo dpkg -i percona-release_latest.generic_all.deb
+  	sudo apt-get -y install pmm2-client
+		sudo apt-get update
+		rm percona-release_latest.generic_all.deb
+	elif grep -iq "centos"  /etc/os-release || grep -iq "rhel"  /etc/os-release  ; then
+		sudo yum -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+		sudo yum clean all
+		sudo yum -y install pmm2-client
+		sudo yum -y update
 }
 
 configure_mysql(){
