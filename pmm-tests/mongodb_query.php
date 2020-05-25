@@ -2,11 +2,11 @@
 require 'vendor/autoload.php'; // include Composer's autoloader
 /* This script is designed to generate test workload to hit certain amount of tables in certain amount of schemas
    having certain amount of unique queries */
-$db=100;
+$db=10;
 $collection=100;
 
 /* How many queries try to run per second */
-$target_qps=100;
+$target_qps=10;
 
 $mongodb_host="localhost";
 $mongodb_user="";
@@ -47,7 +47,7 @@ function run_query($db,$collection)
         $collectionName = "beers" . $collection;
         $dbName = "demo" . $db;
         $collection = $client->$dbName->$collectionName;
-        $result = $collection->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $i ] );
+
         $cursor = $collection->find();
         // iterate cursor to display title of documents
         foreach ($cursor as $document) {
@@ -56,9 +56,23 @@ function run_query($db,$collection)
         $collection->updateMany(array("a"=>"a"),
         array('$set'=>array("a"=>"a_u")));
         $collection->deleteOne(array("a"=>"a_u"));
+        $result = $collection->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $i ] );
 }
 
 echo("Running Queries...\n");
+
+//lets create all db's and data
+for($i = 1; $i <= $db; $i++)
+{
+        $dbName = "demo" . $i;
+        for ($j = 1; $j <= $collection; $j++)
+        {
+                $collectionName = "beers" . $j;
+                $collection = $client->$dbName->$collectionName;
+                $result = $collection->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $j ] );
+                echo "Inserted with Object ID '{$result->getInsertedId()}'";
+        }
+}
 
 /* How long we want target to take */
 $target_round_time=1/$target_qps;
