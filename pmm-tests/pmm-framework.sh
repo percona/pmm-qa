@@ -2035,9 +2035,9 @@ run_workload() {
         export TEST_COLLECTION=1000
         export TEST_DB=10
         touch mongodb_$i.log
-        docker run --rm --name mongodb_$i -d -e MONGODB_PORT=${MONGODB_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_COLLECTION=${TEST_COLLECTION} -e TEST_DB=${TEST_DB} -d --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
+        docker run --rm --name mongodb_$i --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
+        docker run --rm --name mongodb_$i -d -e MONGODB_PORT=${MONGODB_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_COLLECTION=${TEST_COLLECTION} -e TEST_DB=${TEST_DB} --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
         sleep 5
-        docker logs mongodb_$i
         echo "Load Triggered check Docker logs, load should run only for Primary Nodes"
     done
   fi
