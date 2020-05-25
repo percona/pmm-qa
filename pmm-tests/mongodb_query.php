@@ -47,15 +47,14 @@ function run_query($db,$collection)
         $collectionName = "beers" . $collection;
         $dbName = "demo" . $db;
         $collection = $client->$dbName->$collectionName;
-
+        //read
         $cursor = $collection->find();
-        // iterate cursor to display title of documents
-        foreach ($cursor as $document) {
-                echo $document["a"] . "\n";
-        }
+        //update
         $collection->updateMany(array("a"=>"a"),
         array('$set'=>array("a"=>"a_u")));
+        //delete
         $collection->deleteOne(array("a"=>"a_u"));
+        //create
         $result = $collection->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $i ] );
 }
 
