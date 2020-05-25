@@ -2031,8 +2031,8 @@ run_workload() {
     for i in $(pmm-admin list | grep "MongoDB" | grep "mongodb_rs" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
         echo "$i"
         export MONGODB_PORT=${i}
-        export TEST_TARGET_QPS=100
-        export TEST_COLLECTION=1000
+        export TEST_TARGET_QPS=10
+        export TEST_COLLECTION=100
         export TEST_DB=10
         touch mongodb_$i.log
         docker run --rm --name mongodb_$i --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
