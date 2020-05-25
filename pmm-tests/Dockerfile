@@ -11,5 +11,5 @@ RUN apk --update add --virtual build-dependencies build-base openssl-dev autocon
   && apk del build-dependencies build-base openssl-dev autoconf \
   && rm -rf /var/cache/apk/*
 
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin --filename=composer/usr/src/myapp
-RUN cd /usr/src/myapp && composer require mongodb/mongodb
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/bin/ --filename=composer
+RUN composer require mongodb/mongodb
