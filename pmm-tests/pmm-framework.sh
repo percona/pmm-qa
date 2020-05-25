@@ -2071,7 +2071,7 @@ run_workload() {
         echo "$i"
         export MONGODB_PORT=${i}
         export TEST_TARGET_QPS=10
-        export TEST_COLLECTION=100
+        export TEST_COLLECTION=30
         export TEST_DB=10
         touch mongodb_$i.log
         docker run --rm --name mongodb_$i --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
@@ -2093,21 +2093,22 @@ setup_pmm2_client_docker_image () {
   sleep 5
 
   # Start PMM-Server on a different port for testing purpose
-  docker run -d -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server --network docker-client-check  -e PMM_DEBUG=1 -e PERCONA_TEST_CHECKS_INTERVAL=10s -e PERCONA_TEST_CHECKS_HOST=check-dev.percona.com:443 -e PERCONA_TEST_CHECKS_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX perconalab/pmm-server:dev-latest
-  sleep 5
+  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 perconalab/pmm-server:dev-latest
+  sleep 20
   echo "PMM Server Dev Latest connected using port 8081"
 
   # Start pmm-client and use same network, connect it to pmm-server
-  docker run -d -e PMM_AGENT_SERVER_ADDRESS=pmm-server:445 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml --network docker-client-check --name=pmm-client perconalab/pmm-client:dev-latest
-  sleep 5
+  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml -d --network docker-client-check --name=pmm-client perconalab/pmm-client:dev-latest
+  sleep 20
   echo "PMM Client Start and connected to PMM-Server"
   ## Start Percona Server 5.7 latest image and connect it to same network
 
-  docker run -d -e PMM_AGENT_SERVER_ADDRESS=pmm-server:445 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent --network docker-client-check --name=ps5.7 percona:5.7
+  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent -d --network docker-client-check --name=ps5.7 percona:5.7
   sleep 20
   docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL slow_query_log='ON';"
   docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL long_query_time=0;"
   docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL log_slow_rate_limit=1;"
+  sleep 10
 
   ## Add instance for monitoring.
   docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7  --host=ps5.7 --port=3306 --server-url=http://admin:admin@pmm-server/
