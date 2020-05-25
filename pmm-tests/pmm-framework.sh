@@ -93,12 +93,13 @@ usage () {
   echo " --add-annotation               Pass this to add Annotation to All reports and dashboard"
   echo " --use-socket                   Use DB Socket for PMM Client Connection"
   echo " --mongomagic                   Use this option for experimental MongoDB setup with PMM2"
+  echo " --setup-pmm-client-docker      Use this option to setup PMM-Client docker, Percona Server and PMM-Server Docker images for testing client"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -254,6 +255,10 @@ do
     --mongomagic )
     shift
     MONGOMAGIC=1
+    ;;
+    --setup-pmm-client-docker )
+    shift
+    setup_pmm_client_docker=1
     ;;
     --disable-tablestats )
     shift
@@ -2083,6 +2088,32 @@ add_annotation_pmm2 () {
   pmm-admin annotate "pmm-annotate-tags" --tags="pmm-testing-tag1,pmm-testing-tag2"
 }
 
+setup_pmm2_client_docker_image () {
+  docker network create docker-client-check
+  sleep 5
+
+  # Start PMM-Server on a different port for testing purpose
+  docker run -d -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server --network docker-client-check  -e PMM_DEBUG=1 -e PERCONA_TEST_CHECKS_INTERVAL=10s -e PERCONA_TEST_CHECKS_HOST=check-dev.percona.com:443 -e PERCONA_TEST_CHECKS_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX perconalab/pmm-server:dev-latest
+  sleep 5
+  echo "PMM Server Dev Latest connected using port 8081"
+
+  # Start pmm-client and use same network, connect it to pmm-server
+  docker run -d -e PMM_AGENT_SERVER_ADDRESS=pmm-server:445 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml --network docker-client-check --name=pmm-client perconalab/pmm-client:dev-latest
+  sleep 5
+  echo "PMM Client Start and connected to PMM-Server"
+  ## Start Percona Server 5.7 latest image and connect it to same network
+
+  docker run -d -e PMM_AGENT_SERVER_ADDRESS=pmm-server:445 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent --network docker-client-check --name=ps5.7 percona:5.7
+  sleep 20
+  docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL slow_query_log='ON';"
+  docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL long_query_time=0;"
+  docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL log_slow_rate_limit=1;"
+
+  ## Add instance for monitoring.
+  docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7  --host=ps5.7 --port=3306 --server-url=http://admin:admin@pmm-server/
+  sleep 5
+}
+
 if [ ! -z $wipe_clients ]; then
   clean_clients
 fi
@@ -2175,6 +2206,10 @@ fi
 
 if [ ! -z $add_annotation ]; then
   add_annotation_pmm2
+fi
+
+if [ ! -z $setup_pmm_client_docker ]; then
+  setup_pmm2_client_docker_image
 fi
 
 exit 0
