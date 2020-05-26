@@ -1604,7 +1604,7 @@ add_clients(){
 check_port (){
   PORT=$1
   DB=$2
-  if [[ $(sudo docker ps | grep $DB | grep 0.0.0.0:$PORT) ]]; then
+  if [[ $(sudo docker ps | grep $DB | grep 0.0.0.0:$PORT) ]] || [[ $(lsof -i -P -n | grep LISTEN | grep $PORT) ]]; then
     if [[ $DB == "postgres" ]]; then
       PGSQL_PORT=$((PGSQL_PORT+j))
       check_port $PGSQL_PORT postgres
@@ -1622,87 +1622,6 @@ check_port (){
       check_port $MD_PORT mariadb
     fi
   fi
-}
-
-pmm_docker_client_startup(){
-  centos_docker_client(){
-    rm -rf Dockerfile docker-compose.yml
-    echo "FROM centos:centos6" >> Dockerfile
-    echo "RUN yum install -y http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm" >> Dockerfile
-    echo "RUN yum install -y yum install Percona-Server-server-57 pmm-client" >> Dockerfile
-    echo "RUN echo \"UNINSTALL PLUGIN validate_password;\" > init.sql " >> Dockerfile
-    echo "RUN echo \"ALTER USER  root@localhost IDENTIFIED BY '';\" >> init.sql " >> Dockerfile
-    echo "RUN echo \"CREATE USER root@'%';\" >> init.sql " >> Dockerfile
-    echo "RUN echo \"GRANT ALL ON *.* TO root@'%';\" >> init.sql" >> Dockerfile
-    echo "RUN service mysql start" >> Dockerfile
-    echo "EXPOSE 3306 42000 42002 42003 42004" >> Dockerfile
-    echo "centos_ps:" >> docker-compose.yml
-    echo "   build: ." >> docker-compose.yml
-    echo "   hostname: centos_ps1" >> docker-compose.yml
-    echo "   command: sh -c \"mysqld --init-file=/init.sql --user=root\"" >> docker-compose.yml
-    echo "   ports:" >> docker-compose.yml
-    echo "      - \"3306\"" >> docker-compose.yml
-    echo "      - \"42000\"" >> docker-compose.yml
-    echo "      - \"42002\"" >> docker-compose.yml
-    echo "      - \"42003\"" >> docker-compose.yml
-    echo "      - \"42004\"" >> docker-compose.yml
-    docker-compose up >/dev/null 2>&1 &
-    BASE_DIR=$(basename "$PWD")
-    BASE_DIR=${BASE_DIR//[^[:alnum:]]/}
-    while ! docker ps | grep ${BASE_DIR}_centos_ps_1 > /dev/null; do
-      sleep 5 ;
-    done
-    DOCKER_CONTAINER_NAME=$(docker ps | grep ${BASE_DIR}_centos_ps | awk '{print $NF}')
-    IP_ADD=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-    if [ ! -z $DOCKER_CONTAINER_NAME ]; then
-      echo -e "\nAdding pmm-client instance from CentOS docker container to the currently live PMM server"
-      IP_DOCKER_ADD=$(docker exec -it $DOCKER_CONTAINER_NAME ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-      docker exec -it $DOCKER_CONTAINER_NAME pmm-admin config --server $IP_ADD --bind-address $IP_DOCKER_ADD
-      docker exec -it $DOCKER_CONTAINER_NAME pmm-admin add mysql
-    fi
-  }
-
-  ubuntu_docker_client(){
-    rm -rf Dockerfile docker-compose.yml
-    echo "FROM ubuntu:16.04" >> Dockerfile
-    echo "RUN apt-get update" >> Dockerfile
-    echo "RUN apt-get install -y wget lsb-release net-tools vim iproute" >> Dockerfile
-    echo "RUN wget http://repo.percona.com/apt/percona-release_0.1-4.\$(lsb_release -sc)_all.deb" >> Dockerfile
-    echo "RUN dpkg -i percona-release_0.1-4.\$(lsb_release -sc)_all.deb" >> Dockerfile
-    echo "RUN apt-get update" >> Dockerfile
-    echo "RUN apt-get install -y percona-server-server-5.7 pmm-client" >> Dockerfile
-    echo "RUN echo \"CREATE USER root@'%';\" > init.sql " >> Dockerfile
-    echo "RUN echo \"GRANT ALL ON *.* TO root@'%';\" >> init.sql" >> Dockerfile
-    echo "RUN service mysql start" >> Dockerfile
-    echo "EXPOSE 3306 42000 42002 42003 42004" >> Dockerfile
-    echo "ubuntu_ps:" >> docker-compose.yml
-    echo "   build: ." >> docker-compose.yml
-    echo "   hostname: ubuntu_ps1" >> docker-compose.yml
-    echo "   command: sh -c \"mysqld --init-file=/init.sql\"" >> docker-compose.yml
-    echo "   ports:" >> docker-compose.yml
-    echo "      - 3306:3306" >> docker-compose.yml
-    echo "      - 42000:42000" >> docker-compose.yml
-    echo "      - 42002:42002" >> docker-compose.yml
-    echo "      - 42003:42003" >> docker-compose.yml
-    echo "      - 42004:42004" >> docker-compose.yml
-    docker-compose up >/dev/null 2>&1 &
-    BASE_DIR=$(basename "$PWD")
-    BASE_DIR=${BASE_DIR//[^[:alnum:]]/}
-    while ! docker ps | grep ${BASE_DIR}_ubuntu_ps_1 > /dev/null; do
-      sleep 5 ;
-    done
-    DOCKER_CONTAINER_NAME=$(docker ps | grep ${BASE_DIR}_ubuntu_ps | awk '{print $NF}')
-    IP_ADD=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-    if [ ! -z $DOCKER_CONTAINER_NAME ]; then
-      echo -e "\nAdding pmm-client instance from Ubuntu docker container to the currently live PMM server"
-      IP_DOCKER_ADD=$(docker exec -it $DOCKER_CONTAINER_NAME ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-      docker exec -it $DOCKER_CONTAINER_NAME pmm-admin config --server $IP_ADD --bind-address $IP_DOCKER_ADD
-      docker exec -it $DOCKER_CONTAINER_NAME pmm-admin add mysql
-    fi
-  }
-
-  centos_docker_client
-  ubuntu_docker_client
 }
 
 clean_clients(){
@@ -1855,6 +1774,7 @@ wipe_pmm2_clients () {
         echo "$i"
         MYSQL_SERVICE_ID=${i}
         pmm-admin remove mysql ${MYSQL_SERVICE_ID}
+        docker stop ${MYSQL_SERVICE_ID} && docker rm ${MYSQL_SERVICE_ID}
     done
   fi
   if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
@@ -1863,6 +1783,7 @@ wipe_pmm2_clients () {
         echo "$i"
         PGSQL_SERVICE_ID=${i}
         pmm-admin remove postgresql ${PGSQL_SERVICE_ID}
+        docker stop ${PGSQL_SERVICE_ID} && docker rm ${PGSQL_SERVICE_ID}
     done
   fi
   if [[ $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ]]; then
@@ -1871,6 +1792,7 @@ wipe_pmm2_clients () {
         echo "$i"
         MONGODB_SERVICE_ID=${i}
         pmm-admin remove mongodb ${MONGODB_SERVICE_ID}
+        docker stop ${MONGODB_SERVICE_ID} && docker rm ${MONGODB_SERVICE_ID}
     done
   fi
 }
