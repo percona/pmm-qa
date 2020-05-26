@@ -46,16 +46,16 @@ function run_query($db,$collection)
         global $client;
         $collectionName = "beers" . $collection;
         $dbName = "demo" . $db;
-        $collection = $client->$dbName->$collectionName;
+        $collectionObj = $client->$dbName->$collectionName;
         //read
-        $cursor = $collection->find();
+        $cursor = $collectionObj->find();
         //update
-        $collection->updateMany(array("a"=>"a"),
+        $collectionObj->updateMany(array("a"=>"a"),
         array('$set'=>array("a"=>"a_u")));
         //delete
-        $collection->deleteOne(array("a"=>"a_u"));
+        $collectionObj->deleteOne(array("a"=>"a_u"));
         //create
-        $result = $collection->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $i ] );
+        $result = $collectionObj->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $i ] );
 }
 
 echo("Running Queries...\n");
@@ -67,8 +67,8 @@ for($i = 1; $i <= $db; $i++)
         for ($j = 1; $j <= $collection; $j++)
         {
                 $collectionName = "beers" . $j;
-                $collection = $client->$dbName->$collectionName;
-                $result = $collection->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $j ] );
+                $collectionObj = $client->$dbName->$collectionName;
+                $result = $collectionObj->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $j ] );
                 echo "Inserted with Object ID '{$result->getInsertedId()}'";
         }
 }
@@ -79,9 +79,9 @@ $target_round_time=1/$target_qps;
 while(1)
 {
    $start=microtime(1);
-   $db=skewed_rnd(1,$db);
-   $collection=skewed_rnd(1,$collection);
-   run_query($db,$collection);
+   $dbNumber=skewed_rnd(1,$db);
+   $collectionNumber=skewed_rnd(1,$collection);
+   run_query($dbNumber,$collectionNumber);
    $end=microtime(1);
    $round_time=$end-$start;
 #   echo("Round Took: $round_time\n");

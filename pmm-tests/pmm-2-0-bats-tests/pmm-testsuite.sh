@@ -11,10 +11,15 @@ function pmm_framework_setup() {
 
 function pmm_framework_add_clients() {
   if [[ $1 == "pxc" ]]; then
+    pmm_client_docker_test
     ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --with-proxysql --${1}-version=$3 --pmm2 --download --pmm2-server-ip=$4
   else
     ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --${1}-version=$3 --pmm2 --dbdeployer --download --pmm2-server-ip=$4
   fi
+}
+
+function pmm_client_docker_test () {
+  ${DIRNAME}/../pmm-framework.sh --setup-pmm-client-docker
 }
 
 function pmm_wipe_all() {
@@ -105,8 +110,10 @@ function run_mongodb_specific_tests() {
 function run_proxysql_tests() {
   if [[ $tap == 1 ]] ; then
     bats --tap ${DIRNAME}/proxysql-specific-tests.bats
+    bats --tap ${DIRNAME}/pmm-client-docker-tests.bats
   else
     bats ${DIRNAME}/proxysql-specific-tests.bats
+    bats ${DIRNAME}/pmm-client-docker-tests.bats
   fi
 }
 
