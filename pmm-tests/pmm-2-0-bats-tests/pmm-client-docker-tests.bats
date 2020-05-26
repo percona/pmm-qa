@@ -12,7 +12,9 @@ echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "Service type" ]]
     [[ ${lines[1]} =~ "ps5.7" ]]
-    [[ ${lines[4]} =~ "Running" ]]
+    [[ ${lines[2]} =~ "mongodb-4.0" ]]
+    [[ ${lines[3]} =~ "postgres-10" ]]
+    [[ ${lines[7]} =~ "Running" ]]
 }
 
 @test "run pmm-admin add mysql with default options" {
@@ -40,18 +42,18 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
-run docker exec pmm-client pmm-admin add mongodb --service-name=psmdb-3.6_2  --host=psmbd-3.6 --port=27017 --server-url=http://admin:admin@pmm-server/
+run docker exec pmm-client pmm-admin add mongodb --service-name=mongodb-4.0_2  --host=mongodb --port=27017 --server-url=http://admin:admin@pmm-server/
 echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "MongoDB Service added" ]]
-    [[ ${lines[2]} =~ "psmdb-3.6_2" ]]
+    [[ ${lines[2]} =~ "mongodb-4.0_2" ]]
 }
 
 @test "run pmm-admin remove mongodb" {
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
-run docker exec pmm-client pmm-admin remove mongodb psmdb-3.6_2
+run docker exec pmm-client pmm-admin remove mongodb mongodb-4.0_2
 echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "Service removed." ]]

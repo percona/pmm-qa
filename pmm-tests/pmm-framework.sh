@@ -2111,9 +2111,10 @@ setup_pmm2_client_docker_image () {
   sleep 5
 
   ## Add Percona Server for MongoDB instance for monitoring
-  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -d --network docker-client-check --name=psmdb-3.6 percona:psmdb-3.6
+  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -d --network docker-client-check --name mongodb mongo:4.0
   sleep 10
-  docker exec pmm-client pmm-admin add mongodb --service-name=psmdb-3.6  --host=psmbd-3.6 --port=27017 --server-url=http://admin:admin@pmm-server/
+  docker exec mongodb mongo --eval 'db.setProfilingLevel(2)'
+  docker exec pmm-client pmm-admin add mongodb --service-name=mongodb-4.0  --host=mongodb --port=27017 --server-url=http://admin:admin@pmm-server/
 
   ## Add PostgreSQL instance for Monitoring
   docker run  -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d --network docker-client-check --name=postgres-10 postgres:10
