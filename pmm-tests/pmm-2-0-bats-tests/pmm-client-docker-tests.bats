@@ -10,7 +10,7 @@ fi
 run docker exec pmm-client pmm-admin list
 echo "$output"
     [ "$status" -eq 0 ]
-    [[ ${lines[0]} =~ "Service type  Service name Address and port Service ID" ]]
+    [[ ${lines[0]} =~ "Service type" ]]
     [[ ${lines[1]} =~ "ps5.7" ]]
     [[ ${lines[4]} =~ "Running" ]]
 }
@@ -31,6 +31,48 @@ if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
 run docker exec pmm-client pmm-admin remove mysql ps5.7_2
+echo "$output"
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} =~ "Service removed." ]]
+}
+
+@test "run pmm-admin add mongodb with default options" {
+if [[ $(id -u) -eq 0 ]] ; then
+        skip "Skipping this test, because you are running under root"
+fi
+run docker exec pmm-client pmm-admin add mongodb --service-name=psmdb-3.6_2  --host=psmbd-3.6 --port=27017 --server-url=http://admin:admin@pmm-server/
+echo "$output"
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} =~ "MongoDB Service added" ]]
+    [[ ${lines[2]} =~ "psmdb-3.6_2" ]]
+}
+
+@test "run pmm-admin remove mongodb" {
+if [[ $(id -u) -eq 0 ]] ; then
+        skip "Skipping this test, because you are running under root"
+fi
+run docker exec pmm-client pmm-admin remove mongodb psmdb-3.6_2
+echo "$output"
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} =~ "Service removed." ]]
+}
+
+@test "run pmm-admin add postgresql with default options" {
+if [[ $(id -u) -eq 0 ]] ; then
+        skip "Skipping this test, because you are running under root"
+fi
+run docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10_2  --host=postgres-10 --port=5432 --server-url=http://admin:admin@pmm-server/
+echo "$output"
+    [ "$status" -eq 0 ]
+    [[ ${lines[0]} =~ "PostgreSQL Service added." ]]
+    [[ ${lines[2]} =~ "postgres-10_2" ]]
+}
+
+@test "run pmm-admin remove postgresql" {
+if [[ $(id -u) -eq 0 ]] ; then
+        skip "Skipping this test, because you are running under root"
+fi
+run docker exec pmm-client pmm-admin remove postgresql postgres-10_2
 echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "Service removed." ]]

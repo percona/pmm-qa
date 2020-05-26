@@ -2105,13 +2105,20 @@ setup_pmm2_client_docker_image () {
 
   docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent -d --network docker-client-check --name=ps5.7 percona:5.7
   sleep 20
-  docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL slow_query_log='ON';"
-  docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL long_query_time=0;"
-  docker exec ps5.7 mysql -u root -proot -e "SET GLOBAL log_slow_rate_limit=1;"
-  sleep 10
 
-  ## Add instance for monitoring.
-  docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7  --host=ps5.7 --port=3306 --server-url=http://admin:admin@pmm-server/
+  ## Add mysql instance for monitoring.
+  docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7 --query-source=perfschema --host=ps5.7 --port=3306 --server-url=http://admin:admin@pmm-server/
+  sleep 5
+
+  ## Add Percona Server for MongoDB instance for monitoring
+  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -d --network docker-client-check --name=psmdb-3.6 percona:psmdb-3.6
+  sleep 10
+  docker exec pmm-client pmm-admin add mongodb --service-name=psmdb-3.6  --host=psmbd-3.6 --port=27017 --server-url=http://admin:admin@pmm-server/
+
+  ## Add PostgreSQL instance for Monitoring
+  docker run  -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d --network docker-client-check --name=postgres-10 postgres:10
+  sleep 10
+  docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@pmm-server/
   sleep 5
 }
 
