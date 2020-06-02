@@ -92,12 +92,14 @@ usage () {
   echo " --run-load-pmm2                Run Load Tests on Percona Server Instances with PMM2"
   echo " --add-annotation               Pass this to add Annotation to All reports and dashboard"
   echo " --use-socket                   Use DB Socket for PMM Client Connection"
+  echo " --mongomagic                   Use this option for experimental MongoDB setup with PMM2"
+  echo " --setup-pmm-client-docker      Use this option to setup PMM-Client docker, Percona Server and PMM-Server Docker images for testing client"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -119,6 +121,10 @@ do
     --with-replica )
     shift
     with_replica=1
+    ;;
+    --with-arbiter )
+    shift
+    with_arbiter=1
     ;;
     --replcount )
     REPLCOUNT=$2
@@ -245,6 +251,14 @@ do
     --pmm2 )
     shift
     PMM2=1
+    ;;
+    --mongomagic )
+    shift
+    MONGOMAGIC=1
+    ;;
+    --setup-pmm-client-docker )
+    shift
+    setup_pmm_client_docker=1
     ;;
     --disable-tablestats )
     shift
@@ -1066,7 +1080,7 @@ add_clients(){
     fi
 
     ADDCLIENTS_COUNT=$(echo "${i}" | sed 's|[^0-9]||g')
-    if  [[ "${CLIENT_NAME}" == "mo" ]]; then
+    if  [[ "${CLIENT_NAME}" == "mo" && -z $MONGOMAGIC ]]; then
       rm -rf $BASEDIR/data
       for k in `seq 1  ${REPLCOUNT}`;do
         PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
@@ -1220,7 +1234,7 @@ add_clients(){
       docker pull postgres:${pgsql_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
-        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
+        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
         sleep 20
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
@@ -1368,6 +1382,60 @@ add_clients(){
         fi
         MODB_PORT=$((MODB_PORT+j+3))
       done
+    elif [[ "${CLIENT_NAME}" == "mo" && ! -z $PMM2  && ! -z $MONGOMAGIC ]]; then
+      echo "Running MongoDB setup script, using MONGOMAGIC"
+      sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
+      sudo chmod +x mongo_startup.sh
+      echo ${BASEDIR}
+      ## Download right PXC version
+      if [[ "$with_sharding" == "1" ]]; then
+        if [ "$mo_version" == "3.6" ]; then
+          bash ./mongo_startup.sh -s -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        if [ "$mo_version" == "4.0" ]; then
+          bash ./mongo_startup.sh -s -e mmapv1 --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        if [ "$mo_version" == "4.2" ]; then
+          bash ./mongo_startup.sh -s -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        sleep 20
+        pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --debug 127.0.0.1:27027
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --debug 127.0.0.1:27028
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --debug 127.0.0.1:27029
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27018
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27019
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27020
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --debug 127.0.0.1:28018
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --debug 127.0.0.1:28019
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --debug 127.0.0.1:28020
+      elif [[ "$with_replica" == "1" ]]; then
+        if [ "$mo_version" == "3.6" ]; then
+          bash ./mongo_startup.sh -r -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        if [ "$mo_version" == "4.0" ]; then
+          bash ./mongo_startup.sh -r -e mmapv1 --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        if [ "$mo_version" == "4.2" ]; then
+          bash ./mongo_startup.sh -r -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        sleep 20
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
+        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27019
+      else
+        if [ "$mo_version" == "3.6" ]; then
+          bash ./mongo_startup.sh -m -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        if [ "$mo_version" == "4.0" ]; then
+          bash ./mongo_startup.sh -m -e mmapv1 --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        if [ "$mo_version" == "4.2" ]; then
+          bash ./mongo_startup.sh -m -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+        sleep 20
+        pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single --debug 127.0.0.1:27017
+      fi
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
       echo "Running pxc_proxysql_setup script"
       sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT} ${pxc_version} ${query_source}
@@ -1531,7 +1599,7 @@ add_clients(){
 check_port (){
   PORT=$1
   DB=$2
-  if [[ $(sudo docker ps | grep $DB | grep 0.0.0.0:$PORT) ]]; then
+  if [[ $(sudo docker ps | grep $DB | grep 0.0.0.0:$PORT) ]] || [[ $(lsof -i -P -n | grep LISTEN | grep $PORT) ]]; then
     if [[ $DB == "postgres" ]]; then
       PGSQL_PORT=$((PGSQL_PORT+j))
       check_port $PGSQL_PORT postgres
@@ -1549,87 +1617,6 @@ check_port (){
       check_port $MD_PORT mariadb
     fi
   fi
-}
-
-pmm_docker_client_startup(){
-  centos_docker_client(){
-    rm -rf Dockerfile docker-compose.yml
-    echo "FROM centos:centos6" >> Dockerfile
-    echo "RUN yum install -y http://www.percona.com/downloads/percona-release/redhat/0.1-4/percona-release-0.1-4.noarch.rpm" >> Dockerfile
-    echo "RUN yum install -y yum install Percona-Server-server-57 pmm-client" >> Dockerfile
-    echo "RUN echo \"UNINSTALL PLUGIN validate_password;\" > init.sql " >> Dockerfile
-    echo "RUN echo \"ALTER USER  root@localhost IDENTIFIED BY '';\" >> init.sql " >> Dockerfile
-    echo "RUN echo \"CREATE USER root@'%';\" >> init.sql " >> Dockerfile
-    echo "RUN echo \"GRANT ALL ON *.* TO root@'%';\" >> init.sql" >> Dockerfile
-    echo "RUN service mysql start" >> Dockerfile
-    echo "EXPOSE 3306 42000 42002 42003 42004" >> Dockerfile
-    echo "centos_ps:" >> docker-compose.yml
-    echo "   build: ." >> docker-compose.yml
-    echo "   hostname: centos_ps1" >> docker-compose.yml
-    echo "   command: sh -c \"mysqld --init-file=/init.sql --user=root\"" >> docker-compose.yml
-    echo "   ports:" >> docker-compose.yml
-    echo "      - \"3306\"" >> docker-compose.yml
-    echo "      - \"42000\"" >> docker-compose.yml
-    echo "      - \"42002\"" >> docker-compose.yml
-    echo "      - \"42003\"" >> docker-compose.yml
-    echo "      - \"42004\"" >> docker-compose.yml
-    docker-compose up >/dev/null 2>&1 &
-    BASE_DIR=$(basename "$PWD")
-    BASE_DIR=${BASE_DIR//[^[:alnum:]]/}
-    while ! docker ps | grep ${BASE_DIR}_centos_ps_1 > /dev/null; do
-      sleep 5 ;
-    done
-    DOCKER_CONTAINER_NAME=$(docker ps | grep ${BASE_DIR}_centos_ps | awk '{print $NF}')
-    IP_ADD=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-    if [ ! -z $DOCKER_CONTAINER_NAME ]; then
-      echo -e "\nAdding pmm-client instance from CentOS docker container to the currently live PMM server"
-      IP_DOCKER_ADD=$(docker exec -it $DOCKER_CONTAINER_NAME ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-      docker exec -it $DOCKER_CONTAINER_NAME pmm-admin config --server $IP_ADD --bind-address $IP_DOCKER_ADD
-      docker exec -it $DOCKER_CONTAINER_NAME pmm-admin add mysql
-    fi
-  }
-
-  ubuntu_docker_client(){
-    rm -rf Dockerfile docker-compose.yml
-    echo "FROM ubuntu:16.04" >> Dockerfile
-    echo "RUN apt-get update" >> Dockerfile
-    echo "RUN apt-get install -y wget lsb-release net-tools vim iproute" >> Dockerfile
-    echo "RUN wget http://repo.percona.com/apt/percona-release_0.1-4.\$(lsb_release -sc)_all.deb" >> Dockerfile
-    echo "RUN dpkg -i percona-release_0.1-4.\$(lsb_release -sc)_all.deb" >> Dockerfile
-    echo "RUN apt-get update" >> Dockerfile
-    echo "RUN apt-get install -y percona-server-server-5.7 pmm-client" >> Dockerfile
-    echo "RUN echo \"CREATE USER root@'%';\" > init.sql " >> Dockerfile
-    echo "RUN echo \"GRANT ALL ON *.* TO root@'%';\" >> init.sql" >> Dockerfile
-    echo "RUN service mysql start" >> Dockerfile
-    echo "EXPOSE 3306 42000 42002 42003 42004" >> Dockerfile
-    echo "ubuntu_ps:" >> docker-compose.yml
-    echo "   build: ." >> docker-compose.yml
-    echo "   hostname: ubuntu_ps1" >> docker-compose.yml
-    echo "   command: sh -c \"mysqld --init-file=/init.sql\"" >> docker-compose.yml
-    echo "   ports:" >> docker-compose.yml
-    echo "      - 3306:3306" >> docker-compose.yml
-    echo "      - 42000:42000" >> docker-compose.yml
-    echo "      - 42002:42002" >> docker-compose.yml
-    echo "      - 42003:42003" >> docker-compose.yml
-    echo "      - 42004:42004" >> docker-compose.yml
-    docker-compose up >/dev/null 2>&1 &
-    BASE_DIR=$(basename "$PWD")
-    BASE_DIR=${BASE_DIR//[^[:alnum:]]/}
-    while ! docker ps | grep ${BASE_DIR}_ubuntu_ps_1 > /dev/null; do
-      sleep 5 ;
-    done
-    DOCKER_CONTAINER_NAME=$(docker ps | grep ${BASE_DIR}_ubuntu_ps | awk '{print $NF}')
-    IP_ADD=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-    if [ ! -z $DOCKER_CONTAINER_NAME ]; then
-      echo -e "\nAdding pmm-client instance from Ubuntu docker container to the currently live PMM server"
-      IP_DOCKER_ADD=$(docker exec -it $DOCKER_CONTAINER_NAME ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-      docker exec -it $DOCKER_CONTAINER_NAME pmm-admin config --server $IP_ADD --bind-address $IP_DOCKER_ADD
-      docker exec -it $DOCKER_CONTAINER_NAME pmm-admin add mysql
-    fi
-  }
-
-  centos_docker_client
-  ubuntu_docker_client
 }
 
 clean_clients(){
@@ -1773,6 +1760,7 @@ wipe_pmm2_clients () {
         echo "$i"
         MYSQL_SERVICE_ID=${i}
         pmm-admin remove mysql ${MYSQL_SERVICE_ID}
+        docker stop ${MYSQL_SERVICE_ID} && docker rm ${MYSQL_SERVICE_ID}
     done
   fi
   if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
@@ -1781,6 +1769,7 @@ wipe_pmm2_clients () {
         echo "$i"
         PGSQL_SERVICE_ID=${i}
         pmm-admin remove postgresql ${PGSQL_SERVICE_ID}
+        docker stop ${PGSQL_SERVICE_ID} && docker rm ${PGSQL_SERVICE_ID}
     done
   fi
   if [[ $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ]]; then
@@ -1789,6 +1778,7 @@ wipe_pmm2_clients () {
         echo "$i"
         MONGODB_SERVICE_ID=${i}
         pmm-admin remove mongodb ${MONGODB_SERVICE_ID}
+        docker stop ${MONGODB_SERVICE_ID} && docker rm ${MONGODB_SERVICE_ID}
     done
   fi
 }
@@ -1896,8 +1886,10 @@ setup_alertmanager() {
 }
 
 run_workload() {
+  touch docker-build.log
+  docker build --tag php-db $SCRIPT_PWD/ > docker-build.log 2>&1
+  IFS=$'\n'
   if [[ $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ]]; then
-    IFS=$'\n'
     for i in $(pmm-admin list | grep "MySQL" | grep "ps" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
         echo "$i"
         export MYSQL_PORT=${i}
@@ -1967,12 +1959,76 @@ run_workload() {
         echo "Load Triggered check log"
     done
   fi
+  if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
+    for i in $(pmm-admin list | grep "PostgreSQL" | grep "PGSQL" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export PGSQL_PORT=${i}
+        export PGSQL_HOST=localhost
+        export PGSQL_USER=postgres
+        export TEST_TARGET_QPS=100
+        export TEST_QUERIES=1000
+        touch pgsql_$i.log
+        docker run --rm --name pgsql_php_$i -d -e PGSQL_PORT=${PGSQL_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_QUERIES=${TEST_QUERIES} -d --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db php pgsql_schema_table_query.php
+        sleep 5
+        docker logs pgsql_php_$i
+        echo "Load Triggered check log"
+    done
+  fi
+  if [[ $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ]]; then
+    for i in $(pmm-admin list | grep "MongoDB" | grep "mongodb_rs" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
+        echo "$i"
+        export MONGODB_PORT=${i}
+        export TEST_TARGET_QPS=10
+        export TEST_COLLECTION=30
+        export TEST_DB=10
+        touch mongodb_$i.log
+        docker run --rm --name mongodb_$i --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
+        docker run --rm --name mongodb_$i -d -e MONGODB_PORT=${MONGODB_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_COLLECTION=${TEST_COLLECTION} -e TEST_DB=${TEST_DB} --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
+        sleep 5
+        echo "Load Triggered check Docker logs, load should run only for Primary Nodes"
+    done
+  fi
 }
 
 add_annotation_pmm2 () {
   pmm-admin annotate "pmm-annotate-without-tags"
   sleep 20
   pmm-admin annotate "pmm-annotate-tags" --tags="pmm-testing-tag1,pmm-testing-tag2"
+}
+
+setup_pmm2_client_docker_image () {
+  docker network create docker-client-check
+  sleep 5
+
+  # Start PMM-Server on a different port for testing purpose
+  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 perconalab/pmm-server:dev-latest
+  sleep 20
+  echo "PMM Server Dev Latest connected using port 8081"
+
+  # Start pmm-client and use same network, connect it to pmm-server
+  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml -d --network docker-client-check --name=pmm-client perconalab/pmm-client:dev-latest
+  sleep 20
+  echo "PMM Client Start and connected to PMM-Server"
+  ## Start Percona Server 5.7 latest image and connect it to same network
+
+  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent -d --network docker-client-check --name=ps5.7 percona:5.7
+  sleep 20
+
+  ## Add mysql instance for monitoring.
+  docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7 --query-source=perfschema --host=ps5.7 --port=3306 --server-url=http://admin:admin@pmm-server/
+  sleep 5
+
+  ## Add Percona Server for MongoDB instance for monitoring
+  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -d --network docker-client-check --name mongodb mongo:4.0
+  sleep 10
+  docker exec mongodb mongo --eval 'db.setProfilingLevel(2)'
+  docker exec pmm-client pmm-admin add mongodb --service-name=mongodb-4.0  --host=mongodb --port=27017 --server-url=http://admin:admin@pmm-server/
+
+  ## Add PostgreSQL instance for Monitoring
+  docker run  -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d --network docker-client-check --name=postgres-10 postgres:10
+  sleep 10
+  docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@pmm-server/
+  sleep 5
 }
 
 if [ ! -z $wipe_clients ]; then
@@ -2067,6 +2123,10 @@ fi
 
 if [ ! -z $add_annotation ]; then
   add_annotation_pmm2
+fi
+
+if [ ! -z $setup_pmm_client_docker ]; then
+  setup_pmm2_client_docker_image
 fi
 
 exit 0

@@ -112,85 +112,104 @@ runs_on_node_id=`jsonval`
 echo $runs_on_node_id
 
 install() {
-	echo "Installing PMM2-Client..."
-	if grep -iq "ubuntu"  /etc/os-release ; then
-		wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
-		sudo dpkg -i percona-release_latest.generic_all.deb
-		sudo apt-get -y install pmm2-client
-		sudo apt-get update
-		rm percona-release_latest.generic_all.deb
-	elif grep -iq "centos"  /etc/os-release || grep -iq "rhel"  /etc/os-release  ; then
-		sudo yum -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-		sudo yum clean all
-		sudo yum -y install pmm2-client
-		sudo yum -y update
-	fi
+  echo "Installing PMM2-Client..."
+  if grep -iq "ubuntu"  /etc/os-release ; then
+    if [[ -z $dev ]]; then 
+      wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+      sudo dpkg -i percona-release_latest.generic_all.deb
+      sudo apt-get -y install pmm2-client
+      sudo apt-get update
+      rm percona-release_latest.generic_all.deb
+    else
+      wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+      sudo dpkg -i percona-release_latest.generic_all.deb
+      sudo percona-release disable all
+      sudo percona-release enable original testing
+      sudo apt-get -y install pmm2-client
+      sudo apt-get update
+      rm percona-release_latest.generic_all.deb
+    fi
+  elif grep -iq "centos"  /etc/os-release || grep -iq "rhel"  /etc/os-release  ; then
+    if [[ -z $dev ]]; then
+      sudo yum -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+      sudo yum clean all
+      sudo yum -y install pmm2-client
+      sudo yum -y update
+    else
+      sudo yum -y install https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+      sudo percona-release disable all
+      sudo percona-release enable original testing
+      sudo yum clean all
+      sudo yum -y install pmm2-client
+      sudo yum -y update
+    fi
+  fi
 }
 
 configure_mysql(){
-	if [ -z "$db_server_port" ]
-	then
-	      db_server_port='3306'
-	fi
-	service_name=mysql-$((1 + RANDOM % 100))
-	json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label3": "for_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddMySQL`
-	prop='service_id'
-	service_id=`jsonval`
-	echo $service_id
+  if [ -z "$db_server_port" ]
+  then
+      db_server_port='3306'
+  fi
+  service_name=mysql-$((1 + RANDOM % 100))
+  json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label3": "for_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
+  http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddMySQL`
+  prop='service_id'
+  service_id=`jsonval`
+  echo $service_id
 
-	json=`curl -d '{"custom_labels": {"custom_label4": "for_mysql_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddMySQLdExporter`
-	prop='runs_on_node_id'
-	runs_on_node_id=`jsonval`
-	echo $runs_on_node_id
+  json=`curl -d '{"custom_labels": {"custom_label4": "for_mysql_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
+  http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddMySQLdExporter`
+  prop='runs_on_node_id'
+  runs_on_node_id=`jsonval`
+  echo $runs_on_node_id
 
   json=`curl -d '{"custom_labels": {"custom_label6": "for_perfschemaAgent"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
   http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddQANMySQLPerfSchemaAgent`
 }
 
 configure_mongodb(){
-	service_name=mongodb-$((1 + RANDOM % 100))
-	json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label3": "for_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddMongoDB`
- 	prop='service_id'
-	service_id=`jsonval`
-	echo $service_id
+  service_name=mongodb-$((1 + RANDOM % 100))
+  json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label3": "for_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
+  http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddMongoDB`
+  prop='service_id'
+  service_id=`jsonval`
+  echo $service_id
 
-	json=`curl -d '{"custom_labels": {"custom_label4": "for_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddMongoDBExporter`
-	prop='runs_on_node_id'
-	runs_on_node_id=`jsonval`
-	echo $runs_on_node_id
+  json=`curl -d '{"custom_labels": {"custom_label4": "for_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
+  http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddMongoDBExporter`
+  prop='runs_on_node_id'
+  runs_on_node_id=`jsonval`
+  echo $runs_on_node_id
 }
 
 configure_postgresql(){
-	service_name=postgres-$((1 + RANDOM % 100))
-	json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label6": "for_postgres_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddPostgreSQL`
- 	prop='service_id'
-	service_id=`jsonval`
-	echo $service_id
+  service_name=postgres-$((1 + RANDOM % 100))
+  json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label6": "for_postgres_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
+  http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddPostgreSQL`
+  prop='service_id'
+  service_id=`jsonval`
+  echo $service_id
 
-	json=`curl -d '{"custom_labels": {"custom_label4": "for_postgres_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddPostgresExporter`
-	prop='runs_on_node_id'
-	runs_on_node_id=`jsonval`
-	echo $runs_on_node_id
+  json=`curl -d '{"custom_labels": {"custom_label4": "for_postgres_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
+  http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddPostgresExporter`
+  prop='runs_on_node_id'
+  runs_on_node_id=`jsonval`
+  echo $runs_on_node_id
 }
 
 if [ ! -z $install_client ]; then
-	install
+  install
 fi
 
 if [ "$which_db" == "mysql" ]; then
-	configure_mysql
+  configure_mysql
 fi
 
 if [ "$which_db" == "mongodb" ]; then
-	configure_mongodb
+  configure_mongodb
 fi
 
 if [ "$which_db" == "postgresql" ]; then
-	configure_postgresql
+  configure_postgresql
 fi
