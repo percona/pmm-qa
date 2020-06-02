@@ -1995,7 +1995,7 @@ run_workload() {
         echo "$i"
         export MONGODB_PORT=${i}
         export TEST_TARGET_QPS=10
-        export TEST_COLLECTION=30
+        export TEST_COLLECTION=10
         export TEST_DB=10
         touch mongodb_$i.log
         docker run --rm --name mongodb_$i --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
