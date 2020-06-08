@@ -44,7 +44,7 @@ usage () {
   echo " --pmm-server-version           Pass PMM version"
   echo " --pmm-port                     Pass port for PMM docker"
   echo " --pmm2-server-ip               Pass Address for PMM2-Server"
-  echo " --package-name                 Name of the Server package installed"
+  echo " --package-name                 Name of the Server package installed [ps, psmyr, ms, pgsql, md, pxc, mo]"
   echo " --ps-version                   Pass Percona Server version info"
   echo " --modb-version                 Pass MongoDB version info, from MongoDB!!"
   echo " --ms-version                   Pass MySQL Server version info"
@@ -137,7 +137,7 @@ do
     ;;
     --pmm-server )
     pmm_server="$2"
-	shift 2
+    shift 2
     if [ "$pmm_server" != "docker" ] && [ "$pmm_server" != "ami" ] && [ "$pmm_server" != "ova" ] && [ "$pmm_server" != "custom" ]; then
       echo "ERROR: Invalid --pmm-server passed:"
       echo "  Please choose any of these pmm-server options: 'docker', 'ami', 'custom', or 'ova'"
@@ -731,7 +731,7 @@ get_basedir(){
   CLIENT_MSG=$3
   VERSION=$4
   if cat /etc/os-release | grep rhel >/dev/null ; then
-   DISTRUBUTION=centos
+    DISTRUBUTION=centos
   fi
   if [ $download_link -eq 1 ]; then
     if [ -f $SCRIPT_PWD/../get_download_link.sh ]; then
@@ -793,13 +793,13 @@ compare_query(){
   insert_loop(){
     NUM_START=$((CURRENT_QUERY_COUNT + 1))
     NUM_END=$(shuf -i ${1} -n 1)
-	TOTAL_QUERY_COUNT_BEFORE_RUN=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT COUNT_STAR  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
+    TOTAL_QUERY_COUNT_BEFORE_RUN=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT COUNT_STAR  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
     for i in `seq $NUM_START $NUM_END`; do
       STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
       ${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -e "INSERT INTO test.t1 (str) VALUES ('${STRING}')"
     done
-	TOTAL_QUERY_COUNT_AFTER_RUN=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT COUNT_STAR  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
-	CURRENT_QUERY_COUNT=$((TOTAL_QUERY_COUNT_AFTER_RUN - TOTAL_QUERY_COUNT_BEFORE_RUN))
+    TOTAL_QUERY_COUNT_AFTER_RUN=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT COUNT_STAR  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
+    CURRENT_QUERY_COUNT=$((TOTAL_QUERY_COUNT_AFTER_RUN - TOTAL_QUERY_COUNT_BEFORE_RUN))
     START_TIME=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT FIRST_SEEN  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
     END_TIME=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT LAST_SEEN  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
   }
@@ -814,7 +814,7 @@ compare_query(){
   fi
   if [ -z $TEST_SOCKET ];then
     echo "ERROR! PMM client instance does not exist. Terminating"
-	exit 1
+    exit 1
   fi
   echo "Initializing query count testing"
   ${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -e "create database if not exists test;"  2>&1
@@ -933,10 +933,10 @@ add_clients(){
     fi
     if [[ "${CLIENT_NAME}" != "md"  && "${CLIENT_NAME}" != "mo" && "${CLIENT_NAME}" != "pgsql" ]]; then
       VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
-    if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
-        MID="${BASEDIR}/bin/mysqld   --default-authentication-plugin=mysql_native_password --initialize-insecure --basedir=${BASEDIR}"
+      if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
+          MID="${BASEDIR}/bin/mysqld   --default-authentication-plugin=mysql_native_password --initialize-insecure --basedir=${BASEDIR}"
       else
-        MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
+          MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
       fi
     else
       if [[ "${CLIENT_NAME}" != "mo" ]]; then
@@ -987,12 +987,12 @@ add_clients(){
       create_replset_js
       if [[ "$with_replica" == "1" ]]; then
         for k in `seq 1  ${REPLCOUNT}`;do
-	        n=$(( $k - 1 ))
-		      echo "Configuring replicaset"
+          n=$(( $k - 1 ))
+          echo "Configuring replicaset"
           sudo $BASEDIR/bin/mongo --quiet --port ${PSMDB_PORTS[$n]} --eval "var replSet='r${k}'" "/tmp/config_replset.js"
           sleep 20
-	      done
-	    fi
+        done
+      fi
       if [ ! -z $PMM2 ]; then
         for p in `seq 1  ${REPLCOUNT}`;do
           n=$(( $p - 1 ))
@@ -1044,12 +1044,12 @@ add_clients(){
           fi
         fi
         echo "Adding Shards"
-		    sleep 20
+        sleep 20
         for k in `seq 1  ${REPLCOUNT}`;do
           n=$(( $k - 1 ))
           $BASEDIR/bin/mongo --quiet --eval "printjson(db.getSisterDB('admin').runCommand({addShard: 'r${k}/localhost:${PSMDB_PORTS[$n]}'}))"
         done
-	    fi
+      fi
     elif [[ -z $PMM2 && "${CLIENT_NAME}" == "pgsql" ]]; then
       if [ $create_pgsql_user -eq 1 ]; then
         PGSQL_USER=psql
@@ -1508,7 +1508,7 @@ clean_clients(){
       echo -e "Removing all local pmm client instances"
       sudo pmm-admin remove --all 2&>/dev/null
     fi
- else 
+  else 
     for i in $(pmm-admin list | grep -E "MySQL" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove mysql $i
     
@@ -1530,8 +1530,8 @@ clean_clients(){
       docker rm -f $i
     done
     dbdeployer delete all --skip-confirm 
- fi
-   #Kill mongodb processes
+  fi
+  #Kill mongodb processes
     sudo killall mongod 2> /dev/null
     sudo killall mongos 2> /dev/null
     sleep 5
@@ -1661,7 +1661,7 @@ sysbench_prepare(){
   #Initiate sysbench data load on all mysql client instances
   for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
     DB_NAME=$(echo ${i}  | awk -F[\/\.] '{print $3}')
-	DB_NAME="${DB_NAME}_${storage_engine}"
+    DB_NAME="${DB_NAME}_${storage_engine}"
     $MYSQL_CLIENT --user=root --socket=${i} -e "drop database if exists ${DB_NAME};create database ${DB_NAME};"
     sysbench /usr/share/sysbench/oltp_insert.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=root --mysql-storage-engine=$storage_engine  --threads=16 --db-driver=mysql --mysql-socket=${i} prepare  > $WORKDIR/logs/sysbench_prepare_${DB_NAME}.txt 2>&1
     check_script $? "Failed to run sysbench dataload"
@@ -1722,7 +1722,7 @@ sysbench_run(){
   #Initiate sysbench oltp run on all mysql client instances
   for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
     DB_NAME=$(echo ${i}  | awk -F[\/\.] '{print $3}')
-	   DB_NAME="${DB_NAME}_${storage_engine}"
+    DB_NAME="${DB_NAME}_${storage_engine}"
     sysbench /usr/share/sysbench/oltp_read_write.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=root  --mysql-storage-engine=$storage_engine --threads=16 --time=3600 --events=1870000000 --db-driver=mysql --db-ps-mode=disable --mysql-socket=${i} run  > $WORKDIR/logs/sysbench_run_${DB_NAME}.txt 2>&1 &
     check_script $? "Failed to run sysbench oltp"
   done
@@ -1730,8 +1730,8 @@ sysbench_run(){
 
 check_dbdeployer(){
   if ! dbdeployer --version | grep 'dbdeployer version 1.' > /dev/null ; then
-      echo "ERROR! dbdeployer not installed attempting to install"
-      install_dbdeployer
+    echo "ERROR! dbdeployer not installed attempting to install"
+    install_dbdeployer
   fi
   dbdeployer delete all --skip-confirm
 }
