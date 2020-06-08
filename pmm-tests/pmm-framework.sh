@@ -25,7 +25,7 @@ mysqld_startup_options="--user=root"
 
 mkdir -p $WORKDIR/logs
 # User configurable variables
-IS_BATS_RUN=0
+IS_SSL="No"
 
 # Dispay script usage details
 usage () {
@@ -36,7 +36,6 @@ usage () {
   echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
   echo " --pmm2                         When this option is specified, PMM framework will use specified PMM 2.x development version. Must be used with pmm-server-version option"
   echo " --skip-docker-setup            Pass this parameter if Docker Setup for PMM2-Server is not needed, Only Pmm2-client needs to be installed"
-  echo " --is-bats-run                  Change Bats run option, set to 1 if not user interaction required"
   echo " --link-client                  Pass URL to download pmm-client"
   echo " --addclient=ps,2               Add Percona (ps), MySQL (ms), MariaDB (md), Percona XtraDB Cluster (pxc), and/or mongodb (mo) pmm-clients to the currently live PMM server (as setup by --setup)"
   echo "                                You can add multiple client instances simultaneously. eg : --addclient=ps,2  --addclient=ms,2 --addclient=md,2 --addclient=mo,2 --addclient=pxc,3"
@@ -97,7 +96,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -184,10 +183,6 @@ do
     ;;
     --key-name )
     key_name="$2"
-    shift 2
-    ;;
-    --is-bats-run )
-    IS_BATS_RUN=1
     shift 2
     ;;
     --ova-image )
@@ -539,33 +534,28 @@ if [[ -z "$query_source" ]];then
 fi
 
 setup(){
-  if [ $IS_BATS_RUN -eq 0 ];then
-    read -p "Would you like to enable SSL encryption to protect PMM from unauthorized access[y/n] ? " check_param
-    case $check_param in
-      y|Y)
-        echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access"
-        openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
-        IS_SSL="Yes"
-        if [[ -z $PMM_PORT ]]; then
-          PMM_PORT=443
-        fi
-      ;;
-      n|N)
-        echo ""
-        IS_SSL="No"
-        if [[ -z $PMM_PORT ]]; then
-          PMM_PORT=80
-        fi
-      ;;
-      *)
-        echo "Please type [y/n]! Terminating."
-        exit 1
-      ;;
-    esac
-  else
-    IS_SSL="No"
-  fi
-
+  read -p "Would you like to enable SSL encryption to protect PMM from unauthorized access[y/n] ? " check_param
+  case $check_param in
+    y|Y)
+      echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access"
+      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
+      IS_SSL="Yes"
+      if [[ -z $PMM_PORT ]]; then
+        PMM_PORT=443
+      fi
+    ;;
+    n|N)
+      echo ""
+      IS_SSL="No"
+      if [[ -z $PMM_PORT ]]; then
+        PMM_PORT=80
+      fi
+    ;;
+    *)
+      echo "Please type [y/n]! Terminating."
+      exit 1
+    ;;
+  esac
   
   if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
     echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
