@@ -74,10 +74,6 @@ usage () {
   echo " --pmm-server-memory            Set METRICS_MEMORY option to PMM server"
   echo " --pmm-docker-memory            Set memory for docker container"
   echo " --pmm-server=[docker|ami|ova]  Choose PMM server appliance, default pmm server appliance is docker"
-  echo " --ami-image                    Pass PMM server ami image name"
-  echo " --key-name                     Pass your aws access key file name"
-  echo " --ova-image                    Pass PMM server ova image name"
-  echo " --ova-memory                   Pass memory(memorysize in MB) for OVA virtual box"
   echo " --disable-ssl                  Disable ssl mode on exporter"
   echo " --create-pgsql-user            Set this option if a Dedicated PGSQl User creation is required username: psql and no password"
   echo " --upgrade-server               When this option is specified, PMM Server will be updated to the last version"
@@ -96,7 +92,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,pmm2-server-ip:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -175,22 +171,6 @@ do
     ;;
     --pmm-docker-memory )
     DOCKER_MEMORY="$2"
-    shift 2
-    ;;
-    --ami-image )
-    ami_image="$2"
-    shift 2
-    ;;
-    --key-name )
-    key_name="$2"
-    shift 2
-    ;;
-    --ova-image )
-    ova_image="$2"
-    shift 2
-    ;;
-    --ova-memory )
-    ova_memory="$2"
     shift 2
     ;;
     --ps-version )
@@ -440,24 +420,6 @@ fi
 
 if [[ -z "$pmm_server" ]];then
   pmm_server="docker"
-elif [[ "$pmm_server" == "ami" ]];then
-  if [[ "$setup" == "1" ]];then
-    if [[ -z "$ami_image" ]];then
-      echo "ERROR! You have not given AMI image name. Please use --ami-image to pass image name. Terminating"
-      exit 1
-    fi
-    if [[ -z "$key_name" ]];then
-      echo "ERROR! You have not entered  aws key name. Please use --key-name to pass key name. Terminating"
-      exit 1
-    fi
-  fi
-elif [[ "$pmm_server" == "ova" ]];then
-  if [[ "$setup" == "1" ]];then
-    if [[ -z "$ova_image" ]];then
-      echo "ERROR! You have not given OVA image name. Please use --ova-image to pass image name. Terminating"
-      exit 1
-    fi
-  fi
 elif [[ "$pmm_server" == "custom" ]];then
   if ! sudo pmm-admin ping | grep -q "OK, PMM server is alive"; then
     echo "ERROR! PMM Server is not running. Please check PMM server status. Terminating"
@@ -469,27 +431,8 @@ sanity_check(){
   if [[ "$pmm_server" == "docker" ]];then
     if ! sudo docker ps | grep 'pmm-server' > /dev/null ; then
       echo "ERROR! pmm-server docker container is not runnning. Terminating"
-      #exit 1
+      exit 1
     fi
-  elif [[ "$pmm_server" == "ami" ]];then
-    if [ -f $WORKDIR/aws_instance_config.txt ]; then
-      INSTANCE_ID=$(cat $WORKDIR/aws_instance_config.txt | grep "InstanceId"  | awk -F[\"\"] '{print $4}')
-	else
-	  echo "ERROR! Could not read aws instance id. $WORKDIR/aws_instance_config.txt does not exist. Terminating"
-	  exit 1
-	fi
-    INSTANCE_ACTIVE=$(aws ec2 describe-instance-status --instance-ids  $INSTANCE_ID | grep "Code" | sed 's/[^0-9]//g')
-	if [[ "$INSTANCE_ACTIVE" != "16" ]];then
-      echo "ERROR! pmm-server ami instance is not runnning. Terminating"
-      exit 1
-	fi
-  elif [[ "$pmm_server" == "ova" ]];then
-    VMBOX=$(vboxmanage list runningvms | grep "PMM-Server" | awk -F[\"\"] '{print $2}')
-	VMBOX_STATUS=$(vboxmanage showvminfo $VMBOX  | grep State | awk '{print $2}')
-	if [[ "$VMBOX_STATUS" != "running" ]]; then
-	  echo "ERROR! pmm-server ova instance is not runnning. Terminating"
-      exit 1
-	fi
   fi
 }
 
@@ -515,7 +458,6 @@ if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.4"; fi
 if [[ -z "${mo_version}" ]]; then mo_version="4.0"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
-if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
 if [[ -z "${pgsql_version}" ]]; then pgsql_version="10.8";fi
 
 if [[ -z $pmm_server_version ]] && [[ ! -z $dev ]]; then  # Set Default Docker Image Tag: dev-latest
@@ -572,7 +514,7 @@ setup(){
       PMM_VERSION=$(lynx --dump https://hub.docker.com/r/$docker_org/pmm-server/tags/ | grep '[0-9].[0-9].[0-9]' | sed 's|   ||' | head -n1)
       echo "PMM VERSION IS $PMM_VERSION"
       
-    #PMM sanity check
+      #PMM sanity check
       if ! pgrep docker > /dev/null ; then
         echo "ERROR! docker service is not running. Terminating"
         exit 1
@@ -586,90 +528,35 @@ setup(){
         exit 1
       fi
     fi
-   if [[ "$pmm_server" == "aws" ]];then
-	    aws ec2 describe-instance-status --instance-ids  $INSTANCE_ID | grep "Code" | sed 's/[^0-9]//g'
-    fi
+    
     echo "Initiating PMM configuration"
     if [[ ! -z $PMM2  && -z $skip_docker_setup ]]; then
       sudo docker create -v /srv    --name pmm-data    $docker_org/pmm-server:$PMM_VERSION  /bin/true
       sudo docker run -d  -p $PMM_PORT:80 -p 443:443 -p 9000:9000  --name pmm-server $docker_org/pmm-server:$PMM_VERSION
     else
-    if [ ! -z $DEV_FB ]; then
-      sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
-      sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always perconalab/pmm-server-fb:$DEV_FB 2>/dev/null
-    else
-      sudo docker create -v /opt/prometheus/data -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data percona/pmm-server:$PMM_VERSION /bin/true 2>/dev/null
-
-      if [ "$IS_SSL" == "Yes" ];then
-        sudo docker run -d -p $PMM_PORT:443 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY  -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
+      if [ ! -z $DEV_FB ]; then
+        sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
+        sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always perconalab/pmm-server-fb:$DEV_FB 2>/dev/null
       else
-        sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
+        sudo docker create -v /opt/prometheus/data -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data percona/pmm-server:$PMM_VERSION /bin/true 2>/dev/null
+
+        if [ "$IS_SSL" == "Yes" ];then
+          sudo docker run -d -p $PMM_PORT:443 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY  -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
+        else
+          sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
+        fi
       fi
-   fi
-  fi
-  elif [[ "$pmm_server" == "ami" ]] ; then
-    if [[ ! -e $(which aws 2> /dev/null) ]] ;then
-      echo "ERROR! AWS client program is currently not installed. Please install awscli. Terminating"
-      exit 1
     fi
-    if [ ! -f $HOME/.aws/credentials ]; then
-      echo "ERROR! AWS access key is not configured. Terminating"
-	  exit 1
-	fi
-	aws ec2 run-instances \
-	--image-id $ami_image \
-	--security-group-ids sg-3b6e5e46 \
-	--instance-type t2.micro \
-    --subnet-id subnet-4765a930 \
-    --region us-east-1 \
-    --key-name $key_name > $WORKDIR/aws_instance_config.txt 2> /dev/null
-
-	INSTANCE_ID=$(cat $WORKDIR/aws_instance_config.txt | grep "InstanceId"  | awk -F[\"\"] '{print $4}')
-
-	aws ec2 create-tags  \
-    --resources $INSTANCE_ID \
-    --region us-east-1 \
-    --tags Key=Name,Value=PMM_test_image 2> /dev/null
-
-	sleep 30
-
-	AWS_PUBLIC_IP=$(aws ec2 describe-instances --instance-ids  $INSTANCE_ID | grep "PublicIpAddress" | awk -F[\"\"] '{print $4}')
-  elif [[ "$pmm_server" == "ova" ]] ; then
-    if [[ ! -e $(which VBoxManage 2> /dev/null) ]] ;then
-      echo "ERROR! VBoxManage client program is currently not installed. Please install VirtualBox. Terminating"
-      exit 1
-    fi
-	ova_image_name=$(echo $ova_image | sed 's/.ova//')
-    VMBOX=$(vboxmanage list runningvms | grep $ova_image_name | awk -F[\"\"] '{print $2}')
-	VMBOX_STATUS=$(vboxmanage showvminfo $VMBOX  | grep State | awk '{print $2}')
-	if [[ "$VMBOX_STATUS" == "running" ]]; then
-	  echo "ERROR! pmm-server ova instance is already runnning. Terminating"
-      exit 1
-	fi
-	# import image
-	if [ ! -f $ova_image ] ;then
-	  echo "Alert! ${ova_image} does not exist in $WORKDIR. Downloading ${ova_image} ..."
-	  wget https://s3.amazonaws.com/percona-vm/$ova_image
-	fi
-    VBoxManage import $ova_image > $WORKDIR/ova_instance_config.txt 2> /dev/null
-	NETWORK_INTERFACE=$(ip addr | grep $IP_ADDRESS |  awk 'NF>1{print $NF}')
-	VBoxManage modifyvm $ova_image_name --nic1 bridged --bridgeadapter1 ${NETWORK_INTERFACE}
-	VBoxManage modifyvm $ova_image_name --uart1 0x3F8 4 --uartmode1 file $WORKDIR/pmm-server-console.log
-    VBoxManage modifyvm $ova_image_name --memory ${ova_memory}
-    # start instance
-    VBoxManage startvm --type headless $ova_image_name > $WORKDIR/pmm-server-starup.log 2> /dev/null
-	sleep 120
-	OVA_PUBLIC_IP=$(grep 'Percona Monitoring and Management' $WORKDIR/pmm-server-console.log | awk -F[\/\/] '{print $3}')
   fi
- #  #PMM configuration setup
+  #PMM configuration setup
   if [ -z $pmm_server_version ] && [ -z $dev ]; then
-   PMM_VERSION=$(lynx --dump https://hub.docker.com/r/percona/pmm-server/tags/ | grep '[0-9].[0-9].[0-9]' | sed 's|   ||' | head -n1)
- else
-   if [[ ! -z $pmm_server_version ]]; then
-     PMM_VERSION=$pmm_server_version
-   fi
-   echo "PMM version is ====== $PMM_VERSION"
- fi
+    PMM_VERSION=$(lynx --dump https://hub.docker.com/r/percona/pmm-server/tags/ | grep '[0-9].[0-9].[0-9]' | sed 's|   ||' | head -n1)
+  else
+    if [[ ! -z $pmm_server_version ]]; then
+      PMM_VERSION=$pmm_server_version
+    fi
+    echo "PMM version is ====== $PMM_VERSION"
+  fi
   echo "Initiating PMM client configuration"
   PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
   if [ -z $PMM_CLIENT_BASEDIR ]; then
@@ -684,33 +571,33 @@ setup(){
       if [ ! -z $PMM2 ]; then
         install_client
       else  
-      if [ ! -z $dev ]; then
-        if [  -z $link_client]; then
-         PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+        if [ ! -z $dev ]; then
+          if [  -z $link_client]; then
+            PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+          else
+            PMM_CLIENT_TARBALL_URL=$link_client
+          fi
+          #echo "PMM client URL $PMM_CLIENT_URL"
+          echo "PMM client tarball $PMM_CLIENT_TARBALL_URL"
+          wget $PMM_CLIENT_TARBALL_URL
+          PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TARBALL_URL | grep -o '[^/]*$')
+          tar -xzf $PMM_CLIENT_TAR
+          PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
+          pushd $PMM_CLIENT_BASEDIR > /dev/null
+          sudo ./install
+          popd > /dev/null
         else
-          PMM_CLIENT_TARBALL_URL=$link_client
+          PMM_CLIENT_TAR=$(lynx --dump  https://www.percona.com/downloads/pmm-client/$PMM_VERSION/binary/tarball/ | grep -o pmm-client.*.tar.gz | head -n1)
+          echo "PMM client tar 2 $PMM_CLIENT_TAR"
+          wget https://www.percona.com/downloads/pmm-client/$PMM_VERSION/binary/tarball/$PMM_CLIENT_TAR
+          tar -xzf $PMM_CLIENT_TAR
+          PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
+          pushd $PMM_CLIENT_BASEDIR > /dev/null
+          sudo ./install
+          popd > /dev/null
         fi
-        #echo "PMM client URL $PMM_CLIENT_URL"
-        echo "PMM client tarball $PMM_CLIENT_TARBALL_URL"
-        wget $PMM_CLIENT_TARBALL_URL
-        PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TARBALL_URL | grep -o '[^/]*$')
-        tar -xzf $PMM_CLIENT_TAR
-        PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
-        pushd $PMM_CLIENT_BASEDIR > /dev/null
-        sudo ./install
-        popd > /dev/null
-      else
-        PMM_CLIENT_TAR=$(lynx --dump  https://www.percona.com/downloads/pmm-client/$PMM_VERSION/binary/tarball/ | grep -o pmm-client.*.tar.gz | head -n1)
-        echo "PMM client tar 2 $PMM_CLIENT_TAR"
-        wget https://www.percona.com/downloads/pmm-client/$PMM_VERSION/binary/tarball/$PMM_CLIENT_TAR
-        tar -xzf $PMM_CLIENT_TAR
-        PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
-        pushd $PMM_CLIENT_BASEDIR > /dev/null
-        sudo ./install
-        popd > /dev/null
       fi
     fi
-  fi
   else
     pushd $PMM_CLIENT_BASEDIR > /dev/null
     sudo ./install
@@ -726,29 +613,19 @@ setup(){
     exit 1
   else
     sleep 10
-  if [[ ! -e $(which pmm-agent 2> /dev/null) ]] && [ ! -z $PMM2 ] ;then
-    echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
-    exit 1
-  fi
-   #Cleaning existing PMM server configuration
-  if [ ! -z $PMM2 ]; then
-    configure_client
-  else
-    sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
-    if [[ "$pmm_server" == "ami" ]]; then
-	  sudo pmm-admin config --server $AWS_PUBLIC_IP --client-address $IP_ADDRESS $PMM_MYEXTRA
-	  echo "Alert! Password protection is not enabled in ami image, Please configure it manually"
-	  SERVER_IP=$AWS_PUBLIC_IP
-    elif [[ "$pmm_server" == "ova" ]]; then
-	  sudo pmm-admin config --server $OVA_PUBLIC_IP --client-address $IP_ADDRESS $PMM_MYEXTRA
-	  echo "Alert! Password protection is not enabled in ova image, Please configure it manually"
-	  SERVER_IP=$OVA_PUBLIC_IP
+    if [[ ! -e $(which pmm-agent 2> /dev/null) ]] && [ ! -z $PMM2 ] ;then
+      echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
+      exit 1
+    fi
+    #Cleaning existing PMM server configuration
+    if [ ! -z $PMM2 ]; then
+      configure_client
     else
+      sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
       sudo pmm-admin config --server $IP_ADDRESS:$PMM_PORT --server-user=$pmm_server_username --server-password=$pmm_server_password $PMM_MYEXTRA
-	  SERVER_IP=$IP_ADDRESS
+      SERVER_IP=$IP_ADDRESS
     fi
   fi
-fi
 
   echo -e "******************************************************************"
   if [[ "$pmm_server" == "docker" ]]; then
@@ -1679,22 +1556,22 @@ clean_server(){
     sudo docker stop pmm-server  2&> /dev/null
     sudo docker rm pmm-server pmm-data  2&> /dev/null
   elif [[ "$pmm_server" == "ova" ]] ; then
-	VMBOX=$(vboxmanage list runningvms | grep "PMM-Server" | awk -F[\"\"] '{print $2}')
-	echo "Shutting down ova instance"
-	VBoxManage controlvm $VMBOX poweroff
-	echo "Unregistering ova instance"
-	VBoxManage unregistervm $VMBOX --delete
-	 VM_DISKS=($(vboxmanage list hdds | grep -B4 $VMBOX | grep UUID | grep -v 'Parent UUID:' | awk '{ print $2}'))
-	for i in ${VM_DISKS[@]}; do
-	  VBoxManage closemedium disk $i --delete ;
-	done
+    VMBOX=$(vboxmanage list runningvms | grep "PMM-Server" | awk -F[\"\"] '{print $2}')
+    echo "Shutting down ova instance"
+    VBoxManage controlvm $VMBOX poweroff
+    echo "Unregistering ova instance"
+    VBoxManage unregistervm $VMBOX --delete
+    VM_DISKS=($(vboxmanage list hdds | grep -B4 $VMBOX | grep UUID | grep -v 'Parent UUID:' | awk '{ print $2}'))
+    for i in ${VM_DISKS[@]}; do
+      VBoxManage closemedium disk $i --delete ;
+    done
   elif [[ "$pmm_server" == "ami" ]] ; then
     if [ -f $WORKDIR/aws_instance_config.txt ]; then
       INSTANCE_ID=$(cat $WORKDIR/aws_instance_config.txt | grep "InstanceId"  | awk -F[\"\"] '{print $4}')
-	else
-	  echo "ERROR! Could not read aws instance id. $WORKDIR/aws_instance_config.txt does not exist. Terminating"
-	  exit 1
-	fi
+    else
+      echo "ERROR! Could not read aws instance id. $WORKDIR/aws_instance_config.txt does not exist. Terminating"
+      exit 1
+    fi
     aws ec2 terminate-instances --instance-ids $INSTANCE_ID > $WORKDIR/aws_remove_instance.log
   fi
 
