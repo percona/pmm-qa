@@ -42,7 +42,7 @@ usage () {
   echo " --download                     This will help us to download pmm client binary tar balls"
   echo " --dbdeployer                   This option will use dbdeployer tool for deploying PS, MS Databases"
   echo " --pmm-server-version           Pass PMM version"
-  echo " --pmm-port                     Pass port for PMM docker"
+  echo " --pmm-port                     Pass port for PMM docker [Default: 443 when SSL enabled, 80 when SSL disabled]"
   echo " --pmm2-server-ip               Pass Address for PMM2-Server"
   echo " --package-name                 Name of the Server package installed [ps, psmyr, ms, pgsql, md, pxc, mo]"
   echo " --ps-version                   Pass Percona Server version info"
@@ -712,7 +712,11 @@ setup_db_tar(){
   CLIENT_MSG=$3
   VERSION=$4
   if cat /etc/os-release | grep rhel >/dev/null ; then
-   DISTRUBUTION=centos
+    DISTRUBUTION=centos
+  fi
+  if [ ! -f $SCRIPT_PWD/../get_download_link.sh ] ; then
+    curl -OL https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
+    mv get_download_link.sh $SCRIPT_PWD/../
   fi
   LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
   echo "Downloading $CLIENT_MSG(Version : $VERSION)"
@@ -734,32 +738,31 @@ get_basedir(){
     DISTRUBUTION=centos
   fi
   if [ $download_link -eq 1 ]; then
-    if [ -f $SCRIPT_PWD/../get_download_link.sh ]; then
-      LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
-      echo "Downloading $CLIENT_MSG(Version : $VERSION)"
-      wget $LINK 2>/dev/null
-      BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
-      if [ -z $BASEDIR ]; then
-        BASE_TAR=$(ls -1td $SERVER_STRING 2>/dev/null | grep ".tar" | head -n1)
-        if [ ! -z $BASE_TAR ];then
-          tar -xvf $BASE_TAR >/dev/null
-          if [[ "${PRODUCT_NAME}" == "postgresql" ]]; then
-            BASEDIR=$(ls -1td pgsql 2>/dev/null | grep -v ".tar" | head -n1)
-          else
-            BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
-          fi
-          BASEDIR="$WORKDIR/$BASEDIR"
-          rm -rf $BASEDIR/node*
+    if [ ! -f $SCRIPT_PWD/../get_download_link.sh ] ; then
+      curl -OL https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
+      mv get_download_link.sh $SCRIPT_PWD/../
+    fi
+    LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
+    echo "Downloading $CLIENT_MSG(Version : $VERSION)"
+    wget $LINK 2>/dev/null
+    BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
+    if [ -z $BASEDIR ]; then
+      BASE_TAR=$(ls -1td $SERVER_STRING 2>/dev/null | grep ".tar" | head -n1)
+      if [ ! -z $BASE_TAR ];then
+        tar -xvf $BASE_TAR >/dev/null
+        if [[ "${PRODUCT_NAME}" == "postgresql" ]]; then
+          BASEDIR=$(ls -1td pgsql 2>/dev/null | grep -v ".tar" | head -n1)
         else
-          echo "ERROR! $CLIENT_MSG(this script looked for '$SERVER_STRING') does not exist. Terminating."
-          exit 1
+          BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
         fi
-      else
         BASEDIR="$WORKDIR/$BASEDIR"
+        rm -rf $BASEDIR/node*
+      else
+        echo "ERROR! $CLIENT_MSG(this script looked for '$SERVER_STRING') does not exist. Terminating."
+        exit 1
       fi
     else
-      echo "ERROR! $SCRIPT_PWD/../get_download_link.sh does not exist. Terminating."
-      exit 1
+      BASEDIR="$WORKDIR/$BASEDIR"
     fi
   else
     BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
