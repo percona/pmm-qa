@@ -322,3 +322,7 @@ echo "$output"
                         echo "${output}" | grep "not found."
         done
 }
+
+function teardown() {
+        echo "$output"
+}
