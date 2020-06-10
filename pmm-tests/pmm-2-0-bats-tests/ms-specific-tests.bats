@@ -81,7 +81,7 @@ echo "$output"
 @test "run pmm-admin list check for msqld_exporter string in output" {
     run bash -c 'pmm-admin list | grep "msqld_exporter"'
     echo "$output"
-    [ "$status" -eq 0 ]
+    [ "$status" -eq 1 ]
 }
 
 @test "run pmm-admin list check for MYSQLD_EXPORTER string in output" {
