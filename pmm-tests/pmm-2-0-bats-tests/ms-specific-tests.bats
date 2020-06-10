@@ -54,6 +54,54 @@ echo "$output"
         done
 }
 
+@test "run pmm-admin status --json check for RUNNING string in output" {
+    run bash -c 'pmm-admin status --json | grep "RUNNING"'
+    echo "${output}"
+    [ "$status" -eq 0 ]
+}
+
+@test "run pmm-admin status check for Running string in output" {
+    run bash -c 'pmm-admin status | grep "Running"'
+    echo "${output}"
+    [ "$status" -eq 0 ]
+}
+
+@test "run pmm-admin status check for RUNNING string in output" {
+    run bash -c 'pmm-admin status | grep "RUNNING"'
+    echo "$output"
+    [ "$status" -eq 1 ]
+}
+
+@test "run pmm-admin status --json check for Running string in output" {
+    run bash -c 'pmm-admin status --json | grep "Running"'
+    echo "$output"
+    [ "$status" -eq 1 ]
+}
+
+@test "run pmm-admin list check for msqld_exporter string in output" {
+    run bash -c 'pmm-admin list | grep "msqld_exporter"'
+    echo "$output"
+    [ "$status" -eq 0 ]
+}
+
+@test "run pmm-admin list check for MYSQLD_EXPORTER string in output" {
+    run bash -c 'pmm-admin status | grep "MYSQLD_EXPORTER"'
+    echo "$output"
+    [ "$status" -eq 1 ]
+}
+
+@test "run pmm-admin list --json check for msqld_exporter string in output" {
+    run bash -c 'pmm-admin list --json | grep "msqld_exporter"'
+    echo "$output"
+    [ "$status" -eq 1 ]
+}
+
+@test "run pmm-admin list --json check for MYSQLD_EXPORTER string in output" {
+    run bash -c 'pmm-admin status --json | grep "MYSQLD_EXPORTER"'
+    echo "$output"
+    [ "$status" -eq 0 ]
+}
+
 @test "run pmm-admin remove mysql" {
         COUNTER=0
         IFS=$'\n'
