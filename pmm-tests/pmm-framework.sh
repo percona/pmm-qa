@@ -671,19 +671,27 @@ install_client(){
   if [ ! -z $link_client ]; then
     PMM_CLIENT_TAR_URL=$link_client;
   else
-    PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+    PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | grep $PMM_VERSION | head -n1)
   fi
   echo "PMM2 client  $PMM_CLIENT_TAR_URL"
-  wget $PMM_CLIENT_TAR_URL
-  PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TAR_URL | grep -o '[^/]*$')
-  tar -xzf $PMM_CLIENT_TAR
-  PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client-* 2>/dev/null | grep -v ".tar" | head -n1)
-  pushd $PMM_CLIENT_BASEDIR > /dev/null
-  echo "export PATH=$PATH:$PWD/bin" >> ~/.bash_profile
+  wget -O pmm2-client.tar.gz $PMM_CLIENT_TAR_URL
+  tar -zxpf pmm2-client.tar.gz
+  rm -r pmm2-client.tar.gz
+  mv pmm2-client-* pmm2-client
+  cd pmm2-client
+  sudo bash -x ./install_tarball
+  cd ../
+  export PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client 2>/dev/null | grep -v ".tar" | head -n1)
+  export PATH="$PWD/pmm2-client/bin:$PATH"
+  echo "export PATH=$PWD/pmm2-client/bin:$PATH" >> ~/.bash_profile
   source ~/.bash_profile
   pmm-admin --version
-  pmm-agent setup --config-file=$PWD/config/pmm-agent.yaml --server-address=$IP_ADDRESS:443 --server-insecure-tls  --server-username=admin --server-password=admin --trace
-  pmm-agent --config-file=$PWD/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+  pmm-agent setup --config-file=$PWD/pmm2-client/config/pmm-agent.yaml --server-address=$IP_ADDRESS:443 --server-insecure-tls --server-username=admin --server-password=admin $IP
+  sleep 10
+  JENKINS_NODE_COOKIE=dontKillMe nohup bash -c 'pmm-agent --config-file=$PWD/pmm2-client/config/pmm-agent.yaml > pmm-agent.log 2>&1 &'
+  sleep 10
+  cat pmm-agent.log
+  pmm-admin status
 }
 
 configure_client() {
