@@ -1561,30 +1561,10 @@ clean_docker_clients(){
 }
 
 clean_server(){
-  #Stop/Remove pmm-server docker/ami/ova instances
-  if [[ "$pmm_server" == "docker" ]] ; then
-    echo -e "Removing pmm-server docker containers"
-    sudo docker stop pmm-server  2&> /dev/null
-    sudo docker rm pmm-server pmm-data  2&> /dev/null
-  elif [[ "$pmm_server" == "ova" ]] ; then
-    VMBOX=$(vboxmanage list runningvms | grep "PMM-Server" | awk -F[\"\"] '{print $2}')
-    echo "Shutting down ova instance"
-    VBoxManage controlvm $VMBOX poweroff
-    echo "Unregistering ova instance"
-    VBoxManage unregistervm $VMBOX --delete
-    VM_DISKS=($(vboxmanage list hdds | grep -B4 $VMBOX | grep UUID | grep -v 'Parent UUID:' | awk '{ print $2}'))
-    for i in ${VM_DISKS[@]}; do
-      VBoxManage closemedium disk $i --delete ;
-    done
-  elif [[ "$pmm_server" == "ami" ]] ; then
-    if [ -f $WORKDIR/aws_instance_config.txt ]; then
-      INSTANCE_ID=$(cat $WORKDIR/aws_instance_config.txt | grep "InstanceId"  | awk -F[\"\"] '{print $4}')
-    else
-      echo "ERROR! Could not read aws instance id. $WORKDIR/aws_instance_config.txt does not exist. Terminating"
-      exit 1
-    fi
-    aws ec2 terminate-instances --instance-ids $INSTANCE_ID > $WORKDIR/aws_remove_instance.log
-  fi
+  #Stop/Remove pmm-server docker instances
+  echo -e "Removing pmm-server docker containers"
+  sudo docker stop pmm-server  2&> /dev/null
+  sudo docker rm pmm-server pmm-data  2&> /dev/null
 
 }
 
