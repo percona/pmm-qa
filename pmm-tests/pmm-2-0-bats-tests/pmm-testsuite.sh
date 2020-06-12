@@ -164,6 +164,15 @@ function run_pmm_slow_log_rotation_check() {
     bats ${DIRNAME}/pmm-slow-log-rotation-tests.bats
   fi
 }
+
+function run_docker_env_variable_tests() {
+  if [[ $tap == 1 ]] ; then
+    bats --tap ${DIRNAME}/docker-env-variable-tests.bats
+  else
+    bats ${DIRNAME}/docker-env-variable-tests.bats
+  fi
+}
+
 # Additional functions
 function run_create_table() {
   bash ${DIRNAME}/create_table.sh $1 $2 $3
@@ -230,6 +239,7 @@ fi
 if [[ $instance_t == "pxc" ]]; then
   echo "Running Postgre SQL specific tests"
   run_proxysql_tests
+  run_docker_env_variable_tests
 fi
 
 echo "Finished Checking Testsuite"
