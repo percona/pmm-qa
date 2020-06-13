@@ -499,64 +499,15 @@ setup(){
     ;;
   esac
   
-  if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
-    echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
-    exit 1
-  fi
-  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
-  if [ -z $IP_ADDRESS ]; then
-    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-  fi
-  if [[ "$pmm_server" == "docker" ]];then
-    #PMM configuration setup
-    if [ -z $pmm_server_version ]; then
-      echo "dev is == " $dev
-      PMM_VERSION=$(lynx --dump https://hub.docker.com/r/$docker_org/pmm-server/tags/ | grep '[0-9].[0-9].[0-9]' | sed 's|   ||' | head -n1)
-      echo "PMM VERSION IS $PMM_VERSION"
-      
-      #PMM sanity check
-      if ! pgrep docker > /dev/null ; then
-        echo "ERROR! docker service is not running. Terminating"
-        exit 1
-      fi
-      if sudo docker ps | grep 'pmm-server' > /dev/null ; then
-        echo "ERROR! pmm-server docker container is already runnning. Terminating"
-        exit 1
-      elif  sudo docker ps -a | grep 'pmm-server' > /dev/null ; then
-        CONTAINER_NAME=$(sudo docker ps -a | grep 'pmm-server' | grep $PMM_VERSION | grep -v pmm-data | awk '{ print $1}')
-        echo "ERROR! The name 'pmm-server' is already in use by container $CONTAINER_NAME"
-        exit 1
-      fi
-    fi
-    
-    echo "Initiating PMM configuration"
-    if [[ ! -z $PMM2  && -z $skip_docker_setup ]]; then
-      sudo docker create -v /srv    --name pmm-data    $docker_org/pmm-server:$PMM_VERSION  /bin/true
-      sudo docker run -d  -p $PMM_PORT:80 -p 443:443 -p 9000:9000  --name pmm-server $docker_org/pmm-server:$PMM_VERSION
-    else
-      if [ ! -z $DEV_FB ]; then
-        sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
-        sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always perconalab/pmm-server-fb:$DEV_FB 2>/dev/null
-      else
-        sudo docker create -v /opt/prometheus/data -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data percona/pmm-server:$PMM_VERSION /bin/true 2>/dev/null
+  pmm_sanity_check
+  echo "Initiating PMM-Server Docker installation..."
+  install_server_docker
 
-        if [ "$IS_SSL" == "Yes" ];then
-          sudo docker run -d -p $PMM_PORT:443 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY  -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
-        else
-          sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
-        fi
-      fi
-    fi
+  #PMM Client configuration setup
+  if [[ -z $PMM_VERSION ]]; then
+    PMM_VERSION=$pmm_server_version
   fi
-  #PMM configuration setup
-  if [ -z $pmm_server_version ] && [ -z $dev ]; then
-    PMM_VERSION=$(lynx --dump https://hub.docker.com/r/percona/pmm-server/tags/ | grep '[0-9].[0-9].[0-9]' | sed 's|   ||' | head -n1)
-  else
-    if [[ ! -z $pmm_server_version ]]; then
-      PMM_VERSION=$pmm_server_version
-    fi
-    echo "PMM version is ====== $PMM_VERSION"
-  fi
+  echo "PMM version is ====== $PMM_VERSION"
   echo "Initiating PMM client configuration"
   PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
   if [ -z $PMM_CLIENT_BASEDIR ]; then
@@ -569,7 +520,7 @@ setup(){
       popd > /dev/null
     else
       if [ ! -z $PMM2 ]; then
-        install_client
+        install_client # Installs PMM2 Client using Tarball
       else  
         if [ ! -z $dev ]; then
           if [  -z $link_client]; then
@@ -628,10 +579,9 @@ setup(){
   fi
 
   echo -e "******************************************************************"
-  if [[ "$pmm_server" == "docker" ]]; then
-    echo -e "Please execute below command to access docker container"
-    echo -e "docker exec -it pmm-server bash\n"
-  fi
+  echo -e "Please execute below command to access docker container"
+  echo -e "docker exec -it pmm-server bash\n"
+
   if [ "$IS_SSL" == "Yes" ];then
     (
     printf "%s\t%s\n" "PMM landing page" "https://$SERVER_IP:$PMM_PORT"
@@ -664,6 +614,55 @@ setup(){
     ) | column -t -s $'\t'
   fi
   echo -e "******************************************************************"
+}
+
+pmm_sanity_check(){
+  if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
+    echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
+    exit 1
+  fi
+  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
+  if [ -z $IP_ADDRESS ]; then
+    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+  fi
+
+  if [ -z $pmm_server_version ]; then
+    echo "Please provide pmm-server version using: --pmm-server-version. Terminating"
+    exit 1
+  fi
+
+  if ! pgrep docker > /dev/null ; then
+    echo "ERROR! docker service is not running. Terminating"
+    exit 1
+  fi
+  if sudo docker ps | grep 'pmm-server' > /dev/null ; then
+    echo "ERROR! pmm-server docker container is already runnning. Terminating"
+    exit 1
+  elif  sudo docker ps -a | grep 'pmm-server' > /dev/null ; then
+    CONTAINER_NAME=$(sudo docker ps -a | grep 'pmm-server' | grep $PMM_VERSION | grep -v pmm-data | awk '{ print $1}')
+    echo "ERROR! The name 'pmm-server' is already in use by container $CONTAINER_NAME"
+    exit 1
+  fi
+}
+
+install_server_docker(){
+  if [[ ! -z $PMM2  && -z $skip_docker_setup ]]; then
+    sudo docker create -v /srv    --name pmm-data    $docker_org/pmm-server:$PMM_VERSION  /bin/true
+    sudo docker run -d  -p $PMM_PORT:80 -p 443:443 -p 9000:9000  --name pmm-server $docker_org/pmm-server:$PMM_VERSION
+  else
+    if [ ! -z $DEV_FB ]; then
+      sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
+      sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always perconalab/pmm-server-fb:$DEV_FB 2>/dev/null
+    else
+      sudo docker create -v /opt/prometheus/data -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data percona/pmm-server:$PMM_VERSION /bin/true 2>/dev/null
+
+      if [ "$IS_SSL" == "Yes" ];then
+        sudo docker run -d -p $PMM_PORT:443 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY  -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
+      else
+        sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
+      fi
+    fi
+  fi
 }
 
 #Download and install PMM2.x client
@@ -1260,7 +1259,7 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "mo" && ! -z $PMM2  && ! -z $MONGOMAGIC ]]; then
       echo "Running MongoDB setup script, using MONGOMAGIC"
-      sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
+      curl -OL https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startup.sh
       sudo chmod +x mongo_startup.sh
       echo ${BASEDIR}
       ## Download right PXC version
