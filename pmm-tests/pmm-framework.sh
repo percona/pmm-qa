@@ -12,8 +12,6 @@ SCRIPT_PWD=$(cd `dirname $0` && pwd)
 RPORT=$(( RANDOM%21 + 10 ))
 RBASE="$(( RPORT*1000 ))"
 SERVER_START_TIMEOUT=100
-SUSER="root"
-SPASS=""
 OUSER="admin"
 OPASS="passw0rd"
 ADDR="127.0.0.1"
@@ -27,7 +25,7 @@ mysqld_startup_options="--user=root"
 
 mkdir -p $WORKDIR/logs
 # User configurable variables
-IS_BATS_RUN=0
+IS_SSL="No"
 
 # Dispay script usage details
 usage () {
@@ -38,16 +36,15 @@ usage () {
   echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
   echo " --pmm2                         When this option is specified, PMM framework will use specified PMM 2.x development version. Must be used with pmm-server-version option"
   echo " --skip-docker-setup            Pass this parameter if Docker Setup for PMM2-Server is not needed, Only Pmm2-client needs to be installed"
-  echo " --is-bats-run                  Change Bats run option, set to 1 if not user interaction required"
   echo " --link-client                  Pass URL to download pmm-client"
   echo " --addclient=ps,2               Add Percona (ps), MySQL (ms), MariaDB (md), Percona XtraDB Cluster (pxc), and/or mongodb (mo) pmm-clients to the currently live PMM server (as setup by --setup)"
   echo "                                You can add multiple client instances simultaneously. eg : --addclient=ps,2  --addclient=ms,2 --addclient=md,2 --addclient=mo,2 --addclient=pxc,3"
   echo " --download                     This will help us to download pmm client binary tar balls"
   echo " --dbdeployer                   This option will use dbdeployer tool for deploying PS, MS Databases"
   echo " --pmm-server-version           Pass PMM version"
-  echo " --pmm-port                     Pass port for PMM docker"
+  echo " --pmm-port                     Pass port for PMM docker [Default: 443 when SSL enabled, 80 when SSL disabled]"
   echo " --pmm2-server-ip               Pass Address for PMM2-Server"
-  echo " --package-name                 Name of the Server package installed"
+  echo " --package-name                 Name of the Server package installed [ps, psmyr, ms, pgsql, md, pxc, mo]"
   echo " --ps-version                   Pass Percona Server version info"
   echo " --modb-version                 Pass MongoDB version info, from MongoDB!!"
   echo " --ms-version                   Pass MySQL Server version info"
@@ -77,10 +74,6 @@ usage () {
   echo " --pmm-server-memory            Set METRICS_MEMORY option to PMM server"
   echo " --pmm-docker-memory            Set memory for docker container"
   echo " --pmm-server=[docker|ami|ova]  Choose PMM server appliance, default pmm server appliance is docker"
-  echo " --ami-image                    Pass PMM server ami image name"
-  echo " --key-name                     Pass your aws access key file name"
-  echo " --ova-image                    Pass PMM server ova image name"
-  echo " --ova-memory                   Pass memory(memorysize in MB) for OVA virtual box"
   echo " --disable-ssl                  Disable ssl mode on exporter"
   echo " --create-pgsql-user            Set this option if a Dedicated PGSQl User creation is required username: psql and no password"
   echo " --upgrade-server               When this option is specified, PMM Server will be updated to the last version"
@@ -99,7 +92,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,pmm2-server-ip:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -144,7 +137,7 @@ do
     ;;
     --pmm-server )
     pmm_server="$2"
-	shift 2
+    shift 2
     if [ "$pmm_server" != "docker" ] && [ "$pmm_server" != "ami" ] && [ "$pmm_server" != "ova" ] && [ "$pmm_server" != "custom" ]; then
       echo "ERROR: Invalid --pmm-server passed:"
       echo "  Please choose any of these pmm-server options: 'docker', 'ami', 'custom', or 'ova'"
@@ -178,26 +171,6 @@ do
     ;;
     --pmm-docker-memory )
     DOCKER_MEMORY="$2"
-    shift 2
-    ;;
-    --ami-image )
-    ami_image="$2"
-    shift 2
-    ;;
-    --key-name )
-    key_name="$2"
-    shift 2
-    ;;
-    --is-bats-run )
-    IS_BATS_RUN=1
-    shift 2
-    ;;
-    --ova-image )
-    ova_image="$2"
-    shift 2
-    ;;
-    --ova-memory )
-    ova_memory="$2"
     shift 2
     ;;
     --ps-version )
@@ -447,24 +420,6 @@ fi
 
 if [[ -z "$pmm_server" ]];then
   pmm_server="docker"
-elif [[ "$pmm_server" == "ami" ]];then
-  if [[ "$setup" == "1" ]];then
-    if [[ -z "$ami_image" ]];then
-      echo "ERROR! You have not given AMI image name. Please use --ami-image to pass image name. Terminating"
-      exit 1
-    fi
-    if [[ -z "$key_name" ]];then
-      echo "ERROR! You have not entered  aws key name. Please use --key-name to pass key name. Terminating"
-      exit 1
-    fi
-  fi
-elif [[ "$pmm_server" == "ova" ]];then
-  if [[ "$setup" == "1" ]];then
-    if [[ -z "$ova_image" ]];then
-      echo "ERROR! You have not given OVA image name. Please use --ova-image to pass image name. Terminating"
-      exit 1
-    fi
-  fi
 elif [[ "$pmm_server" == "custom" ]];then
   if ! sudo pmm-admin ping | grep -q "OK, PMM server is alive"; then
     echo "ERROR! PMM Server is not running. Please check PMM server status. Terminating"
@@ -476,27 +431,8 @@ sanity_check(){
   if [[ "$pmm_server" == "docker" ]];then
     if ! sudo docker ps | grep 'pmm-server' > /dev/null ; then
       echo "ERROR! pmm-server docker container is not runnning. Terminating"
-      #exit 1
+      exit 1
     fi
-  elif [[ "$pmm_server" == "ami" ]];then
-    if [ -f $WORKDIR/aws_instance_config.txt ]; then
-      INSTANCE_ID=$(cat $WORKDIR/aws_instance_config.txt | grep "InstanceId"  | awk -F[\"\"] '{print $4}')
-	else
-	  echo "ERROR! Could not read aws instance id. $WORKDIR/aws_instance_config.txt does not exist. Terminating"
-	  exit 1
-	fi
-    INSTANCE_ACTIVE=$(aws ec2 describe-instance-status --instance-ids  $INSTANCE_ID | grep "Code" | sed 's/[^0-9]//g')
-	if [[ "$INSTANCE_ACTIVE" != "16" ]];then
-      echo "ERROR! pmm-server ami instance is not runnning. Terminating"
-      exit 1
-	fi
-  elif [[ "$pmm_server" == "ova" ]];then
-    VMBOX=$(vboxmanage list runningvms | grep "PMM-Server" | awk -F[\"\"] '{print $2}')
-	VMBOX_STATUS=$(vboxmanage showvminfo $VMBOX  | grep State | awk '{print $2}')
-	if [[ "$VMBOX_STATUS" != "running" ]]; then
-	  echo "ERROR! pmm-server ova instance is not runnning. Terminating"
-      exit 1
-	fi
   fi
 }
 
@@ -522,7 +458,6 @@ if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.4"; fi
 if [[ -z "${mo_version}" ]]; then mo_version="4.0"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
-if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
 if [[ -z "${pgsql_version}" ]]; then pgsql_version="10.8";fi
 
 if [[ -z $pmm_server_version ]] && [[ ! -z $dev ]]; then  # Set Default Docker Image Tag: dev-latest
@@ -541,147 +476,38 @@ if [[ -z "$query_source" ]];then
 fi
 
 setup(){
-  if [ $IS_BATS_RUN -eq 0 ];then
-    read -p "Would you like to enable SSL encryption to protect PMM from unauthorized access[y/n] ? " check_param
-    case $check_param in
-      y|Y)
-        echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access"
-        openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
-        IS_SSL="Yes"
-        if [[ -z $PMM_PORT ]]; then
-          PMM_PORT=443
-        fi
-      ;;
-      n|N)
-        echo ""
-        IS_SSL="No"
-        if [[ -z $PMM_PORT ]]; then
-          PMM_PORT=80
-        fi
-      ;;
-      *)
-        echo "Please type [y/n]! Terminating."
-        exit 1
-      ;;
-    esac
-  else
-    IS_SSL="No"
-  fi
-
+  read -p "Would you like to enable SSL encryption to protect PMM from unauthorized access[y/n] ? " check_param
+  case $check_param in
+    y|Y)
+      echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access"
+      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
+      IS_SSL="Yes"
+      if [[ -z $PMM_PORT ]]; then
+        PMM_PORT=443
+      fi
+    ;;
+    n|N)
+      echo ""
+      IS_SSL="No"
+      if [[ -z $PMM_PORT ]]; then
+        PMM_PORT=80
+      fi
+    ;;
+    *)
+      echo "Please type [y/n]! Terminating."
+      exit 1
+    ;;
+  esac
   
-  if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
-    echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
-    exit 1
+  pmm_sanity_check
+  echo "Initiating PMM-Server Docker installation..."
+  install_server_docker
+
+  #PMM Client configuration setup
+  if [[ -z $PMM_VERSION ]]; then
+    PMM_VERSION=$pmm_server_version
   fi
-  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
-  if [ -z $IP_ADDRESS ]; then
-    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-  fi
-  if [[ "$pmm_server" == "docker" ]];then
-    #PMM configuration setup
-    if [ -z $pmm_server_version ]; then
-      echo "dev is == " $dev
-      PMM_VERSION=$(lynx --dump https://hub.docker.com/r/$docker_org/pmm-server/tags/ | grep '[0-9].[0-9].[0-9]' | sed 's|   ||' | head -n1)
-      echo "PMM VERSION IS $PMM_VERSION"
-      
-    #PMM sanity check
-      if ! pgrep docker > /dev/null ; then
-        echo "ERROR! docker service is not running. Terminating"
-        exit 1
-      fi
-      if sudo docker ps | grep 'pmm-server' > /dev/null ; then
-        echo "ERROR! pmm-server docker container is already runnning. Terminating"
-        exit 1
-      elif  sudo docker ps -a | grep 'pmm-server' > /dev/null ; then
-        CONTAINER_NAME=$(sudo docker ps -a | grep 'pmm-server' | grep $PMM_VERSION | grep -v pmm-data | awk '{ print $1}')
-        echo "ERROR! The name 'pmm-server' is already in use by container $CONTAINER_NAME"
-        exit 1
-      fi
-    fi
-   if [[ "$pmm_server" == "aws" ]];then
-	    aws ec2 describe-instance-status --instance-ids  $INSTANCE_ID | grep "Code" | sed 's/[^0-9]//g'
-    fi
-    echo "Initiating PMM configuration"
-    if [[ ! -z $PMM2  && -z $skip_docker_setup ]]; then
-      sudo docker create -v /srv    --name pmm-data    $docker_org/pmm-server:$PMM_VERSION  /bin/true
-      sudo docker run -d  -p $PMM_PORT:80 -p 443:443 -p 9000:9000  --name pmm-server $docker_org/pmm-server:$PMM_VERSION
-    else
-    if [ ! -z $DEV_FB ]; then
-      sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
-      sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always perconalab/pmm-server-fb:$DEV_FB 2>/dev/null
-    else
-      sudo docker create -v /opt/prometheus/data -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data percona/pmm-server:$PMM_VERSION /bin/true 2>/dev/null
-
-      if [ "$IS_SSL" == "Yes" ];then
-        sudo docker run -d -p $PMM_PORT:443 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY  -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
-      else
-        sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
-      fi
-   fi
-  fi
-  elif [[ "$pmm_server" == "ami" ]] ; then
-    if [[ ! -e $(which aws 2> /dev/null) ]] ;then
-      echo "ERROR! AWS client program is currently not installed. Please install awscli. Terminating"
-      exit 1
-    fi
-    if [ ! -f $HOME/.aws/credentials ]; then
-      echo "ERROR! AWS access key is not configured. Terminating"
-	  exit 1
-	fi
-	aws ec2 run-instances \
-	--image-id $ami_image \
-	--security-group-ids sg-3b6e5e46 \
-	--instance-type t2.micro \
-    --subnet-id subnet-4765a930 \
-    --region us-east-1 \
-    --key-name $key_name > $WORKDIR/aws_instance_config.txt 2> /dev/null
-
-	INSTANCE_ID=$(cat $WORKDIR/aws_instance_config.txt | grep "InstanceId"  | awk -F[\"\"] '{print $4}')
-
-	aws ec2 create-tags  \
-    --resources $INSTANCE_ID \
-    --region us-east-1 \
-    --tags Key=Name,Value=PMM_test_image 2> /dev/null
-
-	sleep 30
-
-	AWS_PUBLIC_IP=$(aws ec2 describe-instances --instance-ids  $INSTANCE_ID | grep "PublicIpAddress" | awk -F[\"\"] '{print $4}')
-  elif [[ "$pmm_server" == "ova" ]] ; then
-    if [[ ! -e $(which VBoxManage 2> /dev/null) ]] ;then
-      echo "ERROR! VBoxManage client program is currently not installed. Please install VirtualBox. Terminating"
-      exit 1
-    fi
-	ova_image_name=$(echo $ova_image | sed 's/.ova//')
-    VMBOX=$(vboxmanage list runningvms | grep $ova_image_name | awk -F[\"\"] '{print $2}')
-	VMBOX_STATUS=$(vboxmanage showvminfo $VMBOX  | grep State | awk '{print $2}')
-	if [[ "$VMBOX_STATUS" == "running" ]]; then
-	  echo "ERROR! pmm-server ova instance is already runnning. Terminating"
-      exit 1
-	fi
-	# import image
-	if [ ! -f $ova_image ] ;then
-	  echo "Alert! ${ova_image} does not exist in $WORKDIR. Downloading ${ova_image} ..."
-	  wget https://s3.amazonaws.com/percona-vm/$ova_image
-	fi
-    VBoxManage import $ova_image > $WORKDIR/ova_instance_config.txt 2> /dev/null
-	NETWORK_INTERFACE=$(ip addr | grep $IP_ADDRESS |  awk 'NF>1{print $NF}')
-	VBoxManage modifyvm $ova_image_name --nic1 bridged --bridgeadapter1 ${NETWORK_INTERFACE}
-	VBoxManage modifyvm $ova_image_name --uart1 0x3F8 4 --uartmode1 file $WORKDIR/pmm-server-console.log
-    VBoxManage modifyvm $ova_image_name --memory ${ova_memory}
-    # start instance
-    VBoxManage startvm --type headless $ova_image_name > $WORKDIR/pmm-server-starup.log 2> /dev/null
-	sleep 120
-	OVA_PUBLIC_IP=$(grep 'Percona Monitoring and Management' $WORKDIR/pmm-server-console.log | awk -F[\/\/] '{print $3}')
-  fi
- #  #PMM configuration setup
-  if [ -z $pmm_server_version ] && [ -z $dev ]; then
-   PMM_VERSION=$(lynx --dump https://hub.docker.com/r/percona/pmm-server/tags/ | grep '[0-9].[0-9].[0-9]' | sed 's|   ||' | head -n1)
- else
-   if [[ ! -z $pmm_server_version ]]; then
-     PMM_VERSION=$pmm_server_version
-   fi
-   echo "PMM version is ====== $PMM_VERSION"
- fi
+  echo "PMM version is ====== $PMM_VERSION"
   echo "Initiating PMM client configuration"
   PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
   if [ -z $PMM_CLIENT_BASEDIR ]; then
@@ -694,35 +520,35 @@ setup(){
       popd > /dev/null
     else
       if [ ! -z $PMM2 ]; then
-        install_client
+        install_client # Installs PMM2 Client using Tarball
       else  
-      if [ ! -z $dev ]; then
-        if [  -z $link_client]; then
-         PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+        if [ ! -z $dev ]; then
+          if [  -z $link_client]; then
+            PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+          else
+            PMM_CLIENT_TARBALL_URL=$link_client
+          fi
+          #echo "PMM client URL $PMM_CLIENT_URL"
+          echo "PMM client tarball $PMM_CLIENT_TARBALL_URL"
+          wget $PMM_CLIENT_TARBALL_URL
+          PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TARBALL_URL | grep -o '[^/]*$')
+          tar -xzf $PMM_CLIENT_TAR
+          PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
+          pushd $PMM_CLIENT_BASEDIR > /dev/null
+          sudo ./install
+          popd > /dev/null
         else
-          PMM_CLIENT_TARBALL_URL=$link_client
+          PMM_CLIENT_TAR=$(lynx --dump  https://www.percona.com/downloads/pmm-client/$PMM_VERSION/binary/tarball/ | grep -o pmm-client.*.tar.gz | head -n1)
+          echo "PMM client tar 2 $PMM_CLIENT_TAR"
+          wget https://www.percona.com/downloads/pmm-client/$PMM_VERSION/binary/tarball/$PMM_CLIENT_TAR
+          tar -xzf $PMM_CLIENT_TAR
+          PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
+          pushd $PMM_CLIENT_BASEDIR > /dev/null
+          sudo ./install
+          popd > /dev/null
         fi
-        #echo "PMM client URL $PMM_CLIENT_URL"
-        echo "PMM client tarball $PMM_CLIENT_TARBALL_URL"
-        wget $PMM_CLIENT_TARBALL_URL
-        PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TARBALL_URL | grep -o '[^/]*$')
-        tar -xzf $PMM_CLIENT_TAR
-        PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
-        pushd $PMM_CLIENT_BASEDIR > /dev/null
-        sudo ./install
-        popd > /dev/null
-      else
-        PMM_CLIENT_TAR=$(lynx --dump  https://www.percona.com/downloads/pmm-client/$PMM_VERSION/binary/tarball/ | grep -o pmm-client.*.tar.gz | head -n1)
-        echo "PMM client tar 2 $PMM_CLIENT_TAR"
-        wget https://www.percona.com/downloads/pmm-client/$PMM_VERSION/binary/tarball/$PMM_CLIENT_TAR
-        tar -xzf $PMM_CLIENT_TAR
-        PMM_CLIENT_BASEDIR=$(ls -1td pmm-client-* 2>/dev/null | grep -v ".tar" | head -n1)
-        pushd $PMM_CLIENT_BASEDIR > /dev/null
-        sudo ./install
-        popd > /dev/null
       fi
     fi
-  fi
   else
     pushd $PMM_CLIENT_BASEDIR > /dev/null
     sudo ./install
@@ -738,35 +564,24 @@ setup(){
     exit 1
   else
     sleep 10
-  if [[ ! -e $(which pmm-agent 2> /dev/null) ]] && [ ! -z $PMM2 ] ;then
-    echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
-    exit 1
-  fi
-   #Cleaning existing PMM server configuration
-  if [ ! -z $PMM2 ]; then
-    configure_client
-  else
-    sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
-    if [[ "$pmm_server" == "ami" ]]; then
-	  sudo pmm-admin config --server $AWS_PUBLIC_IP --client-address $IP_ADDRESS $PMM_MYEXTRA
-	  echo "Alert! Password protection is not enabled in ami image, Please configure it manually"
-	  SERVER_IP=$AWS_PUBLIC_IP
-    elif [[ "$pmm_server" == "ova" ]]; then
-	  sudo pmm-admin config --server $OVA_PUBLIC_IP --client-address $IP_ADDRESS $PMM_MYEXTRA
-	  echo "Alert! Password protection is not enabled in ova image, Please configure it manually"
-	  SERVER_IP=$OVA_PUBLIC_IP
+    if [[ ! -e $(which pmm-agent 2> /dev/null) ]] && [ ! -z $PMM2 ] ;then
+      echo "ERROR! The pmm-agent was not found, please install the pmm2-client package"
+      exit 1
+    fi
+    #Cleaning existing PMM server configuration
+    if [ ! -z $PMM2 ]; then
+      configure_client
     else
+      sudo truncate -s0 /usr/local/percona/pmm-client/pmm.yml
       sudo pmm-admin config --server $IP_ADDRESS:$PMM_PORT --server-user=$pmm_server_username --server-password=$pmm_server_password $PMM_MYEXTRA
-	  SERVER_IP=$IP_ADDRESS
+      SERVER_IP=$IP_ADDRESS
     fi
   fi
-fi
 
   echo -e "******************************************************************"
-  if [[ "$pmm_server" == "docker" ]]; then
-    echo -e "Please execute below command to access docker container"
-    echo -e "docker exec -it pmm-server bash\n"
-  fi
+  echo -e "Please execute below command to access docker container"
+  echo -e "docker exec -it pmm-server bash\n"
+
   if [ "$IS_SSL" == "Yes" ];then
     (
     printf "%s\t%s\n" "PMM landing page" "https://$SERVER_IP:$PMM_PORT"
@@ -801,24 +616,81 @@ fi
   echo -e "******************************************************************"
 }
 
+pmm_sanity_check(){
+  if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
+    echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
+    exit 1
+  fi
+  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
+  if [ -z $IP_ADDRESS ]; then
+    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+  fi
+
+  if [ -z $pmm_server_version ]; then
+    echo "Please provide pmm-server version using: --pmm-server-version. Terminating"
+    exit 1
+  fi
+
+  if ! pgrep docker > /dev/null ; then
+    echo "ERROR! docker service is not running. Terminating"
+    exit 1
+  fi
+  if sudo docker ps | grep 'pmm-server' > /dev/null ; then
+    echo "ERROR! pmm-server docker container is already runnning. Terminating"
+    exit 1
+  elif  sudo docker ps -a | grep 'pmm-server' > /dev/null ; then
+    CONTAINER_NAME=$(sudo docker ps -a | grep 'pmm-server' | grep $PMM_VERSION | grep -v pmm-data | awk '{ print $1}')
+    echo "ERROR! The name 'pmm-server' is already in use by container $CONTAINER_NAME"
+    exit 1
+  fi
+}
+
+install_server_docker(){
+  if [[ ! -z $PMM2  && -z $skip_docker_setup ]]; then
+    sudo docker create -v /srv    --name pmm-data    $docker_org/pmm-server:$PMM_VERSION  /bin/true
+    sudo docker run -d  -p $PMM_PORT:80 -p 443:443 -p 9000:9000  --name pmm-server $docker_org/pmm-server:$PMM_VERSION
+  else
+    if [ ! -z $DEV_FB ]; then
+      sudo docker create -v /opt/prometheus/data  -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data perconalab/pmm-server-fb:$DEV_FB /bin/true 2>/dev/null
+      sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always perconalab/pmm-server-fb:$DEV_FB 2>/dev/null
+    else
+      sudo docker create -v /opt/prometheus/data -v /var/lib/grafana -v /opt/consul-data -v /var/lib/mysql -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" --name pmm-data percona/pmm-server:$PMM_VERSION /bin/true 2>/dev/null
+
+      if [ "$IS_SSL" == "Yes" ];then
+        sudo docker run -d -p $PMM_PORT:443 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY  -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
+      else
+        sudo docker run -d -p $PMM_PORT:80 -p 8500:8500 $DOCKER_CONTAINER_MEMORY $PMM_METRICS_MEMORY -e SERVER_USER="$pmm_server_username" -e SERVER_PASSWORD="$pmm_server_password" -e ORCHESTRATOR_USER=$OUSER -e ORCHESTRATOR_PASSWORD=$OPASS --volumes-from pmm-data --name pmm-server --restart always $docker_org/pmm-server:$PMM_VERSION 2>/dev/null
+      fi
+    fi
+  fi
+}
+
 #Download and install PMM2.x client
 install_client(){
   if [ ! -z $link_client ]; then
     PMM_CLIENT_TAR_URL=$link_client;
   else
-    PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
+    PMM_CLIENT_TAR_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm2-client" |awk '{print $2}'| grep "tar.gz" | grep $PMM_VERSION | head -n1)
   fi
   echo "PMM2 client  $PMM_CLIENT_TAR_URL"
-  wget $PMM_CLIENT_TAR_URL
-  PMM_CLIENT_TAR=$(echo $PMM_CLIENT_TAR_URL | grep -o '[^/]*$')
-  tar -xzf $PMM_CLIENT_TAR
-  PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client-* 2>/dev/null | grep -v ".tar" | head -n1)
-  pushd $PMM_CLIENT_BASEDIR > /dev/null
-  echo "export PATH=$PATH:$PWD/bin" >> ~/.bash_profile
+  wget -O pmm2-client.tar.gz $PMM_CLIENT_TAR_URL
+  tar -zxpf pmm2-client.tar.gz
+  rm -r pmm2-client.tar.gz
+  mv pmm2-client-* pmm2-client
+  cd pmm2-client
+  sudo bash -x ./install_tarball
+  cd ../
+  export PMM_CLIENT_BASEDIR=$(ls -1td pmm2-client 2>/dev/null | grep -v ".tar" | head -n1)
+  export PATH="$PWD/pmm2-client/bin:$PATH"
+  echo "export PATH=$PWD/pmm2-client/bin:$PATH" >> ~/.bash_profile
   source ~/.bash_profile
   pmm-admin --version
-  pmm-agent setup --config-file=$PWD/config/pmm-agent.yaml --server-address=$IP_ADDRESS:443 --server-insecure-tls  --server-username=admin --server-password=admin --trace
-  pmm-agent --config-file=$PWD/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+  pmm-agent setup --config-file=$PWD/pmm2-client/config/pmm-agent.yaml --server-address=$IP_ADDRESS:443 --server-insecure-tls --server-username=admin --server-password=admin $IP
+  sleep 10
+  JENKINS_NODE_COOKIE=dontKillMe nohup bash -c 'pmm-agent --config-file=$PWD/pmm2-client/config/pmm-agent.yaml > pmm-agent.log 2>&1 &'
+  sleep 10
+  cat pmm-agent.log
+  pmm-admin status
 }
 
 configure_client() {
@@ -847,7 +719,11 @@ setup_db_tar(){
   CLIENT_MSG=$3
   VERSION=$4
   if cat /etc/os-release | grep rhel >/dev/null ; then
-   DISTRUBUTION=centos
+    DISTRUBUTION=centos
+  fi
+  if [ ! -f $SCRIPT_PWD/../get_download_link.sh ] ; then
+    curl -OL https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
+    mv get_download_link.sh $SCRIPT_PWD/../
   fi
   LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
   echo "Downloading $CLIENT_MSG(Version : $VERSION)"
@@ -866,35 +742,34 @@ get_basedir(){
   CLIENT_MSG=$3
   VERSION=$4
   if cat /etc/os-release | grep rhel >/dev/null ; then
-   DISTRUBUTION=centos
+    DISTRUBUTION=centos
   fi
   if [ $download_link -eq 1 ]; then
-    if [ -f $SCRIPT_PWD/../get_download_link.sh ]; then
-      LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
-      echo "Downloading $CLIENT_MSG(Version : $VERSION)"
-      wget $LINK 2>/dev/null
-      BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
-      if [ -z $BASEDIR ]; then
-        BASE_TAR=$(ls -1td $SERVER_STRING 2>/dev/null | grep ".tar" | head -n1)
-        if [ ! -z $BASE_TAR ];then
-          tar -xvf $BASE_TAR >/dev/null
-          if [[ "${PRODUCT_NAME}" == "postgresql" ]]; then
-            BASEDIR=$(ls -1td pgsql 2>/dev/null | grep -v ".tar" | head -n1)
-          else
-            BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
-          fi
-          BASEDIR="$WORKDIR/$BASEDIR"
-          rm -rf $BASEDIR/node*
+    if [ ! -f $SCRIPT_PWD/../get_download_link.sh ] ; then
+      curl -OL https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
+      mv get_download_link.sh $SCRIPT_PWD/../
+    fi
+    LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
+    echo "Downloading $CLIENT_MSG(Version : $VERSION)"
+    wget $LINK 2>/dev/null
+    BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
+    if [ -z $BASEDIR ]; then
+      BASE_TAR=$(ls -1td $SERVER_STRING 2>/dev/null | grep ".tar" | head -n1)
+      if [ ! -z $BASE_TAR ];then
+        tar -xvf $BASE_TAR >/dev/null
+        if [[ "${PRODUCT_NAME}" == "postgresql" ]]; then
+          BASEDIR=$(ls -1td pgsql 2>/dev/null | grep -v ".tar" | head -n1)
         else
-          echo "ERROR! $CLIENT_MSG(this script looked for '$SERVER_STRING') does not exist. Terminating."
-          exit 1
+          BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
         fi
-      else
         BASEDIR="$WORKDIR/$BASEDIR"
+        rm -rf $BASEDIR/node*
+      else
+        echo "ERROR! $CLIENT_MSG(this script looked for '$SERVER_STRING') does not exist. Terminating."
+        exit 1
       fi
     else
-      echo "ERROR! $SCRIPT_PWD/../get_download_link.sh does not exist. Terminating."
-      exit 1
+      BASEDIR="$WORKDIR/$BASEDIR"
     fi
   else
     BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
@@ -928,13 +803,13 @@ compare_query(){
   insert_loop(){
     NUM_START=$((CURRENT_QUERY_COUNT + 1))
     NUM_END=$(shuf -i ${1} -n 1)
-	TOTAL_QUERY_COUNT_BEFORE_RUN=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT COUNT_STAR  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
+    TOTAL_QUERY_COUNT_BEFORE_RUN=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT COUNT_STAR  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
     for i in `seq $NUM_START $NUM_END`; do
       STRING=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
       ${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -e "INSERT INTO test.t1 (str) VALUES ('${STRING}')"
     done
-	TOTAL_QUERY_COUNT_AFTER_RUN=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT COUNT_STAR  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
-	CURRENT_QUERY_COUNT=$((TOTAL_QUERY_COUNT_AFTER_RUN - TOTAL_QUERY_COUNT_BEFORE_RUN))
+    TOTAL_QUERY_COUNT_AFTER_RUN=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT COUNT_STAR  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
+    CURRENT_QUERY_COUNT=$((TOTAL_QUERY_COUNT_AFTER_RUN - TOTAL_QUERY_COUNT_BEFORE_RUN))
     START_TIME=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT FIRST_SEEN  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
     END_TIME=$(${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -Bse "SELECT LAST_SEEN  FROM performance_schema.events_statements_summary_by_digest WHERE DIGEST_TEXT LIKE 'INSERT INTO `test`%';")
   }
@@ -949,7 +824,7 @@ compare_query(){
   fi
   if [ -z $TEST_SOCKET ];then
     echo "ERROR! PMM client instance does not exist. Terminating"
-	exit 1
+    exit 1
   fi
   echo "Initializing query count testing"
   ${BASEDIR}/bin/mysql -uroot --socket=$TEST_SOCKET -e "create database if not exists test;"  2>&1
@@ -1068,10 +943,10 @@ add_clients(){
     fi
     if [[ "${CLIENT_NAME}" != "md"  && "${CLIENT_NAME}" != "mo" && "${CLIENT_NAME}" != "pgsql" ]]; then
       VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
-    if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
-        MID="${BASEDIR}/bin/mysqld   --default-authentication-plugin=mysql_native_password --initialize-insecure --basedir=${BASEDIR}"
+      if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
+          MID="${BASEDIR}/bin/mysqld   --default-authentication-plugin=mysql_native_password --initialize-insecure --basedir=${BASEDIR}"
       else
-        MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
+          MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
       fi
     else
       if [[ "${CLIENT_NAME}" != "mo" ]]; then
@@ -1122,12 +997,12 @@ add_clients(){
       create_replset_js
       if [[ "$with_replica" == "1" ]]; then
         for k in `seq 1  ${REPLCOUNT}`;do
-	        n=$(( $k - 1 ))
-		      echo "Configuring replicaset"
+          n=$(( $k - 1 ))
+          echo "Configuring replicaset"
           sudo $BASEDIR/bin/mongo --quiet --port ${PSMDB_PORTS[$n]} --eval "var replSet='r${k}'" "/tmp/config_replset.js"
           sleep 20
-	      done
-	    fi
+        done
+      fi
       if [ ! -z $PMM2 ]; then
         for p in `seq 1  ${REPLCOUNT}`;do
           n=$(( $p - 1 ))
@@ -1179,12 +1054,12 @@ add_clients(){
           fi
         fi
         echo "Adding Shards"
-		    sleep 20
+        sleep 20
         for k in `seq 1  ${REPLCOUNT}`;do
           n=$(( $k - 1 ))
           $BASEDIR/bin/mongo --quiet --eval "printjson(db.getSisterDB('admin').runCommand({addShard: 'r${k}/localhost:${PSMDB_PORTS[$n]}'}))"
         done
-	    fi
+      fi
     elif [[ -z $PMM2 && "${CLIENT_NAME}" == "pgsql" ]]; then
       if [ $create_pgsql_user -eq 1 ]; then
         PGSQL_USER=psql
@@ -1384,7 +1259,7 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "mo" && ! -z $PMM2  && ! -z $MONGOMAGIC ]]; then
       echo "Running MongoDB setup script, using MONGOMAGIC"
-      sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
+      curl -OL https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startup.sh
       sudo chmod +x mongo_startup.sh
       echo ${BASEDIR}
       ## Download right PXC version
@@ -1643,7 +1518,7 @@ clean_clients(){
       echo -e "Removing all local pmm client instances"
       sudo pmm-admin remove --all 2&>/dev/null
     fi
- else 
+  else 
     for i in $(pmm-admin list | grep -E "MySQL" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove mysql $i
     
@@ -1665,8 +1540,8 @@ clean_clients(){
       docker rm -f $i
     done
     dbdeployer delete all --skip-confirm 
- fi
-   #Kill mongodb processes
+  fi
+  #Kill mongodb processes
     sudo killall mongod 2> /dev/null
     sudo killall mongos 2> /dev/null
     sleep 5
@@ -1685,30 +1560,10 @@ clean_docker_clients(){
 }
 
 clean_server(){
-  #Stop/Remove pmm-server docker/ami/ova instances
-  if [[ "$pmm_server" == "docker" ]] ; then
-    echo -e "Removing pmm-server docker containers"
-    sudo docker stop pmm-server  2&> /dev/null
-    sudo docker rm pmm-server pmm-data  2&> /dev/null
-  elif [[ "$pmm_server" == "ova" ]] ; then
-	VMBOX=$(vboxmanage list runningvms | grep "PMM-Server" | awk -F[\"\"] '{print $2}')
-	echo "Shutting down ova instance"
-	VBoxManage controlvm $VMBOX poweroff
-	echo "Unregistering ova instance"
-	VBoxManage unregistervm $VMBOX --delete
-	 VM_DISKS=($(vboxmanage list hdds | grep -B4 $VMBOX | grep UUID | grep -v 'Parent UUID:' | awk '{ print $2}'))
-	for i in ${VM_DISKS[@]}; do
-	  VBoxManage closemedium disk $i --delete ;
-	done
-  elif [[ "$pmm_server" == "ami" ]] ; then
-    if [ -f $WORKDIR/aws_instance_config.txt ]; then
-      INSTANCE_ID=$(cat $WORKDIR/aws_instance_config.txt | grep "InstanceId"  | awk -F[\"\"] '{print $4}')
-	else
-	  echo "ERROR! Could not read aws instance id. $WORKDIR/aws_instance_config.txt does not exist. Terminating"
-	  exit 1
-	fi
-    aws ec2 terminate-instances --instance-ids $INSTANCE_ID > $WORKDIR/aws_remove_instance.log
-  fi
+  #Stop/Remove pmm-server docker instances
+  echo -e "Removing pmm-server docker containers"
+  sudo docker stop pmm-server  2&> /dev/null
+  sudo docker rm pmm-server pmm-data  2&> /dev/null
 
 }
 
@@ -1796,7 +1651,7 @@ sysbench_prepare(){
   #Initiate sysbench data load on all mysql client instances
   for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
     DB_NAME=$(echo ${i}  | awk -F[\/\.] '{print $3}')
-	DB_NAME="${DB_NAME}_${storage_engine}"
+    DB_NAME="${DB_NAME}_${storage_engine}"
     $MYSQL_CLIENT --user=root --socket=${i} -e "drop database if exists ${DB_NAME};create database ${DB_NAME};"
     sysbench /usr/share/sysbench/oltp_insert.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=root --mysql-storage-engine=$storage_engine  --threads=16 --db-driver=mysql --mysql-socket=${i} prepare  > $WORKDIR/logs/sysbench_prepare_${DB_NAME}.txt 2>&1
     check_script $? "Failed to run sysbench dataload"
@@ -1857,7 +1712,7 @@ sysbench_run(){
   #Initiate sysbench oltp run on all mysql client instances
   for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
     DB_NAME=$(echo ${i}  | awk -F[\/\.] '{print $3}')
-	   DB_NAME="${DB_NAME}_${storage_engine}"
+    DB_NAME="${DB_NAME}_${storage_engine}"
     sysbench /usr/share/sysbench/oltp_read_write.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=root  --mysql-storage-engine=$storage_engine --threads=16 --time=3600 --events=1870000000 --db-driver=mysql --db-ps-mode=disable --mysql-socket=${i} run  > $WORKDIR/logs/sysbench_run_${DB_NAME}.txt 2>&1 &
     check_script $? "Failed to run sysbench oltp"
   done
@@ -1865,8 +1720,8 @@ sysbench_run(){
 
 check_dbdeployer(){
   if ! dbdeployer --version | grep 'dbdeployer version 1.' > /dev/null ; then
-      echo "ERROR! dbdeployer not installed attempting to install"
-      install_dbdeployer
+    echo "ERROR! dbdeployer not installed attempting to install"
+    install_dbdeployer
   fi
   dbdeployer delete all --skip-confirm
 }
