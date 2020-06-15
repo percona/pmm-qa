@@ -1,6 +1,4 @@
 #!/bin/bash
-# Created by Ramesh Sivaraman, Percona LLC
-# Additions by Roel Van de Paar, Percona LLC
 
 # PMM Framework
 # This script enables one to quickly setup a Percona Monitoring and Management environment. One can setup a PMM server and quickly add multiple clients
@@ -1397,7 +1395,7 @@ add_clients(){
       ## Download right PXC version
       if [[ "$with_sharding" == "1" ]]; then
         if [ "$mo_version" == "3.6" ]; then
-          bash ./mongo_startup.sh -s -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+          bash ./mongo_startup.sh -s -e rocksdb --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         if [ "$mo_version" == "4.0" ]; then
           bash ./mongo_startup.sh -s -e mmapv1 --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
