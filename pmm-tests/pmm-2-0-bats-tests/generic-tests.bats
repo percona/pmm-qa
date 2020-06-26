@@ -309,8 +309,8 @@ run pmm-admin annotate --help
 echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "usage: pmm-admin annotate [<flags>] <text>" ]]
-    [[ ${lines[16]} =~ "<text>  Text of annotation" ]]
-    [[ ${lines[1]} =~ "Add an annotation to Grafana charts" ]]
+    [[ ${output} =~ "<text>  Text of annotation" ]]
+    [[ ${output} =~ "Add an annotation to Grafana charts" ]]
 }
 
 @test "run pmm-admin annotate 'pmm-testing-check'" {
