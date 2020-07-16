@@ -60,7 +60,7 @@ function run_query($db,$collection)
         $collectionObj->distinct("a");
 
         //aggregate
-        $collectionObj->aggregate();
+        $collectionObj->aggregate([array('$match' =>array("a"=>"a_u"))]);
 
         //findAndModify
         $collectionObj->findOneAndUpdate(array("a"=>"a_u"), array('$set'=>array("a"=>"a_m"));  
