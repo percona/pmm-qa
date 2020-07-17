@@ -63,7 +63,7 @@ echo "$output"
  run pmm-admin --version
  echo "$output"
  	[ "$status" -eq 0 ]
-	echo "$output" | grep "Version: 2.7.1"
+	echo "$output" | grep "Version: 2.9.1"
 }
 
 @test "run pmm-admin config without parameters" {
@@ -91,7 +91,7 @@ echo "$output"
 run pmm-admin summary --version
 echo "$output"
     [ "$status" -eq 0 ]
-    echo "$output" | grep "Version: 2.7.1"
+    echo "$output" | grep "Version: 2.9.1"
 }
 
 @test "run pmm-admin summary --server-url with http" {
@@ -309,8 +309,8 @@ run pmm-admin annotate --help
 echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "usage: pmm-admin annotate [<flags>] <text>" ]]
-    [[ ${lines[16]} =~ "<text>  Text of annotation" ]]
-    [[ ${lines[1]} =~ "Add an annotation to Grafana charts" ]]
+    [[ ${output} =~ "<text>  Text of annotation" ]]
+    [[ ${output} =~ "Add an annotation to Grafana charts" ]]
 }
 
 @test "run pmm-admin annotate 'pmm-testing-check'" {
