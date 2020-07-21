@@ -1350,7 +1350,7 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
       MD_PORT=53306
-      docker pull mariadb/server:${md_version}
+      docker pull mariadb:${md_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MD_PORT mariadb
         sudo chmod 777 -R /var/log
