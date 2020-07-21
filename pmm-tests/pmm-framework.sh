@@ -1356,7 +1356,7 @@ add_clients(){
         sudo chmod 777 -R /var/log
         mkdir md_socket_${MD_PORT}
         sudo chmod 777 -R md_socket_${MD_PORT}
-        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -e UMASK=0777 -d mariadb/server:${md_version} --performance-schema=1
+        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -e UMASK=0777 -d mariadb:${md_version} --performance-schema=1
         sleep 20
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log='ON';"
