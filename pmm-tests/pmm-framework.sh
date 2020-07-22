@@ -74,7 +74,8 @@ usage () {
   echo " --pmm-server-memory            Set METRICS_MEMORY option to PMM server"
   echo " --pmm-docker-memory            Set memory for docker container"
   echo " --pmm-server=[docker|ami|ova]  Choose PMM server appliance, default pmm server appliance is docker"
-  echo " --disable-ssl                  Disable ssl mode on exporter"
+  echo " --disable-ssl                  Disable SSL mode on exporter"
+  echo " --ssl                          Pass this option to Enable SSL encryption to protect PMM from unauthorized access"
   echo " --create-pgsql-user            Set this option if a Dedicated PGSQl User creation is required username: psql and no password"
   echo " --upgrade-server               When this option is specified, PMM Server will be updated to the last version"
   echo " --upgrade-client               When this option is specified, PMM client will be updated to the last version"
@@ -92,7 +93,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,pmm2-server-ip:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,pmm2-server-ip:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,ssl,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -220,6 +221,10 @@ do
     --setup )
     shift
     setup=1
+    ;;
+    --ssl )
+    shift
+    IS_SSL="Yes"
     ;;
     --pmm2 )
     shift
@@ -476,28 +481,18 @@ if [[ -z "$query_source" ]];then
 fi
 
 setup(){
-  read -p "Would you like to enable SSL encryption to protect PMM from unauthorized access[y/n] ? " check_param
-  case $check_param in
-    y|Y)
-      echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access"
-      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
-      IS_SSL="Yes"
-      if [[ -z $PMM_PORT ]]; then
-        PMM_PORT=443
-      fi
-    ;;
-    n|N)
-      echo ""
-      IS_SSL="No"
-      if [[ -z $PMM_PORT ]]; then
-        PMM_PORT=80
-      fi
-    ;;
-    *)
-      echo "Please type [y/n]! Terminating."
-      exit 1
-    ;;
-  esac
+  if [[ IS_SSL == "Yes" ]]
+    echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access"
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
+    if [[ -z $PMM_PORT ]]; then
+      PMM_PORT=443
+    fi
+  else
+    echo ""
+    if [[ -z $PMM_PORT ]]; then
+      PMM_PORT=80
+    fi
+  fi
   
   pmm_sanity_check
   echo "Initiating PMM-Server Docker installation..."
