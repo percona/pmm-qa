@@ -1,6 +1,4 @@
 #!/bin/bash
-# Created by Ramesh Sivaraman, Percona LLC
-# Additions by Roel Van de Paar, Percona LLC
 
 # PMM Framework
 # This script enables one to quickly setup a Percona Monitoring and Management environment. One can setup a PMM server and quickly add multiple clients
@@ -460,10 +458,10 @@ if [[ -z "${ps_version}" ]]; then ps_version="5.7"; fi
 if [[ -z "${modb_version}" ]]; then modb_version="4.2.0"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
-if [[ -z "${md_version}" ]]; then md_version="10.4"; fi
-if [[ -z "${mo_version}" ]]; then mo_version="4.0"; fi
+if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
+if [[ -z "${mo_version}" ]]; then mo_version="4.2"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
-if [[ -z "${pgsql_version}" ]]; then pgsql_version="10.8";fi
+if [[ -z "${pgsql_version}" ]]; then pgsql_version="12";fi
 
 if [[ -z $pmm_server_version ]] && [[ ! -z $dev ]]; then  # Set Default Docker Image Tag: dev-latest
   pmm_server_version="dev-latest"
@@ -1107,6 +1105,8 @@ add_clients(){
         docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
         sleep 20
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
+        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'ALTER SYSTEM SET track_io_timing=ON;'
+        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
         else
@@ -1173,13 +1173,22 @@ add_clients(){
         sudo chmod 777 -R /var/log
         mkdir ps_socket_${PS_PORT}
         sudo chmod 777 -R ps_socket_${PS_PORT}
-        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
+        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version}
         sleep 20
+        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL userstat=1;"
+        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
         mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'ps';"
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log='ON';"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL log_slow_admin_statements=ON;"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL log_slow_slave_statements=ON;"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL query_response_time_stats=ON;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
         fi
         if [[ -z $use_socket ]]; then
@@ -1206,13 +1215,13 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
       MD_PORT=53306
-      docker pull mariadb/server:${md_version}
+      docker pull mariadb:${md_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MD_PORT mariadb
         sudo chmod 777 -R /var/log
         mkdir md_socket_${MD_PORT}
         sudo chmod 777 -R md_socket_${MD_PORT}
-        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -d mariadb/server:${md_version} --performance-schema=1
+        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -e UMASK=0777 -d mariadb:${md_version} --performance-schema=1
         sleep 20
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log='ON';"
@@ -1829,7 +1838,7 @@ run_workload() {
         echo "$i"
         export MONGODB_PORT=${i}
         export TEST_TARGET_QPS=10
-        export TEST_COLLECTION=30
+        export TEST_COLLECTION=10
         export TEST_DB=10
         touch mongodb_$i.log
         docker run --rm --name mongodb_$i --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
