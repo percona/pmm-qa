@@ -637,6 +637,24 @@ setup_client(){
   echo -e "******************************************************************"
 }
 
+setup_server(){
+  if [[ IS_SSL == "Yes" ]]; then
+    echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access\n"
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
+    if [[ -z $PMM_PORT ]]; then
+      PMM_PORT=443
+    fi
+  else
+    if [[ -z $PMM_PORT ]]; then
+      PMM_PORT=80
+    fi
+  fi
+  
+  pmm_sanity_check
+  echo "Initiating PMM-Server Docker installation..."
+  install_server_docker
+}
+
 install_server_docker(){
   if [[ ! -z $PMM2  && -z $skip_docker_setup ]]; then
     sudo docker create -v /srv    --name pmm-data    $docker_org/pmm-server:$PMM_VERSION  /bin/true
