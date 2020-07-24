@@ -29,7 +29,9 @@ IS_SSL="No"
 usage () {
   echo "Usage: [ options ]"
   echo "Options:"
-  echo " --setup                        This will setup and configure a PMM server"
+  echo " --setup                        This will setup and configure a PMM server and PMM Client BOTH"
+  echo " --setup-server                 This will setup and configure a PMM Server only"
+  echo " --setup-client                 This will setup and configure a PMM Client only"
   echo " --dev                          When this option is specified, PMM framework will use the latest PMM development version. Otherwise, the latest 1.x version is used"
   echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
   echo " --pmm2                         When this option is specified, PMM framework will use specified PMM 2.x development version. Must be used with pmm-server-version option"
@@ -71,7 +73,6 @@ usage () {
   echo " --pmm-server-password          Password to access the PMM Server web interface"
   echo " --pmm-server-memory            Set METRICS_MEMORY option to PMM server"
   echo " --pmm-docker-memory            Set memory for docker container"
-  echo " --pmm-server=[docker|ami|ova]  Choose PMM server appliance, default pmm server appliance is docker"
   echo " --disable-ssl                  Disable SSL mode on exporter"
   echo " --ssl                          Pass this option to Enable SSL encryption to protect PMM from unauthorized access"
   echo " --create-pgsql-user            Set this option if a Dedicated PGSQl User creation is required username: psql and no password"
@@ -91,7 +92,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,pmm2-server-ip:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,ssl,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,setup-server,setup-client,replcount:,pmm2-server-ip:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,ssl,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -133,15 +134,6 @@ do
     --link-client )
     link_client="$2"
     shift 2
-    ;;
-    --pmm-server )
-    pmm_server="$2"
-    shift 2
-    if [ "$pmm_server" != "docker" ] && [ "$pmm_server" != "ami" ] && [ "$pmm_server" != "ova" ] && [ "$pmm_server" != "custom" ]; then
-      echo "ERROR: Invalid --pmm-server passed:"
-      echo "  Please choose any of these pmm-server options: 'docker', 'ami', 'custom', or 'ova'"
-      exit 1
-    fi
     ;;
     --pmm-server-version )
     pmm_server_version="$2"
@@ -219,6 +211,14 @@ do
     --setup )
     shift
     setup=1
+    ;;
+    --setup-server )
+    shift
+    setup_server=1
+    ;;
+    --setup-client )
+    shift
+    setup_client=1
     ;;
     --ssl )
     shift
@@ -423,11 +423,6 @@ fi
 
 if [[ -z "$pmm_server" ]];then
   pmm_server="docker"
-elif [[ "$pmm_server" == "custom" ]];then
-  if ! sudo pmm-admin ping | grep -q "OK, PMM server is alive"; then
-    echo "ERROR! PMM Server is not running. Please check PMM server status. Terminating"
-    exit 1
-  fi
 fi
 
 sanity_check(){
@@ -479,14 +474,13 @@ if [[ -z "$query_source" ]];then
 fi
 
 setup(){
-  if [[ IS_SSL == "Yes" ]]
-    echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access"
+  if [[ IS_SSL == "Yes" ]]; then
+    echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access\n"
     openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
     if [[ -z $PMM_PORT ]]; then
       PMM_PORT=443
     fi
   else
-    echo ""
     if [[ -z $PMM_PORT ]]; then
       PMM_PORT=80
     fi
@@ -496,6 +490,40 @@ setup(){
   echo "Initiating PMM-Server Docker installation..."
   install_server_docker
 
+  echo "Initiating PMM-Client installation..."
+  setup_client
+}
+
+pmm_sanity_check(){
+  if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
+    echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
+    exit 1
+  fi
+  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
+  if [ -z $IP_ADDRESS ]; then
+    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+  fi
+
+  if [ -z $pmm_server_version ]; then
+    echo "Please provide pmm-server version using: --pmm-server-version. Terminating"
+    exit 1
+  fi
+
+  if ! pgrep docker > /dev/null ; then
+    echo "ERROR! docker service is not running. Terminating"
+    exit 1
+  fi
+  if sudo docker ps | grep 'pmm-server' > /dev/null ; then
+    echo "ERROR! pmm-server docker container is already runnning. Terminating"
+    exit 1
+  elif  sudo docker ps -a | grep 'pmm-server' > /dev/null ; then
+    CONTAINER_NAME=$(sudo docker ps -a | grep 'pmm-server' | grep $PMM_VERSION | grep -v pmm-data | awk '{ print $1}')
+    echo "ERROR! The name 'pmm-server' is already in use by container $CONTAINER_NAME"
+    exit 1
+  fi
+}
+
+setup_client(){
   #PMM Client configuration setup
   if [[ -z $PMM_VERSION ]]; then
     PMM_VERSION=$pmm_server_version
@@ -513,7 +541,7 @@ setup(){
       popd > /dev/null
     else
       if [ ! -z $PMM2 ]; then
-        install_client # Installs PMM2 Client using Tarball
+        install_pmm2_client # Installs PMM2 Client using Tarball
       else  
         if [ ! -z $dev ]; then
           if [  -z $link_client]; then
@@ -609,35 +637,6 @@ setup(){
   echo -e "******************************************************************"
 }
 
-pmm_sanity_check(){
-  if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
-    echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
-    exit 1
-  fi
-  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
-  if [ -z $IP_ADDRESS ]; then
-    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-  fi
-
-  if [ -z $pmm_server_version ]; then
-    echo "Please provide pmm-server version using: --pmm-server-version. Terminating"
-    exit 1
-  fi
-
-  if ! pgrep docker > /dev/null ; then
-    echo "ERROR! docker service is not running. Terminating"
-    exit 1
-  fi
-  if sudo docker ps | grep 'pmm-server' > /dev/null ; then
-    echo "ERROR! pmm-server docker container is already runnning. Terminating"
-    exit 1
-  elif  sudo docker ps -a | grep 'pmm-server' > /dev/null ; then
-    CONTAINER_NAME=$(sudo docker ps -a | grep 'pmm-server' | grep $PMM_VERSION | grep -v pmm-data | awk '{ print $1}')
-    echo "ERROR! The name 'pmm-server' is already in use by container $CONTAINER_NAME"
-    exit 1
-  fi
-}
-
 install_server_docker(){
   if [[ ! -z $PMM2  && -z $skip_docker_setup ]]; then
     sudo docker create -v /srv    --name pmm-data    $docker_org/pmm-server:$PMM_VERSION  /bin/true
@@ -659,7 +658,7 @@ install_server_docker(){
 }
 
 #Download and install PMM2.x client
-install_client(){
+install_pmm2_client(){
   if [ ! -z $link_client ]; then
     PMM_CLIENT_TAR_URL=$link_client;
   else
@@ -1926,6 +1925,14 @@ fi
 
 if [ ! -z $setup ]; then
   setup
+fi
+
+if [ ! -z $setup_server ]; then
+  setup_server
+fi
+
+if [ ! -z $setup_client ]; then
+  setup_client
 fi
 
 #if [ ! -z $PMM2 ]; then
