@@ -1,6 +1,4 @@
 #!/bin/bash
-# Created by Ramesh Sivaraman, Percona LLC
-# Additions by Roel Van de Paar, Percona LLC
 
 # PMM Framework
 # This script enables one to quickly setup a Percona Monitoring and Management environment. One can setup a PMM server and quickly add multiple clients
@@ -31,7 +29,9 @@ IS_SSL="No"
 usage () {
   echo "Usage: [ options ]"
   echo "Options:"
-  echo " --setup                        This will setup and configure a PMM server"
+  echo " --setup                        This will setup and configure a PMM server and PMM Client BOTH"
+  echo " --setup-server                 This will setup and configure a PMM Server only"
+  echo " --setup-client                 This will setup and configure a PMM Client only"
   echo " --dev                          When this option is specified, PMM framework will use the latest PMM development version. Otherwise, the latest 1.x version is used"
   echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
   echo " --pmm2                         When this option is specified, PMM framework will use specified PMM 2.x development version. Must be used with pmm-server-version option"
@@ -73,8 +73,8 @@ usage () {
   echo " --pmm-server-password          Password to access the PMM Server web interface"
   echo " --pmm-server-memory            Set METRICS_MEMORY option to PMM server"
   echo " --pmm-docker-memory            Set memory for docker container"
-  echo " --pmm-server=[docker|ami|ova]  Choose PMM server appliance, default pmm server appliance is docker"
-  echo " --disable-ssl                  Disable ssl mode on exporter"
+  echo " --disable-ssl                  Disable SSL mode on exporter"
+  echo " --ssl                          Pass this option to Enable SSL encryption to protect PMM from unauthorized access"
   echo " --create-pgsql-user            Set this option if a Dedicated PGSQl User creation is required username: psql and no password"
   echo " --upgrade-server               When this option is specified, PMM Server will be updated to the last version"
   echo " --upgrade-client               When this option is specified, PMM client will be updated to the last version"
@@ -92,7 +92,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,pmm2-server-ip:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,setup-server,setup-client,replcount:,pmm2-server-ip:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,ssl,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -134,15 +134,6 @@ do
     --link-client )
     link_client="$2"
     shift 2
-    ;;
-    --pmm-server )
-    pmm_server="$2"
-    shift 2
-    if [ "$pmm_server" != "docker" ] && [ "$pmm_server" != "ami" ] && [ "$pmm_server" != "ova" ] && [ "$pmm_server" != "custom" ]; then
-      echo "ERROR: Invalid --pmm-server passed:"
-      echo "  Please choose any of these pmm-server options: 'docker', 'ami', 'custom', or 'ova'"
-      exit 1
-    fi
     ;;
     --pmm-server-version )
     pmm_server_version="$2"
@@ -220,6 +211,18 @@ do
     --setup )
     shift
     setup=1
+    ;;
+    --setup-server )
+    shift
+    setup_server=1
+    ;;
+    --setup-client )
+    shift
+    setup_client=1
+    ;;
+    --ssl )
+    shift
+    IS_SSL="Yes"
     ;;
     --pmm2 )
     shift
@@ -420,11 +423,6 @@ fi
 
 if [[ -z "$pmm_server" ]];then
   pmm_server="docker"
-elif [[ "$pmm_server" == "custom" ]];then
-  if ! sudo pmm-admin ping | grep -q "OK, PMM server is alive"; then
-    echo "ERROR! PMM Server is not running. Please check PMM server status. Terminating"
-    exit 1
-  fi
 fi
 
 sanity_check(){
@@ -455,10 +453,10 @@ if [[ -z "${ps_version}" ]]; then ps_version="5.7"; fi
 if [[ -z "${modb_version}" ]]; then modb_version="4.2.0"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
-if [[ -z "${md_version}" ]]; then md_version="10.4"; fi
-if [[ -z "${mo_version}" ]]; then mo_version="4.0"; fi
+if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
+if [[ -z "${mo_version}" ]]; then mo_version="4.2"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
-if [[ -z "${pgsql_version}" ]]; then pgsql_version="10.8";fi
+if [[ -z "${pgsql_version}" ]]; then pgsql_version="12";fi
 
 if [[ -z $pmm_server_version ]] && [[ ! -z $dev ]]; then  # Set Default Docker Image Tag: dev-latest
   pmm_server_version="dev-latest"
@@ -476,33 +474,56 @@ if [[ -z "$query_source" ]];then
 fi
 
 setup(){
-  read -p "Would you like to enable SSL encryption to protect PMM from unauthorized access[y/n] ? " check_param
-  case $check_param in
-    y|Y)
-      echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access"
-      openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
-      IS_SSL="Yes"
-      if [[ -z $PMM_PORT ]]; then
-        PMM_PORT=443
-      fi
-    ;;
-    n|N)
-      echo ""
-      IS_SSL="No"
-      if [[ -z $PMM_PORT ]]; then
-        PMM_PORT=80
-      fi
-    ;;
-    *)
-      echo "Please type [y/n]! Terminating."
-      exit 1
-    ;;
-  esac
+  if [[ IS_SSL == "Yes" ]]; then
+    echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access\n"
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
+    if [[ -z $PMM_PORT ]]; then
+      PMM_PORT=443
+    fi
+  else
+    if [[ -z $PMM_PORT ]]; then
+      PMM_PORT=80
+    fi
+  fi
   
   pmm_sanity_check
   echo "Initiating PMM-Server Docker installation..."
   install_server_docker
 
+  echo "Initiating PMM-Client installation..."
+  setup_client
+}
+
+pmm_sanity_check(){
+  if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
+    echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
+    exit 1
+  fi
+  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
+  if [ -z $IP_ADDRESS ]; then
+    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
+  fi
+
+  if [ -z $pmm_server_version ]; then
+    echo "Please provide pmm-server version using: --pmm-server-version. Terminating"
+    exit 1
+  fi
+
+  if ! pgrep docker > /dev/null ; then
+    echo "ERROR! docker service is not running. Terminating"
+    exit 1
+  fi
+  if sudo docker ps | grep 'pmm-server' > /dev/null ; then
+    echo "ERROR! pmm-server docker container is already runnning. Terminating"
+    exit 1
+  elif  sudo docker ps -a | grep 'pmm-server' > /dev/null ; then
+    CONTAINER_NAME=$(sudo docker ps -a | grep 'pmm-server' | grep $PMM_VERSION | grep -v pmm-data | awk '{ print $1}')
+    echo "ERROR! The name 'pmm-server' is already in use by container $CONTAINER_NAME"
+    exit 1
+  fi
+}
+
+setup_client(){
   #PMM Client configuration setup
   if [[ -z $PMM_VERSION ]]; then
     PMM_VERSION=$pmm_server_version
@@ -520,7 +541,7 @@ setup(){
       popd > /dev/null
     else
       if [ ! -z $PMM2 ]; then
-        install_client # Installs PMM2 Client using Tarball
+        install_pmm2_client # Installs PMM2 Client using Tarball
       else  
         if [ ! -z $dev ]; then
           if [  -z $link_client]; then
@@ -616,33 +637,22 @@ setup(){
   echo -e "******************************************************************"
 }
 
-pmm_sanity_check(){
-  if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
-    echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
-    exit 1
+setup_server(){
+  if [[ IS_SSL == "Yes" ]]; then
+    echo -e "\nGenerating SSL certificate files to protect PMM from unauthorized access\n"
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout server.key -out server.crt -subj '/CN=www.percona.com/O=Database Performance./C=US'
+    if [[ -z $PMM_PORT ]]; then
+      PMM_PORT=443
+    fi
+  else
+    if [[ -z $PMM_PORT ]]; then
+      PMM_PORT=80
+    fi
   fi
-  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
-  if [ -z $IP_ADDRESS ]; then
-    IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
-  fi
-
-  if [ -z $pmm_server_version ]; then
-    echo "Please provide pmm-server version using: --pmm-server-version. Terminating"
-    exit 1
-  fi
-
-  if ! pgrep docker > /dev/null ; then
-    echo "ERROR! docker service is not running. Terminating"
-    exit 1
-  fi
-  if sudo docker ps | grep 'pmm-server' > /dev/null ; then
-    echo "ERROR! pmm-server docker container is already runnning. Terminating"
-    exit 1
-  elif  sudo docker ps -a | grep 'pmm-server' > /dev/null ; then
-    CONTAINER_NAME=$(sudo docker ps -a | grep 'pmm-server' | grep $PMM_VERSION | grep -v pmm-data | awk '{ print $1}')
-    echo "ERROR! The name 'pmm-server' is already in use by container $CONTAINER_NAME"
-    exit 1
-  fi
+  
+  pmm_sanity_check
+  echo "Initiating PMM-Server Docker installation..."
+  install_server_docker
 }
 
 install_server_docker(){
@@ -666,7 +676,7 @@ install_server_docker(){
 }
 
 #Download and install PMM2.x client
-install_client(){
+install_pmm2_client(){
   if [ ! -z $link_client ]; then
     PMM_CLIENT_TAR_URL=$link_client;
   else
@@ -1112,6 +1122,8 @@ add_clients(){
         docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
         sleep 20
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
+        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'ALTER SYSTEM SET track_io_timing=ON;'
+        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
         else
@@ -1178,13 +1190,22 @@ add_clients(){
         sudo chmod 777 -R /var/log
         mkdir ps_socket_${PS_PORT}
         sudo chmod 777 -R ps_socket_${PS_PORT}
-        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -d percona:${ps_version}
+        docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version}
         sleep 20
+        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL userstat=1;"
+        mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
         mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'ps';"
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log='ON';"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL log_slow_admin_statements=ON;"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL log_slow_slave_statements=ON;"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"
+          mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL query_response_time_stats=ON;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
         fi
         if [[ -z $use_socket ]]; then
@@ -1211,13 +1232,13 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
       MD_PORT=53306
-      docker pull mariadb/server:${md_version}
+      docker pull mariadb:${md_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MD_PORT mariadb
         sudo chmod 777 -R /var/log
         mkdir md_socket_${MD_PORT}
         sudo chmod 777 -R md_socket_${MD_PORT}
-        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -d mariadb/server:${md_version} --performance-schema=1
+        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -e UMASK=0777 -d mariadb:${md_version} --performance-schema=1
         sleep 20
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log='ON';"
@@ -1834,7 +1855,7 @@ run_workload() {
         echo "$i"
         export MONGODB_PORT=${i}
         export TEST_TARGET_QPS=10
-        export TEST_COLLECTION=30
+        export TEST_COLLECTION=10
         export TEST_DB=10
         touch mongodb_$i.log
         docker run --rm --name mongodb_$i --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
@@ -1922,6 +1943,14 @@ fi
 
 if [ ! -z $setup ]; then
   setup
+fi
+
+if [ ! -z $setup_server ]; then
+  setup_server
+fi
+
+if [ ! -z $setup_client ]; then
+  setup_client
 fi
 
 #if [ ! -z $PMM2 ]; then

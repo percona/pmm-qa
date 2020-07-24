@@ -52,8 +52,21 @@ function run_query($db,$collection)
         //update
         $collectionObj->updateMany(array("a"=>"a"),
         array('$set'=>array("a"=>"a_u")));
+        
+        //count
+        $collectionObj->count();
+
+        //distinct
+        $collectionObj->distinct("a");
+
+        //aggregate
+        $collectionObj->aggregate([array('$match' =>array("a"=>"a_u"))]);
+
+        //findAndModify
+        $collectionObj->findOneAndUpdate(array("a"=>"a_u"), array('$set'=>array("a"=>"a_m")));  
+      
         //delete
-        $collectionObj->deleteOne(array("a"=>"a_u"));
+        $collectionObj->deleteOne(array("a"=>"a_m"));
         //create
         $result = $collectionObj->insertOne( [ 'a' => 'a', 'b' => 'B', 'c' => $i ] );
 }
