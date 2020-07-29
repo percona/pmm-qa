@@ -733,6 +733,7 @@ setup_db_tar(){
   fi
   if [ ! -f $SCRIPT_PWD/../get_download_link.sh ] ; then
     curl -OL https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
+    chmod +x get_download_link.sh
     mv get_download_link.sh $SCRIPT_PWD/../
   fi
   LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
@@ -757,6 +758,7 @@ get_basedir(){
   if [ $download_link -eq 1 ]; then
     if [ ! -f $SCRIPT_PWD/../get_download_link.sh ] ; then
       curl -OL https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
+      chmod +x get_download_link.sh
       mv get_download_link.sh $SCRIPT_PWD/../
     fi
     LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
@@ -1971,8 +1973,6 @@ if [ ${#ADDCLIENT[@]} -ne 0 ]; then
       echo "ERROR! PMM Server is not running. Please check PMM server status. Terminating"
       exit 1
     fi
-  else
-    sanity_check
   fi
   add_clients
 fi
