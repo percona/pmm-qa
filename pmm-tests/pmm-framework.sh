@@ -517,11 +517,11 @@ if [[ -z "${ps_version}" ]]; then ps_version="5.7"; fi
 if [[ -z "${modb_version}" ]]; then modb_version="4.2.0"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
-if [[ -z "${md_version}" ]]; then md_version="10.4"; fi
-if [[ -z "${mo_version}" ]]; then mo_version="4.0"; fi
+if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
+if [[ -z "${mo_version}" ]]; then mo_version="4.2"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
 if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
-if [[ -z "${pgsql_version}" ]]; then pgsql_version="10.8";fi
+if [[ -z "${pgsql_version}" ]]; then pgsql_version="12";fi
 
 if [[ -z "$query_source" ]];then
   query_source=perfschema
@@ -1350,13 +1350,13 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "md" && ! -z $PMM2 ]]; then
       MD_PORT=53306
-      docker pull mariadb/server:${md_version}
+      docker pull mariadb:${md_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MD_PORT mariadb
         sudo chmod 777 -R /var/log
         mkdir md_socket_${MD_PORT}
         sudo chmod 777 -R md_socket_${MD_PORT}
-        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -e UMASK=0777 -d mariadb/server:${md_version} --performance-schema=1
+        docker run --name md_${md_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/md_socket_${MD_PORT}/:/var/run/mysqld/ -p $MD_PORT:3306 -e MYSQL_ROOT_PASSWORD=md -e UMASK=0777 -d mariadb:${md_version} --performance-schema=1
         sleep 20
         if [[ "$query_source" != "perfschema" ]]; then
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log='ON';"
