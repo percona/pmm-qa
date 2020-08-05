@@ -1139,7 +1139,7 @@ add_clients(){
             if [[ -z $use_socket ]]; then
               pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_rpl${p}_${r}_$IP_ADDRESS localhost:$PORT
             else
-              pmm-admin add mongodb --debug --cluster --socket=/tmp/mongodb-$PORT.sock mongodb_cluster mongodb_inst_rpl${p}_${r}_$IP_ADDRESS
+              pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock  mongodb_inst_rpl${p}_${r}_$IP_ADDRESS
             fi
           done
         done
@@ -1159,9 +1159,9 @@ add_clients(){
           else
             if [ ! -z $PMM2 ]; then
               if [[ -z $use_socket ]]; then
-                pmm-admin add mongodb --debug mongodb_inst_config_rpl${m}_$IP_ADDRESS localhost:$PORT
+                pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_config_rpl${m}_$IP_ADDRESS localhost:$PORT
               else
-                pmm-admin add mongodb --debug --socket=/tmp/mongodb-$PORT.sock mongodb_inst_config_rpl${m}_$IP_ADDRESS
+                pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock mongodb_inst_config_rpl${m}_$IP_ADDRESS
               fi
             else
               sudo pmm-admin add mongodb --cluster mongodb_cluster --uri mongodb_inst_config_rpl${m} localhost:$PORT
@@ -1394,7 +1394,7 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MODB_PORT mongodb
         MODB_PORT_NEXT=$((MODB_PORT+2))
-        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/:/tmp/ --name -e UMASK=0777 mongodb_node_$j mongo:${modb_version}
+        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/:/tmp/ -e UMASK=0777 --name mongodb_node_$j mongo:${modb_version}
         sleep 20
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
         if [[ -z $use_socket ]]; then
