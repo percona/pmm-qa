@@ -121,7 +121,7 @@ echo "$output"
     echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "usage: pmm-admin add mongodb [<flags>] [<name>] [<address>]" ]]
-    echo "${output}" | grep "--socket=SOCKET"
+    [[ ${lines[35]} =~ "--socket=SOCKET" ]
 }
 
 
