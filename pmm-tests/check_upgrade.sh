@@ -10,3 +10,6 @@ docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-update-$1
 docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-server-$1
 docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-managed-$1
 docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm2-client-$1
+
+if [ $1 == "2.9.2" ]
+docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep dbaas-controller-$1
