@@ -1020,7 +1020,11 @@ add_clients(){
           n=$(( $p - 1 ))
           for r in `seq 1  ${ADDCLIENTS_COUNT}`;do
             PORT=$(( ${PSMDB_PORTS[$n]} + $r - 1 ))
-            pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_rpl${p}_${r}_$IP_ADDRESS localhost:$PORT
+            if [[ -z $use_socket ]]; then
+              pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_rpl${p}_${r}_$IP_ADDRESS localhost:$PORT
+            else
+              pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock  mongodb_inst_rpl${p}_${r}_$IP_ADDRESS
+            fi
           done
         done
       fi
@@ -1038,7 +1042,11 @@ add_clients(){
             check_disable_ssl mongodb_inst_rpl${k}_${j}
           else
             if [ ! -z $PMM2 ]; then
-              pmm-admin add mongodb --debug mongodb_inst_config_rpl${m}_$IP_ADDRESS localhost:$PORT
+              if [[ -z $use_socket ]]; then
+                pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_config_rpl${m}_$IP_ADDRESS localhost:$PORT
+              else
+                pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock mongodb_inst_config_rpl${m}_$IP_ADDRESS
+              fi
             else
               sudo pmm-admin add mongodb --cluster mongodb_cluster --uri mongodb_inst_config_rpl${m} localhost:$PORT
             fi
@@ -1270,13 +1278,21 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MODB_PORT mongodb
         MODB_PORT_NEXT=$((MODB_PORT+2))
-        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 --name mongodb_node_$j mongo:${modb_version}
+        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/:/tmp/ -e UMASK=0777 --name mongodb_node_$j mongo:${modb_version}
         sleep 20
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
-        if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+        if [[ -z $use_socket ]]; then
+          if [ $(( ${j} % 2 )) -eq 0 ]; then
+            pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+          else
+            pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+          fi
         else
-          pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+          if [ $(( ${j} % 2 )) -eq 0 ]; then
+            pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+          else
+            pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug 
+          fi
         fi
         MODB_PORT=$((MODB_PORT+j+3))
       done
@@ -1318,9 +1334,15 @@ add_clients(){
           bash ./mongo_startup.sh -r -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         sleep 20
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27019
+        if [[ -z $use_socket ]]; then
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27019
+        else
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_1 --debug
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_2 --debug
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --environment=mongodb_rs_node mongodb_rs1_3 --debug
+        fi
       else
         if [ "$mo_version" == "3.6" ]; then
           bash ./mongo_startup.sh -m -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
