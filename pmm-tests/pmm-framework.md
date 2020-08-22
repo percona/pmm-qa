@@ -55,7 +55,7 @@ pmm-client|tarball|dev
   - `./pmm-framework.sh --pmm2 --download --setup-db`
   - Supported DBs: `ps, ms, md, mo, modb, pgsql, pxc`
 
-6. To provide specific versions of DB: *(Change VERSION with your version string)*
+7. To provide specific versions of DB: *(Change VERSION with your version string)*
   - `--ps-version VERSION`
   - `--modb-version VERSION`
   - `--ms-version VERSION`
@@ -65,24 +65,24 @@ pmm-client|tarball|dev
   - `--pxc-version VERSION`   
   
 ### Load Test:
-7. Run Load Tests on Percona Server Instances with PMM2
+8. Run Load Tests on Percona Server Instances with PMM2
   - `--run-load-pmm2`
 
-8. Sysbench load test on MySQL instances:
+9. Sysbench load test on MySQL instances:
   - `--sysbench-data-load` - This will initiate sysbench data load on mysql instances
   - `--sysbench-oltp-run` - This will initiate sysbench oltp run on mysql instances
   - `--storage-engine` - Create sysbench tables with specific storage engine
 
-9. Sysbench load test on MongoDB:
+10. Sysbench load test on MongoDB:
   - `--mongo-sysbench` - Initiates sysbench oltp prepare and run for MongoDB instance  
   
   
 ### Wipe Configuration:
-10. `--wipe` - To wipe all the configuration
+11. `--wipe` - To wipe all the configuration
   - `--wipe-server` - Stop **pmm-server** container and remove all pmm containers
   - `--wipe-clients` - Stop all client instances and remove all clients from pmm-admin
   - `--wipe-pmm2-clients` - Stop all pmm-server from monitoring client instances (uses pmm-admin remove)
 - `--wipe-docker-clients` - Stop all docker client instances and remove all clients from docker container
 
 ### Miscellaneous: 
-11. `--use-socket` - Use DB Socket for PMM Client Connection
+12. `--use-socket` - Use DB Socket for PMM Client Connection
