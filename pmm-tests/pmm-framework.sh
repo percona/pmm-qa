@@ -514,11 +514,11 @@ sudo_check(){
 }
 
 if [[ -z "${ps_version}" ]]; then ps_version="5.7"; fi
-if [[ -z "${modb_version}" ]]; then modb_version="4.2.0"; fi
+if [[ -z "${modb_version}" ]]; then modb_version="4.4"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
-if [[ -z "${mo_version}" ]]; then mo_version="4.2"; fi
+if [[ -z "${mo_version}" ]]; then mo_version="4.4"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
 if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
 if [[ -z "${pgsql_version}" ]]; then pgsql_version="12";fi
@@ -1085,6 +1085,7 @@ add_clients(){
     ADDCLIENTS_COUNT=$(echo "${i}" | sed 's|[^0-9]||g')
     if  [[ "${CLIENT_NAME}" == "mo" && -z $MONGOMAGIC ]]; then
       rm -rf $BASEDIR/data
+      sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
       for k in `seq 1  ${REPLCOUNT}`;do
         PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
         PSMDB_PORTS+=($PSMDB_PORT)
@@ -1417,7 +1418,10 @@ add_clients(){
       sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
       sudo chmod +x mongo_startup.sh
       echo ${BASEDIR}
-      ## Download right PXC version
+      
+      ##Missing Library for 4.4
+      sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      
       if [[ "$with_sharding" == "1" ]]; then
         if [ "$mo_version" == "3.6" ]; then
           bash ./mongo_startup.sh -s -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
@@ -1427,6 +1431,9 @@ add_clients(){
         fi
         if [ "$mo_version" == "4.2" ]; then
           bash ./mongo_startup.sh -s -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+	if [ "$mo_version" == "4.4" ]; then
+          bash ./mongo_startup.sh -s -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         sleep 20
         pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
@@ -1449,6 +1456,9 @@ add_clients(){
         if [ "$mo_version" == "4.2" ]; then
           bash ./mongo_startup.sh -r -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
+	if [ "$mo_version" == "4.4" ]; then
+          bash ./mongo_startup.sh -r -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
         sleep 20
         if [[ -z $use_socket ]]; then
           pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
@@ -1468,6 +1478,9 @@ add_clients(){
         fi
         if [ "$mo_version" == "4.2" ]; then
           bash ./mongo_startup.sh -m -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
+        fi
+	if [ "$mo_version" == "4.4" ]; then
+          bash ./mongo_startup.sh -m -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         sleep 20
         pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single --debug 127.0.0.1:27017
