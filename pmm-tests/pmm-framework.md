@@ -50,12 +50,8 @@ pmm-client|tarball|dev
     - For example, `./pmm-framework.sh --pmm2 --download --addclient=ps,2 --addclient=ms,3` adds 2 PS instances and 3 MySQL instances  
   
   - *Note:* `--download` option is necessary to download DB installers
-  
-6. To setup all supported DBs at once, 1 instance of each DB:
-  - `./pmm-framework.sh --pmm2 --download --setup-db`
-  - Supported DBs: `ps, ms, md, mo, modb, pgsql, pxc`
 
-7. To provide specific versions of DB: *(Change VERSION with your version string)*
+6. To provide specific versions of DB: *(Change VERSION with your version string)*
   - `--ps-version VERSION`
   - `--modb-version VERSION`
   - `--ms-version VERSION`
@@ -63,15 +59,18 @@ pmm-client|tarball|dev
   - `--md-version VERSION`
   - `--mo-version VERSION`
   - `--pxc-version VERSION`   
+
+7. To only install the DBs and not connect them to PMM-Client yet, use `setup-db.sh`
+  - `setup-db.sh` will install the requested DBs and export DB configuration parameters like Username, Password, Port, Socket etc. to another file (*db_config.txt*), so that DB can be later connected to PMM-Client as needed.  
   
 ### Load Test:
 8. Run Load Tests on Percona Server Instances with PMM2
-  - `--run-load-pmm2`
+  - `--run-load-pmm2`  
 
 9. Sysbench load test on MySQL instances:
   - `--sysbench-data-load` - This will initiate sysbench data load on mysql instances
   - `--sysbench-oltp-run` - This will initiate sysbench oltp run on mysql instances
-  - `--storage-engine` - Create sysbench tables with specific storage engine
+  - `--storage-engine` - Create sysbench tables with specific storage engine  
 
 10. Sysbench load test on MongoDB:
   - `--mongo-sysbench` - Initiates sysbench oltp prepare and run for MongoDB instance  
@@ -86,3 +85,5 @@ pmm-client|tarball|dev
 
 ### Miscellaneous: 
 12. `--use-socket` - Use DB Socket for PMM Client Connection
+
+13. `--help` - to see all available options and their guide
