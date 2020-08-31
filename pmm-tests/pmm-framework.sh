@@ -854,18 +854,40 @@ setup_db_tar(){
   SERVER_STRING=$2
   CLIENT_MSG=$3
   VERSION=$4
-  if cat /etc/os-release | grep rhel >/dev/null ; then
-   DISTRUBUTION=centos
+
+  #This is only needed due to a bug in get_download_links.sh file, once that is fixed, we don't need to hardcode Download URL's
+  if [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "8.0" ]]; then
+    LINK="https://www.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.20-11/binary/tarball/Percona-Server-8.0.20-11-Linux.x86_64.glibc2.12-minimal.tar.gz"
+    FILE=`echo $LINK | awk -F"/" '{print $9}'`
+    if [ ! -f $FILE ]; then
+      wget $LINK 2>/dev/null
+    fi
+    VERSION_ACCURATE="8.0.20"
+    PORT_NUMBER="80201"
+    BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
+  elif [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "5.7" ]]; then
+    LINK="https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-5.7.31-34/binary/tarball/Percona-Server-5.7.31-34-Linux.x86_64.glibc2.12-minimal.tar.gz"
+    FILE=`echo $LINK | awk -F"/" '{print $9}'`
+    if [ ! -f $FILE ]; then
+      wget $LINK 2>/dev/null
+    fi
+    VERSION_ACCURATE="5.7.31"
+    PORT_NUMBER="57311"
+    BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
+  else
+    if cat /etc/os-release | grep rhel >/dev/null ; then
+      DISTRUBUTION=centos
+    fi
+    LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
+    echo "Downloading $CLIENT_MSG(Version : $VERSION)"
+    FILE=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"/" '{print $7}'`
+    if [ ! -f $FILE ]; then
+      wget $LINK 2>/dev/null
+    fi
+    VERSION_ACCURATE=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"-" '{ print $3 }'`
+    PORT_NUMBER=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"-" '{ print $3 }' | tr -d .`
+    BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
   fi
-  LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
-  echo "Downloading $CLIENT_MSG(Version : $VERSION)"
-  FILE=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"/" '{print $7}'`
-  if [ ! -f $FILE ]; then
-    wget $LINK 2>/dev/null
-  fi
-  VERSION_ACCURATE=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"-" '{ print $3 }'`
-  PORT_NUMBER=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION | awk -F"-" '{ print $3 }' | tr -d .`
-  BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
 }
 #Get PMM client basedir.
 get_basedir(){
@@ -1351,12 +1373,6 @@ add_clients(){
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_admin_statements=ON;"
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL query_response_time_stats=ON;"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log_file='/var/log/ps_${j}_slowlog.log';"
           run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
           if [[ -z $use_socket ]]; then
             pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
@@ -1865,6 +1881,7 @@ wipe_pmm2_clients () {
         MYSQL_SERVICE_ID=${i}
         pmm-admin remove mysql ${MYSQL_SERVICE_ID}
         docker stop ${MYSQL_SERVICE_ID} && docker rm ${MYSQL_SERVICE_ID}
+        dbdeployer delete all --skip-confirm
     done
   fi
   if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
@@ -1972,7 +1989,6 @@ check_dbdeployer(){
       echo "ERROR! dbdeployer not installed attempting to install"
       install_dbdeployer
   fi
-  dbdeployer delete all --skip-confirm
 }
 
 install_dbdeployer(){
