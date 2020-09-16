@@ -1117,7 +1117,11 @@ add_clients(){
     ADDCLIENTS_COUNT=$(echo "${i}" | sed 's|[^0-9]||g')
     if  [[ "${CLIENT_NAME}" == "mo" && -z $MONGOMAGIC ]]; then
       rm -rf $BASEDIR/data
-      sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      if [ -f /usr/lib64/liblzma.so.5.0.99 ]; then
+        sudo ln -s /usr/lib64/liblzma.so.5.0.99 /usr/lib64/liblzma.so.0
+      else
+        sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      fi
       for k in `seq 1  ${REPLCOUNT}`;do
         PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
         PSMDB_PORTS+=($PSMDB_PORT)
@@ -1500,7 +1504,11 @@ add_clients(){
       echo ${BASEDIR}
       
       ##Missing Library for 4.4
-      sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      if [ -f /usr/lib64/liblzma.so.5.0.99 ]; then
+        sudo ln -s /usr/lib64/liblzma.so.5.0.99 /usr/lib64/liblzma.so.0
+      else
+        sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      fi
       
       if [[ "$with_sharding" == "1" ]]; then
         if [ "$mo_version" == "3.6" ]; then
