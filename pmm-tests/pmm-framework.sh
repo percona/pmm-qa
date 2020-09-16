@@ -93,12 +93,13 @@ usage () {
   echo " --mongomagic                   Use this option for experimental MongoDB setup with PMM2"
   echo " --setup-pmm-client-docker      Use this option to setup PMM-Client docker, Percona Server and PMM-Server Docker images for testing client"
   echo " --group-replication            Use this option to setup MS/PS with Group Replication, --single-primary & topology group"
+  echo " --setup-replication-ps-pmm2    Use this option to setup PS with group replication, this is only needed for UI tests extra check setup"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -262,6 +263,10 @@ do
     --group-replication )
     shift
     setup_group_replication=1
+    ;;
+    --setup-replication-ps-pmm2 )
+    shift
+    setup_replication_ps_pmm2=1
     ;;
     --disable-tablestats )
     shift
@@ -2110,6 +2115,35 @@ run_workload() {
   fi
 }
 
+setup_replication_ps_pmm2 () {
+  check_dbdeployer
+  setup_db_tar ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
+  if [ -d "$WORKDIR/ps" ]; then
+    rm -Rf $WORKDIR/ps;
+  fi
+  mkdir $WORKDIR/ps
+  dbdeployer unpack Percona-Server-${ps_version}* --sandbox-binary $WORKDIR/ps --overwrite
+  rm -Rf Percona-Server-${ps_version}*
+  dbdeployer deploy --topology=group replication $VERSION_ACCURATE --single-primary --sandbox-binary $WORKDIR/ps --force
+  node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+  for j in `seq 1  3`;do
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_admin_statements=ON;"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
+    run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
+    if [[ -z $use_socket ]]; then
+      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+    else
+      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps-group-replication-node-$j-$IP_ADDRESS --debug
+    fi
+    node_port=$(($node_port + 1))
+    sleep 20
+  done
+}
+
 add_annotation_pmm2 () {
   pmm-admin annotate "pmm-annotate-without-tags"
   sleep 20
@@ -2243,6 +2277,10 @@ fi
 
 if [ ! -z $add_annotation ]; then
   add_annotation_pmm2
+fi
+
+if [ ! -z $setup_replication_ps_pmm2 ]; then
+  setup_replication_ps_pmm2
 fi
 
 if [ ! -z $setup_pmm_client_docker ]; then
