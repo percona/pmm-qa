@@ -52,6 +52,7 @@ usage () {
   echo " --pgsql-version                Pass Postgre SQL server version Info"
   echo " --md-version                   Pass MariaDB Server version info"
   echo " --pxc-version                  Pass Percona XtraDB Cluster version info"
+  echo " --pdpgsql-version              Pass Percona Distribution for PostgreSQL version Info"
   echo " --mysqld-startup-options       Pass MySQL startup options. eg : --mysqld-startup-options='--innodb_buffer_pool_size=1G --innodb_log_file_size=1G'"
   echo " --with-proxysql                This allow to install PXC with proxysql"
   echo " --sysbench-data-load           This will initiate sysbench data load on mysql instances"
@@ -100,7 +101,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -223,6 +224,10 @@ do
     ;;
     --pxc-version )
     pxc_version="$2"
+    shift 2
+    ;;
+    --pdpgsql-version )
+    pdpgsql_version="$2"
     shift 2
     ;;
     --mysqld-startup-options )
@@ -537,6 +542,7 @@ if [[ -z "${mo_version}" ]]; then mo_version="4.4"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
 if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
 if [[ -z "${pgsql_version}" ]]; then pgsql_version="12";fi
+if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="12"; fi
 
 if [[ -z "$query_source" ]];then
   query_source=perfschema
@@ -910,7 +916,17 @@ get_basedir(){
   fi
   if [ $download_link -eq 1 ]; then
     if [ -f $SCRIPT_PWD/../get_download_link.sh ]; then
-      LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
+      if [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.4" ]]; then
+        LINK="https://www.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-4.4.1-3/binary/tarball/percona-server-mongodb-4.4.1-3-x86_64.glibc2.12.tar.gz"
+      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.2" ]]; then
+        LINK="https://www.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.9-10/binary/tarball/percona-server-mongodb-4.2.9-10-x86_64.glibc2.12.tar.gz"
+      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.0" ]]; then
+        LINK="https://www.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.20-14/binary/tarball/percona-server-mongodb-4.0.20-14-x86_64.glibc2.12.tar.gz"
+      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "3.6" ]]; then
+        LINK="https://www.percona.com/downloads/percona-server-mongodb-3.6/percona-server-mongodb-3.6.19-8.0/binary/tarball/percona-server-mongodb-3.6.19-8.0-x86_64.glibc2.12.tar.gz"
+      else
+        LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
+      fi
       echo "Downloading $CLIENT_MSG(Version : $VERSION)"
       wget $LINK 2>/dev/null
       BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
@@ -1299,6 +1315,23 @@ add_clients(){
         fi
         PGSQL_PORT=$((PGSQL_PORT+j))
       done
+    elif [[ "${CLIENT_NAME}" == "pdpgsql" && ! -z $PMM2 ]]; then
+      PDPGSQL_PORT=6432
+      docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
+      for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
+        check_port $PDPGSQL_PORT postgres
+        docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries='pg_stat_monitor' -c shared_preload_libraries='pg_stat_statements' -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
+        sleep 20
+        docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
+        docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
+        docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
+        if [ $(( ${j} % 2 )) -eq 0 ]; then
+          pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+        else
+          pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+        fi
+        PDPGSQL_PORT=$((PDPGSQL_PORT+j))
+      done
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
       check_dbdeployer
       setup_db_tar mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
@@ -1531,7 +1564,7 @@ add_clients(){
         if [ "$mo_version" == "4.2" ]; then
           bash ./mongo_startup.sh -s -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
-	if [ "$mo_version" == "4.4" ]; then
+        if [ "$mo_version" == "4.4" ]; then
           bash ./mongo_startup.sh -s -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         sleep 20
@@ -1555,7 +1588,7 @@ add_clients(){
         if [ "$mo_version" == "4.2" ]; then
           bash ./mongo_startup.sh -r -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
-	if [ "$mo_version" == "4.4" ]; then
+        if [ "$mo_version" == "4.4" ]; then
           bash ./mongo_startup.sh -r -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         sleep 20
@@ -1578,7 +1611,7 @@ add_clients(){
         if [ "$mo_version" == "4.2" ]; then
           bash ./mongo_startup.sh -m -e inMemory --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
-	if [ "$mo_version" == "4.4" ]; then
+        if [ "$mo_version" == "4.4" ]; then
           bash ./mongo_startup.sh -m -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         sleep 20
