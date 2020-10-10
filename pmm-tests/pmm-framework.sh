@@ -93,12 +93,14 @@ usage () {
   echo " --mongomagic                   Use this option for experimental MongoDB setup with PMM2"
   echo " --setup-pmm-client-docker      Use this option to setup PMM-Client docker, Percona Server and PMM-Server Docker images for testing client"
   echo " --group-replication            Use this option to setup MS/PS with Group Replication, --single-primary & topology group"
+  echo " --setup-replication-ps-pmm2    Use this option to setup PS with group replication, this is only needed for UI tests extra check setup"
+  echo " --disable-queryexample         Use this option to setup PS instance with disabled query example"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -263,9 +265,17 @@ do
     shift
     setup_group_replication=1
     ;;
+    --setup-replication-ps-pmm2 )
+    shift
+    setup_replication_ps_pmm2=1
+    ;;
     --disable-tablestats )
     shift
     DISABLE_TABLESTATS=1
+    ;;
+    --disable-queryexample )
+    shift
+    DISABLE_QUERYEXAMPLE=1
     ;;
     --dbdeployer )
     shift
@@ -1112,7 +1122,11 @@ add_clients(){
     ADDCLIENTS_COUNT=$(echo "${i}" | sed 's|[^0-9]||g')
     if  [[ "${CLIENT_NAME}" == "mo" && -z $MONGOMAGIC ]]; then
       rm -rf $BASEDIR/data
-      sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      if [ -f /usr/lib64/liblzma.so.5.0.99 ]; then
+        sudo ln -s /usr/lib64/liblzma.so.5.0.99 /usr/lib64/liblzma.so.0
+      else
+        sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      fi
       for k in `seq 1  ${REPLCOUNT}`;do
         PSMDB_PORT=$(( (RANDOM%21 + 10) * 1001 ))
         PSMDB_PORTS+=($PSMDB_PORT)
@@ -1418,6 +1432,9 @@ add_clients(){
             if [[ ! -z $DISABLE_TABLESTATS ]]; then
               pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
             fi
+	    if [[ ! -z $DISABLE_QUERYEXAMPLE ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-queryexamples ps_disabled_queryexample_$j --debug 127.0.0.1:$PS_PORT
+            fi
           else
             if [ $(( ${j} % 2 )) -eq 0 ]; then
               pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
@@ -1426,6 +1443,9 @@ add_clients(){
             fi
             if [[ ! -z $DISABLE_TABLESTATS ]]; then
               pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug
+            fi
+	    if [[ ! -z $DISABLE_QUERYEXAMPLE ]]; then
+              pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --disable-queryexamples ps_disabled_queryexample_$j --debug
             fi
           fi
           #run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
@@ -1495,7 +1515,11 @@ add_clients(){
       echo ${BASEDIR}
       
       ##Missing Library for 4.4
-      sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      if [ -f /usr/lib64/liblzma.so.5.0.99 ]; then
+        sudo ln -s /usr/lib64/liblzma.so.5.0.99 /usr/lib64/liblzma.so.0
+      else
+        sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
+      fi
       
       if [[ "$with_sharding" == "1" ]]; then
         if [ "$mo_version" == "3.6" ]; then
@@ -2123,6 +2147,35 @@ run_workload() {
   fi
 }
 
+setup_replication_ps_pmm2 () {
+  check_dbdeployer
+  setup_db_tar ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
+  if [ -d "$WORKDIR/ps" ]; then
+    rm -Rf $WORKDIR/ps;
+  fi
+  mkdir $WORKDIR/ps
+  dbdeployer unpack Percona-Server-${ps_version}* --sandbox-binary $WORKDIR/ps --overwrite
+  rm -Rf Percona-Server-${ps_version}*
+  dbdeployer deploy --topology=group replication $VERSION_ACCURATE --single-primary --sandbox-binary $WORKDIR/ps --force
+  node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+  for j in `seq 1  3`;do
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_admin_statements=ON;"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
+    run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
+    if [[ -z $use_socket ]]; then
+      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps_group_replication_node_$j_$IP_ADDRESS --debug 127.0.0.1:$node_port
+    else
+      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_group_replication_node_$j_$IP_ADDRESS --debug
+    fi
+    node_port=$(($node_port + 1))
+    sleep 20
+  done
+}
+
 add_annotation_pmm2 () {
   pmm-admin annotate "pmm-annotate-without-tags"
   sleep 20
@@ -2256,6 +2309,10 @@ fi
 
 if [ ! -z $add_annotation ]; then
   add_annotation_pmm2
+fi
+
+if [ ! -z $setup_replication_ps_pmm2 ]; then
+  setup_replication_ps_pmm2
 fi
 
 if [ ! -z $setup_pmm_client_docker ]; then
