@@ -146,27 +146,6 @@ PGSQL_HOST='localhost'
     echo "${output}" | grep "disable-queryexamples"
 }
 
-@test "run pmm-admin add postgresql --help to check service-name" {
-    run pmm-admin add postgresql --help
-    echo "$output"
-    [ "$status" -eq 0 ]
-    echo "${output}" | grep "service-name=NAME"
-}
-
-@test "run pmm-admin add postgresql --help to check host" {
-    run pmm-admin add postgresql --help
-    echo "$output"
-    [ "$status" -eq 0 ]
-    echo "${output}" | grep "host=HOST"
-}
-
-@test "run pmm-admin add postgresql --help to check port" {
-    run pmm-admin add postgresql --help
-    echo "$output"
-    [ "$status" -eq 0 ]
-    echo "${output}" | grep "port=PORT"
-}
-
 function teardown() {
         echo "$output"
 }
