@@ -5,7 +5,7 @@
 PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
 
-@test "run pmm-admin add postgres with pgstatmonitor" {
+@test "run pmm-admin add postgreSQL with pgstatmonitor" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
@@ -18,7 +18,6 @@ PGSQL_HOST='localhost'
                 echo "${lines[0]}" | grep "PostgreSQL Service added."
         done
 }
-
 
 @test "run pmm-admin add postgresql --help to check version" {
     run pmm-admin add postgresql --help
