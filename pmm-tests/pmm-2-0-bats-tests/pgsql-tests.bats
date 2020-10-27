@@ -2,9 +2,23 @@
 
 ## Verify all flags for pmm-admin add postgresql --help
 
-
 PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
+
+@test "run pmm-admin add postgres with pgstatmonitor" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
+            echo "$i"
+            let COUNTER=COUNTER+1
+            PGSQL_IP_PORT=${i}
+            run pmm-admin add postgresql --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgsql_$COUNTER ${PGSQL_IP_PORT}
+            echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "PostgreSQL Service added."
+        done
+}
+
 
 @test "run pmm-admin add postgresql --help to check version" {
     run pmm-admin add postgresql --help
