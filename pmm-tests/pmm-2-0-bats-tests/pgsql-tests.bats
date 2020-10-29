@@ -6,16 +6,15 @@ PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
 
 @test "run pmm-admin add postgreSQL with pgstatmonitor" {
-        COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
             echo "$i"
-            let COUNTER=COUNTER+1
             PGSQL_IP_PORT=${i}
-            run pmm-admin add postgresql --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgsql_$COUNTER ${PGSQL_IP_PORT}
+            run pmm-admin add postgresql --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgstatmonitor ${PGSQL_IP_PORT}
             echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "PostgreSQL Service added."
+                echo "${lines[2]}" | grep "Service name: pgstatmonitor"
         done
 }
 
