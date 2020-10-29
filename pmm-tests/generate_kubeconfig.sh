@@ -41,6 +41,8 @@ export TOKEN=$(kubectl describe secret $SECRET_NAME | grep -E '^token' | cut -f2
 
 export APISERVER=$(curl ifconfig.me):8443
 
+cd ../
+
 mv kubeconfig_sample.yaml kubeconfig.yaml
 
 sed -i "s+{SERVER_INFO}+${APISERVER}+g" kubeconfig.yaml
