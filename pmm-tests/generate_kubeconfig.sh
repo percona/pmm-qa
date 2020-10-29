@@ -6,8 +6,14 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
+### setup minikube and kubectl
 curl -Lo /usr/local/bin/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 chmod +x /usr/local/bin/minikube
+
+curl -Lo https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+mv ./kubectl /usr/local/bin/kubectl
+
 export CHANGE_MINIKUBE_NONE_USER=true
 # sudo su root
 # curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
@@ -33,13 +39,12 @@ make env-up
 mv /root/.kube /root/.minikube $HOME
 chown -R $USER $HOME/.kube $HOME/.minikube
 
-alias kubectl="/usr/local/bin/minikube kubectl --"
 
-export SECRET_NAME=$(kubectl get secrets | grep percona-xtradb-cluster-operator | cut -f1 -d ' ')
+export SECRET_NAME=$(/usr/local/bin/kubectl get secrets | grep percona-xtradb-cluster-operator | cut -f1 -d ' ')
 
-export TOKEN=$(kubectl describe secret $SECRET_NAME | grep -E '^token' | cut -f2 -d':' | tr -d " ")
+export TOKEN=$(/usr/local/bin/kubectl describe secret $SECRET_NAME | grep -E '^token' | cut -f2 -d':' | tr -d " ")
 
-export APISERVER=$(curl ifconfig.me):8443
+export APISERVER=$(curl http://169.254.169.254/latest/meta-data/public-ipv4):8443
 
 cd ../
 
