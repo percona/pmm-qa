@@ -20,43 +20,12 @@ PGSQL_HOST='localhost'
         done
 }
 
-@test "run pmm-admin remove postgresql with pgstatmonitor" {
-        COUNTER=0
-        IFS=$'\n'
-        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgstatmonitor_") ; do
-            let COUNTER=COUNTER+1
-            run pmm-admin remove postgresql pgstatmonitor_$COUNTER
-            echo "$output"
-            [ "$status" -eq 0 ]
-            echo "${output}" | grep "Service removed."
-        done
-}
-
-@test "PMM-T442 run pmm-admin add postgreSQL with pgstatements" {
-        COUNTER=0
-        IFS=$'\n'
-        for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
-            let COUNTER=COUNTER+1
-            echo "$i"
-            PGSQL_IP_PORT=${i}
-            run pmm-admin add postgresql --query-source=pgstatements --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgstatements_$COUNTER ${PGSQL_IP_PORT}
-            echo "$output"
-                [ "$status" -eq 0 ]
-                echo "${lines[0]}" | grep "PostgreSQL Service added."
-                echo "${lines[2]}" | grep "Service name: pgstatements_$COUNTER"
-        done
-}
-
-@test "run pmm-admin remove postgresql with pgstatements" {
-        COUNTER=0
-        IFS=$'\n'
-        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgstatements_") ; do
-            let COUNTER=COUNTER+1
-            run pmm-admin remove postgresql pgstatements_$COUNTER
-            echo "$output"
-            [ "$status" -eq 0 ]
-            echo "${output}" | grep "Service removed."
-        done
+@test "PMM-T442 run pmm-admin inventory list agents for check agent postgresql_pgstatmonitor_agent" {
+    run pmm-admin inventory list agents
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "postgres_exporter           Running "
+    echo "${output}" | grep "postgresql_pgstatmonitor_agent Running "
 }
 
 @test "PMM-T442 run pmm-admin add postgreSQL with default query source" {
@@ -74,16 +43,12 @@ PGSQL_HOST='localhost'
         done
 }
 
-@test "run pmm-admin remove postgresql with default query source" {
-        COUNTER=0
-        IFS=$'\n'
-        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgdefault_") ; do
-            let COUNTER=COUNTER+1
-            run pmm-admin remove postgresql pgdefault_$COUNTER
-            echo "$output"
-            [ "$status" -eq 0 ]
-            echo "${output}" | grep "Service removed."
-        done
+@test "PMM-T442 run pmm-admin inventory list agents for check agent postgresql_pgstatements_agent" {
+    run pmm-admin inventory list agents
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "postgres_exporter           Running "
+    echo "${output}" | grep "postgresql_pgstatements_agent Running "
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check version" {
@@ -224,6 +189,31 @@ PGSQL_HOST='localhost'
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "disable-queryexamples"
+}
+
+
+@test "run pmm-admin remove postgresql with pgstatmonitor" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgstatmonitor_") ; do
+            let COUNTER=COUNTER+1
+            run pmm-admin remove postgresql pgstatmonitor_$COUNTER
+            echo "$output"
+            [ "$status" -eq 0 ]
+            echo "${output}" | grep "Service removed."
+        done
+}
+
+@test "run pmm-admin remove postgresql with default query source" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgdefault_") ; do
+            let COUNTER=COUNTER+1
+            run pmm-admin remove postgresql pgdefault_$COUNTER
+            echo "$output"
+            [ "$status" -eq 0 ]
+            echo "${output}" | grep "Service removed."
+        done
 }
 
 function teardown() {
