@@ -10,11 +10,13 @@ fi
 curl -Lo /usr/local/bin/minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 chmod +x /usr/local/bin/minikube
 
-curl -Lo https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
+curl -LO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 chmod +x ./kubectl
 mv ./kubectl /usr/local/bin/kubectl
 
 export CHANGE_MINIKUBE_NONE_USER=true
+
+sleep 10
 # sudo su root
 # curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
 # sudo install minikube-linux-amd64 /usr/local/bin/minikube
@@ -36,6 +38,8 @@ sed -i 's+minikube+/usr/local/bin/minikube+g' Makefile
 
 make env-up
 
+sleep 10
+
 mv /root/.kube /root/.minikube $HOME
 chown -R $USER $HOME/.kube $HOME/.minikube
 
@@ -50,6 +54,6 @@ cd ../
 
 mv kubeconfig_sample.yaml kubeconfig.yaml
 
-sed -i "s+{SERVER_INFO}+${APISERVER}+g" kubeconfig.yaml
+sed -i "s+{SERVER_INFO}+https://${APISERVER}+g" kubeconfig.yaml
 
 sed -i "s+{TOKEN}+${TOKEN}+g" kubeconfig.yaml
