@@ -6,17 +6,32 @@ PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
 
 @test "run pmm-admin add postgreSQL with pgstatmonitor" {
+        COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
+            let COUNTER=COUNTER+1
             echo "$i"
             PGSQL_IP_PORT=${i}
-            run pmm-admin add postgresql --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgstatmonitor ${PGSQL_IP_PORT}
+            run pmm-admin add postgresql --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgstatmonitor_$COUNTER ${PGSQL_IP_PORT}
             echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "PostgreSQL Service added."
                 echo "${lines[2]}" | grep "Service name: pgstatmonitor"
         done
 }
+
+@test "run pmm-admin remove postgresql with pgstatmonitor" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgstatmonitor_") ; do
+            let COUNTER=COUNTER+1
+            run pmm-admin remove postgresql pgstatmonitor_$COUNTER
+            echo "$output"
+            [ "$status" -eq 0 ]
+            echo "${output}" | grep "Service removed."
+        done
+}
+
 
 @test "run pmm-admin add postgresql --help to check version" {
     run pmm-admin add postgresql --help
