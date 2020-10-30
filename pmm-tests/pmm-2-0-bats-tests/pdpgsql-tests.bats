@@ -5,7 +5,7 @@
 PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
 
-@test "run pmm-admin add postgreSQL with pgstatmonitor" {
+@test "PMM-T442 run pmm-admin add postgreSQL with pgstatmonitor" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
@@ -16,7 +16,7 @@ PGSQL_HOST='localhost'
             echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "PostgreSQL Service added."
-                echo "${lines[2]}" | grep "Service name: pgstatmonitor"
+                echo "${lines[2]}" | grep "Service name: pgstatmonitor_$COUNTER"
         done
 }
 
@@ -32,141 +32,167 @@ PGSQL_HOST='localhost'
         done
 }
 
+@test "PMM-T442 run pmm-admin add postgreSQL with pgstatements" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
+            let COUNTER=COUNTER+1
+            echo "$i"
+            PGSQL_IP_PORT=${i}
+            run pmm-admin add postgresql --query-source=pgstatements --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgstatements_$COUNTER ${PGSQL_IP_PORT}
+            echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "PostgreSQL Service added."
+                echo "${lines[2]}" | grep "Service name: pgstatements_$COUNTER"
+        done
+}
 
-@test "run pmm-admin add postgresql --help to check version" {
+@test "run pmm-admin remove postgresql with pgstatements" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgstatements_") ; do
+            let COUNTER=COUNTER+1
+            run pmm-admin remove postgresql pgstatements_$COUNTER
+            echo "$output"
+            [ "$status" -eq 0 ]
+            echo "${output}" | grep "Service removed."
+        done
+}
+
+@test "PMM-T443 run pmm-admin add postgresql --help to check version" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "version"
 }
 
-@test "run pmm-admin add postgresql --help to check server-url" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check server-url" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "server-url=SERVER-URL"
 }
 
-@test "run pmm-admin add postgresql --help to check server-insecure-tls" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check server-insecure-tls" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "server-insecure-tls"
 }
 
-@test "run pmm-admin add postgresql --help to check debug" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check debug" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "debug"
 }
 
-@test "run pmm-admin add postgresql --help to check trace" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check trace" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "trace"
 }
 
-@test "run pmm-admin add postgresql --help to check json" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check json" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "json"
 }
 
-@test "run pmm-admin add postgresql --help to check socket" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check socket" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "socket=SOCKET"
 }
 
-@test "run pmm-admin add postgresql --help to check node-id" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check node-id" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "node-id=NODE-ID"
 }
 
-@test "run pmm-admin add postgresql --help to check pmm-agent-id" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check pmm-agent-id" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "pmm-agent-id=PMM-AGENT-ID"
 }
 
-@test "run pmm-admin add postgresql --help to check username" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check username" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep 'username="postgres"'
 }
 
-@test "run pmm-admin add postgresql --help to check password" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check password" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "password=PASSWORD"
 }
 
-@test "run pmm-admin add postgresql --help to check query-source" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check query-source" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "query-source=pgstatements"
 }
 
-@test "run pmm-admin add postgresql --help to check evironment" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check evironment" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "environment=ENVIRONMENT"
 }
 
-@test "run pmm-admin add postgresql --help to check cluster" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check cluster" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "cluster=CLUSTER"
 }
 
-@test "run pmm-admin add postgresql --help to check replication-set" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check replication-set" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "replication-set=REPLICATION-SET"
 }
 
-@test "run pmm-admin add postgresql --help to check custom-labels" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check custom-labels" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "custom-labels=CUSTOM-LABELS"
 }
 
-@test "run pmm-admin add postgresql --help to check skip-connection-check" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check skip-connection-check" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "skip-connection-check"
 }
 
-@test "run pmm-admin add postgresql --help to check tls" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check tls" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "tls"
 }
 
-@test "run pmm-admin add postgresql --help to check tls-skip-verify" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check tls-skip-verify" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "tls-skip-verify"
 }
 
-@test "run pmm-admin add postgresql --help to check disable-queryexamples" {
+@test "PMM-T443 run pmm-admin add postgresql --help to check disable-queryexamples" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
