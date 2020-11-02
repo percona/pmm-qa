@@ -82,6 +82,14 @@ function run_postgresql_specific_tests() {
   fi
 }
 
+function run_pdpgsql_specific_tests() {
+  if [[ $tap == 1 ]] ; then
+    bats --tap ${DIRNAME}/pdpgsql-tests.bats
+  else
+    bats ${DIRNAME}/pdpgsql-tests.bats
+  fi
+}
+
 function run_pxc_specific_tests() {
   if [[ $tap == 1 ]] ; then
     bats --tap ${DIRNAME}/pxc-specific-tests.bats
@@ -253,6 +261,10 @@ if [[ $instance_t == "pgsql" ]]; then
   run_postgresql_specific_tests
 fi
 
+if [[ $instance_t == "pdpgsql" ]]; then
+  echo "Running Percona Distribution Postgresql tests"
+  run_pdpgsql_specific_tests
+fi
 
 if [[ $instance_t == "pxc" ]]; then
   echo "Running PXC specific tests"
