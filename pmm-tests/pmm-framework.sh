@@ -1330,7 +1330,7 @@ add_clients(){
             pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           else
             pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
-          if
+          fi
         else
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
