@@ -177,7 +177,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "5 files"
+    echo "$output" | grep -E "5|6 files"
 }
 
 @test "run pmm-admin summary --skip-server" {
