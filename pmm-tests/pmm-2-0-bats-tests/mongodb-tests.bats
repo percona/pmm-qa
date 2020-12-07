@@ -23,6 +23,57 @@ echo "$output"
 }
 
 
+@test "run pmm-admin add mongodb based on running instances with metrics-mode push" {
+    COUNTER=0
+    IFS=$'\n'
+  for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        MONGO_IP_PORT=${i}
+        run pmm-admin add mongodb --metrics-mode=push mongo_inst_${COUNTER} ${MONGO_IP_PORT}
+      [ "$status" -eq 0 ]
+      echo "${lines[0]}" | grep "MongoDB Service added"
+  done
+}
+
+@test "run pmm-admin remove mongodb" {
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        MONGO_IP_PORT=${i}
+        run pmm-admin remove mongodb mongo_inst_${COUNTER}
+      [ "$status" -eq 0 ]
+      echo "${lines[0]}"
+      echo "${lines[0]}" | grep "Service removed."
+    done
+}
+
+@test "run pmm-admin add mongodb based on running instances with metrics-mode pull" {
+    COUNTER=0
+    IFS=$'\n'
+  for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        MONGO_IP_PORT=${i}
+        run pmm-admin add mongodb --metrics-mode=pull mongo_inst_${COUNTER} ${MONGO_IP_PORT}
+      [ "$status" -eq 0 ]
+      echo "${lines[0]}" | grep "MongoDB Service added"
+  done
+}
+
+@test "run pmm-admin remove mongodb" {
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        MONGO_IP_PORT=${i}
+        run pmm-admin remove mongodb mongo_inst_${COUNTER}
+      [ "$status" -eq 0 ]
+      echo "${lines[0]}"
+      echo "${lines[0]}" | grep "Service removed."
+    done
+}
+
+
 @test "run pmm-admin add mongodb based on running instances" {
 	COUNTER=0
 	IFS=$'\n'
@@ -124,6 +175,13 @@ echo "$output"
     [[ ${lines[35]} =~ "--socket=SOCKET" ]
 }
 
+
+@test "run pmm-admin add mongodb --help to check metrics-mode=auto" {
+    run pmm-admin add mongodb --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "metrics-mode=auto"
+}
 
 @test "run pmm-admin add mongodb --help to check host" {
     run pmm-admin add mongodb --help

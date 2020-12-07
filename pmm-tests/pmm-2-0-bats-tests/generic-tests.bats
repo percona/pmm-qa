@@ -63,7 +63,7 @@ echo "$output"
  run pmm-admin --version
  echo "$output"
  	[ "$status" -eq 0 ]
-	echo "$output" | grep "Version: 2.11.2"
+	echo "$output" | grep "Version: 2.12.1"
 }
 
 @test "run pmm-admin config without parameters" {
@@ -91,7 +91,7 @@ echo "$output"
 run pmm-admin summary --version
 echo "$output"
     [ "$status" -eq 0 ]
-    echo "$output" | grep "Version: 2.11.2"
+    echo "$output" | grep "Version: 2.12.1"
 }
 
 @test "run pmm-admin summary --server-url with http" {
@@ -100,7 +100,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep -E "41|42 files"
+    echo "$output" | grep -E "42|43 files"
 }
 
 @test "run pmm-admin summary --server-url with https and verify warning" {
@@ -117,7 +117,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[0]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep -E "41|42 files"
+    echo "$output" | grep -E "42|43 files"
 }
 
 @test "run pmm-admin summary --debug" {
@@ -177,7 +177,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[-1]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep "5 files"
+    echo "$output" | grep -E "5|6 files"
 }
 
 @test "run pmm-admin summary --skip-server" {
@@ -347,6 +347,17 @@ run pmm-admin annotate --tags="testing"
 echo "$output"
     [ "$status" -eq 1 ]
     echo "$output" | grep "pmm-admin: error: required argument 'text' not provided, try --help"
+}
+
+@test "run pmm-admin config --help to check for Metrics Mode option" {
+run pmm-admin config --help
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "metrics-mode=auto"
+    echo "${output}" | grep "Metrics flow mode for agents node-exporter, can
+                            be push - agent will push metrics, pull - server
+                            scrape metrics from agent or auto - chosen by
+                            server."
 }
 
 function teardown() {
