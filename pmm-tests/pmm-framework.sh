@@ -1691,15 +1691,24 @@ add_clients(){
         sleep 20
         if [[ ! -z $metrics_mode ]]; then
           pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
         else
           pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
           pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --debug 127.0.0.1:27027
@@ -1729,8 +1738,10 @@ add_clients(){
         if [[ -z $use_socket ]]; then
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+            sleep 2
+	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+            sleep 2
+	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
           else
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
@@ -1739,8 +1750,10 @@ add_clients(){
         else
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_1 --debug
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
+            sleep 2
+	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
+            sleep 2
+	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
           else
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_1 --debug
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_2 --debug
