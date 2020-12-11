@@ -1784,7 +1784,7 @@ add_clients(){
       echo "Running pxc_proxysql_setup script"
       sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT} ${pxc_version} ${query_source}
       sleep 5
-      BASEDIR=$(ls -1td Percona-XtraDB-Cluster* 2>/dev/null | grep -v ".tar" | head -n1)
+      BASEDIR=$(ls -1td PXC* 2>/dev/null | grep -v ".tar" | head -n1)
       cd ${BASEDIR}
       echo $node1_port
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do

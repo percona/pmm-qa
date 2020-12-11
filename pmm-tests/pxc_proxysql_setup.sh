@@ -20,7 +20,8 @@ if [ "$pxc_version" == "8.0" ]; then
 fi
 tar -xzf Percona-XtraDB-Cluster*
 rm -r Percona-XtraDB-Cluster*.tar.gz
-cd Percona-XtraDB-Cluster*
+mv Percona-XtraDB-Cluster* PXC
+cd PXC
 
 ## start PXC
 bash ../pxc-startup.sh
