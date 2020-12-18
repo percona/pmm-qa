@@ -96,12 +96,13 @@ usage () {
   echo " --group-replication            Use this option to setup MS/PS with Group Replication, --single-primary & topology group"
   echo " --setup-replication-ps-pmm2    Use this option to setup PS with group replication, this is only needed for UI tests extra check setup"
   echo " --disable-queryexample         Use this option to setup PS instance with disabled query example"
+  echo " --metrics-mode                 Use this option to set Metrics mode for DB exporters"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -281,6 +282,10 @@ do
     --disable-queryexample )
     shift
     DISABLE_QUERYEXAMPLE=1
+    ;;
+    --metrics-mode )
+    metrics_mode="$2"
+    shift 2
     ;;
     --dbdeployer )
     shift
@@ -1195,9 +1200,17 @@ add_clients(){
           for r in `seq 1  ${ADDCLIENTS_COUNT}`;do
             PORT=$(( ${PSMDB_PORTS[$n]} + $r - 1 ))
             if [[ -z $use_socket ]]; then
-              pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_rpl${p}_${r}_$IP_ADDRESS localhost:$PORT
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mongodb --debug --metrics-mode=$metrics_mode --cluster mongodb_cluster mongodb_inst_rpl${p}_${r}_$IP_ADDRESS localhost:$PORT
+              else
+                pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_rpl${p}_${r}_$IP_ADDRESS localhost:$PORT
+              fi
             else
-              pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock  mongodb_inst_rpl${p}_${r}_$IP_ADDRESS
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock --metrics-mode=$metrics_mode mongodb_inst_rpl${p}_${r}_$IP_ADDRESS
+              else
+                pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock  mongodb_inst_rpl${p}_${r}_$IP_ADDRESS
+              fi
             fi
           done
         done
@@ -1219,7 +1232,11 @@ add_clients(){
               if [[ -z $use_socket ]]; then
                 pmm-admin add mongodb --debug --cluster mongodb_cluster mongodb_inst_config_rpl${m}_$IP_ADDRESS localhost:$PORT
               else
-                pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock mongodb_inst_config_rpl${m}_$IP_ADDRESS
+                if [[ ! -z $metrics_mode ]]; then
+                  pmm-admin add mongodb --debug --cluster mongodb_cluster --metrics-mode=$metrics_mode --socket=/tmp/mongodb-$PORT.sock mongodb_inst_config_rpl${m}_$IP_ADDRESS
+                else
+                  pmm-admin add mongodb --debug --cluster mongodb_cluster --socket=/tmp/mongodb-$PORT.sock mongodb_inst_config_rpl${m}_$IP_ADDRESS
+                fi
               fi
             else
               sudo pmm-admin add mongodb --cluster mongodb_cluster --uri mongodb_inst_config_rpl${m} localhost:$PORT
@@ -1309,9 +1326,17 @@ add_clients(){
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'ALTER SYSTEM SET track_io_timing=ON;'
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+          if [[ ! -z $metrics_mode ]]; then
+            pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+          else
+            pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+          fi
         else
-          pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+          if [[ ! -z $metrics_mode ]]; then
+            pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+          else
+            pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+          fi
         fi
         PGSQL_PORT=$((PGSQL_PORT+j))
       done
@@ -1326,9 +1351,17 @@ add_clients(){
         docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
         docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
-          pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+          if [[ ! -z $metrics_mode ]]; then
+            pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+          else
+            pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+          fi
         else
-          pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+          if [[ ! -z $metrics_mode ]]; then
+            pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+          else
+            pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+          fi
         fi
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
@@ -1359,9 +1392,17 @@ add_clients(){
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
             run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-group-replication-node-$j
             if [[ -z $use_socket ]]; then
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl ms-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --metrics-mode=$metrics_mode --replication-set=ms-repl ms-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              else
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl ms-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              fi
             else
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-group-replication-node-$j-$IP_ADDRESS --debug
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-group-replication-node-$j-$IP_ADDRESS --debug
+              else
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-group-replication-node-$j-$IP_ADDRESS --debug
+              fi
             fi
             node_port=$(($node_port + 1))
             sleep 20
@@ -1369,9 +1410,17 @@ add_clients(){
         else
           run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
           if [[ -z $use_socket ]]; then
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
+            else
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
+            fi
           else
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
+            else
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
+            fi
           fi
         fi
       else
@@ -1386,15 +1435,31 @@ add_clients(){
           fi
           if [[ -z $use_socket ]]; then
             if [ $(( ${j} % 2 )) -eq 0 ]; then
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              else
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              fi
             else
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              else
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+              fi
             fi
           else
             if [ $(( ${j} % 2 )) -eq 0 ]; then
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
+              else
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
+              fi
             else
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
+              else
+                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
+              fi
             fi
           fi
           #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
@@ -1423,9 +1488,17 @@ add_clients(){
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
           run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
           if [[ -z $use_socket ]]; then
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --metrics-mode=$metrics_mode --cluster=ps-prod-cluster --replication-set=ps-repl ps-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            else
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+            fi
           else
-            pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps-group-replication-node-$j-$IP_ADDRESS --debug
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --metrics-mode=$metrics_mode --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps-group-replication-node-$j-$IP_ADDRESS --debug
+            else
+              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps-group-replication-node-$j-$IP_ADDRESS --debug
+            fi
           fi
           node_port=$(($node_port + 1))
           sleep 20
@@ -1458,26 +1531,42 @@ add_clients(){
           fi
           if [[ -z $use_socket ]]; then
             if [ $(( ${j} % 2 )) -eq 0 ]; then
-              pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --metrics-mode=$metrics_mode --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+              else
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+              fi
             else
-              pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+              else
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+              fi
             fi
             if [[ ! -z $DISABLE_TABLESTATS ]]; then
               pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug 127.0.0.1:$PS_PORT
             fi
-	    if [[ ! -z $DISABLE_QUERYEXAMPLE ]]; then
+	          if [[ ! -z $DISABLE_QUERYEXAMPLE ]]; then
               pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --disable-queryexamples ps_disabled_queryexample_$j --debug 127.0.0.1:$PS_PORT
             fi
           else
             if [ $(( ${j} % 2 )) -eq 0 ]; then
-              pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+              else
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+              fi
             else
-              pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+              if [[ ! -z $metrics_mode ]]; then
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --metrics-mode=$metrics_mode --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+              else
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+              fi
             fi
             if [[ ! -z $DISABLE_TABLESTATS ]]; then
               pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --disable-tablestats ps_dts_node_$j --debug
             fi
-	    if [[ ! -z $DISABLE_QUERYEXAMPLE ]]; then
+	          if [[ ! -z $DISABLE_QUERYEXAMPLE ]]; then
               pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --disable-queryexamples ps_disabled_queryexample_$j --debug
             fi
           fi
@@ -1503,15 +1592,31 @@ add_clients(){
         fi
         if [[ -z $use_socket ]]; then
           if [ $(( ${j} % 2 )) -eq 0 ]; then
-            pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-prod --cluster=md-prod-cluster --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-prod --cluster=md-prod-cluster --metrics-mode=$metrics_mode --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+            else
+              pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-prod --cluster=md-prod-cluster --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+            fi
           else
-            pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-dev --cluster=md-dev-cluster --metrics-mode=$metrics_mode --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+            else
+              pmm-admin add mysql --query-source=$query_source --username=root --password=md --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$MD_PORT
+            fi
           fi
         else
           if [ $(( ${j} % 2 )) -eq 0 ]; then
-            pmm-admin add mysql --query-source=$query_source --username=root --password=md --socket=${WORKDIR}/md_socket_${MD_PORT}/mysqld.sock --environment=md-prod --cluster=md-prod-cluster --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=root --password=md --socket=${WORKDIR}/md_socket_${MD_PORT}/mysqld.sock --environment=md-prod --cluster=md-prod-cluster --metrics-mode=$metrics_mode --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug
+            else
+              pmm-admin add mysql --query-source=$query_source --username=root --password=md --socket=${WORKDIR}/md_socket_${MD_PORT}/mysqld.sock --environment=md-prod --cluster=md-prod-cluster --replication-set=md-repl2 md_${md_version}_${IP_ADDRESS}_$j --debug
+            fi
           else
-            pmm-admin add mysql --query-source=$query_source --username=root --password=md --socket=${WORKDIR}/md_socket_${MD_PORT}/mysqld.sock --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mysql --query-source=$query_source --username=root --password=md --socket=${WORKDIR}/md_socket_${MD_PORT}/mysqld.sock --environment=md-dev --cluster=md-dev-cluster --metrics-mode=$metrics_mode --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug
+            else
+              pmm-admin add mysql --query-source=$query_source --username=root --password=md --socket=${WORKDIR}/md_socket_${MD_PORT}/mysqld.sock --environment=md-dev --cluster=md-dev-cluster --replication-set=md-repl1 md_${md_version}_${IP_ADDRESS}_$j --debug
+            fi
           fi
         fi
         #run_workload 127.0.0.1 root md $MD_PORT mysql md_${md_version}_${IP_ADDRESS}_$j
@@ -1528,15 +1633,31 @@ add_clients(){
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
         if [[ -z $use_socket ]]; then
           if [ $(( ${j} % 2 )) -eq 0 ]; then
-            pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+            else
+              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+            fi
           else
-            pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+            else
+              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+            fi
           fi
         else
           if [ $(( ${j} % 2 )) -eq 0 ]; then
-            pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-prod mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+            else
+              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+            fi
           else
-            pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug 
+            if [[ ! -z $metrics_mode ]]; then
+              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --metrics-mode=$metrics_mode --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+            else
+              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+            fi
           fi
         fi
         MODB_PORT=$((MODB_PORT+j+3))
@@ -1568,16 +1689,38 @@ add_clients(){
           bash ./mongo_startup.sh -s -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         sleep 20
-        pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --debug 127.0.0.1:27027
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --debug 127.0.0.1:27028
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --debug 127.0.0.1:27029
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27018
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27019
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27020
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --debug 127.0.0.1:28018
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --debug 127.0.0.1:28019
-        pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --debug 127.0.0.1:28020
+        if [[ ! -z $metrics_mode ]]; then
+          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
+          sleep 2
+	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
+        else
+          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --debug 127.0.0.1:27027
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --debug 127.0.0.1:27028
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --debug 127.0.0.1:27029
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27018
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27019
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27020
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --debug 127.0.0.1:28018
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --debug 127.0.0.1:28019
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --debug 127.0.0.1:28020
+        fi
       elif [[ "$with_replica" == "1" ]]; then
         if [ "$mo_version" == "3.6" ]; then
           bash ./mongo_startup.sh -r -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
@@ -1593,13 +1736,29 @@ add_clients(){
         fi
         sleep 20
         if [[ -z $use_socket ]]; then
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27019
+          if [[ ! -z $metrics_mode ]]; then
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
+            sleep 2
+	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+            sleep 2
+	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+          else
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27019
+          fi
         else
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_1 --debug
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_2 --debug
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --environment=mongodb_rs_node mongodb_rs1_3 --debug
+          if [[ ! -z $metrics_mode ]]; then
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_1 --debug
+            sleep 2
+	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
+            sleep 2
+	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
+          else
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_1 --debug
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_2 --debug
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --environment=mongodb_rs_node mongodb_rs1_3 --debug
+          fi
         fi
       else
         if [ "$mo_version" == "3.6" ]; then
@@ -1615,26 +1774,42 @@ add_clients(){
           bash ./mongo_startup.sh -m -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
         fi
         sleep 20
-        pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single --debug 127.0.0.1:27017
+        if [[ ! -z $metrics_mode ]]; then
+          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
+        else
+          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single --debug 127.0.0.1:27017
+        fi
       fi
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
       echo "Running pxc_proxysql_setup script"
       sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT} ${pxc_version} ${query_source}
       sleep 5
-      BASEDIR=$(ls -1td Percona-XtraDB-Cluster* 2>/dev/null | grep -v ".tar" | head -n1)
+      BASEDIR=$(ls -1td PXC* 2>/dev/null | grep -v ".tar" | head -n1)
       cd ${BASEDIR}
       echo $node1_port
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         if [[ -z $use_socket ]]; then
-          pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+          if [[ ! -z $metrics_mode ]]; then
+            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+          else
+            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+          fi
         else
-          pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+          if [[ ! -z $metrics_mode ]]; then
+            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+          else
+            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+          fi
         fi
         sleep 5
         #run_workload 127.0.0.1 sysbench test $(cat node$j.cnf | grep port | awk -F"=" '{print $2}') mysql pxc_node_${pxc_version}_${IP_ADDRESS}_$j
       done
       cd ../
-      pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl
+      if [[ ! -z $metrics_mode ]]; then
+        pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --metrics-mode=$metrics_mode --replication-set=proxysql-repl
+      else
+        pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl
+      fi
     else
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"

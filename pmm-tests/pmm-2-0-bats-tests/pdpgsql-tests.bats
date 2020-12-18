@@ -43,6 +43,61 @@ PGSQL_HOST='localhost'
         done
 }
 
+@test "run pmm-admin add postgreSQL with default query source and metrics mode push" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
+            let COUNTER=COUNTER+1
+            echo "$i"
+            PGSQL_IP_PORT=${i}
+            run pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --metrics-mode=push pgsqlpush_$COUNTER ${PGSQL_IP_PORT}
+            echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "PostgreSQL Service added."
+                echo "${lines[2]}" | grep "Service name: pgsqlpush_$COUNTER"
+        done
+}
+
+@test "run pmm-admin add postgreSQL with default query source and metrics mode pull" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
+            let COUNTER=COUNTER+1
+            echo "$i"
+            PGSQL_IP_PORT=${i}
+            run pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --metrics-mode=pull pgsqlpull_$COUNTER ${PGSQL_IP_PORT}
+            echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "PostgreSQL Service added."
+                echo "${lines[2]}" | grep "Service name: pgsqlpull_$COUNTER"
+        done
+}
+
+@test "run pmm-admin remove postgresql with metrics-mode push" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsqlpush_") ; do
+            let COUNTER=COUNTER+1
+            run pmm-admin remove postgresql pgsqlpush_$COUNTER
+            echo "$output"
+            [ "$status" -eq 0 ]
+            echo "${output}" | grep "Service removed."
+        done
+}
+
+@test "run pmm-admin remove postgresql with metrics-mode pull" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsqlpull_") ; do
+            let COUNTER=COUNTER+1
+            run pmm-admin remove postgresql pgsqlpull_$COUNTER
+            echo "$output"
+            [ "$status" -eq 0 ]
+            echo "${output}" | grep "Service removed."
+        done
+}
+
+
 @test "PMM-T442 run pmm-admin inventory list agents for check agent postgresql_pgstatements_agent" {
     run pmm-admin inventory list agents
     echo "$output"
@@ -56,6 +111,13 @@ PGSQL_HOST='localhost'
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "version"
+}
+
+@test "run pmm-admin add postgresql --help to check metrics-mode=auto" {
+    run pmm-admin add postgresql --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "metrics-mode=auto"
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check server-url" {
