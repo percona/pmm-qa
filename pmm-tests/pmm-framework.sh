@@ -2433,6 +2433,7 @@ setup_pmm2_client_docker_image () {
 setup_external_service () {
   wget https://github.com/oliver006/redis_exporter/releases/download/v1.14.0/redis_exporter-v1.14.0.linux-386.tar.gz
   tar -xvf redis_exporter-v1.14.0.linux-386.tar.gz
+  rm redis_exporter*.tar.gz
   mv redis_* redis_exporter
   cd redis_exporter
   docker run -d -p 6379:6379 redis
