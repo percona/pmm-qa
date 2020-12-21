@@ -2380,9 +2380,9 @@ setup_replication_ps_pmm2 () {
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
     run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
     if [[ -z $use_socket ]]; then
-      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps_group_replication_node_$j_$IP_ADDRESS --debug 127.0.0.1:$node_port
+      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps_group_replication_node_$j --debug 127.0.0.1:$node_port
     else
-      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_group_replication_node_$j_$IP_ADDRESS --debug
+      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_group_replication_node_$j --debug
     fi
     node_port=$(($node_port + 1))
     sleep 20
