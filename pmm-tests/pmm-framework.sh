@@ -1132,9 +1132,9 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "mo" ]]; then
       get_basedir psmdb "percona-server-mongodb-${mo_version}*" "Percona Server Mongodb binary tar ball" ${mo_version}
     fi
-    if [[ "${CLIENT_NAME}" != "md"  && "${CLIENT_NAME}" != "mo" && "${CLIENT_NAME}" != "pgsql" ]]; then
+    if [[ "${CLIENT_NAME}" != "md"  && "${CLIENT_NAME}" != "mo" && "${CLIENT_NAME}" != "pgsql" && -z $PMM2 ]]; then
       VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
-    if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
+      if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
         MID="${BASEDIR}/bin/mysqld   --default-authentication-plugin=mysql_native_password --initialize-insecure --basedir=${BASEDIR}"
       else
         MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
