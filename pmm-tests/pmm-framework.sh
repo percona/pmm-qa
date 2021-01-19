@@ -97,12 +97,13 @@ usage () {
   echo " --setup-replication-ps-pmm2    Use this option to setup PS with group replication, this is only needed for UI tests extra check setup"
   echo " --disable-queryexample         Use this option to setup PS instance with disabled query example"
   echo " --metrics-mode                 Use this option to set Metrics mode for DB exporters"
+  echo " --setup-external-service       Use this option to setup Redis as External Service"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -290,6 +291,10 @@ do
     --dbdeployer )
     shift
     use_dbdeployer=1
+    ;;
+    --setup-external-service )
+    shift
+    setup_external_service=1
     ;;
     --skip-docker-setup )
     shift
@@ -1127,9 +1132,9 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "mo" ]]; then
       get_basedir psmdb "percona-server-mongodb-${mo_version}*" "Percona Server Mongodb binary tar ball" ${mo_version}
     fi
-    if [[ "${CLIENT_NAME}" != "md"  && "${CLIENT_NAME}" != "mo" && "${CLIENT_NAME}" != "pgsql" ]]; then
+    if [[ "${CLIENT_NAME}" != "md"  && "${CLIENT_NAME}" != "mo" && "${CLIENT_NAME}" != "pgsql" && -z $PMM2 ]]; then
       VERSION="$(${BASEDIR}/bin/mysqld --version | grep -oe '[58]\.[5670]' | head -n1)"
-    if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
+      if [ "$VERSION" == "5.7" -o "$VERSION" == "8.0" ]; then
         MID="${BASEDIR}/bin/mysqld   --default-authentication-plugin=mysql_native_password --initialize-insecure --basedir=${BASEDIR}"
       else
         MID="${BASEDIR}/scripts/mysql_install_db --no-defaults --basedir=${BASEDIR}"
@@ -1345,7 +1350,7 @@ add_clients(){
       docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         check_port $PDPGSQL_PORT postgres
-        docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
+        docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
         sleep 20
         docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
         docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
@@ -1511,7 +1516,7 @@ add_clients(){
           sudo chmod 777 -R /var/log
           mkdir ps_socket_${PS_PORT}
           sudo chmod 777 -R ps_socket_${PS_PORT}
-          docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version}
+          docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
           sleep 20
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL userstat=1;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
@@ -2375,9 +2380,9 @@ setup_replication_ps_pmm2 () {
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
     run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
     if [[ -z $use_socket ]]; then
-      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps_group_replication_node_$j_$IP_ADDRESS --debug 127.0.0.1:$node_port
+      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps_group_replication_node_$j --debug 127.0.0.1:$node_port
     else
-      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_group_replication_node_$j_$IP_ADDRESS --debug
+      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_group_replication_node_$j --debug
     fi
     node_port=$(($node_port + 1))
     sleep 20
@@ -2423,6 +2428,20 @@ setup_pmm2_client_docker_image () {
   sleep 10
   docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@pmm-server/
   sleep 5
+}
+
+setup_external_service () {
+  wget https://github.com/oliver006/redis_exporter/releases/download/v1.14.0/redis_exporter-v1.14.0.linux-386.tar.gz
+  tar -xvf redis_exporter-v1.14.0.linux-386.tar.gz
+  rm redis_exporter*.tar.gz
+  mv redis_* redis_exporter
+  cd redis_exporter
+  docker run -d -p 6379:6379 redis
+  sleep 10
+  touch redis.log
+  ./redis_exporter -redis.addr=localhost:6379 > redis.log 2>&1 &
+  sleep 10
+  pmm-admin add external --listen-port=9121 --group="redis"
 }
 
 if [ ! -z $wipe_clients ]; then
@@ -2525,6 +2544,10 @@ fi
 
 if [ ! -z $setup_pmm_client_docker ]; then
   setup_pmm2_client_docker_image
+fi
+
+if [ ! -z $setup_external_service ]; then
+  setup_external_service
 fi
 
 exit 0

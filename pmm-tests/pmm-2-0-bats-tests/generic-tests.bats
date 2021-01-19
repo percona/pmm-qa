@@ -63,7 +63,7 @@ echo "$output"
  run pmm-admin --version
  echo "$output"
  	[ "$status" -eq 0 ]
-	echo "$output" | grep "Version: 2.12.1"
+	echo "$output" | grep "Version: 2.13.1"
 }
 
 @test "run pmm-admin config without parameters" {
@@ -91,7 +91,7 @@ echo "$output"
 run pmm-admin summary --version
 echo "$output"
     [ "$status" -eq 0 ]
-    echo "$output" | grep "Version: 2.12.1"
+    echo "$output" | grep "Version: 2.13.1"
 }
 
 @test "run pmm-admin summary --server-url with http" {
@@ -100,7 +100,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep -E "42|43 files"
+    echo "$output" | grep -E "50|51 files"
 }
 
 @test "run pmm-admin summary --server-url with https and verify warning" {
@@ -117,7 +117,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[0]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep -E "42|43 files"
+    echo "$output" | grep -E "50|51 files"
 }
 
 @test "run pmm-admin summary --debug" {
