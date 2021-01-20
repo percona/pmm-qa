@@ -1350,7 +1350,7 @@ add_clients(){
       docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         check_port $PDPGSQL_PORT postgres
-        docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
+        docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
         sleep 20
         docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
         docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
@@ -1594,6 +1594,9 @@ add_clients(){
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL long_query_time=0;"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log_file='/var/log/md_${j}_slowlog.log';"
+        else  
+          mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE 'statement/%';"
+          mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%statements%';"
         fi
         if [[ -z $use_socket ]]; then
           if [ $(( ${j} % 2 )) -eq 0 ]; then
