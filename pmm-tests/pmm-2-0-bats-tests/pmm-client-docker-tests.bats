@@ -32,6 +32,7 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
+run sleep 5
 run docker exec pmm-client pmm-admin remove mysql ps5.7_2
 echo "$output"
     [ "$status" -eq 0 ]
@@ -53,6 +54,7 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
+run sleep 5
 run docker exec pmm-client pmm-admin remove mongodb mongodb-4.0_2
 echo "$output"
     [ "$status" -eq 0 ]
@@ -74,6 +76,7 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
+run sleep 5
 run docker exec pmm-client pmm-admin remove postgresql postgres-10_2
 echo "$output"
     [ "$status" -eq 0 ]
