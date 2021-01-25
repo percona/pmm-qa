@@ -1,45 +1,24 @@
 # PMM-QA
-Automated tests for Percona Monitoring and Management
-GUI tests are created for testing frontend of PMM. They include tests for Query Analytics and for Grafana dashboards
+Automated tests for Percona Monitoring and Management, mostly consists of Shell scripts and PMM-Framework script file for deploying and setting up PMM-Server with different DB's. 
 
-## Using Selenoid for running tests in Local
-1. Install Node.js and atleast npm 8.x on your system
-2. Selenoid and Selenoid UI use port 4444 and 8080 respectively,
-make sure they are not being used, otherwise update docker-compose.yml file
-3. run npm install in project root.
-4. run prepare_ui_test.sh script in the root directory.
-`bash -x ./prepare_ui_test.sh`
-5. This should start running UI tests in 4 parallel browser sessions inside chrome containers with help of selenoid
-6. Check live execution by launching http://localhost:8080 in your browser.
 
-## If you'd like to have more control over the UI test framework parameters, please check out next sections
+## Submitting Bug Reports
 
-### Installation (UI tests version 2.0)
-1. Install Node.js and atleast npm 8.x on your system
-2. Checkout `master` branch for pmm-qa Repo
-3. To run tests on your local systems, delete `codecept.json` and rename `local.codecept.json` to `codecept.json`
-4. Make sure to update URL of the application in the `webdriver` helper in the configuration file (codecept.json)
-5. Install latest version of JDK on your system
+If you find a bug in PMM Framework or PMM tests Scripts, you can submit a bug report to that project's [JIRA](https://jira.percona.com) issue tracker.
 
-> Follow any one of these: 
+Your first step should be [to search](https://jira.percona.com/browse/PMM-7374?jql=project%20%3D%20PMM%20AND%20component%20%3D%20QA) the existing set of open tickets for a similar report. If you find that someone else has already reported your problem, then you can upvote that report to increase its visibility.
 
-6. Install Selenium Standalone server via npm globally using `npm install selenium-standalone -g`
-7. Run the following `selenium-standalone start`
-> OR
-6. Install Selenium Standalone server locally via npm `npm install selenium-standalone --save-dev`
-7. Run the following `./node_modules/.bin/selenium-standalone install && ./node_modules/.bin/selenium-standalone start`
+If there is no existing report, submit a report following these steps:
 
-8. Inside the root folder for `pmm-qa` run `npm install` this will install all required packages
+1. [Sign in to Percona JIRA.](https://jira.percona.com/login.jsp) You will need to create an account if you do not have one.
+2. [Go to the Create Issue screen and select the relevant project.](https://jira.percona.com/secure/CreateIssueDetails!init.jspa?pid=11600&issuetype=1&priority=3&components=11307)
+3. Fill in the fields of Summary, Description, Steps To Reproduce, and Affects Version to the best you can. If the bug corresponds to a crash, attach the stack trace from the logs.
 
-### How to use
-Run all Tests:
-```
-./node_modules/.bin/codeceptjs run --steps
-```
-Run individual Tests:
-```
-./node_modules/.bin/codeceptjs run --steps tests/verifyMysqlDashboards_test.js
-```
+An excellent resource is [Elika Etemad's article on filing good bug reports.](http://fantasai.inkedblade.net/style/talks/filing-good-bugs/).
 
-We have implemented the tests to run in parallel chunks of 3, which will basically launch 3 browsers and execute different tests,
-to make any change to that, modify the configuration file `codecept.json`
+As a general rule of thumb, please try to create bug reports that are:
+
+- _Reproducible._ Include steps to reproduce the problem.
+- _Specific._ Include as much detail as possible: which version, what environment, etc.
+- _Unique._ Do not duplicate existing tickets.
+- _Scoped to a Single Bug._ One bug per report.
