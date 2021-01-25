@@ -2133,6 +2133,7 @@ wipe_pmm2_clients () {
         echo "$i"
         MYSQL_SERVICE_ID=${i}
         pmm-admin remove mysql ${MYSQL_SERVICE_ID}
+	sleep 5
         docker stop ${MYSQL_SERVICE_ID} && docker rm ${MYSQL_SERVICE_ID}
         dbdeployer delete all --skip-confirm
     done
@@ -2143,6 +2144,7 @@ wipe_pmm2_clients () {
         echo "$i"
         PGSQL_SERVICE_ID=${i}
         pmm-admin remove postgresql ${PGSQL_SERVICE_ID}
+	sleep 5
         docker stop ${PGSQL_SERVICE_ID} && docker rm ${PGSQL_SERVICE_ID}
     done
   fi
@@ -2152,6 +2154,7 @@ wipe_pmm2_clients () {
         echo "$i"
         MONGODB_SERVICE_ID=${i}
         pmm-admin remove mongodb ${MONGODB_SERVICE_ID}
+	sleep 5
         docker stop ${MONGODB_SERVICE_ID} && docker rm ${MONGODB_SERVICE_ID}
     done
   fi
