@@ -55,12 +55,14 @@ echo "$output"
 }
 
 @test "run pmm-admin status --json check for RUNNING string in output" {
+    run sleep 5
     run bash -c 'pmm-admin status --json | grep "RUNNING"'
     echo "${output}"
     [ "$status" -eq 0 ]
 }
 
 @test "run pmm-admin status check for RUNNING string in output for VM_AGENT" {
+    run sleep 5
     run bash -c 'pmm-admin status | grep "vmagent Running"'
     echo "${output}"
     [ "$status" -eq 0 ]
@@ -114,6 +116,7 @@ echo "$output"
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
                 let COUNTER=COUNTER+1
                 run pmm-admin remove mysql mysql_$COUNTER
+                run sleep 5
                 echo "$output"
                         [ "$status" -eq 0 ]
                         echo "${output}" | grep "Service removed."
@@ -176,6 +179,7 @@ echo "$output"
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
                 let COUNTER=COUNTER+1
+                run sleep 5
                 run pmm-admin remove mysql mysql_$COUNTER
                 echo "$output"
                         [ "$status" -eq 0 ]
@@ -204,6 +208,7 @@ echo "$output"
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
                 let COUNTER=COUNTER+1
+                run sleep 5
                 run pmm-admin remove mysql mysql_$COUNTER
                 echo "$output"
                         [ "$status" -eq 0 ]
@@ -232,6 +237,7 @@ echo "$output"
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
                 let COUNTER=COUNTER+1
+                run sleep 5
                 run pmm-admin remove mysql mysql_$COUNTER
                 echo "$output"
                         [ "$status" -eq 0 ]
@@ -292,6 +298,7 @@ echo "$output"
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
                 let COUNTER=COUNTER+1
+                run sleep 5
                 run pmm-admin remove mysql mysql_$COUNTER
                 echo "$output"
                         [ "$status" -eq 0 ]
@@ -347,6 +354,7 @@ echo "$output"
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
                 let COUNTER=COUNTER+1
+                run sleep 5
                 run pmm-admin remove mysql mysql_$COUNTER
                 echo "$output"
                         [ "$status" -eq 0 ]
@@ -373,6 +381,7 @@ echo "$output"
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
                 let COUNTER=COUNTER+1
+                run sleep 5
                 run pmm-admin remove mysql mysql_$COUNTER
                 echo "$output"
                         [ "$status" -eq 0 ]
@@ -385,6 +394,7 @@ echo "$output"
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" ) ; do
                 let COUNTER=COUNTER+1
+                run sleep 5
                 run pmm-admin remove mysql mysql_$COUNTER
                 echo "$output"
                         [ "$status" -eq 1 ]
