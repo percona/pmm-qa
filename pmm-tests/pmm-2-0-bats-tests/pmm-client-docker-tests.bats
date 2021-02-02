@@ -32,6 +32,7 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
+run sleep 10
 run docker exec pmm-client pmm-admin remove mysql ps5.7_2
 echo "$output"
     [ "$status" -eq 0 ]
@@ -42,6 +43,7 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
+run sleep 5
 run docker exec pmm-client pmm-admin add mongodb --service-name=mongodb-4.0_2  --host=mongodb --port=27017 --server-url=http://admin:admin@pmm-server/
 echo "$output"
     [ "$status" -eq 0 ]
@@ -53,6 +55,7 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
+run sleep 10
 run docker exec pmm-client pmm-admin remove mongodb mongodb-4.0_2
 echo "$output"
     [ "$status" -eq 0 ]
@@ -63,6 +66,7 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
+run sleep 5
 run docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10_2  --host=postgres-10 --port=5432 --server-url=http://admin:admin@pmm-server/
 echo "$output"
     [ "$status" -eq 0 ]
@@ -74,6 +78,7 @@ echo "$output"
 if [[ $(id -u) -eq 0 ]] ; then
         skip "Skipping this test, because you are running under root"
 fi
+run sleep 10
 run docker exec pmm-client pmm-admin remove postgresql postgres-10_2
 echo "$output"
     [ "$status" -eq 0 ]
