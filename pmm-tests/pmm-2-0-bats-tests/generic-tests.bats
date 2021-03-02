@@ -59,13 +59,6 @@ echo "$output"
     [ "$status" -eq 0 ]
 }
 
-@test "run pmm-admin --version" {
- run pmm-admin --version
- echo "$output"
- 	[ "$status" -eq 0 ]
-	echo "$output" | grep "Version: 2.15.0"
-}
-
 @test "run pmm-admin config without parameters" {
 run pmm-admin config
 echo "$output"
@@ -85,13 +78,6 @@ run pmm-admin summary -h
 echo "$output"
     [ "$status" -eq 0 ]
     [ "${lines[0]}" = "usage: pmm-admin summary [<flags>]" ]
-}
-
-@test "run pmm-admin summary --version" {
-run pmm-admin summary --version
-echo "$output"
-    [ "$status" -eq 0 ]
-    echo "$output" | grep "Version: 2.15.0"
 }
 
 @test "run pmm-admin summary --server-url with http" {
