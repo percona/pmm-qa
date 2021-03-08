@@ -63,7 +63,7 @@ echo "$output"
  run pmm-admin --version
  echo "$output"
  	[ "$status" -eq 0 ]
-	echo "$output" | grep "Version: 2.13.1"
+	echo "$output" | grep "Version: ${PMM_VERSION}"
 }
 
 @test "run pmm-admin config without parameters" {
@@ -91,7 +91,7 @@ echo "$output"
 run pmm-admin summary --version
 echo "$output"
     [ "$status" -eq 0 ]
-    echo "$output" | grep "Version: 2.13.1"
+    echo "$output" | grep "Version: ${PMM_VERSION}"
 }
 
 @test "run pmm-admin summary --server-url with http" {
