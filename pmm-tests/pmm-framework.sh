@@ -1375,6 +1375,19 @@ add_clients(){
       sudo yum install -y ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-dev libssl-dev libsystemd-dev make wget zlib1g-dev
       git clone https://github.com/haproxy/haproxy.git
       cd haproxy
+      sudo yum install -y make gcc-c++ pcre-devel openssl-devel readline-devel systemd-devel zlib-devel
+      curl -R -O http://www.lua.org/ftp/lua-5.3.5.tar.gz
+      tar zxf lua-5.3.5.tar.gz
+      cd lua-5.3.5
+      make linux test
+      sudo make linux install
+      cd ..
+      curl -R -O https://www.openssl.org/source/openssl-1.1.1c.tar.gz
+      tar xvzf openssl-1.1.1c.tar.gz
+      cd openssl-1.1.1c
+      ./config --prefix=/usr/local/openssl-1.1.1c shared
+      make
+      cd ..
       make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 EXTRA_OBJS="contrib/prometheus-exporter/service-prometheus.o"
       sudo make install-bin
       ./haproxy -f ./haproxy.cfg &
