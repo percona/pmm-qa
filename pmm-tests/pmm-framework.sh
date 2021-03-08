@@ -1370,6 +1370,22 @@ add_clients(){
         fi
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
+    elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
+      HAPROXY_PORT=8404
+      sudo yum install -y ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-dev libssl-dev libsystemd-dev make wget zlib1g-dev
+      git clone https://github.com/haproxy/haproxy.git
+      cd haproxy
+      make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 EXTRA_OBJS="contrib/prometheus-exporter/service-prometheus.o"
+      sudo make install-bin
+      ./haproxy -f ./haproxy.cfg &
+      sleep 5
+      for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
+        if [[ ! -z $metrics_mode ]]; then
+          pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy --metrics-mode=$metrics_mode HAPROXY__${IP_ADDRESS}_$j
+        else
+          pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy HAPROXY__${IP_ADDRESS}_$j
+        fi
+      done
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
       check_dbdeployer
       setup_db_tar mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
