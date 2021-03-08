@@ -1379,6 +1379,7 @@ add_clients(){
       sudo make install-bin
       ./haproxy -f ./haproxy.cfg &
       sleep 5
+      cd ../
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         if [[ ! -z $metrics_mode ]]; then
           pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy --metrics-mode=$metrics_mode HAPROXY__${IP_ADDRESS}_$j
