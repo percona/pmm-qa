@@ -271,7 +271,6 @@ if [[ $instance_t == "pxc" ]]; then
   run_pxc_specific_tests
 fi
 
-
 echo "Validate Summary Checks"
 run_pmm_summary
 
