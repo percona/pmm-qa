@@ -1383,7 +1383,7 @@ add_clients(){
       sudo make linux install > /dev/null 2>&1;
       cd ..
       curl -R -O https://www.openssl.org/source/openssl-1.1.1c.tar.gz
-      tar xvzf openssl-1.1.1c.tar.gz
+      tar xvzf openssl-1.1.1c.tar.gz > /dev/null 2>&1;
       cd openssl-1.1.1c
       ./config --prefix=/usr/local/openssl-1.1.1c shared > /dev/null 2>&1;
       make > /dev/null 2>&1;
