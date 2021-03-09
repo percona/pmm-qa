@@ -13,6 +13,20 @@
     echo "${output}" | grep "external-exporter        Unknown"
 }
 
+@test "PMM-T657 - Verify skip-connection-check option while adding HAProxy service" {
+    run pmm-admin add haproxy --listen-port=8455 --skip-connection-check haproxyServiceCLI2
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "HAProxy Service added."
+}
+
+@test "Remove HAProxy with connection check" {
+    run pmm-admin remove haproxy haproxyServiceCLI2
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "Service removed."
+}
+
 @test "PMM-T674 - Verify help for adding HAProxy service help" {
     run pmm-admin add haproxy --help
     echo "$output"
@@ -144,6 +158,13 @@
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "skip-connection-check"
+}
+
+@test "PMM-T656 - Verify adding HAProxy service with wrong port" {
+    run pmm-admin add haproxy --listen-port=8444
+    echo "$output"
+    [ "$status" -eq 1 ]
+    echo "${output}" | grep 'Connection check failed: Get "http://127.0.0.1:8444/metrics": dial tcp 127.0.0.1:8444: connect: connection refused.'
 }
 
 @test "PMM-T705 - Remove HAProxy service" {
