@@ -2167,6 +2167,14 @@ wipe_pmm2_clients () {
         dbdeployer delete all --skip-confirm
     done
   fi
+  if [[ $(pmm-admin list | grep "HAProxy" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "HAProxy" | awk -F" " '{print $2}') ; do
+        echo "$i"
+        HAPROXY_SERVICE_NAME=${i}
+        pmm-admin remove haproxy ${HAPROXY_SERVICE_NAME}
+    done
+  fi
   if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
     IFS=$'\n'
     for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ; do
