@@ -1379,18 +1379,18 @@ add_clients(){
       curl -R -O http://www.lua.org/ftp/lua-5.3.5.tar.gz
       tar zxf lua-5.3.5.tar.gz
       cd lua-5.3.5
-      make linux test
-      sudo make linux install
+      make linux test > /dev/null 2>&1;
+      sudo make linux install > /dev/null 2>&1;
       cd ..
       curl -R -O https://www.openssl.org/source/openssl-1.1.1c.tar.gz
       tar xvzf openssl-1.1.1c.tar.gz
       cd openssl-1.1.1c
-      ./config --prefix=/usr/local/openssl-1.1.1c shared
-      make
+      ./config --prefix=/usr/local/openssl-1.1.1c shared > /dev/null 2>&1;
+      make > /dev/null 2>&1;
       cd ..
-      make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 EXTRA_OBJS="contrib/prometheus-exporter/service-prometheus.o"
+      make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 EXTRA_OBJS="contrib/prometheus-exporter/service-prometheus.o" > /dev/null 2>&1;
       sudo make install-bin
-      ./haproxy -f ./haproxy.cfg &
+      ./haproxy -f /srv/pmm-qa/pmm-tests/haproxy.cfg &
       sleep 5
       cd ../
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
@@ -1547,7 +1547,7 @@ add_clients(){
           mkdir ps_socket_${PS_PORT}
           sudo chmod 777 -R ps_socket_${PS_PORT}
           docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
-          sleep 20
+          sleep 30
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL userstat=1;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'ps';"
