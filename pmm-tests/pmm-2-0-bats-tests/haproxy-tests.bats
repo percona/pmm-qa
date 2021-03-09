@@ -13,6 +13,20 @@
     echo "${output}" | grep "external-exporter        Unknown"
 }
 
+@test "PMM-T657 - Verify skip-connection-check option while adding HAProxy service" {
+    run pmm-admin add haproxy --listen-port=8455 --skip-connection-check haproxyServiceCLI2
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "HAProxy Service added."
+}
+
+@test "Remove HAProxy with connection check" {
+    run pmm-admin remove haproxy haproxyServiceCLI2
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "Service removed."
+}
+
 @test "PMM-T674 - Verify help for adding HAProxy service help" {
     run pmm-admin add haproxy --help
     echo "$output"
