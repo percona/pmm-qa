@@ -146,6 +146,13 @@
     echo "${output}" | grep "skip-connection-check"
 }
 
+@test "PMM-T656 - Verify adding HAProxy service with wrong port" {
+    run pmm-admin add haproxy --listen-port=8444
+    echo "$output"
+    [ "$status" -eq 1 ]
+    echo "${output}" | grep 'Connection check failed: Get "http://127.0.0.1:8444/metrics": dial tcp 127.0.0.1:8444: connect: connection refused.'
+}
+
 @test "PMM-T705 - Remove HAProxy service" {
     run pmm-admin remove haproxy haproxyServiceCLI1
     echo "$output"
