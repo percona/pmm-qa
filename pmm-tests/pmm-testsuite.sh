@@ -74,14 +74,6 @@ function run_ps_specific_tests() {
   fi
 }
 
-function run_haproxy_specific_tests() {
-  if [[ $tap == 1 ]] ; then
-    bats --tap ${DIRNAME}/haproxy-tests.bats
-  else
-    bats ${DIRNAME}/haproxy-tests.bats
-  fi
-}
-
 function run_postgresql_specific_tests() {
   if [[ $tap == 1 ]] ; then
     bats --tap ${DIRNAME}/pgsql-specific-tests.bats
@@ -279,10 +271,6 @@ if [[ $instance_t == "pxc" ]]; then
   run_pxc_specific_tests
 fi
 
-if [[ $instance_t == "haproxy" ]]; then
-  echo "Running haproxy tests"
-  run_haproxy_specific_tests
-fi
 
 echo "Validate Summary Checks"
 run_pmm_summary

@@ -91,6 +91,14 @@ function run_ms_specific_tests() {
   fi
 }
 
+function run_haproxy_specific_tests() {
+  if [[ $tap == 1 ]] ; then
+    bats --tap ${DIRNAME}/haproxy-tests.bats
+  else
+    bats ${DIRNAME}/haproxy-tests.bats
+  fi
+}
+
 function run_postgresql_specific_tests() {
   if [[ $tap == 1 ]] ; then
     bats --tap ${DIRNAME}/pgsql-specific-tests.bats
@@ -240,6 +248,11 @@ if [[ $instance_t == "pxc" ]]; then
   echo "Running Postgre SQL specific tests"
   run_proxysql_tests
   run_docker_env_variable_tests
+fi
+
+if [[ $instance_t == "haproxy" ]]; then
+  echo "Running haproxy tests"
+  run_haproxy_specific_tests
 fi
 
 echo "Finished Checking Testsuite"
