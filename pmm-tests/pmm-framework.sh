@@ -1394,7 +1394,8 @@ add_clients(){
       cd ..
       make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 EXTRA_OBJS="contrib/prometheus-exporter/service-prometheus.o" > /dev/null 2>&1;
       sudo make install-bin
-      ./haproxy -f /srv/pmm-qa/pmm-tests/haproxy.cfg &
+      touch haproxy.log
+      ./haproxy -f /srv/pmm-qa/pmm-tests/haproxy.cfg > haproxy.log 2>&1 &
       sleep 5
       cd ../
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
