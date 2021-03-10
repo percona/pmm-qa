@@ -11,6 +11,7 @@
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "external-exporter        Unknown"
+    echo "${output}" | grep "haproxyServiceCLI1"
 }
 
 @test "PMM-T657 - Verify skip-connection-check option while adding HAProxy service" {
