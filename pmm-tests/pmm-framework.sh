@@ -103,7 +103,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -226,6 +226,10 @@ do
     ;;
     --pxc-version )
     pxc_version="$2"
+    shift 2
+    ;;
+    --haproxy-version )
+    haproxy_version="$2"
     shift 2
     ;;
     --pdpgsql-version )
@@ -1370,6 +1374,37 @@ add_clients(){
         fi
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
+    elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
+      HAPROXY_PORT=8404
+      sudo yum install -y ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-dev libssl-dev libsystemd-dev make wget zlib1g-dev
+      git clone https://github.com/haproxy/haproxy.git
+      cd haproxy
+      sudo yum install -y make gcc-c++ pcre-devel openssl-devel readline-devel systemd-devel zlib-devel
+      curl -R -O http://www.lua.org/ftp/lua-5.3.5.tar.gz
+      tar zxf lua-5.3.5.tar.gz
+      cd lua-5.3.5
+      make linux test > /dev/null 2>&1;
+      sudo make linux install > /dev/null 2>&1;
+      cd ..
+      curl -R -O https://www.openssl.org/source/openssl-1.1.1c.tar.gz
+      tar xvzf openssl-1.1.1c.tar.gz > /dev/null 2>&1;
+      cd openssl-1.1.1c
+      ./config --prefix=/usr/local/openssl-1.1.1c shared > /dev/null 2>&1;
+      make > /dev/null 2>&1;
+      cd ..
+      make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 EXTRA_OBJS="contrib/prometheus-exporter/service-prometheus.o" > /dev/null 2>&1;
+      sudo make install-bin
+      touch haproxy.log
+      ./haproxy -f /srv/pmm-qa/pmm-tests/haproxy.cfg > haproxy.log 2>&1 &
+      sleep 5
+      cd ../
+      for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
+        if [[ ! -z $metrics_mode ]]; then
+          pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy --metrics-mode=$metrics_mode HAPROXY__${IP_ADDRESS}_$j
+        else
+          pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy HAPROXY__${IP_ADDRESS}_$j
+        fi
+      done
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
       check_dbdeployer
       setup_db_tar mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
@@ -1517,7 +1552,7 @@ add_clients(){
           mkdir ps_socket_${PS_PORT}
           sudo chmod 777 -R ps_socket_${PS_PORT}
           docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
-          sleep 20
+          sleep 30
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL userstat=1;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'ps';"
@@ -2135,6 +2170,14 @@ wipe_pmm2_clients () {
         pmm-admin remove mysql ${MYSQL_SERVICE_ID}
         docker stop ${MYSQL_SERVICE_ID} && docker rm ${MYSQL_SERVICE_ID}
         dbdeployer delete all --skip-confirm
+    done
+  fi
+  if [[ $(pmm-admin list | grep "HAProxy" | awk -F" " '{print $2}') ]]; then
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "HAProxy" | awk -F" " '{print $2}') ; do
+        echo "$i"
+        HAPROXY_SERVICE_NAME=${i}
+        pmm-admin remove haproxy ${HAPROXY_SERVICE_NAME}
     done
   fi
   if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
