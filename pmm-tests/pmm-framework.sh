@@ -2496,13 +2496,15 @@ setup_external_service () {
 }
 
 setup_custom_queries () {
+  echo "Creating Custom Queries"
   git clone https://github.com/Percona-Lab/pmm-custom-queries
-  cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
+  sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
   ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | awk '$1 != "ec2-user" { print $2 }' | sudo xargs kill
   sleep 5
 }
 
 setup_custom_prometheus_config () {
+  echo "Creating Custom Prometheus Configuration"
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker cp /srv/pmm-qa/pmm-tests/prometheus.base.yml $PMM_SERVER_DOCKER_CONTAINER:/srv/prometheus/prometheus.base.yml
   docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl restart pmm-managed
