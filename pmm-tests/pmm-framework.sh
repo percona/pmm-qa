@@ -2499,7 +2499,7 @@ setup_custom_queries () {
   echo "Creating Custom Queries"
   git clone https://github.com/Percona-Lab/pmm-custom-queries
   sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
-  ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | awk '$1 != "ec2-user" { print $2 }' | sudo xargs kill
+  ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
   sleep 5
 }
 
