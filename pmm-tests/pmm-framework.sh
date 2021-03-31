@@ -98,12 +98,13 @@ usage () {
   echo " --disable-queryexample         Use this option to setup PS instance with disabled query example"
   echo " --metrics-mode                 Use this option to set Metrics mode for DB exporters"
   echo " --setup-external-service       Use this option to setup Redis as External Service"
+  echo " --setup-with-custom-settings   Use this option to setup Custom Queries on Client and Custom Prometheues Base Config File"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-with-custom-settings,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -331,6 +332,10 @@ do
     --setup-alertmanager )
     shift
     setup_alertmanager=1
+    ;;
+    --setup-with-custom-settings )
+    shift
+    setup_with_custom_settings=1
     ;;
     --delete-package )
     shift
@@ -2490,6 +2495,21 @@ setup_external_service () {
   pmm-admin add external --listen-port=9121 --group="redis"
 }
 
+setup_custom_queries () {
+  echo "Creating Custom Queries"
+  git clone https://github.com/Percona-Lab/pmm-custom-queries
+  sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
+  ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
+  sleep 5
+}
+
+setup_custom_prometheus_config () {
+  echo "Creating Custom Prometheus Configuration"
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker cp /srv/pmm-qa/pmm-tests/prometheus.base.yml $PMM_SERVER_DOCKER_CONTAINER:/srv/prometheus/prometheus.base.yml
+  docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl restart pmm-managed
+}
+
 if [ ! -z $wipe_clients ]; then
   clean_clients
 fi
@@ -2594,6 +2614,11 @@ fi
 
 if [ ! -z $setup_external_service ]; then
   setup_external_service
+fi
+
+if [ ! -z $setup_with_custom_settings ]; then
+  setup_custom_queries
+  setup_custom_prometheus_config
 fi
 
 exit 0
