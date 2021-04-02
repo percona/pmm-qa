@@ -2510,6 +2510,12 @@ setup_custom_prometheus_config () {
   docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl restart pmm-managed
 }
 
+setup_grafana_plugin () {
+  echo "Installing alexanderzobnin-zabbix-app Plugin for Grafana"
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app 
+}
+
 if [ ! -z $wipe_clients ]; then
   clean_clients
 fi
@@ -2619,6 +2625,7 @@ fi
 if [ ! -z $setup_with_custom_settings ]; then
   setup_custom_queries
   setup_custom_prometheus_config
+  setup_grafana_plugin
 fi
 
 exit 0
