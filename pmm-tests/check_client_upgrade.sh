@@ -1,6 +1,6 @@
 #!/bin/sh
 
-#check for packages after upgrade
+#check for exporters and agents after client_upgrade on upgrade job.
 
 pmm-admin status | grep -q Running
 pmm-admin status | grep node_exporter | grep -qv Waiting
