@@ -1382,7 +1382,7 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
       HAPROXY_PORT=8404
       sudo yum install -y ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-dev libssl-dev libsystemd-dev make wget zlib1g-dev
-      git clone https://github.com/haproxy/haproxy.git
+      git clone --depth 1 --branch v2.3.0 https://github.com/haproxy/haproxy.git
       cd haproxy
       sudo yum install -y make gcc-c++ pcre-devel openssl-devel readline-devel systemd-devel zlib-devel
       curl -R -O http://www.lua.org/ftp/lua-5.3.5.tar.gz
