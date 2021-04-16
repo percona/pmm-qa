@@ -1380,29 +1380,15 @@ add_clients(){
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
-      HAPROXY_PORT=8404
+      HAPROXY_PORT=42100
       sudo yum install -y ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-dev libssl-dev libsystemd-dev make wget zlib1g-dev
-      git clone --depth 1 --branch v2.3.0 https://github.com/haproxy/haproxy.git
-      cd haproxy
-      sudo yum install -y make gcc-c++ pcre-devel openssl-devel readline-devel systemd-devel zlib-devel
-      curl -R -O http://www.lua.org/ftp/lua-5.3.5.tar.gz
-      tar zxf lua-5.3.5.tar.gz
-      cd lua-5.3.5
-      make linux test > /dev/null 2>&1;
-      sudo make linux install > /dev/null 2>&1;
-      cd ..
-      curl -R -O https://www.openssl.org/source/openssl-1.1.1c.tar.gz
-      tar xvzf openssl-1.1.1c.tar.gz > /dev/null 2>&1;
-      cd openssl-1.1.1c
-      ./config --prefix=/usr/local/openssl-1.1.1c shared > /dev/null 2>&1;
-      make > /dev/null 2>&1;
-      cd ..
-      make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 EXTRA_OBJS="contrib/prometheus-exporter/service-prometheus.o" > /dev/null 2>&1;
-      sudo make install-bin
-      touch haproxy.log
-      ./haproxy -f /srv/pmm-qa/pmm-tests/haproxy.cfg > haproxy.log 2>&1 &
+      sudo percona-release enable pdpxc-8.0
+      sudo yum install -q -y percona-haproxy
+      haproxy -vv | grep Prometheus
+      sudo cp /srv/pmm-qa/pmm-tests/haproxy.cfg /etc/haproxy/
+      sudo systemctl stop haproxy
+      sudo systemctl start haproxy
       sleep 5
-      cd ../
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         if [[ ! -z $metrics_mode ]]; then
           pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy --metrics-mode=$metrics_mode HAPROXY__${IP_ADDRESS}_$j
