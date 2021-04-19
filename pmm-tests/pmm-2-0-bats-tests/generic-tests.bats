@@ -94,6 +94,11 @@ echo "$output"
     echo "$output" | grep "Version: ${PMM_VERSION}"
 }
 
+@test "run pmm-admin status and strict check version in output" {
+run bash -c "echo $(pmm-admin status | grep Version | awk -F' ' '{print $2}')"
+[ "$output" = "${PMM_VERSION}" ]
+}
+
 @test "run pmm-admin summary --server-url with http" {
 run pmm-admin summary --server-url='http://admin:admin@localhost'
 echo "$output"
