@@ -94,8 +94,13 @@ echo "$output"
     echo "$output" | grep "Version: ${PMM_VERSION}"
 }
 
-@test "run pmm-admin status and strict check version in output" {
-run bash -c "echo $(pmm-admin status | grep Version | awk -F' ' '{print $2}')"
+@test "run pmm-admin status and strict check version admin in output" {
+run bash -c "echo $(pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}')"
+[ "$output" = "${PMM_VERSION}" ]
+}
+
+@test "run pmm-admin status and strict check version agent in output" {
+run bash -c "echo $(pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}')"
 [ "$output" = "${PMM_VERSION}" ]
 }
 
