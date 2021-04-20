@@ -2476,9 +2476,9 @@ setup_external_service () {
   docker run -d -p 6379:6379 redis
   sleep 10
   touch redis.log
-  ./redis_exporter -redis.addr=localhost:6379 > redis.log 2>&1 &
+  ./redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &
   sleep 10
-  pmm-admin add external --listen-port=9121 --group="redis"
+  pmm-admin add external --listen-port=42200 --group="redis"
 }
 
 setup_custom_queries () {
