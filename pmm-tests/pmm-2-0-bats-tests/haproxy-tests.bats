@@ -3,7 +3,7 @@
 ## haproxy
 
 @test "PMM-T655 - Verify adding HAProxy as service" {
-    run pmm-admin add haproxy --listen-port=8404 haproxyServiceCLI1
+    run pmm-admin add haproxy --listen-port=42100 haproxyServiceCLI1
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "HAProxy Service added."

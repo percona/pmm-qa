@@ -98,12 +98,13 @@ usage () {
   echo " --disable-queryexample         Use this option to setup PS instance with disabled query example"
   echo " --metrics-mode                 Use this option to set Metrics mode for DB exporters"
   echo " --setup-external-service       Use this option to setup Redis as External Service"
+  echo " --setup-with-custom-settings   Use this option to setup Custom Queries on Client and Custom Prometheues Base Config File"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-with-custom-settings,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -331,6 +332,10 @@ do
     --setup-alertmanager )
     shift
     setup_alertmanager=1
+    ;;
+    --setup-with-custom-settings )
+    shift
+    setup_with_custom_settings=1
     ;;
     --delete-package )
     shift
@@ -1375,29 +1380,15 @@ add_clients(){
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
-      HAPROXY_PORT=8404
+      HAPROXY_PORT=42100
       sudo yum install -y ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-dev libssl-dev libsystemd-dev make wget zlib1g-dev
-      git clone https://github.com/haproxy/haproxy.git
-      cd haproxy
-      sudo yum install -y make gcc-c++ pcre-devel openssl-devel readline-devel systemd-devel zlib-devel
-      curl -R -O http://www.lua.org/ftp/lua-5.3.5.tar.gz
-      tar zxf lua-5.3.5.tar.gz
-      cd lua-5.3.5
-      make linux test > /dev/null 2>&1;
-      sudo make linux install > /dev/null 2>&1;
-      cd ..
-      curl -R -O https://www.openssl.org/source/openssl-1.1.1c.tar.gz
-      tar xvzf openssl-1.1.1c.tar.gz > /dev/null 2>&1;
-      cd openssl-1.1.1c
-      ./config --prefix=/usr/local/openssl-1.1.1c shared > /dev/null 2>&1;
-      make > /dev/null 2>&1;
-      cd ..
-      make TARGET=linux-glibc USE_LUA=1 USE_OPENSSL=1 USE_PCRE=1 USE_ZLIB=1 USE_SYSTEMD=1 EXTRA_OBJS="contrib/prometheus-exporter/service-prometheus.o" > /dev/null 2>&1;
-      sudo make install-bin
-      touch haproxy.log
-      ./haproxy -f /srv/pmm-qa/pmm-tests/haproxy.cfg > haproxy.log 2>&1 &
+      sudo percona-release enable pdpxc-8.0
+      sudo yum install -q -y percona-haproxy
+      haproxy -vv | grep Prometheus
+      sudo cp /srv/pmm-qa/pmm-tests/haproxy.cfg /etc/haproxy/
+      sudo systemctl stop haproxy
+      sudo systemctl start haproxy
       sleep 5
-      cd ../
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         if [[ ! -z $metrics_mode ]]; then
           pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy --metrics-mode=$metrics_mode HAPROXY__${IP_ADDRESS}_$j
@@ -2394,9 +2385,9 @@ run_workload() {
     for i in $(pmm-admin list | grep "MongoDB" | grep "mongodb_rs" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
         echo "$i"
         export MONGODB_PORT=${i}
-        export TEST_TARGET_QPS=10
-        export TEST_COLLECTION=10
-        export TEST_DB=10
+        export TEST_TARGET_QPS=5
+        export TEST_COLLECTION=5
+        export TEST_DB=5
         touch mongodb_$i.log
         docker run --rm --name mongodb_$i --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
         docker run --rm --name mongodb_$i -d -e MONGODB_PORT=${MONGODB_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_COLLECTION=${TEST_COLLECTION} -e TEST_DB=${TEST_DB} --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
@@ -2485,9 +2476,30 @@ setup_external_service () {
   docker run -d -p 6379:6379 redis
   sleep 10
   touch redis.log
-  ./redis_exporter -redis.addr=localhost:6379 > redis.log 2>&1 &
+  ./redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &
   sleep 10
-  pmm-admin add external --listen-port=9121 --group="redis"
+  pmm-admin add external --listen-port=42200 --group="redis"
+}
+
+setup_custom_queries () {
+  echo "Creating Custom Queries"
+  git clone https://github.com/Percona-Lab/pmm-custom-queries
+  sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
+  ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
+  sleep 5
+}
+
+setup_custom_prometheus_config () {
+  echo "Creating Custom Prometheus Configuration"
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker cp /srv/pmm-qa/pmm-tests/prometheus.base.yml $PMM_SERVER_DOCKER_CONTAINER:/srv/prometheus/prometheus.base.yml
+  docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl restart pmm-managed
+}
+
+setup_grafana_plugin () {
+  echo "Installing alexanderzobnin-zabbix-app Plugin for Grafana"
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app 
 }
 
 if [ ! -z $wipe_clients ]; then
@@ -2594,6 +2606,12 @@ fi
 
 if [ ! -z $setup_external_service ]; then
   setup_external_service
+fi
+
+if [ ! -z $setup_with_custom_settings ]; then
+  setup_custom_queries
+  setup_custom_prometheus_config
+  setup_grafana_plugin
 fi
 
 exit 0

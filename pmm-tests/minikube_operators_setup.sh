@@ -22,8 +22,8 @@ curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster
 | minikube kubectl -- apply -f -
 
 # Install the PSMDB operator
-curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v1.6.0/deploy/bundle.yaml \
+curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v${OPERATOR_VERSION}/deploy/bundle.yaml \
 | minikube kubectl -- apply -f -
-curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v1.6.0/deploy/secrets.yaml \
+curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v${OPERATOR_VERSION}/deploy/secrets.yaml \
 | sed "s/PMM_SERVER_USER:.*$/PMM_SERVER_USER: ${PMM_USER}/g;s/PMM_SERVER_PASSWORD:.*$/PMM_SERVER_PASSWORD: ${PMM_PASS}/g;" \
 | minikube kubectl -- apply -f -

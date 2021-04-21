@@ -94,6 +94,17 @@ echo "$output"
     echo "$output" | grep "Version: ${PMM_VERSION}"
 }
 
+@test "run pmm-admin status and strict check version admin in output" {
+skip "The version number for Feature Build can never be strict matched since packages are downloaded via tarball hence need to skip"
+run bash -c "echo $(pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}')"
+[ "$output" = "${PMM_VERSION}" ]
+}
+
+@test "run pmm-admin status and strict check version agent in output" {
+run bash -c "echo $(pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}')"
+[ "$output" = "${PMM_VERSION}" ]
+}
+
 @test "run pmm-admin summary --server-url with http" {
 run pmm-admin summary --server-url='http://admin:admin@localhost'
 echo "$output"
