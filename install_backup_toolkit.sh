@@ -5,6 +5,6 @@ if [[ \$msql_version == '5.7' ]]; then
 elif [[ \$msql_version == '8.0' ]]; then
     sudo yum install percona-xtrabackup-80  qpress -y
 else
-    echo "ERROR! You have selected version of mysql not supported by backup tools"
+    echo "ERROR! You have selected non supported combination of version MySQL & XtraBackup"
     exit 1
 exit 0
