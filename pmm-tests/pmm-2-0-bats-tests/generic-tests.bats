@@ -101,6 +101,7 @@ run bash -c "echo $(pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}')"
 }
 
 @test "run pmm-admin status and strict check version agent in output" {
+skip "The version number for Feature Build can never be strict matched since packages are downloaded via tarball hence need to skip"
 run bash -c "echo $(pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}')"
 [ "$output" = "${PMM_VERSION}" ]
 }

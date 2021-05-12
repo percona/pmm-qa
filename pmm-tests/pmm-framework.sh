@@ -2502,6 +2502,15 @@ setup_grafana_plugin () {
   docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app 
 }
 
+## Method is called with Client Docker Setup to run on the PXC stage for testsuite, tests are part of docker bats tests
+setup_clickhouse_client () {
+  echo "Setting up ClickHouse Client to Connect to Clickhouse server on PMM-Server"
+  sudo yum install -y yum-utils
+  sudo rpm --import https://repo.clickhouse.tech/CLICKHOUSE-KEY.GPG
+  sudo yum-config-manager --add-repo https://repo.clickhouse.tech/rpm/stable/x86_64
+  sudo yum install -y clickhouse-client
+}
+
 if [ ! -z $wipe_clients ]; then
   clean_clients
 fi
@@ -2602,6 +2611,7 @@ fi
 
 if [ ! -z $setup_pmm_client_docker ]; then
   setup_pmm2_client_docker_image
+  setup_clickhouse_client
 fi
 
 if [ ! -z $setup_external_service ]; then
