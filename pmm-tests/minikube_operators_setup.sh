@@ -15,7 +15,7 @@ PMM_USER_B64="$(echo -n "${PMM_USER}" | base64)";
 PMM_PASS_B64="$(echo -n "${PMM_PASS}" | base64)";
 
 # Install the PXC operator
-curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v${OPERATOR_VERSION}/deploy/bundle.yaml \
+curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/v1.8.0/deploy/bundle.yaml \
 | minikube kubectl -- apply -f -
 
 # Install the PSMDB operator
