@@ -1405,8 +1405,8 @@ add_clients(){
       check_dbdeployer
       echo "Checking if Percona-xtrabackup required"
       if [[ ! -z $install_backup_toolkit ]]; then
-        sudo chmod +x install_backup_toolkit.sh
-        bash ./install_backup_toolkit.sh ${ms_version}
+        sudo chmod +x $SCRIPT_PWD/install_backup_toolkit.sh
+        bash $SCRIPT_PWD/install_backup_toolkit.sh ${ms_version}
       fi
       setup_db_tar mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
       if [ -d "$WORKDIR/mysql" ]; then
@@ -1511,8 +1511,8 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
       echo "Checking if Percona-xtrabackup required"
       if [[ ! -z $install_backup_toolkit ]]; then
-        sudo chmod +x install_backup_toolkit.sh
-        bash ./install_backup_toolkit.sh ${ps_version}
+        sudo chmod +x $SCRIPT_PWD/install_backup_toolkit.sh
+        bash $SCRIPT_PWD/install_backup_toolkit.sh ${ps_version}
       fi
       if [[ ! -z $setup_group_replication ]]; then
         check_dbdeployer
