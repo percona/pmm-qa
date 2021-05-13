@@ -66,11 +66,24 @@ echo "$output"
 	echo "$output" | grep "Version: ${PMM_VERSION}"
 }
 
-@test "run pmm-admin config without parameters" {
+@test "run pmm-admin config without parameters package installation" {
+if $(which pmm-admin | grep -q 'pmm2-client'); then
+    skip "Skipping this test, because pmm2-client is a tarball setup"
+fi
+run sudo pmm-admin config
+echo "$output"
+    [ "$status" -eq 1 ]
+    echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name"
+}
+
+@test "run pmm-admin config without parameters tarball installation" {
+if $(which pmm-admin | grep -qv 'pmm2-client'); then
+    skip "Skipping this test, because pmm2-client is a package installation"
+fi
 run pmm-admin config
 echo "$output"
-	[ "$status" -eq 1 ]
-	echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name"
+    [ "$status" -eq 1 ]
+    echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name"
 }
 
 @test "run pmm-admin summary --help" {
