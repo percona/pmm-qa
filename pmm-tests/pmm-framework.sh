@@ -99,12 +99,13 @@ usage () {
   echo " --metrics-mode                 Use this option to set Metrics mode for DB exporters"
   echo " --setup-external-service       Use this option to setup Redis as External Service"
   echo " --setup-with-custom-settings   Use this option to setup Custom Queries on Client and Custom Prometheues Base Config File"
+  echo " --install-backup-toolkit       Use this option to setup Percona-xtrabackup along with Mysql, Percona-Server Setup"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-with-custom-settings,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-with-custom-settings,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -296,6 +297,10 @@ do
     --dbdeployer )
     shift
     use_dbdeployer=1
+    ;;
+    --install-backup-toolkit )
+    shift
+    install_backup_toolkit=1
     ;;
     --setup-external-service )
     shift
@@ -1398,6 +1403,11 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
       check_dbdeployer
+      echo "Checking if Percona-xtrabackup required"
+      if [[ ! -z $install_backup_toolkit ]]; then
+        sudo chmod +x install_backup_toolkit.sh
+        bash ./install_backup_toolkit.sh ${ms_version}
+      fi
       setup_db_tar mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
       if [ -d "$WORKDIR/mysql" ]; then
         rm -Rf $WORKDIR/mysql;
@@ -1499,6 +1509,11 @@ add_clients(){
         done
       fi
     elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
+      echo "Checking if Percona-xtrabackup required"
+      if [[ ! -z $install_backup_toolkit ]]; then
+        sudo chmod +x install_backup_toolkit.sh
+        bash ./install_backup_toolkit.sh ${ps_version}
+      fi
       if [[ ! -z $setup_group_replication ]]; then
         check_dbdeployer
         setup_db_tar ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
@@ -1726,23 +1741,23 @@ add_clients(){
         if [[ ! -z $metrics_mode ]]; then
           pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
           sleep 2
-	  pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
+          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
         else
           pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
           pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --debug 127.0.0.1:27027
@@ -1773,9 +1788,9 @@ add_clients(){
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
             sleep 2
-	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
             sleep 2
-	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
           else
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
@@ -1785,9 +1800,9 @@ add_clients(){
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_1 --debug
             sleep 2
-	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
             sleep 2
-	    pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
           else
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_1 --debug
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_2 --debug
