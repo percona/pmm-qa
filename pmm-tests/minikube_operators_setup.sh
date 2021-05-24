@@ -19,5 +19,5 @@ curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster
 | minikube kubectl -- apply -f -
 
 # Install the PSMDB operator
-curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v${OPERATOR_VERSION}/deploy/bundle.yaml \
+curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/v1.8.0/deploy/bundle.yaml \
 | minikube kubectl -- apply -f -
