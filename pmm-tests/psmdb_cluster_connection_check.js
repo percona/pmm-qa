@@ -1,4 +1,4 @@
-db.grantRolesToUser( "userAdmin", [ "root" ])
+db.grantRolesToUser( "userAdmin", [ "root" ]);
 db = db.getSiblingDB('tutorialkart2');
 db.customers.insert({ name: "Honey1", age: 25, cars: [ "Audi R8" ] })
 db.customers.insertMany(
@@ -8,4 +8,5 @@ db.customers.insertMany(
         { name: "Honey2", age: 25, cars: [ "Audi R8" ] }
     ]
 )
+printjson(db.getCollectionNames());
 printjson(db.adminCommand( { listDatabases: 1 } ))
