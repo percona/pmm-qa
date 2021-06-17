@@ -1441,7 +1441,7 @@ add_clients(){
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
             mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
-            run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-group-replication-node-$j
+            #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-group-replication-node-$j
             if [[ -z $use_socket ]]; then
               if [[ ! -z $metrics_mode ]]; then
                 pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --metrics-mode=$metrics_mode --replication-set=ms-repl ms-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
@@ -1459,7 +1459,7 @@ add_clients(){
             sleep 20
           done
         else
-          run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
+          #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
           if [[ -z $use_socket ]]; then
             if [[ ! -z $metrics_mode ]]; then
               pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
@@ -1542,7 +1542,7 @@ add_clients(){
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_admin_statements=ON;"
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
-          run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
+          #run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
           if [[ -z $use_socket ]]; then
             if [[ ! -z $metrics_mode ]]; then
               pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --metrics-mode=$metrics_mode --cluster=ps-prod-cluster --replication-set=ps-repl ps-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
@@ -2440,7 +2440,7 @@ setup_replication_ps_pmm2 () {
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_admin_statements=ON;"
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
-    run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
+    #run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
     if [[ -z $use_socket ]]; then
       pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps_group_replication_node_$j --debug 127.0.0.1:$node_port
     else
