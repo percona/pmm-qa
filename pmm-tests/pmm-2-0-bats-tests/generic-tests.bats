@@ -142,7 +142,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[0]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep -E "46|46 files"
+    echo "$output" | grep -E "45|46 files"
 }
 
 @test "run pmm-admin summary --debug" {
