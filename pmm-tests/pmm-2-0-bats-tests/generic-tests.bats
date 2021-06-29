@@ -125,7 +125,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep -E "50|51 files"
+    echo "$output" | grep -E "45|46 files"
 }
 
 @test "run pmm-admin summary --server-url with https and verify warning" {
@@ -142,7 +142,7 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${lines[0]}" | grep ".zip created."
     checkZipFileContents
-    echo "$output" | grep -E "50|51 files"
+    echo "$output" | grep -E "45|46 files"
 }
 
 @test "run pmm-admin summary --debug" {
