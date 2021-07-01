@@ -2462,7 +2462,7 @@ setup_pmm2_client_docker_image () {
   sleep 5
 
   # Start PMM-Server on a different port for testing purpose
-  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 perconalab/pmm-server:dev-latest
+  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 public.ecr.aws/e7j3v3n0/pmm-server:dev-latest
   sleep 20
   echo "PMM Server Dev Latest connected using port 8081"
 

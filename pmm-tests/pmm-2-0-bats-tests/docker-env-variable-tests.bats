@@ -1,7 +1,7 @@
 #!/usr/bin/env bats
 
 if [ -z ${DOCKER_VERSION+x} ]; then
-export DOCKER_VERSION=perconalab/pmm-server:dev-latest
+export DOCKER_VERSION=public.ecr.aws/e7j3v3n0/pmm-server:dev-latest
 
 fi
 
