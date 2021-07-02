@@ -2561,7 +2561,7 @@ setup_mysql_ssl () {
   echo "Setting up mysql ssl"
   export PWD=$(pwd)
   setup_docker_compose
-  git clone --branch PMM-8349 https://github.com/percona/pmm-ui-tests
+  git clone https://github.com/percona/pmm-ui-tests
   pushd pmm-ui-tests
   PWD=$(pwd) docker-compose -f docker-compose-mysql-ssl.yml up -d
   sleep 30
