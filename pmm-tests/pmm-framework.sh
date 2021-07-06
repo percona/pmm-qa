@@ -2567,7 +2567,7 @@ setup_mongodb_ssl () {
   export PWD=$(pwd)
   setup_docker_compose
   if [ ! -d "pmm-ui-tests" ] then
-    git clone https://github.com/percona/pmm-ui-tests
+    git clone --branch PMM-8380 https://github.com/percona/pmm-ui-tests
   fi
   pushd pmm-ui-tests
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mongodb_ssl_4_4.sh
