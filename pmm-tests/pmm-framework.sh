@@ -2566,13 +2566,16 @@ setup_mongodb_ssl () {
   echo "Setting up mongodb ssl"
   export PWD=$(pwd)
   setup_docker_compose
+  sudo mkdir -p /srv/pmm-qa || :
+  pushd /srv/pmm-qa
   if [ ! -d "pmm-ui-tests" ]; then
     git clone https://github.com/percona/pmm-ui-tests
   fi
   pushd pmm-ui-tests
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mongodb_ssl_4_4.sh
   sleep 10
-  pmm-admin add mongodb --host=127.0.0.1 --port=27018 --tls --tls-skip-verify --tls-certificate-key-file=./testdata/mongodb/certs/client.pem --tls-certificate-key-file-password=testdata/mongodb/certs/client.key --tls-ca-file=./testdata/mongodb/certs/ca.crt mongodb_ssl_1
+  popd
+  pmm-admin add mongodb --host=127.0.0.1 --port=27018 --tls --tls-skip-verify --tls-certificate-key-file=/srv/pmm-qa/pmm-ui-tests/testdata/mongodb/certs/client.pem --tls-certificate-key-file-password=/srv/pmm-qa/pmm-ui-tests/testdata/mongodb/certs/client.key --tls-ca-file=/srv/pmm-qa/pmm-ui-tests/testdata/mongodb/certs/ca.crt mongodb_ssl_1
   popd
 }
 
@@ -2580,12 +2583,17 @@ setup_mysql_ssl () {
   echo "Setting up mysql ssl"
   export PWD=$(pwd)
   setup_docker_compose
-  git clone https://github.com/percona/pmm-ui-tests
+  sudo mkdir -p /srv/pmm-qa || :
+  pushd /srv/pmm-qa
+  if [ ! -d "pmm-ui-tests" ]; then
+    git clone https://github.com/percona/pmm-ui-tests
+  fi
   pushd pmm-ui-tests
   PWD=$(pwd) docker-compose -f docker-compose-mysql-ssl.yml up -d
   sleep 30
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mysql_ssl_8_0.sh
-  pmm-admin add mysql --username=root --password=r00tr00t --port=3308 --query-source=perfschema --tls --tls-skip-verify --tls-ca=./testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert=./testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key=./testdata/mysql/ssl-cert-scripts/certs/client-key.pem tls_mysql
+  popd
+  pmm-admin add mysql --username=root --password=r00tr00t --port=3308 --query-source=perfschema --tls --tls-skip-verify --tls-ca=/srv/pmm-qa/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert=/srv/pmm-qa/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key=/srv/pmm-qa/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-key.pem tls_mysql
   popd
 }
 
