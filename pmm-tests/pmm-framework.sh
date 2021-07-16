@@ -2566,10 +2566,10 @@ setup_mongodb_ssl () {
   echo "Setting up mongodb ssl"
   export PWD=$(pwd)
   setup_docker_compose
-  sudo mkdir -p /tmp/ssl || :
+  mkdir -p /tmp/ssl || :
   pushd /tmp/ssl
   if [ ! -d "pmm-ui-tests" ]; then
-    sudo git clone https://github.com/percona/pmm-ui-tests
+    git clone https://github.com/percona/pmm-ui-tests
   fi
   sudo chown -R $USER:$USER pmm-ui-tests
   pushd pmm-ui-tests
