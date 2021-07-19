@@ -272,7 +272,6 @@ fi
 echo "Validate Summary Checks"
 run_pmm_summary
 
-
 # ProxySQL
 # @test "Running ProxySQL tests" {
 #   if [[ $instance_t != "pxc" ]] ; then
