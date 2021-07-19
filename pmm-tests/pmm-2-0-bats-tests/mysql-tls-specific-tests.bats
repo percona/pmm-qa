@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bats
 
 ## Verify mysql with tls 

@@ -74,14 +74,6 @@ function run_ps_specific_tests() {
   fi
 }
 
-function run_mysql_tls_specific_tests() {
-  if [[ $tap == 1 ]] ; then
-    bats --tap ${DIRNAME}/mysql-tls-specific-tests.bats
-  else
-    bats ${DIRNAME}/mysql-tls-specific-tests.bats
-  fi
-}
-
 function run_postgresql_specific_tests() {
   if [[ $tap == 1 ]] ; then
     bats --tap ${DIRNAME}/pgsql-specific-tests.bats
@@ -260,8 +252,6 @@ fi
 if [[ $instance_t == "ps" ]]; then
   echo "Running PS specific tests"
   run_ps_specific_tests
-  echo "Running MySQL TLS tests"
-  run_mysql_tls_specific_tests
 fi
 
 if [[ $instance_t == "pgsql" ]]; then

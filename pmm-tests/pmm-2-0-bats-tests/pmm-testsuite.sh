@@ -181,6 +181,15 @@ function run_docker_env_variable_tests() {
   fi
 }
 
+function run_mysql_tls_specific_tests() {
+  ${DIRNAME}/../pmm-framework.sh --addclient=ps,2 --setup-mysql-ssl 
+  if [[ $tap == 1 ]] ; then
+    bats --tap ${DIRNAME}/mysql-tls-specific-tests.bats
+  else
+    bats ${DIRNAME}/mysql-tls-specific-tests.bats
+  fi
+}
+
 # Additional functions
 function run_create_table() {
   bash ${DIRNAME}/create_table.sh $1 $2 $3
@@ -232,6 +241,8 @@ fi
 if [[ $instance_t == "ps" ]]; then
   echo "Running PS specific tests"
   run_ps_specific_tests
+  echo "Running MySQL TLS tests"
+  run_mysql_tls_specific_tests
 fi
 
 if [[ $instance_t == "ms" ]]; then
