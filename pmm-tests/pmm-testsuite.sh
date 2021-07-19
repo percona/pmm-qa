@@ -262,7 +262,6 @@ fi
 if [[ $instance_t == "ps" ]]; then
   echo "Running PS specific tests"
   run_ps_specific_tests
-  run_mysql_tls_specific_tests
 fi
 
 if [[ $instance_t == "pgsql" ]]; then
@@ -282,6 +281,9 @@ fi
 
 echo "Validate Summary Checks"
 run_pmm_summary
+
+echo "Running MySQL TLS tests"
+run_mysql_tls_specific_tests
 
 # ProxySQL
 # @test "Running ProxySQL tests" {
