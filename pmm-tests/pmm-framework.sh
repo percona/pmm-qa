@@ -2580,10 +2580,12 @@ setup_mysql_ssl () {
   echo "Setting up mysql ssl"
   export PWD=$(pwd)
   setup_docker_compose
-  git clone https://github.com/percona/pmm-ui-tests
+  git clone --single-branch --branch PMM-8339 https://github.com/percona/pmm-ui-tests
   pushd pmm-ui-tests
   PWD=$(pwd) docker-compose -f docker-compose-mysql-ssl.yml up -d
+  PWD=$(pwd) docker-compose -f docker-compose-ami-db-setup.yml up -d
   sleep 30
+  sudo bash -x testdata/db_setup.sh
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mysql_ssl_8_0.sh
   pmm-admin add mysql --username=root --password=r00tr00t --port=3308 --query-source=perfschema --tls --tls-skip-verify --tls-ca=./testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert=./testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key=./testdata/mysql/ssl-cert-scripts/certs/client-key.pem tls_mysql
   popd
