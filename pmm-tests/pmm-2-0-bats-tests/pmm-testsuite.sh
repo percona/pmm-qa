@@ -182,7 +182,7 @@ function run_docker_env_variable_tests() {
 }
 
 function run_mysql_tls_specific_tests() {
-  ${DIRNAME}/../pmm-framework.sh --addclient=ps,2 --setup-mysql-ssl 
+  ${DIRNAME}/../pmm-framework.sh --setup-mysql-ssl 
   if [[ $tap == 1 ]] ; then
     bats --tap ${DIRNAME}/mysql-tls-specific-tests.bats
   else
