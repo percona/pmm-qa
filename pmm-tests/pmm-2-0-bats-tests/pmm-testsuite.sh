@@ -181,6 +181,15 @@ function run_docker_env_variable_tests() {
   fi
 }
 
+function run_mysql_tls_specific_tests() {
+  ${DIRNAME}/../pmm-framework.sh --setup-mysql-ssl 
+  if [[ $tap == 1 ]] ; then
+    bats --tap ${DIRNAME}/mysql-tls-specific-tests.bats
+  else
+    bats ${DIRNAME}/mysql-tls-specific-tests.bats
+  fi
+}
+
 # Additional functions
 function run_create_table() {
   bash ${DIRNAME}/create_table.sh $1 $2 $3
@@ -248,6 +257,8 @@ if [[ $instance_t == "pxc" ]]; then
   echo "Running Postgre SQL specific tests"
   run_proxysql_tests
   run_docker_env_variable_tests
+  echo "Running MySQL TLS tests"
+  run_mysql_tls_specific_tests
 fi
 
 if [[ $instance_t == "haproxy" ]]; then

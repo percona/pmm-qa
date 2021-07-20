@@ -104,13 +104,12 @@ usage () {
   echo " --setup-custom-ami             Use this option to setup AMI instance PMM with custom configuration"
   echo " --setup-mysql-ssl              Use this option to setup mysql 8.x server with SSL option"
   echo " --setup-mongodb-ssl            Use this option to setup official mongodb 4.4 server with ssl"
-  echo " --setup-remote-db              Use this option when running AMI/OVF instances and setting up remote db's on client node"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -410,10 +409,6 @@ do
     --setup-mongodb-ssl )
     shift
     mongodb_ssl_setup=1
-    ;;
-    --setup-remote-db )
-    shift
-    setup_remote_db=1
     ;;
     --compare-query-count )
     shift
@@ -2571,13 +2566,17 @@ setup_mongodb_ssl () {
   echo "Setting up mongodb ssl"
   export PWD=$(pwd)
   setup_docker_compose
+  mkdir -p /tmp/ssl || :
+  pushd /tmp/ssl
   if [ ! -d "pmm-ui-tests" ]; then
     git clone https://github.com/percona/pmm-ui-tests
   fi
+  sudo chown -R $USER:$USER pmm-ui-tests
   pushd pmm-ui-tests
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mongodb_ssl_4_4.sh
   sleep 10
-  pmm-admin add mongodb --host=127.0.0.1 --port=27018 --tls --tls-skip-verify --tls-certificate-key-file=./testdata/mongodb/certs/client.pem --tls-certificate-key-file-password=testdata/mongodb/certs/client.key --tls-ca-file=./testdata/mongodb/certs/ca.crt mongodb_ssl_1
+  popd
+  pmm-admin add mongodb --host=127.0.0.1 --port=27018 --tls --tls-skip-verify --tls-certificate-key-file=/tmp/ssl/pmm-ui-tests/testdata/mongodb/certs/client.pem --tls-certificate-key-file-password=/tmp/ssl/pmm-ui-tests/testdata/mongodb/certs/client.key --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/mongodb/certs/ca.crt mongodb_ssl_1
   popd
 }
 
@@ -2585,27 +2584,21 @@ setup_mysql_ssl () {
   echo "Setting up mysql ssl"
   export PWD=$(pwd)
   setup_docker_compose
-  git clone https://github.com/percona/pmm-ui-tests
+  sudo mkdir -p /tmp/ssl || :
+  pushd /tmp/ssl
+  if [ ! -d "pmm-ui-tests" ]; then
+    sudo git clone https://github.com/percona/pmm-ui-tests
+  fi
+  sudo chown -R $USER:$USER pmm-ui-tests
   pushd pmm-ui-tests
   PWD=$(pwd) docker-compose -f docker-compose-mysql-ssl.yml up -d
+  sleep 30
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mysql_ssl_8_0.sh
-  pmm-admin add mysql --username=root --password=r00tr00t --port=3308 --query-source=perfschema --tls --tls-skip-verify --tls-ca=./testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert=./testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key=./testdata/mysql/ssl-cert-scripts/certs/client-key.pem tls_mysql
+  popd
+  pmm-admin add mysql --username=root --password=r00tr00t --port=3308 --query-source=perfschema --tls --tls-skip-verify --tls-ca=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-key.pem tls_mysql
   popd
 }
 
-setup_remote_db_docker_compose () {
-  echo "Setting up remote db's for AMI/OVF instances"
-  export PWD=$(pwd)
-  setup_docker_compose
-  if [ ! -d "pmm-ui-tests" ]; then
-    git clone --single-branch --branch PMM-8339 https://github.com/percona/pmm-ui-tests
-  fi
-  pushd pmm-ui-tests
-  PWD=$(pwd) docker-compose -f docker-compose-ami-db-setup.yml up -d
-  sleep 30
-  sudo bash -x testdata/db_setup.sh
-  popd
-}
 
 if [ ! -z $wipe_clients ]; then
   clean_clients
@@ -2730,10 +2723,6 @@ fi
 
 if [ ! -z $mysql_ssl_setup ]; then
   setup_mysql_ssl
-fi
-
-if [ ! -z $setup_remote_db ]; then
-  setup_remote_db_docker_compose
 fi
 
 if [ ! -z $mongodb_ssl_setup ]; then

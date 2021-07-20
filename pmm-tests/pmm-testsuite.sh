@@ -244,12 +244,10 @@ else
   echo "Skipping stress test!"
 fi
 
-
 if [[ $instance_t == "mo" ]] ; then
   echo "Running MongoDB specific tests"
   run_mongodb_specific_tests
 fi
-
 
 if [[ $instance_t == "ps" ]]; then
   echo "Running PS specific tests"
