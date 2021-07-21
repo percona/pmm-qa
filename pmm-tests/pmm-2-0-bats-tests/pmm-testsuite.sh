@@ -257,8 +257,8 @@ if [[ $instance_t == "pxc" ]]; then
   echo "Running Postgre SQL specific tests"
   run_proxysql_tests
   run_docker_env_variable_tests
-  #echo "Running MySQL TLS tests"
-  #run_mysql_tls_specific_tests
+  echo "Running MySQL TLS tests"
+  run_mysql_tls_specific_tests
 fi
 
 if [[ $instance_t == "haproxy" ]]; then
