@@ -2587,12 +2587,11 @@ setup_mongodb_ssl () {
 
 setup_mysql_ssl () {
   echo "Setting up mysql ssl"
-  export PWD=$(pwd)
   setup_docker_compose
-  sudo mkdir -p /tmp/ssl || :
+  mkdir -p /tmp/ssl || :
   pushd /tmp/ssl
   if [ ! -d "pmm-ui-tests" ]; then
-    sudo git clone https://github.com/percona/pmm-ui-tests
+    git clone https://github.com/percona/pmm-ui-tests
   fi
   sudo chown -R $USER:$USER pmm-ui-tests
   pushd pmm-ui-tests
@@ -2606,15 +2605,18 @@ setup_mysql_ssl () {
 
 setup_remote_db_docker_compose () {
   echo "Setting up remote db's for AMI/OVF instances"
-  export PWD=$(pwd)
   setup_docker_compose
+  mkdir -p /tmp/remote_db || :
+  pushd /tmp/remote_db
   if [ ! -d "pmm-ui-tests" ]; then
-    git clone --single-branch --branch PMM-8339 https://github.com/percona/pmm-ui-tests
+    git clone https://github.com/percona/pmm-ui-tests
   fi
   pushd pmm-ui-tests
   PWD=$(pwd) docker-compose -f docker-compose-ami-db-setup.yml up -d
   sleep 30
   sudo bash -x testdata/db_setup.sh
+  popd
+  echo "Remote Instances Setup for OVF/AMI compose file present at /tmp/remote_db"
   popd
 }
 
