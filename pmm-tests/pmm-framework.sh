@@ -2224,6 +2224,9 @@ wipe_pmm2_clients () {
         docker stop ${MONGODB_SERVICE_ID} && docker rm ${MONGODB_SERVICE_ID}
     done
   fi
+  docker image prune -af
+  docker container prune -f
+  docker volume prune -f
 }
 
 sysbench_prepare(){
