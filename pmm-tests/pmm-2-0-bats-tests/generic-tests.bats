@@ -391,7 +391,7 @@ function teardown() {
 
 check_postgres_encoding() {
     container_name="$(docker ps -f name=-server --format "{{ .Names }}")"
-    docker exec $container_name su -l postgres -c "psql -c 'SHOW SERVER_ENCODING'" | grep UTF8
+    docker exec $container_name su -l postgres -c "psql pmm-managed -c 'SHOW SERVER_ENCODING'" | grep UTF8
 }
 
 @test "Check that default postgres encoding is UTF8" {
