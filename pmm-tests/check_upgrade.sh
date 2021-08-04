@@ -2,6 +2,7 @@
 
 #check for packages after upgrade
 if [ $3 == "ami" ]; then
+        echo $(rpm -qa)
 	rpm -qa | grep percona-qan-api2-$1
 	rpm -qa | grep percona-dashboards-$1
 	rpm -qa | grep pmm-update-$1
@@ -16,6 +17,7 @@ if [ $3 == "ami" ]; then
 else
 	export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
 	echo $PMM_SERVER_DOCKER_CONTAINER
+	echo $(docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa)
 	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep percona-qan-api2-$1
 	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep percona-dashboards-$1
 	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-update-$1
