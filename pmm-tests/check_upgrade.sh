@@ -2,7 +2,7 @@
 
 #check for packages after upgrade
 if [ $3 == "ami" ]; then
-        echo $(rpm -qa)
+	echo $(rpm -qa)
 	rpm -qa | grep percona-qan-api2-$1
 	rpm -qa | grep percona-dashboards-$1
 	rpm -qa | grep pmm-update-$1
