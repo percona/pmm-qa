@@ -2601,6 +2601,7 @@ setup_mysql_ssl () {
   PWD=$(pwd) docker-compose -f docker-compose-mysql-ssl.yml up -d
   sleep 30
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mysql_ssl_8_0.sh
+  docker network connect pmm2-ui-tests-temp_pmm-network mysql_ssl
   popd
   pmm-admin add mysql --username=root --password=r00tr00t --port=3308 --query-source=perfschema --tls --tls-skip-verify --tls-ca=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-key.pem tls_mysql
   popd
