@@ -190,6 +190,14 @@ function run_mysql_tls_specific_tests() {
   fi
 }
 
+function run_version_json_unregister_tests() {
+  if [[ $tap == 1 ]] ; then
+    bats --tap ${DIRNAME}/pmm-admin-unregister-tests.bats
+  else
+    bats ${DIRNAME}/pmm-admin-unregister-tests.bats
+  fi
+}
+
 # Additional functions
 function run_create_table() {
   bash ${DIRNAME}/create_table.sh $1 $2 $3
@@ -222,11 +230,10 @@ function run_populate_table() {
 echo "Wipe clients"
 pmm_wipe_clients
 
-echo "Adding clients"
-pmm_framework_add_clients $instance_t $instance_c $version $pmm_server_ip
-
-echo "Running generic tests"
-run_generic_tests
+echo "Adding clients for DB's"
+if [[ $instance_t != "generic" ]]; then
+  pmm_framework_add_clients $instance_t $instance_c $version $pmm_server_ip
+fi
 
 if [[ $instance_t == "mo" ]] ; then
   echo "Running MongoDB specific tests"
@@ -259,6 +266,13 @@ if [[ $instance_t == "pxc" ]]; then
   run_docker_env_variable_tests
   echo "Running MySQL TLS tests"
   run_mysql_tls_specific_tests
+fi
+
+if [[ $instance_t == "generic" ]]; then
+  echo "Running generic tests"
+  run_generic_tests
+  echo "Running Version and Unregister Command Tests"
+  run_version_json_unregister_tests
 fi
 
 if [[ $instance_t == "haproxy" ]]; then
