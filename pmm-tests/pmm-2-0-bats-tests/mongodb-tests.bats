@@ -138,7 +138,10 @@ echo "$output"
     done
 }
 
-@test "PMM-T157 PMM-T161 Adding MongoDB with specified socket" {
+@test "PMM-T157 PMM-T161 Adding MongoDB with specified socket for psmdb" {
+    if [[ "$instance_t" == "modb" ]] ; then
+        skip "Skipping this test, because you are running for official Mongodb"
+    fi
     COUNTER=0
     IFS=$'\n'
     for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
@@ -153,6 +156,26 @@ echo "$output"
         echo "${lines[0]}" | grep "MongoDB Service added"
     done
 }
+
+@test "PMM-T157 PMM-T161 Adding MongoDB with specified socket for modb" {
+    if [[ "$instance_t" == "mo" ]] ; then
+        skip "Skipping this test, because you are running for Percona Distribution Mongodb"
+    fi
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
+        echo "$i"
+        let COUNTER=COUNTER+1
+        MONGO_IP_PORT=${i}
+        export MONGO_IP=$(cut -d':' -f1 <<< $MONGO_IP_PORT)
+        export MONGO_PORT=$(cut -d':' -f2 <<< $MONGO_IP_PORT)
+        run pmm-admin add mongodb --socket=/tmp/modb_${MONGO_PORT}/mongodb-27017.sock mongo_inst_${COUNTER}
+        echo "$output"
+        [ "$status" -eq 0 ]
+        echo "${lines[0]}" | grep "MongoDB Service added"
+    done
+}
+
 
 @test "run pmm-admin remove mongodb" {
 	COUNTER=0
