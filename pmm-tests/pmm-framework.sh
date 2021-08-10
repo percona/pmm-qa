@@ -1702,6 +1702,7 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MODB_PORT mongodb
         MODB_PORT_NEXT=$((MODB_PORT+2))
+        sudo rm -r /tmp/
         docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/:/tmp/ -e UMASK=0777 --name mongodb_node_$j mongo:${modb_version}
         sleep 20
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
