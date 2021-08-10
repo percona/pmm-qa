@@ -1699,11 +1699,13 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "modb" && ! -z $PMM2 ]]; then
       MODB_PORT=27017
       docker pull mongo:${modb_version}
+      chown -R $USER:$USER /tmp/ > /dev/null 2>&1
+      chmod -R go+w /tmp/ > /dev/null 2>&1
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MODB_PORT mongodb
         MODB_PORT_NEXT=$((MODB_PORT+2))
-        sudo rm -r /tmp/
-        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/:/tmp/ -e UMASK=0777 --name mongodb_node_$j mongo:${modb_version}
+        mkdir -p /tmp/modb_${MODB_PORT}
+        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/modb_${MODB_PORT}/:/tmp/ -e UMASK=0777 --name mongodb_node_$j mongo:${modb_version}
         sleep 20
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
         if [[ -z $use_socket ]]; then
@@ -1723,15 +1725,15 @@ add_clients(){
         else
           if [ $(( ${j} % 2 )) -eq 0 ]; then
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-prod mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-prod mongodb_node_$j --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             fi
           else
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --metrics-mode=$metrics_mode --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --metrics-mode=$metrics_mode --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             fi
           fi
         fi
