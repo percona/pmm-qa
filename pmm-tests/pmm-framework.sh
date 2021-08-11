@@ -1699,12 +1699,12 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "modb" && ! -z $PMM2 ]]; then
       MODB_PORT=27017
       docker pull mongo:${modb_version}
-      chown -R $USER:$USER /tmp/ > /dev/null 2>&1
-      chmod -R go+w /tmp/ > /dev/null 2>&1
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MODB_PORT mongodb
         MODB_PORT_NEXT=$((MODB_PORT+2))
         mkdir -p /tmp/modb_${MODB_PORT}
+        chown -R $USER:$USER /tmp/ > /dev/null 2>&1
+        chmod -R go+w /tmp/ > /dev/null 2>&1
         docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/modb_${MODB_PORT}/:/tmp/ -e UMASK=0777 --name mongodb_node_$j mongo:${modb_version}
         sleep 20
         docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
