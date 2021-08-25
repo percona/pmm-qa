@@ -26,11 +26,11 @@ if [ "$#" -lt 4 ]; then
 fi
 
 STR=$1
-IFS=’:’ read -ra pmm_serer_with_port <<< "$STR" 
+IFS=’:’ read -ra pmm_server_with_port <<< "$STR" 
 MSTR=$3
 IFS=’:’ read -ra db_server_with_port <<< "$MSTR"
-pmm_server=${pmm_serer_with_port[0]}
-pmm_server_port=${pmm_serer_with_port[1]}
+pmm_server=${pmm_server_with_port[0]}
+pmm_server_port=${pmm_server_with_port[1]}
 db_server=${db_server_with_port[0]}
 db_server_port=${db_server_with_port[1]}
 db_user=$4
