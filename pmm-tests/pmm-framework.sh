@@ -2402,6 +2402,14 @@ run_workload() {
         export TEST_QUERIES=100
         touch ms_${i}.log
         sleep 5
+        ## Make sure dbdeployer_instances are up
+        export sandbox=$(dbdeployer sandboxes --header | awk -F'[' '{print $1}' | awk -F' ' '{print $1}' | grep msb)
+	if [[ -f ~/sandboxes/${sandbox}/start_all ]]; then
+          bash ~/sandboxes/${sandbox}/start_all 
+        fi 
+        if [[ -f ~/sandboxes/${sandbox}/start ]]; then 
+          bash ~/sandboxes/${sandbox}/start 
+        fi
         php $SCRIPT_PWD/schema_table_query.php > ms_${i}.log 2>&1 &
         PHP_PID=$!
         echo $PHP_PID
