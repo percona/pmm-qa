@@ -1445,7 +1445,7 @@ add_clients(){
           dbdeployer deploy --topology=group replication $VERSION_ACCURATE --single-primary --sandbox-binary $WORKDIR/mysql --force
           node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
         else
-          dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
+          dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force --my-cnf-options="skip_name_resolve=1"
           node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
           mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
