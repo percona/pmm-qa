@@ -2322,10 +2322,10 @@ check_dbdeployer(){
 }
 
 install_dbdeployer(){
-  wget https://github.com/datacharmer/dbdeployer/releases/download/v1.45.0/dbdeployer-1.45.0.linux.tar.gz
-  tar -xzf dbdeployer-1.45.0.linux.tar.gz
-  chmod +x dbdeployer-1.45.0.linux
-  sudo mv dbdeployer-1.45.0.linux /usr/local/bin/dbdeployer
+  wget https://github.com/datacharmer/dbdeployer/releases/download/v1.62.0/dbdeployer-1.62.0.linux.tar.gz
+  tar -xzf dbdeployer-1.62.0.linux.tar.gz
+  chmod +x dbdeployer-1.62.0.linux
+  sudo mv dbdeployer-1.62.0.linux /usr/local/bin/dbdeployer
 }
 
 setup_alertmanager() {
