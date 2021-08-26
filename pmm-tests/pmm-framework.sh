@@ -2398,10 +2398,15 @@ run_workload() {
         export MYSQL_PASSWORD=msandbox
         export MYSQL_USER=msandbox
         export MYSQL_DATABASE=mysql
-        export TEST_TARGET_QPS=1000
+        export TEST_TARGET_QPS=100
         export TEST_QUERIES=100
         touch ms_${i}.log
         sleep 5
+        php $SCRIPT_PWD/schema_table_query.php > ms_${i}.log 2>&1 &
+        PHP_PID=$!
+        echo $PHP_PID
+        jobs -l
+        echo "Load Triggered check log"
         ## Make sure dbdeployer_instances are up
         export sandbox=$(dbdeployer sandboxes --header | awk -F'[' '{print $1}' | awk -F' ' '{print $1}' | grep msb)
 	if [[ -f ~/sandboxes/${sandbox}/start_all ]]; then
@@ -2410,11 +2415,6 @@ run_workload() {
         if [[ -f ~/sandboxes/${sandbox}/start ]]; then 
           bash ~/sandboxes/${sandbox}/start 
         fi
-        php $SCRIPT_PWD/schema_table_query.php > ms_${i}.log 2>&1 &
-        PHP_PID=$!
-        echo $PHP_PID
-        jobs -l
-        echo "Load Triggered check log"
     done
   fi
   if [[ $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ]]; then
