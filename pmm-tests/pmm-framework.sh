@@ -104,13 +104,14 @@ usage () {
   echo " --setup-custom-ami             Use this option to setup AMI instance PMM with custom configuration"
   echo " --setup-mysql-ssl              Use this option to setup mysql 8.x server with SSL option"
   echo " --setup-mongodb-ssl            Use this option to setup official mongodb 4.4 server with ssl"
+  echo " --setup-postgres-ssl           Use this option to setup official Postgresql 13 with SSL"
   echo " --setup-remote-db              Use this option when running AMI/OVF instances and setting up remote db's on client node"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -410,6 +411,10 @@ do
     --setup-mongodb-ssl )
     shift
     mongodb_ssl_setup=1
+    ;;
+    --setup-postgres-ssl )
+    shift
+    postgres_ssl_setup=1
     ;;
     --setup-remote-db )
     shift
@@ -2322,10 +2327,10 @@ check_dbdeployer(){
 }
 
 install_dbdeployer(){
-  wget https://github.com/datacharmer/dbdeployer/releases/download/v1.45.0/dbdeployer-1.45.0.linux.tar.gz
-  tar -xzf dbdeployer-1.45.0.linux.tar.gz
-  chmod +x dbdeployer-1.45.0.linux
-  sudo mv dbdeployer-1.45.0.linux /usr/local/bin/dbdeployer
+  wget https://github.com/datacharmer/dbdeployer/releases/download/v1.62.0/dbdeployer-1.62.0.linux.tar.gz
+  tar -xzf dbdeployer-1.62.0.linux.tar.gz
+  chmod +x dbdeployer-1.62.0.linux
+  sudo mv dbdeployer-1.62.0.linux /usr/local/bin/dbdeployer
 }
 
 setup_alertmanager() {
@@ -2386,23 +2391,6 @@ run_workload() {
         touch md_${i}.log
         sleep 5
         php $SCRIPT_PWD/schema_table_query.php > md_${i}.log 2>&1 &
-        PHP_PID=$!
-        echo $PHP_PID
-        jobs -l
-        echo "Load Triggered check log"
-    done
-    for i in $(pmm-admin list | grep "MySQL" | grep "ms" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
-        echo "$i"
-        export MYSQL_PORT=${i}
-        export MYSQL_HOST=127.0.0.1
-        export MYSQL_PASSWORD=msandbox
-        export MYSQL_USER=msandbox
-        export MYSQL_DATABASE=mysql
-        export TEST_TARGET_QPS=1000
-        export TEST_QUERIES=100
-        touch ms_${i}.log
-        sleep 5
-        php $SCRIPT_PWD/schema_table_query.php > ms_${i}.log 2>&1 &
         PHP_PID=$!
         echo $PHP_PID
         jobs -l
@@ -2606,6 +2594,23 @@ setup_mysql_ssl () {
   popd
 }
 
+setup_postgres_ssl () {
+  echo "Setting up postgres ssl"
+  setup_docker_compose
+  mkdir -p /tmp/ssl || :
+  pushd /tmp/ssl
+  if [ ! -d "pmm-ui-tests" ]; then
+    git clone -b PMM-8625 https://github.com/percona/pmm-ui-tests
+  fi
+  sudo chown -R $USER:$USER pmm-ui-tests
+  pushd pmm-ui-tests
+  bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_postgres_ssl_13.sh
+  sleep 30
+  popd
+  pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
+  popd
+}
+
 setup_remote_db_docker_compose () {
   echo "Setting up remote db's for AMI/OVF instances"
   setup_docker_compose
@@ -2756,4 +2761,9 @@ fi
 if [ ! -z $mongodb_ssl_setup ]; then
   setup_mongodb_ssl
 fi
+
+if [ ! -z $postgres_ssl_setup ]; then
+  setup_postgres_ssl
+fi
+
 exit 0
