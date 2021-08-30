@@ -1538,6 +1538,10 @@ add_clients(){
           sleep 20
         done
       fi
+
+      ### Need this to handle crash for mysql server on aws instance, workaround fix
+      export sandboxes_name=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      bash -x /srv/pmm-qa/pmm-tests/dbdeployer_setup_status_check.sh ${sandboxes_name} > ${sandboxes_name}.log 2>&1 &
     elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
       echo "Checking if Percona-xtrabackup required"
       if [[ ! -z $install_backup_toolkit ]]; then
