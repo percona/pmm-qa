@@ -1538,6 +1538,10 @@ add_clients(){
           sleep 20
         done
       fi
+
+      ### Need this to handle crash for mysql server on aws instance, workaround fix
+      export sandboxes_name=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      sh /srv/pmm-qa/pmm-tests/dbdeployer_setup_status_check.sh ${sandboxes_name} > ${sandboxes_name}.log 2>&1 &
     elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
       echo "Checking if Percona-xtrabackup required"
       if [[ ! -z $install_backup_toolkit ]]; then
@@ -2610,7 +2614,7 @@ setup_postgres_ssl () {
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_postgres_ssl_13.sh
   sleep 30
   popd
-  pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
+  pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
   popd
 }
 
