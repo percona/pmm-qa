@@ -2614,7 +2614,7 @@ setup_postgres_ssl () {
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_postgres_ssl_13.sh
   sleep 30
   popd
-  pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
+  pmm-admin add postgresql --port=5439 --host=192.168.0.1 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
   popd
 }
 
