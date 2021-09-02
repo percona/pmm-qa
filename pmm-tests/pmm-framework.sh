@@ -2516,13 +2516,14 @@ setup_external_service () {
   touch redis.log
   ./redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &
   sleep 10
-  pmm-admin add external --listen-port=42200 --group="redis"
+  pmm-admin add external --listen-port=42200 --group="redis" --service-name="redis_external"
 }
 
 setup_custom_queries () {
   echo "Creating Custom Queries"
   git clone https://github.com/Percona-Lab/pmm-custom-queries
   sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
+  sudo cp pmm-custom-queries/postgresql/*.yaml /usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution/
   #ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
   sleep 5
   echo "Setup for Custom Queries Completed"
@@ -2616,6 +2617,7 @@ setup_postgres_ssl () {
   popd
   pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
   popd
+  docker logs postgres_ssl
 }
 
 setup_remote_db_docker_compose () {
