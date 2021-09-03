@@ -2604,7 +2604,7 @@ setup_postgres_ssl () {
   mkdir -p /tmp/ssl || :
   pushd /tmp/ssl
   if [ ! -d "pmm-ui-tests" ]; then
-    git clone https://github.com/percona/pmm-ui-tests
+    git clone --branch PMM-8625 https://github.com/percona/pmm-ui-tests
   fi
   sudo chown -R $USER:$USER pmm-ui-tests
   pushd pmm-ui-tests
