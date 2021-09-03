@@ -1369,11 +1369,8 @@ add_clients(){
       docker pull postgres:${pgsql_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
-        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
+        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
         sleep 20
-        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
-        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'ALTER SYSTEM SET track_io_timing=ON;'
-        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
@@ -1394,9 +1391,8 @@ add_clients(){
       docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         check_port $PDPGSQL_PORT postgres
-        docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
+        docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
         sleep 20
-        docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
         docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
         docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
@@ -2759,6 +2755,10 @@ if [ ! -z $setup_custom_ami ]; then
   setup_custom_ami_instance
 fi
 
+if [ ! -z $postgres_ssl_setup ]; then
+  setup_postgres_ssl
+fi
+
 if [ ! -z $mysql_ssl_setup ]; then
   setup_mysql_ssl
 fi
@@ -2771,8 +2771,5 @@ if [ ! -z $mongodb_ssl_setup ]; then
   setup_mongodb_ssl
 fi
 
-if [ ! -z $postgres_ssl_setup ]; then
-  setup_postgres_ssl
-fi
 
 exit 0
