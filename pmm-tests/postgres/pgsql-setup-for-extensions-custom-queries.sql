@@ -1,8 +1,6 @@
 create extension pg_stat_statements;
 ALTER SYSTEM SET track_io_timing=ON;
 SELECT pg_reload_conf();
-
-### Sample sql for postgresql to get custom queries
 create table dummy_table(name varchar(20),address text,age int);
 insert into dummy_table values('XYZ','location-A',25);
 insert into dummy_table values('ABC','location-B',35);
