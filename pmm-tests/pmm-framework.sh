@@ -33,7 +33,7 @@ usage () {
   echo "Options:"
   echo " --setup                        This will setup and configure a PMM server"
   echo " --dev                          When this option is specified, PMM framework will use the latest PMM development version. Otherwise, the latest 1.x version is used"
-  echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
+  echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)"
   echo " --pmm2                         When this option is specified, PMM framework will use specified PMM 2.x development version. Must be used with pmm-server-version option"
   echo " --skip-docker-setup            Pass this parameter if Docker Setup for PMM2-Server is not needed, Only Pmm2-client needs to be installed"
   echo " --is-bats-run                  Change Bats run option, set to 1 if not user interaction required"
@@ -106,6 +106,8 @@ usage () {
   echo " --setup-mongodb-ssl            Use this option to setup official mongodb 4.4 server with ssl"
   echo " --setup-postgres-ssl           Use this option to setup official Postgresql 13 with SSL"
   echo " --setup-remote-db              Use this option when running AMI/OVF instances and setting up remote db's on client node"
+  echo " --setup-pbm-for-client         Use this option to setup lates PBM on client node"
+  echo " --mongo_replica_for_backup     Use this option to setup MongoDB Replica Set and PBM for each replica member on client node"
 }
 
 # Check if we have a functional getopt(1)
@@ -420,6 +422,14 @@ do
     shift
     setup_remote_db=1
     ;;
+    --setup-pbm-for-client )
+    shift
+    $pbm_client_setup=1
+    ;;
+    --mongo_replica_for_backup )
+    shift
+    $mongo_replica_for_backup=1
+    ;;
     --compare-query-count )
     shift
     compare_query_count=1
@@ -474,7 +484,7 @@ mongo_sysbench(){
     exit 1
   fi
   wget https://raw.githubusercontent.com/Percona-Lab/sysbench-mongodb-lua/master/oltp-mongo.lua
-  PORT=$(sudo pmm-admin list  | awk -F '[: ]+' '/mongodb:metrics/{print $7}'| head -n1) 
+  PORT=$(sudo pmm-admin list  | awk -F '[: ]+' '/mongodb:metrics/{print $7}'| head -n1)
   echo "PORT "$PORT
   sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=1000000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=${PORT}  --rand-type=pareto prepare > $WORKDIR/logs/mongo_sysbench_prepare.txt 2>&1 &
   sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=1000000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=${PORT} --time=1200 --report-interval=1 --rand-type=pareto run > $WORKDIR/logs/mongo_sysbench_run.txt 2>&1 &
@@ -630,7 +640,7 @@ setup(){
     IS_SSL="No"
   fi
 
-  
+
   if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
     echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
     exit 1
@@ -773,7 +783,7 @@ setup(){
     else
       if [ ! -z $PMM2 ]; then
         install_client
-      else  
+      else
       if [ ! -z $dev ]; then
         if [  -z $link_client]; then
          PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
@@ -1665,7 +1675,7 @@ add_clients(){
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL long_query_time=0;"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log_file='/var/log/md_${j}_slowlog.log';"
-        else  
+        else
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE 'statement/%';"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%statements%';"
         fi
@@ -1749,14 +1759,14 @@ add_clients(){
       sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
       sudo chmod +x mongo_startup.sh
       echo ${BASEDIR}
-      
+
       ##Missing Library for 4.4
       if [ -f /usr/lib64/liblzma.so.5.0.99 ]; then
         sudo ln -s /usr/lib64/liblzma.so.5.0.99 /usr/lib64/liblzma.so.0
       else
         sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
       fi
-      
+
       if [[ "$with_sharding" == "1" ]]; then
         if [ "$mo_version" == "3.6" ]; then
           bash ./mongo_startup.sh -s -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
@@ -2081,15 +2091,15 @@ clean_clients(){
       echo -e "Removing all local pmm client instances"
       sudo pmm-admin remove --all 2&>/dev/null
     fi
- else 
+ else
     for i in $(pmm-admin list | grep -E "MySQL" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove mysql $i
-    
+
     done
     for i in $(pmm-admin list | grep -E "MongoDB" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove mongodb $i
     done
-     
+
     for i in $(pmm-admin list | grep -E "PostgreSQL" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove postgresql $i
     done
@@ -2102,7 +2112,7 @@ clean_clients(){
     for i in $(docker ps -f name=ps -f name=PGS -f name=mongo -q) ; do
       docker rm -f $i
     done
-    dbdeployer delete all --skip-confirm 
+    dbdeployer delete all --skip-confirm
  fi
    #Kill mongodb processes
     sudo killall mongod 2> /dev/null
@@ -2535,7 +2545,7 @@ setup_custom_prometheus_config () {
 setup_grafana_plugin () {
   echo "Installing alexanderzobnin-zabbix-app Plugin for Grafana"
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
-  docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app 
+  docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app
 }
 
 setup_custom_ami_instance() {
@@ -2633,6 +2643,25 @@ setup_remote_db_docker_compose () {
   popd
 }
 
+setup_mongo_replica_for_backup() {
+  echo "Setting up MongoDB replica set with PBM inside"
+  setup_docker_compose
+  mkdir -p /tmp/mongodb_backup_replica || :
+  pushd /tmp/mongodb_backup_replica
+  if [ ! -d "pmm-ui-tests" ]; then
+    git clone https://github.com/percona/pmm-ui-tests
+  fi
+  pushd pmm-ui-tests
+  bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
+  popd
+  popd
+}
+
+setup_pbm_for_client() {
+  echo "Setting up percona-backup-mongodb for Client instance"
+  percona-release enable pbm release && yum -y install percona-backup-mongodb
+  pbm-agent --help
+}
 
 if [ ! -z $wipe_clients ]; then
   clean_clients
@@ -2769,6 +2798,14 @@ fi
 
 if [ ! -z $mongodb_ssl_setup ]; then
   setup_mongodb_ssl
+fi
+
+if [ ! -z $pbm_client_setup ]; then
+  setup_pbm_for_client
+fi
+
+if [ ! -z $mongo_replica_for_backup ]; then
+  setup_mongo_replica_for_backup
 fi
 
 
