@@ -422,10 +422,6 @@ do
     shift
     setup_remote_db=1
     ;;
-    --setup-pbm-for-client )
-    shift
-    $pbm_client_setup=1
-    ;;
     --mongo_replica_for_backup )
     shift
     $mongo_replica_for_backup=1
@@ -2644,7 +2640,8 @@ setup_remote_db_docker_compose () {
 }
 
 setup_mongo_replica_for_backup() {
-  echo "Setting up MongoDB replica set with PBM inside"
+  echo "Setting up MongoDB replica set with PBM"
+  sudo percona-release enable pbm release && yum -y install percona-backup-mongodb
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
@@ -2655,12 +2652,6 @@ setup_mongo_replica_for_backup() {
   bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
   popd
   popd
-}
-
-setup_pbm_for_client() {
-  echo "Setting up percona-backup-mongodb for Client instance"
-  percona-release enable pbm release && yum -y install percona-backup-mongodb
-  pbm-agent --help
 }
 
 if [ ! -z $wipe_clients ]; then
@@ -2798,10 +2789,6 @@ fi
 
 if [ ! -z $mongodb_ssl_setup ]; then
   setup_mongodb_ssl
-fi
-
-if [ ! -z $pbm_client_setup ]; then
-  setup_pbm_for_client
 fi
 
 if [ ! -z $mongo_replica_for_backup ]; then
