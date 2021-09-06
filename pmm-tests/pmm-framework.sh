@@ -106,7 +106,6 @@ usage () {
   echo " --setup-mongodb-ssl            Use this option to setup official mongodb 4.4 server with ssl"
   echo " --setup-postgres-ssl           Use this option to setup official Postgresql 13 with SSL"
   echo " --setup-remote-db              Use this option when running AMI/OVF instances and setting up remote db's on client node"
-  echo " --setup-pbm-for-client         Use this option to setup lates PBM on client node"
   echo " --mongo_replica_for_backup     Use this option to setup MongoDB Replica Set and PBM for each replica member on client node"
 }
 
