@@ -423,7 +423,7 @@ do
     ;;
     --mongo_replica_for_backup )
     shift
-    $mongo_replica_for_backup=1
+    mongo_replica_for_backup=1
     ;;
     --compare-query-count )
     shift
