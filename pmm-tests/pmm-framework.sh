@@ -2627,7 +2627,7 @@ setup_remote_db_docker_compose () {
   mkdir -p /tmp/remote_db || :
   pushd /tmp/remote_db
   if [ ! -d "pmm-ui-tests" ]; then
-    git clone https://github.com/percona/pmm-ui-tests
+    git clone --branch PMM-8625 https://github.com/percona/pmm-ui-tests
   fi
   pushd pmm-ui-tests
   PWD=$(pwd) docker-compose -f docker-compose-ami-db-setup.yml up -d
