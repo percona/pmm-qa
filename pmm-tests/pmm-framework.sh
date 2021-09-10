@@ -2524,6 +2524,7 @@ setup_custom_queries () {
   echo "Creating Custom Queries"
   git clone https://github.com/Percona-Lab/pmm-custom-queries
   sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
+  echo "Adding Custom Queries for postgres"
   sudo cp pmm-custom-queries/postgresql/*.yaml /usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution/
   #ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
   sleep 5
@@ -2616,7 +2617,7 @@ setup_postgres_ssl () {
   bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_postgres_ssl_13.sh
   sleep 30
   popd
-  pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/postgres/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
+  pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
   popd
   docker logs postgres_ssl
 }
@@ -2652,6 +2653,10 @@ setup_mongo_replica_for_backup() {
   popd
   popd
 }
+
+if [ ! -z $setup_remote_db ]; then
+  setup_remote_db_docker_compose
+fi
 
 if [ ! -z $wipe_clients ]; then
   clean_clients
@@ -2780,10 +2785,6 @@ fi
 
 if [ ! -z $mysql_ssl_setup ]; then
   setup_mysql_ssl
-fi
-
-if [ ! -z $setup_remote_db ]; then
-  setup_remote_db_docker_compose
 fi
 
 if [ ! -z $mongodb_ssl_setup ]; then
