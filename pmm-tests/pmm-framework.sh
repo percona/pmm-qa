@@ -2654,6 +2654,10 @@ setup_mongo_replica_for_backup() {
   popd
 }
 
+if [ ! -z $setup_remote_db ]; then
+  setup_remote_db_docker_compose
+fi
+
 if [ ! -z $wipe_clients ]; then
   clean_clients
 fi
@@ -2781,10 +2785,6 @@ fi
 
 if [ ! -z $mysql_ssl_setup ]; then
   setup_mysql_ssl
-fi
-
-if [ ! -z $setup_remote_db ]; then
-  setup_remote_db_docker_compose
 fi
 
 if [ ! -z $mongodb_ssl_setup ]; then
