@@ -49,8 +49,8 @@ echo "$output"
                 ProxySQL_IP_PORT=${i}
                 run pmm-admin add proxysql proxysql_$COUNTER ${ProxySQL_IP_PORT}
                 echo "$output"
-                        [ "$status" -eq 1 ]
-                        echo "${lines[0]}" | grep "already exists."
+                [ "$status" -eq 1 ]
+                echo "${lines[0]}" | grep "already exists."
         done
 }
 
@@ -77,4 +77,47 @@ echo "$output"
                         [ "$status" -eq 1 ]
                         echo "${output}" | grep "not found."
         done
+}
+
+@test "PMM-T965 run pmm-admin add proxysql with --agent-password flag" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "ProxySQL" | grep "proxysql_" | awk -F" " '{print $3}') ; do
+                let COUNTER=COUNTER+1
+                ProxySQL_IP_PORT=${i}
+                run pmm-admin add proxysql --agent-password=mypass proxysql_$COUNTER ${ProxySQL_IP_PORT}
+                echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "ProxySQL Service added."
+        done
+}
+
+@test "PMM-T965 check metrics from proxysql service with custom agent password" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "ProxySQL" | grep "proxysql_") ; do
+            let COUNTER=COUNTER+1
+            run sleep 20
+            run chmod +x check_metric.sh
+            run ./check_metric.sh proxysql_$COUNTER proxysql_up $VM_IP proxysql_exporter pmm mypass
+            echo "$output"
+            [ "$status" -eq 0 ]
+            [ "${lines[0]}" = "proxysql_up 1" ]
+        done
+}
+
+@test "run pmm-admin remove proxysql added with custom agent password" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "ProxySQL" | grep "proxysql_") ; do
+                let COUNTER=COUNTER+1
+                run pmm-admin remove proxysql proxysql_$COUNTER
+                echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${output}" | grep "Service removed."
+        done
+}
+
+function teardown() {
+    echo "$output"
 }

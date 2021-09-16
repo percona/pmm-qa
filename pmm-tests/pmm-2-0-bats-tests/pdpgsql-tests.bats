@@ -278,6 +278,47 @@ PGSQL_HOST='localhost'
         done
 }
 
+@test "PMM-T963 run pmm-admin add postgresql with --agent-password flag" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
+                let COUNTER=COUNTER+1
+                PGSQL_IP_PORT=${i}
+                export PGSQL_IP=$(cut -d':' -f1 <<< $PGSQL_IP_PORT)
+                export PGSQL_PORT=$(cut -d':' -f2 <<< $PGSQL_IP_PORT)
+                run pmm-admin add postgresql --agent-password=mypass --host=${PGSQL_IP} --port=${PGSQL_PORT} --service-name=pgsql_$COUNTER
+                echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "PostgreSQL Service added."
+        done
+}
+
+@test "PMM-T963 check metrics from postgres service with custom agent password" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
+                let COUNTER=COUNTER+1
+                run sleep 20
+                run chmod +x check_metric.sh
+                run ./check_metric.sh pgsql_$COUNTER pg_up $VM_IP postgres_exporter pmm mypass
+                echo "$output"
+                [ "$status" -eq 0 ]
+                [ "${lines[0]}" = "pg_up 1" ]
+        done
+}
+
+@test "PMM-T963 run pmm-admin remove postgresql added with custom agent password" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
+                let COUNTER=COUNTER+1
+                run pmm-admin remove postgresql pgsql_$COUNTER
+                echo "$output"
+                        [ "$status" -eq 0 ]
+                        echo "${output}" | grep "Service removed."
+        done
+}
+
 function teardown() {
         echo "$output"
 }

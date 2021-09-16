@@ -255,6 +255,46 @@ skip "Skipping this test, because of setup issue on Framework, https://jira.perc
 	done
 }
 
-function teardown() {
+@test "PMM-T964 run pmm-admin add mongodb with --agent-password flag" {
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        MONGO_IP_PORT=${i}
+        export MONGO_IP=$(cut -d':' -f1 <<< $MONGO_IP_PORT)
+        export MONGO_PORT=$(cut -d':' -f2 <<< $MONGO_IP_PORT)
+        run pmm-admin add mongodb --host=${MONGO_IP} --agent-password=mypass --port=${MONGO_PORT} --service-name=mongo_inst_${COUNTER}
+        [ "$status" -eq 0 ]
+        echo "${lines[0]}" | grep "MongoDB Service added"
+    done
+}
+
+@test "PMM-T964 check metrics from mongodb service with custom agent password" {
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        run sleep 20
+        run chmod +x check_metric.sh
+        run ./check_metric.sh mongo_inst_$COUNTER mongodb_up $VM_IP mongodb_exporter pmm mypass
         echo "$output"
+        [ "$status" -eq 0 ]
+        [ "${lines[0]}" = "mongodb_up 1" ]
+    done
+}
+
+@test "run pmm-admin remove mongodb added with custom agent password" {
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        run pmm-admin remove mongodb mongo_inst_${COUNTER}
+        [ "$status" -eq 0 ]
+        echo "${lines[0]}"
+        echo "${lines[0]}" | grep "Service removed."
+    done
+}
+
+function teardown() {
+    echo "$output"
 }
