@@ -98,8 +98,8 @@ echo "$output"
         for i in $(pmm-admin list | grep "ProxySQL" | grep "proxysql_") ; do
             let COUNTER=COUNTER+1
             run sleep 20
-            run chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh/check_metric.sh
-            run ./srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh/check_metric.sh proxysql_$COUNTER proxysql_up $pmm_server_ip proxysql_exporter pmm mypass
+            run chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+            run ./srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh proxysql_$COUNTER proxysql_up $pmm_server_ip proxysql_exporter pmm mypass
             echo "$output"
             [ "$status" -eq 0 ]
             [ "${lines[0]}" = "proxysql_up 1" ]

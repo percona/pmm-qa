@@ -299,8 +299,8 @@ PGSQL_HOST='localhost'
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
                 let COUNTER=COUNTER+1
                 run sleep 20
-                run chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh/check_metric.sh
-                run ./srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh/check_metric.sh pgsql_$COUNTER pg_up $pmm_server_ip postgres_exporter pmm mypass
+                run chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+                run ./srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh pgsql_$COUNTER pg_up $pmm_server_ip postgres_exporter pmm mypass
                 echo "$output"
                 [ "$status" -eq 0 ]
                 [ "${lines[0]}" = "pg_up 1" ]
