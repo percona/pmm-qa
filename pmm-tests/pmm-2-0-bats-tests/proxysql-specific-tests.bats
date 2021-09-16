@@ -99,7 +99,7 @@ echo "$output"
             let COUNTER=COUNTER+1
             run sleep 20
             run chmod +x check_metric.sh
-            run ./check_metric.sh proxysql_$COUNTER proxysql_up $VM_IP proxysql_exporter pmm mypass
+            run ./check_metric.sh proxysql_$COUNTER proxysql_up $pmm_server_ip proxysql_exporter pmm mypass
             echo "$output"
             [ "$status" -eq 0 ]
             [ "${lines[0]}" = "proxysql_up 1" ]

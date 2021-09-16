@@ -300,7 +300,7 @@ PGSQL_HOST='localhost'
                 let COUNTER=COUNTER+1
                 run sleep 20
                 run chmod +x check_metric.sh
-                run ./check_metric.sh pgsql_$COUNTER pg_up $VM_IP postgres_exporter pmm mypass
+                run ./check_metric.sh pgsql_$COUNTER pg_up $pmm_server_ip postgres_exporter pmm mypass
                 echo "$output"
                 [ "$status" -eq 0 ]
                 [ "${lines[0]}" = "pg_up 1" ]
