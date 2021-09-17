@@ -276,7 +276,7 @@ skip "Skipping this test, because of setup issue on Framework, https://jira.perc
         let COUNTER=COUNTER+1
         run sleep 20
         run chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
-        run ./srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh mongo_inst_$COUNTER mongodb_up $pmm_server_ip mongodb_exporter pmm mypass
+        run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh mongo_inst_$COUNTER mongodb_up ${pmm_server_ip} mongodb_exporter pmm mypass
         echo "$output"
         [ "$status" -eq 0 ]
         [ "${lines[0]}" = "mongodb_up 1" ]
