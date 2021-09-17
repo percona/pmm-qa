@@ -275,7 +275,7 @@ skip "Skipping this test, because of setup issue on Framework, https://jira.perc
     for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
         let COUNTER=COUNTER+1
         run sleep 20
-        run chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+        run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
         run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh mongo_inst_$COUNTER mongodb_up ${pmm_server_ip} mongodb_exporter pmm mypass
         echo "$output"
         [ "$status" -eq 0 ]
