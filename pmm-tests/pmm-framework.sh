@@ -2515,7 +2515,7 @@ setup_external_service () {
   docker run -d -p 6379:6379 redis
   sleep 10
   touch redis.log
-  ./redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &
+  JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
   sleep 10
   pmm-admin add external --listen-port=42200 --group="redis" --service-name="redis_external"
 }
