@@ -15,6 +15,6 @@ docker rm $PMM_SERVER_DOCKER_CONTAINER
 ## Setup new Container using volume from previous container
 export PMM_SERVER_DOCKER_VOLUME=$(docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
 
-PWD=$(pwd) PMM_SERVER_IMAGE=$1 docker-compose up -d pmm-server
+docker run -d -p 80:80 -p 443:443 --volumes-from $PMM_SERVER_DOCKER_VOLUME --name pmm-server --restart always $1
 sleep 30
 docker logs pmm-server
