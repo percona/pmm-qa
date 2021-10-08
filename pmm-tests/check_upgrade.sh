@@ -25,7 +25,7 @@ else
 	if [ $2 == "post" ]; then
 		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep dbaas-controller-$1
 		if [[ $PERFORM_DOCKER_WAY_UPGRADE != "yes" ]]; then
-			docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli --pluginsDir /srv/grafana/plugins/ plugins ls | grep alexanderzobnin-zabbix-app
+			docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins ls | grep alexanderzobnin-zabbix-app
 		fi
 	fi
 fi
