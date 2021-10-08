@@ -8,7 +8,7 @@ if [ $3 == "ami" ]; then
 	rpm -qa | grep pmm-server-$1
 	rpm -qa | grep pmm-managed-$1
 	rpm -qa | grep pmm2-client-$1
-	ls -la /var/lib/grafana/plugins/ | grep alexanderzobnin-zabbix-app
+	grafana-cli plugins ls | grep alexanderzobnin-zabbix-app
 
 	if [ $2 == "post" ]; then
 		rpm -qa | grep dbaas-controller-$1
@@ -22,10 +22,10 @@ else
 	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-server-$1
 	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-managed-$1
 	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm2-client-$1
-	if [[ $PERFORM_DOCKER_WAY_UPGRADE != "yes" ]]; then
-		docker exec $PMM_SERVER_DOCKER_CONTAINER ls -la /var/lib/grafana/plugins/ | grep alexanderzobnin-zabbix-app
-	fi
 	if [ $2 == "post" ]; then
 		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep dbaas-controller-$1
+		if [[ $PERFORM_DOCKER_WAY_UPGRADE != "yes" ]]; then
+			docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins ls | grep alexanderzobnin-zabbix-app
+		fi
 	fi
 fi
