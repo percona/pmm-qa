@@ -1,7 +1,6 @@
 #!/bin/bash
 
 export PDPGSQL_CONTAINER=$1
-git clone https://github.com/percona/pg_stat_monitor
 db=1
 docker exec ${PDPGSQL_CONTAINER} mkdir /tmp/sql
 pushd pg_stat_monitor/regression/sql/
