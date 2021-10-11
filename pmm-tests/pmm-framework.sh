@@ -2518,6 +2518,11 @@ setup_external_service () {
   JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
   sleep 10
   pmm-admin add external --listen-port=42200 --group="redis" --service-name="redis_external"
+  echo "Setting up node_process"
+  wget https://github.com/ncabatoff/process-exporter/releases/download/v0.7.5/process-exporter_0.7.5_linux_amd64.rpm
+  sudo rpm -i process-exporter_0.7.5_linux_amd64.rpm
+  sudo service process-exporter start
+  pmm-admin add external --group=processes  --listen-port=9256 --service-name=external_nodeprocess
 }
 
 setup_custom_queries () {
@@ -2526,7 +2531,8 @@ setup_custom_queries () {
   sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
   echo "Adding Custom Queries for postgres"
   sudo cp pmm-custom-queries/postgresql/*.yaml /usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution/
-  #ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
+  ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
+  ps -aux | grep '/usr/local/percona/pmm2/exporters/postgres_exporter --auto-discover-databases' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
   sleep 5
   echo "Setup for Custom Queries Completed"
 }
