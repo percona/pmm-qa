@@ -2508,6 +2508,7 @@ setup_pmm2_client_docker_image () {
 
 setup_external_service () {
   wget https://github.com/oliver006/redis_exporter/releases/download/v1.14.0/redis_exporter-v1.14.0.linux-386.tar.gz
+  export NODE_PROCESS_EXPORTER_VERSION="0.7.5"
   tar -xvf redis_exporter-v1.14.0.linux-386.tar.gz
   rm redis_exporter*.tar.gz
   mv redis_* redis_exporter
@@ -2518,6 +2519,12 @@ setup_external_service () {
   JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
   sleep 10
   pmm-admin add external --listen-port=42200 --group="redis" --service-name="redis_external"
+  echo "Setting up node_process"
+  wget https://github.com/ncabatoff/process-exporter/releases/download/v${NODE_PROCESS_EXPORTER_VERSION}/process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
+  sudo rpm -i process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
+  sudo service process-exporter start
+  sleep 10
+  pmm-admin add external --group=processes  --listen-port=9256 --service-name=external_nodeprocess
 }
 
 setup_custom_queries () {
@@ -2526,7 +2533,8 @@ setup_custom_queries () {
   sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
   echo "Adding Custom Queries for postgres"
   sudo cp pmm-custom-queries/postgresql/*.yaml /usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution/
-  #ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
+  sudo pkill -f mysqld_exporter
+  sudo pkill -f postgres_exporter
   sleep 5
   echo "Setup for Custom Queries Completed"
 }
