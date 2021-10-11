@@ -1413,7 +1413,7 @@ add_clients(){
             pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
           fi
         fi
-	sudo chmod +x $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh
+        sudo chmod +x $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh
         bash $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j > pdpgsql_pgstatmonitor_$j.log 2>&1 &
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
