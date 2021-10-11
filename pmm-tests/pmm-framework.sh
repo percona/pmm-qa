@@ -2523,6 +2523,7 @@ setup_external_service () {
   wget https://github.com/ncabatoff/process-exporter/releases/download/v${NODE_PROCESS_EXPORTER_VERSION}/process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
   sudo rpm -i process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
   sudo service process-exporter start
+  sleep 10
   pmm-admin add external --group=processes  --listen-port=9256 --service-name=external_nodeprocess
 }
 
@@ -2533,7 +2534,7 @@ setup_custom_queries () {
   echo "Adding Custom Queries for postgres"
   sudo cp pmm-custom-queries/postgresql/*.yaml /usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution/
   sudo pkill -f mysqld_exporter
-  sudp pkill -f postgres_exporter
+  sudo pkill -f postgres_exporter
   sleep 5
   echo "Setup for Custom Queries Completed"
 }
