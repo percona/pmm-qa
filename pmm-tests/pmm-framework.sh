@@ -1394,6 +1394,7 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "pdpgsql" && ! -z $PMM2 ]]; then
       PDPGSQL_PORT=6432
       docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
+      git clone https://github.com/percona/pg_stat_monitor
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         check_port $PDPGSQL_PORT postgres
         docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
@@ -1413,6 +1414,8 @@ add_clients(){
             pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
           fi
         fi
+        sudo chmod +x $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh
+        bash $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j > pdpgsql_pgstatmonitor_$j.log 2>&1 &
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
