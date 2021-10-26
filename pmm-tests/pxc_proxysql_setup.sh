@@ -11,12 +11,12 @@ sed -i 's+${MID} --datadir+${MID} --socket=\\${node}/socket.sock --port=\\${RBAS
 
 ## Download right PXC version
 if [ "$pxc_version" == "5.7" ]; then
-	wget https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.31-31.45-3/binary/tarball/Percona-XtraDB-Cluster-5.7.31-rel34-45.3.Linux.x86_64.glibc2.12-minimal.tar.gz
+	wget https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.34-31.51/binary/tarball/Percona-XtraDB-Cluster-5.7.34-rel37-51.1.Linux.x86_64.glibc2.12-minimal.tar.gz
 	sudo yum install -y percona-xtrabackup-24
 fi
 if [ "$pxc_version" == "8.0" ]; then
 	sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
-	wget https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-8.0.21/binary/tarball/Percona-XtraDB-Cluster_8.0.21-12.1_Linux.x86_64.glibc2.17-minimal.tar.gz	
+	wget https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-8.0.23/binary/tarball/Percona-XtraDB-Cluster_8.0.23-14.1_Linux.x86_64.glibc2.17-minimal.tar.gz	
 fi
 tar -xzf Percona-XtraDB-Cluster*
 rm -r Percona-XtraDB-Cluster*.tar.gz
