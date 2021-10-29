@@ -2536,10 +2536,13 @@ setup_custom_queries () {
   sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
   echo "Adding Custom Queries for postgres"
   sudo cp pmm-custom-queries/postgresql/*.yaml /usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution/
+  echo 'node_role{role="my_monitored_server_1"} 1' > node_role.prom
+  sudo cp node_role.prom /usr/local/percona/pmm2/collectors/textfile-collector/high-resolution/
   sudo pkill -f mysqld_exporter
   sudo pkill -f postgres_exporter
+  sudo pkill -f node_exporter
   sleep 5
-  echo "Setup for Custom Queries Completed"
+  echo "Setup for Custom Queries Completed along with custom text file collector Metrics"
 }
 
 setup_custom_prometheus_config () {
