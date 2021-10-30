@@ -44,7 +44,7 @@
     run pmm-admin unregister --force --node-name=pmm-server
     echo $output
     [ $status -eq 1 ]
-    echo "${output}" | grep "PMM Server node can't be removed.. Please check username and password."
+    echo "${output}" | grep "PMM Server node can't be removed."
 }
 
 @test "run pmm-admin unregister with --force" {
