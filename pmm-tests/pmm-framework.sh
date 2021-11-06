@@ -1608,7 +1608,8 @@ add_clients(){
           sudo chmod 777 -R /var/log
           mkdir ps_socket_${PS_PORT}
           sudo chmod 777 -R ps_socket_${PS_PORT}
-          docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+          ps_service_name=$(prepare_service_name ps_${ps_version}_${IP_ADDRESS}_$j)
+          docker run --name $ps_service_name -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
           sleep 30
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL userstat=1;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
@@ -1629,15 +1630,15 @@ add_clients(){
           if [[ -z $use_socket ]]; then
             if [ $(( ${j} % 2 )) -eq 0 ]; then
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --metrics-mode=$metrics_mode --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --metrics-mode=$metrics_mode --cluster=ps-prod-cluster --replication-set=ps-repl2 $ps_service_name --debug 127.0.0.1:$PS_PORT
               else
-                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 $ps_service_name --debug 127.0.0.1:$PS_PORT
               fi
             else
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl1 $ps_service_name --debug 127.0.0.1:$PS_PORT
               else
-                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 $ps_service_name --debug 127.0.0.1:$PS_PORT
               fi
             fi
             if [[ ! -z $DISABLE_TABLESTATS ]]; then
@@ -1649,15 +1650,15 @@ add_clients(){
           else
             if [ $(( ${j} % 2 )) -eq 0 ]; then
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl2 $ps_service_name --debug
               else
-                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 $ps_service_name --debug
               fi
             else
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --metrics-mode=$metrics_mode --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --metrics-mode=$metrics_mode --cluster=ps-dev-cluster --replication-set=ps-repl1 $ps_service_name --debug
               else
-                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 $ps_service_name --debug
               fi
             fi
             if [[ ! -z $DISABLE_TABLESTATS ]]; then
@@ -1667,7 +1668,7 @@ add_clients(){
               pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --disable-queryexamples ps_disabled_queryexample_$j --debug
             fi
           fi
-          #run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
+          #run_workload 127.0.0.1 root ps $PS_PORT mysql $ps_service_name
           PS_PORT=$((PS_PORT+j))
         done
       fi
@@ -1731,35 +1732,36 @@ add_clients(){
         mkdir -p /tmp/modb_${MODB_PORT}
         chown -R $USER:$USER /tmp/ > /dev/null 2>&1
         chmod -R go+w /tmp/ > /dev/null 2>&1
-        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/modb_${MODB_PORT}/:/tmp/ -e UMASK=0777 --name mongodb_node_$j mongo:${modb_version}
+        modb_service_name=$(prepare_service_name mongodb_node_$j)
+        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/modb_${MODB_PORT}/:/tmp/ -e UMASK=0777 --name $modb_service_name mongo:${modb_version}
         sleep 20
-        docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
+        docker exec $modb_service_name mongo --eval 'db.setProfilingLevel(2)'
         if [[ -z $use_socket ]]; then
           if [ $(( ${j} % 2 )) -eq 0 ]; then
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-prod $modb_service_name --debug localhost:$MODB_PORT
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-prod $modb_service_name --debug localhost:$MODB_PORT
             fi
           else
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-dev $modb_service_name --debug localhost:$MODB_PORT
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --debug localhost:$MODB_PORT
             fi
           fi
         else
           if [ $(( ${j} % 2 )) -eq 0 ]; then
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-prod mongodb_node_$j --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-prod $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-prod $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             fi
           else
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --metrics-mode=$metrics_mode --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --metrics-mode=$metrics_mode --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             fi
           fi
         fi
