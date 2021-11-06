@@ -204,6 +204,7 @@ do
     service_custom_name=1
     service_name="$2"
     shift 2
+    ;;
     --ami-image )
     ami_image="$2"
     shift 2
