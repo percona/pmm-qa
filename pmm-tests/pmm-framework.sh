@@ -2694,7 +2694,7 @@ setup_mongo_replica_for_backup() {
 
 prepare_service_name() {
   random_service_name=$1
-  if [ ! -z service_custom_name ]; then
+  if [ ! -z $service_custom_name ]; then
     echo $service_name
   else
     echo $random_service_name
