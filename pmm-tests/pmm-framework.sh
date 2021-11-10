@@ -2579,7 +2579,12 @@ setup_custom_prometheus_config () {
 setup_grafana_plugin () {
   echo "Installing alexanderzobnin-zabbix-app Plugin for Grafana"
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
-  docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app
+  export pmm_minor_v=$(get_minor_version ${PMM_SERVER_DOCKER_CONTAINER})
+  if [ "${pmm_minor_v}" -gt "22" ]; then
+    docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app
+  else
+   docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app 
+  fi
 }
 
 setup_custom_ami_instance() {
@@ -2699,6 +2704,12 @@ prepare_service_name() {
   else
     echo $random_service_name
   fi
+}
+
+get_minor_version() {
+  export PMM_SERVER_VERSION=$(docker exec $1 pmm-admin status | grep 'Version:' | awk -F' ' '{print $2}')
+  versions=(${PMM_SERVER_VERSION//./ })
+  echo ${versions[1]};
 }
 
 if [ ! -z $setup_remote_db ]; then
