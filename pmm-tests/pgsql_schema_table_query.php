@@ -38,6 +38,9 @@ function run_query($schema,$table,$query)
     die();
   }
   $runQuery->exec("select id, v as col$query from tbl$table");
+  $runQuery->exec("insert into tbl$table values(2,'value')");
+  $runQuery->exec("update tbl$table set v='new value' where id=2");
+  $runQuery->exec("delete from tbl$table where id=2 and v='new value'");
   $runQuery=null;
 }
 
@@ -79,7 +82,8 @@ try {
 for($i = 1;$i <= $schemas;$i++)
 {
   /* We strategically ignore error here assuming it would be database already exists */
-  $link->exec("create database db$i"); 
+  $link->exec("create database db$i");
+  $link->exec("create EXTENSION pg_stat_monitor");
   echo("Initializing Database db$i\n");
   try {
     $initializeConnection = new PDO("pgsql:host=$pgsql_host;port=$pgsql_port;dbname=db$i", $pgsql_user, $pgsql_password);
