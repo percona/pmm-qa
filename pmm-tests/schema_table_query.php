@@ -35,9 +35,9 @@ function run_query($schema,$table,$query)
   if(!$link->select_db("db$schema"))
     die("Can't select database db$schema\n");
   $r=$link->query("select id, v as col$query from tbl$table");
-  $link->exec("insert into tbl$table values(2,'value')");
-  $link->exec("update tbl$table set v='new value' where id=2");
-  $link->exec("delete from tbl$table where id=2 and v='new value'");
+  $link->query("insert into tbl$table values(2,'value')");
+  $link->query("update tbl$table set v='new value' where id=2");
+  $link->query("delete from tbl$table where id=2 and v='new value'");
   if(!$r)
     die("Can't run query on db$schema.tbl$table\n");
   $r->free_result();
