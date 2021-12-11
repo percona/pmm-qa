@@ -392,6 +392,45 @@ echo "$output"
         done
 }
 
+@test "PMM-T962 run pmm-admin add mysql with --agent-password flag" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $3}') ; do
+                let COUNTER=COUNTER+1
+                MYSQL_IP_PORT=${i}
+                run pmm-admin add mysql --query-source=perfschema --username=${MYSQL_USER} --agent-password=mypass --password=${MYSQL_PASSWORD} mysql_$COUNTER ${MYSQL_IP_PORT}
+                echo "$output"
+                [ "$status" -eq 0 ]
+                echo "${lines[0]}" | grep "MySQL Service added."
+        done
+}
+
+@test "PMM-T962 check metrics from service with custom agent password" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
+                let COUNTER=COUNTER+1
+                run sleep 20
+                run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+                run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh mysql_$COUNTER mysql_up ${pmm_server_ip} mysqld_exporter pmm mypass
+                echo "$output"
+                [ "$status" -eq 0 ]
+                [ "${lines[0]}" = "mysql_up 1" ]
+        done
+}
+
+@test "run pmm-admin remove mysql added with custom agent password" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
+                let COUNTER=COUNTER+1
+                run pmm-admin remove mysql mysql_$COUNTER
+                echo "$output"
+                        [ "$status" -eq 0 ]
+                        echo "${output}" | grep "Service removed."
+        done
+}
+
 function teardown() {
         echo "$output"
 }

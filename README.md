@@ -16,12 +16,12 @@ make sure they are not being used, otherwise update docker-compose.yml file
 
 ### Installation (UI tests version 2.0)
 1. Install Node.js and atleast npm 8.x on your system
-2. Checkout `master` branch for pmm-qa Repo
+2. Checkout `main` branch for pmm-qa Repo
 3. To run tests on your local systems, delete `codecept.json` and rename `local.codecept.json` to `codecept.json`
 4. Make sure to update URL of the application in the `webdriver` helper in the configuration file (codecept.json)
 5. Install latest version of JDK on your system
 
-> Follow any one of these: 
+> Follow any one of these:
 
 6. Install Selenium Standalone server via npm globally using `npm install selenium-standalone -g`
 7. Run the following `selenium-standalone start`

@@ -33,7 +33,7 @@ usage () {
   echo "Options:"
   echo " --setup                        This will setup and configure a PMM server"
   echo " --dev                          When this option is specified, PMM framework will use the latest PMM development version. Otherwise, the latest 1.x version is used"
-  echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)" 
+  echo " --dev-fb                       This will install specified feature build (must be used with --setup and --dev options)"
   echo " --pmm2                         When this option is specified, PMM framework will use specified PMM 2.x development version. Must be used with pmm-server-version option"
   echo " --skip-docker-setup            Pass this parameter if Docker Setup for PMM2-Server is not needed, Only Pmm2-client needs to be installed"
   echo " --is-bats-run                  Change Bats run option, set to 1 if not user interaction required"
@@ -104,13 +104,17 @@ usage () {
   echo " --setup-custom-ami             Use this option to setup AMI instance PMM with custom configuration"
   echo " --setup-mysql-ssl              Use this option to setup mysql 8.x server with SSL option"
   echo " --setup-mongodb-ssl            Use this option to setup official mongodb 4.4 server with ssl"
+  echo " --setup-postgres-ssl           Use this option to setup official Postgresql 13 with SSL"
   echo " --setup-remote-db              Use this option when running AMI/OVF instances and setting up remote db's on client node"
+  echo " --mongo-replica-for-backup     Use this option to setup MongoDB Replica Set and PBM for each replica member on client node"
+  echo " --cleanup-service              Use this option to delete DB container and remove from monitoring, just pass service name"
+  echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,pmm-server-version:,dev-fb:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -189,6 +193,16 @@ do
     ;;
     --pmm-docker-memory )
     DOCKER_MEMORY="$2"
+    shift 2
+    ;;
+    --cleanup-service )
+    cleanup_services=1
+    cleanup_service_name="$2"
+    shift 2
+    ;;
+    --deploy-service-with-name )
+    service_custom_name=1
+    service_name="$2"
     shift 2
     ;;
     --ami-image )
@@ -411,9 +425,17 @@ do
     shift
     mongodb_ssl_setup=1
     ;;
+    --setup-postgres-ssl )
+    shift
+    postgres_ssl_setup=1
+    ;;
     --setup-remote-db )
     shift
     setup_remote_db=1
+    ;;
+    --mongo-replica-for-backup )
+    shift
+    mongo_replica_for_backup=1
     ;;
     --compare-query-count )
     shift
@@ -469,7 +491,7 @@ mongo_sysbench(){
     exit 1
   fi
   wget https://raw.githubusercontent.com/Percona-Lab/sysbench-mongodb-lua/master/oltp-mongo.lua
-  PORT=$(sudo pmm-admin list  | awk -F '[: ]+' '/mongodb:metrics/{print $7}'| head -n1) 
+  PORT=$(sudo pmm-admin list  | awk -F '[: ]+' '/mongodb:metrics/{print $7}'| head -n1)
   echo "PORT "$PORT
   sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=1000000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=${PORT}  --rand-type=pareto prepare > $WORKDIR/logs/mongo_sysbench_prepare.txt 2>&1 &
   sysbench oltp-mongo.lua --tables=10 --threads=10 --table-size=1000000 --mongodb-db=sbtest --mongodb-host=localhost --mongodb-port=${PORT} --time=1200 --report-interval=1 --rand-type=pareto run > $WORKDIR/logs/mongo_sysbench_run.txt 2>&1 &
@@ -625,7 +647,7 @@ setup(){
     IS_SSL="No"
   fi
 
-  
+
   if [[ ! -e $(which lynx 2> /dev/null) ]] ;then
     echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
     exit 1
@@ -768,7 +790,7 @@ setup(){
     else
       if [ ! -z $PMM2 ]; then
         install_client
-      else  
+      else
       if [ ! -z $dev ]; then
         if [  -z $link_client]; then
          PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
@@ -1364,11 +1386,8 @@ add_clients(){
       docker pull postgres:${pgsql_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
-        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
+        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
         sleep 20
-        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
-        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'ALTER SYSTEM SET track_io_timing=ON;'
-        docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
@@ -1387,26 +1406,29 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "pdpgsql" && ! -z $PMM2 ]]; then
       PDPGSQL_PORT=6432
       docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
+      git clone https://github.com/percona/pg_stat_monitor
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         check_port $PDPGSQL_PORT postgres
-        docker run --name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
+        pdpgsql_service_name=$(prepare_service_name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j)
+        docker run --name $pdpgsql_service_name -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_monitor.pgsm_enable_query_plan=1 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
         sleep 20
-        docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_statements'
-        docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
-        docker exec PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+            pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 $pdpgsql_service_name localhost:$PDPGSQL_PORT
           else
-            pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+            pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 $pdpgsql_service_name localhost:$PDPGSQL_PORT
           fi
         else
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+            pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 $pdpgsql_service_name localhost:$PDPGSQL_PORT
           else
-            pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j localhost:$PDPGSQL_PORT
+            pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 $pdpgsql_service_name localhost:$PDPGSQL_PORT
           fi
         fi
+        sudo chmod +x $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh
+        bash $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh $pdpgsql_service_name > pdpgsql_pgstatmonitor_$j.log 2>&1 &
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
@@ -1533,6 +1555,10 @@ add_clients(){
           sleep 20
         done
       fi
+
+      ### Need this to handle crash for mysql server on aws instance, workaround fix
+      export sandboxes_name=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      sh /srv/pmm-qa/pmm-tests/dbdeployer_setup_status_check.sh ${sandboxes_name} > ${sandboxes_name}.log 2>&1 &
     elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
       echo "Checking if Percona-xtrabackup required"
       if [[ ! -z $install_backup_toolkit ]]; then
@@ -1582,7 +1608,8 @@ add_clients(){
           sudo chmod 777 -R /var/log
           mkdir ps_socket_${PS_PORT}
           sudo chmod 777 -R ps_socket_${PS_PORT}
-          docker run --name ps_${ps_version}_${IP_ADDRESS}_$j -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+          ps_service_name=$(prepare_service_name ps_${ps_version}_${IP_ADDRESS}_$j)
+          docker run --name $ps_service_name -v /var/log:/var/log -v ${WORKDIR}/ps_socket_${PS_PORT}/:/var/lib/mysql/ -p $PS_PORT:3306 -e MYSQL_ROOT_PASSWORD=ps -e UMASK=0777 -d percona:${ps_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
           sleep 30
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL userstat=1;"
           mysql -h 127.0.0.1 -u root -pps --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
@@ -1603,15 +1630,15 @@ add_clients(){
           if [[ -z $use_socket ]]; then
             if [ $(( ${j} % 2 )) -eq 0 ]; then
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --metrics-mode=$metrics_mode --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --metrics-mode=$metrics_mode --cluster=ps-prod-cluster --replication-set=ps-repl2 $ps_service_name --debug 127.0.0.1:$PS_PORT
               else
-                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 $ps_service_name --debug 127.0.0.1:$PS_PORT
               fi
             else
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl1 $ps_service_name --debug 127.0.0.1:$PS_PORT
               else
-                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug 127.0.0.1:$PS_PORT
+                pmm-admin add mysql --query-source=$query_source --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 $ps_service_name --debug 127.0.0.1:$PS_PORT
               fi
             fi
             if [[ ! -z $DISABLE_TABLESTATS ]]; then
@@ -1623,15 +1650,15 @@ add_clients(){
           else
             if [ $(( ${j} % 2 )) -eq 0 ]; then
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --metrics-mode=$metrics_mode --replication-set=ps-repl2 $ps_service_name --debug
               else
-                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl2 $ps_service_name --debug
               fi
             else
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --metrics-mode=$metrics_mode --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --metrics-mode=$metrics_mode --cluster=ps-dev-cluster --replication-set=ps-repl1 $ps_service_name --debug
               else
-                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_${ps_version}_${IP_ADDRESS}_$j --debug
+                pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 $ps_service_name --debug
               fi
             fi
             if [[ ! -z $DISABLE_TABLESTATS ]]; then
@@ -1641,7 +1668,7 @@ add_clients(){
               pmm-admin add mysql --query-source=$query_source --socket=${WORKDIR}/ps_socket_${PS_PORT}/mysql.sock --username=root --password=ps --environment=ps-prod --disable-queryexamples ps_disabled_queryexample_$j --debug
             fi
           fi
-          #run_workload 127.0.0.1 root ps $PS_PORT mysql ps_${ps_version}_${IP_ADDRESS}_$j
+          #run_workload 127.0.0.1 root ps $PS_PORT mysql $ps_service_name
           PS_PORT=$((PS_PORT+j))
         done
       fi
@@ -1660,7 +1687,7 @@ add_clients(){
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL long_query_time=0;"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "SET GLOBAL slow_query_log_file='/var/log/md_${j}_slowlog.log';"
-        else  
+        else
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "UPDATE performance_schema.setup_instruments SET ENABLED = 'YES', TIMED = 'YES' WHERE NAME LIKE 'statement/%';"
           mysql -h 127.0.0.1 -u root -pmd --port $MD_PORT -e "UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%statements%';"
         fi
@@ -1702,35 +1729,39 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MODB_PORT mongodb
         MODB_PORT_NEXT=$((MODB_PORT+2))
-        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/:/tmp/ -e UMASK=0777 --name mongodb_node_$j mongo:${modb_version}
+        mkdir -p /tmp/modb_${MODB_PORT}
+        chown -R $USER:$USER /tmp/ > /dev/null 2>&1
+        chmod -R go+w /tmp/ > /dev/null 2>&1
+        modb_service_name=$(prepare_service_name mongodb_node_$j)
+        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/modb_${MODB_PORT}/:/tmp/ -e UMASK=0777 --name $modb_service_name mongo:${modb_version}
         sleep 20
-        docker exec mongodb_node_$j mongo --eval 'db.setProfilingLevel(2)'
+        docker exec $modb_service_name mongo --eval 'db.setProfilingLevel(2)'
         if [[ -z $use_socket ]]; then
           if [ $(( ${j} % 2 )) -eq 0 ]; then
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-prod $modb_service_name --debug localhost:$MODB_PORT
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-prod $modb_service_name --debug localhost:$MODB_PORT
             fi
           else
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-dev $modb_service_name --debug localhost:$MODB_PORT
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --debug localhost:$MODB_PORT
             fi
           fi
         else
           if [ $(( ${j} % 2 )) -eq 0 ]; then
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --metrics-mode=$metrics_mode --environment=modb-prod mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-prod $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-prod mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-prod $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             fi
           else
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --metrics-mode=$metrics_mode --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --metrics-mode=$metrics_mode --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             else
-              pmm-admin add mongodb --cluster mongodb_node_$j --environment=modb-dev mongodb_node_$j --socket=/tmp/mongodb-$MODB_PORT.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             fi
           fi
         fi
@@ -1741,14 +1772,14 @@ add_clients(){
       sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
       sudo chmod +x mongo_startup.sh
       echo ${BASEDIR}
-      
+
       ##Missing Library for 4.4
       if [ -f /usr/lib64/liblzma.so.5.0.99 ]; then
         sudo ln -s /usr/lib64/liblzma.so.5.0.99 /usr/lib64/liblzma.so.0
       else
         sudo ln -s /usr/lib64/liblzma.so.5.2.2 /usr/lib64/liblzma.so.0
       fi
-      
+
       if [[ "$with_sharding" == "1" ]]; then
         if [ "$mo_version" == "3.6" ]; then
           bash ./mongo_startup.sh -s -e rocksdb --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=${BASEDIR}/bin
@@ -2073,15 +2104,15 @@ clean_clients(){
       echo -e "Removing all local pmm client instances"
       sudo pmm-admin remove --all 2&>/dev/null
     fi
- else 
+ else
     for i in $(pmm-admin list | grep -E "MySQL" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove mysql $i
-    
+
     done
     for i in $(pmm-admin list | grep -E "MongoDB" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove mongodb $i
     done
-     
+
     for i in $(pmm-admin list | grep -E "PostgreSQL" | awk -F " " '{print $2}'  | sort -r) ; do
       pmm-admin remove postgresql $i
     done
@@ -2094,7 +2125,7 @@ clean_clients(){
     for i in $(docker ps -f name=ps -f name=PGS -f name=mongo -q) ; do
       docker rm -f $i
     done
-    dbdeployer delete all --skip-confirm 
+    dbdeployer delete all --skip-confirm
  fi
    #Kill mongodb processes
     sudo killall mongod 2> /dev/null
@@ -2234,6 +2265,15 @@ wipe_pmm2_clients () {
   docker volume prune -f
 }
 
+cleanup_services() {
+  export SERVICE_TYPE=$(pmm-admin list | grep ${cleanup_service_name} | awk -F" " '{print $1}' | awk '{print tolower($0)}')
+  pmm-admin remove ${SERVICE_TYPE} ${cleanup_service_name}
+  docker stop ${cleanup_service_name} && docker rm ${cleanup_service_name}
+  docker container prune -f
+  docker image prune -af
+  docker volume prune -f
+}
+
 sysbench_prepare(){
   if [[ ! -e $(which mysql 2> /dev/null) ]] ;then
     MYSQL_CLIENT=$(find . -type f -name mysql | head -n1)
@@ -2322,10 +2362,10 @@ check_dbdeployer(){
 }
 
 install_dbdeployer(){
-  wget https://github.com/datacharmer/dbdeployer/releases/download/v1.45.0/dbdeployer-1.45.0.linux.tar.gz
-  tar -xzf dbdeployer-1.45.0.linux.tar.gz
-  chmod +x dbdeployer-1.45.0.linux
-  sudo mv dbdeployer-1.45.0.linux /usr/local/bin/dbdeployer
+  wget https://github.com/datacharmer/dbdeployer/releases/download/v1.62.0/dbdeployer-1.62.0.linux.tar.gz
+  tar -xzf dbdeployer-1.62.0.linux.tar.gz
+  chmod +x dbdeployer-1.62.0.linux
+  sudo mv dbdeployer-1.62.0.linux /usr/local/bin/dbdeployer
 }
 
 setup_alertmanager() {
@@ -2386,23 +2426,6 @@ run_workload() {
         touch md_${i}.log
         sleep 5
         php $SCRIPT_PWD/schema_table_query.php > md_${i}.log 2>&1 &
-        PHP_PID=$!
-        echo $PHP_PID
-        jobs -l
-        echo "Load Triggered check log"
-    done
-    for i in $(pmm-admin list | grep "MySQL" | grep "ms" | awk -F" " '{print $3}' | awk -F":" '{print $2}') ; do
-        echo "$i"
-        export MYSQL_PORT=${i}
-        export MYSQL_HOST=127.0.0.1
-        export MYSQL_PASSWORD=msandbox
-        export MYSQL_USER=msandbox
-        export MYSQL_DATABASE=mysql
-        export TEST_TARGET_QPS=1000
-        export TEST_QUERIES=100
-        touch ms_${i}.log
-        sleep 5
-        php $SCRIPT_PWD/schema_table_query.php > ms_${i}.log 2>&1 &
         PHP_PID=$!
         echo $PHP_PID
         jobs -l
@@ -2480,7 +2503,7 @@ setup_pmm2_client_docker_image () {
   sleep 5
 
   # Start PMM-Server on a different port for testing purpose
-  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 perconalab/pmm-server:dev-latest
+  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 public.ecr.aws/e7j3v3n0/pmm-server:dev-latest
   sleep 20
   echo "PMM Server Dev Latest connected using port 8081"
 
@@ -2512,6 +2535,7 @@ setup_pmm2_client_docker_image () {
 
 setup_external_service () {
   wget https://github.com/oliver006/redis_exporter/releases/download/v1.14.0/redis_exporter-v1.14.0.linux-386.tar.gz
+  export NODE_PROCESS_EXPORTER_VERSION="0.7.5"
   tar -xvf redis_exporter-v1.14.0.linux-386.tar.gz
   rm redis_exporter*.tar.gz
   mv redis_* redis_exporter
@@ -2519,18 +2543,30 @@ setup_external_service () {
   docker run -d -p 6379:6379 redis
   sleep 10
   touch redis.log
-  ./redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &
+  JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
   sleep 10
-  pmm-admin add external --listen-port=42200 --group="redis"
+  pmm-admin add external --listen-port=42200 --group="redis" --service-name="redis_external"
+  echo "Setting up node_process"
+  wget https://github.com/ncabatoff/process-exporter/releases/download/v${NODE_PROCESS_EXPORTER_VERSION}/process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
+  sudo rpm -i process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
+  sudo service process-exporter start
+  sleep 10
+  pmm-admin add external --group=processes  --listen-port=9256 --service-name=external_nodeprocess
 }
 
 setup_custom_queries () {
   echo "Creating Custom Queries"
   git clone https://github.com/Percona-Lab/pmm-custom-queries
   sudo cp pmm-custom-queries/mysql/*.yml /usr/local/percona/pmm2/collectors/custom-queries/mysql/high-resolution/
-  #ps -aux | grep '/usr/local/percona/pmm2/exporters/mysqld_exporter --collect.auto_increment.columns' | grep -v grep | awk '{ print $2 }' | sudo xargs kill
+  echo "Adding Custom Queries for postgres"
+  sudo cp pmm-custom-queries/postgresql/*.yaml /usr/local/percona/pmm2/collectors/custom-queries/postgresql/high-resolution/
+  echo 'node_role{role="my_monitored_server_1"} 1' > node_role.prom
+  sudo cp node_role.prom /usr/local/percona/pmm2/collectors/textfile-collector/high-resolution/
+  sudo pkill -f mysqld_exporter
+  sudo pkill -f postgres_exporter
+  sudo pkill -f node_exporter
   sleep 5
-  echo "Setup for Custom Queries Completed"
+  echo "Setup for Custom Queries Completed along with custom text file collector Metrics"
 }
 
 setup_custom_prometheus_config () {
@@ -2543,7 +2579,12 @@ setup_custom_prometheus_config () {
 setup_grafana_plugin () {
   echo "Installing alexanderzobnin-zabbix-app Plugin for Grafana"
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
-  docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app 
+  export pmm_minor_v=$(get_minor_version ${PMM_SERVER_DOCKER_CONTAINER})
+  if [ "${pmm_minor_v}" -gt "22" ]; then
+    docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app
+  else
+   docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app 
+  fi
 }
 
 setup_custom_ami_instance() {
@@ -2606,6 +2647,24 @@ setup_mysql_ssl () {
   popd
 }
 
+setup_postgres_ssl () {
+  echo "Setting up postgres ssl"
+  setup_docker_compose
+  mkdir -p /tmp/ssl || :
+  pushd /tmp/ssl
+  if [ ! -d "pmm-ui-tests" ]; then
+    git clone https://github.com/percona/pmm-ui-tests
+  fi
+  sudo chown -R $USER:$USER pmm-ui-tests
+  pushd pmm-ui-tests
+  bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_postgres_ssl_13.sh
+  sleep 30
+  popd
+  pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
+  popd
+  docker logs postgres_ssl
+}
+
 setup_remote_db_docker_compose () {
   echo "Setting up remote db's for AMI/OVF instances"
   setup_docker_compose
@@ -2623,6 +2682,39 @@ setup_remote_db_docker_compose () {
   popd
 }
 
+setup_mongo_replica_for_backup() {
+  echo "Setting up MongoDB replica set with PBM"
+  sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb
+  setup_docker_compose
+  mkdir -p /tmp/mongodb_backup_replica || :
+  pushd /tmp/mongodb_backup_replica
+  if [ ! -d "pmm-ui-tests" ]; then
+    git clone https://github.com/percona/pmm-ui-tests
+  fi
+  pushd pmm-ui-tests
+  bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
+  popd
+  popd
+}
+
+prepare_service_name() {
+  random_service_name=$1
+  if [ ! -z $service_custom_name ]; then
+    echo $service_name
+  else
+    echo $random_service_name
+  fi
+}
+
+get_minor_version() {
+  export PMM_SERVER_VERSION=$(docker exec $1 pmm-admin status | grep 'Version:' | awk -F' ' '{print $2}')
+  versions=(${PMM_SERVER_VERSION//./ })
+  echo ${versions[1]};
+}
+
+if [ ! -z $setup_remote_db ]; then
+  setup_remote_db_docker_compose
+fi
 
 if [ ! -z $wipe_clients ]; then
   clean_clients
@@ -2745,15 +2837,24 @@ if [ ! -z $setup_custom_ami ]; then
   setup_custom_ami_instance
 fi
 
-if [ ! -z $mysql_ssl_setup ]; then
-  setup_mysql_ssl
+if [ ! -z $postgres_ssl_setup ]; then
+  setup_postgres_ssl
 fi
 
-if [ ! -z $setup_remote_db ]; then
-  setup_remote_db_docker_compose
+if [ ! -z $mysql_ssl_setup ]; then
+  setup_mysql_ssl
 fi
 
 if [ ! -z $mongodb_ssl_setup ]; then
   setup_mongodb_ssl
 fi
+
+if [ ! -z $mongo_replica_for_backup ]; then
+  setup_mongo_replica_for_backup
+fi
+
+if [ ! -z $cleanup_services ]; then
+  cleanup_services
+fi
+
 exit 0

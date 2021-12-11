@@ -138,7 +138,10 @@ echo "$output"
     done
 }
 
-@test "PMM-T157 PMM-T161 Adding MongoDB with specified socket" {
+@test "PMM-T157 PMM-T161 Adding MongoDB with specified socket for psmdb" {
+    if [[ "$instance_t" == "modb" ]] ; then
+        skip "Skipping this test, because you are running for official Mongodb"
+    fi
     COUNTER=0
     IFS=$'\n'
     for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
@@ -153,6 +156,27 @@ echo "$output"
         echo "${lines[0]}" | grep "MongoDB Service added"
     done
 }
+
+@test "PMM-T157 PMM-T161 Adding MongoDB with specified socket for modb" {
+skip "Skipping this test, because of setup issue on Framework, https://jira.percona.com/browse/PMM-8708"
+    if [[ "$instance_t" == "mo" ]] ; then
+        skip "Skipping this test, because you are running for Percona Distribution Mongodb"
+    fi
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
+        echo "$i"
+        let COUNTER=COUNTER+1
+        MONGO_IP_PORT=${i}
+        export MONGO_IP=$(cut -d':' -f1 <<< $MONGO_IP_PORT)
+        export MONGO_PORT=$(cut -d':' -f2 <<< $MONGO_IP_PORT)
+        run pmm-admin add mongodb --socket=/tmp/modb_${MONGO_PORT}/mongodb-27017.sock mongo_inst_${COUNTER}
+        echo "$output"
+        [ "$status" -eq 0 ]
+        echo "${lines[0]}" | grep "MongoDB Service added"
+    done
+}
+
 
 @test "run pmm-admin remove mongodb" {
 	COUNTER=0
@@ -172,7 +196,7 @@ echo "$output"
     echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "usage: pmm-admin add mongodb [<flags>] [<name>] [<address>]" ]]
-    [[ ${lines[35]} =~ "--socket=SOCKET" ]
+    [[ ${lines[54]} =~ "--socket=SOCKET" ]]
 }
 
 
@@ -231,6 +255,46 @@ echo "$output"
 	done
 }
 
-function teardown() {
+@test "PMM-T964 run pmm-admin add mongodb with --agent-password flag" {
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        MONGO_IP_PORT=${i}
+        export MONGO_IP=$(cut -d':' -f1 <<< $MONGO_IP_PORT)
+        export MONGO_PORT=$(cut -d':' -f2 <<< $MONGO_IP_PORT)
+        run pmm-admin add mongodb --host=${MONGO_IP} --agent-password=mypass --port=${MONGO_PORT} --service-name=mongo_inst_${COUNTER}
+        [ "$status" -eq 0 ]
+        echo "${lines[0]}" | grep "MongoDB Service added"
+    done
+}
+
+@test "PMM-T964 check metrics from mongodb service with custom agent password" {
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        run sleep 20
+        run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+        run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh mongo_inst_$COUNTER mongodb_up ${pmm_server_ip} mongodb_exporter pmm mypass
         echo "$output"
+        [ "$status" -eq 0 ]
+        [ "${lines[0]}" = "mongodb_up 1" ]
+    done
+}
+
+@test "run pmm-admin remove mongodb added with custom agent password" {
+    COUNTER=0
+    IFS=$'\n'
+    for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
+        let COUNTER=COUNTER+1
+        run pmm-admin remove mongodb mongo_inst_${COUNTER}
+        [ "$status" -eq 0 ]
+        echo "${lines[0]}"
+        echo "${lines[0]}" | grep "Service removed."
+    done
+}
+
+function teardown() {
+    echo "$output"
 }
