@@ -253,6 +253,13 @@ PGSQL_HOST='localhost'
     echo "${output}" | grep "disable-queryexamples"
 }
 
+@test "PMM-T443 run pmm-admin add postgresql --help to check database" {
+    run pmm-admin add postgresql --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "database=DATABASE"
+}
+
 
 @test "run pmm-admin remove postgresql with pgstatmonitor" {
         COUNTER=0
