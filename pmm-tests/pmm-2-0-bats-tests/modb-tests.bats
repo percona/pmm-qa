@@ -2,7 +2,7 @@
 
 ## mongodb
 
-MONGO_USERNAME='mongoadmin'
+MONGO_USERNAME='pmm_mongodb'
 MONGO_PASSWORD="secret"
 
 if [ -z ${pmm_server_ip+x} ]; then
