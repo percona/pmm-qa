@@ -1728,42 +1728,40 @@ add_clients(){
       docker pull mongo:${modb_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $MODB_PORT mongodb
-        MODB_PORT=$((MODB_PORT+2))
+        MODB_PORT_NEXT=$((MODB_PORT+2))
         mkdir -p /tmp/modb_${MODB_PORT}
         chown -R $USER:$USER /tmp/ > /dev/null 2>&1
         chmod -R go+w /tmp/ > /dev/null 2>&1
         modb_service_name=$(prepare_service_name mongodb_node_$j)
-        docker run -d -p $MODB_PORT:27017 -v /tmp/modb_${MODB_PORT}/:/tmp/ -e MONGO_INITDB_ROOT_USERNAME=mongoadmin -e MONGO_INITDB_ROOT_PASSWORD=secret -e UMASK=0777 --name $modb_service_name mongo:${modb_version}
+        docker run -d -p $MODB_PORT-$MODB_PORT_NEXT:27017-27019 -v /tmp/modb_${MODB_PORT}/:/tmp/ -e UMASK=0777 --name $modb_service_name mongo:${modb_version}
         sleep 20
-        docker exec $modb_service_name mongo -u mongoadmin -p 'secret' --eval 'db.setProfilingLevel(2)'
-        docker cp $SCRIPT_PWD/mongodb_user_setup.js $modb_service_name:/
-        docker exec $modb_service_name mongo -u mongoadmin -p 'secret' mongodb_user_setup.js
+        docker exec $modb_service_name mongo --eval 'db.setProfilingLevel(2)'
         if [[ -z $use_socket ]]; then
           if [ $(( ${j} % 2 )) -eq 0 ]; then
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster $modb_service_name --username=pmm_mongodb --password=secret --metrics-mode=$metrics_mode --environment=modb-prod $modb_service_name --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-prod $modb_service_name --debug localhost:$MODB_PORT
             else
-              pmm-admin add mongodb --cluster $modb_service_name --username=pmm_mongodb --password=secret --environment=modb-prod $modb_service_name --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-prod $modb_service_name --debug localhost:$MODB_PORT
             fi
           else
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster $modb_service_name --username=pmm_mongodb --password=secret --metrics-mode=$metrics_mode --environment=modb-dev $modb_service_name --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-dev $modb_service_name --debug localhost:$MODB_PORT
             else
-              pmm-admin add mongodb --cluster $modb_service_name --username=pmm_mongodb --password=secret --environment=modb-dev $modb_service_name --debug localhost:$MODB_PORT
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --debug localhost:$MODB_PORT
             fi
           fi
         else
           if [ $(( ${j} % 2 )) -eq 0 ]; then
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster $modb_service_name --username=pmm_mongodb --password=secret --metrics-mode=$metrics_mode --environment=modb-prod $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --metrics-mode=$metrics_mode --environment=modb-prod $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             else
-              pmm-admin add mongodb --cluster $modb_service_name --username=pmm_mongodb --password=secret --environment=modb-prod $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-prod $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             fi
           else
             if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mongodb --cluster $modb_service_name --username=pmm_mongodb --password=secret --environment=modb-dev $modb_service_name --metrics-mode=$metrics_mode --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --metrics-mode=$metrics_mode --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             else
-              pmm-admin add mongodb --cluster $modb_service_name --username=pmm_mongodb --password=secret --environment=modb-dev $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
+              pmm-admin add mongodb --cluster $modb_service_name --environment=modb-dev $modb_service_name --socket=/tmp/modb_${MODB_PORT}/mongodb-27017.sock --debug
             fi
           fi
         fi
