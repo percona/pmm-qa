@@ -1,0 +1,139 @@
+---
+- name: Running MYSQL Database as Docker Container using Ansible.
+  hosts: localhost
+  vars:
+    mysqldockerdb: "{{ lookup('vars', 'extra_mysqldockerdb', default=lookup('env','MYSQL_CONTAINER') | default('mysql57-db', true) ) }}"
+    mysqlport: "{{ lookup('vars', 'extra_mysqlport', default=lookup('env','MYSQL_PORT') | default('43306', true) ) }}"
+    mysqlversion: "{{ lookup('vars', 'extra_mysqlversion', default=lookup('env','MYSQL_VERSION') | default('5.7', true) ) }}"
+    mysqldistribution: "{{ lookup('vars', 'extra_mysqldistribution', default=lookup('env','MYSQL_DISTRIBUTION') | default('mysql', true) ) }}"
+    mysqlhost: 127.0.0.1
+  tasks:
+    - name: Check for mysql container already running, kill it
+      shell: >
+        docker ps -q --filter "name={{ mysqldockerdb }}" | grep -q . && docker stop {{ mysqldockerdb }} && docker rm -fv {{ mysqldockerdb }}
+      ignore_errors: true
+
+    - name: Check for mysql container created previously, kill it
+      shell: >
+        docker rm {{ mysqldockerdb }}
+      ignore_errors: true
+
+    - name: delete network if exist
+      shell: docker network rm "{{ mysqldockerdb }}_network"
+      ignore_errors: true
+
+    - name: Create a network
+      shell: docker network create "{{ mysqldockerdb }}_network"
+
+    - name: Delete slowlog file if exist from previous runs
+      file:
+        path: "/tmp/mysql/{{ mysqldockerdb }}/mysql_log.log"
+        state: absent
+      become: yes
+      tags:
+        - slowlog-setup
+
+    - name: ensure slowlog directory exist
+      command: mkdir -p /tmp/mysql/{{ mysqldockerdb }}/
+      tags:
+        - slowlog-setup
+
+    - name: ensure slowlog file is writable by Docker container
+      command: chmod 777 -R  /tmp/mysql/{{ mysqldockerdb }}/
+      become: yes
+      tags:
+        - slowlog-setup
+
+    - name: Setting Source for Container based on Distribution requested by user [mysql]
+      set_fact: db="mysql"
+      when: mysqldistribution == "mysql"
+
+    - name: Setting Source for Container based on Distribution requested by user [percona]
+      set_fact: db="percona"
+      when: mysqldistribution == "percona"
+
+    - name: Setting Source for Container based on Distribution requested by user [mariadb]
+      set_fact: db="mariadb"
+      when: mysqldistribution == "mariadb"
+
+    - name: Launch MySQL Database Container
+      shell: >
+        docker run --name {{ mysqldockerdb }} -e MYSQL_ROOT_PASSWORD=password
+        -p {{ mysqlport }}:3306
+        -v /tmp/mysql/{{ mysqldockerdb }}:/tmp/mysql/{{ mysqldockerdb }}
+        -v "/$(pwd)/queries/mysql/users.sql:/docker-entrypoint-initdb.d/1.sql"
+        -v "/$(pwd)/queries/mysql/{{ db }}.sql:/docker-entrypoint-initdb.d/2.sql"
+        --network "{{ mysqldockerdb }}_network"
+        -d {{ db }}:{{ mysqlversion }}
+        --slow-query-log-file=/tmp/mysql/{{ mysqldockerdb }}/mysql_log.log
+        --net_read_timeout=100
+        --slow-query-log='ON'
+        --long-query-time=0
+        --log-slow-admin-statements='ON'
+        --log-slow-slave-statements='ON'
+      tags:
+        - container-mysql
+
+    - name: Wait for Container to be ready
+      shell: docker logs {{ mysqldockerdb }} 2>&1 | grep "ready for connections."
+      register: result
+      until: result.rc == 0
+      retries: 10
+      delay: 5
+
+    - name: Pause for 30 seconds for container buildup
+      pause:
+        seconds: 30
+
+    - name: Check for mysql slow log query
+      shell: docker exec {{ mysqldockerdb }} mysql -u root -ppassword -e "SET GLOBAL slow_query_log='ON';"
+      tags:
+        - slowlog-setup
+
+    - name: Enable Query Response time plugin for Percona Server 5.x
+      shell: docker exec {{ mysqldockerdb }} mysql -u root -ppassword -e "{{ item }}"
+      with_items:
+       - "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"
+       - "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"
+       - "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"
+       - "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"
+       - "SET GLOBAL query_response_time_stats=ON;"
+      when: mysqlversion is search("5") and  db == "percona"
+      ignore_errors: true
+      tags:
+        - slowlog-setup
+
+    - name: setup sysbench for Mysql DB deployment
+      shell: >
+        docker run --rm=true --name=sb-prepare --network "{{ mysqldockerdb }}_network" severalnines/sysbench sysbench
+        --db-driver=mysql
+        --oltp-table-size=100000
+        --oltp-tables-count=24
+        --threads=1
+        --mysql-host={{ mysqldockerdb }}
+        --mysql-port=3306
+        --mysql-user=sbtest
+        --mysql-password=sbtestsecret
+        /usr/share/sysbench/tests/include/oltp_legacy/parallel_prepare.lua run
+      tags:
+        - sysbench-mysql
+
+    - name: Check for sysbench container for this DB already running, kill it
+      shell: >
+        docker stop sb{{ mysqldockerdb }}-run && docker rm -fv sb{{ mysqldockerdb }}-run
+      ignore_errors: true
+
+    - name: run sysbench Read & Write Load for mysql DB
+      shell: >
+        docker run --name="sb{{ mysqldockerdb }}-run" -d --network "{{ mysqldockerdb }}_network" severalnines/sysbench
+        sysbench --db-driver=mysql --report-interval=2 --mysql-table-engine=innodb --oltp-table-size=100000
+        --oltp-tables-count=24
+        --threads=64
+        --time=99999
+        --mysql-host={{ mysqldockerdb }}
+        --mysql-port=3306
+        --mysql-user=sbtest
+        --mysql-password=sbtestsecret
+        /usr/share/sysbench/tests/include/oltp_legacy/oltp.lua run
+      tags:
+        - sysbench-mysql
