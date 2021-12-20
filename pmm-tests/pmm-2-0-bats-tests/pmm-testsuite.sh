@@ -115,6 +115,14 @@ function run_mongodb_specific_tests() {
   fi
 }
 
+function run_modb_specific_tests() {
+  if [[ $tap == 1 ]] ; then
+    bats --tap ${DIRNAME}/modb-tests.bats
+  else
+    bats ${DIRNAME}/modb-tests.bats
+  fi
+}
+
 function run_proxysql_tests() {
   if [[ $tap == 1 ]] ; then
     bats --tap ${DIRNAME}/proxysql-specific-tests.bats
@@ -246,7 +254,7 @@ fi
 
 if [[ $instance_t == "modb" ]] ; then
   echo "Running MongoDB specific tests"
-  run_mongodb_specific_tests
+  run_modb_specific_tests
 fi
 
 if [[ $instance_t == "ps" ]]; then
