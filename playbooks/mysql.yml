@@ -6,6 +6,7 @@
     mysqlport: "{{ lookup('vars', 'extra_mysqlport', default=lookup('env','MYSQL_PORT') | default('43306', true) ) }}"
     mysqlversion: "{{ lookup('vars', 'extra_mysqlversion', default=lookup('env','MYSQL_VERSION') | default('5.7', true) ) }}"
     mysqldistribution: "{{ lookup('vars', 'extra_mysqldistribution', default=lookup('env','MYSQL_DISTRIBUTION') | default('mysql', true) ) }}"
+    mysqldataload: "{{ lookup('vars', 'extra_mysqldataload', default=lookup('env','MYSQL_DATALOAD') | default('pmmworkload', true) ) }}"
     mysqlhost: 127.0.0.1
   tasks:
     - name: Check for mysql container already running, kill it
@@ -115,13 +116,17 @@
         --mysql-user=sbtest
         --mysql-password=sbtestsecret
         /usr/share/sysbench/tests/include/oltp_legacy/parallel_prepare.lua run
+      when: mysqldataload == "sysbench"
       tags:
         - sysbench-mysql
 
     - name: Check for sysbench container for this DB already running, kill it
       shell: >
         docker stop sb{{ mysqldockerdb }}-run && docker rm -fv sb{{ mysqldockerdb }}-run
+      when: mysqldataload == "sysbench"
       ignore_errors: true
+      tags:
+        - sysbench-mysql
 
     - name: run sysbench Read & Write Load for mysql DB
       shell: >
@@ -135,5 +140,26 @@
         --mysql-user=sbtest
         --mysql-password=sbtestsecret
         /usr/share/sysbench/tests/include/oltp_legacy/oltp.lua run
+      when: mysqldataload == "sysbench"
       tags:
         - sysbench-mysql
+
+    - name: run QAN Workload Script for High Bucket size
+      shell: >
+        docker run --rm --name="pmm{{ mysqldockerdb }}-run" -d
+        --network "{{ mysqldockerdb }}_network"
+        -e MYSQL_HOST={{ mysqldockerdb }}
+        -e MYSQL_PORT=3306
+        -e MYSQL_USER=root
+        -e MYSQL_PASSWORD=password
+        -e TEST_TARGET_QPS=1000
+        -e TEST_QUERIES=100
+        -e TEST_TABLES=50
+        -e TEST_TABLES=10
+        -v /srv/pmm-qa/pmm-tests:/usr/src/myapp
+        -w /usr/src/myapp
+        php-db
+        php schema_table_query.php
+      when: mysqldataload == "pmmworkload"
+      tags:
+        - pmm-workload
