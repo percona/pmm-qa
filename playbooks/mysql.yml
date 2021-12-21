@@ -5,7 +5,7 @@
     mysqldockerdb: "{{ lookup('vars', 'extra_mysqldockerdb', default=lookup('env','MYSQL_CONTAINER') | default('mysql57-db', true) ) }}"
     mysqlport: "{{ lookup('vars', 'extra_mysqlport', default=lookup('env','MYSQL_PORT') | default('43306', true) ) }}"
     mysqlversion: "{{ lookup('vars', 'extra_mysqlversion', default=lookup('env','MYSQL_VERSION') | default('5.7', true) ) }}"
-    mysqldistribution: "{{ lookup('vars', 'extra_mysqldistribution', default=lookup('env','MYSQL_DISTRIBUTION') | default('mysql', true) ) }}"
+    mysqldistribution: "{{ lookup('vars', 'extra_mysqldistribution', default=lookup('env','MYSQL_DISTRIBUTION') | default('percona', true) ) }}"
     mysqldataload: "{{ lookup('vars', 'extra_mysqldataload', default=lookup('env','MYSQL_DATALOAD') | default('pmmworkload', true) ) }}"
     mysqlhost: 127.0.0.1
   tasks:
@@ -144,6 +144,14 @@
       tags:
         - sysbench-mysql
 
+    - name: Check if PMM Workload container for this Deployment already running, kill it
+      shell: >
+        docker stop pmm{{ mysqldockerdb }}-run && docker rm -fv pmm{{ mysqldockerdb }}-run
+      when: mysqldataload == "pmmworkload"
+      ignore_errors: true
+      tags:
+        - pmm-workload
+
     - name: run QAN Workload Script for High Bucket size
       shell: >
         docker run --rm --name="pmm{{ mysqldockerdb }}-run" -d
@@ -155,7 +163,7 @@
         -e TEST_TARGET_QPS=1000
         -e TEST_QUERIES=100
         -e TEST_TABLES=50
-        -e TEST_TABLES=10
+        -e TEST_SCHEMAS=10
         -v /srv/pmm-qa/pmm-tests:/usr/src/myapp
         -w /usr/src/myapp
         php-db

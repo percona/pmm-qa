@@ -1,0 +1,146 @@
+---
+- name: Running Postgresql Database as Docker Container using Ansible.
+  hosts: localhost
+  vars:
+    pgsqldockerdb: "{{ lookup('vars', 'extra_pgsqldockerdb', default=lookup('env','PGSQL_CONTAINER') | default('pgsql14db', true) ) }}"
+    pgsqlport: "{{ lookup('vars', 'extra_pgsqlport', default=lookup('env','PGSQL_PORT') | default('45432', true) ) }}"
+    pgsqlversion: "{{ lookup('vars', 'extra_pgsqlversion', default=lookup('env','PGSQL_VERSION') | default('14.1', true) ) }}"
+    pgsqldistribution: "{{ lookup('vars', 'extra_pgsqldistribution', default=lookup('env','PGSQL_DISTRIBUTION') | default('pdpgsql', true) ) }}"
+    pgsqldataload: "{{ lookup('vars', 'extra_pgsqldataload', default=lookup('env','PGSQL_DATALOAD') | default('pmmworkload', true) ) }}"
+    pgsqlhost: 127.0.0.1
+  tasks:
+    - name: Check for pgsql container already running, kill it
+      shell: >
+        docker ps -q --filter "name={{ pgsqldockerdb }}" | grep -q . && docker stop {{ pgsqldockerdb }} && docker rm -fv {{ pgsqldockerdb }}
+      ignore_errors: true
+
+    - name: Check for pgsql container created previously, kill it
+      shell: >
+        docker rm {{ pgsqldockerdb }}
+      ignore_errors: true
+
+    - name: delete network if exist
+      shell: docker network rm "{{ pgsqldockerdb }}_network"
+      ignore_errors: true
+
+    - name: Create a network
+      docker_network:
+        name: "{{ pgsqldockerdb }}_network"
+
+    - name: Launch Official Postgresql database container
+      shell: >
+        docker run --name {{ pgsqldockerdb }}
+        -p {{ pgsqlport }}:5432
+        -e POSTGRES_PASSWORD=password
+        -v "/$(pwd)/queries/postgresql:/docker-entrypoint-initdb.d/:rw"
+        --network "{{ pgsqldockerdb }}_network"
+        -d postgres:{{ pgsqlversion }}
+        -c shared_preload_libraries=pg_stat_statements
+        -c track_activity_query_size=2048
+        -c pg_stat_statements.max=10000
+        -c pg_stat_statements.track=all
+        -c pg_stat_statements.save=off
+        -c track_io_timing=on
+        -c password_encryption=md5
+      when: pgsqldistribution == "pgsql"
+
+    - name: Launch Percona Postgresql database container
+      shell: >
+        docker run --name {{ pgsqldockerdb }}
+        -p {{ pgsqlport }}:5432
+        -e POSTGRES_PASSWORD=password
+        -v "/$(pwd)/queries/postgresql:/docker-entrypoint-initdb.d/:rw"
+        --network "{{ pgsqldockerdb }}_network"
+        -d perconalab/percona-distribution-postgresql:{{ pgsqlversion }}
+        -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements
+        -c track_activity_query_size=2048
+        -c pg_stat_statements.max=10000
+        -c pg_stat_monitor.pgsm_normalized_query=0
+        -c pg_stat_monitor.pgsm_query_max_len=10000
+        -c pg_stat_monitor.pgsm_enable_query_plan=1
+        -c pg_stat_statements.track=all
+        -c pg_stat_statements.save=off
+        -c track_io_timing=on
+        -c password_encryption=md5
+      when: pgsqldistribution == "pdpgsql"
+
+    - name: Wait for Container to be ready
+      shell: docker logs {{ pgsqldockerdb }} 2>&1 | grep "PostgreSQL init process complete; ready for start up."
+      register: result
+      until: result.rc == 0
+      retries: 10
+      delay: 5
+
+    - name: Pause for 30 seconds for container buildup
+      pause:
+        seconds: 30
+
+    - name: setup sysbench for Postgres DB deployment
+      shell: >
+        docker run --rm=true --name=sb-prepare --network "{{ pgsqldockerdb }}_network" severalnines/sysbench sysbench
+        --db-driver=pgsql
+        --oltp-table-size=100000
+        --oltp-tables-count=24
+        --threads=1
+        --pgsql-host={{ pgsqldockerdb }}
+        --pgsql-port=5432
+        --pgsql-user=sbtest
+        --pgsql-password=sbtestsecret
+        /usr/share/sysbench/tests/include/oltp_legacy/parallel_prepare.lua run
+      when: pgsqldataload == "sysbench"
+      ignore_errors: true
+      tags:
+        - sysbench-pgsql
+
+    - name: Check for sysbench container for this DB already running, kill it
+      shell: >
+        docker stop sb{{ pgsqldockerdb }}-run && docker rm -fv sb{{ pgsqldockerdb }}-run
+      when: pgsqldataload == "sysbench"
+      ignore_errors: true
+      tags:
+        - sysbench-pgsql
+
+    - name: run sysbench Read & Write Load for postgresql DB
+      shell: >
+        docker run --name="sb{{ pgsqldockerdb }}-run" -d --network "{{ pgsqldockerdb }}_network" severalnines/sysbench
+        sysbench --db-driver=pgsql --report-interval=2 --oltp-table-size=100000
+        --oltp-tables-count=24
+        --threads=64
+        --time=99999
+        --pgsql-host={{ pgsqldockerdb }}
+        --pgsql-port=5432
+        --pgsql-user=sbtest
+        --pgsql-password=sbtestsecret
+        /usr/share/sysbench/tests/include/oltp_legacy/oltp.lua run
+      when: pgsqldataload == "sysbench"
+      ignore_errors: true
+      tags:
+        - sysbench-pgsql
+
+    - name: Check if PMM Workload container for this PGSQL Deployment already running, kill it
+      shell: >
+        docker stop pmm{{ pgsqldockerdb }}-run && docker rm -fv pmm{{ pgsqldockerdb }}-run
+      when: pgsqldataload == "pmmworkload"
+      ignore_errors: true
+      tags:
+        - pmm-workload
+
+    - name: run QAN Workload Script for Postgresql
+      shell: >
+        docker run --rm --name="pmm{{ pgsqldockerdb }}-run" -d
+        --network "{{ pgsqldockerdb }}_network"
+        -e PGSQL_HOST={{ pgsqldockerdb }}
+        -e PGSQL_PORT=5432
+        -e PGSQL_USER=root
+        -e PGSQL_PASSWORD=password
+        -e TEST_TARGET_QPS=1000
+        -e TEST_QUERIES=100
+        -e TEST_TABLES=50
+        -e TEST_SCHEMAS=10
+        -v /srv/pmm-qa/pmm-tests:/usr/src/myapp
+        -w /usr/src/myapp
+        php-db
+        php pgsql_schema_table_query.php
+      when: pgsqldataload == "pmmworkload"
+      tags:
+        - pmm-workload
