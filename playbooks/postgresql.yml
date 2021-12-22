@@ -7,6 +7,7 @@
     pgsqlversion: "{{ lookup('vars', 'extra_pgsqlversion', default=lookup('env','PGSQL_VERSION') | default('14.1', true) ) }}"
     pgsqldistribution: "{{ lookup('vars', 'extra_pgsqldistribution', default=lookup('env','PGSQL_DISTRIBUTION') | default('pdpgsql', true) ) }}"
     pgsqldataload: "{{ lookup('vars', 'extra_pgsqldataload', default=lookup('env','PGSQL_DATALOAD') | default('pmmworkload', true) ) }}"
+    workloadscripts: "{{ lookup('vars', 'extra_workloadscripts', default=lookup('env','WORKLOAD_SCRIPTS') | default('/$(pwd)/workload/', true) ) }}"
     pgsqlhost: 127.0.0.1
   tasks:
     - name: Check for pgsql container already running, kill it
@@ -125,19 +126,27 @@
       tags:
         - pmm-workload
 
+    - name: Build the Workload container if not already build
+      shell: >
+        touch docker-build.log | docker build --tag php-db {{ workloadscripts }} > docker-build.log 2>&1
+      when: pgsqldataload == "pmmworkload"
+      ignore_errors: true
+      tags:
+        - pmm-workload
+
     - name: run QAN Workload Script for Postgresql
       shell: >
         docker run --rm --name="pmm{{ pgsqldockerdb }}-run" -d
         --network "{{ pgsqldockerdb }}_network"
         -e PGSQL_HOST={{ pgsqldockerdb }}
         -e PGSQL_PORT=5432
-        -e PGSQL_USER=root
+        -e PGSQL_USER=postgres
         -e PGSQL_PASSWORD=password
         -e TEST_TARGET_QPS=1000
         -e TEST_QUERIES=100
         -e TEST_TABLES=50
         -e TEST_SCHEMAS=10
-        -v /srv/pmm-qa/pmm-tests:/usr/src/myapp
+        -v "{{ workloadscripts }}:/usr/src/myapp"
         -w /usr/src/myapp
         php-db
         php pgsql_schema_table_query.php
