@@ -26,6 +26,21 @@ echo "$output"
     [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
 }
 
+@test "run metric check for already running instances" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | awk -F" " '{print $2}') ; do
+                echo "$i"
+                let COUNTER=COUNTER+1
+                MYSQL_SERVICE_NAME=${i}
+                run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+                run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh $MYSQL_SERVICE_NAME mysql_up ${pmm_server_ip} mysqld_exporter 1
+                echo "$output"
+                [ "$status" -eq 0 ]
+                [ "${lines[0]}" = "mysql_up 1" ]
+        done
+}
+
 @test "run pmm-admin add mysql based on running intsances" {
         COUNTER=0
         IFS=$'\n'
