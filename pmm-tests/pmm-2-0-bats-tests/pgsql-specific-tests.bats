@@ -26,6 +26,21 @@ echo "$output"
     [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
 }
 
+@test "run metric check for already running instances" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $2}') ; do
+                echo "$i"
+                let COUNTER=COUNTER+1
+                PGSQL_SERVICE_NAME=${i}
+                run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+                run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh $PGSQL_SERVICE_NAME pg_up ${pmm_server_ip} postgres_exporter 1
+                echo "$output"
+                [ "$status" -eq 0 ]
+                [ "${lines[0]}" = "pg_up 1" ]
+        done
+}
+
 @test "run pmm-admin add postgresql based on running intsances" {
         COUNTER=0
         IFS=$'\n'
