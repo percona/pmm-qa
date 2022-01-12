@@ -22,6 +22,20 @@ echo "$output"
     [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
 }
 
+@test "run metric check for already running instances" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $2}') ; do
+                echo "$i"
+                let COUNTER=COUNTER+1
+                MONGODB_SERVICE_NAME=${i}
+                run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+                run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh $MONGODB_SERVICE_NAME mongodb_up ${pmm_server_ip} mongodb_exporter 1
+                echo "$output"
+                [ "$status" -eq 0 ]
+                [ "${lines[0]}" = "mongodb_up 1" ]
+        done
+}
 
 @test "run pmm-admin add mongodb based on running instances with metrics-mode push" {
     COUNTER=0
