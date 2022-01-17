@@ -1,0 +1,170 @@
+---
+- name: Running Mongodb Database as Container using Ansible.
+  hosts: localhost
+  vars:
+    mongodbdockerdb: "{{ lookup('vars', 'extra_mongodbdockerdb', default=lookup('env','MONGODB_CONTAINER') | default('mongo44db', true) ) }}"
+    mongodbportrange: "{{ lookup('vars', 'extra_mongodbportrange', default=lookup('env','MONGODB_PORTRANGE') | default('27017-27019', true) ) }}"
+    mongodbversion: "{{ lookup('vars', 'extra_mongodbversion', default=lookup('env','MONGODB_VERSION') | default('4.4', true) ) }}"
+    mongodbsetup: "{{ lookup('vars', 'extra_mongodbsetup', default=lookup('env','MONGODB_SETUP') | default('replicaset', true) ) }}"
+    mongodbdistribution: "{{ lookup('vars', 'extra_mongodbdistribution', default=lookup('env','MONGODB_DISTRIBUTION') | default('psmdb', true) ) }}"
+    mongodbdataload: "{{ lookup('vars', 'extra_mongodbdataload', default=lookup('env','MONGODB_DATALOAD') | default('pmmworkload', true) ) }}"
+    workloadscripts: "{{ lookup('vars', 'extra_workloadscripts', default=lookup('env','WORKLOAD_SCRIPTS') | default('/$(pwd)/workload/', true) ) }}"
+    mongodbhost: 127.0.0.1
+  tasks:
+    - name: Check for mongodb container already running, kill it
+      shell: >
+        docker ps -q --filter "name={{ mongodbdockerdb }}" | grep -q . && docker stop {{ mongodbdockerdb }} && docker rm -fv {{ mongodbdockerdb }}
+      ignore_errors: true
+      tags:
+        - cleanup
+
+    - name: Check for mongodb container created previously, kill it
+      shell: >
+        docker rm {{ mongodbdockerdb }}
+      ignore_errors: true
+      tags:
+        - cleanup
+
+    - name: delete network if exist
+      shell: docker network rm "{{ mongodbdockerdb }}_network"
+      ignore_errors: true
+      tags:
+        - cleanup
+
+    - name: Create a network
+      shell: docker network create "{{ mongodbdockerdb }}_network"
+
+    - name: Prepare volume for official mongodb container
+      shell: "{{ item }}"
+      with_items:
+        - mkdir -p /tmp/modb_{{ mongodbdockerdb }}
+        - chown -R $USER:$USER /tmp/modb_{{ mongodbdockerdb }} > /dev/null 2>&1
+        - chmod -R go+w /tmp/modb_{{ mongodbdockerdb }} > /dev/null 2>&1
+      when: mongodbdistribution == "modb"
+      become: yes
+
+    - name: Cleanup the tmp on local
+      shell: rm -r /tmp/modb_{{ mongodbdockerdb }}
+      tags: ['never', 'cleanup' ]
+      become: yes
+      ignore_errors: true
+
+    - name: Launch Official Mongodb database container
+      shell: >
+        docker run -d
+        -p {{ mongodbportrange }}:27017-27019
+        --network "{{ mongodbdockerdb }}_network"
+        -v "/tmp/modb_{{ mongodbdockerdb }}/:/tmp/"
+        -v "/$(pwd)/queries/mongodb:/tmp/mongodb/"
+        -e MONGO_INITDB_ROOT_USERNAME=mongoadmin
+        -e MONGO_INITDB_ROOT_PASSWORD=secret
+        -e UMASK=0777
+        --name {{ mongodbdockerdb }}
+        mongo:{{ mongodbversion }}
+      when: mongodbdistribution == "modb"
+
+    - name: Prepare Container for Mongodb
+      shell: >
+        docker run -d --name={{ mongodbdockerdb }}
+        -p {{ mongodbportrange }}:27017-27019
+        --network "{{ mongodbdockerdb }}_network"
+        -v "/$(pwd)/setup_scripts/mongodb:/tmp/setup/"
+        -v "/$(pwd)/queries/mongodb:/tmp/mongodb/"
+        phusion/baseimage:focal-1.1.0
+      when: mongodbdistribution == "psmdb"
+
+    - name: Setup Percona Server Mongodb using setup script
+      shell: docker exec {{ mongodbdockerdb }} nohup bash -x /tmp/setup/mongodb_setup.sh {{ mongodbversion }} {{ mongodbsetup }} > /$(pwd)/setup_scripts/mongodb/mongodb_setup_log 2>&1
+      when: mongodbdistribution == "psmdb"
+
+    - name: Wait for Container to be ready
+      shell: docker logs {{ mongodbdockerdb }} 2>&1 | grep "waiting for connections on port 27017"
+      register: result
+      until: result.rc == 0
+      retries: 10
+      delay: 10
+      when: mongodbdistribution == "modb"
+
+    - name: Wait for Container to be ready
+      shell: cat /$(pwd)/setup_scripts/mongodb/mongodb_setup_log | grep "waiting for connections on port 27017"
+      register: result
+      until: result.rc == 0
+      retries: 10
+      delay: 10
+      when: mongodbdistribution == "psmdb"
+
+    - name: Get the Port for Primary in Mongodb Replica Set and Sharded Cluster Setups
+      shell: docker exec {{ mongodbdockerdb }} ./nodes/cl_primary.sh --eval 'db.runCommand("ismaster")' | grep "primary" | awk '{print $3}' | awk -F':' '{print $2}' | awk -F"\"" '{print $1}'
+      when: mongodbdistribution == "psmdb" and (mongodbsetup == "replicaset" or mongodbsetup == "sharding" )
+      register: primaryport
+
+    - name: Enable MongoDb Profiler on Docker official Mongodb
+      shell: docker exec {{ mongodbdockerdb }} mongo -u mongoadmin -p 'secret' "{{ item }}"
+      with_items:
+        - /tmp/mongodb/mongodb_user_setup.js
+      when: mongodbdistribution == "modb"
+
+    - name: Check if PMM Workload container for this Mongodb Deployment already running, kill it
+      shell: >
+        docker stop pmm{{ mongodbdockerdb }}-run && docker rm -fv pmm{{ mongodbdockerdb }}-run
+      when: mongodbdataload == "pmmworkload"
+      ignore_errors: true
+      tags:
+        - pmm-workload
+        - cleanup
+
+    - name: Build the Workload container if not already build
+      shell: >
+        touch docker-build.log | docker build --tag php-db {{ workloadscripts }} > docker-build.log 2>&1
+      when: mongodbdataload == "pmmworkload"
+      ignore_errors: true
+      tags:
+        - pmm-workload
+
+    - name: setup QAN Workload container with composer requirement for mongodb driver
+      shell: >
+        docker run --rm --name="pmm{{ mongodbdockerdb }}-run"
+        --network "{{ mongodbdockerdb }}_network"
+        -v "{{ workloadscripts }}:/usr/src/myapp"
+        -w /usr/src/myapp
+        php-db
+        composer require mongodb/mongodb
+      when: mongodbdataload == "pmmworkload"
+      tags:
+        - pmm-workload
+
+    - name: run QAN Workload Script for Official Mongodb
+      shell: >
+        docker run --rm --name="pmm{{ mongodbdockerdb }}-run" -d
+        --network "{{ mongodbdockerdb }}_network"
+        -e MONGODB_HOST={{ mongodbdockerdb }}
+        -e MONGODB_PORT=27017
+        -e MONGODB_USER=mongoadmin
+        -e MONGODB_PASSWORD=secret
+        -e TEST_TARGET_QPS=1000
+        -e TEST_COLLECTION=50
+        -e TEST_DB=10
+        -v "{{ workloadscripts }}:/usr/src/myapp"
+        -w /usr/src/myapp
+        php-db
+        php mongodb_query.php
+      when: mongodbdataload == "pmmworkload" and mongodbdistribution == "modb"
+      tags:
+        - pmm-workload
+
+    - name: run QAN Workload Script for Official Mongodb
+      shell: >
+        docker run --rm --name="pmm{{ mongodbdockerdb }}-run" -d
+        --network "{{ mongodbdockerdb }}_network"
+        -e MONGODB_HOST={{ mongodbdockerdb }}
+        -e MONGODB_PORT={{ primaryport.stdout }}
+        -e TEST_TARGET_QPS=1000
+        -e TEST_COLLECTION=50
+        -e TEST_DB=10
+        -v "{{ workloadscripts }}:/usr/src/myapp"
+        -w /usr/src/myapp
+        php-db
+        php mongodb_query.php
+      when: mongodbdataload == "pmmworkload" and mongodbdistribution == "psmdb"
+      tags:
+        - pmm-workload

@@ -1,3 +1,4 @@
+db.setProfilingLevel(2)
 db.getSiblingDB("admin").createRole({
     role: "explainRole",
     privileges: [{
