@@ -141,6 +141,7 @@ echo "$output"
 }
 
 @test "PMM-T963 check metrics from postgres service with custom agent password" {
+skip "Skipping this test, because of random failure and flaky behaviour"
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do

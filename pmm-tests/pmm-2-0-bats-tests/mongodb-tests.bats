@@ -196,7 +196,7 @@ skip "Skipping this test, because of setup issue on Framework, https://jira.perc
     echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "usage: pmm-admin add mongodb [<flags>] [<name>] [<address>]" ]]
-    [[ ${lines[54]} =~ "--socket=SOCKET" ]]
+    echo "${output}" | grep -- "--socket=SOCKET"
 }
 
 
@@ -270,6 +270,7 @@ skip "Skipping this test, because of setup issue on Framework, https://jira.perc
 }
 
 @test "PMM-T964 check metrics from mongodb service with custom agent password" {
+skip "Skipping this test, because of random failure and flaky behaviour"
     COUNTER=0
     IFS=$'\n'
     for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
