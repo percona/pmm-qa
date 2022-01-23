@@ -392,18 +392,14 @@ check_postgres_encoding() {
     database_name=$1
     container_name="$(docker ps -f name=-server --format "{{ .Names }}")"
     docker exec $container_name su -l postgres -c "psql $database_name -c 'SHOW SERVER_ENCODING'" | grep UTF8
+
+    [ "$status" -eq 0 ]
 }
 
 @test "Check that pmm-managed database encoding is UTF8" {
-run check_postgres_encoding pmm-managed
-
-[ "$status" -eq 0 ]
-
+    run check_postgres_encoding pmm-managed
 }
 
 @test "Check that template1 database encoding is UTF8" {
-run check_postgres_encoding template1
-
-[ "$status" -eq 0 ]
-
+    run check_postgres_encoding template1
 }
