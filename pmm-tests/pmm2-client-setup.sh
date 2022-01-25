@@ -1,120 +1,58 @@
-#!/bin/bash
+#!/bin/sh
 
-function jsonval {
-    temp=`echo $json | sed 's/\\\\\//\//g' | sed 's/[{}]//g' | awk -v k="text" '{n=split($0,a,","); for (i=1; i<=n; i++) print a[i]}' | sed 's/\"\:\"/\|/g' | sed 's/[\,]/ /g' | sed 's/\"//g' | grep -w $prop`
-    echo ${temp##*|}
-}
+export PMM_SERVER_IP=$1
+export CLIENT_VERSION=$2
+export METRICS_METHOD=$3
+export ADMIN_PASSWORD=$4
 
-display_usage() { 
-	echo "Please make sure to pass atleast pmm_server, db, db_server, db_user"
-	echo "1) pmm_server ------------------localhost:80"
-	echo "2) which_db   ------------------mysql/mongodb/postgresql"
-	echo "3) db_server  ------------------localhost:3306"
-	echo "4) db_user    ------------------root"
-	echo "5) db_password------------------secret"
-}
+apt-get update
+apt-get install -y wget gnupg2
+wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb
+dpkg -i percona-release_latest.$(lsb_release -sc)_all.deb
+apt-get update
+export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
+mv -v /artifacts/* .
 
-# check whether user had supplied -h or --help . If yes display usage 
-if [[ ( $# == "--help") ||  $# == "-h" ]] 
-then 
-	display_usage
-	exit 0
-fi
-if [ "$#" -lt 4 ]; then
-    display_usage
-    exit 1;
+if [[ "$CLIENT_VERSION" == "dev-latest" ]]; then
+    percona-release enable-only original experimental
+    apt-get update
+    apt-get -y install pmm2-client
 fi
 
-STR=$1
-IFS=’:’ read -ra pmm_serer_with_port <<< "$STR" 
-MSTR=$3
-IFS=’:’ read -ra db_server_with_port <<< "$MSTR"
-pmm_server=${pmm_serer_with_port[0]}
-pmm_server_port=${pmm_serer_with_port[1]}
-db_server=${db_server_with_port[0]}
-db_server_port=${db_server_with_port[1]}
-db_user=$4
-db_password=$5
-which_db=$2
-
-if [ -z "$pmm_server_port" ]
-then
-  pmm_server_port=80
+if [[ "$CLIENT_VERSION" == "pmm2-rc" ]]; then
+    percona-release enable-only original testing
+    apt-get update
+    apt-get -y install pmm2-client
 fi
 
-node_name=node$((1 + RANDOM % 100))
-json=`curl -d '{"address": "'${pmm_server}'", "custom_labels": {"custom_label": "for_node"}, "node_name": "'$node_name'"}' http://$pmm_server:$pmm_server_port/v1/inventory/Nodes/AddGeneric`
-prop='node_id'
-node_id=`jsonval`
+if [[ "$CLIENT_VERSION" == "pmm2-latest" ]]; then
+    apt-get -y install pmm2-client
+    apt-get -y update
+    percona-release enable-only original experimental
+fi
 
-json=`curl -d '{"custom_labels": {"custom_label2": "for_pmm-agent"}, "runs_on_node_id": "'$node_id'"}' http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddPMMAgent`
-prop='agent_id'
-agent_id=`jsonval`
-echo $agent_id
-echo $node_id
-
-sudo pmm-agent setup --server-address=$pmm_server:443 --server-insecure-tls --id=$agent_id --trace  > $PWD/pmm-agent.logs 2>&1 &
-
+if [[ "$CLIENT_VERSION" == http* ]]; then
+        tar -zxpf pmm2-client.tar.gz
+        rm -r pmm2-client.tar.gz
+        export PMM2_CLIENT=`ls -1td pmm2-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
+        echo ${PMM2_CLIENT}
+        mv ${PMM2_CLIENT} pmm2-client
+        cd pmm2-client
+        bash -x ./install_tarball
+        pwd
+        cd ../
+        export PMM_CLIENT_BASEDIR=`ls -1td pmm2-client 2>/dev/null | grep -v ".tar" | head -n1`
+        export PATH="`pwd`/pmm2-client/bin:$PATH"
+        echo "export PATH=`pwd`/pmm2-client/bin:$PATH" >> ~/.bash_profile
+        source ~/.bash_profile
+        pmm-admin --version
+        pmm-agent setup --config-file=`pwd`/pmm2-client/config/pmm-agent.yaml --server-address=${PMM_SERVER_IP}:443 --server-insecure-tls --metrics-mode=${METRICS_METHOD} --server-username=admin --server-password=${ADMIN_PASSWORD}
+		sleep 10
+		pmm-agent --config-file=`pwd`/pmm2-client/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+else
+		pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${PMM_SERVER_IP}:443 --server-insecure-tls --metrics-mode=${METRICS_METHOD} --server-username=admin --server-password=${ADMIN_PASSWORD}
+		sleep 10
+		pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+fi
 sleep 10
-
-
-json=`curl -d '{"custom_labels": {"custom_label5": "for_node_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'"}' \
-     http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddNodeExporter`
-prop='runs_on_node_id'
-runs_on_node_id=`jsonval`
-echo $runs_on_node_id
-
-if [ $which_db == "mysql" ]
-then
-	if [ -z "$db_server_port" ]
-	then
-	      db_server_port='3306'
-	fi
-	service_name=mysql-$((1 + RANDOM % 100))
-	json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label3": "for_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddMySQL`
-	prop='service_id'
-	service_id=`jsonval`
-	echo $service_id
-
-	json=`curl -d '{"custom_labels": {"custom_label4": "for_mysql_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddMySQLdExporter`
-	prop='runs_on_node_id'
-	runs_on_node_id=`jsonval`
-	echo $runs_on_node_id
-
-  json=`curl -d '{"custom_labels": {"custom_label6": "for_perfschemaAgent"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
-  http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddQANMySQLPerfSchemaAgent`
-fi
-
-if [ $which_db == "mongodb" ]
-then
-	service_name=mongodb-$((1 + RANDOM % 100))
-	json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label3": "for_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddMongoDB`
- 	prop='service_id'
-	service_id=`jsonval`
-	echo $service_id
-
-	json=`curl -d '{"custom_labels": {"custom_label4": "for_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddMongoDBExporter`
-	prop='runs_on_node_id'
-	runs_on_node_id=`jsonval`
-	echo $runs_on_node_id
-fi
-
-if [ $which_db == "postgresql" ]
-then
-	service_name=postgres-$((1 + RANDOM % 100))
-	json=`curl -d '{"address": "'${db_server}'", "port": '${db_server_port}', "custom_labels": {"custom_label6": "for_postgres_service"}, "node_id": "'$node_id'", "service_name": "'$service_name'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Services/AddPostgreSQL`
- 	prop='service_id'
-	service_id=`jsonval`
-	echo $service_id
-
-	json=`curl -d '{"custom_labels": {"custom_label4": "for_postgres_exporter"}, "pmm_agent_id": "'$agent_id'", "service_id": "'$service_id'", "username": "'$db_user'", "password": "'$db_password'"}' \
-	http://$pmm_server:$pmm_server_port/v1/inventory/Agents/AddPostgresExporter`
-	prop='runs_on_node_id'
-	runs_on_node_id=`jsonval`
-	echo $runs_on_node_id
-fi
+pmm-admin status
