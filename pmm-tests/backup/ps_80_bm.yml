@@ -1,0 +1,88 @@
+---
+# This playbook does following:
+#   enables Percona testing repository
+#   Install Percona Server at Version 8.0.25 
+#   Install all required tools for backups in compatible version
+
+- hosts: localhost
+  become: true
+  become_method: sudo
+
+  pre_tasks:
+  - name: Remove old MySQL Packages Installation
+    apt:
+      name: "{{ oldPackages }}"
+      state: absent
+    vars:
+      oldPackages:
+        - percona-server-server
+        - percona-server-client
+        - percona-server-common
+        - percona-xtrabackup-80
+
+  tasks:
+  - name: install Percona Server repository
+    shell: "{{item}}"
+    with_items:
+      - "wget https://repo.percona.com/apt/percona-release_latest.focal_all.deb"
+      - "dpkg -i percona-release_latest.focal_all.deb"
+    become: yes
+
+  - name: Enable percona release
+    command: percona-release setup ps80
+
+  - name: Install Percona packages
+    apt:
+      name: "{{ packages }}"
+      state: present 
+      update_cache: true
+    vars:
+      packages:
+        - percona-server-server=8.0.25-15-1.focal
+        - percona-server-client=8.0.25-15-1.focal
+        - percona-server-common=8.0.25-15-1.focal
+    
+  - name: Start the MySQL service
+    service:
+      name: mysql
+      state: started
+      enabled: true
+
+  - name: Install python3-pymysql library
+    apt:
+      name: python3-pymysql
+      state: present
+  
+  - name: Change the authentication plugin of MySQL root user to mysql_native_password
+    shell: mysql -u root -e 'UPDATE mysql.user SET plugin="mysql_native_password" WHERE user="root" AND host="localhost"'
+  
+  - name: Flush Privileges
+    shell: mysql -u root -e 'FLUSH PRIVILEGES'
+  
+  - name: Set MySQL root password
+    mysql_user:
+      login_host: 'localhost'
+      login_user: 'root'
+      login_password: ''
+      name: 'root'
+      password: 'admin'
+      state: present
+  
+  - name: Stop MySQL
+    service: name=mysql state=stopped
+  
+  - name: Start MySQL
+    service: name=mysql state=started
+
+  - name: Enable percona tools repo
+    command: percona-release enable-only tools release
+  
+  - name: Install Percona packages
+    apt:
+      name: "{{ packages }}"
+      state: present 
+      update_cache: true
+    vars:
+      packages:
+        - percona-xtrabackup-80=8.0.25-17-1.focal
+        - qpress
