@@ -1409,7 +1409,7 @@ add_clients(){
       docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
       git clone https://github.com/percona/pg_stat_monitor
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
-        check_port $PDPGSQL_PORT pdpgsql
+        check_port $PDPGSQL_PORT PDPGSQL
         pdpgsql_service_name=$(prepare_service_name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j)
         docker run --name $pdpgsql_service_name -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_monitor.pgsm_enable_query_plan=1 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
         sleep 20
@@ -2064,9 +2064,9 @@ check_port (){
   PORT=$1
   DB=$2
   if [[ $(sudo docker ps | grep $DB | grep 0.0.0.0:$PORT) ]] || [[ $(lsof -i -P -n | grep LISTEN | grep $PORT) ]]; then
-    if [[ $DB == "pdpgsql" ]]; then
+    if [[ $DB == "PDPGSQL" ]]; then
       PDPGSQL_PORT=$((PDPGSQL_PORT+j))
-      check_port $PDPGSQL_PORT pdpgsql
+      check_port $PDPGSQL_PORT PDPGSQL
     fi
     if [[ $DB == "postgres" ]]; then
       PGSQL_PORT=$((PGSQL_PORT+j))
