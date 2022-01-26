@@ -17,6 +17,7 @@
   - name: Cleanup PMM-QA repo if exist in the current path
     shell: rm -r pmm-qa
     ignore_errors: true
+    tags: cleanup
 
   - name: Stop and Remove Running Container
     shell: "{{item}}"
@@ -24,6 +25,7 @@
       - "docker stop {{client_container_name}}"
       - "docker rm {{client_container_name}}"
     ignore_errors: true
+    tags: cleanup
 
   - name: Clone PMM-QA Repo to get the Artifacts
     shell: "{{item}}"
