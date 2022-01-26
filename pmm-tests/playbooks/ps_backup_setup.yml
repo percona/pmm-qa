@@ -1,0 +1,55 @@
+---
+# This playbook does following:
+#   Sets up Backup Management Related artifacts for Integrations tests
+
+- hosts: localhost
+  become: true
+  vars:
+    pmm_server: "{{ lookup('vars', 'extra_pmm_server', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    pmm_client_version: "{{ lookup('vars', 'extra_pmm_client_version', default=lookup('env','PMM_CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    container_name: "{{ lookup('vars', 'extra_container_name', default=lookup('env','CONTAINER_NAME') | default('PMM_PS_BM', true) ) }}"
+    pmm_server_admin_password: "{{ lookup('vars', 'extra_pmm_server_admin_password', default=lookup('env','PMM_SERVER_ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_BRANCH') | default('PMM-9211', true) ) }}"
+  tasks:
+  - set_fact:
+      client_container_name: "{{ container_name }}"
+
+  - name: Cleanup PMM-QA repo if exist in the current path
+    shell: rm -r pmm-qa
+    ignore_errors: true
+
+  - name: Stop and Remove Running Container
+    shell: "{{item}}"
+    with_items:
+      - "docker stop {{client_container_name}}"
+      - "docker rm {{client_container_name}}"
+    ignore_errors: true
+
+  - name: Clone PMM-QA Repo to get the Artifacts
+    shell: "{{item}}"
+    with_items:
+      - "git clone --branch {{pmm_qa_branch}} https://github.com/percona/pmm-qa"
+
+  - name: Run Baseimage container for setting up PS, PMM-Client and Xtrapbackup
+    shell: "{{item}}"
+    with_items:
+      - "docker run -d --name={{client_container_name}} phusion/baseimage:focal-1.1.0"
+      - "docker cp pmm-qa/pmm-tests/pmm2-client-setup.sh {{client_container_name}}:/"
+      - "docker cp pmm-qa/pmm-tests/backup/ps_80_bm.yml {{client_container_name}}:/"
+      - "docker exec {{client_container_name}} apt-get update"
+      - "docker exec {{client_container_name}} apt-get install -y wget git ansible"
+    
+  - name: Setup PMM2-Client Inside Base Image container
+    shell: "{{item}}"
+    with_items:
+      - "docker exec {{client_container_name}} bash -x pmm2-client-setup.sh {{pmm_server}} {{pmm_client_version}} auto {{pmm_server_admin_password}} no"
+
+  - name: Setup Percona Server and All dependencies inside the base image container
+    shell: "{{item}}"
+    with_items:
+      - "docker exec {{client_container_name}} ansible-playbook ps_80_bm.yml"
+
+  - name: Setup Percona Server and All dependencies inside the base image container
+    shell: "{{item}}"
+    with_items:
+      - "docker exec {{client_container_name}} pmm-admin add mysql --username=root --password=admin --query-source=perfschema mysql_bm_{{client_container_name}}"
