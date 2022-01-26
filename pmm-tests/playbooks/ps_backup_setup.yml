@@ -49,6 +49,12 @@
     with_items:
       - "docker exec {{client_container_name}} ansible-playbook ps_80_bm.yml"
 
+  - name: Remove the service Name if it was already being monitored
+    shell: "{{item}}"
+    with_items:
+      - "docker exec {{client_container_name}} pmm-admin remove mysql mysql_bm_{{client_container_name}}"
+    ignore_errors: true
+
   - name: Setup Percona Server and All dependencies inside the base image container
     shell: "{{item}}"
     with_items:
