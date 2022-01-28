@@ -2519,6 +2519,7 @@ setup_pmm2_client_docker_image () {
   sleep 20
   echo "PMM Client Start and connected to PMM-Server"
   ## Start Percona Server 5.7 latest image and connect it to same network
+  docker logs pmm-client
 
   docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent -d --network docker-client-check --name=ps5.7 percona:5.7
   sleep 20
