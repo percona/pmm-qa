@@ -3,6 +3,7 @@ FROM php:7.4-alpine
 RUN set -ex \
 	&& apk --no-cache add postgresql-libs postgresql-dev \
 	&& docker-php-ext-install pgsql pdo_pgsql \
+	&& docker-php-ext-install mysqli && docker-php-ext-enable mysqli \
 	&& apk del postgresql-dev
 
 RUN apk --update add --virtual build-dependencies build-base openssl-dev autoconf \
