@@ -32,10 +32,10 @@ else
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep pmm-agent | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep pmm-managed | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep postgresql | grep RUNNING
-	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep victoriametrics | grep RUNNING
-	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep vmalert | grep RUNNING
 	if [ $2 == "post" ]; then
 		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep dbaas-controller-$1
+		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep victoriametrics | grep RUNNING
+		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep vmalert | grep RUNNING
 		versions=(${DOCKER_VERSION//./ })
 		export pmm_minor_v=$(echo ${versions[1]});
 		if [[ $PERFORM_DOCKER_WAY_UPGRADE == "yes" && "${pmm_minor_v}" -gt "22" ]] || [[ $PERFORM_DOCKER_WAY_UPGRADE != "yes" ]]; then
