@@ -40,6 +40,13 @@
     shell: yum-config-manager --disable mysql57-community
     when: ansible_os_family == "RedHat"
 
+  - name: Stop mysql service on CentOS
+    systemd:
+     name: mysql
+     state: stopped
+    when: ansible_os_family == "RedHat"
+    ignore_errors: true
+
   - name: Install Percona Release RedHat
     yum:
       name: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
