@@ -2724,6 +2724,8 @@ setup_bm_mysql() {
   if [ "$ps_version" == "8.0" ]; then
     ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_80_bm.yml
   fi
+  sudo cat -f /var/log/mysqld.log
+  sleep 30m
 }
 
 prepare_service_name() {
