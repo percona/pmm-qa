@@ -30,7 +30,7 @@
     loop:
       - mysql-community-*
       - mariadb-*
-
+      - mysql*
       - Percona-Server-*
       - Percona-XtraDB-*
       - percona-server-*
