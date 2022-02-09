@@ -37,7 +37,7 @@
   - name: disable MySQL 5.7 repository
     shell: yum-config-manager --disable mysql57-community
     when: ansible_os_family == "RedHat"
-
+  
   - name: Install Percona Release RedHat
     yum:
       name: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
@@ -51,38 +51,18 @@
       - "dpkg -i percona-release_latest.generic_all.deb"
     when: ansible_os_family == "Debian"
 
+  - name: Setup task for install PS-57 from Percona-QA package-testing
+    shell: wget https://raw.githubusercontent.com/Percona-QA/package-testing/master/tasks/install_ps57.yml
+
+  - name: Setup task for install PXB24 from Percona-QA package-testing
+    shell: wget https://raw.githubusercontent.com/Percona-QA/package-testing/master/tasks/install_pxb24.yml
+
   - name: Enable percona release
-    command: percona-release setup ps80
+    command: percona-release setup ps57
 
-  - name: Install Percona packages RedHat
-    yum:
-      name: "{{ packages }}"
-      state: present
-      update_cache: true
-    vars:
-      packages:
-        - percona-server-server-8.0.25-15.1.el7
-        - percona-server-client-8.0.25-15.1.el7
-        - percona-server-shared-8.0.25-15.1.el7
-    when: ansible_os_family == "RedHat"
-
-  - name: Get OS version into variable for Debian
-    shell: echo $(lsb_release -sc)
-    register: linux_version
-    when: ansible_os_family == "Debian"
-
-  - name: Install Percona packages Deb
-    apt:
-      name: "{{ packages }}"
-      state: present 
-      update_cache: true
-    vars:
-      packages:
-        - percona-server-server=8.0.25-15-1.{{linux_version.stdout}}
-        - percona-server-client=8.0.25-15-1.{{linux_version.stdout}}
-        - percona-server-common=8.0.25-15-1.{{linux_version.stdout}}
-    when: ansible_os_family == "Debian"
-
+  - name: Include task to install ps57
+    include_tasks: ./install_ps57.yml
+    
   - name: start mysql service on Debian
     service:
       name: mysql
@@ -127,26 +107,26 @@
 
   - name: Enable percona tools repo
     command: percona-release enable-only tools release
-  
-  - name: Install Percona packages
+
+  - name: Include task to install PXB24
+    include_tasks: ./install_pxb24.yml
+
+  - name: install Percona XtraBackup new deb packages
     apt:
       name: "{{ packages }}"
-      state: present 
-      update_cache: true
+      update_cache: yes
+      state: latest
     vars:
       packages:
-        - percona-xtrabackup-80=8.0.25-17-1.{{linux_version.stdout}}
-        - qpress
+      - qpress
     when: ansible_os_family == "Debian"
 
-  - name: Install XtraBackup
+  - name: install Percona XtraBackup new rpm packages
     yum:
-      name: "https://downloads.percona.com/downloads/Percona-XtraBackup-LATEST/Percona-XtraBackup-8.0.25-17/binary/redhat/7/x86_64/percona-xtrabackup-test-80-8.0.25-17.1.el7.x86_64.rpm"
-      state: present
-    when: ansible_os_family == "RedHat"
-
-  - name: Install qpress
-    yum:
-      name: qpress
-      state: present
+      name: "{{ packages }}"
+      state: latest
+      update_cache: yes
+    vars:
+      packages:
+      - qpress
     when: ansible_os_family == "RedHat"
