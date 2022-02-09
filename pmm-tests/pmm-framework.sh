@@ -2719,10 +2719,10 @@ setup_bm_mysql() {
   echo "Setting up mysql"
   sudo yum install -y ansible
   if [ "$ps_version" == "5.7" ]; then
-    ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ps_57_bm.yml
+    ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_57_bm.yml
   fi
   if [ "$ps_version" == "8.0" ]; then
-    ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ps_80_bm.yml
+    ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_80_bm.yml
   fi
 }
 
