@@ -119,7 +119,7 @@
     when: ansible_os_family == "Debian"
   
   - name: Change Root MySQL password
-    command: mysql -u root --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY 'PMM_user@k@12456';"
+    command: mysql -u root --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY 'PMM_userk12456';"
     become: true
     when: ansible_os_family == "Debian"
 
@@ -130,7 +130,7 @@
     when: ansible_os_family == "RedHat"
   
   - name: Change temp MySQL password
-    command: mysql -u root -p"{{ mysql_root_password_temp.stdout }}" --connect-expired-password --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY 'PMM_user@k@12456';"
+    command: mysql -u root -p"{{ mysql_root_password_temp.stdout }}" --connect-expired-password --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY 'PMM_userk12456';"
     become: true
     when: ansible_os_family == "RedHat"
 
