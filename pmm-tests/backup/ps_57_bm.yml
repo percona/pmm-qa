@@ -15,6 +15,7 @@
       state: absent
     loop:
       - mysql-community-*
+      - mysql*
       - mariadb-*
       - Percona-Server-*
       - Percona-XtraDB-*
@@ -29,6 +30,7 @@
     loop:
       - mysql-community-*
       - mariadb-*
+      - mysql*
       - Percona-Server-*
       - Percona-XtraDB-*
       - percona-server-*
