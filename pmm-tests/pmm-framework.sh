@@ -108,6 +108,7 @@ usage () {
   echo " --setup-postgres-ssl           Use this option to setup official Postgresql 13 with SSL"
   echo " --setup-remote-db              Use this option when running AMI/OVF instances and setting up remote db's on client node"
   echo " --mongo-replica-for-backup     Use this option to setup MongoDB Replica Set and PBM for each replica member on client node"
+  echo " --setup-bm-mysql               Use this option to setup Percona Server along with Percona Xtra Backup and Qpress for BM setup"
   echo " --cleanup-service              Use this option to delete DB container and remove from monitoring, just pass service name"
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
 }
@@ -115,7 +116,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -321,6 +322,10 @@ do
     --install-backup-toolkit )
     shift
     install_backup_toolkit=1
+    ;;
+    --setup-bm-mysql )
+    shift
+    setup_bm_mysql=1
     ;;
     --setup-external-service )
     shift
@@ -2710,6 +2715,18 @@ setup_mongo_replica_for_backup() {
   popd
 }
 
+setup_bm_mysql() {
+  echo "Setting up mysql for Backup"
+  sudo yum install -y ansible
+  if [ "$ps_version" == "5.7" ]; then
+    ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_57_bm.yml
+  fi
+  if [ "$ps_version" == "8.0" ]; then
+    ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_80_bm.yml
+  fi
+  sudo cat /var/log/mysqld.log
+}
+
 prepare_service_name() {
   random_service_name=$1
   if [ ! -z $service_custom_name ]; then
@@ -2868,6 +2885,10 @@ fi
 
 if [ ! -z $cleanup_services ]; then
   cleanup_services
+fi
+
+if [ ! -z $setup_bm_mysql ]; then
+  setup_bm_mysql
 fi
 
 exit 0

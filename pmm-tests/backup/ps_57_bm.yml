@@ -1,0 +1,143 @@
+---
+# This playbook does following:
+#   enables Percona testing repository
+#   Install Percona Server at Version 8.0.25 
+#   Install all required tools for backups in compatible version
+
+- hosts: all
+  become: true
+  become_method: sudo
+
+  pre_tasks:
+  - name: Remove old MySQL Installation
+    yum:
+      name: "{{ item }}"
+      state: absent
+    loop:
+      - mysql-community-*
+      - mysql*
+      - mariadb-*
+      - Percona-Server-*
+      - Percona-XtraDB-*
+      - percona-server-*
+    when: ansible_os_family == "RedHat"
+    ignore_errors: true
+
+  - name: Remove old MySQL Installation
+    apt:
+      name: "{{ item }}"
+      state: absent
+    loop:
+      - mysql-community-*
+      - mariadb-*
+      - mysql*
+      - Percona-Server-*
+      - Percona-XtraDB-*
+      - percona-server-*
+    when: ansible_os_family == "Debian"
+    ignore_errors: true
+
+  tasks:
+  - name: disable MySQL 5.7 repository
+    shell: yum-config-manager --disable mysql57-community
+    when: ansible_os_family == "RedHat"
+
+  - name: Stop mysql service on CentOS
+    systemd:
+     name: mysql
+     state: stopped
+    when: ansible_os_family == "RedHat"
+    ignore_errors: true
+  
+  - name: Install Percona Release RedHat
+    yum:
+      name: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
+      state: present
+    when: ansible_os_family == "RedHat"
+
+  - name: Install Percona Release Debian
+    shell: "{{item}}"
+    with_items:
+      - "wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb"
+      - "dpkg -i percona-release_latest.generic_all.deb"
+    when: ansible_os_family == "Debian"
+
+  - name: Setup task for install PS-57 from Percona-QA package-testing
+    shell: wget https://raw.githubusercontent.com/Percona-QA/package-testing/master/tasks/install_ps57.yml
+
+  - name: Setup task for install PXB24 from Percona-QA package-testing
+    shell: wget https://raw.githubusercontent.com/Percona-QA/package-testing/master/tasks/install_pxb24.yml
+
+  - name: Enable percona release
+    command: percona-release setup ps57
+
+  - name: Include task to install ps57
+    include_tasks: ./install_ps57.yml
+    
+  - name: start mysql service on Debian
+    service:
+      name: mysql
+      state: started
+    when: ansible_os_family == "Debian"
+
+  - name: start mysql service on CentOS
+    systemd:
+      name: mysql
+      state: started
+    when: ansible_os_family == "RedHat"
+
+  - name: Install python3-pymysql library
+    apt:
+      name: python3-pymysql
+      state: present
+    when: ansible_os_family == "Debian"
+  
+  - name: Change the authentication plugin of MySQL root user to mysql_native_password
+    shell: mysql -u root -e 'UPDATE mysql.user SET plugin="mysql_native_password" WHERE user="root" AND host="localhost"'
+    when: ansible_os_family == "Debian"
+  
+  - name: Flush Privileges
+    shell: mysql -u root -e 'FLUSH PRIVILEGES'
+    when: ansible_os_family == "Debian"
+  
+  - name: Change Root MySQL password
+    command: mysql -u root --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY 'PMM_userk12456';"
+    become: true
+    when: ansible_os_family == "Debian"
+
+  - name: Find temporary password
+    shell: "echo `grep 'temporary.*root@localhost' /var/log/mysqld.log | sed 's/.*root@localhost: //'`"
+    register: mysql_root_password_temp
+    tags: register
+    when: ansible_os_family == "RedHat"
+  
+  - name: Change temp MySQL password
+    command: mysql -u root -p"{{ mysql_root_password_temp.stdout }}" --connect-expired-password --execute="ALTER USER 'root'@'localhost' IDENTIFIED BY 'PMM_userk12456';"
+    become: true
+    when: ansible_os_family == "RedHat"
+
+  - name: Enable percona tools repo
+    command: percona-release enable-only tools release
+
+  - name: Include task to install PXB24
+    include_tasks: ./install_pxb24.yml
+
+  - name: install Percona XtraBackup new deb packages
+    apt:
+      name: "{{ packages }}"
+      update_cache: yes
+      state: latest
+    vars:
+      packages:
+      - qpress
+    when: ansible_os_family == "Debian"
+
+  - name: install Percona XtraBackup new rpm packages
+    yum:
+      name: "{{ packages }}"
+      state: latest
+      update_cache: yes
+    vars:
+      packages:
+      - qpress
+    when: ansible_os_family == "RedHat"
