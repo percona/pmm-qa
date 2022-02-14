@@ -2396,8 +2396,8 @@ run_workload() {
         export MYSQL_DATABASE=mysql
 	export TEST_SCHEMAS=50
 	export TEST_TABLES=3000
-        export TEST_TARGET_QPS=1000
-        export TEST_QUERIES=3000
+        export TEST_TARGET_QPS=2000
+        export TEST_QUERIES=10000
         touch ps_$i.log
         sleep 5
         php $SCRIPT_PWD/schema_table_query.php > ps_${i}.log 2>&1 &
