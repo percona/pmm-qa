@@ -2450,8 +2450,8 @@ run_workload() {
         export PGSQL_PORT=${i}
         export PGSQL_HOST=localhost
         export PGSQL_USER=postgres
-        export TEST_TARGET_QPS=100
-        export TEST_QUERIES=1000
+        export TEST_TARGET_QPS=15
+        export TEST_QUERIES=100000
         touch pgsql_$i.log
         docker run --rm --name pgsql_php_$i -d -e PGSQL_PORT=${PGSQL_PORT} -e TEST_TARGET_QPS=${TEST_TARGET_QPS} -e TEST_QUERIES=${TEST_QUERIES} -d --network=host -v $SCRIPT_PWD:/usr/src/myapp -w /usr/src/myapp php-db php pgsql_schema_table_query.php
         sleep 5
