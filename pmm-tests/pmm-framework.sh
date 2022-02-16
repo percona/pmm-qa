@@ -2725,7 +2725,7 @@ setup_bm_mysql() {
     ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_80_bm.yml
   fi
   sudo cat /var/log/mysqld.log
-  pmm-admin add mysql --username=root --password=PMM_userk12456 --query-source=perfschema bm_mysql_pmm_qa
+  pmm-admin add mysql --username=root --password=PMM_userk12456 --query-source=perfschema bm_mysql_pmm_qa_$ps_version
 }
 
 prepare_service_name() {
