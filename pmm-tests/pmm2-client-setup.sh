@@ -32,6 +32,13 @@ if [[ "$CLIENT_VERSION" == "pmm2-latest" ]]; then
     percona-release enable-only original experimental
 fi
 
+## only supported for debian based systems for now
+if [[ "$CLIENT_VERSION" == 2* && dpkg -l ]]; then
+    export distro=$(cat /etc/*-release | grep DISTRIB_CODENAME | awk -F'=' '{print $2}')
+    wget -O pmm2-client.deb https://repo.percona.com/pmm2-client/apt/pool/main/p/pmm2-client/pmm2-client_${CLIENT_VERSION}-6.${distro}_amd64.deb
+    dpkg -i pmm2-client.deb
+fi
+
 if [[ "$CLIENT_VERSION" == http* ]]; then
 		if [[ "$INSTALL_CLIENT" == "yes" ]]; then
 			wget -O pmm2-client.tar.gz --progress=dot:giga "${CLIENT_VERSION}"
