@@ -2667,20 +2667,35 @@ setup_mysql_ssl () {
 
 setup_postgres_ssl () {
   echo "Setting up postgres ssl"
-  setup_docker_compose
-  mkdir -p /tmp/ssl || :
-  pushd /tmp/ssl
-  if [ ! -d "pmm-ui-tests" ]; then
-    git clone https://github.com/percona/pmm-ui-tests
+  sudo yum install -y ansible
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/pmm-tests/tls-ssl-setup
+  if echo "$pdpgsql_version" | grep '13'; then
+    export PGSQL_VERSION=13
   fi
-  sudo chown -R $USER:$USER pmm-ui-tests
-  pushd pmm-ui-tests
-  bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_postgres_ssl_13.sh
-  sleep 30
+  if echo "$pdpgsql_version" | grep '11'; then
+    export PGSQL_VERSION=11
+  fi
+  if echo "$pdpgsql_version" | grep '12'; then
+    export PGSQL_VERSION=12
+  fi
+  if echo "$pdpgsql_version" | grep '14'; then
+    export PGSQL_VERSION=14
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "$IP_ADDRESS" ]
+  then
+    export PMM_SERVER_IP=127.0.0.1
+  fi
+  export PMM_SERVER_IP=${IP_ADDRESS}
+  export PGSQL_SSL_CONTAINER=pgsql_${PGSQL_VERSION}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 postgresql_tls_setup.yml
   popd
-  pmm-admin add postgresql --port=5439 --tls --tls-skip-verify --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/root-ca.pem --tls-cert-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/client-cert.pem --tls-key-file=/tmp/ssl/pmm-ui-tests/testdata/pgsql/ssl-cert-scripts/certs/client-key.pem postgresql_ssl_1
-  popd
-  docker logs postgres_ssl
 }
 
 setup_remote_db_docker_compose () {
@@ -2718,11 +2733,14 @@ setup_mongo_replica_for_backup() {
 setup_bm_mysql() {
   echo "Setting up mysql for Backup"
   sudo yum install -y ansible
-  if [ "$ps_version" == "5.7" ]; then
-    ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_57_bm.yml
-  fi
-  if [ "$ps_version" == "8.0" ]; then
-    ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_80_bm.yml
+  export pmm_client_minor_v=$(get_client_minor_version)
+  if [ "${pmm_minor_v}" -gt "23" ]; then
+    if [ "$ps_version" == "5.7" ]; then
+      ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_57_bm.yml
+    fi
+    if [ "$ps_version" == "8.0" ]; then
+      ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_80_bm.yml
+    fi
   fi
   sudo cat /var/log/mysqld.log
 }
@@ -2739,6 +2757,12 @@ prepare_service_name() {
 get_minor_version() {
   export PMM_SERVER_VERSION=$(docker exec $1 pmm-admin status | grep 'Version:' | awk -F' ' '{print $2}')
   versions=(${PMM_SERVER_VERSION//./ })
+  echo ${versions[1]};
+}
+
+get_client_minor_version() {
+  export PMM_CLIENT_VERSION=$(pmm-admin status | grep 'Version:' | awk -F' ' '{print $2}')
+  versions=(${PMM_CLIENT_VERSION//./ })
   echo ${versions[1]};
 }
 
@@ -2868,7 +2892,10 @@ if [ ! -z $setup_custom_ami ]; then
 fi
 
 if [ ! -z $postgres_ssl_setup ]; then
-  setup_postgres_ssl
+  export pmm_client_minor_v=$(get_client_minor_version)
+  if [ "${pmm_minor_v}" -gt "23" ]; then
+    setup_postgres_ssl
+  fi
 fi
 
 if [ ! -z $mysql_ssl_setup ]; then
