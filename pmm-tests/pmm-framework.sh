@@ -2691,8 +2691,9 @@ setup_postgres_ssl () {
   if [ -z "$IP_ADDRESS" ]
   then
     export PMM_SERVER_IP=127.0.0.1
+  else
+    export PMM_SERVER_IP=${IP_ADDRESS}
   fi
-  export PMM_SERVER_IP=${IP_ADDRESS}
   export PGSQL_SSL_CONTAINER=pgsql_${PGSQL_VERSION}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 postgresql_tls_setup.yml
   popd
