@@ -2671,7 +2671,7 @@ setup_postgres_ssl () {
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
-  pushd $SCRIPT_PWD/pmm-tests/tls-ssl-setup
+  pushd $SCRIPT_PWD/tls-ssl-setup
   if echo "$pdpgsql_version" | grep '13'; then
     export PGSQL_VERSION=13
   fi
