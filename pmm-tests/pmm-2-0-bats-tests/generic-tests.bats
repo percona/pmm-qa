@@ -355,8 +355,8 @@ echo "$output"
 run pmm-admin --help
 echo "$output"
     [ "$status" -eq 0 ]
-    [[ ${lines[16]} =~ "annotate [<flags>] <text>" ]]
-    [[ ${lines[17]} =~ "Add an annotation to Grafana charts" ]]
+    [[ ${lines[18]} =~ "annotate [<flags>] <text>" ]]
+    [[ ${lines[19]} =~ "Add an annotation to Grafana charts" ]]
 }
 
 @test "run pmm-admin annotate without any text and verify it should not work" {
