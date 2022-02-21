@@ -2735,7 +2735,7 @@ setup_bm_mysql() {
   echo "Setting up mysql for Backup"
   sudo yum install -y ansible
   export pmm_client_minor_v=$(get_client_minor_version)
-  if [ "${pmm_minor_v}" -gt "23" ]; then
+  if [ "${pmm_client_minor_v}" -gt "23" ]; then
     if [ "$ps_version" == "5.7" ]; then
       ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 $SCRIPT_PWD/backup/ps_57_bm.yml
     fi
@@ -2894,7 +2894,7 @@ fi
 
 if [ ! -z $postgres_ssl_setup ]; then
   export pmm_client_minor_v=$(get_client_minor_version)
-  if [ "${pmm_minor_v}" -gt "23" ]; then
+  if [ "${pmm_client_minor_v}" -gt "23" ]; then
     setup_postgres_ssl
   fi
 fi
