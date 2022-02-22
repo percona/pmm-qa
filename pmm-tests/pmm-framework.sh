@@ -2631,19 +2631,36 @@ setup_docker_compose() {
 
 setup_mongodb_ssl () {
   echo "Setting up mongodb ssl"
-  export PWD=$(pwd)
-  setup_docker_compose
-  mkdir -p /tmp/ssl || :
-  pushd /tmp/ssl
-  if [ ! -d "pmm-ui-tests" ]; then
-    git clone https://github.com/percona/pmm-ui-tests
+  sudo yum install -y ansible
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/tls-ssl-setup
+  if echo "$mo_version" | grep '4.4'; then
+    export MONGODB_VERSION=4.4
   fi
-  sudo chown -R $USER:$USER pmm-ui-tests
-  pushd pmm-ui-tests
-  bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mongodb_ssl_4_4.sh
-  sleep 10
-  popd
-  pmm-admin add mongodb --host=127.0.0.1 --port=27018 --tls --tls-skip-verify --tls-certificate-key-file=/tmp/ssl/pmm-ui-tests/testdata/mongodb/certs/client.pem --tls-certificate-key-file-password=/tmp/ssl/pmm-ui-tests/testdata/mongodb/certs/client.key --tls-ca-file=/tmp/ssl/pmm-ui-tests/testdata/mongodb/certs/ca.crt mongodb_ssl_1
+  if echo "$mo_version" | grep '4.2'; then
+    export MONGODB_VERSION=4.2
+  fi
+  if echo "$mo_version" | grep '4.0'; then
+    export MONGODB_VERSION=4.0
+  fi
+  if echo "$mo_version" | grep '5.0'; then
+    export MONGODB_VERSION=5.0
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    export PMM_SERVER_IP=127.0.0.1
+  else
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+  fi
+  export MONGODB_SSL_CONTAINER=mongodb_${MONGODB_VERSION}
+  export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 mongodb_tls_setup.yml
   popd
 }
 

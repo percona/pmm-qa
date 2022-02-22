@@ -1,3 +1,7 @@
 node_modules/*
 tests/output/*
 .idea
+pmm-tests/backup/.vagrant
+pmm-tests/tls-ssl-setup/postgres/1*/*
+pmm-tests/tls-ssl-setup/mongodb/4*/*
+pmm-tests/tls-ssl-setup/mongodb/5*/*
