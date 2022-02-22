@@ -2922,7 +2922,10 @@ if [ ! -z $mysql_ssl_setup ]; then
 fi
 
 if [ ! -z $mongodb_ssl_setup ]; then
-  setup_mongodb_ssl
+  export pmm_client_minor_v=$(get_client_minor_version)
+  if [ "${pmm_client_minor_v}" -gt "23" ]; then
+    setup_mongodb_ssl
+  fi
 fi
 
 if [ ! -z $mongo_replica_for_backup ]; then
