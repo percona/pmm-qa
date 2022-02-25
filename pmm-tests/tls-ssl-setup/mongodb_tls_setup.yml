@@ -16,9 +16,9 @@
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
 
   tasks:
-  - name: Run Docker container for client and DB setup
+  - name: Cleanup Docker container for client and DB setup
     shell: >
-      docker ps -q --filter "name={{ mongodb_ssl_container }}" | grep -q . && docker stop {{ mongodb_ssl_container }} && docker rm -fv {{ mongodb_ssl_container }}
+      docker ps -a --filter "name={{ mongodb_ssl_container }}" | grep -q . && docker stop {{ mongodb_ssl_container }} && docker rm -fv {{ mongodb_ssl_container }}
     ignore_errors: true
     tags:
       - cleanup

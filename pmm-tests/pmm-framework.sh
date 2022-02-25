@@ -1416,7 +1416,7 @@ add_clients(){
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         check_port $PDPGSQL_PORT PDPGSQL
         pdpgsql_service_name=$(prepare_service_name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j)
-        docker run --name $pdpgsql_service_name -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_monitor.pgsm_enable_query_plan=1 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
+        docker run --name $pdpgsql_service_name -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements -c pg_stat_monitor.pgsm_bucket_time=21600 -c pg_stat_monitor.pgsm_max_buckets=1 -c pg_stat_monitor.pgsm_query_shared_buffer=1000 -c pg_stat_monitor.pgsm_max=1000 -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 -c pg_stat_monitor.pgsm_enable_query_plan=1 -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
         sleep 20
         docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
         docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
@@ -2666,19 +2666,30 @@ setup_mongodb_ssl () {
 
 setup_mysql_ssl () {
   echo "Setting up mysql ssl"
-  setup_docker_compose
-  mkdir -p /tmp/ssl || :
-  pushd /tmp/ssl
-  if [ ! -d "pmm-ui-tests" ]; then
-    git clone https://github.com/percona/pmm-ui-tests
+  sudo yum install -y ansible
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/tls-ssl-setup
+  if echo "$ps_version" | grep '5.7'; then
+    export mysql_version=5.7
   fi
-  sudo chown -R $USER:$USER pmm-ui-tests
-  pushd pmm-ui-tests
-  PWD=$(pwd) docker-compose -f docker-compose-mysql-ssl.yml up -d
-  sleep 30
-  bash -x ${PWD}/testdata/docker-db-setup-scripts/docker_mysql_ssl_8_0.sh
-  popd
-  pmm-admin add mysql --username=root --password=r00tr00t --port=3308 --query-source=perfschema --tls --tls-skip-verify --tls-ca=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/root-ca.pem --tls-cert=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-cert.pem --tls-key=/tmp/ssl/pmm-ui-tests/testdata/mysql/ssl-cert-scripts/certs/client-key.pem tls_mysql
+  if echo "$ps_version" | grep '8.0'; then
+    export mysql_version=8.0
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    export PMM_SERVER_IP=127.0.0.1
+  else
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+  fi
+  export MYSQL_SSL_CONTAINER=pgsql_${PGSQL_VERSION}
+  export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 mysql_tls_setup.yml
   popd
 }
 
@@ -2775,14 +2786,14 @@ prepare_service_name() {
 
 get_minor_version() {
   export PMM_SERVER_VERSION=$(docker exec $1 pmm-admin status | grep 'Version:' | awk -F' ' '{print $2}')
-  versions=(${PMM_SERVER_VERSION//./ })
-  echo ${versions[1]};
+  versions=${PMM_SERVER_VERSION:2:2}
+  echo ${versions};
 }
 
 get_client_minor_version() {
   export PMM_CLIENT_VERSION=$(pmm-admin status | grep 'Version:' | awk -F' ' '{print $2}')
-  versions=(${PMM_CLIENT_VERSION//./ })
-  echo ${versions[1]};
+  versions=${PMM_CLIENT_VERSION:2:2}
+  echo ${versions};
 }
 
 if [ ! -z $setup_remote_db ]; then
@@ -2918,7 +2929,10 @@ if [ ! -z $postgres_ssl_setup ]; then
 fi
 
 if [ ! -z $mysql_ssl_setup ]; then
-  setup_mysql_ssl
+  export pmm_client_minor_v=$(get_client_minor_version)
+  if [ "${pmm_client_minor_v}" -gt "23" ]; then
+    setup_mysql_ssl
+  fi
 fi
 
 if [ ! -z $mongodb_ssl_setup ]; then
