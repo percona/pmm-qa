@@ -2672,10 +2672,10 @@ setup_mysql_ssl () {
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/tls-ssl-setup
   if echo "$ps_version" | grep '5.7'; then
-    export mysql_version=5.7
+    export MYSQL_VERSION=5.7
   fi
   if echo "$ps_version" | grep '8.0'; then
-    export mysql_version=8.0
+    export MYSQL_VERSION=8.0
   fi
   if [ -z "$CLIENT_VERSION" ]
   then
@@ -2687,7 +2687,7 @@ setup_mysql_ssl () {
   else
     export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
-  export MYSQL_SSL_CONTAINER=pgsql_${PGSQL_VERSION}
+  export MYSQL_SSL_CONTAINER=mysql_${MYSQL_VERSION}
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 mysql_tls_setup.yml
   popd
