@@ -9,7 +9,7 @@
   become_method: sudo
   vars:
     mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL_VERSION') | default('8.0', true) ) }}"
-    mysql_ssl_container: "{{ lookup('vars', 'extra_mysql_ssl_container', default=lookup('env','MYSQL_CONTAINER') | default('mysql_ssl', true) ) }}"
+    mysql_ssl_container: "{{ lookup('vars', 'extra_mysql_ssl_container', default=lookup('env','MYSQL_SSL_CONTAINER') | default('mysql_ssl', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
     client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
