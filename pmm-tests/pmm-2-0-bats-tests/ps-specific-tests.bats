@@ -246,6 +246,17 @@ echo "$output"
         done
 }
 
+@test "PMM-T789 - Verify help for pmm-admin add mysql has TLS-related flags" {
+    run pmm-admin add mysql --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "tls                      Use TLS to connect to the database"
+    echo "${output}" | grep "tls-skip-verify          Skip TLS certificates validation"
+    echo "${output}" | grep "tls-ca=TLS-CA            Path to certificate authority certificate file"
+    echo "${output}" | grep "tls-cert=TLS-CERT        Path to client certificate file"
+    echo "${output}" | grep "tls-key=TLS-KEY          Path to client key file"
+}
+
 function teardown() {
         echo "$output"
 }
