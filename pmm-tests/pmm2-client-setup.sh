@@ -24,7 +24,7 @@ if [ -z "$client_version" ]; then
 fi
 
 if [ -z "$install_client" ]; then
-    export install_client=no
+    export install_client=yes
 fi
 
 if [ -z "$metrics_mode" ]; then
