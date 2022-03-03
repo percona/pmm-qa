@@ -79,21 +79,18 @@ if [[ "$client_version" == http* ]]; then
     echo ${PMM2_CLIENT}
     mv ${PMM2_CLIENT} pmm2-client
     cd pmm2-client
+    export PMM_DIR=/usr/local
     bash -x ./install_tarball
     pwd
     cd ../
-    export PMM_CLIENT_BASEDIR=`ls -1td pmm2-client 2>/dev/null | grep -v ".tar" | head -n1`
-    export PATH="`pwd`/pmm2-client/bin:$PATH"
-    echo "export PATH=`pwd`/pmm2-client/bin:$PATH" >> ~/.bash_profile
-    source ~/.bash_profile
     pmm-admin --version
     if [[ "$use_metrics_mode" == "yes" ]]; then
-        pmm-agent setup --config-file=`pwd`/pmm2-client/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
+        pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
 	else
-        pmm-agent setup --config-file=`pwd`/pmm2-client/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
+        pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
     fi
     sleep 10
-	pmm-agent --config-file=`pwd`/pmm2-client/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+	pmm-agent --config-file=/usr/local/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 else
     if [[ "$use_metrics_mode" == "yes" ]]; then
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
