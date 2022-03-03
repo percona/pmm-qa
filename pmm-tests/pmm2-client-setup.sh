@@ -78,11 +78,15 @@ if [[ "$client_version" == http* ]]; then
     export PMM2_CLIENT=`ls -1td pmm2-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
     echo ${PMM2_CLIENT}
     mv ${PMM2_CLIENT} pmm2-client
-    cd pmm2-client
+    mv pmm2-client /usr/local/bin
+    pushd /usr/local/bin/pmm2-client
+    ## only setting up all binaries in default path /usr/local/percona/pmm2
+    bash -x ./install_tarball
+    ## keep the pmm-admin & pmm-agent binaries in the /usr/local/bin path
     export PMM_DIR=/usr/local
     bash -x ./install_tarball
     pwd
-    cd ../
+    popd
     pmm-admin --version
     if [[ "$use_metrics_mode" == "yes" ]]; then
         pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
