@@ -327,6 +327,17 @@ skip "Skipping this test, because of random failure and flaky behaviour"
         done
 }
 
+@test "PMM-T945 - Verify help for pmm-admin add postgresql has TLS-related flags" {
+    run pmm-admin add postgresql --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "tls                      Use TLS to connect to the database"
+    echo "${output}" | grep "tls-skip-verify          Skip TLS certificates validation"
+    echo "${output}" | grep "tls-cert-file=TLS-CERT-FILE"
+    echo "${output}" | grep "tls-key-file=TLS-KEY-FILE"
+    echo "${output}" | grep "tls-ca-file=TLS-CA-FILE  TLS CA certificate file"
+}
+
 function teardown() {
         echo "$output"
 }

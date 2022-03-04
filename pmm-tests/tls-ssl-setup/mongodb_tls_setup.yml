@@ -1,0 +1,84 @@
+---
+# This playbook does following:
+#   enables Percona testing repository
+#   Install Percona Server at Version 8.0.25 
+#   Install all required tools for backups in compatible version
+
+- hosts: all
+  become: true
+  become_method: sudo
+  vars:
+    mongodb_version: "{{ lookup('vars', 'extra_mongodb_version', default=lookup('env','MONGODB_VERSION') | default('4.4', true) ) }}"
+    mongodb_ssl_container: "{{ lookup('vars', 'extra_mongodb_ssl_container', default=lookup('env','MONGODB_SSL_CONTAINER') | default('mongodb_ssl', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
+
+  tasks:
+  - name: Cleanup Docker container for client and DB setup
+    shell: >
+      docker ps -a --filter "name={{ mongodb_ssl_container }}" | grep -q . && docker stop {{ mongodb_ssl_container }} && docker rm -fv {{ mongodb_ssl_container }}
+    ignore_errors: true
+    tags:
+      - cleanup
+  - name: delete network if exist
+    shell: docker network rm "{{ mongodb_ssl_container }}_network"
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Create a network
+    shell: docker network create "{{ mongodb_ssl_container }}_network"
+
+  - name: Create pmm-qa network if not exist
+    shell: docker network create pmm-qa
+    ignore_errors: true
+
+  - name: Prepare Container for mongodb ssl container
+    shell: >
+      docker run -d --name={{ mongodb_ssl_container }}
+      --network "{{ mongodb_ssl_container }}_network"
+      phusion/baseimage:focal-1.1.0
+  
+  - name: Copy all required Artifacts to the docker mongodb_ssl_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mongodb_ssl_container }} mkdir -p artifacts
+      - docker cp ./mongodb/mongodb_ssl_setup.sh {{ mongodb_ssl_container }}:/
+
+  - name: Execute Setup script inside the mongodb mongodb_ssl_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mongodb_ssl_container }} bash -xe ./mongodb_ssl_setup.sh --mongodb_version {{ mongodb_version }} > mongodb/setup_mongodb_ssl_{{ mongodb_version }}.log
+
+  - name: Install pmm2-client on the mongodb_ssl_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mongodb_ssl_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
+      - docker network connect pmm-qa {{ mongodb_ssl_container }}
+      - docker exec {{ mongodb_ssl_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+  
+  - name: Add pmm-admin binary to path when tar ball installation
+    shell: docker exec {{ mongodb_ssl_container }} echo "export PATH=$PATH:/pmm2-client/bin" > setup_path.sh
+    when: '"http" in client_version'
+
+  - name: Remove mongodb service if already added previously
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mongodb_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove mongodb {{ mongodb_ssl_container }}_service'
+    ignore_errors: true
+
+  - name: Add mongodb_ssl for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mongodb_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
+      - docker exec {{ mongodb_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add mongodb --tls --tls-skip-verify --authentication-mechanism=MONGODB-X509 --authentication-database=$external --tls-certificate-key-file=/nodes/certificates/client.pem --tls-certificate-key-file-password=/nodes/certificates/client.key --tls-ca-file=/nodes/certificates/ca.crt {{ mongodb_ssl_container }}_ssl_service'
+  
+  - name: Get client cert Files on host
+    shell: "{{ item }}"
+    with_items:
+      - mkdir -p mongodb/{{ mongodb_version }} || true
+      - docker exec {{ mongodb_ssl_container }} cat /nodes/certificates/ca.crt > mongodb/{{ mongodb_version }}/ca.crt
+      - docker exec {{ mongodb_ssl_container }} cat /nodes/certificates/client.key > mongodb/{{ mongodb_version }}/client.key
+      - docker exec {{ mongodb_ssl_container }} cat /nodes/certificates/client.pem > mongodb/{{ mongodb_version }}/client.pem

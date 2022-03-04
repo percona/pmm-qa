@@ -284,6 +284,20 @@ skip "Skipping this test, because of Random Failures, need to fix this"
     done
 }
 
+@test "PMM-T925 - Verify help for pmm-admin add mongodb has TLS-related flags" {
+    run pmm-admin add mongodb --help
+    echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "tls                      Use TLS to connect to the database"
+    echo "${output}" | grep "tls-skip-verify          Skip TLS certificates validation"
+    echo "${output}" | grep "tls-certificate-key-file=TLS-CERTIFICATE-KEY-FILE"
+    echo "${output}" | grep "tls-certificate-key-file-password=TLS-CERTIFICATE-KEY-FILE-PASSWORD"
+    echo "${output}" | grep "tls-ca-file=TLS-CA-FILE  Path to certificate authority file"
+    echo "${output}" | grep "authentication-mechanism=AUTHENTICATION-MECHANISM"
+    echo "${output}" | grep "authentication-mechanism=AUTHENTICATION-MECHANISM"
+    echo "${output}" | grep "authentication-database=AUTHENTICATION-DATABASE"
+}
+
 function teardown() {
     echo "$output"
 }
