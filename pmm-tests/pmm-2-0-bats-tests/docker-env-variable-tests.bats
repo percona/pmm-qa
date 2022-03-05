@@ -1,8 +1,7 @@
 #!/usr/bin/env bats
 
 if [ -z ${DOCKER_VERSION+x} ]; then
-export DOCKER_VERSION=perconalab/pmm-server:dev-latest
-
+    export DOCKER_VERSION=perconalab/pmm-server:dev-latest
 fi
 
 @test "PMM-T224 run docker container with a invalid value for a environment variable DATA_RETENTION=48" {
