@@ -1,0 +1,106 @@
+---
+# This playbook does following:
+#   enables Percona testing repository
+
+- hosts: all
+  become: true
+  become_method: sudo
+  vars:
+    pgsql_version: "{{ lookup('vars', 'extra_pgsql_version', default=lookup('env','PGSQL_VERSION') | default('14', true) ) }}"
+    pgsql_pgsm_container: "{{ lookup('vars', 'extra_pgsql_pgsm_container', default=lookup('env','PGSQL_PGSM_CONTAINER') | default('pgsql_pgsm', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
+
+  tasks:
+  - name: cleanup container for client and DB setup
+    shell: >
+      docker ps -a --filter "name={{ pgsql_pgsm_container }}" | grep -q . && docker stop {{ pgsql_pgsm_container }} && docker rm -fv {{ pgsql_pgsm_container }}
+    ignore_errors: true
+    tags:
+      - cleanup
+  - name: delete network if exist
+    shell: docker network rm "{{ pgsql_pgsm_container }}_network"
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Create a network
+    shell: docker network create "{{ pgsql_pgsm_container }}_network"
+
+  - name: Create pmm-qa network if not exist
+    shell: docker network create pmm-qa
+    ignore_errors: true
+
+  - name: Prepare Container for PostgreSQL
+    shell: >
+      docker run -d --name={{ pgsql_pgsm_container }}
+      --network "{{ pgsql_pgsm_container }}_network"
+      phusion/baseimage:focal-1.1.0
+  
+  - name: Copy all required Artifacts to the docker pgsql_pgsm_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pgsql_pgsm_container }} mkdir -p artifacts
+      - docker cp ./pg_stat_monitor_setup.sh {{ pgsql_pgsm_container }}:/
+      - docker cp ./tls-ssl-setup/postgres/init.sql {{ pgsql_pgsm_container }}:/
+      - docker cp ./pgsm_run_queries.sh {{ pgsql_pgsm_container }}:/
+
+  - name: Execute Setup script inside the pgsql pgsql_pgsm_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pgsql_pgsm_container }} bash -xe ./pg_stat_monitor_setup.sh --pgsql_version {{ pgsql_version }} > setup_pgsql_pgsm_{{ pgsql_version }}.log
+
+  - name: Install pmm2-client on the pgsql_pgsm_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pgsql_pgsm_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
+      - docker network connect pmm-qa {{ pgsql_pgsm_container }}
+      - docker exec {{ pgsql_pgsm_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+
+  - name: Remove pgsql service if already added previously
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove postgresql {{ pgsql_pgsm_container }}_service'
+      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove postgresql {{ pgsql_pgsm_container }}_pg_stat_statement_service'
+    ignore_errors: true 
+
+  - name: Add pgsql_pgsm for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
+      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor {{ pgsql_pgsm_container }}_service'
+      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm {{ pgsql_pgsm_container }}_pg_stat_statement_service'
+     # - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile; pmm-admin add postgresql --socket=/var/run/postgresql postgresql_socket'
+
+  - name: cleanup pgadmin container if already running
+    shell: >
+      docker ps -a --filter "name=pgadmin" | grep -q . && docker stop pgadmin && docker rm -fv pgadmin
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Start PGAdmin docker container
+    shell: "{{ item }}"
+    with_items:
+      - docker run --name=pgadmin -d -p 9093:80 -e PGADMIN_DEFAULT_EMAIL=admin@admin.com -e PGADMIN_DEFAULT_PASSWORD=root dpage/pgadmin4
+      - docker network connect pmm-qa pgadmin
+
+  - name: cleanup clickhouse UI container if already running
+    shell: >
+      docker ps -a --filter "name=clickhousetabix" | grep -q . && docker stop clickhousetabix && docker rm -fv clickhousetabix
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Start Clickhouse UI Tabix docker container
+    shell: "{{ item }}"
+    with_items:
+      - docker run -d --name=clickhousetabix -p 8080:80 spoonest/clickhouse-tabix-web-client
+      - docker network connect pmm-qa clickhousetabix
+
+  - name: Run queries for generating data
+    shell: "{{ item }}"
+    with_items:
+        - docker exec {{ pgsql_pgsm_container }} bash ./pgsm_run_queries.sh &
