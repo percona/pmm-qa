@@ -87,4 +87,4 @@ su postgres bash -c 'psql -c "CREATE DATABASE contrib_regression;"'
 su postgres bash -c 'psql -d contrib_regression -c "CREATE EXTENSION pg_stat_monitor;"'
 
 ## Running Queries
-wget https://raw.githubusercontent.com/percona/pmm-agent/pmm-2.26.0/testqueries/postgres/pg_stat_monitor_load.sql
+wget https://raw.githubusercontent.com/percona/pmm-agent/main/testqueries/postgres/pg_stat_monitor_load.sql
