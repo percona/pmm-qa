@@ -85,10 +85,12 @@ make USE_PGXS=1
 make USE_PGXS=1 install
 
 #$ Stop and restart server to reload PGSM library
+
+su postgres bash -c 'psql -c "CREATE DATABASE contrib_regression;"'
+su postgres bash -c 'psql -c "ALTER SYSTEM SET shared_preload_libraries TO pg_stat_monitor;" contrib_regression'
 service postgresql stop
 echo "shared_preload_libraries = 'pg_stat_monitor'" | tee -a /etc/postgresql/${pgsql_version}/main/postgresql.conf
 service postgresql start
-su postgres bash -c 'psql -c "CREATE DATABASE contrib_regression;"'
 su postgres bash -c 'psql -d contrib_regression -c "CREATE EXTENSION pg_stat_monitor;"'
 su postgres bash -c 'psql -d postgres -c "CREATE EXTENSION pg_stat_monitor;"'
 su postgres bash -c 'psql -d contrib_regression -c "CREATE EXTENSION pg_stat_statements;"'
