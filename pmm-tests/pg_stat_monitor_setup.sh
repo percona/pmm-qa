@@ -15,6 +15,11 @@ then
       export pgsql_version=14
 fi
 
+if [ -z "$pgstat_monitor_branch" ]
+then
+      export pgstat_monitor_branch=REL1_0_STABLE
+fi
+
 ## Need to add a user postgres either here or in Dockerfile
 ## postgres user will need sudo permission to install the build PGSM library
 ## for that you can figure out where to give sudo permissions to postgres here
@@ -68,7 +73,7 @@ cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 ## Down PGSM repo and move to /home/postgres/pg_stat_monitor dir
 ##
 cd /home/postgres
-git clone -b REL1_0_STABLE https://github.com/percona/pg_stat_monitor
+git clone -b ${pgstat_monitor_branch} https://github.com/percona/pg_stat_monitor
 chown -R postgres:postgres pg_stat_monitor
 cd pg_stat_monitor
 
