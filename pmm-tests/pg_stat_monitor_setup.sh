@@ -87,7 +87,7 @@ make USE_PGXS=1 install
 #$ Stop and restart server to reload PGSM library
 
 su postgres bash -c 'psql -c "CREATE DATABASE contrib_regression;"'
-su postgres bash -c 'psql -c "ALTER SYSTEM SET shared_preload_libraries TO pg_stat_monitor;" contrib_regression'
+su postgres bash -c 'psql -c "ALTER SYSTEM SET shared_preload_libraries TO pg_stat_monitor,pg_stat_statements;" contrib_regression'
 service postgresql stop
 echo "shared_preload_libraries = 'pg_stat_monitor'" | tee -a /etc/postgresql/${pgsql_version}/main/postgresql.conf
 service postgresql start
@@ -98,3 +98,4 @@ sleep 30
 
 ## Running Queries
 wget https://raw.githubusercontent.com/percona/pmm-agent/main/testqueries/postgres/pg_stat_monitor_load.sql
+su postgres bash -c 'psql -f pg_stat_monitor_load.sql'
