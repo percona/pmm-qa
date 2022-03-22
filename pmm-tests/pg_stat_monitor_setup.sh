@@ -97,4 +97,3 @@ sleep 30
 
 ## Running Queries
 wget https://raw.githubusercontent.com/percona/pmm-agent/main/testqueries/postgres/pg_stat_monitor_load.sql
-su postgres bash -c 'psql -f pg_stat_monitor_load.sql'
