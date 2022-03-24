@@ -2488,12 +2488,14 @@ setup_replication_ps_pmm2 () {
   fi
   if [  $group == true ]; then
     replication_param='--topology=group --single-primary'
-  fi 
+  fi
+  echo "REPLICATION PARAM ======= $replication_param ===== $group \n" 
   mkdir $WORKDIR/ps
   dbdeployer unpack Percona-Server-${ps_version}* --sandbox-binary $WORKDIR/ps --overwrite
   rm -Rf Percona-Server-${ps_version}*
   dbdeployer deploy $replication_param replication $VERSION_ACCURATE  --sandbox-binary $WORKDIR/ps --force
-  node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+  node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+  #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
   for j in `seq 1  3`;do
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
