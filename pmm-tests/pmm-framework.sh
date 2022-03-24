@@ -2486,7 +2486,7 @@ setup_replication_ps_pmm2 () {
   if [ -d "$WORKDIR/ps" ]; then
     rm -Rf $WORKDIR/ps;
   fi
-  if [  $group == true ]; then
+  if [[ ! -z $group ]]; then
     replication_param='--topology=group --single-primary'
   fi
   echo "REPLICATION PARAM ======= $replication_param ===== $group \n" 
