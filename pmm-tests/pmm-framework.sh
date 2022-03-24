@@ -109,6 +109,7 @@ usage () {
   echo " --setup-remote-db              Use this option when running AMI/OVF instances and setting up remote db's on client node"
   echo " --mongo-replica-for-backup     Use this option to setup MongoDB Replica Set and PBM for each replica member on client node"
   echo " --setup-bm-mysql               Use this option to setup Percona Server along with Percona Xtra Backup and Qpress for BM setup"
+  echo " --setup-ssl-services           Use this option to setup mysql, postgresql, mongodb ssl services all together"
   echo " --setup-pmm-pgsm-integration   Use this option to setup PMM-Client with PGSM for integration testing"
   echo " --cleanup-service              Use this option to delete DB container and remove from monitoring, just pass service name"
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
@@ -117,7 +118,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -211,6 +212,10 @@ do
     --ami-image )
     ami_image="$2"
     shift 2
+    ;;
+    --setup-ssl-services )
+    setup_ssl_services=1
+    shift
     ;;
     --key-name )
     key_name="$2"
@@ -615,7 +620,7 @@ sudo_check(){
   fi
 }
 
-if [[ -z "${ps_version}" ]]; then ps_version="5.7"; fi
+if [[ -z "${ps_version}" ]]; then ps_version="8.0"; fi
 if [[ -z "${modb_version}" ]]; then modb_version="4.4"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
@@ -623,8 +628,8 @@ if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
 if [[ -z "${mo_version}" ]]; then mo_version="4.4"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
 if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
-if [[ -z "${pgsql_version}" ]]; then pgsql_version="12";fi
-if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="12"; fi
+if [[ -z "${pgsql_version}" ]]; then pgsql_version="14";fi
+if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="14"; fi
 
 if [[ -z "$query_source" ]];then
   query_source=perfschema
@@ -2821,6 +2826,13 @@ setup_bm_mysql() {
   pmm-admin add mysql --username=root --password=PMM_userk12456 --query-source=perfschema bm_mysql_pmm_qa_$ps_version
 }
 
+setup_ssl_services() {
+  setup_bm_mysql
+  setup_postgres_ssl
+  setup_mysql_ssl
+
+}
+
 prepare_service_name() {
   random_service_name=$1
   if [ ! -z $service_custom_name ]; then
@@ -2998,4 +3010,8 @@ if [ ! -z $setup_pmm_pgsm_integration ]; then
   setup_pmm_pgsm_integration
 fi
 
+
+if [ ! -z $setup_ssl_services ]; then
+  setup_ssl_services
+fi
 exit 0
