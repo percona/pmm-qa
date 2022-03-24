@@ -2827,10 +2827,9 @@ setup_bm_mysql() {
 }
 
 setup_ssl_services() {
-  setup_bm_mysql
+  setup_mongodb_ssl
   setup_postgres_ssl
   setup_mysql_ssl
-
 }
 
 prepare_service_name() {
