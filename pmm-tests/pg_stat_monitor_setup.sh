@@ -94,6 +94,3 @@ su postgres bash -c 'psql -d contrib_regression -c "CREATE EXTENSION pg_stat_mon
 su postgres bash -c 'psql -d postgres -c "CREATE EXTENSION pg_stat_monitor;"'
 su postgres bash -c 'psql -d contrib_regression -c "CREATE EXTENSION pg_stat_statements;"'
 sleep 30
-
-## Running Queries
-wget https://raw.githubusercontent.com/percona/pmm-agent/main/testqueries/postgres/pg_stat_monitor_load.sql
