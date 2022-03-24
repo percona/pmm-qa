@@ -2486,17 +2486,16 @@ setup_replication_ps_pmm2 () {
   if [ -d "$WORKDIR/ps" ]; then
     rm -Rf $WORKDIR/ps;
   fi
-  if [[ ! -z $group ]]; then
-    replication_param='--topology=group --single-primary'
-  fi
-  echo "REPLICATION PARAM ======= $replication_param ===== $group \n" 
   mkdir $WORKDIR/ps
   dbdeployer unpack Percona-Server-${ps_version}* --sandbox-binary $WORKDIR/ps --overwrite
   rm -Rf Percona-Server-${ps_version}*
-  dbdeployer deploy $replication_param replication $VERSION_ACCURATE  --sandbox-binary $WORKDIR/ps --force
-  echo "dbdeployer deploy $replication_param replication $VERSION_ACCURATE  --sandbox-binary $WORKDIR/ps --force"
-  node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-  echo "Node_port====== $node_port\n"
+  if [[ ! -z $group ]]; then
+    dbdeployer deploy $replication_param replication --topology=group $VERSION_ACCURATE --single-primary --sandbox-binary $WORKDIR/ps --force
+    node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE |  grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+  else
+    dbdeployer deploy $replication_param replication $VERSION_ACCURATE  --sandbox-binary $WORKDIR/ps --force
+    node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+  fi
   #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
   for j in `seq 1  3`;do
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
