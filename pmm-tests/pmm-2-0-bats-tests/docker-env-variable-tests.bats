@@ -74,7 +74,7 @@ fi
 }
 
 @test "Basic Sanity using Clickhouse shipped with PMM-Server, Check Connection, Run a Query" {
-    rexport PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+    export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
     run docker exec ${PMM_SERVER_DOCKER_CONTAINER} clickhouse-client --database pmm --query "select any(example),sum(num_queries) cnt, max(m_query_time_max) slowest  from metrics where period_start>subtractHours(now(),6)  group by queryid order by slowest desc limit 10"
     [ "$status" -eq 0 ]
 
