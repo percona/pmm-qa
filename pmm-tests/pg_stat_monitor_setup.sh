@@ -63,7 +63,6 @@ echo "host    all             all              0.0.0.0/0                       m
 
 sleep 10
 service postgresql restart
-## I commented following line, uncomment if you are using some sql to load data
 wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/tls-ssl-setup/postgres/init.sql
 su postgres bash -c 'psql -f init.sql'
 export PATH="/usr/lib/postgresql/${pgsql_version}/bin:$PATH"
