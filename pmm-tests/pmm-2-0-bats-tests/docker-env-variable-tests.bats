@@ -74,27 +74,26 @@ fi
 }
 
 @test "Basic Sanity using Clickhouse shipped with PMM-Server, Check Connection, Run a Query" {
-    export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
-    run docker exec ${PMM_SERVER_DOCKER_CONTAINER} clickhouse-client --database pmm --query "select any(example),sum(num_queries) cnt, max(m_query_time_max) slowest  from metrics where period_start>subtractHours(now(),6)  group by queryid order by slowest desc limit 10"
+    run bash -c 'clickhouse-client --database pmm --query "select any(example),sum(num_queries) cnt, max(m_query_time_max) slowest  from metrics where period_start>subtractHours(now(),6)  group by queryid order by slowest desc limit 10"'
     [ "$status" -eq 0 ]
 
     ## Check PMM Database Exist
-    run bash -c "docker exec ${PMM_SERVER_DOCKER_CONTAINER} clickhouse-client --query 'SELECT * FROM system.databases' | grep pmm | awk -F' ' '{print $1}'"
+    run bash -c "echo $(clickhouse-client --query 'SELECT * FROM system.databases' | grep pmm | awk -F' ' '{print $1}')"
+    [ "$output" = "pmm" ]
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "pmm"
 
     ## Check Data path matches expected Value
-    run bash -c "docker exec ${PMM_SERVER_DOCKER_CONTAINER} clickhouse-client --query 'SELECT * FROM system.databases' | grep pmm | awk -F' ' '{print $3}'"
+    run bash -c "echo $(clickhouse-client --query 'SELECT * FROM system.databases' | grep pmm | awk -F' ' '{print $3}')"
+    [ "$output" = "/srv/clickhouse/data/pmm/" ]
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "/srv/clickhouse/data/pmm/"
 
     ## Check Metadata path matches expected Value
-    run bash -c "docker exec ${PMM_SERVER_DOCKER_CONTAINER} clickhouse-client --query 'SELECT * FROM system.databases' | grep pmm | awk -F' ' '{print $4}'"
+    run bash -c "echo $(clickhouse-client --query 'SELECT * FROM system.databases' | grep pmm | awk -F' ' '{print $4}')"
+    [ "$output" = "/srv/clickhouse/metadata/pmm/" ]
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "/srv/clickhouse/metadata/pmm/"
+
 }
 
 function teardown() {
     echo "$output"
 }
-
