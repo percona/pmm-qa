@@ -2616,8 +2616,7 @@ setup_custom_ami_instance() {
 setup_clickhouse_client () {
   echo "Setting up ClickHouse Client to Connect to Clickhouse server on PMM-Server"
   sudo yum install -y yum-utils
-  sudo rpm --import https://repo.clickhouse.tech/CLICKHOUSE-KEY.GPG
-  sudo yum-config-manager --add-repo https://repo.clickhouse.tech/rpm/stable/x86_64
+  sudo yum-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo
   sudo yum install -y clickhouse-client
 }
 
