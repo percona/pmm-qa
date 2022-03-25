@@ -2496,7 +2496,6 @@ setup_replication_ps_pmm2 () {
     dbdeployer deploy $replication_param replication $VERSION_ACCURATE  --sandbox-binary $WORKDIR/ps --force
     node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
   fi
-  #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
   for j in `seq 1  3`;do
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
