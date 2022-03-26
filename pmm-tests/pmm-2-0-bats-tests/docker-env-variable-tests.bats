@@ -97,4 +97,3 @@ fi
 function teardown() {
     echo "$output"
 }
-
