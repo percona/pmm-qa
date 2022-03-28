@@ -110,6 +110,8 @@ usage () {
   echo " --setup-remote-db              Use this option when running AMI/OVF instances and setting up remote db's on client node"
   echo " --mongo-replica-for-backup     Use this option to setup MongoDB Replica Set and PBM for each replica member on client node"
   echo " --setup-bm-mysql               Use this option to setup Percona Server along with Percona Xtra Backup and Qpress for BM setup"
+  echo " --setup-ssl-services           Use this option to setup mysql, postgresql, mongodb ssl services all together"
+  echo " --setup-pmm-pgsm-integration   Use this option to setup PMM-Client with PGSM for integration testing"
   echo " --cleanup-service              Use this option to delete DB container and remove from monitoring, just pass service name"
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
 }
@@ -117,7 +119,7 @@ usage () {
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -212,6 +214,10 @@ do
     ami_image="$2"
     shift 2
     ;;
+    --setup-ssl-services )
+    setup_ssl_services=1
+    shift
+    ;;
     --key-name )
     key_name="$2"
     shift 2
@@ -291,6 +297,10 @@ do
     --mongomagic )
     shift
     MONGOMAGIC=1
+    ;;
+    --setup-pmm-pgsm-integration )
+    shift
+    setup_pmm_pgsm_integration=1
     ;;
     --setup-pmm-client-docker )
     shift
@@ -615,7 +625,7 @@ sudo_check(){
   fi
 }
 
-if [[ -z "${ps_version}" ]]; then ps_version="5.7"; fi
+if [[ -z "${ps_version}" ]]; then ps_version="8.0"; fi
 if [[ -z "${modb_version}" ]]; then modb_version="4.4"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
@@ -623,8 +633,8 @@ if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
 if [[ -z "${mo_version}" ]]; then mo_version="4.4"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
 if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
-if [[ -z "${pgsql_version}" ]]; then pgsql_version="12";fi
-if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="12"; fi
+if [[ -z "${pgsql_version}" ]]; then pgsql_version="14";fi
+if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="14"; fi
 
 if [[ -z "$query_source" ]];then
   query_source=perfschema
@@ -2737,6 +2747,46 @@ setup_postgres_ssl () {
   popd
 }
 
+setup_pmm_pgsm_integration () {
+  echo "Setting up PMM and PGSM Integration"
+  sudo yum install -y ansible
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    echo "Please start PMM-Server docker container for PGSM setup"
+    exit 1;
+  fi
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/
+  if echo "$pdpgsql_version" | grep '13'; then
+    export PGSQL_VERSION=13
+  fi
+  if echo "$pdpgsql_version" | grep '11'; then
+    export PGSQL_VERSION=11
+  fi
+  if echo "$pdpgsql_version" | grep '12'; then
+    export PGSQL_VERSION=12
+  fi
+  if echo "$pdpgsql_version" | grep '14'; then
+    export PGSQL_VERSION=14
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    export PMM_SERVER_IP=127.0.0.1
+  else
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+  fi
+  export PGSQL_PGSM_CONTAINER=pgsql_pgsm_${PGSQL_VERSION}
+  export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgsm_setup.yml
+  popd
+}
+
 setup_remote_db_docker_compose () {
   echo "Setting up remote db's for AMI/OVF instances"
   setup_docker_compose
@@ -2783,6 +2833,12 @@ setup_bm_mysql() {
   fi
   sudo cat /var/log/mysqld.log
   pmm-admin add mysql --username=root --password=PMM_userk12456 --query-source=perfschema bm_mysql_pmm_qa_$ps_version
+}
+
+setup_ssl_services() {
+  setup_mongodb_ssl
+  setup_postgres_ssl
+  setup_mysql_ssl
 }
 
 prepare_service_name() {
@@ -2933,23 +2989,17 @@ fi
 
 if [ ! -z $postgres_ssl_setup ]; then
   export pmm_client_minor_v=$(get_client_minor_version)
-  if [ "${pmm_client_minor_v}" -gt "23" ]; then
-    setup_postgres_ssl
-  fi
+  setup_postgres_ssl
 fi
 
 if [ ! -z $mysql_ssl_setup ]; then
   export pmm_client_minor_v=$(get_client_minor_version)
-  if [ "${pmm_client_minor_v}" -gt "23" ]; then
-    setup_mysql_ssl
-  fi
+  setup_mysql_ssl
 fi
 
 if [ ! -z $mongodb_ssl_setup ]; then
   export pmm_client_minor_v=$(get_client_minor_version)
-  if [ "${pmm_client_minor_v}" -gt "23" ]; then
-    setup_mongodb_ssl
-  fi
+  setup_mongodb_ssl
 fi
 
 if [ ! -z $mongo_replica_for_backup ]; then
@@ -2964,4 +3014,12 @@ if [ ! -z $setup_bm_mysql ]; then
   setup_bm_mysql
 fi
 
+if [ ! -z $setup_pmm_pgsm_integration ]; then
+  setup_pmm_pgsm_integration
+fi
+
+
+if [ ! -z $setup_ssl_services ]; then
+  setup_ssl_services
+fi
 exit 0
