@@ -56,13 +56,6 @@ echo "host    all             all              0.0.0.0/0                       m
 sleep 10
 service postgresql restart
 
-## NOTE
-##I commented following line,THIS SQL SCRIPT IS CAUSING PROBLEMS 
-## As I mentioned earlier postgresql.auto.conf always takes precendence over postgresql.conf 
-## when applying settings. Please use one, either postgresql.conf or postgresql.auto.conf for changes. 
-#wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/tls-ssl-setup/postgres/init.sql
-#su postgres bash -c 'psql -f init.sql'
-
 export PATH="/usr/lib/postgresql/${pgsql_version}/bin:$PATH"
 echo $PATH
 cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
@@ -86,20 +79,17 @@ make USE_PGXS=1
 make USE_PGXS=1 install
 
 service postgresql stop
-echo "shared_preload_libraries = 'pg_stat_monitor'" >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
+echo "shared_preload_libraries = 'pg_stat_monitor, pg_stat_statements'" >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 echo "track_activity_query_size=2048"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 echo "track_io_timing=ON"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
+echo "CREATE DATABASE sbtest1" >> /home/postgres/init.sql
+echo "CREATE DATABASE sbtest2" >> /home/postgres/init.sql
+echo "CREATE USER pmm WITH PASSWORD 'pmm'" >> /home/postgres/init.sql
+echo "GRANT pg_monitor TO pmm" >> /home/postgres/init.sql
 service postgresql start
 
-echo "CREATE DATABASE sbtest1;" >> /home/postgres/init.sql
-echo "CREATE DATABASE sbtest2;" >> /home/postgres/init.sql
-echo "CREATE USER pmm WITH PASSWORD 'pmm';" >> /home/postgres/init.sql
-echo "GRANT pg_monitor TO pmm;" >> /home/postgres/init.sql
 su postgres bash -c 'psql -f /home/postgres/init.sql'
 
-service postgresql start
 su postgres bash -c 'psql -c "CREATE DATABASE contrib_regression;"'
-su postgres bash -c 'psql -U postgres -c "CREATE EXTENSION pg_stat_monitor;"'
-
-## Running Queries
-wget https://raw.githubusercontent.com/percona/pmm-agent/main/testqueries/postgres/pg_stat_monitor_load.sql
+su postgres bash -c 'psql -U postgres -d contrib_regression -c "CREATE EXTENSION pg_stat_monitor;"'
+su postgres bash -c 'psql -U postgres -d postgres -c "CREATE EXTENSION pg_stat_statements;"'

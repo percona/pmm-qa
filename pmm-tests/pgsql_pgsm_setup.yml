@@ -46,7 +46,6 @@
     with_items:
       - docker exec {{ pgsql_pgsm_container }} mkdir -p artifacts
       - docker cp ./pg_stat_monitor_setup.sh {{ pgsql_pgsm_container }}:/
-      - docker cp ./tls-ssl-setup/postgres/init.sql {{ pgsql_pgsm_container }}:/
       - docker cp ./pgsm_run_queries.sh {{ pgsql_pgsm_container }}:/
 
   - name: Execute Setup script inside the pgsql pgsql_pgsm_container

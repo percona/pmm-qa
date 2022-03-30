@@ -5,5 +5,6 @@ wget https://raw.githubusercontent.com/percona/pmm-agent/main/testqueries/postgr
 while true
 do
   su postgres bash -c 'psql -d contrib_regression -f pg_stat_monitor_load.sql'
+  su postgres bash -c 'psql -d postgres -f pg_stat_monitor_load.sql'
   sleep 30
 done
