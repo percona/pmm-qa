@@ -73,9 +73,7 @@ if [[ "$client_version" == http* ]]; then
 	if [[ "$install_client" == "yes" ]]; then
 		wget -O pmm2-client.tar.gz --progress=dot:giga "${client_version}"
 	fi
-
-    wget https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm2-client/pmm2-client-PR-2407-3aed9ad.tar.gz
-    tar -zxpf pmm2-client-PR-2407-3aed9ad.tar.gz
+    tar -zxpf pmm2-client.tar.gz
     rm -r pmm2-client.tar.gz
     export PMM2_CLIENT=`ls -1td pmm2-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
     echo ${PMM2_CLIENT}
