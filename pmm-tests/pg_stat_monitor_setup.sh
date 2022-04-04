@@ -90,5 +90,5 @@ service postgresql start
 
 su postgres bash -c 'psql -f /home/postgres/init.sql'
 su postgres bash -c 'psql -c "CREATE DATABASE contrib_regression;"'
-su postgres bash -c 'psql -U postgres -d contrib_regression -c "CREATE EXTENSION pg_stat_monitor;"'
-su postgres bash -c 'psql -U postgres -d sbtest1 -c "CREATE EXTENSION pg_stat_statements;"'
+su postgres bash -c 'psql -U postgres -c "CREATE EXTENSION pg_stat_monitor;"'
+su postgres bash -c 'psql -U postgres -c "CREATE EXTENSION pg_stat_statements;"'
