@@ -10,6 +10,5 @@ pmm-tests/tls-ssl-setup/mysql/8*/*
 pmm-tests/tls-ssl-setup/mysql/setup*
 pmm-tests/tls-ssl-setup/mongodb/setup*
 pmm-tests/tls-ssl-setup/postgres/setup*
-pmm-tests/setup_pgsql_pgsm_12.log
-pmm-tests/setup_pgsql_pgsm_13.log
-pmm-tests/setup_pgsql_pgsm_14.log
+pmm-tests/setup_pgsql_pgsm_*.log
+
