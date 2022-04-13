@@ -16,5 +16,6 @@ docker rm $PMM_SERVER_DOCKER_CONTAINER
 export PMM_SERVER_DOCKER_VOLUME=$(docker ps -a --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
 
 PWD=$(pwd) PMM_SERVER_IMAGE=$1 docker-compose up -d pmm-server
+docker network connect pmm-qa pmm-server || true
 sleep 30
 docker logs pmm-server
