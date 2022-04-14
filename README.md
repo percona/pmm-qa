@@ -9,7 +9,7 @@ make sure they are not being used, otherwise update docker-compose.yml file
 3. run npm install in project root.
 4. run prepare_ui_test.sh script in the root directory.
 `bash -x ./prepare_ui_test.sh`
-5. This should start running UI tests in 4 parallel browser sessions inside chrome containers with help of selenoid
+5. This should start running UI tests in 4 parallel browser sessions inside chrome containers with help of selwenoid
 6. Check live execution by launching http://localhost:8080 in your browser.
 
 ## If you'd like to have more control over the UI test framework parameters, please check out next sections
