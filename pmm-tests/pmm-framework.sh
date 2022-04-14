@@ -190,6 +190,7 @@ do
     ;;
     --pmm2-server-ip )
     IP_ADDRESS="$2"
+    PMM2_SERVER_IP="$2"
     shift 2
     ;;
     --package-name )
@@ -1009,13 +1010,11 @@ get_basedir(){
   if [ $download_link -eq 1 ]; then
     if [ -f $SCRIPT_PWD/../get_download_link.sh ]; then
       if [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.4" ]]; then
-        LINK="https://www.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-4.4.1-3/binary/tarball/percona-server-mongodb-4.4.1-3-x86_64.glibc2.12.tar.gz"
+        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-4.4.13-13/binary/tarball/percona-server-mongodb-4.4.13-13-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.2" ]]; then
-        LINK="https://www.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.9-10/binary/tarball/percona-server-mongodb-4.2.9-10-x86_64.glibc2.12.tar.gz"
+        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.19-19/binary/tarball/percona-server-mongodb-4.2.19-19-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.0" ]]; then
-        LINK="https://www.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.20-14/binary/tarball/percona-server-mongodb-4.0.20-14-x86_64.glibc2.12.tar.gz"
-      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "3.6" ]]; then
-        LINK="https://www.percona.com/downloads/percona-server-mongodb-3.6/percona-server-mongodb-3.6.19-8.0/binary/tarball/percona-server-mongodb-3.6.19-8.0-x86_64.glibc2.12.tar.gz"
+        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.28-23/binary/tarball/percona-server-mongodb-4.0.28-23-x86_64.glibc2.17-minimal.tar.gz"
       else
         LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
       fi
@@ -2652,6 +2651,7 @@ setup_mongodb_ssl () {
   echo "Setting up mongodb ssl"
   sudo yum install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  export PMM_CLIENT_VERSION=$(pmm-admin --version | grep -m1 'Version:' | awk -F' ' '{print $2}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/tls-ssl-setup
@@ -2669,13 +2669,28 @@ setup_mongodb_ssl () {
   fi
   if [ -z "$CLIENT_VERSION" ]
   then
-    export CLIENT_VERSION=dev-latest
+    if [ -z "$PMM_CLIENT_VERSION" ]
+    then
+      export CLIENT_VERSION=dev-latest
+    else
+      export CLIENT_VERSION=${PMM_CLIENT_VERSION}
+    fi
   fi
   if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
   then
-    export PMM_SERVER_IP=127.0.0.1
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
   else
-    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    fi
   fi
   export MONGODB_SSL_CONTAINER=mongodb_${MONGODB_VERSION}
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
@@ -2687,6 +2702,7 @@ setup_mysql_ssl () {
   echo "Setting up mysql ssl"
   sudo yum install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  export PMM_CLIENT_VERSION=$(pmm-admin --version | grep -m1 'Version:' | awk -F' ' '{print $2}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/tls-ssl-setup
@@ -2698,13 +2714,28 @@ setup_mysql_ssl () {
   fi
   if [ -z "$CLIENT_VERSION" ]
   then
-    export CLIENT_VERSION=dev-latest
+    if [ -z "$PMM_CLIENT_VERSION" ]
+    then
+      export CLIENT_VERSION=dev-latest
+    else
+      export CLIENT_VERSION=${PMM_CLIENT_VERSION}
+    fi
   fi
   if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
   then
-    export PMM_SERVER_IP=127.0.0.1
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
   else
-    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    fi
   fi
   export MYSQL_SSL_CONTAINER=mysql_${MYSQL_VERSION}
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
@@ -2716,6 +2747,7 @@ setup_postgres_ssl () {
   echo "Setting up postgres ssl"
   sudo yum install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  export PMM_CLIENT_VERSION=$(pmm-admin --version | grep -m1 'Version:' | awk -F' ' '{print $2}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/tls-ssl-setup
@@ -2733,13 +2765,28 @@ setup_postgres_ssl () {
   fi
   if [ -z "$CLIENT_VERSION" ]
   then
-    export CLIENT_VERSION=dev-latest
+    if [ -z "$PMM_CLIENT_VERSION" ]
+    then
+      export CLIENT_VERSION=dev-latest
+    else
+      export CLIENT_VERSION=${PMM_CLIENT_VERSION}
+    fi
   fi
   if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
   then
-    export PMM_SERVER_IP=127.0.0.1
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
   else
-    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    fi
   fi
   export PGSQL_SSL_CONTAINER=pgsql_${PGSQL_VERSION}
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
@@ -2857,7 +2904,7 @@ get_minor_version() {
 }
 
 get_client_minor_version() {
-  export PMM_CLIENT_VERSION=$(pmm-admin status | grep 'Version:' | awk -F' ' '{print $2}')
+  export PMM_CLIENT_VERSION=$(pmm-admin --version | grep -m1 'Version:' | awk -F' ' '{print $2}')
   versions=${PMM_CLIENT_VERSION:2:2}
   echo ${versions};
 }
