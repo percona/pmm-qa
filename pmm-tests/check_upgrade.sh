@@ -11,7 +11,6 @@ if [ $3 == "ami" ]; then
 	sudo supervisorctl status | grep qan-api2 | grep RUNNING
 	sudo supervisorctl status | grep alertmanager | grep RUNNING
 	sudo supervisorctl status | grep clickhouse | grep RUNNING
-	sudo supervisorctl status | grep cron | grep RUNNING
 	sudo supervisorctl status | grep grafana | grep RUNNING
 	sudo supervisorctl status | grep nginx | grep RUNNING
 	sudo supervisorctl status | grep pmm-agent | grep RUNNING
@@ -39,7 +38,6 @@ else
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep qan-api2 | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep alertmanager | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep clickhouse | grep RUNNING
-	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep cron | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep grafana | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep nginx | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep pmm-agent | grep RUNNING
