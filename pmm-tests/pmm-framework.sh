@@ -1448,7 +1448,7 @@ add_clients(){
           fi
         fi
         sudo chmod +x $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh
-        bash $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh $pdpgsql_service_name > pdpgsql_pgstatmonitor_$j.log 2>&1 &
+        bash $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh $pdpgsql_service_name > /dev/null 2>&1 &
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
