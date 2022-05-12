@@ -64,7 +64,6 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove postgresql {{ pgsql_pgsm_container }}_service'
-      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove postgresql {{ pgsql_pgsm_container }}_pg_stat_statement_service'
     ignore_errors: true 
 
   - name: Add pgsql_pgsm for monitoring
@@ -72,8 +71,6 @@
     with_items:
       - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
       - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor {{ pgsql_pgsm_container }}_service'
-      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm {{ pgsql_pgsm_container }}_pg_stat_statement_service'
-     # - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile; pmm-admin add postgresql --socket=/var/run/postgresql postgresql_socket'
 
   - name: cleanup pgadmin container if already running
     shell: >

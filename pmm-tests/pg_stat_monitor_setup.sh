@@ -86,6 +86,7 @@ echo "CREATE DATABASE sbtest1;" >> /home/postgres/init.sql
 echo "CREATE DATABASE sbtest2;" >> /home/postgres/init.sql
 echo "CREATE USER pmm WITH PASSWORD 'pmm';" >> /home/postgres/init.sql
 echo "GRANT pg_monitor TO pmm;" >> /home/postgres/init.sql
+echo "ALTER USER postgres PASSWORD 'pass+this';" >> /home/postgres/init.sql
 service postgresql start
 
 su postgres bash -c 'psql -f /home/postgres/init.sql'
