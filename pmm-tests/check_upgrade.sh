@@ -4,7 +4,9 @@
 if [ $3 == "ami" ]; then
 	rpm -qa | grep percona-qan-api2-$1
 	rpm -qa | grep percona-dashboards-$1
-	rpm -qa | grep pmm-update-$1
+	if [ ${SERVER_VERSION} != "2.25.0" ]; then
+		rpm -qa | grep pmm-update-$1
+	fi
 	rpm -qa | grep pmm-server-$1
 	rpm -qa | grep pmm-managed-$1
 	rpm -qa | grep pmm2-client-$1
