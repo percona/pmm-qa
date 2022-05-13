@@ -21,14 +21,6 @@
     ignore_errors: true
     tags:
       - cleanup
-  - name: delete network if exist
-    shell: docker network rm "{{ pgsql_pgsm_container }}_network"
-    ignore_errors: true
-    tags:
-      - cleanup
-
-  - name: Create a network
-    shell: docker network create "{{ pgsql_pgsm_container }}_network"
 
   - name: Create pmm-qa network if not exist
     shell: docker network create pmm-qa
@@ -37,8 +29,7 @@
   - name: Prepare Container for PostgreSQL
     shell: >
       docker run -d --name={{ pgsql_pgsm_container }}
-      --network "{{ pgsql_pgsm_container }}_network"
-      -p 5433:5432
+      -p 5437:5432
       phusion/baseimage:focal-1.1.0
   
   - name: Copy all required Artifacts to the docker pgsql_pgsm_container
@@ -64,7 +55,6 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove postgresql {{ pgsql_pgsm_container }}_service'
-      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove postgresql {{ pgsql_pgsm_container }}_pg_stat_statement_service'
     ignore_errors: true 
 
   - name: Add pgsql_pgsm for monitoring
@@ -72,8 +62,6 @@
     with_items:
       - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
       - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor {{ pgsql_pgsm_container }}_service'
-      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm {{ pgsql_pgsm_container }}_pg_stat_statement_service'
-     # - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile; pmm-admin add postgresql --socket=/var/run/postgresql postgresql_socket'
 
   - name: cleanup pgadmin container if already running
     shell: >
@@ -87,19 +75,6 @@
     with_items:
       - docker run --name=pgadmin -d -p 9093:80 -e PGADMIN_DEFAULT_EMAIL=admin@admin.com -e PGADMIN_DEFAULT_PASSWORD=root dpage/pgadmin4
       - docker network connect pmm-qa pgadmin
-
-  - name: cleanup clickhouse UI container if already running
-    shell: >
-      docker ps -a --filter "name=clickhousetabix" | grep -q . && docker stop clickhousetabix && docker rm -fv clickhousetabix
-    ignore_errors: true
-    tags:
-      - cleanup
-
-  - name: Start Clickhouse UI Tabix docker container
-    shell: "{{ item }}"
-    with_items:
-      - docker run -d --name=clickhousetabix -p 8080:80 spoonest/clickhouse-tabix-web-client
-      - docker network connect pmm-qa clickhousetabix
 
   - name: Run queries for generating data
     shell: "{{ item }}"
