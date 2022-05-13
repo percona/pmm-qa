@@ -1432,7 +1432,7 @@ add_clients(){
         pdpgsql_service_name=$(prepare_service_name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j)
         docker run --name $pdpgsql_service_name -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 \
         -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} \
-        -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements \
+        -c shared_preload_libraries=pg_stat_statements,pg_stat_monitor \
         -c pg_stat_monitor.pgsm_bucket_time=60 \
         -c pg_stat_monitor.pgsm_max_buckets=10 -c pg_stat_monitor.pgsm_query_shared_buffer=20 \
         -c pg_stat_monitor.pgsm_max=100 -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 \
