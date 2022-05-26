@@ -9,13 +9,13 @@ PSMDB_OPERATOR_VERSION=$2;
 if [ "$PXC_OPERATOR_VERSION" == none ] ; then
 	echo "No PXC operator installed"
 else
-	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/"${PXC_OPERATOR_VERSION}"/deploy/bundle.yaml | kubectl apply -f -		
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-xtradb-cluster-operator/"${PXC_OPERATOR_VERSION}"/deploy/bundle.yaml | kubectl apply -f -
 fi
 
 if [ "$PSMDB_OPERATOR_VERSION" == none ] ; then
 	echo "No PSMDB operator installed"
 else
-	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/"${PSMDB_OPERATOR_VERSION}"/deploy/bundle.yaml | kubectl apply -f -	
+	curl -sSf -m 30 https://raw.githubusercontent.com/percona/percona-server-mongodb-operator/"${PSMDB_OPERATOR_VERSION}"/deploy/bundle.yaml | kubectl apply -f -
 fi
 
 PMM_USER_B64="$(echo -n "${PMM_USER}" | base64)";
