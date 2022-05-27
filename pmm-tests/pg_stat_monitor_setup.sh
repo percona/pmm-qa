@@ -63,7 +63,7 @@ cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 ##
 if [ -z "$pgstat_monitor_branch" ]
 then
-      export pgstat_monitor_branch=REL1_0_STABLE
+      export pgstat_monitor_branch=REL_1_STABLE
 fi
 
 cd /home/postgres
