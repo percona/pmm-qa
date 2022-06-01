@@ -15,30 +15,46 @@ then
       export pgsql_version=14
 fi
 
-## Need to add a user postgres either here or in Dockerfile
+if [ -z "$pgstat_monitor_branch" ]
+then
+      export pgstat_monitor_branch=REL_1_STABLE
+fi
+
+# If distribution is not provided then it will default to percona distribution 'PPG'
+# For PG community distribution please use 'PGDG'
+if [ -z "$distribution" ]
+then
+      export distribution=PPG
+fi
+
+# Need to add a user postgres either here or in Dockerfile
 cd /home
 mkdir postgres
 useradd postgres
 chown -R postgres:postgres postgres
 cd postgres
 
+# Install the dependencies
 apt-get update
-apt-get -y install sudo 
-rm -rf /var/log/postgresql/
-rm -rf /etc/postgresql/
-rm -rf /usr/lib/postgresql
-rm -rf /usr/include/postgresql
-rm -rf /usr/share/postgresql
-rm -rf /etc/postgresql
-rm -f /usr/bin/pg_config
-rm -rf /var/lib/postgres
-apt purge postgresql-client-common postgresql-common postgresql postgresql*
-apt-get update
-apt-get install build-essential libreadline6-dev systemtap-sdt-dev zlib1g-dev libssl-dev libpam0g-dev python-dev bison flex libipc-run-perl git wget -y
-wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ focal-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
-apt update
-apt -y install postgresql-${pgsql_version} postgresql-server-dev-${pgsql_version}
+apt-get -y install wget curl git gnupg2 lsb-release
+apt-get -y install libreadline6-dev systemtap-sdt-dev zlib1g-dev libssl-dev libpam0g-dev python-dev bison make flex libipc-run-perl wget
+sleep 10
+
+# Install the PG server from selected distribution
+if [[ $distribution == "PGDG" ]];
+then
+      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add -
+      sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+      apt update
+      apt -y install postgresql-${pgsql_version} postgresql-server-dev-${pgsql_version}
+else
+      wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+      dpkg -i percona-release_latest.generic_all.deb
+      percona-release setup ppg-${pgsql_version}
+      apt-get -y update
+      apt-get -y install percona-postgresql-${pgsql_version} percona-postgresql-contrib percona-postgresql-server-dev-all
+fi
+
 sleep 10
 sed -i 's/\(host\s*all\s*all\s*127.0.0.1.*\) md5/\1 trust/g' /etc/postgresql/${pgsql_version}/main/pg_hba.conf
 sed -i 's/\(host\s*all\s*all\s*::1.*\) md5/\1 trust/g' /etc/postgresql/${pgsql_version}/main/pg_hba.conf
@@ -59,13 +75,7 @@ export PATH="/usr/lib/postgresql/${pgsql_version}/bin:$PATH"
 echo $PATH
 cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 
-## Down PGSM repo and move to /home/postgres/pg_stat_monitor dir
-##
-if [ -z "$pgstat_monitor_branch" ]
-then
-      export pgstat_monitor_branch=REL_1_STABLE
-fi
-
+# Clone PGSM repo and move to /home/postgres/pg_stat_monitor dir
 cd /home/postgres
 git clone -b ${pgstat_monitor_branch} https://github.com/percona/pg_stat_monitor
 chown -R postgres:postgres pg_stat_monitor
@@ -74,21 +84,24 @@ cd pg_stat_monitor
 # Build PGSM
 make USE_PGXS=1
 
-## Install build library into server
+# Install built PGSM library into server
 make USE_PGXS=1 install
 
+# Stop server and edit postgresql.conf to load PGSM library with required configurations
 service postgresql stop
 echo "shared_preload_libraries = 'pg_stat_monitor'" >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 echo "track_activity_query_size=2048"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 echo "track_io_timing=ON"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 
+# Create init.sql file required by PMM
 echo "CREATE DATABASE sbtest1;" >> /home/postgres/init.sql
 echo "CREATE DATABASE sbtest2;" >> /home/postgres/init.sql
 echo "CREATE USER pmm WITH PASSWORD 'pmm';" >> /home/postgres/init.sql
 echo "GRANT pg_monitor TO pmm;" >> /home/postgres/init.sql
 echo "ALTER USER postgres PASSWORD 'pass+this';" >> /home/postgres/init.sql
-service postgresql start
 
+# Start server, run init.sql and Create extension PGSM
+service postgresql start
 su postgres bash -c 'psql -f /home/postgres/init.sql'
 su postgres bash -c 'psql -c "CREATE DATABASE contrib_regression;"'
 su postgres bash -c 'psql -U postgres -c "CREATE EXTENSION pg_stat_monitor;"'
