@@ -66,8 +66,15 @@ then
       export pgstat_monitor_branch=REL_1_STABLE
 fi
 
+## Down PGSM repo and move to /home/postgres/pg_stat_monitor dir
+##
+if [ -z "$pgstat_monitor_repo" ]
+then
+      export pgstat_monitor_repo=https://github.com/percona/pg_stat_monitor
+fi
+
 cd /home/postgres
-git clone -b ${pgstat_monitor_branch} https://github.com/percona/pg_stat_monitor
+git clone -b ${pgstat_monitor_branch} ${pgstat_monitor_repo}
 chown -R postgres:postgres pg_stat_monitor
 cd pg_stat_monitor
 
