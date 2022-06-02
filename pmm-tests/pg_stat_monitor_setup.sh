@@ -70,11 +70,11 @@ fi
 ##
 if [ -z "$pgstat_monitor_repo" ]
 then
-      export pgstat_monitor_repo=https://github.com/percona/pg_stat_monitor
+      export pgstat_monitor_repo=percona/pg_stat_monitor
 fi
 
 cd /home/postgres
-git clone -b ${pgstat_monitor_branch} ${pgstat_monitor_repo}
+git clone -b ${pgstat_monitor_branch} https://github.com/${pgstat_monitor_repo}
 chown -R postgres:postgres pg_stat_monitor
 cd pg_stat_monitor
 
