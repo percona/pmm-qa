@@ -23,7 +23,7 @@ if [ $3 == "ami" ]; then
 		rpm -qa | grep dbaas-controller-$1
 		sudo supervisorctl status | grep victoriametrics | grep RUNNING
 		sudo supervisorctl status | grep vmalert | grep RUNNING
-		grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.3.1"
+		grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.4.4"
 		grafana-cli plugins ls | grep alexanderzobnin-zabbix-app
 	fi
 else
@@ -54,6 +54,6 @@ else
 		if [[ $PERFORM_DOCKER_WAY_UPGRADE == "yes" && "${pmm_minor_v}" -gt "22" ]] || [[ $PERFORM_DOCKER_WAY_UPGRADE != "yes" ]]; then
 			docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins ls | grep alexanderzobnin-zabbix-app
 		fi
-		docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.3.1"
+		docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.4.4"
 	fi
 fi
