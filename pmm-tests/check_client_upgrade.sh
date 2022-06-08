@@ -12,7 +12,7 @@ pmm-admin status | grep postgres_exporter | grep -qv Waiting
 pmm-admin status | grep mongodb_profiler_agent | grep -qv Waiting
 pmm-admin status | grep postgresql_pgstatements_agent | grep -qv Waiting
 server_version=$(pmm-admin status | grep Version | awk -F' ' '{print $2}')
-if [ ${FB_EXECUTION} != "yes" ]; then
+if [ ${FB_EXECUTION} == "no" ]; then
         if [ "$server_version" != "$1" ]; then
             echo "PMM Server Version is not equal to expected $1";
             exit 1;
