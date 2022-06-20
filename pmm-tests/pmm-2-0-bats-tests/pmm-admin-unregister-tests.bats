@@ -37,7 +37,7 @@
     run pmm-admin unregister --node-name=Testing --json --force
     echo $output
     [ $status -eq 1 ]
-    echo "${output}" | grep '"Node Testing is not found"'    
+    echo "${output}" | grep '"node Testing is not found"'    
 }
 
 @test "run pmm-admin unregister --force --node-name=pmm-server" {
