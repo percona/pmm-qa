@@ -16,7 +16,6 @@ teardown() {
     kubectl delete pods,services,statefulsets,configmaps,secrets --selector=app.kubernetes.io/name=pmm --force || true
     delete_pvc || true
     rm values.yaml || true
-    rm -rf pmm || true
 }
 
 @test "add helm repo" {
@@ -77,12 +76,8 @@ teardown() {
     sed -i "s|tag: .*|tag: \"dev-latest\"|g" values.yaml
     sed -i "s|percona/pmm-server|perconalab/pmm-server|g" values.yaml
 
-    helm pull --untar percona/pmm
-    sed -i "s|version: .*|version: 99.0.0|g" pmm/Chart.yaml 
-    sed -i "s|appVersion: .*|appVersion: 99.0.0|g" pmm/Chart.yaml 
-
-    helm upgrade pmm3 -f values.yaml ./pmm
-    sleep 7 # get a chance to update manifest
+    helm upgrade pmm3 -f values.yaml percona/pmm
+    sleep 7 # give a chance to update manifest
     wait_for_pmm
 
     local new_ver=$(kubectl get pod --selector=app.kubernetes.io/name=pmm -o jsonpath="{.items[*].spec.containers[*].image}")

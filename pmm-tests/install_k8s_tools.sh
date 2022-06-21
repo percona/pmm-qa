@@ -133,7 +133,7 @@ install_kubectl()
 
     install_bin kubectl
 
-    rm kubectl.sha256 kubectl || true
+    rm kubectl.sha256 kubectl 2>&1 1>/dev/null || true
 
     echo "kubectl version --client --output=yaml"
     kubectl version --client --output=yaml
@@ -146,7 +146,7 @@ install_minikube()
 
     install_bin minikube
 
-    rm minikube || true
+    rm minikube 2>&1 1>/dev/null || true
 
     echo "minikube version"
     minikube version
@@ -163,7 +163,7 @@ install_kind()
 
     install_bin kind
 
-    rm kind || true
+    rm kind 2>&1 1>/dev/null || true
 
     echo "kind version"
     kind version
@@ -176,7 +176,7 @@ install_helm()
 
     HELM_INSTALL_DIR=$INSTALL_DIR USE_SUDO=$USE_SUDO ./get_helm.sh 2>&1 1>/dev/null
     
-    rm get_helm.sh || true
+    rm get_helm.sh 2>&1 1>/dev/null || true
     
     echo "helm version"
     helm version
