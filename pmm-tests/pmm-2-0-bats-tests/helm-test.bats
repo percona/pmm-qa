@@ -8,12 +8,17 @@ setup() {
     echo "file name $BATS_TEST_FILENAME"
 
     source "$PROJECT_ROOT/k8s_helper.sh"
+
+    # set default image from the repo charts or take it as a parameters from CI
+    IMAGE_REPO=${IMAGE_REPO:-$(helm show values percona/pmm | grep 'repository:' | cut -d ':' -f 2 | xargs)}
+    IMAGE_TAG=${IMAGE_TAG:-$(helm show values percona/pmm | grep 'tag:' | cut -d ':' -f 2 | xargs)}
 }
 
 teardown() {
 
     echo "cleanup"
-    kubectl delete pods,services,statefulsets,configmaps,secrets --selector=app.kubernetes.io/name=pmm --force || true
+    helm list --short | xargs helm uninstall || true
+    kubectl delete pods,services,statefulsets,configmaps,secrets,serviceaccount --selector=app.kubernetes.io/name=pmm --force || true
     delete_pvc || true
     rm values.yaml || true
 }
@@ -27,7 +32,10 @@ teardown() {
 }
 
 @test "install/uninstall default chart and check connectivity" {
-    helm install pmm percona/pmm
+    helm install pmm \
+        --set image.repository=$IMAGE_REPO \
+        --set image.tag=$IMAGE_TAG \
+        percona/pmm
     wait_for_pmm
 
     # depends on the driver, but probably local PVC wouldn't be cleaned up
@@ -51,6 +59,8 @@ teardown() {
 
 @test "install/uninstall with parameter set in cli" {
     helm install pmm1 \
+        --set image.repository=$IMAGE_REPO \
+        --set image.tag=$IMAGE_TAG \
         --set-string pmmEnv.ENABLE_DBAAS="1" \
         --set service.type="NodePort" \
         percona/pmm
@@ -61,6 +71,10 @@ teardown() {
 
 @test "install/uninstall chart with default values from file" {
     helm show values percona/pmm > values.yaml
+
+    sed -i "s|tag: .*|tag: \"$IMAGE_TAG\"|g" values.yaml
+    sed -i "s|percona/pmm-server|$IMAGE_REPO|g" values.yaml
+
     helm install pmm -f values.yaml percona/pmm
     wait_for_pmm
 
@@ -70,6 +84,10 @@ teardown() {
 
 @test "install/uninstall chart with values from file and update pmm" {
     helm show values percona/pmm > values.yaml
+
+    sed -i "s|tag: .*|tag: \"$IMAGE_TAG\"|g" values.yaml
+    sed -i "s|percona/pmm-server|$IMAGE_REPO|g" values.yaml
+
     helm install pmm3 -f values.yaml percona/pmm
     wait_for_pmm
 
