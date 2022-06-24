@@ -10,8 +10,8 @@ setup() {
     source "$PROJECT_ROOT/k8s_helper.sh"
 
     # set default image from the repo charts or take it as a parameters from CI
-    IMAGE_REPO=${IMAGE_REPO:-$(helm show values percona/pmm | grep 'repository:' | cut -d ':' -f 2 | xargs)}
-    IMAGE_TAG=${IMAGE_TAG:-$(helm show values percona/pmm | grep 'tag:' | cut -d ':' -f 2 | xargs)}
+    IMAGE_REPO=${IMAGE_REPO:-"percona/pmm-server"}
+    IMAGE_TAG=${IMAGE_TAG:-"2"}
 }
 
 teardown() {
