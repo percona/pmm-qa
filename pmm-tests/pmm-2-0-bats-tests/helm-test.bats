@@ -57,6 +57,9 @@ teardown() {
     local encoded_u_p=$(echo -n admin:${admin_pass} | base64)
 
     echo "curl -k -H 'Authorization: Basic ...' https://"${pmm_address}"/v1/version"
+    #echo admin pass in case there are some issues with it
+    echo "pass:${admin_pass}"
+
     run bash -c "curl -sk -H 'Authorization: Basic ${encoded_u_p}' https://${pmm_address}/v1/version"
     echo $output
     [ "$status" -eq 0 ]
@@ -82,7 +85,7 @@ teardown() {
     helm show values percona/pmm > values.yaml
 
     sed -i "s|tag: .*|tag: \"$IMAGE_TAG\"|g" values.yaml
-    sed -i "s|percona/pmm-server|$IMAGE_REPO|g" values.yaml
+    sed -i "s|repository:.*|repository: $IMAGE_REPO|g" values.yaml
 
     helm install pmm -f values.yaml percona/pmm
     wait_for_pmm
@@ -95,13 +98,13 @@ teardown() {
     helm show values percona/pmm > values.yaml
 
     sed -i "s|tag: .*|tag: \"$IMAGE_TAG\"|g" values.yaml
-    sed -i "s|percona/pmm-server|$IMAGE_REPO|g" values.yaml
+    sed -i "s|repository:.*|repository: $IMAGE_REPO|g" values.yaml
 
     helm install pmm3 -f values.yaml percona/pmm
     wait_for_pmm
 
     sed -i "s|tag: .*|tag: \"dev-latest\"|g" values.yaml
-    sed -i "s|percona/pmm-server|perconalab/pmm-server|g" values.yaml
+    sed -i "s|repository:.*|repository: perconalab/pmm-server|g" values.yaml
 
     helm upgrade pmm3 -f values.yaml percona/pmm
     sleep 7 # give a chance to update manifest
