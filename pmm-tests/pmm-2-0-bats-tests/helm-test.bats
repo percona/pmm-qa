@@ -16,11 +16,20 @@ setup() {
 
 teardown() {
 
-    echo "cleanup"
+    echo "-------debug info-------"
+
+    kubectl get pods
+    kubectl describe pod --selector=app.kubernetes.io/name=pmm
+    kubectl get events --sort-by=lastTimestamp
+    kubectl logs --all-containers --timestamps --selector=app.kubernetes.io/name=pmm
+    echo "------------------------"
+
+    echo "--------cleanup---------"
     helm list --short | xargs helm uninstall || true
     kubectl delete pods,services,statefulsets,configmaps,secrets,serviceaccount --selector=app.kubernetes.io/name=pmm --force || true
     delete_pvc || true
     rm values.yaml || true
+    echo "------------------------"
 }
 
 @test "add helm repo" {
