@@ -2501,16 +2501,22 @@ add_annotation_pmm2 () {
 }
 
 setup_pmm2_client_docker_image () {
+  if [ -z ${DOCKER_VERSION+x} ]; then
+    export DOCKER_VERSION=perconalab/pmm-server:dev-latest
+  fi
+  if [ -z ${CLIENT_DOCKER_VERSION+x} ]; then
+    export CLIENT_DOCKER_VERSION=perconalab/pmm-client:dev-latest
+  fi
   docker network create docker-client-check
   sleep 5
 
   # Start PMM-Server on a different port for testing purpose
-  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 perconalab/pmm-server:dev-latest
+  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 ${DOCKER_VERSION}
   sleep 20
   echo "PMM Server Dev Latest connected using port 8081"
 
   # Start pmm-client and use same network, connect it to pmm-server
-  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml -d --network docker-client-check --name=pmm-client perconalab/pmm-client:dev-latest
+  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml -d --network docker-client-check --name=pmm-client ${CLIENT_DOCKER_VERSION}
   sleep 20
   echo "PMM Client Start and connected to PMM-Server"
   ## Start Percona Server 5.7 latest image and connect it to same network
