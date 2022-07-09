@@ -63,7 +63,7 @@ cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 ##
 if [ -z "$pgstat_monitor_branch" ]
 then
-      export pgstat_monitor_branch=REL_1_STABLE
+      export pgstat_monitor_branch=main
 fi
 
 ## Down PGSM repo and move to /home/postgres/pg_stat_monitor dir
