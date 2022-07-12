@@ -25,6 +25,7 @@ if [ $3 == "ami" ]; then
 		sudo supervisorctl status | grep vmalert | grep RUNNING
 		grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.4.4"
 		grafana-cli plugins ls | grep alexanderzobnin-zabbix-app
+		victoriametrics --version | grep victoria-metrics-20220620-144706-pmm-6401-v1.77.1
 	fi
 else
 	export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
@@ -49,6 +50,7 @@ else
 		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep dbaas-controller-$1
 		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep victoriametrics | grep RUNNING
 		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep vmalert | grep RUNNING
+		docker exec $PMM_SERVER_DOCKER_CONTAINER victoriametrics --version | grep victoria-metrics-20220620-144706-pmm-6401-v1.77.1
 		versions=(${DOCKER_VERSION//./ })
 		export pmm_minor_v=$(echo ${versions[1]});
 		if [[ $PERFORM_DOCKER_WAY_UPGRADE == "yes" && "${pmm_minor_v}" -gt "22" ]] || [[ $PERFORM_DOCKER_WAY_UPGRADE != "yes" ]]; then
