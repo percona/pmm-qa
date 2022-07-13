@@ -10,14 +10,22 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+# If postgres server version is not provided then it will default to version 14.
 if [ -z "$pgsql_version" ]
 then
       export pgsql_version=14
 fi
 
+# If branch/tag is not provided then it will default to main branch
 if [ -z "$pgstat_monitor_branch" ]
 then
-      export pgstat_monitor_branch=REL_1_STABLE
+      export pgstat_monitor_branch=main
+fi
+
+# If repo is not provided then it will default to percona PGSM repository
+if [ -z "$pgstat_monitor_repo" ]
+then
+      export pgstat_monitor_repo=percona/pg_stat_monitor
 fi
 
 # If distribution is not provided then it will default to percona distribution 'PPG'
@@ -77,7 +85,7 @@ cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 
 # Clone PGSM repo and move to /home/postgres/pg_stat_monitor dir
 cd /home/postgres
-git clone -b ${pgstat_monitor_branch} https://github.com/percona/pg_stat_monitor
+git clone -b ${pgstat_monitor_branch} https://github.com/${pgstat_monitor_repo}
 chown -R postgres:postgres pg_stat_monitor
 cd pg_stat_monitor
 
