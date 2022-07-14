@@ -21,6 +21,7 @@ if [ $3 == "ami" ]; then
 
 	if [ $2 == "post" ]; then
 		rpm -qa | grep dbaas-controller-$1
+		rpm -qa | grep pmm-dump-$1
 		sudo supervisorctl status | grep victoriametrics | grep RUNNING
 		sudo supervisorctl status | grep vmalert | grep RUNNING
 		grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.4.4"
@@ -48,6 +49,7 @@ else
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep postgresql | grep RUNNING
 	if [ $2 == "post" ]; then
 		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep dbaas-controller-$1
+		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-dump-$1
 		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep victoriametrics | grep RUNNING
 		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep vmalert | grep RUNNING
 		docker exec $PMM_SERVER_DOCKER_CONTAINER victoriametrics --version | grep victoria-metrics-20220620-144706-pmm-6401-v1.77.1
