@@ -12,7 +12,7 @@ fi
 run pmm-admin
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ] # first line of output lacks information about usage should be 'usage: pmm-admin [<flags>] <command> [<args> ...]'
 }
 
 @test "run pmm-admin under root privileges" {
@@ -29,28 +29,28 @@ echo "$output"
 run pmm-admin
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ] # first line of output lacks information about usage should be 'usage: pmm-admin [<flags>] <command> [<args> ...]'
 }
 
 @test "run pmm-admin help" {
 run pmm-admin help
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ] # first line of output lacks information about usage should be 'usage: pmm-admin [<flags>] <command> [<args> ...]'
 }
 
 @test "run pmm-admin -h" {
 run pmm-admin -h
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ] # first line of output lacks information about usage should be 'usage: pmm-admin [<flags>] <command> [<args> ...]''
 }
 
 @test "run pmm-admin with wrong option" {
 run pmm-admin install
 echo "$output"
     [ "$status" -eq 1 ]
-    echo "${output}" | grep "pmm-admin: error: expected command but got"
+    echo "${output}" | grep "pmm-admin: error: unexpected argument install"
 }
 
 @test "run pmm-admin list to check for available services" {
@@ -83,7 +83,7 @@ fi
 run pmm-admin config
 echo "$output"
     [ "$status" -eq 1 ]
-    echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name"
+    echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name" # no information about failure reasons is shown
 }
 
 @test "run pmm-admin summary --help" {
@@ -140,7 +140,7 @@ echo "$output"
 run pmm-admin summary --server-url='https://admin:admin@localhost' --server-insecure-tls
 echo "$output"
     [ "$status" -eq 0 ]
-    echo "${lines[0]}" | grep ".zip created."
+    echo "${lines[0]}" | grep ".zip created." # there are problems with certificate Get "https://localhost/logs.zip": x509: certificate is not valid for any names, but wanted to match localhost. Despite error archive s still created
     checkZipFileContents
     echo "$output" | grep -E "43|44 files"
 }
@@ -150,7 +150,7 @@ run pmm-admin summary --debug
 echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep "POST /v1/inventory/Services/List HTTP/1.1"
-    echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "$output" | grep "POST /v1/inventory/Agents/List HTTP/1.1" # there are no request for those urls. but there are requests for /local/status
     echo "${lines[-1]}" | grep ".zip created."
 }
 
@@ -159,7 +159,7 @@ run pmm-admin summary --trace
 echo "$output"
     [ "$status" -eq 0 ]
     echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Services/List HTTP/1.1"
-    echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Agents/List HTTP/1.1"
+    echo "$output" | grep "(*Runtime).Submit() POST /v1/inventory/Agents/List HTTP/1.1" # there are no request for those urls. but there are requests for /local/status
     echo "${lines[-1]}" | grep ".zip created."
 }
 
@@ -332,8 +332,8 @@ echo "$output"
 run pmm-admin annotate --help
 echo "$output"
     [ "$status" -eq 0 ]
-    [[ ${lines[0]} =~ "usage: pmm-admin annotate [<flags>] <text>" ]]
-    [[ ${output} =~ "<text>  Text of annotation" ]]
+    [[ ${lines[0]} =~ "usage: pmm-admin annotate [<flags>] <text>" ]] # the case of the U in usage is different in output
+    [[ ${output} =~ "<text>  Text of annotation" ]] # the amount of spaces is different in output 
     [[ ${output} =~ "Add an annotation to Grafana charts" ]]
 }
 
@@ -355,29 +355,28 @@ echo "$output"
 run pmm-admin --help
 echo "$output"
     [ "$status" -eq 0 ]
-    [[ ${lines[18]} =~ "annotate [<flags>] <text>" ]]
-    [[ ${lines[19]} =~ "Add an annotation to Grafana charts" ]]
+     echo "$output" | grep "annotate      Add an annotation to Grafana charts"
 }
 
 @test "run pmm-admin annotate without any text and verify it should not work" {
 run pmm-admin annotate
 echo "$output"
     [ "$status" -eq 1 ]
-    echo "$output" | grep "pmm-admin: error: required argument 'text' not provided, try --help"
+    echo "$output" | grep "pmm-admin: error: expected \"<text>\""
 }
 
 @test "run pmm-admin annotate with tags without text cannot be added" {
 run pmm-admin annotate --tags="testing"
 echo "$output"
     [ "$status" -eq 1 ]
-    echo "$output" | grep "pmm-admin: error: required argument 'text' not provided, try --help"
+    echo "$output" | grep "pmm-admin: error: expected \"<text>\""
 }
 
 @test "run pmm-admin config --help to check for Metrics Mode option" {
 run pmm-admin config --help
 echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "metrics-mode=auto"
+    echo "${output}" | grep "metrics-mode=\"auto\""
     echo "${output}" | grep "Metrics flow mode for agents node-exporter, can
                             be push - agent will push metrics, pull - server
                             scrape metrics from agent or auto - chosen by
