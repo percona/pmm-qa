@@ -13,7 +13,7 @@ arr=("node_exporter"
      "postgresql_pgstatmonitor_agent")
 
 for agent in "${arr[@]}" ; do
-        for i in $(pmm-admin status | grep ${agent}) ; do
+        for i in $(pmm-admin status | grep ${agent} | awk -F' ' '{ print $3 }') ; do
                 echo $i | grep -qv Waiting
                 echo $i | grep Running
         done
