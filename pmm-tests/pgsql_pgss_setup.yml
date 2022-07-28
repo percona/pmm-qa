@@ -1,6 +1,6 @@
 ---
 # This playbook does following:
-#   enables Percona testing repository
+#   install postgres with pgstatement enabled for QAN and PMM Integration testing
 
 - hosts: all
   become: true
