@@ -1830,36 +1830,36 @@ add_clients(){
         fi
         sleep 20
         if [[ ! -z $metrics_mode ]]; then
-          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_sharded_node mongodb_shraded_node --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --environment=mongodb_sharded_node_${IP_ADDRESS_CLIENT} mongodb_sharded_node_${IP_ADDRESS_CLIENT} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=config_${IP_ADDRESS_CLIENT} --environment=mongodb_config_node_${IP_ADDRESS_CLIENT} mongodb_config_${IP_ADDRESS_CLIENT}_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=config_${IP_ADDRESS_CLIENT} --environment=mongodb_config_node_${IP_ADDRESS_CLIENT} mongodb_config_${IP_ADDRESS_CLIENT}_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=config_${IP_ADDRESS_CLIENT} --environment=mongodb_config_node_${IP_ADDRESS_CLIENT} mongodb_config_${IP_ADDRESS_CLIENT}_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+          pmm-admin add mongodb --cluster mongodb__cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs2_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs2_${IP_ADDRESS_CLIENT}_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs2_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs2_${IP_ADDRESS_CLIENT}_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
           sleep 2
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs2_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs2_${IP_ADDRESS_CLIENT}_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
         else
-          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_sharded_node mongodb_shraded_node --debug 127.0.0.1:27017
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --debug 127.0.0.1:27027
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --debug 127.0.0.1:27028
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --debug 127.0.0.1:27029
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27018
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27019
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27020
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_1 --debug 127.0.0.1:28018
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_2 --debug 127.0.0.1:28019
-          pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --debug 127.0.0.1:28020
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --environment=mongodb_sharded_node_${IP_ADDRESS_CLIENT} mongodb_sharded_node_${IP_ADDRESS_CLIENT} --debug 127.0.0.1:27017
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=config_${IP_ADDRESS_CLIENT} --environment=mongodb_config_node_${IP_ADDRESS_CLIENT} mongodb_config_${IP_ADDRESS_CLIENT}_1 --debug 127.0.0.1:27027
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=config_${IP_ADDRESS_CLIENT} --environment=mongodb_config_node_${IP_ADDRESS_CLIENT} mongodb_config_2_${IP_ADDRESS_CLIENT} --debug 127.0.0.1:27028
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=config_${IP_ADDRESS_CLIENT} --environment=mongodb_config_node_${IP_ADDRESS_CLIENT} mongodb_config_3_${IP_ADDRESS_CLIENT} --debug 127.0.0.1:27029
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_1 --debug 127.0.0.1:27018
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_2 --debug 127.0.0.1:27019
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_3 --debug 127.0.0.1:27020
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs2_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs2_${IP_ADDRESS_CLIENT}_1 --debug 127.0.0.1:28018
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs2_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs2_${IP_ADDRESS_CLIENT}_2 --debug 127.0.0.1:28019
+          pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs2_${IP_ADDRESS_CLIENT} --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs2_${IP_ADDRESS_CLIENT}_3 --debug 127.0.0.1:28020
         fi
       elif [[ "$with_replica" == "1" ]]; then
         if [ "$mo_version" == "3.6" ]; then
