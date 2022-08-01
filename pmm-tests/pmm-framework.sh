@@ -1883,19 +1883,19 @@ add_clients(){
             sleep 2
             pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS} --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
           else
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_1 --debug 127.0.0.1:27017
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_1 --debug 127.0.0.1:27017
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_2 --debug 127.0.0.1:27018
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_3 --debug 127.0.0.1:27019
           fi
         else
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_1 --debug
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_1 --debug
             sleep 2
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
             sleep 2
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
           else
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_1 --debug
+            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_1 --debug
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_2 --debug
             pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --environment=mongodb_rs_node mongodb_rs1_3 --debug
           fi
