@@ -679,7 +679,7 @@ setup(){
     echo "ERROR! The program 'lynx' is currently not installed. Please install lynx. Terminating"
     exit 1
   fi
-  #IP_ADDRESS=$(ip route get 8.8.8.8 | head -1 | cut -d' ' -f8)
+  IP_ADDRESS_CLIENT=$(hostname -I | cut -d' ' -f1)
   if [ -z $IP_ADDRESS ]; then
     IP_ADDRESS=$(ip route get 8.8.8.8 | awk -F"src " 'NR==1{split($2,a," ");print a[1]}')
   fi
@@ -1877,27 +1877,27 @@ add_clients(){
         sleep 20
         if [[ -z $use_socket ]]; then
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS} --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
             sleep 2
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS} --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_2 --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
             sleep 2
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS} --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
           else
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS} --replication-set=rs1 --environment=mongodb_rs_node_${IP_ADDRESS} mongodb_rs1_${IP_ADDRESS}_1 --debug 127.0.0.1:27017
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS} --replication-set=rs1 --environment=mongodb_rs_node_${IP_ADDRESS} mongodb_rs1_${IP_ADDRESS}_2 --debug 127.0.0.1:27018
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS} --replication-set=rs1 --environment=mongodb_rs_node_${IP_ADDRESS} mongodb_rs1_${IP_ADDRESS}_3 --debug 127.0.0.1:27019
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_1 --debug 127.0.0.1:27017
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_2 --debug 127.0.0.1:27018
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --environment=mongodb_rs_node_${IP_ADDRESS_CLIENT} mongodb_rs1_${IP_ADDRESS_CLIENT}_3 --debug 127.0.0.1:27019
           fi
         else
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_1 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_1 --debug
             sleep 2
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
             sleep 2
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
           else
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS}_1 --debug
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_2 --debug
-            pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --environment=mongodb_rs_node mongodb_rs1_3 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}}_1 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_2 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_3 --debug
           fi
         fi
       else
@@ -1930,15 +1930,15 @@ add_clients(){
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         if [[ -z $use_socket ]]; then
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev_${IP_ADDRESS} --cluster=pxc-cluster_${IP_ADDRESS} --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev_${IP_ADDRESS_CLIENT} --cluster=pxc-cluster_${IP_ADDRESS_CLIENT} --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS_CLIENT}_$j
           else
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-cluster_${IP_ADDRESS} --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-cluster_${IP_ADDRESS_CLIENT} --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS_CLIENT}_$j
           fi
         else
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev_${IP_ADDRESS} --cluster=pxc-cluster_${IP_ADDRESS} --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev_${IP_ADDRESS_CLIENT} --cluster=pxc-cluster_${IP_ADDRESS_CLIENT} --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS_CLIENT}_$j
           else
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev_${IP_ADDRESS} --cluster=pxc-cluster_${IP_ADDRESS} --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
+            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev_${IP_ADDRESS_CLIENT} --cluster=pxc-cluster_${IP_ADDRESS_CLIENT} --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS_CLIENT}_$j
           fi
         fi
         sleep 5
