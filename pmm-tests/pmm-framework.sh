@@ -1807,7 +1807,7 @@ add_clients(){
       sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
       sudo chmod +x mongo_startup.sh
       echo ${BASEDIR}
-
+      IP_ADDRESS_CLIENT=$(hostname -I | cut -d' ' -f1)
       ##Missing Library for 4.4
       if [ -f /usr/lib64/liblzma.so.5.0.99 ]; then
         sudo ln -s /usr/lib64/liblzma.so.5.0.99 /usr/lib64/liblzma.so.0
@@ -1830,7 +1830,7 @@ add_clients(){
         fi
         sleep 20
         if [[ ! -z $metrics_mode ]]; then
-          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
+          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_sharded_node mongodb_shraded_node --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
           sleep 2
           pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
           sleep 2
@@ -1850,7 +1850,7 @@ add_clients(){
           sleep 2
           pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3 --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
         else
-          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node --debug 127.0.0.1:27017
+          pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_sharded_node mongodb_shraded_node --debug 127.0.0.1:27017
           pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1 --debug 127.0.0.1:27027
           pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_2 --debug 127.0.0.1:27028
           pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_3 --debug 127.0.0.1:27029
@@ -1891,11 +1891,11 @@ add_clients(){
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_1 --debug
             sleep 2
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_2 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_2 --debug
             sleep 2
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_3 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --metrics-mode=$metrics_mode --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_3 --debug
           else
-            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}}_1 --debug
+            pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27017.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_1 --debug
             pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27018.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_2 --debug
             pmm-admin add mongodb --cluster mongodb_cluster_${IP_ADDRESS_CLIENT} --replication-set=rs1 --socket=/tmp/mongodb-27019.sock --environment=mongodb_rs_node mongodb_rs1_${IP_ADDRESS_CLIENT}_3 --debug
           fi
@@ -1927,6 +1927,7 @@ add_clients(){
       BASEDIR=$(ls -1td PXC* 2>/dev/null | grep -v ".tar" | head -n1)
       cd ${BASEDIR}
       echo $node1_port
+      IP_ADDRESS_CLIENT=$(hostname -I | cut -d' ' -f1)
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         if [[ -z $use_socket ]]; then
           if [[ ! -z $metrics_mode ]]; then
