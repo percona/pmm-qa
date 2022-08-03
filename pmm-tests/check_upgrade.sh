@@ -7,7 +7,6 @@ if [ $3 == "ami" ]; then
 	if [ ${SERVER_VERSION} != "2.25.0" ]; then
 		rpm -qa | grep pmm-update-$1
 	fi
-	rpm -qa | grep pmm-server-$1
 	rpm -qa | grep pmm-managed-$1
 	rpm -qa | grep pmm2-client-$1
 	sudo supervisorctl status | grep qan-api2 | grep RUNNING
@@ -34,7 +33,6 @@ else
 	if [ $1 != "2.25.0" ]; then
 		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-update-$1
 	fi
-	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-server-$1
 	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-managed-$1
 	docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm2-client-$1
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep qan-api2 | grep RUNNING
