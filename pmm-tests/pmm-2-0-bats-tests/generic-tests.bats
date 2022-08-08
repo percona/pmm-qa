@@ -11,7 +11,7 @@ if [[ $(id -u) -eq 0 ]] ; then
 fi
 run pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
+    [ "$status" -eq 1 ]
     [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
 }
 
@@ -21,21 +21,21 @@ if [[ $(id -u) -ne 0 ]] ; then
 fi
 run pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
+    [ "$status" -eq 1 ]
     [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
 }
 
 @test "run pmm-admin without any arguments" {
 run pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
+    [ "$status" -eq 1 ]
     [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin help" {
 run pmm-admin help
 echo "$output"
-    [ "$status" -eq 0 ]
+    [ "$status" -eq 1 ]
     [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
@@ -333,7 +333,7 @@ run pmm-admin annotate --help
 echo "$output"
     [ "$status" -eq 0 ]
     [[ ${lines[0]} =~ "Usage: pmm-admin annotate <text>" ]]
-    [[ ${output} =~ "<text>  Text of annotation" ]] 
+    [[ ${output} =~ "<text>    Text of annotation" ]] 
     [[ ${output} =~ "Add an annotation to Grafana charts" ]]
 }
 
@@ -377,10 +377,7 @@ run pmm-admin config --help
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "metrics-mode=\"auto\""\
-    echo "${output}" | grep "Metrics flow mode for agents node-exporter, can
-                                    be push - agent will push metrics, pull -
-                                    server scrape metrics from agent or auto -
-                                    chosen by server."
+    echo "${output}" | grep -Pzo "Metrics flow mode for agents node-exporter, can.*\n.*be push - agent will push metrics, pull -.*\n.*server scrape metrics from agent or auto -.*\n.*chosen by server."
 }
 
 function teardown() {
