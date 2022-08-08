@@ -12,7 +12,7 @@ fi
 run pmm-admin
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ] # first line of output lacks information about usage should be 'usage: pmm-admin [<flags>] <command> [<args> ...]'
+    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
 }
 
 @test "run pmm-admin under root privileges" {
@@ -22,28 +22,28 @@ fi
 run pmm-admin
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
 }
 
 @test "run pmm-admin without any arguments" {
 run pmm-admin
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ] # first line of output lacks information about usage should be 'usage: pmm-admin [<flags>] <command> [<args> ...]'
+    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
 }
 
 @test "run pmm-admin help" {
 run pmm-admin help
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ] # first line of output lacks information about usage should be 'usage: pmm-admin [<flags>] <command> [<args> ...]'
+    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
 }
 
 @test "run pmm-admin -h" {
 run pmm-admin -h
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ] # first line of output lacks information about usage should be 'usage: pmm-admin [<flags>] <command> [<args> ...]''
+    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
 }
 
 @test "run pmm-admin with wrong option" {
@@ -90,14 +90,14 @@ echo "$output"
 run pmm-admin summary --help
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin summary [<flags>]" ]
+    [ "${lines[0]}" = "usage: pmm-admin summary" ]
 }
 
 @test "run pmm-admin summary -h" {
 run pmm-admin summary -h
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin summary [<flags>]" ]
+    [ "${lines[0]}" = "usage: pmm-admin summary" ]
 }
 
 @test "run pmm-admin summary --version" {
@@ -332,7 +332,7 @@ echo "$output"
 run pmm-admin annotate --help
 echo "$output"
     [ "$status" -eq 0 ]
-    [[ ${lines[0]} =~ "usage: pmm-admin annotate [<flags>] <text>" ]] # the case of the U in usage is different in output
+    [[ ${lines[0]} =~ "Usage: pmm-admin annotate [<flags>] <text>" ]]
     [[ ${output} =~ "<text>  Text of annotation" ]] # the amount of spaces is different in output 
     [[ ${output} =~ "Add an annotation to Grafana charts" ]]
 }
@@ -376,7 +376,7 @@ echo "$output"
 run pmm-admin config --help
 echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "metrics-mode=\"auto\""
+    echo "${output}" | grep "metrics-mode=\"auto\""\
     echo "${output}" | grep "Metrics flow mode for agents node-exporter, can
                             be push - agent will push metrics, pull - server
                             scrape metrics from agent or auto - chosen by
