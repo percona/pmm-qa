@@ -29,21 +29,21 @@ echo "$output"
 run pmm-admin
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin help" {
 run pmm-admin help
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin -h" {
 run pmm-admin -h
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin with wrong option" {
@@ -90,14 +90,14 @@ echo "$output"
 run pmm-admin summary --help
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin summary" ]
+    [ "${lines[0]}" = "Usage: pmm-admin summary" ]
 }
 
 @test "run pmm-admin summary -h" {
 run pmm-admin summary -h
 echo "$output"
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin summary" ]
+    [ "${lines[0]}" = "Usage: pmm-admin summary" ]
 }
 
 @test "run pmm-admin summary --version" {
@@ -332,8 +332,8 @@ echo "$output"
 run pmm-admin annotate --help
 echo "$output"
     [ "$status" -eq 0 ]
-    [[ ${lines[0]} =~ "Usage: pmm-admin annotate [<flags>] <text>" ]]
-    [[ ${output} =~ "<text>  Text of annotation" ]] # the amount of spaces is different in output 
+    [[ ${lines[0]} =~ "Usage: pmm-admin annotate <text>" ]]
+    [[ ${output} =~ "<text>  Text of annotation" ]] 
     [[ ${output} =~ "Add an annotation to Grafana charts" ]]
 }
 
@@ -378,9 +378,9 @@ echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "metrics-mode=\"auto\""\
     echo "${output}" | grep "Metrics flow mode for agents node-exporter, can
-                            be push - agent will push metrics, pull - server
-                            scrape metrics from agent or auto - chosen by
-                            server."
+                                    be push - agent will push metrics, pull -
+                                    server scrape metrics from agent or auto -
+                                    chosen by server."
 }
 
 function teardown() {
