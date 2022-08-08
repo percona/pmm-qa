@@ -377,7 +377,8 @@ run pmm-admin config --help
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "metrics-mode=\"auto\""
-    echo "${output}" | grep "Metrics flow mode for agents node-exporter, can"
+    echo "${output}" | grep "Metrics flow mode for agents node-exporter, can
+                                    be"
 }
 
 function teardown() {
