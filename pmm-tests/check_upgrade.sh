@@ -18,7 +18,7 @@ if [ "$3" = "ami" ]; then
 	sudo supervisorctl status | grep pmm-managed | grep RUNNING
 	sudo supervisorctl status | grep postgresql | grep RUNNING
 
-	if [ "$2" != "pre" ]; then
+	if [ "$2" = "postUpgrade" ]; then
 		rpm -qa | grep dbaas-controller-$1
 		sudo supervisorctl status | grep victoriametrics | grep RUNNING
 		sudo supervisorctl status | grep vmalert | grep RUNNING
@@ -43,7 +43,7 @@ else
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep pmm-agent | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep pmm-managed | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep postgresql | grep RUNNING
-	if [ "$2" != "pre" ]; then
+	if [ "$2" = "postUpgrade" ]; then
 		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep dbaas-controller-$1
 		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep victoriametrics | grep RUNNING
 		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep vmalert | grep RUNNING
