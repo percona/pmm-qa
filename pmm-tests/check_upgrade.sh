@@ -1,9 +1,5 @@
 #!/bin/sh
 
-echo "$1"
-echo "$2"
-echo "$3"
-
 #check for packages after upgrade
 if [ "$3" = "ami" ]; then
 	rpm -qa | grep percona-qan-api2-$1
@@ -22,7 +18,7 @@ if [ "$3" = "ami" ]; then
 	sudo supervisorctl status | grep pmm-managed | grep RUNNING
 	sudo supervisorctl status | grep postgresql | grep RUNNING
 
-	if [ "$2" = "post" ]; then
+	if [ "$2" != "pre" ]; then
 		rpm -qa | grep dbaas-controller-$1
 		sudo supervisorctl status | grep victoriametrics | grep RUNNING
 		sudo supervisorctl status | grep vmalert | grep RUNNING
@@ -47,7 +43,7 @@ else
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep pmm-agent | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep pmm-managed | grep RUNNING
 	docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep postgresql | grep RUNNING
-	if [ "$2" = "post" ]; then
+	if [ "$2" != "pre" ]; then
 		docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep dbaas-controller-$1
 		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep victoriametrics | grep RUNNING
 		docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep vmalert | grep RUNNING
