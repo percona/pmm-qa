@@ -81,14 +81,14 @@
     run pmm-admin add haproxy --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "username=USERNAME"
+    echo "${output}" | grep "username=STRING"
 }
 
 @test "PMM-T674 - Verify help for adding HAProxy service password" {
     run pmm-admin add haproxy --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "password=PASSWORD"
+    echo "${output}" | grep "password=STRING"
 }
 
 @test "PMM-T674 - Verify help for adding HAProxy service scheme" {
@@ -109,14 +109,14 @@
     run pmm-admin add haproxy --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "listen-port=LISTEN-PORT"
+    echo "${output}" | grep "listen-port=port"
 }
 
 @test "PMM-T674 - Verify help for adding HAProxy service node id" {
     run pmm-admin add haproxy --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "node-id=NODE-ID "
+    echo "${output}" | grep "node-id=STRING "
 }
 
 @test "PMM-T674 - Verify help for adding HAProxy service environment" {
@@ -144,14 +144,14 @@
     run pmm-admin add haproxy --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "custom-labels=CUSTOM-LABELS"
+    echo "${output}" | grep "custom-labels=KEY=VALUE;"
 }
 
 @test "PMM-T674 - Verify help for adding HAProxy service metrics mode" {
     run pmm-admin add haproxy --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "metrics-mode=auto"
+    echo "${output}" | grep "metrics-mode=\"auto\""
 }
 
 @test "PMM-T674 - Verify help for adding HAProxy service skip connection check" {
