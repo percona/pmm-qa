@@ -38,3 +38,14 @@ ls -la /usr/local/percona/pmm2/exporters | grep -q postgres_exporter
 ls -la /usr/local/percona/pmm2/exporters | grep -q proxysql_exporter
 ls -la /usr/local/percona/pmm2/exporters | grep -q rds_exporter
 ls -la /usr/local/percona/pmm2/exporters | grep -q vmagent
+
+## Verification of the tarball binary for latest version PMM-T1329
+rm -r pmm2-client.tar.gz | true
+rm -r pmm2-client-${agent_version} | true
+wget -O pmm2-client.tar.gz https://downloads.percona.com/downloads/TESTING/pmm/pmm2-client-${agent_version}.tar.gz
+tar -xvf pmm2-client.tar.gz
+if ls -la pmm2-client-${agent_version}/bin | grep -q "pmm-managed"; then
+    echo "unexpected pmm-managed binaries exist in client tarball"
+    exit 1;
+fi
+
