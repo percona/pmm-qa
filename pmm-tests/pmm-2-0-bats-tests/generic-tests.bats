@@ -22,7 +22,7 @@ fi
 run pmm-admin
 echo "$output"
     [ "$status" -eq 1 ]
-    [ "${lines[0]}" = "Usage: pmm-admin annotate <text>" ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin without any arguments" {
