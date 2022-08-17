@@ -16,18 +16,6 @@ then
       export pgsql_version=14
 fi
 
-# If branch/tag is not provided then it will default to main branch
-if [ -z "$pgstat_monitor_branch" ]
-then
-      export pgstat_monitor_branch=main
-fi
-
-# If repo is not provided then it will default to percona PGSM repository
-if [ -z "$pgstat_monitor_repo" ]
-then
-      export pgstat_monitor_repo=percona/pg_stat_monitor
-fi
-
 # If distribution is not provided then it will default to percona distribution 'PPG'
 # For PG community distribution please use 'PGDG'
 if [ -z "$distribution" ]
@@ -83,21 +71,9 @@ export PATH="/usr/lib/postgresql/${pgsql_version}/bin:$PATH"
 echo $PATH
 cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 
-# Clone PGSM repo and move to /home/postgres/pg_stat_monitor dir
-cd /home/postgres
-git clone -b ${pgstat_monitor_branch} https://github.com/${pgstat_monitor_repo}
-chown -R postgres:postgres pg_stat_monitor
-cd pg_stat_monitor
-
-# Build PGSM
-make USE_PGXS=1
-
-# Install built PGSM library into server
-make USE_PGXS=1 install
-
-# Stop server and edit postgresql.conf to load PGSM library with required configurations
+# Stop server and edit postgresql.conf to load pg_stat_sstatement library with required configurations
 service postgresql stop
-echo "shared_preload_libraries = 'pg_stat_monitor'" >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
+echo "shared_preload_libraries = 'pg_stat_statements'" >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 echo "track_activity_query_size=2048"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 echo "track_io_timing=ON"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 
@@ -112,4 +88,4 @@ echo "ALTER USER postgres PASSWORD 'pass+this';" >> /home/postgres/init.sql
 service postgresql start
 su postgres bash -c 'psql -f /home/postgres/init.sql'
 su postgres bash -c 'psql -c "CREATE DATABASE contrib_regression;"'
-su postgres bash -c 'psql -U postgres -c "CREATE EXTENSION pg_stat_monitor;"'
+su postgres bash -c 'psql -U postgres -c "CREATE EXTENSION pg_stat_statements;"'
