@@ -15,9 +15,8 @@ if [[ $(id -u) -eq 0 ]] ; then
 fi
 run pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
-}
+    [ "$status" -eq 1 ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 
 @test "run pmm-admin under root privileges" {
 if [[ $(id -u) -ne 0 ]] ; then
@@ -25,8 +24,8 @@ if [[ $(id -u) -ne 0 ]] ; then
 fi
 run sudo pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "$status" -eq 1 ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 
@@ -183,16 +182,16 @@ skip "Skipping this test, because of random Failure"
     run pmm-admin add mongodb --help
     echo "$output"
     [ "$status" -eq 0 ]
-    [[ ${lines[0]} =~ "usage: pmm-admin add mongodb [<flags>] [<name>] [<address>]" ]]
-    echo "${output}" | grep -- "--socket=SOCKET"
+    [[ ${lines[0]} =~ "Usage: pmm-admin add mongodb [<name> [<address>]]" ]]
+    echo "${output}" | grep -- "--socket=STRING"
 }
 
 
-@test "run pmm-admin add mongodb --help to check metrics-mode=auto" {
+@test "run pmm-admin add mongodb --help to check metrics-mode=\"auto\"" {
     run pmm-admin add mongodb --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "metrics-mode=auto"
+    echo "${output}" | grep "metrics-mode=\"auto\""
 }
 
 @test "run pmm-admin add mongodb --help to check host" {
@@ -288,14 +287,13 @@ skip "Skipping this test, because of Random Failures, need to fix this"
     run pmm-admin add mongodb --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "tls                      Use TLS to connect to the database"
-    echo "${output}" | grep "tls-skip-verify          Skip TLS certificates validation"
-    echo "${output}" | grep "tls-certificate-key-file=TLS-CERTIFICATE-KEY-FILE"
-    echo "${output}" | grep "tls-certificate-key-file-password=TLS-CERTIFICATE-KEY-FILE-PASSWORD"
-    echo "${output}" | grep "tls-ca-file=TLS-CA-FILE  Path to certificate authority file"
-    echo "${output}" | grep "authentication-mechanism=AUTHENTICATION-MECHANISM"
-    echo "${output}" | grep "authentication-mechanism=AUTHENTICATION-MECHANISM"
-    echo "${output}" | grep "authentication-database=AUTHENTICATION-DATABASE"
+    echo "${output}" | grep "tls                        Use TLS to connect to the database"
+    echo "${output}" | grep "tls-skip-verify            Skip TLS certificates validation"
+    echo "${output}" | grep "tls-certificate-key-file=STRING"
+    echo "${output}" | grep "tls-certificate-key-file-password=TLS-STRING"
+    echo "${output}" | grep "tls-ca-file=STRING  Path to certificate authority file"
+    echo "${output}" | grep "authentication-mechanism=STRING"
+    echo "${output}" | grep "authentication-database=STRING"
 }
 
 function teardown() {
