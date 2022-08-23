@@ -139,6 +139,7 @@ echo "$output"
 }
 
 @test "PMM-T157 PMM-T161 Adding MongoDB with specified socket for psmdb" {
+skip "Skipping this test, because of setup issue on Framework, https://jira.percona.com/browse/PMM-8708"
     if [[ "$instance_t" == "modb" ]] ; then
         skip "Skipping this test, because you are running for official Mongodb"
     fi
