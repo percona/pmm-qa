@@ -304,7 +304,7 @@ skip "Skipping this test, because of random failure and flaky behaviour"
     echo "${output}" | grep "tls-skip-verify            Skip TLS certificates validation"
     echo "${output}" | grep "tls-certificate-key-file=STRING"
     echo "${output}" | grep "tls-certificate-key-file-password=STRING"
-    echo "${output}" | grep "--tls-ca-file=STRING       Path to certificate authority file"
+    echo "${output}" | grep "tls-ca-file=STRING         Path to certificate authority file"
     echo "${output}" | grep "authentication-mechanism=STRING"
     echo "${output}" | grep "authentication-database=STRING"
 }

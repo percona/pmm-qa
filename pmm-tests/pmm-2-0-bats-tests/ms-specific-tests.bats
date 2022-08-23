@@ -435,11 +435,11 @@ echo "$output"
     run pmm-admin add mysql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "tls                      Use TLS to connect to the database"
-    echo "${output}" | grep "tls-skip-verify          Skip TLS certificates validation"
-    echo "${output}" | grep "tls-ca=TLS-CA            Path to certificate authority certificate file"
-    echo "${output}" | grep "tls-cert=TLS-CERT        Path to client certificate file"
-    echo "${output}" | grep "tls-key=TLS-KEY          Path to client key file"
+    echo "${output}" | grep "tls                       Use TLS to connect to the database"
+    echo "${output}" | grep "tls-skip-verify           Skip TLS certificates validation"
+    echo "${output}" | grep "tls-ca=STRING             Path to certificate authority certificate file"
+    echo "${output}" | grep "tls-cert=STRING           Path to client certificate file"
+    echo "${output}" | grep "tls-key=STRING            Path to client key file"
 }
 
 function teardown() {
