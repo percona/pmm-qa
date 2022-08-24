@@ -77,7 +77,7 @@ echo "$output"
     run pmm-admin add mysql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "disable-tablestats-limit=UINT-16"
+    echo "${output}" | grep "disable-tablestats-limit=NUMBER"
 }
 
 @test "run pmm-admin add mysql --help to check host" {

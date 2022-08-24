@@ -304,7 +304,7 @@ echo "$output"
     echo "$output"
         [ "$status" -eq 0 ]
         [[ ${lines[0]} =~ "usage: pmm-admin add mysql [<flags>] [<name>] [<address>]" ]]
-        [[ ${lines[15]} =~ "--socket=SOCKET" ]]
+        [[ ${lines[15]} =~ "--socket=STRING" ]]
 }
 
 @test "run pmm-admin add mysql --help to check disable-tablestats-limit" {
