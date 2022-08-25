@@ -303,7 +303,7 @@ echo "$output"
     run pmm-admin add mysql --help
     echo "$output"
         [ "$status" -eq 0 ]
-        [[ ${lines[0]} =~ "Usage: pmm-admin add mysql [<name> [<address>]]" ]]echo "${output}" | grep "tls-key=STRING            Path to client key file"
+        [[ ${lines[0]} =~ "Usage: pmm-admin add mysql [<name> [<address>]]" ]]
         [[ ${lines[22]} =~ "--socket=STRING" ]]
 }
 
