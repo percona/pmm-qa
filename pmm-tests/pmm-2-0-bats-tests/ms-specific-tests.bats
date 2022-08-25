@@ -299,12 +299,12 @@ echo "$output"
         done
 }
 
-@test "run pmm-admin mysql --help check for socket" {
+@test "run pmm-admin add mysql --help check for socket" {
     run pmm-admin add mysql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "Usage: pmm-admin add mysql [<name> [<address>]]"
-    echo "${output}" | grep "socket=STRING"
+    [[ ${lines[0]} =~ "Usage: pmm-admin add mysql [<name> [<address>]]" ]]
+    echo "${output}" | grep -- "socket=STRING"
 }
 
 @test "run pmm-admin add mysql --help to check disable-tablestats-limit" {
