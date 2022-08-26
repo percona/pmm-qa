@@ -21,7 +21,7 @@
     run pmm-admin unregister --help
     echo $output
     [ $status -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin unregister [<flags>]" ]
+    [ "${lines[0]}" = "Usage: pmm-admin unregister" ]
     [ "${lines[1]}" = "Unregister current Node from PMM Server" ]
 }
 

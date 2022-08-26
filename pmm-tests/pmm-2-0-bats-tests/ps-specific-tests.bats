@@ -12,8 +12,8 @@ if [[ $(id -u) -eq 0 ]] ; then
 fi
 run pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "$status" -eq 1 ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin under root privileges" {
@@ -22,8 +22,8 @@ if [[ $(id -u) -ne 0 ]] ; then
 fi
 run sudo pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "$status" -eq 1 ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin add mysql based on running intsances" {
@@ -77,7 +77,7 @@ echo "$output"
     run pmm-admin add mysql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "disable-tablestats-limit=DISABLE-TABLESTATS-LIMIT"
+    echo "${output}" | grep "disable-tablestats-limit=NUMBER"
 }
 
 @test "run pmm-admin add mysql --help to check host" {
@@ -250,11 +250,11 @@ echo "$output"
     run pmm-admin add mysql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "tls                      Use TLS to connect to the database"
-    echo "${output}" | grep "tls-skip-verify          Skip TLS certificates validation"
-    echo "${output}" | grep "tls-ca=TLS-CA            Path to certificate authority certificate file"
-    echo "${output}" | grep "tls-cert=TLS-CERT        Path to client certificate file"
-    echo "${output}" | grep "tls-key=TLS-KEY          Path to client key file"
+    echo "${output}" | grep "tls                       Use TLS to connect to the database"
+    echo "${output}" | grep "tls-skip-verify           Skip TLS certificates validation"
+    echo "${output}" | grep "tls-ca=STRING             Path to certificate authority certificate file"
+    echo "${output}" | grep "tls-cert=STRING           Path to client certificate file"
+    echo "${output}" | grep "tls-key=STRING            Path to client key file"
 }
 
 function teardown() {

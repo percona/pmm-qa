@@ -12,8 +12,8 @@ if [[ $(id -u) -eq 0 ]] ; then
 fi
 run pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "$status" -eq 1 ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin under root privileges" {
@@ -22,8 +22,8 @@ if [[ $(id -u) -ne 0 ]] ; then
 fi
 run sudo pmm-admin
 echo "$output"
-    [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "usage: pmm-admin [<flags>] <command> [<args> ...]" ]
+    [ "$status" -eq 1 ]
+    [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
 }
 
 @test "run pmm-admin add postgresql based on running intsances" {
