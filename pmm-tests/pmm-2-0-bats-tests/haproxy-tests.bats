@@ -144,7 +144,7 @@
     run pmm-admin add haproxy --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "custom-labels=KEY=VALUE;"
+    echo "${output}" | grep "custom-labels=KEY=VALUE,..."
 }
 
 @test "PMM-T674 - Verify help for adding HAProxy service metrics mode" {
