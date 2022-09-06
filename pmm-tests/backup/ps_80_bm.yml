@@ -7,6 +7,8 @@
 - hosts: all
   become: true
   become_method: sudo
+  vars:
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
 
   pre_tasks:
   - name: Remove old MySQL Installation
@@ -21,6 +23,16 @@
       - percona-server-*
     when: ansible_os_family == "RedHat"
     ignore_errors: true
+
+  - name: Check if we are running in AWS
+    uri:
+      url: http://169.254.169.254/latest/meta-data/ami-id
+      timeout: 2
+    register: aws_uri_check
+    failed_when: False
+  - set_fact:
+      is_aws_environment: "{{ aws_uri_check.status == 200 }}"
+    ignore_errors: False
 
   - name: Remove old MySQL Installation
     apt:
@@ -159,3 +171,38 @@
       name: qpress
       state: present
     when: ansible_os_family == "RedHat"
+
+  - name: Kill running pmm-agents
+    ignore_errors: no
+    shell: killall pmm-agent
+    when: is_aws_environment
+
+  - name: "add pmm-client binary to the secure path"
+    become: yes
+    become_user: root
+    when: is_aws_environment
+    lineinfile:
+      path: /etc/sudoers
+      # The String to Search
+      regexp: "^Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin$" 
+      # The String to Replace
+      line: "Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/percona/pmm2/bin:/usr/local/percona/pmm2/config"
+      state: present
+      backup: yes
+      validate: '/usr/sbin/visudo -cf %s'
+
+  - name: create config file
+    ignore_errors: yes
+    shell: pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=localhost:443 --server-insecure-tls --server-username=admin --server-password={{ admin_password }} --force
+    become: yes
+    become_user: root
+    when: is_aws_environment
+
+  - name: run pmm-agent as root user
+    ignore_errors: yes
+    shell: pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml >> pmm-agent_log
+    async: 2592000
+    poll: 0
+    become: yes
+    become_user: root
+    when: is_aws_environment
