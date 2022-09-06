@@ -29,6 +29,8 @@
     register: aws_uri_check
     failed_when: False
     ignore_errors: False
+    - set_fact:
+        is_aws_environment: "{{ aws_uri_check.status == 200 }}"
 
   - name: Remove old MySQL Installation
     apt:
