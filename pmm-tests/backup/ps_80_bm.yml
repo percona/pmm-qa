@@ -186,7 +186,7 @@
       # The String to Search
       regexp: "^Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin$" 
       # The String to Replace
-      line: "Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/home/ec2-user/workspace/aws-staging-start/pmm2-client/config:/usr/local/percona/pmm2/bin:/usr/local/percona/pmm2/config"
+      line: "Defaults    secure_path = /sbin:/bin:/usr/sbin:/usr/bin:/usr/local/percona/pmm2/bin:/usr/local/percona/pmm2/config"
       state: present
       backup: yes
       validate: '/usr/sbin/visudo -cf %s'
@@ -206,3 +206,4 @@
     become: yes
     become_user: root
     when: is_aws_environment
+    
