@@ -22,6 +22,16 @@
       - percona-server-*
     when: ansible_os_family == "RedHat"
     ignore_errors: true
+  
+  - name: Check if we are running in AWS
+    uri:
+      url: http://169.254.169.254/latest/meta-data/ami-id
+      timeout: 2
+    register: aws_uri_check
+    failed_when: False
+  - set_fact:
+      is_aws_environment: "{{ aws_uri_check.status == 200 }}"
+    ignore_errors: False
 
   - name: Remove old MySQL Installation
     apt:
@@ -125,11 +135,13 @@
   - name: Kill running pmm-agents
     ignore_errors: no
     shell: killall pmm-agent
-    become: yes   
+    become: yes
+    when: is_aws_environment   
 
   - name: "add pmm-client binary to the secure path"
     become: yes
     become_user: root
+    when: is_aws_environment
     lineinfile:
       path: /etc/sudoers
       # The String to Search
@@ -145,6 +157,7 @@
     shell: pmm-agent setup --config-file=/home/ec2-user/workspace/aws-staging-start/pmm2-client/config/pmm-agent.yaml --server-address=localhost:443 --server-insecure-tls --server-username=admin --server-password=admin --force
     become: yes
     become_user: root
+    when: is_aws_environment
 
   - name: run pmm-agent as root user
     ignore_errors: yes
@@ -153,6 +166,7 @@
     poll: 0
     become: yes
     become_user: root
+    when: is_aws_environment
     
   - name: install Percona XtraBackup new deb packages
     apt:
