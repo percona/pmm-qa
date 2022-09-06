@@ -22,6 +22,14 @@
     when: ansible_os_family == "RedHat"
     ignore_errors: true
 
+  - name: Check if we are running in AWS
+    uri:
+      url: http://169.254.169.254/latest/meta-data/ami-id
+      timeout: 2
+    register: aws_uri_check
+    failed_when: False
+    ignore_errors: False
+
   - name: Remove old MySQL Installation
     apt:
       name: "{{ item }}"
