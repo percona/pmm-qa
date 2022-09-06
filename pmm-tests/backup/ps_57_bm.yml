@@ -7,6 +7,8 @@
 - hosts: all
   become: true
   become_method: sudo
+  vars:
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
 
   pre_tasks:
   - name: Remove old MySQL Installation
@@ -154,7 +156,7 @@
 
   - name: create config file
     ignore_errors: yes
-    shell: pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=localhost:443 --server-insecure-tls --server-username=admin --server-password=admin-password --force
+    shell: pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=localhost:443 --server-insecure-tls --server-username=admin --server-password={{ admin_password }} --force
     become: yes
     become_user: root
     when: is_aws_environment
