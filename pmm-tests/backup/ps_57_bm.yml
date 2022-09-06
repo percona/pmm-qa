@@ -154,14 +154,14 @@
 
   - name: create config file
     ignore_errors: yes
-    shell: pmm-agent setup --config-file=/home/ec2-user/workspace/aws-staging-start/pmm2-client/config/pmm-agent.yaml --server-address=localhost:443 --server-insecure-tls --server-username=admin --server-password=admin --force
+    shell: pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=localhost:443 --server-insecure-tls --server-username=admin --server-password=admin --force
     become: yes
     become_user: root
     when: is_aws_environment
 
   - name: run pmm-agent as root user
     ignore_errors: yes
-    shell: pmm-agent --config-file=/home/ec2-user/workspace/aws-staging-start/pmm2-client/config/pmm-agent.yaml >> pmm-agent_log.txt
+    shell: pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml >> pmm-agent_log
     async: 2592000
     poll: 0
     become: yes
