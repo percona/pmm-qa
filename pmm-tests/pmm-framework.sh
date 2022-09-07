@@ -1768,9 +1768,15 @@ add_clients(){
         modb_service_name=$(prepare_service_name mongodb_node_$j)
         docker run -d -p $MODB_PORT:27017 -v /tmp/modb_${MODB_PORT}/:/tmp/ -e MONGO_INITDB_ROOT_USERNAME=mongoadmin -e MONGO_INITDB_ROOT_PASSWORD=secret -e UMASK=0777 --name $modb_service_name mongo:${modb_version}
         sleep 20
-        docker exec $modb_service_name mongo -u mongoadmin -p 'secret' --eval 'db.setProfilingLevel(2)'
-        docker cp $SCRIPT_PWD/mongodb_user_setup.js $modb_service_name:/
-        docker exec $modb_service_name mongo -u mongoadmin -p 'secret' mongodb_user_setup.js
+        if [[ ${modb_version} -gt 5 ]]; then
+          docker exec $modb_service_name mongosh -u mongoadmin -p 'secret' --eval 'db.setProfilingLevel(2)'
+          docker cp $SCRIPT_PWD/mongodb_user_setup.js $modb_service_name:/
+          docker exec $modb_service_name mongosh -u mongoadmin -p 'secret' mongodb_user_setup.js
+        else   
+          docker exec $modb_service_name mongo -u mongoadmin -p 'secret' --eval 'db.setProfilingLevel(2)'
+          docker cp $SCRIPT_PWD/mongodb_user_setup.js $modb_service_name:/
+          docker exec $modb_service_name mongo -u mongoadmin -p 'secret' mongodb_user_setup.js
+        fi
         if [[ -z $use_socket ]]; then
           if [ $(( ${j} % 2 )) -eq 0 ]; then
             if [[ ! -z $metrics_mode ]]; then
