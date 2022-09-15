@@ -25,7 +25,7 @@ fi
 # If repo is not provided then it will default to percona PGSM repository
 if [ -z "$pgstat_monitor_repo" ]
 then
-      export pgstat_monitor_repo=percona/pg_stat_monitor
+      export pgstat_monitor_repo=JiriCtvrtka/pg_stat_monitor
 fi
 
 # If distribution is not provided then it will default to percona distribution 'PPG'
