@@ -46,4 +46,4 @@
   - name: Setup psmdb for monitoring
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ psmdb_container }} bash -x ./psmdb_setup.sh --mongodb_version {{ psmdb_version }} --mongodb_setup {{ psmdb_setup }} > setup_psmdb_{{ psmdb_version }}.log
+      - docker exec {{ psmdb_container }} bash -x ./psmdb_setup.sh --mongodb_version {{ psmdb_version }} --mongodb_setup {{ psmdb_setup }} > ~/setup_psmdb_{{ psmdb_version }}.log
