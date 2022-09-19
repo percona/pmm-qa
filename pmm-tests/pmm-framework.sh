@@ -1465,22 +1465,37 @@ add_clients(){
         PDPGSQL_PORT=$((PDPGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "haproxy" && ! -z $PMM2 ]]; then
-      HAPROXY_PORT=42100
-      sudo yum install -y ca-certificates gcc libc6-dev liblua5.3-dev libpcre3-dev libssl-dev libsystemd-dev make wget zlib1g-dev
-      sudo percona-release enable pdpxc-8.0
-      sudo yum install -q -y percona-haproxy
-      haproxy -vv | grep Prometheus
-      sudo cp /srv/pmm-qa/pmm-tests/haproxy.cfg /etc/haproxy/
-      sudo systemctl stop haproxy
-      sudo systemctl start haproxy
-      sleep 5
-      for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
-        if [[ ! -z $metrics_mode ]]; then
-          pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy --metrics-mode=$metrics_mode HAPROXY__${IP_ADDRESS}_$j
+      echo "Setting up PMM and HAPROXY Integration"
+
+      ## only doing it for jenkins workers, need ansible installed on the host
+      sudo yum install -y ansible || true
+      export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+      docker network create pmm-qa || true
+      docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+      pushd $SCRIPT_PWD/
+      if [ -z "$CLIENT_VERSION" ]
+      then
+        export CLIENT_VERSION=dev-latest
+      fi
+      if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+      then
+        if [ ! -z "${PMM2_SERVER_IP}" ]
+        then
+          export PMM_SERVER_IP=${PMM2_SERVER_IP}
         else
-          pmm-admin add haproxy --listen-port=$HAPROXY_PORT --environment=haproxy HAPROXY__${IP_ADDRESS}_$j
+          export PMM_SERVER_IP=127.0.0.1
         fi
-      done
+      else
+        if [ ! -z "${PMM2_SERVER_IP}" ]
+        then
+          export PMM_SERVER_IP=${PMM2_SERVER_IP}
+        else
+          export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+        fi
+      fi
+      export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+      ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 haproxy_setup.yml
+      popd
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
       check_dbdeployer
       echo "Checking if Percona-xtrabackup required"
@@ -1808,7 +1823,7 @@ add_clients(){
         fi
         MODB_PORT=$((MODB_PORT+j+3))
       done
-    elif [[ "${CLIENT_NAME}" == "mo" && ! -z $PMM2  && ! -z $MONGOMAGIC ]]; then
+    elif [[ "${CLIENT_NAME}" == "mo" && ! -z $PMM2  && -z $MONGOMAGIC ]]; then
       echo "Running MongoDB setup script, using MONGOMAGIC"
       sudo svn export https://github.com/Percona-QA/percona-qa.git/trunk/mongo_startup.sh
       sudo chmod +x mongo_startup.sh
@@ -2817,11 +2832,6 @@ setup_pmm_pgsm_integration () {
   echo "Setting up PMM and PGSM Integration"
   sudo yum install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
-  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
-  then
-    echo "Please start PMM-Server docker container for PGSM setup"
-    exit 1;
-  fi
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/
@@ -2843,9 +2853,19 @@ setup_pmm_pgsm_integration () {
   fi
   if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
   then
-    export PMM_SERVER_IP=127.0.0.1
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
   else
-    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    fi
   fi
   if [ -z "${PGSQL_PGSM_CONTAINER}" ]
   then
@@ -2862,11 +2882,6 @@ setup_pmm_pgss_integration () {
   echo "Setting up PMM and PGStatements Integration"
   sudo yum install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
-  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
-  then
-    echo "Please start PMM-Server docker container for PGSM setup"
-    exit 1;
-  fi
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/
@@ -2888,9 +2903,19 @@ setup_pmm_pgss_integration () {
   fi
   if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
   then
-    export PMM_SERVER_IP=127.0.0.1
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
   else
-    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    fi
   fi
   if [ -z "${PGSQL_PGSS_CONTAINER}" ]
   then
@@ -2900,6 +2925,64 @@ setup_pmm_pgss_integration () {
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgss_setup.yml
+  popd
+}
+
+setup_pmm_psmdb_integration () {
+  echo "Setting up PMM and PSMDB Integration"
+
+  ## only doing it for jenkins workers, need ansible installed on the host
+  sudo yum install -y ansible || true
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/
+  if echo "$mo_version" | grep '4.4'; then
+    export PSMDB_VERSION=4.4
+  fi
+  if echo "$mo_version" | grep '5.0'; then
+    export PSMDB_VERSION=5.0
+  fi
+  if echo "$mo_version" | grep '4.2'; then
+    export PSMDB_VERSION=4.2
+  fi
+  if echo "$mo_version" | grep '4.0'; then
+    export PSMDB_VERSION=4.0
+  fi
+  if echo "$with_sharding" | grep '1'; then
+    export PSMDB_SETUP=sharded
+  fi
+  if echo "$with_replica" | grep '1'; then
+    export PSMDB_SETUP=replica
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
+  else
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+    fi
+  fi
+  if [ -z "${PSMDB_CONTAINER}" ]
+  then
+    export PSMDB_CONTAINER=psmdb_pmm_${PSMDB_VERSION}
+  else
+    export PSMDB_CONTAINER=${PSMDB_CONTAINER}_${PSMDB_VERSION}
+  fi
+  export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 psmdb_setup.yml
   popd
 }
 
@@ -3142,4 +3225,9 @@ fi
 if [ ! -z $setup_ssl_services ]; then
   setup_ssl_services
 fi
+
+if [ ! -z $MONGOMAGIC ]; then
+  setup_pmm_psmdb_integration
+fi
+
 exit 0
