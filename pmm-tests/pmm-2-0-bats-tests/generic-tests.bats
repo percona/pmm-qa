@@ -380,7 +380,7 @@ echo "$output"
     echo "${output}" | grep "Metrics flow mode for agents node-exporter, can
                                     be push - agent will push metrics, pull -
                                     server scrape metrics from agent or auto -
-                                    chosen by server."
+                                    chosen by server"
 }
 
 function teardown() {
