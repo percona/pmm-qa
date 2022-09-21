@@ -2860,12 +2860,7 @@ setup_pmm_pgsm_integration () {
       export PMM_SERVER_IP=127.0.0.1
     fi
   else
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
-      export PMM_SERVER_IP=${PMM2_SERVER_IP}
-    else
-      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
-    fi
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
   if [ -z "${PGSQL_PGSM_CONTAINER}" ]
   then
@@ -2910,12 +2905,7 @@ setup_pmm_pgss_integration () {
       export PMM_SERVER_IP=127.0.0.1
     fi
   else
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
-      export PMM_SERVER_IP=${PMM2_SERVER_IP}
-    else
-      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
-    fi
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
   if [ -z "${PGSQL_PGSS_CONTAINER}" ]
   then
@@ -2968,12 +2958,7 @@ setup_pmm_psmdb_integration () {
       export PMM_SERVER_IP=127.0.0.1
     fi
   else
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
-      export PMM_SERVER_IP=${PMM2_SERVER_IP}
-    else
-      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
-    fi
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
   if [ -z "${PSMDB_CONTAINER}" ]
   then
