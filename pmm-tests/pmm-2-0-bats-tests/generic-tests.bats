@@ -377,8 +377,8 @@ run pmm-admin config --help
 echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "metrics-mode=\"auto\""
-    echo "${output}" | grep "Metrics flow mode for agents node-exporter, can
-                                    be push - agent will push metrics, pull -
+    echo "${output}" | grep "Metrics flow mode for agents node-exporter,
+                                    can be push - agent will push metrics, pull -
                                     server scrape metrics from agent or auto -
                                     chosen by server."
 }
