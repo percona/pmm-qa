@@ -3,7 +3,7 @@
 ## mongodb
 
 MONGO_USERNAME='pmm_mongodb'
-MONGO_PASSWORD="secret"
+MONGO_PASSWORD="GRgrO9301RuF"
 
 if [ -z ${pmm_server_ip+x} ]; then
    export pmm_server_ip=127.0.0.1

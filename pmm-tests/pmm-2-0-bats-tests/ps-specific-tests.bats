@@ -4,7 +4,7 @@
 
 
 MYSQL_USER='root'
-MYSQL_PASSWORD="ps"
+MYSQL_PASSWORD="GRgrO9301RuF"
 
 @test "run pmm-admin under regular(non-root) user privileges" {
 if [[ $(id -u) -eq 0 ]] ; then
