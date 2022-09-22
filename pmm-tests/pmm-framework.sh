@@ -1662,7 +1662,7 @@ add_clients(){
           sleep 30
           mysql -h 127.0.0.1 -u root -p${PS_PASSWORD} --port $PS_PORT -e "SET GLOBAL userstat=1;"
           mysql -h 127.0.0.1 -u root -p${PS_PASSWORD} --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
-          mysql -h 127.0.0.1 -u root -p${PS_PASSWORD} --port $PS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'ps';"
+          mysql -h 127.0.0.1 -u root -p${PS_PASSWORD} --port $PS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'GRgrO9301RuF';"
           if [[ "$query_source" != "perfschema" ]]; then
             mysql -h 127.0.0.1 -u root -p${PS_PASSWORD} --port $PS_PORT -e "SET GLOBAL slow_query_log='ON';"
             mysql -h 127.0.0.1 -u root -p${PS_PASSWORD} --port $PS_PORT -e "SET GLOBAL long_query_time=0;"
