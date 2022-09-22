@@ -1015,9 +1015,9 @@ get_basedir(){
   if [ $download_link -eq 1 ]; then
     if [ -f $SCRIPT_PWD/../get_download_link.sh ]; then
       if [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.4" ]]; then
-        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.13-13/binary/tarball/percona-server-mongodb-4.4.13-13-x86_64.glibc2.17-minimal.tar.gz"
+        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.2" ]]; then
-        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.19-19/binary/tarball/percona-server-mongodb-4.2.19-19-x86_64.glibc2.17-minimal.tar.gz"
+        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.22-22/binary/tarball/percona-server-mongodb-4.2.22-22-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.0" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.28-23/binary/tarball/percona-server-mongodb-4.0.28-23-x86_64.glibc2.17-minimal.tar.gz"
       else
@@ -2860,12 +2860,7 @@ setup_pmm_pgsm_integration () {
       export PMM_SERVER_IP=127.0.0.1
     fi
   else
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
-      export PMM_SERVER_IP=${PMM2_SERVER_IP}
-    else
-      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
-    fi
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
   if [ -z "${PGSQL_PGSM_CONTAINER}" ]
   then
@@ -2910,12 +2905,7 @@ setup_pmm_pgss_integration () {
       export PMM_SERVER_IP=127.0.0.1
     fi
   else
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
-      export PMM_SERVER_IP=${PMM2_SERVER_IP}
-    else
-      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
-    fi
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
   if [ -z "${PGSQL_PGSS_CONTAINER}" ]
   then
@@ -2968,12 +2958,7 @@ setup_pmm_psmdb_integration () {
       export PMM_SERVER_IP=127.0.0.1
     fi
   else
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
-      export PMM_SERVER_IP=${PMM2_SERVER_IP}
-    else
-      export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
-    fi
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
   if [ -z "${PSMDB_CONTAINER}" ]
   then
