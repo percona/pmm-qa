@@ -1486,12 +1486,7 @@ add_clients(){
           export PMM_SERVER_IP=127.0.0.1
         fi
       else
-        if [ ! -z "${PMM2_SERVER_IP}" ]
-        then
-          export PMM_SERVER_IP=${PMM2_SERVER_IP}
-        else
-          export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
-        fi
+        export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
       fi
       export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
       ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 haproxy_setup.yml
