@@ -1790,7 +1790,7 @@ add_clients(){
           docker exec $modb_service_name mongosh -u mongoadmin -p ${MODB_PASSWORD} --eval 'db.setProfilingLevel(2)'
           docker cp $SCRIPT_PWD/mongodb_user_setup.js $modb_service_name:/
           docker exec $modb_service_name mongosh -u mongoadmin -p ${MODB_PASSWORD} mongodb_user_setup.js
-        else   
+        else
           docker exec $modb_service_name mongo -u mongoadmin -p ${MODB_PASSWORD} --eval 'db.setProfilingLevel(2)'
           docker cp $SCRIPT_PWD/mongodb_user_setup.js $modb_service_name:/
           docker exec $modb_service_name mongo -u mongoadmin -p ${MODB_PASSWORD} mongodb_user_setup.js
@@ -2877,7 +2877,9 @@ setup_remote_db_docker_compose () {
 
 setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
-  sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb
+  wget https://downloads.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-1.8.1/binary/tarball/percona-backup-mongodb-1.8.1-x86_64.tar.gz
+  tar -xf percona-backup-mongodb-1.8.1-x86_64.tar.gz
+  export PATH=~/percona-backup-mongodb-1.8.1/:$PATH
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
