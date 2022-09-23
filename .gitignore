@@ -11,5 +11,6 @@ pmm-tests/tls-ssl-setup/mysql/setup*
 pmm-tests/tls-ssl-setup/mongodb/setup*
 pmm-tests/tls-ssl-setup/postgres/setup*
 pmm-tests/setup_pgsql_pgsm_*.log
+pmm-tests/vendor/*
 
 ps_socket*
