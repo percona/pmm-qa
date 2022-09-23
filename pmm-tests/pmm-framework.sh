@@ -2880,11 +2880,12 @@ setup_mongo_replica_for_backup() {
   wget https://downloads.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-1.8.1/binary/tarball/percona-backup-mongodb-1.8.1-x86_64.tar.gz
   tar -xf percona-backup-mongodb-1.8.1-x86_64.tar.gz
   export PATH=~/percona-backup-mongodb-1.8.1/:$PATH
+  pbm version
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
   if [ ! -d "pmm-ui-tests" ]; then
-    git clone https://github.com/percona/pmm-ui-tests
+    git clone --branch PMM-7-mongo-replica-priorities https://github.com/percona/pmm-ui-tests
   fi
   pushd pmm-ui-tests
   bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
