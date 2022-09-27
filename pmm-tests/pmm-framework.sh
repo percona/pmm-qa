@@ -2877,10 +2877,7 @@ setup_remote_db_docker_compose () {
 
 setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
-  wget https://downloads.percona.com/downloads/percona-backup-mongodb/percona-backup-mongodb-1.8.1/binary/tarball/percona-backup-mongodb-1.8.1-x86_64.tar.gz
-  tar -xf percona-backup-mongodb-1.8.1-x86_64.tar.gz
-  export PATH=~/percona-backup-mongodb-1.8.1/:$PATH
-  pbm version
+  sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb=1.8.1-1.focal
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
