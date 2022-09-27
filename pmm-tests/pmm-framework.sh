@@ -2882,7 +2882,7 @@ setup_mongo_replica_for_backup() {
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
   if [ ! -d "pmm-ui-tests" ]; then
-    git clone --branch PMM-7-mongo-replica-priorities https://github.com/percona/pmm-ui-tests
+    git clone https://github.com/percona/pmm-ui-tests
   fi
   pushd pmm-ui-tests
   bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
