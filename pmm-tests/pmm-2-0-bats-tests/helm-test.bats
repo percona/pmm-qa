@@ -65,6 +65,7 @@ teardown() {
     [ "$status" -eq 0 ]
     echo "${output}" | grep "full_version"
 
+
     helm uninstall --wait --timeout 60s pmm
     delete_pvc
 }
@@ -77,6 +78,8 @@ teardown() {
         --set service.type="NodePort" \
         percona/pmm
     wait_for_pmm
+    run bash -c "kubectl get sa pmm-service-account -o json | jq  '.secrets[]|length'"
+    [ "$output" -eq 1 ]
     helm uninstall --wait --timeout 60s pmm1
     delete_pvc
 }
