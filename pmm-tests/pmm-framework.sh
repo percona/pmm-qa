@@ -5,6 +5,7 @@
 # The intention of this script is to be robust from a quality assurance POV; it should handle many different server configurations accurately
 
 # Internal variables
+DIRNAME=$(dirname "$0")
 WORKDIR=${PWD}
 SCRIPT_PWD=$(cd `dirname $0` && pwd)
 RPORT=$(( RANDOM%21 + 10 ))
@@ -115,6 +116,7 @@ usage () {
   echo " --setup-pmm-pgss-integration   Use this option to setup PMM-Client with PG Stat Statements for Integration Testing"
   echo " --cleanup-service              Use this option to delete DB container and remove from monitoring, just pass service name"
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
+  echo " --setup-postgres-vacuum   "
 }
 
 # Check if we have a functional getopt(1)
@@ -138,6 +140,10 @@ do
     --addclient )
     ADDCLIENT+=("$2")
     shift 2
+    ;;
+    --setup-postgres-vacuum )
+    shift
+    setup_postgres_vacuum=1
     ;;
     --with-replica )
     shift
@@ -2912,6 +2918,10 @@ setup_ssl_services() {
   setup_mysql_ssl
 }
 
+setup_postgres_vacuum() {
+  ${DIRNAME}/pmm-framework.sh
+}
+
 prepare_service_name() {
   random_service_name=$1
   if [ ! -z $service_custom_name ]; then
@@ -2935,6 +2945,10 @@ get_client_minor_version() {
 
 if [ ! -z $setup_remote_db ]; then
   setup_remote_db_docker_compose
+fi
+
+if [ ! -z $setup_postgres_vacuum ]; then
+  setup_postgres_vacuum
 fi
 
 if [ ! -z $wipe_clients ]; then
