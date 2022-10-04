@@ -5,6 +5,7 @@
 # The intention of this script is to be robust from a quality assurance POV; it should handle many different server configurations accurately
 
 # Internal variables
+DIRNAME=$(dirname "$0")
 WORKDIR=${PWD}
 SCRIPT_PWD=$(cd `dirname $0` && pwd)
 RPORT=$(( RANDOM%21 + 10 ))
@@ -115,6 +116,7 @@ usage () {
   echo " --setup-pmm-pgss-integration   Use this option to setup PMM-Client with PG Stat Statements for Integration Testing"
   echo " --cleanup-service              Use this option to delete DB container and remove from monitoring, just pass service name"
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
+  echo " --setup-postgress-vacuum       Use this option to setup postgres with data for vacuum monitoring."
 }
 
 # Check if we have a functional getopt(1)
@@ -303,6 +305,10 @@ do
     --setup-pmm-pgsm-integration )
     shift
     setup_pmm_pgsm_integration=1
+    ;;
+    --setup-postgress-vacuum )
+    shift
+    setup_postgress_vacuum=1
     ;;
     --setup-pmm-pgss-integration )
     shift
@@ -2912,6 +2918,10 @@ setup_ssl_services() {
   setup_mysql_ssl
 }
 
+setup_postgress_vacuum() {
+  ${DIRNAME}/postgres-vacuum.sh
+}
+
 prepare_service_name() {
   random_service_name=$1
   if [ ! -z $service_custom_name ]; then
@@ -3087,6 +3097,10 @@ fi
 
 if [ ! -z $setup_pmm_pgsm_integration ]; then
   setup_pmm_pgsm_integration
+fi
+
+if [ ! -z $setup_postgress_vacuum ]; then  #####################################################################################################################################
+  setup_postgress_vacuum
 fi
 
 if [ ! -z $setup_pmm_pgss_integration ]; then
