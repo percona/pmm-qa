@@ -30,7 +30,7 @@ pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuu
 
 ## Update & Delete tables using a while loop with sleep
 j=0
-while [ $j -lt 100 ]
+while [ $j -lt 10 ]
 do
     export LENGTH=$(shuf -i 100-120 -n 1)
     export LENGTH_NEW=$(shuf -i 100-120 -n 1)
