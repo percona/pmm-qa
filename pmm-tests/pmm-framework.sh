@@ -2919,6 +2919,7 @@ setup_ssl_services() {
 }
 
 setup_postgres_vacuum() {
+  chmod a+x ${DIRNAME}/postgres-vacuum.sh
   ${DIRNAME}/postgres-vacuum.sh
 }
 
