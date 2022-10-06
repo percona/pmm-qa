@@ -4,11 +4,10 @@ export DOCKER_CONTAINER_NAME=pgsql_vacuum_db
 echo "Setting up Postgres for vacuum monitoring"
 docker stop pgsql_vacuum_db || true
 docker rm pgsql_vacuum_db || true
-docker run --name pgsql_vacuum_db --network pmm-qa \
-    -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:14.5 \
+docker run --name pgsql_vacuum_db  -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:14.5 \
     -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
 sleep 20
-
+# --network pmm-qa \
 docker exec pgsql_vacuum_db apt-get update
 docker exec pgsql_vacuum_db apt-get install -y wget unzip
 docker exec pgsql_vacuum_db wget https://www.postgresqltutorial.com/wp-content/uploads/2019/05/dvdrental.zip
