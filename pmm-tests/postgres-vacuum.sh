@@ -4,7 +4,7 @@ export DOCKER_CONTAINER_NAME=pgsql_vacuum_db
 echo "Setting up Postgres for vacuum monitoring"
 docker stop pgsql_vacuum_db || true
 docker rm pgsql_vacuum_db || true
-docker run --name pgsql_vacuum_db  -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:14.5 \
+docker run --name pgsql_vacuum_db -p 7432:5432  -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:14.5 \
     -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
 sleep 20
 # --network pmm-qa \
@@ -25,6 +25,8 @@ wget https://github.com/percona/pmm-qa/raw/PMM-10244-2/pmm-tests/postgres/Sample
 tar -xvf dvdrental.tar.xz ## only works on Linux/Mac based OS
 docker cp dvdrental.sql pgsql_vacuum_db:/
 docker exec pgsql_vacuum_db psql -d dvdrental -f dvdrental.sql -U postgres
+
+pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuum_db localhost:7432
 
 ## Update & Delete tables using a while loop with sleep
 j=0
@@ -57,4 +59,3 @@ done
     #-e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml \
     #percona/pmm-client:2
 #sudo docker exec pmm-client 
-pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuum_db pgsql_vacuum_db:5432
