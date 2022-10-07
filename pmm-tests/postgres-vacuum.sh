@@ -4,7 +4,7 @@ export DOCKER_CONTAINER_NAME=pgsql_vacuum_db
 echo "Setting up Postgres for vacuum monitoring"
 docker stop pgsql_vacuum_db || true
 docker rm pgsql_vacuum_db || true
-docker run --name pgsql_vacuum_db -p 7432:5432  -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:14.5 \
+docker run --name pgsql_vacuum_db -p 7432:5432 -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:14.5 \
     -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
 sleep 20
 # --network pmm-qa \
@@ -30,7 +30,7 @@ pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuu
 
 ## Update & Delete tables using a while loop with sleep
 j=0
-while [ $j -lt 5 ]
+while [ $j -lt 1 ]
 do
     export LENGTH=$(shuf -i 100-120 -n 1)
     export LENGTH_NEW=$(shuf -i 100-120 -n 1)
