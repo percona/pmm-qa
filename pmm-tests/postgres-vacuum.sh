@@ -14,7 +14,6 @@ docker exec pgsql_vacuum_db wget https://www.postgresqltutorial.com/wp-content/u
 docker exec pgsql_vacuum_db unzip dvdrental.zip
 docker exec pgsql_vacuum_db psql -U postgres -c "CREATE EXTENSION pg_stat_statements;"
 docker exec pgsql_vacuum_db psql -U postgres -c 'create database dvdrental;'
-#docker exec pgsql_vacuum_db psql -U postgres -c "CREATE EXTENSION pg_stat_statements;"
 docker exec pgsql_vacuum_db pg_restore -U postgres -d dvdrental dvdrental.tar
 
 ## Prepare Data with 1000 tables and each table having around 10k records
@@ -30,7 +29,7 @@ pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuu
 
 ## Update & Delete tables using a while loop with sleep
 j=0
-while [ $j -lt 1 ]
+while [ $j -lt 3 ]
 do
     export LENGTH=$(shuf -i 100-120 -n 1)
     export LENGTH_NEW=$(shuf -i 100-120 -n 1)
@@ -46,16 +45,3 @@ do
     sleep 5
     j=$(( j + 1 ))
 done
-#PMM_SERVER=X.X.X.X:443
-#sudo docker run -d \
-    #--rm \
-    #--name pmm-client \
-    #-e PMM_AGENT_SERVER_ADDRESS=3.15.165.23:443 \
-    #-e PMM_AGENT_SERVER_USERNAME=admin \
-    #-e PMM_AGENT_SERVER_PASSWORD=admin \
-    #-e PMM_AGENT_SERVER_INSECURE_TLS=1 \
-    #-e PMM_AGENT_SETUP=1 \
-    #--network pmm-qa \
-    #-e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml \
-    #percona/pmm-client:2
-#sudo docker exec pmm-client 
