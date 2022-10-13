@@ -19,13 +19,13 @@ fi
 # If branch/tag is not provided then it will default to main branch
 if [ -z "$pgstat_monitor_branch" ]
 then
-      export pgstat_monitor_branch=REL_1_1_0
+      export pgstat_monitor_branch=1.1.0
 fi
 
 # If repo is not provided then it will default to percona PGSM repository
 if [ -z "$pgstat_monitor_repo" ]
 then
-      export pgstat_monitor_repo=JiriCtvrtka/pg_stat_monitor
+      export pgstat_monitor_repo=percona/pg_stat_monitor
 fi
 
 # If distribution is not provided then it will default to percona distribution 'PPG'
@@ -85,7 +85,7 @@ cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 
 # Clone PGSM repo and move to /home/postgres/pg_stat_monitor dir
 cd /home/postgres
-git clone -b ${pgstat_monitor_branch} https://github.com/${pgstat_monitor_repo}
+git clone --depth 1 --branch ${pgstat_monitor_branch} https://github.com/${pgstat_monitor_repo}
 chown -R postgres:postgres pg_stat_monitor
 cd pg_stat_monitor
 
