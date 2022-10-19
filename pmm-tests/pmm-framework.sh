@@ -2679,6 +2679,9 @@ setup_postgres_ssl () {
   if echo "$pdpgsql_version" | grep '14'; then
     export PGSQL_VERSION=14
   fi
+  if echo "$pdpgsql_version" | grep '15'; then
+    export PGSQL_VERSION=15
+  fi
   if [ -z "$CLIENT_VERSION" ]
   then
     if [ -z "$PMM_CLIENT_VERSION" ]
@@ -2729,6 +2732,9 @@ setup_pmm_pgsm_integration () {
   if echo "$pdpgsql_version" | grep '14'; then
     export PGSQL_VERSION=14
   fi
+  if echo "$pdpgsql_version" | grep '15'; then
+    export PGSQL_VERSION=15
+  fi
   if [ -z "$CLIENT_VERSION" ]
   then
     export CLIENT_VERSION=dev-latest
@@ -2773,6 +2779,9 @@ setup_pmm_pgss_integration () {
   fi
   if echo "$pgsql_version" | grep '14'; then
     export PGSQL_VERSION=14
+  fi
+  if echo "$pgsql_version" | grep '15'; then
+    export PGSQL_VERSION=15
   fi
   if [ -z "$CLIENT_VERSION" ]
   then
