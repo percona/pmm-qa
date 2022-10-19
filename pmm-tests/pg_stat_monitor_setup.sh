@@ -58,7 +58,7 @@ then
 else
       wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
       dpkg -i percona-release_latest.generic_all.deb
-      percona-release setup ppg-${pgsql_version}
+      percona-release enable ppg-${pgsql_version} testing
       apt-get -y update
       apt-get -y install percona-postgresql-${pgsql_version} percona-postgresql-contrib percona-postgresql-server-dev-all
 fi
