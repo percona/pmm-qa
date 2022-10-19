@@ -116,7 +116,7 @@ usage () {
   echo " --setup-pmm-pgss-integration   Use this option to setup PMM-Client with PG Stat Statements for Integration Testing"
   echo " --cleanup-service              Use this option to delete DB container and remove from monitoring, just pass service name"
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
-  echo " --setup-pgsql-vacuum        Use this do setup postgres for vacuum monitoring tests "
+  echo " --setup-pgsql-vacuum           Use this do setup postgres for vacuum monitoring tests "
 }
 
 # Check if we have a functional getopt(1)
@@ -142,8 +142,8 @@ do
     shift 2
     ;;
     --setup-pgsql-vacuum )
+    setup_pgsql_vacuum=1
     shift
-    setup-pgsql-vacuum=1
     ;;
     --with-replica )
     shift
@@ -2922,7 +2922,7 @@ setup_ssl_services() {
   setup_mysql_ssl
 }
 
-setup-pgsql-vacuum() {
+setup_pgsql_vacuum() {
   sudo chmod +x ${DIRNAME}/pgsql-vacuum.sh
   ${DIRNAME}/pgsql-vacuum.sh
 }
@@ -2952,8 +2952,8 @@ if [ ! -z $setup_remote_db ]; then
   setup_remote_db_docker_compose
 fi
 
-if [ ! -z $setup-pgsql-vacuum ]; then
-  setup-pgsql-vacuum
+if [ ! -z $setup_pgsql_vacuum ]; then
+  setup_pgsql_vacuum
 fi
 
 if [ ! -z $wipe_clients ]; then
