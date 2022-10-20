@@ -52,6 +52,10 @@ if [ "$mongodb_version" == "5.0" ]; then
    wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.11-10/binary/tarball/percona-server-mongodb-5.0.11-10-x86_64.glibc2.17-minimal.tar.gz
 fi
 
+if [ "$mongodb_version" == "6.0" ]; then
+   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz
+fi
+
 tar -xvf percona_server_mongodb.tar.gz
 rm percona_server_mongodb.tar.gz*
 mv percona-server-mongodb-${mongodb_version}.* psmdb_${mongodb_version}
