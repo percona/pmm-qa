@@ -54,11 +54,20 @@ fi
 
 if [ "$mongodb_version" == "6.0" ]; then
    wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz
+   wget -O mongosh.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-mongodb-mongosh-1.6.0-x86_64.tar.gz
+   tar -xvf mongosh.tar.gz
+   rm mongosh.tar.gz
+   mv percona-mongodb-mongosh-.* mongosh
 fi
 
 tar -xvf percona_server_mongodb.tar.gz
 rm percona_server_mongodb.tar.gz*
 mv percona-server-mongodb-${mongodb_version}.* psmdb_${mongodb_version}
+
+if [ "$mongodb_version" == "6.0" ]; then
+   cp mongosh/bin/mongosh ./${mongodb_version}/bin/.
+   cp ./${mongodb_version}/bin/mongosh ./${mongodb_version}/bin/mongo
+fi
 
 if [ "$mongodb_setup" == "sharded" ]; then
     bash ./mongo_startup.sh -s -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=./psmdb_${mongodb_version}/bin
