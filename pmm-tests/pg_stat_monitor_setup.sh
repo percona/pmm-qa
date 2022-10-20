@@ -19,7 +19,7 @@ fi
 # If branch/tag is not provided then it will default to main branch
 if [ -z "$pgstat_monitor_branch" ]
 then
-      export pgstat_monitor_branch=1.1.0
+      export pgstat_monitor_branch=REL_1.1.1
 fi
 
 # If repo is not provided then it will default to percona PGSM repository
@@ -58,7 +58,11 @@ then
 else
       wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
       dpkg -i percona-release_latest.generic_all.deb
-      percona-release enable ppg-${pgsql_version}.0 testing
+      if echo "$pgsql_version" | grep '15'; then
+         percona-release enable ppg-${pgsql_version}.0 testing
+      else
+         percona-release enable ppg-${pgsql_version} testing
+      fi
       apt-get -y update
       apt-get -y install percona-postgresql-${pgsql_version} percona-postgresql-contrib percona-postgresql-server-dev-all
 fi
