@@ -1024,6 +1024,10 @@ get_basedir(){
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.2" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.22-22/binary/tarball/percona-server-mongodb-4.2.22-22-x86_64.glibc2.17-minimal.tar.gz"
+      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "5.0" ]]; then
+        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.13-11/binary/tarball/percona-server-mongodb-5.0.13-11-x86_64.glibc2.17-minimal.tar.gz"
+      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "6.0" ]]; then
+        LINK="https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz"	
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.0" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.28-23/binary/tarball/percona-server-mongodb-4.0.28-23-x86_64.glibc2.17-minimal.tar.gz"
       else
