@@ -2828,6 +2828,9 @@ setup_pmm_psmdb_integration () {
   if echo "$mo_version" | grep '5.0'; then
     export PSMDB_VERSION=5.0
   fi
+  if echo "$mo_version" | grep '6.0'; then
+    export PSMDB_VERSION=6.0
+  fi
   if echo "$mo_version" | grep '4.2'; then
     export PSMDB_VERSION=4.2
   fi
