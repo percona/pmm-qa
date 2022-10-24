@@ -9,7 +9,7 @@ if [ ! -z $@ ]; then
 fi  
 echo "$@"
 echo "$1"
-echo PGSQL_VACUUM_VERSION
+echo $PGSQL_VACUUM_VERSION
 docker stop pgsql_vacuum_db || true
 docker rm pgsql_vacuum_db || true
 docker run --name pgsql_vacuum_db -p 7432:5432 -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:14.5 \
