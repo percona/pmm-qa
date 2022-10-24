@@ -2,6 +2,8 @@
 
 export DOCKER_CONTAINER_NAME=pgsql_vacuum_db
 echo "Setting up Postgres for vacuum monitoring"
+echo "$@"
+echo "$1"
 docker stop pgsql_vacuum_db || true
 docker rm pgsql_vacuum_db || true
 docker run --name pgsql_vacuum_db -p 7432:5432 -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:14.5 \
