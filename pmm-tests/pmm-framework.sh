@@ -2926,10 +2926,10 @@ setup_ssl_services() {
 setup_pgsql_vacuum() {
   sudo chmod +x ${DIRNAME}/pgsql-vacuum.sh
   if [ ! -z $pgsql_version]; then
-    echod "Condition met"
+    echo "Condition met"
     ${DIRNAME}/pgsql-vacuum.sh $pgsql_version
   else
-  echod "Condition not met"
+  echo "Condition not met"
     ${DIRNAME}/pgsql-vacuum.sh
   fi  
 }
