@@ -5,7 +5,7 @@ export PGSQL_VACUUM_VERSION="14.5"
 echo "Setting up Postgres for vacuum monitoring"
 if [ ! -z $@ ]; then
     echo "Using pgsql version ${$@}"
-    PGSQL_VACUUM_VERSION=$@
+    PGSQL_VACUUM_VERSION="$@"
 fi  
 echo "$@"
 echo "$1"
