@@ -2927,9 +2927,11 @@ setup_pgsql_vacuum() {
   sudo chmod +x ${DIRNAME}/pgsql-vacuum.sh
   if [ -z $pgsql_version ]; then
     echo "Condition met"
+    echo $pgsql_version
     ${DIRNAME}/pgsql-vacuum.sh $pgsql_version
   else
-  echo "Condition not met"
+    echo "Condition not met"
+    echo $pgsql_version
     ${DIRNAME}/pgsql-vacuum.sh
   fi  
 }
