@@ -4,13 +4,8 @@ export DOCKER_CONTAINER_NAME=pgsql_vacuum_db
 export PGSQL_VACUUM_VERSION="latest"
 echo "Setting up Postgres for vacuum monitoring"
 if [ ! -z $@ ]; then
-    echo "Using pgsql version ${1}"
     PGSQL_VACUUM_VERSION=$1
-    echo $PGSQL_VACUUM_VERSION
-else 
-    echo "Condition not met"
 fi  
-echo $PGSQL_VACUUM_VERSION
 docker stop pgsql_vacuum_db || true
 docker rm pgsql_vacuum_db || true
 docker run --name pgsql_vacuum_db -p 7432:5432 -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:$PGSQL_VACUUM_VERSION \
