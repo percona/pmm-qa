@@ -3,6 +3,8 @@
 #   enables Percona testing repository
 
 - hosts: all
+  become: true
+  become_method: sudo
   vars:
     pxc_version: "{{ lookup('vars', 'extra_pxc_version', default=lookup('env','PXC_VERSION') | default('8', true) ) }}"
     pxc_tarball: "{{ lookup('vars', 'extra_pxc_tarball', default=lookup('env','PXC_TARBALL') | default('https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-8.0.29/binary/tarball/Percona-XtraDB-Cluster_8.0.29-21.1_Linux.x86_64.glibc2.17-minimal.tar.gz', true) ) }}"
