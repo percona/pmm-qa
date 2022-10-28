@@ -1834,35 +1834,8 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "mo" && ! -z $PMM2  && -z $MONGOMAGIC ]]; then
       echo "Will execute a mongodb container method"
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
-      echo "Running pxc_proxysql_setup script"
-      sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT} ${pxc_version} ${query_source}
-      sleep 5
-      BASEDIR=$(ls -1td PXC* 2>/dev/null | grep -v ".tar" | head -n1)
-      cd ${BASEDIR}
-      echo $node1_port
-      for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        if [[ -z $use_socket ]]; then
-          if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-          else
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-          fi
-        else
-          if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-          else
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-          fi
-        fi
-        sleep 5
-        #run_workload 127.0.0.1 sysbench test $(cat node$j.cnf | grep port | awk -F"=" '{print $2}') mysql pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-      done
-      cd ../
-      if [[ ! -z $metrics_mode ]]; then
-        pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --metrics-mode=$metrics_mode --replication-set=proxysql-repl
-      else
-        pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl
-      fi
+      echo "Executing PXC Setup playbook"
+      setup_pxc_client_container
     else
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
@@ -2816,6 +2789,47 @@ setup_pmm_pgss_integration () {
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgss_setup.yml
+  popd
+}
+
+setup_pxc_client_container () {
+  echo "Setting up PMM and PXC Integration"
+
+  ## only doing it for jenkins workers, need ansible installed on the host
+  sudo yum install -y ansible || true
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/
+  if echo "$pxc_version" | grep '5.7'; then
+    export PXC_VERSION=5.7
+  fi
+  if echo "$pxc_version" | grep '8'; then
+    export PXC_VERSION=8
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
+  else
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+  fi
+  if [ -z "${PXC_CONTAINER}" ]
+  then
+    export PXC_CONTAINER=pxc_container_${PXC_VERSION}
+  else
+    export PXC_CONTAINER=${PXC_CONTAINER}_${PXC_VERSION}
+  fi
+  export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
   popd
 }
 
