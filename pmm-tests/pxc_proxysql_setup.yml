@@ -49,6 +49,13 @@
       - docker exec {{ pxc_container }} dpkg -i proxysql_2.4.4-dbg-ubuntu20_amd64.deb
       - docker exec {{ pxc_container }} apt install -y sysbench
 
+  - name: Execute User & Proxysql Setup inside the PXC pxc_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pxc_container }} apt-get install -y percona-xtrabackup-24
+    when: pxc_version == "5.7"
+
+
   - name: Install pmm2-client on the pxc_container
     shell: "{{ item }}"
     with_items:
