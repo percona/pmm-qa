@@ -2800,6 +2800,7 @@ setup_pxc_client_container () {
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/
   if echo "$pxc_version" | grep '5.7'; then
     export PXC_VERSION=5.7
   fi
@@ -2829,6 +2830,7 @@ setup_pxc_client_container () {
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
+  popd
 }
 
 setup_pmm_psmdb_integration () {
