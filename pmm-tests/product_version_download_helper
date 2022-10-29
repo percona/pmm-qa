@@ -1,0 +1,5 @@
+##ProductName  ##Version  ##Tarball Link
+
+pxc # 5.7.39 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.39-31.61/binary/tarball/Percona-XtraDB-Cluster-5.7.39-rel42-61.1.Linux.x86_64.glibc2.12-minimal.tar.gz
+
+pxc # 8.0.29 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-8.0.29/binary/tarball/Percona-XtraDB-Cluster_8.0.29-21.1_Linux.x86_64.glibc2.17-minimal.tar.gz

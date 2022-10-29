@@ -2801,11 +2801,9 @@ setup_pxc_client_container () {
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/
-  if echo "$pxc_version" | grep '5.7'; then
-    export PXC_VERSION=5.7
-  fi
-  if echo "$pxc_version" | grep '8'; then
-    export PXC_VERSION=8
+  if [ -z "$PXC_VERSION" ]
+  then
+    export PXC_VERSION=$pxc_version
   fi
   if [ -z "$CLIENT_VERSION" ]
   then

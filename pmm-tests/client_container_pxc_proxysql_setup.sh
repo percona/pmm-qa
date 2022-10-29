@@ -38,13 +38,11 @@ sed -i 's/log-output=none/log-output=file/g' pxc-startup.sh
 sed -i 's+${MID} --datadir+${MID} --socket=\\${node}/socket.sock --port=\\${RBASE1} --datadir+g' pxc-startup.sh
 
 ## Download right PXC version
-if [ "$pxc_version" == "5.7" ]; then
-  wget -O Percona-XtraDB-Cluster.tar.gz https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.39-31.61/binary/tarball/Percona-XtraDB-Cluster-5.7.39-rel42-61.1.Linux.x86_64.glibc2.12-minimal.tar.gz
-fi
-if [ "$pxc_version" == "8" ]; then
+if echo "$pxc_version" | grep '8'; then
   sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
-  wget -O Percona-XtraDB-Cluster.tar.gz ${pxc_tarball}
 fi
+
+wget -O Percona-XtraDB-Cluster.tar.gz ${pxc_tarball}
 tar -xzf Percona-XtraDB-Cluster.tar.gz
 rm -r Percona-XtraDB-Cluster.tar.gz
 mv Percona-XtraDB-Cluster* PXC
