@@ -16,6 +16,11 @@ then
       export mongodb_version=4.4
 fi
 
+if [ -z "$psmdb_tarball" ]
+then
+      export psmdb_tarball=https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz
+fi
+
 if [ -z "$mongdb_setup" ]
 then
       export mongdb_setup=replica
@@ -40,20 +45,9 @@ chmod +x mongo_startup.sh
 wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/mongodb_user_setup.js
 export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
 
-if [ "$mongodb_version" == "4.4" ]; then
-   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz
-fi
+wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 
-if [ "$mongodb_version" == "4.2" ]; then
-   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.22-22/binary/tarball/percona-server-mongodb-4.2.22-22-x86_64.glibc2.17-minimal.tar.gz
-fi
-
-if [ "$mongodb_version" == "5.0" ]; then
-   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.11-10/binary/tarball/percona-server-mongodb-5.0.11-10-x86_64.glibc2.17-minimal.tar.gz
-fi
-
-if [ "$mongodb_version" == "6.0" ]; then
-   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz
+if echo "$mongodb_version" | grep '6'; then
    wget -O mongosh.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-mongodb-mongosh-1.6.0-x86_64.tar.gz
    tar -xvf mongosh.tar.gz
    rm mongosh.tar.gz

@@ -2803,7 +2803,7 @@ setup_pxc_client_container () {
   pushd $SCRIPT_PWD/
   if [ -z "$PXC_VERSION" ]
   then
-    export PXC_VERSION=$pxc_version
+    export PXC_VERSION=${pxc_version}
   fi
   if [ -z "$CLIENT_VERSION" ]
   then
@@ -2840,20 +2840,9 @@ setup_pmm_psmdb_integration () {
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/
-  if echo "$mo_version" | grep '4.4'; then
-    export PSMDB_VERSION=4.4
-  fi
-  if echo "$mo_version" | grep '5.0'; then
-    export PSMDB_VERSION=5.0
-  fi
-  if echo "$mo_version" | grep '6.0'; then
-    export PSMDB_VERSION=6.0
-  fi
-  if echo "$mo_version" | grep '4.2'; then
-    export PSMDB_VERSION=4.2
-  fi
-  if echo "$mo_version" | grep '4.0'; then
-    export PSMDB_VERSION=4.0
+  if [ -z "$PSMDB_VERSION" ]
+  then
+    export PSMDB_VERSION=${mo_version}
   fi
   if echo "$with_sharding" | grep '1'; then
     export PSMDB_SETUP=sharded
