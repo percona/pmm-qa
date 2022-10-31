@@ -7,6 +7,7 @@
   become_method: sudo
   vars:
     pxc_version: "{{ lookup('vars', 'extra_pxc_version', default=lookup('env','PXC_VERSION') | default('8', true) ) }}"
+    pxc_tarball: "{{ lookup('vars', 'extra_pxc_tarball', default=lookup('env','PXC_TARBALL') | default('', true) ) }}"
     pxc_container: "{{ lookup('vars', 'extra_pxc_container', default=lookup('env','PXC_CONTAINER') | default('pxc_container', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
     client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
@@ -40,6 +41,7 @@
   - name: Get Product tarball URL based on the version
     shell: cat product_version_download_helper | grep pxc | grep "\-{{ pxc_version }}" | head -1 | awk -F'# ' '{print $3}'
     register: pxc_tarball
+    when: lookup('env', 'PXC_TARBALL') == ''
 
   - name: Execute User & Proxysql Setup inside the PXC pxc_container
     shell: "{{ item }}"

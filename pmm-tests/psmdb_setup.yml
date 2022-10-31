@@ -5,6 +5,7 @@
 - hosts: all
   vars:
     psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB_VERSION') | default('4.4', true) ) }}"
+    psmdb_tarball: "{{ lookup('vars', 'extra_psmdb_tarball', default=lookup('env','PSMDB_TARBALL') | default('', true) ) }}"
     psmdb_setup: "{{ lookup('vars', 'extra_psmdb_setup', default=lookup('env','PSMDB_SETUP') | default('replica', true) ) }}"
     psmdb_container: "{{ lookup('vars', 'extra_psmdb_container', default=lookup('env','PSMDB_CONTAINER') | default('psmdb', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
@@ -40,12 +41,14 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
+      - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/mongodb_user_setup.js
       - docker network connect pmm-qa {{ psmdb_container }}
       - docker exec {{ psmdb_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no 
 
   - name: Get Product tarball URL based on the version
     shell: cat product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
     register: psmdb_tarball
+    when: lookup('env', 'PSMDB_TARBALL') == ''
 
   - name: Setup psmdb for monitoring
     shell: "{{ item }}"
@@ -58,6 +61,7 @@
       - rm -r ~/psmdb_{{ psmdb_version }} || true; mkdir ~/psmdb_{{ psmdb_version }}
       - wget -P ~/psmdb_{{ psmdb_version }}/ "https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/Dockerfile"
       - wget -P ~/psmdb_{{ psmdb_version }}/ "https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/mongodb_query.php"
+      - docker exec {{ psmdb_container }} ./nodes/cl_primary.sh mongodb_user_setup.js
       - docker build --tag php-db ~/psmdb_{{ psmdb_version }}/ > ~/docker-build_mongodb_load_{{ psmdb_version }}.log
       - docker rm mongodb_load_{{ psmdb_version }} || true
       - docker run --rm --name mongodb_load_{{ psmdb_version }} --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
