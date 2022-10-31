@@ -84,7 +84,7 @@ if [ "$mongodb_setup" == "sharded" ]; then
     sleep 2
     pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
     sleep 20
-    ./nodes/cl_mongos.sh mongodb_user_setup.js
+    #./nodes/cl_mongos.sh mongodb_user_setup.js
 fi
 
 if [ "$mongodb_setup" == "replica" ]; then
@@ -96,12 +96,10 @@ if [ "$mongodb_setup" == "replica" ]; then
     sleep 2
     pmm-admin remove mongodb mongodb_rs1_3 || true; pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node --metrics-mode=$metrics_mode mongodb_rs1_3_${SERVICE_RANDOM_NUMBER} --debug 127.0.0.1:27019
     sleep 20
-    ./nodes/cl.sh mongodb_user_setup.js
 fi
 
 if [ "$mongodb_setup" == "regular" ]; then
     bash ./mongo_startup.sh -m -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=./psmdb_${mongodb_version}/bin
     pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
     sleep 20
-    ./nodes/cl.sh mongodb_user_setup.js
 fi

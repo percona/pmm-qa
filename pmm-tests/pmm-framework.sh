@@ -22,7 +22,6 @@ create_pgsql_user=0
 PGSQL_PORT=5432
 PDPGSQL_PORT=6432
 PS_PORT=43306
-with_replica=1
 mysqld_startup_options="--user=root"
 
 mkdir -p $WORKDIR/logs
@@ -2846,10 +2845,12 @@ setup_pmm_psmdb_integration () {
   fi
   if echo "$with_sharding" | grep '1'; then
     export PSMDB_SETUP=sharded
-  fi
-  if echo "$with_replica" | grep '1'; then
+  elif echo "$with_replica" | grep '1'; then
     export PSMDB_SETUP=replica
+  else
+    export PSMDB_SETUP=regular
   fi
+
   if [ -z "$CLIENT_VERSION" ]
   then
     export CLIENT_VERSION=dev-latest
@@ -2867,7 +2868,7 @@ setup_pmm_psmdb_integration () {
   fi
   if [ -z "${PSMDB_CONTAINER}" ]
   then
-    export PSMDB_CONTAINER=psmdb_pmm_${PSMDB_VERSION}
+    export PSMDB_CONTAINER=psmdb_pmm_${PSMDB_VERSION}_${PSMDB_SETUP}
   else
     export PSMDB_CONTAINER=${PSMDB_CONTAINER}_${PSMDB_VERSION}
   fi
