@@ -30,6 +30,11 @@ then
       export query_source=perfschema
 fi
 
+if [ -z "$pxc_dev_cluster" ]
+then
+      export pxc_dev_cluster=pxc-dev-cluster
+fi
+
 whoami
 cd ~
 wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/pxc-tests/pxc-startup.sh
@@ -76,7 +81,7 @@ bin/mysql -A -uroot -Snode1/socket.sock -e "drop database if exists sbtest;creat
 
 export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
 for j in `seq 1  ${number_of_nodes}`;do
-    pmm-admin add mysql --query-source=perfschema --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node__${j}_${SERVICE_RANDOM_NUMBER}
+    pmm-admin add mysql --query-source=perfschema --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=${pxc_dev_cluster} --replication-set=pxc-repl pxc_node__${j}_${SERVICE_RANDOM_NUMBER}
 done
 
 ## Start Running Load
