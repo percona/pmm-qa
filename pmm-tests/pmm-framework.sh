@@ -2931,7 +2931,11 @@ setup_ssl_services() {
 
 setup_pgsql_vacuum() {
   sudo chmod +x ${DIRNAME}/pgsql-vacuum.sh
-  ${DIRNAME}/pgsql-vacuum.sh
+  if [ ! -z $pgsql_version ]; then
+    ${DIRNAME}/pgsql-vacuum.sh $pgsql_version
+  else
+    ${DIRNAME}/pgsql-vacuum.sh
+  fi  
 }
 
 prepare_service_name() {
