@@ -1,5 +1,6 @@
 #!/bin/sh
 
+echo "start installing pmm-agent"
 
 while [ $# -gt 0 ]; do
 
@@ -89,20 +90,27 @@ if [[ "$client_version" == http* ]]; then
     popd
     pmm-admin --version
     if [[ "$use_metrics_mode" == "yes" ]]; then
+	      echo "install pmm-agent 1"
         pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
 	else
+	      echo "install pmm-agent 2"
         pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
     fi
     sleep 10
 	pmm-agent --config-file=/usr/local/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 else
     if [[ "$use_metrics_mode" == "yes" ]]; then
+        echo "install pmm-agent 3"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
 	else
+	      echo "install pmm-agent 4"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
     fi    
     sleep 10
+  echo "install config-file"
 	pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 fi
 sleep 10
+
+echo "pmm-admin status"
 pmm-admin status
