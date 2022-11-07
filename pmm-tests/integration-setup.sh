@@ -15,17 +15,32 @@ for arg in $@; do
   fi
 done
 
+
+# Itterate trough all arguments and select correct parameters to be run.
 for var in "$@"
 do
-  if [[ $var == "--setup-pmm-pgss-integration" ]];then
-    echo "Hello World"
-    shift
-  elif [[ $var == "--setup-pgsql-vacuum" ]];then
-    sudo chmod +x ${DIRNAME}/postgres/pgsql-vacuum-setup.sh
-    if [ ! -z $pgsql_version ]; then
-      ${DIRNAME}/postgres/pgsql-vacuum-setup.sh $pgsql_version
-    else
-      ${DIRNAME}/postgres/pgsql-vacuum-setup.sh
-    fi  
-  fi
+  case "$arg" in
+    --setup-pgsql-vacuum )
+      setup_pgsql_vacuum=1
+      shift
+    ;;
+    --setup-pmm-pgss-integration )
+      setup_pmm_pgss_integration=1
+      shift
+    ;;
+  esac
 done
+
+if [ ! -z $setup_pgsql_vacuum ]; then
+  sudo chmod +x ${DIRNAME}/postgres/pgsql-vacuum-setup.sh
+  if [ ! -z $pgsql_version ]; then
+    ${DIRNAME}/postgres/pgsql-vacuum-setup.sh $pgsql_version
+  else
+    ${DIRNAME}/postgres/pgsql-vacuum-setup.sh
+  fi  
+fi
+
+if [ ! -z $setup_pmm_pgss_integration ]; then
+  sudo chmod +x ${DIRNAME}/postgres/pmm-pgss-integration-setup.sh
+  ${DIRNAME}/postgres/pmm-pgss-integration-setup.sh
+fi
