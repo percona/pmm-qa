@@ -2905,6 +2905,7 @@ setup_mongo_replica_for_backup() {
   bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
   popd
   popd
+  pmm-admin add mongodb --port=27027 --service-name=mongo-bm --replication-set=rs0
 }
 
 setup_bm_mysql() {
