@@ -2503,10 +2503,10 @@ setup_external_service () {
   rm redis_exporter*.tar.gz
   mv redis_* redis_exporter
   cd redis_exporter
-  docker run -d -p 6379:6379 redis
+  docker run -d -p 6379:6379 redis '--requirepass oFukiBRg7GujAJXq3tmd'
   sleep 10
   touch redis.log
-  JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
+  JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.password=oFukiBRg7GujAJXq3tmd -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
   sleep 10
   pmm-admin add external --listen-port=42200 --group="redis" --service-name="redis_external"
   echo "Setting up node_process"
