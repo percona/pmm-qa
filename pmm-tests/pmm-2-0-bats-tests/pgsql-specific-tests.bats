@@ -5,6 +5,7 @@
 
 PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
+PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
 
 @test "run pmm-admin under regular(non-root) user privileges" {
 if [[ $(id -u) -eq 0 ]] ; then
@@ -32,7 +33,7 @@ echo "$output"
         for i in $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}') ; do
                 let COUNTER=COUNTER+1
                 PGSQL_IP_PORT=${i}
-                run pmm-admin add postgresql pgsql_$COUNTER ${PGSQL_IP_PORT}
+                run pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgsql_$COUNTER ${PGSQL_IP_PORT}
                 echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "PostgreSQL Service added."
@@ -45,7 +46,7 @@ echo "$output"
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_" | awk -F" " '{print $3}') ; do
                 let COUNTER=COUNTER+1
                 PGSQL_IP_PORT=${i}
-                run pmm-admin add postgresql pgsql_$COUNTER ${PGSQL_IP_PORT}
+                run pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} pgsql_$COUNTER ${PGSQL_IP_PORT}
                 echo "$output"
                         [ "$status" -eq 1 ]
                         echo "${output}" | grep "already exists."
@@ -94,7 +95,7 @@ echo "$output"
                 PGSQL_IP_PORT=${i}
                 export PGSQL_IP=$(cut -d':' -f1 <<< $PGSQL_IP_PORT)
                 export PGSQL_PORT=$(cut -d':' -f2 <<< $PGSQL_IP_PORT)
-                run pmm-admin add postgresql --host=${PGSQL_IP} --port=${PGSQL_PORT} --service-name=pgsql_$COUNTER
+                run pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --host=${PGSQL_IP} --port=${PGSQL_PORT} --service-name=pgsql_$COUNTER
                 echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "PostgreSQL Service added."
@@ -133,7 +134,7 @@ echo "$output"
                 PGSQL_IP_PORT=${i}
                 export PGSQL_IP=$(cut -d':' -f1 <<< $PGSQL_IP_PORT)
                 export PGSQL_PORT=$(cut -d':' -f2 <<< $PGSQL_IP_PORT)
-                run pmm-admin add postgresql --agent-password=mypass --host=${PGSQL_IP} --port=${PGSQL_PORT} --service-name=pgsql_$COUNTER
+                run pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --host=${PGSQL_IP} --port=${PGSQL_PORT} --service-name=pgsql_$COUNTER
                 echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "PostgreSQL Service added."
