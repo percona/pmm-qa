@@ -2477,10 +2477,10 @@ setup_external_service () {
   rm redis_exporter*.tar.gz
   mv redis_* redis_exporter
   cd redis_exporter
-  docker run -d -p 6379:6379 redis
+  docker run -d -p 6379:6379 redis '--requirepass oFukiBRg7GujAJXq3tmd'
   sleep 10
   touch redis.log
-  JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
+  JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.password=oFukiBRg7GujAJXq3tmd -redis.addr=localhost:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
   sleep 10
   pmm-admin add external --listen-port=42200 --group="redis" --service-name="redis_external"
   echo "Setting up node_process"
@@ -2898,12 +2898,12 @@ setup_remote_db_docker_compose () {
 
 setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
-  sudo percona-release enable pbm release && sudo yum -y install https://repo.percona.com/pbm/yum/release/8/RPMS/x86_64/percona-backup-mongodb-1.8.1-1.el8.x86_64.rpm
+  sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
   if [ ! -d "pmm-ui-tests" ]; then
-    git clone https://github.com/percona/pmm-ui-tests
+    git clone -b main https://github.com/percona/pmm-ui-tests
   fi
   pushd pmm-ui-tests
   bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
@@ -2935,7 +2935,11 @@ setup_ssl_services() {
 
 setup_pgsql_vacuum() {
   sudo chmod +x ${DIRNAME}/pgsql-vacuum.sh
-  ${DIRNAME}/pgsql-vacuum.sh
+  if [ ! -z $pgsql_version ]; then
+    ${DIRNAME}/pgsql-vacuum.sh $pgsql_version
+  else
+    ${DIRNAME}/pgsql-vacuum.sh
+  fi  
 }
 
 prepare_service_name() {
