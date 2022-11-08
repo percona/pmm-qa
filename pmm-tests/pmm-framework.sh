@@ -2896,6 +2896,7 @@ setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
   sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb
   setup_docker_compose
+  sudo openssl rand -base64 700 > $SCRIPT_PWD/backup/mongodb/file.key
   sudo chmod 400 $SCRIPT_PWD/backup/mongodb/file.key
   docker-compose -f $SCRIPT_PWD/backup/mongodb/docker-compose-mongo-replica.yml up -d
   sleep 20
