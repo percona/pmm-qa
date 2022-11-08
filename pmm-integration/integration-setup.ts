@@ -25,9 +25,14 @@ const run = async () => {
       case '--setup-pgsql-vacuum':
         await pgsqlVacuumSetup({pgsqlVersion})
         break
-        case '--setup-pmm-pgss-integration':
-          await executeCommand('chmod +x ./postgres/setup_pmm_pgss_integration.sh');
-          console.log(await executeCommand('./postgres/setup_pmm_pgss_integration.sh'));
+      case '--setup-pmm-pgss-integration':
+        await executeCommand('chmod +x ./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
+        console.log(await executeCommand('./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh'));
+        break;
+      case '--setup-pmm-pgsm-integration':
+        await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
+        console.log(await executeCommand('./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
+        break;
       default:
         break
     }

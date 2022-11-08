@@ -1,4 +1,4 @@
-echo "Setting up PMM and PGStatements Integration"
+echo "Setting up PMM and PGSM Integration"
 sudo yum install -y ansible
 export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
 docker network create pmm-qa || true
@@ -23,12 +23,12 @@ then
 else
   export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
 fi
-if [ -z "${PGSQL_PGSS_CONTAINER}" ]
+if [ -z "${PGSQL_PGSM_CONTAINER}" ]
 then
-  export PGSQL_PGSS_CONTAINER=pgsql_pgss_${PGSQL_VERSION}
+  export PGSQL_PGSM_CONTAINER=pgsql_pgsm_${PGSQL_VERSION}
 else
-  export PGSQL_PGSS_CONTAINER=${PGSQL_PGSS_CONTAINER}_${PGSQL_VERSION}
+  export PGSQL_PGSM_CONTAINER=${PGSQL_PGSM_CONTAINER}_${PGSQL_VERSION}
 fi
 export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
-ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 postgres/pgsql_pgss_setup.yml
+ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgsm_setup.yml
 popd
