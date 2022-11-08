@@ -41,30 +41,12 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
     await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "delete from film_testing_${table} where length=${oldLength};"`);
     let i = 0;
     while(i < countInt) {
-      await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "insert into film_testing_${table} values (${i}, 'title for ${i}', 'Description for ${i}', ${length});" `)
+      await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "insert into film_testing_${table} values (${i}, 'title for ${i}', 'Description for ${i}', ${oldLength});" `)
       i++;
     }
+    await executeCommand(`docker exec  ${dockerContainerName} psql -U postgres -d dvdrental -c "update film_testing_${table} set length=${newLength} where length=${length};"`)
     j++;
   }
-  await executeCommand(`j=0 \ 
-    while [ $j -lt 3 ]  \
-    do \
-      export LENGTH=$(shuf -i 100-120 -n 1) \
-      export LENGTH_NEW=$(shuf -i 100-120 -n 1) \
-      export TABLE=$(shuf -i 1-1000 -n 1) \
-      export COUNT=$(docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "select count(*) from film_testing_\${TABLE} where length=\${LENGTH};" | tail -3 | head -1 | xargs) \
-      docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "delete from film_testing_\${TABLE} where length=\${LENGTH};" \
-      i=0 \
-      while [ "$i" -le \${COUNT} ]; do \
-          docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "insert into film_testing_\${TABLE} values (\${i}, 'title for \${i}', 'Description for \${i}', \${LENGTH});" \
-          i=$(( i + 1 )) \
-      done  \
-      docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "update film_testing_\${TABLE} set length=\${LENGTH_NEW} where length=\${LENGTH};" \
-      sleep 5 \ 
-      j=$(( j + 1 )) \
-  done \ 
-  `)
-
 }
 
 export default pgsqlVacuumSetup;
