@@ -2,9 +2,8 @@ import { executeCommand } from "../helpers/commandLine";
 import { stopAndRemoveContainer } from "../helpers/docker";
 
 const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
-  const dockerContainerName = 'pgsql_vacuum_db';
   console.log('Setting up Postgres for vacuum monitoring');
-  console.log(pgsqlVersion)
+  const dockerContainerName = 'pgsql_vacuum_db';
 
   await stopAndRemoveContainer(dockerContainerName);
   await executeCommand(`docker run --name ${dockerContainerName} -p 7432:5432 -e POSTGRES_PASSWORD=YIn7620U1SUc -d postgres:${pgsqlVersion} -c shared_preload_libraries="pg_stat_statements" -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all`);
@@ -24,23 +23,17 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
   await executeCommand(`docker cp dvdrental.sql ${dockerContainerName}:/`);
   await executeCommand(`docker exec ${dockerContainerName} psql -d dvdrental -f dvdrental.sql -U postgres`);
 
-  await executeCommand(`pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuum_db localhost:7432`);
+  await executeCommand(`pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc ${dockerContainerName} localhost:7432`);
  
   let j: number = 0;
   while(j < 3) {
     const oldLength = Math.floor(Math.random() * 120) + 100;
     const newLength = Math.floor(Math.random() * 120) + 100;
     const table = Math.floor(Math.random() * 100) + 1;
-    console.log('Random Variables: ');
-    console.log(`old Length: ${oldLength}`)
-    console.log(`new Length: ${newLength}`)
-    console.log(`table: ${table}`)
     const count: string = (await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "select count(*) from film_testing_${table} where length=${oldLength};" | tail -3 | head -1 | xargs`)).stdout.trim();
-    const countInt: number = parseInt(count);
-    console.log(`Command: ${countInt}`)
     await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "delete from film_testing_${table} where length=${oldLength};"`);
     let i = 0;
-    while(i < countInt) {
+    while(i < parseInt(count)) {
       await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "insert into film_testing_${table} values (${i}, 'title for ${i}', 'Description for ${i}', ${oldLength});" `)
       i++;
     }
