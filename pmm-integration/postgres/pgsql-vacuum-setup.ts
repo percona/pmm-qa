@@ -44,7 +44,7 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
       await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "insert into film_testing_${table} values (${i}, 'title for ${i}', 'Description for ${i}', ${oldLength});" `)
       i++;
     }
-    await executeCommand(`docker exec  ${dockerContainerName} psql -U postgres -d dvdrental -c "update film_testing_${table} set length=${newLength} where length=${length};"`)
+    await executeCommand(`docker exec  ${dockerContainerName} psql -U postgres -d dvdrental -c "update film_testing_${table} set length=${newLength} where length=${oldLength};"`)
     j++;
   }
 }
