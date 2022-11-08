@@ -25,17 +25,27 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
   await executeCommand(`docker exec ${dockerContainerName} psql -d dvdrental -f dvdrental.sql -U postgres`);
 
   await executeCommand(`pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuum_db localhost:7432`);
-
-  const oldLength = Math.floor(Math.random() * 120) + 100;
-  const newLength = Math.floor(Math.random() * 120) + 100;
-  const table = Math.floor(Math.random() * 100) + 1;
-  console.log('Random Variables: ');
-  console.log(`old Length: ${oldLength}`)
-  console.log(`new Length: ${newLength}`)
-  console.log(`table: ${table}`)
-  console.log(`Command:`)
-  console.log(await executeCommand(`docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "select count(*) from film_testing_${table} where length=${oldLength};" | tail -3 | head -1 | xargs`))
-  await executeCommand(`docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "delete from film_testing_${table} where length=${oldLength};"`);
+ 
+  let j: number = 0;
+  while(j < 3) {
+    const oldLength = Math.floor(Math.random() * 120) + 100;
+    const newLength = Math.floor(Math.random() * 120) + 100;
+    const table = Math.floor(Math.random() * 100) + 1;
+    console.log('Random Variables: ');
+    console.log(`old Length: ${oldLength}`)
+    console.log(`new Length: ${newLength}`)
+    console.log(`table: ${table}`)
+    const count: string = (await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "select count(*) from film_testing_${table} where length=${oldLength};" | tail -3 | head -1 | xargs`)).stdout.trim();
+    const countInt: number = parseInt(count);
+    console.log(`Command: ${countInt}`)
+    await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "delete from film_testing_${table} where length=${oldLength};"`);
+    let i = 0;
+    while(i < countInt) {
+      await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "insert into film_testing_${table} values (${i}, 'title for ${i}', 'Description for ${i}', ${length});" `)
+      i++;
+    }
+    j++;
+  }
   await executeCommand(`j=0 \ 
     while [ $j -lt 3 ]  \
     do \
