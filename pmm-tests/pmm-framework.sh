@@ -1027,7 +1027,7 @@ get_basedir(){
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "5.0" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.13-11/binary/tarball/percona-server-mongodb-5.0.13-11-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "6.0" ]]; then
-        LINK="https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz"	
+        LINK="https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.0" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.28-23/binary/tarball/percona-server-mongodb-4.0.28-23-x86_64.glibc2.17-minimal.tar.gz"
       else
@@ -2896,16 +2896,11 @@ setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
   sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb
   setup_docker_compose
-  mkdir -p /tmp/mongodb_backup_replica || :
-  pushd /tmp/mongodb_backup_replica
-  if [ ! -d "pmm-ui-tests" ]; then
-    git clone -b main https://github.com/percona/pmm-ui-tests
-  fi
-  pushd pmm-ui-tests
-  bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
-  popd
-  popd
-  pmm-admin add mongodb --port=27027 --service-name=mongo-bm --replication-set=rs0
+  bash -x $SCRIPT_PWD/backup/mongodb/setup-replica-and-pbm.sh
+  sudo chmod -R 777 /tmp/backup_data/
+  pmm-admin add mongodb --port=27027 --service-name=mongo1 --username=pmm --password=pmm --replication-set=rs0
+  pmm-admin add mongodb --port=27028 --service-name=mongo2 --username=pmm --password=pmm --replication-set=rs0
+  pmm-admin add mongodb --port=27029 --service-name=mongo3 --username=pmm --password=pmm --replication-set=rs0
 }
 
 setup_bm_mysql() {
@@ -2936,7 +2931,7 @@ setup_pgsql_vacuum() {
     ${DIRNAME}/pgsql-vacuum.sh $pgsql_version
   else
     ${DIRNAME}/pgsql-vacuum.sh
-  fi  
+  fi
 }
 
 prepare_service_name() {

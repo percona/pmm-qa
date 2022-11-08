@@ -1,0 +1,68 @@
+---
+version: '3.8'
+
+volumes:
+  mongo1data:
+  mongo2data:
+  mongo3data:
+
+services:
+  mongors1:
+    container_name: mongors1
+    image: 'percona/percona-server-mongodb:4.4'
+    ports:
+      - 27027:27027
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=dba
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+    volumes:
+      - '.:/root/pmm-agent'
+      - './file.key:/data/file.key'
+      - '/tmp/backup_data:/tmp/backup_data'
+      - 'mongo2data:/data/db'
+    command:
+      - --profile=2
+      - --port=27027
+      - --replSet=rs0
+      - --keyFile=/data/file.key
+
+  mongors2:
+    container_name: mongors2
+    image: 'percona/percona-server-mongodb:4.4'
+    ports:
+      - 27028:27028
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=dba
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+    volumes:
+      - '.:/root/pmm-agent'
+      - './file.key:/data/file.key'
+      - '/tmp/backup_data:/tmp/backup_data'
+      - 'mongo2data:/data/db'
+    command:
+      - --profile=2
+      - --port=27028
+      - --replSet=rs0
+      - --keyFile=/data/file.key
+
+  mongors3:
+    container_name: mongors3
+    image: 'percona/percona-server-mongodb:4.4'
+    ports:
+      - 27029:27029
+    restart: always
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=dba
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+    volumes:
+      - '.:/root/pmm-agent'
+      - './file.key:/data/file.key'
+      - '/tmp/backup_data:/tmp/backup_data'
+      - 'mongo3data:/data/db'
+    command:
+      - --profile=2
+      - --port=27029
+      - --replSet=rs0
+      - --keyFile=/data/file.key
