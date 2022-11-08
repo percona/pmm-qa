@@ -30,5 +30,7 @@ else
   export PGSQL_PGSM_CONTAINER=${PGSQL_PGSM_CONTAINER}_${PGSQL_VERSION}
 fi
 export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+FOLDER=$(ls)
+echo $FOLDER
 ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgsm_setup.yml
 popd
