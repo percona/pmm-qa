@@ -31,7 +31,7 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
   console.log(`new Length: ${newLength}`)
   console.log(`table: ${table}`)
   console.log(`Command:`)
-  console.log(await executeCommand('docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "select count(*) from film_testing_\${TABLE} where length=\${LENGTH};" | tail -3 | head -1 | xargs'))
+  console.log(await executeCommand(`docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "select count(*) from film_testing_${table} where length=${length};" | tail -3 | head -1 | xargs`))
   await executeCommand(`pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuum_db localhost:7432`);
   await executeCommand(`j=0 \ 
     while [ $j -lt 3 ]  \
