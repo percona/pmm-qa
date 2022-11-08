@@ -2897,7 +2897,7 @@ setup_mongo_replica_for_backup() {
   sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb
   setup_docker_compose
   docker-compose -f $SCRIPT_PWD/backup/mongodb/docker-compose-mongo-replica.yml up -d
-  sleep 10
+  sleep 20
   docker cp $SCRIPT_PWD/backup/mongodb/setup-replica.js mongors1:/
   docker exec -u 0 mongors1 mongosh --port=27027 --authenticationDatabase admin -u dba -p secret setup-replica.js
 
