@@ -15,7 +15,7 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
   await executeCommand(`docker exec ${dockerContainerName} unzip dvdrental.zip`);
   await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -c "CREATE EXTENSION pg_stat_statements;"`);
   await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -c 'create database dvdrental;'`);
-  await executeCommand(`docker exec ${dockerContainerName} pg_restore -U postgres -d dvdrental dvdrental.tar"`);
+  await executeCommand(`docker exec ${dockerContainerName} pg_restore -U postgres -d dvdrental dvdrental.tar`);
 
   await executeCommand(`rm dvdrental.tar.xz || true`);
   await executeCommand(`rm dvdrental.sql || true`);
@@ -23,7 +23,9 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
   await executeCommand(`tar -xvf dvdrental.tar.xz`);
   await executeCommand(`docker cp dvdrental.sql ${dockerContainerName}:/`);
   await executeCommand(`docker exec ${dockerContainerName} psql -d dvdrental -f dvdrental.sql -U postgres`);
-
+  const oldLength = Math.floor(Math.random() * 120) + 100;
+  const newLength = Math.floor(Math.random() * 120) + 100;
+  const table = Math.floor(Math.random() * 100) + 1;
   await executeCommand(`pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuum_db localhost:7432`);
   await executeCommand(`j=0 \ 
     while [ $j -lt 3 ]  \
