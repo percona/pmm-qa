@@ -23,6 +23,9 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
   await executeCommand(`tar -xvf dvdrental.tar.xz`);
   await executeCommand(`docker cp dvdrental.sql ${dockerContainerName}:/`);
   await executeCommand(`docker exec ${dockerContainerName} psql -d dvdrental -f dvdrental.sql -U postgres`);
+
+  await executeCommand(`pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuum_db localhost:7432`);
+
   const oldLength = Math.floor(Math.random() * 120) + 100;
   const newLength = Math.floor(Math.random() * 120) + 100;
   const table = Math.floor(Math.random() * 100) + 1;
@@ -31,8 +34,8 @@ const pgsqlVacuumSetup = async ({pgsqlVersion = 'latest'}) => {
   console.log(`new Length: ${newLength}`)
   console.log(`table: ${table}`)
   console.log(`Command:`)
-  console.log(await executeCommand(`docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "select count(*) from film_testing_${table} where length=${length};" | tail -3 | head -1 | xargs`))
-  await executeCommand(`pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuum_db localhost:7432`);
+  console.log(await executeCommand(`docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "select count(*) from film_testing_${table} where length=${oldLength};" | tail -3 | head -1 | xargs`))
+  await executeCommand(`docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "delete from film_testing_${table} where length=${oldLength};"`);
   await executeCommand(`j=0 \ 
     while [ $j -lt 3 ]  \
     do \
