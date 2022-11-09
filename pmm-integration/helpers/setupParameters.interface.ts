@@ -1,3 +1,4 @@
 export default interface SetupParameters {
-    pgsqlVersion: string | undefined;    
+  pgsqlVersion?: string;
+  moVersion?: string;
 };
