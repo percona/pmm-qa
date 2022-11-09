@@ -25,7 +25,7 @@ services:
       - --profile=2
       - --port=27027
       - --replSet=rs0
-      - --keyFile=/data/file.key
+#      - --keyFile=/data/file.key
 
   mongors2:
     container_name: mongors2
@@ -45,7 +45,7 @@ services:
       - --profile=2
       - --port=27028
       - --replSet=rs0
-      - --keyFile=/data/file.key
+#      - --keyFile=/data/file.key
 
   mongors3:
     container_name: mongors3
@@ -65,4 +65,4 @@ services:
       - --profile=2
       - --port=27029
       - --replSet=rs0
-      - --keyFile=/data/file.key
+#      - --keyFile=/data/file.key
