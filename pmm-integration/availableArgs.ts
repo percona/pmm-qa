@@ -34,8 +34,8 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-psmdb-integration',
     description: 'Use this option for Percona MongoDB setup with PMM2',
     function: async (parameters: SetupParameters) => {
-      await executeCommand('chmod +x ./postgres/pgsql_psmdb_setup/setup_pmm_psmdb_integration.sh');
-      console.log(await executeCommand('./postgres/pgsql_psmdb_setup/setup_pmm_psmdb_integration.sh'));
+      await executeCommand('chmod +x ./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
+      console.log(await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh'));
     },
   }
 ];
