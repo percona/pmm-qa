@@ -23,11 +23,7 @@ const run = async () => {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)
     if(setup) {
       await setup.function({pgsqlVersion})
-    } else {
-      validateArgs(commandLineArgs);
-      throw new Error('Wrong Setup selected');
-    }
-    
+    }    
   }
 }
 
