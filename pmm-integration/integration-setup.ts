@@ -1,15 +1,14 @@
-import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
 import validateArgs from "./helpers/validateArgs";
-import { executeCommand, setEnvVariable } from "./helpers/commandLine";
+import { setEnvVariable } from "./helpers/commandLine";
+import {  availableSetups, SetupsInterface } from "./availableArgs";
 
 const run = async () => {
-
   let pgsqlVersion: string | undefined;
 
-  const myArgs: string[] = process.argv.slice(2);
-  validateArgs(myArgs);
-  
-  for await (const [_index, value] of myArgs.entries()) {
+  const commandLineArgs: string[] = process.argv.slice(2);
+  validateArgs(commandLineArgs);
+
+  for await (const [_index, value] of commandLineArgs.entries()) {
     switch (true) {
       case value.includes('--pgsql-version'):
         pgsqlVersion = value.split("=")[1];
@@ -20,23 +19,16 @@ const run = async () => {
     }
   }
 
-  for await (const [_index, value] of myArgs.entries()) {
-    switch (value) {
-      case '--setup-pgsql-vacuum':
-        await pgsqlVacuumSetup({pgsqlVersion})
-        break
-      case '--setup-pmm-pgss-integration':
-        await executeCommand('chmod +x ./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
-        console.log(await executeCommand('./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh'));
-        break;
-      case '--setup-pmm-pgsm-integration':
-        await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
-        console.log(await executeCommand('./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
-        break;
-      default:
-        break
+  for await (const [_index, value] of commandLineArgs.entries()) {
+    const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)
+    if(setup) {
+      await setup.function({pgsqlVersion})
+    } else {
+      validateArgs(commandLineArgs);
+      throw new Error('Wrong Setup selected');
     }
-  } 
+    
+  }
 }
 
 run();

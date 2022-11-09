@@ -1,10 +1,10 @@
 import { exit } from "process";
-import availableCommandsLineArgs, { argsMap } from "../availableArgs";
+import availableCommandsLineArgs, { availableArgsMap } from "../availableArgs";
 
 const validateArgs = async (args: string[]) => {
     args.forEach((arg) => {
         if(availableCommandsLineArgs.findIndex(option => arg.includes(option)) < 0) {
-            argsMap.forEach((value, key) => {
+            availableArgsMap.forEach((value, key) => {
                 console.log(`   ${key}:    ${value}`);
             })
             exit();
