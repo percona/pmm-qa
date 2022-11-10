@@ -42,10 +42,10 @@ wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
 dpkg -i percona-release_latest.generic_all.deb
 wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startup.sh
 chmod +x mongo_startup.sh
-wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/mongodb_user_setup.js
 export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
 
 wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
+
 
 if echo "$mongodb_version" | grep '6'; then
    wget -O mongosh.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-mongodb-mongosh-1.6.0-x86_64.tar.gz
@@ -56,7 +56,9 @@ fi
 
 tar -xvf percona_server_mongodb.tar.gz
 rm percona_server_mongodb.tar.gz*
-mv percona-server-mongodb-${mongodb_version}.* psmdb_${mongodb_version}
+export extracted_folder_name=$(ls | grep percona-server-mongodb)
+echo "Extracted folder name ${extracted_folder_name}"
+mv ${extracted_folder_name} psmdb_${mongodb_version}
 
 if [ "$mongodb_version" == "6.0" ]; then
    cp mongosh/bin/mongosh ./psmdb_${mongodb_version}/bin/mongo

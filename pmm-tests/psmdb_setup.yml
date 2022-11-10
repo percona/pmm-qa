@@ -61,9 +61,9 @@
       - rm -r ~/psmdb_{{ psmdb_version }} || true; mkdir ~/psmdb_{{ psmdb_version }}
       - wget -P ~/psmdb_{{ psmdb_version }}/ "https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/Dockerfile"
       - wget -P ~/psmdb_{{ psmdb_version }}/ "https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/mongodb_query.php"
-      - docker build --tag php-db ~/psmdb_{{ psmdb_version }}/ > ~/docker-build_mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }}.log
+      - docker build --tag php-db ~/psmdb_{{ psmdb_version }}/ > ~/docker-build_mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }}.log || true
       - docker rm mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} || true
-      - docker run --rm --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb
+      - docker run --rm --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb || true
 
   - name: Run User setup script when Running Regular MongoDB setup
     shell: docker exec {{ psmdb_container }} ./nodes/cl.sh mongodb_user_setup.js
