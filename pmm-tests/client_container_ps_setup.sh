@@ -47,7 +47,7 @@ mkdir ~/ps${ps_version} || true
 export tar_ball_name=$(ls Percona-Server*)
 dbdeployer unpack ${tar_ball_name} --sandbox-binary=~/ps${ps_version} --flavor=percona  
 export db_version_sandbox=$(ls ~/ps${ps_version})
-dbdeployer deploy single ${db_version_sandbox} --port=${PS_PORT} --sandbox-binary=~/ps8
+dbdeployer deploy single ${db_version_sandbox} --port=${PS_PORT} --sandbox-binary=~/ps${ps_version} --remote-access=% --bind-address=0.0.0.0
 
 export db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
 export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
