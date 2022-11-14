@@ -16,6 +16,11 @@ then
       export mongodb_version=4.4
 fi
 
+if [ -z "$psmdb_tarball" ]
+then
+      export psmdb_tarball=https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz
+fi
+
 if [ -z "$mongdb_setup" ]
 then
       export mongdb_setup=replica
@@ -37,23 +42,12 @@ wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
 dpkg -i percona-release_latest.generic_all.deb
 wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startup.sh
 chmod +x mongo_startup.sh
-wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/mongodb_user_setup.js
 export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
 
-if [ "$mongodb_version" == "4.4" ]; then
-   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz
-fi
+wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 
-if [ "$mongodb_version" == "4.2" ]; then
-   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.22-22/binary/tarball/percona-server-mongodb-4.2.22-22-x86_64.glibc2.17-minimal.tar.gz
-fi
 
-if [ "$mongodb_version" == "5.0" ]; then
-   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.11-10/binary/tarball/percona-server-mongodb-5.0.11-10-x86_64.glibc2.17-minimal.tar.gz
-fi
-
-if [ "$mongodb_version" == "6.0" ]; then
-   wget -O percona_server_mongodb.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz
+if echo "$mongodb_version" | grep '6'; then
    wget -O mongosh.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-mongodb-mongosh-1.6.0-x86_64.tar.gz
    tar -xvf mongosh.tar.gz
    rm mongosh.tar.gz
@@ -62,7 +56,9 @@ fi
 
 tar -xvf percona_server_mongodb.tar.gz
 rm percona_server_mongodb.tar.gz*
-mv percona-server-mongodb-${mongodb_version}.* psmdb_${mongodb_version}
+export extracted_folder_name=$(ls | grep percona-server-mongodb)
+echo "Extracted folder name ${extracted_folder_name}"
+mv ${extracted_folder_name} psmdb_${mongodb_version}
 
 if [ "$mongodb_version" == "6.0" ]; then
    cp mongosh/bin/mongosh ./psmdb_${mongodb_version}/bin/mongo
@@ -90,7 +86,7 @@ if [ "$mongodb_setup" == "sharded" ]; then
     sleep 2
     pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs2 --environment=mongodb_rs_node mongodb_rs2_3_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
     sleep 20
-    ./nodes/cl_mongos.sh mongodb_user_setup.js
+    #./nodes/cl_mongos.sh mongodb_user_setup.js
 fi
 
 if [ "$mongodb_setup" == "replica" ]; then
@@ -102,12 +98,10 @@ if [ "$mongodb_setup" == "replica" ]; then
     sleep 2
     pmm-admin remove mongodb mongodb_rs1_3 || true; pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node --metrics-mode=$metrics_mode mongodb_rs1_3_${SERVICE_RANDOM_NUMBER} --debug 127.0.0.1:27019
     sleep 20
-    ./nodes/cl.sh mongodb_user_setup.js
 fi
 
 if [ "$mongodb_setup" == "regular" ]; then
     bash ./mongo_startup.sh -m -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=./psmdb_${mongodb_version}/bin
     pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
     sleep 20
-    ./nodes/cl.sh mongodb_user_setup.js
 fi

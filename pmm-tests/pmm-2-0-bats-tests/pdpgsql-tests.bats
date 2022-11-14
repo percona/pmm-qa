@@ -4,6 +4,8 @@
 
 PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
+PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
+
 
 @test "PMM-T442 run pmm-admin add postgreSQL with pgstatmonitor" {
         COUNTER=0
@@ -293,7 +295,7 @@ PGSQL_HOST='localhost'
                 PGSQL_IP_PORT=${i}
                 export PGSQL_IP=$(cut -d':' -f1 <<< $PGSQL_IP_PORT)
                 export PGSQL_PORT=$(cut -d':' -f2 <<< $PGSQL_IP_PORT)
-                run pmm-admin add postgresql --agent-password=mypass --host=${PGSQL_IP} --port=${PGSQL_PORT} --service-name=pgsql_$COUNTER
+                run pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --host=${PGSQL_IP} --port=${PGSQL_PORT} --service-name=pgsql_$COUNTER
                 echo "$output"
                 [ "$status" -eq 0 ]
                 echo "${lines[0]}" | grep "PostgreSQL Service added."

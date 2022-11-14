@@ -22,7 +22,6 @@ create_pgsql_user=0
 PGSQL_PORT=5432
 PDPGSQL_PORT=6432
 PS_PORT=43306
-with_replica=1
 mysqld_startup_options="--user=root"
 
 mkdir -p $WORKDIR/logs
@@ -117,12 +116,13 @@ usage () {
   echo " --cleanup-service              Use this option to delete DB container and remove from monitoring, just pass service name"
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
   echo " --setup-pgsql-vacuum           Use this do setup postgres for vacuum monitoring tests "
+  echo " --setup-pmm-ps-integration     Use this do setup for percona-server and PMM using dbdeployer "
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -143,6 +143,10 @@ do
     ;;
     --setup-pgsql-vacuum )
     setup_pgsql_vacuum=1
+    shift
+    ;;
+    --setup-pmm-ps-integration )
+    setup_pmm_ps_integration=1
     shift
     ;;
     --with-replica )
@@ -1418,35 +1422,37 @@ add_clients(){
       done
     elif [[ "${CLIENT_NAME}" == "pgsql" && ! -z $PMM2 ]]; then
       PGSQL_PORT=5432
+      export PGSQL_PASSWORD=oFukiBRg7GujAJXq3tmd
       docker pull postgres:${pgsql_version}
       for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
         check_port $PGSQL_PORT postgres
-        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PGSQL_PORT:5432 -d -e POSTGRES_HOST_AUTH_METHOD=trust postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
+        docker run --name PGSQL_${pgsql_version}_${IP_ADDRESS}_$j -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -e POSTGRES_PASSWORD=${PGSQL_PASSWORD} -p $PGSQL_PORT:5432 -d postgres:${pgsql_version} -c shared_preload_libraries='pg_stat_statements' -c pg_stat_statements.max=10000 -c pg_stat_statements.track=all
         sleep 20
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+            pmm-admin add postgresql --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-prod --cluster=pgsql-prod-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           else
-            pmm-admin add postgresql --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+            pmm-admin add postgresql --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           fi
         else
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+            pmm-admin add postgresql --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-dev --cluster=pgsql-dev-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           else
-            pmm-admin add postgresql --environment=pgsql-dev --cluster=pgsql-dev-cluster --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+            pmm-admin add postgresql --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-dev --cluster=pgsql-dev-cluster --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           fi
         fi
         PGSQL_PORT=$((PGSQL_PORT+j))
       done
     elif [[ "${CLIENT_NAME}" == "pdpgsql" && ! -z $PMM2 ]]; then
       PDPGSQL_PORT=6432
+      export PDPGSQL_PASSWORD=oFukiBRg7GujAJXq3tmd
       docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
       git clone https://github.com/percona/pg_stat_monitor
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         check_port $PDPGSQL_PORT PDPGSQL
         pdpgsql_service_name=$(prepare_service_name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j)
         docker run --name $pdpgsql_service_name -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 \
-        -d -e POSTGRES_HOST_AUTH_METHOD=trust perconalab/percona-distribution-postgresql:${pdpgsql_version} \
+        -d -e POSTGRES_PASSWORD=${PDPGSQL_PASSWORD} perconalab/percona-distribution-postgresql:${pdpgsql_version} \
         -c shared_preload_libraries=pg_stat_statements,pg_stat_monitor \
         -c pg_stat_monitor.pgsm_bucket_time=60 \
         -c pg_stat_monitor.pgsm_max_buckets=10 -c pg_stat_monitor.pgsm_query_shared_buffer=20 \
@@ -1459,15 +1465,15 @@ add_clients(){
         docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 $pdpgsql_service_name localhost:$PDPGSQL_PORT
+            pmm-admin add postgresql --username=postgres --password=${PDPGSQL_PASSWORD} --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 $pdpgsql_service_name localhost:$PDPGSQL_PORT
           else
-            pmm-admin add postgresql --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 $pdpgsql_service_name localhost:$PDPGSQL_PORT
+            pmm-admin add postgresql --username=postgres --password=${PDPGSQL_PASSWORD} --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 $pdpgsql_service_name localhost:$PDPGSQL_PORT
           fi
         else
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 $pdpgsql_service_name localhost:$PDPGSQL_PORT
+            pmm-admin add postgresql --username=postgres --password=${PDPGSQL_PASSWORD} --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 $pdpgsql_service_name localhost:$PDPGSQL_PORT
           else
-            pmm-admin add postgresql --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 $pdpgsql_service_name localhost:$PDPGSQL_PORT
+            pmm-admin add postgresql --username=postgres --password=${PDPGSQL_PASSWORD} --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 $pdpgsql_service_name localhost:$PDPGSQL_PORT
           fi
         fi
         sudo chmod +x $SCRIPT_PWD/pgstatmonitor_metrics_queries.sh
@@ -1834,35 +1840,8 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "mo" && ! -z $PMM2  && -z $MONGOMAGIC ]]; then
       echo "Will execute a mongodb container method"
     elif [[ "${CLIENT_NAME}" == "pxc" && ! -z $PMM2 ]]; then
-      echo "Running pxc_proxysql_setup script"
-      sh $SCRIPT_PWD/pxc_proxysql_setup.sh ${ADDCLIENTS_COUNT} ${pxc_version} ${query_source}
-      sleep 5
-      BASEDIR=$(ls -1td PXC* 2>/dev/null | grep -v ".tar" | head -n1)
-      cd ${BASEDIR}
-      echo $node1_port
-      for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-        if [[ -z $use_socket ]]; then
-          if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-          else
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-          fi
-        else
-          if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --metrics-mode=$metrics_mode --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-          else
-            pmm-admin add mysql --query-source=$query_source --username=sysbench --password=test --socket=$(cat node$j.cnf | grep socket | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=pxc-dev-cluster --replication-set=pxc-repl pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-          fi
-        fi
-        sleep 5
-        #run_workload 127.0.0.1 sysbench test $(cat node$j.cnf | grep port | awk -F"=" '{print $2}') mysql pxc_node_${pxc_version}_${IP_ADDRESS}_$j
-      done
-      cd ../
-      if [[ ! -z $metrics_mode ]]; then
-        pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --metrics-mode=$metrics_mode --replication-set=proxysql-repl
-      else
-        pmm-admin add proxysql --environment=proxysql-dev --cluster=proxysql-dev-cluster --replication-set=proxysql-repl
-      fi
+      echo "Executing PXC Setup playbook"
+      setup_pxc_client_container
     else
       if [ -r ${BASEDIR}/lib/mysql/plugin/ha_tokudb.so ]; then
         TOKUDB_STARTUP="--plugin-load-add=tokudb=ha_tokudb.so --tokudb-check-jemalloc=0"
@@ -2819,6 +2798,45 @@ setup_pmm_pgss_integration () {
   popd
 }
 
+setup_pxc_client_container () {
+  echo "Setting up PMM and PXC Integration"
+
+  ## only doing it for jenkins workers, need ansible installed on the host
+  sudo yum install -y ansible || true
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/
+  if [ -z "$PXC_VERSION" ]
+  then
+    export PXC_VERSION=${pxc_version}
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
+  else
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+  fi
+  if [ -z "${PXC_CONTAINER}" ]
+  then
+    export PXC_CONTAINER=pxc_container_${PXC_VERSION}
+  else
+    export PXC_CONTAINER=${PXC_CONTAINER}_${PXC_VERSION}
+  fi
+  export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
+  popd
+}
+
 setup_pmm_psmdb_integration () {
   echo "Setting up PMM and PSMDB Integration"
 
@@ -2828,27 +2846,18 @@ setup_pmm_psmdb_integration () {
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/
-  if echo "$mo_version" | grep '4.4'; then
-    export PSMDB_VERSION=4.4
-  fi
-  if echo "$mo_version" | grep '5.0'; then
-    export PSMDB_VERSION=5.0
-  fi
-  if echo "$mo_version" | grep '6.0'; then
-    export PSMDB_VERSION=6.0
-  fi
-  if echo "$mo_version" | grep '4.2'; then
-    export PSMDB_VERSION=4.2
-  fi
-  if echo "$mo_version" | grep '4.0'; then
-    export PSMDB_VERSION=4.0
+  if [ -z "$PSMDB_VERSION" ]
+  then
+    export PSMDB_VERSION=${mo_version}
   fi
   if echo "$with_sharding" | grep '1'; then
     export PSMDB_SETUP=sharded
-  fi
-  if echo "$with_replica" | grep '1'; then
+  elif echo "$with_replica" | grep '1'; then
     export PSMDB_SETUP=replica
+  else
+    export PSMDB_SETUP=regular
   fi
+
   if [ -z "$CLIENT_VERSION" ]
   then
     export CLIENT_VERSION=dev-latest
@@ -2866,12 +2875,56 @@ setup_pmm_psmdb_integration () {
   fi
   if [ -z "${PSMDB_CONTAINER}" ]
   then
-    export PSMDB_CONTAINER=psmdb_pmm_${PSMDB_VERSION}
+    export PSMDB_CONTAINER=psmdb_pmm_${PSMDB_VERSION}_${PSMDB_SETUP}
   else
     export PSMDB_CONTAINER=${PSMDB_CONTAINER}_${PSMDB_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 psmdb_setup.yml
+  popd
+}
+
+
+setup_pmm_ps_integration () {
+  echo "Setting up PMM and Percona Server Integration"
+
+  ## only doing it for jenkins workers, need ansible installed on the host
+  sudo yum install -y ansible || true
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/
+  if [ -z "$PS_VERSION" ]
+  then
+    export PS_VERSION=${ps_version}
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "$QUERY_SOURCE" ]
+  then
+    export $QUERY_SOURCE=${query_source}
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
+  else
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+  fi
+  if [ -z "${PS_CONTAINER}" ]
+  then
+    export PS_CONTAINER=ps_pmm_${PS_VERSION}
+  else
+    export PS_CONTAINER=${PS_CONTAINER}_${PS_VERSION}
+  fi
+  export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ps_pmm_setup.yml
   popd
 }
 
@@ -2965,6 +3018,10 @@ fi
 
 if [ ! -z $setup_pgsql_vacuum ]; then
   setup_pgsql_vacuum
+fi
+
+if [ ! -z $setup_pmm_ps_integration ]; then
+  setup_pmm_ps_integration
 fi
 
 if [ ! -z $wipe_clients ]; then

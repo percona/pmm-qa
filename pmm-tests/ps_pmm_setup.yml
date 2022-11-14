@@ -1,0 +1,66 @@
+---
+# This playbook does following:
+#   enables Percona testing repository
+
+- hosts: all
+  become: true
+  become_method: sudo
+  vars:
+    ps_version: "{{ lookup('vars', 'extra_ps_version', default=lookup('env','PS_VERSION') | default('8.0', true) ) }}"
+    ps_tarball: "{{ lookup('vars', 'extra_ps_tarball', default=lookup('env','PS_TARBALL') | default('', true) ) }}"
+    ps_container: "{{ lookup('vars', 'extra_ps_container', default=lookup('env','PS_CONTAINER') | default('ps_container', true) ) }}"
+    query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('slowlog', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
+    number_of_nodes: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','PS_NODES') | default('3', true) ) }}"
+
+  tasks:
+  - name: cleanup container for client and DB setup
+    shell: >
+      docker ps -a --filter "name={{ ps_container }}" | grep -q . && docker stop {{ ps_container }} && docker rm -fv {{ ps_container }}
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Create pmm-qa network if not exist
+    shell: docker network create pmm-qa
+    ignore_errors: true
+
+  - name: Prepare Container for ps and Proxysql
+    shell: >
+      docker run -d --name={{ ps_container }}
+      phusion/baseimage:focal-1.2.0
+  
+  - name: Copy all required Artifacts to the docker ps_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ ps_container }} mkdir -p artifacts
+      - docker cp ./client_container_ps_setup.sh {{ ps_container }}:/
+
+  - name: Get Product tarball URL based on the version
+    shell: cat product_version_download_helper | grep -v pxc | grep ps | grep "\-{{ ps_version }}" | head -1 | awk -F'# ' '{print $3}'
+    register: ps_tarball
+    when: lookup('env', 'PS_TARBALL') == ''
+
+  - name: Setup libraries required inside the container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ ps_container }} apt-get update
+      - docker exec {{ ps_container }} apt-get -y install wget curl git gnupg2 lsb-release
+      - docker exec {{ ps_container }} apt-get -y install libaio1 libaio-dev libnuma-dev socat
+      - docker exec {{ ps_container }} apt install -y sysbench
+
+  - name: Install pmm2-client on the ps_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ ps_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
+      - docker network connect pmm-qa {{ ps_container }}
+      - docker exec {{ ps_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+
+  - name: Execute Setup script inside the ps ps_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ ps_container }} bash -xe ./client_container_ps_setup.sh --ps_version {{ ps_version }} --ps_tarball {{ ps_tarball.stdout }} --number_of_nodes {{ number_of_nodes }} --query_source {{ query_source }} > setup_ps_{{ ps_version }}.log
+
