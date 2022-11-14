@@ -41,7 +41,7 @@
       shell: "{{ item }}"
       with_items:
         - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
-        - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/mongodb_user_setup.js
+        - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-integration/mongoDb/mongodb_user_setup.js
         - docker network connect pmm-qa {{ psmdb_container }}
         - docker exec {{ psmdb_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 

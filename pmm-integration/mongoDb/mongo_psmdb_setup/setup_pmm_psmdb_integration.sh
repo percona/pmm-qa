@@ -53,5 +53,5 @@ echo "Setting up PMM and PSMDB Integration"
     export PSMDB_CONTAINER=${PSMDB_CONTAINER}_${PSMDB_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
-  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml 
+  #ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml 
   #popd 

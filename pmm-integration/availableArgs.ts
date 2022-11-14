@@ -45,6 +45,7 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
       console.log((await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh')).stderr);
+      console.log(await executeCommand('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml '))
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
       core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
