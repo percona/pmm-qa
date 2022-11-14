@@ -1,6 +1,7 @@
 import { executeCommand, setEnvVariable } from "./helpers/commandLine";
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
+import core from '@actions/core';
 
 export interface SetupsInterface {
   arg: string;
@@ -15,6 +16,7 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await pgsqlVacuumSetup(parameters);
       await setEnvVariable("INTEGRATION_FLAG", "@pgsql_vacuum");
+      core.exportVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
     },
   },
   {
@@ -24,6 +26,7 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
       console.log(await executeCommand('./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-pgsm-integration");
+      core.exportVariable('INTEGRATION_FLAG', '@pmm-pgsm-integration');
     },
   },
   {
@@ -33,6 +36,7 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
       console.log(await executeCommand('./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh'));
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-pgss-integration");
+      core.exportVariable('INTEGRATION_FLAG', '@pmm-pgss-integration');
     },
   },
   {
@@ -42,6 +46,7 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
       console.log(await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh'));
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
+      core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
   }
 ];
