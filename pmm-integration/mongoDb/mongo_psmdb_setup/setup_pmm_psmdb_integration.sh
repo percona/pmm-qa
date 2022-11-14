@@ -5,7 +5,7 @@ echo "Setting up PMM and PSMDB Integration"
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
-  pushd $SCRIPT_PWD/
+  #pushd $SCRIPT_PWD/
   if echo "$MO_VERSION" | grep '4.4'; then
     export PSMDB_VERSION=4.4
   fi
@@ -50,4 +50,4 @@ echo "Setting up PMM and PSMDB Integration"
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 psmdb_setup.yml 
-  popd 
+  #popd 
