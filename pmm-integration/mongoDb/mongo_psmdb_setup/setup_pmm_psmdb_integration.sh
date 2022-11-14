@@ -1,7 +1,12 @@
 echo "Setting up PMM and PSMDB Integration"
 
   ## only doing it for jenkins workers, need ansible installed on the host
-  sudo yum install -y ansible || true
+  cat /etc/*-release
+  #sudo yum install -y ansible || true
+  sudo apt update -y
+  sudo apt install software-properties-common -y
+  sudo add-apt-repository --yes --update ppa:ansible/ansible -y
+  sudo apt install ansible -y
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
