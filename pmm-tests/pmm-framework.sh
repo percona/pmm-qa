@@ -2904,7 +2904,7 @@ setup_pmm_ps_integration () {
   fi
   if [ -z "$QUERY_SOURCE" ]
   then
-    export $QUERY_SOURCE=${query_source}
+    export QUERY_SOURCE=${query_source}
   fi
   if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
   then
