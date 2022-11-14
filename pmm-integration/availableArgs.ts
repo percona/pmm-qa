@@ -1,7 +1,7 @@
 import { executeCommand, setEnvVariable } from "./helpers/commandLine";
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
-import core from '@actions/core';
+import * as core from '@actions/core';
 
 export interface SetupsInterface {
   arg: string;
