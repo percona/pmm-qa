@@ -1,6 +1,7 @@
 echo "Setting up PMM and PSMDB Integration"
 
   ## only doing it for jenkins workers, need ansible installed on the host
+  ls
   cat /etc/*-release
   #sudo yum install -y ansible || true
   sudo apt update -y
