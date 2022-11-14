@@ -31,5 +31,5 @@ else
 fi
 export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
 
-ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 /srv/pmm-qa/pmm-integration/postgres/pgsql_pgss_setup/pgsql_pgss_setup.yml
+ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgss_setup/pgsql_pgss_setup.yml
 popd
