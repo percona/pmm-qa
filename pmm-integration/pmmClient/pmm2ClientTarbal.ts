@@ -1,23 +1,34 @@
 import fs from 'fs';
 import url from "url";
 import path from "path";
-import https, { request } from 'https';
-import { unzip } from 'node:zlib';
+import https from 'https';
 import decompress from "decompress";
-import { ClientRequest, IncomingMessage } from 'http';
 import { executeCommand } from '../helpers/commandLine';
+import { stopAndRemoveContainer } from '../helpers/docker';
 
 const setup_pmm_client_tarball = async (tarballURL: string) => {
 
-    var parsed = url.parse(tarballURL);
+    // Set up system variables
+    const containerName = "ubuntuBase"
+    const parsed = url.parse(tarballURL);
     const clientFileName = path.basename(parsed.pathname!)
-    const pathToPmmClient = `${path.resolve(__dirname)}/tarball/bin`
 
+    // Remove old containers from previous runs.
+    await stopAndRemoveContainer(containerName);
+
+    // Download and decompress pmm client.
     const file = fs.createWriteStream(clientFileName);
     await getTarball(tarballURL, file);
-    await decompress(clientFileName, 'pmmClient/tarball/', { strip: 1 })
-    await executeCommand(`echo "export PATH=$PATH:${pathToPmmClient}"`)
-    await executeCommand(`echo $PATH`)
+    await decompress(clientFileName, 'pmmClient/pmm2Client/', { strip: 1 })
+
+    // Run empty base ubuntu container
+    await executeCommand(`docker run -d -e PATH=/pmm2Client/bin:$PATH --name=${containerName} phusion/baseimage:focal-1.2.0`);
+
+    // Copy pmm client into docker container
+    await executeCommand(`docker cp ./pmmClient/. ${containerName}:/`)
+
+    // Test that pmm client is running
+    await executeCommand(`docker exec ${containerName} pmm-admin --version`)
 }
 
 
