@@ -4,6 +4,7 @@ import SetupParameters from '../helpers/setupParameters.interface';
 
 const pgsqlVacuumSetup = async ({ pgsqlVersion = '13' }: SetupParameters) => {
   console.log('Setting up Postgres for vacuum monitoring');
+  console.log(`PGSQL version is: ${pgsqlVersion}`)
   const dockerContainerName = 'pgsql_vacuum_db';
 
   await stopAndRemoveContainer(dockerContainerName);
