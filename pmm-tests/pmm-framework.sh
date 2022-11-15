@@ -2742,8 +2742,6 @@ setup_pmm_pgsm_integration () {
   if [ -z "${PGSQL_PGSM_CONTAINER}" ]
   then
     export PGSQL_PGSM_CONTAINER=pgsql_pgsm_${PGSQL_VERSION}
-  else
-    export PGSQL_PGSM_CONTAINER=${PGSQL_PGSM_CONTAINER}_${PGSQL_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgsm_setup.yml
@@ -2790,8 +2788,6 @@ setup_pmm_pgss_integration () {
   if [ -z "${PGSQL_PGSS_CONTAINER}" ]
   then
     export PGSQL_PGSS_CONTAINER=pgsql_pgss_${PGSQL_VERSION}
-  else
-    export PGSQL_PGSS_CONTAINER=${PGSQL_PGSS_CONTAINER}_${PGSQL_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgss_setup.yml
@@ -2829,8 +2825,6 @@ setup_pxc_client_container () {
   if [ -z "${PXC_CONTAINER}" ]
   then
     export PXC_CONTAINER=pxc_container_${PXC_VERSION}
-  else
-    export PXC_CONTAINER=${PXC_CONTAINER}_${PXC_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
@@ -2876,8 +2870,6 @@ setup_pmm_psmdb_integration () {
   if [ -z "${PSMDB_CONTAINER}" ]
   then
     export PSMDB_CONTAINER=psmdb_pmm_${PSMDB_VERSION}_${PSMDB_SETUP}
-  else
-    export PSMDB_CONTAINER=${PSMDB_CONTAINER}_${PSMDB_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 psmdb_setup.yml
@@ -2920,8 +2912,6 @@ setup_pmm_ps_integration () {
   if [ -z "${PS_CONTAINER}" ]
   then
     export PS_CONTAINER=ps_pmm_${PS_VERSION}
-  else
-    export PS_CONTAINER=${PS_CONTAINER}_${PS_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ps_pmm_setup.yml
