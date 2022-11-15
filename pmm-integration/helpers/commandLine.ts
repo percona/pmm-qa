@@ -8,9 +8,6 @@ export const executeCommand = async (command: string) => {
 
   console.log(response.stdout)
 
-  if (response.stderr) {
-    throw new Error(`Command: "${command}" failed due to error: "${response.stderr}"`)
-  }
   return response;
 }
 
