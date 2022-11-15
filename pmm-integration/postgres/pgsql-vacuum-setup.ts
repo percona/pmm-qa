@@ -32,13 +32,15 @@ const pgsqlVacuumSetup = async ({ pgsqlVersion = 'latest' }: SetupParameters) =>
     const newLength = Math.floor(Math.random() * 120) + 100;
     const table = Math.floor(Math.random() * 100) + 1;
     const count: string = (await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "select count(*) from film_testing_${table} where length=${oldLength};" | tail -3 | head -1 | xargs`)).stdout.trim();
+    console.log(`Count is: ${count}`)
     await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "delete from film_testing_${table} where length=${oldLength};"`);
     let i = 0;
     while (i < parseInt(count)) {
+      console.log(`i is: ${i}`)
       await executeCommand(`docker exec ${dockerContainerName} psql -U postgres -d dvdrental -c "insert into film_testing_${table} values (${i}, 'title for ${i}', 'Description for ${i}', ${oldLength});" `)
       i++;
     }
-    console.log(await executeCommand(`docker exec  ${dockerContainerName} psql -U postgres -d dvdrental -c "update film_testing_${table} set length=${newLength} where length=${oldLength};"`))
+    await executeCommand(`docker exec  ${dockerContainerName} psql -U postgres -d dvdrental -c "update film_testing_${table} set length=${newLength} where length=${oldLength};"`);
     console.log('Last Command.')
     j++;
   }
