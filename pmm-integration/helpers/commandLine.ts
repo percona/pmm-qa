@@ -6,8 +6,14 @@ const awaitExec = promisify(exec);
 export const executeCommand = async (command: string) => {
   const response = await awaitExec(command, { env: process.env });
 
-  console.log(`${command}: command logged: ${response.stdout}`)
-  console.log(`${command}: command logged error : ${response.stderr}`)
+  console.log(command)
+  if (response.stdout) {
+    console.log(`Command logged: ${response.stdout}`)
+  }
+  if (response.stderr) {
+    console.log(`Command logged error : ${response.stderr}`)
+  }
+
 
   return response;
 }
