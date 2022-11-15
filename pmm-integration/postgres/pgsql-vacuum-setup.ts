@@ -2,7 +2,7 @@ import { executeCommand } from "../helpers/commandLine";
 import { stopAndRemoveContainer } from "../helpers/docker";
 import SetupParameters from '../helpers/setupParameters.interface';
 
-const pgsqlVacuumSetup = async ({ pgsqlVersion = 'latest' }: SetupParameters) => {
+const pgsqlVacuumSetup = async ({ pgsqlVersion = '13' }: SetupParameters) => {
   console.log('Setting up Postgres for vacuum monitoring');
   const dockerContainerName = 'pgsql_vacuum_db';
 
