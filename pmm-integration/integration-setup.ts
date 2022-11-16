@@ -1,24 +1,37 @@
 import validateArgs from "./helpers/validateArgs";
-import { executeCommand, setEnvVariable } from "./helpers/commandLine";
+import { executeCommand, setDefaulEnvVariables, setEnvVariable } from "./helpers/commandLine";
 import { availableSetups, SetupsInterface } from "./availableArgs";
 import setup_pmm_client_tarball from "./pmmClient/pmm2ClientTarbal";
+import { recreateNetwork, stopAndRemoveContainer } from "./helpers/docker";
+import SetupParameters from "./helpers/setupParameters.interface";
+import * as core from '@actions/core';
+
+export const dockerNetworkName = "pmm-integration-network"
+export const pmmIntegrationServerName = 'pmm-integration-server'
 
 const run = async () => {
-  let pgsqlVersion: string | undefined;
-  let moVersion: string | undefined;
-
+  let parameters: SetupParameters = {};
   const commandLineArgs: string[] = process.argv.slice(2);
+
   validateArgs(commandLineArgs);
+
+  await stopAndRemoveContainer(pmmIntegrationServerName);
+
+  await recreateNetwork(dockerNetworkName);
+
+  await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
 
   for await (const [_index, value] of commandLineArgs.entries()) {
     switch (true) {
       case value.includes('--pgsql-version'):
-        pgsqlVersion = value.split("=")[1];
-        await setEnvVariable('PGSQL_VERSION', pgsqlVersion);
+        parameters.pgsqlVersion = value.split("=")[1];
+        await setEnvVariable('PGSQL_VERSION', parameters.pgsqlVersion);
+        core.exportVariable('PGSQL_VERSION', parameters.pgsqlVersion);
         break
       case value.includes('--mo-version'):
-        moVersion = value.split("=")[1];
-        await setEnvVariable('MO_VERSION', moVersion);
+        parameters.moVersion = value.split("=")[1];
+        await setEnvVariable('MO_VERSION', parameters.moVersion);
+        core.exportVariable('MO_VERSION', parameters.moVersion);
         break
       case value.includes('--setup-pmm-client-tarball'):
         let tarballURL = value.split("=")[1];
@@ -28,16 +41,13 @@ const run = async () => {
         break
     }
   }
-  /*
-    await executeCommand(`docker run -d --restart always \
-     -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
-     --publish 8080:80 --publish 8443:443 \
-     --name pmm-server-integration percona/pmm-server:latest`);
-  */
+
+  await setDefaulEnvVariables(parameters);
+
   for await (const [_index, value] of commandLineArgs.entries()) {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)
     if (setup) {
-      await setup.function({ pgsqlVersion, moVersion })
+      await setup.function(parameters)
     }
   }
 }

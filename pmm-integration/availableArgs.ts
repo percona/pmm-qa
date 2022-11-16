@@ -1,6 +1,7 @@
 import { executeCommand, setEnvVariable } from "./helpers/commandLine";
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
+import setup_pmm_pgsm_integration from "./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration";
 import * as core from '@actions/core';
 
 export interface SetupsInterface {
@@ -23,8 +24,9 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-pgsm-integration',
     description: 'Use this option to setup PMM-Client with PGSM for integration testing',
     function: async (parameters: SetupParameters) => {
-      await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
-      console.log(await executeCommand('./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
+      // await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
+      await setup_pmm_pgsm_integration(parameters)
+      // console.log(await executeCommand('./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-pgsm-integration");
       core.exportVariable('INTEGRATION_FLAG', '@pmm-pgsm-integration');
     },
