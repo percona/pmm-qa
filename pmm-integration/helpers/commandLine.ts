@@ -6,14 +6,17 @@ import * as core from '@actions/core';
 const awaitExec = promisify(exec);
 
 export const executeCommand = async (command: string) => {
+  let response;
   try {
-    const response = await awaitExec(command)
+    response = await awaitExec(command)
 
     if (response.stdout) {
       console.log(`Command logged response: ${response.stdout}`)
     }
     return response;
   } catch (err: any) {
+    console.log(response?.stdout)
+    console.log(response?.stdout)
     throw new Error(err)
   }
 }
