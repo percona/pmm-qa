@@ -18,11 +18,12 @@ export const executeCommand = async (command: string) => {
   }
 }
 export const executeAnsiblePlaybook = async (command: string) => {
+  let ansibleResponse;
   try {
-    const response = await awaitExec(command)
-      .then((response) => console.log(response.stdout))
+    await awaitExec(command)
+      .then((response) => ansibleResponse = response.stdout)
       .catch((err) => console.log(new String(err.stdout)))
-    return response;
+    return ansibleResponse;
   } catch (err: any) {
     throw new Error(err)
   }
