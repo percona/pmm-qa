@@ -19,7 +19,9 @@ export const executeCommand = async (command: string) => {
 }
 export const executeAnsiblePlaybook = async (command: string) => {
   try {
-    const response = await awaitExec(command).catch((err) => console.log(new String(err.stdout)))
+    const response = await awaitExec(command)
+      .then((response) => console.log(response.stdout))
+      .catch((err) => console.log(new String(err.stdout)))
     return response;
   } catch (err: any) {
     throw new Error(err)
