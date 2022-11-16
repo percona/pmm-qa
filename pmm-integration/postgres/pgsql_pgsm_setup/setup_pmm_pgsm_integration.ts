@@ -4,6 +4,8 @@ import * as core from '@actions/core';
 
 const setup_pmm_pgsm_integration = async (parameters: SetupParameters) => {
 
+    await executeCommand('sudo yum install -y ansible');
+
     await setEnvVariable("PGSQL_PGSM_CONTAINER", `pgsql_pgsm_${process.env['PGSQL_VERSION']}`);
     core.exportVariable('PGSQL_PGSM_CONTAINER', `pgsql_pgsm_${process.env['PGSQL_VERSION']}`);
 
