@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { ChildProcess, exec } from 'child_process';
 import { promisify } from 'util';
 import SetupParameters from './setupParameters.interface';
 import * as core from '@actions/core';
@@ -20,16 +20,15 @@ export const executeCommand = async (command: string) => {
     throw new Error(err)
   }
 }
-export const executeAnsiblePlaybook = async (command: string) => {
-  let ansibleResponse;
-  try {
-    await awaitExec(command)
-      .then((response) => ansibleResponse = response.stdout)
-      .catch((err) => console.log(new String(err.stdout)))
-    return ansibleResponse;
-  } catch (err: any) {
-    throw new Error(err)
-  }
+export const executeAnsiblePlaybook = async (command: string): Promise<ChildProcess> => {
+  return exec(command, (error, stdout, stderr) => {
+    console.log(`stdout: ${stdout}`);
+    console.error(`stderr: ${stderr}`);
+    if (error) {
+      console.error(`exec error: ${error}`);
+      return;
+    }
+  });
 }
 
 export const executeCommandIgnoreErrors = async (command: string) => {

@@ -23,7 +23,7 @@ const setup_pmm_pgsm_integration = async (parameters: SetupParameters) => {
     await executeCommandIgnoreErrors('docker network create pmm-qa')
     await executeCommandIgnoreErrors(`docker network connect ${pmmServerContainer}`)
     console.log('Run Ansible Playbook.')
-    console.log(await executeCommand('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgsm_setup/pgsql_pgsm_setup.yml'))
+    console.log(await executeAnsiblePlaybook('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgsm_setup/pgsql_pgsm_setup.yml'))
 
 }
 
