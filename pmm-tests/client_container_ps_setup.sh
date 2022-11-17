@@ -60,6 +60,15 @@ if [ "$query_source" == "slowlog" ]; then
     mysql -h 127.0.0.1 -u ${PS_USER} -p${PS_PASSWORD} --port $PS_PORT -e "SET GLOBAL log_slow_slave_statements=ON;"
     pmm-admin add mysql --username=${PS_USER} --password=${PS_PASSWORD} --port=3307 --query-source=slowlog mysql_client_slowlog_${SERVICE_RANDOM_NUMBER}
 else
+    mysql -h 127.0.0.1 -u ${PS_USER} -p${PS_PASSWORD} --port $PS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
+    if echo "$ps_version" | grep '5.7'; then
+       mysql -h 127.0.0.1 -u ${PS_USER} -p${PS_PASSWORD} --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"
+       mysql -h 127.0.0.1 -u ${PS_USER} -p${PS_PASSWORD} --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"
+       mysql -h 127.0.0.1 -u ${PS_USER} -p${PS_PASSWORD} --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"
+       mysql -h 127.0.0.1 -u ${PS_USER} -p${PS_PASSWORD} --port $PS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"
+       mysql -h 127.0.0.1 -u ${PS_USER} -p${PS_PASSWORD} --port $PS_PORT -e "SET GLOBAL query_response_time_stats=ON;"
+    fi
+    mysql -h 127.0.0.1 -u ${PS_USER} -p${PS_PASSWORD} --port $PS_PORT -e "UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%statements%';"
     pmm-admin add mysql --username=${PS_USER} --password=${PS_PASSWORD} --port=3307 --query-source=perfschema mysql_client_perfschema_${SERVICE_RANDOM_NUMBER}
 fi
 
