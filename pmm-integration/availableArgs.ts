@@ -57,7 +57,7 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this option for percona-server and PMM using dbdeployer',
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./mysql/pmm_ps_integration/pmm_ps_integration.sh');
-      console.log((await executeCommand('./mysql/pmm_ps_integration/pmm_ps_integration.sh')).stderr);
+      console.log((await executeCommand('./mysql/pmm_ps_integration/pmm_ps_integration.sh')));
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
       core.exportVariable('INTEGRATION_FLAG', '@pmm-ps-integration');
     },
