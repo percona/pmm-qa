@@ -15,9 +15,7 @@ echo "Setting up PMM and Percona Server Integration"
   fi
   if [ -z "$QUERY_SOURCE" ]
   then
-    echo "QUERY SOURCE IS: "
-    echo ${query_source}
-    export $QUERY_SOURCE=${query_source}
+    export QUERY_SOURCE=${query_source}
   fi
   if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
   then
