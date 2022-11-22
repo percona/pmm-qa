@@ -15,4 +15,4 @@ wget https://github.com/ncabatoff/process-exporter/releases/download/v${NODE_PRO
 sudo rpm -i process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
 sudo service process-exporter start
 sleep 10
-pmm-admin add external --group=processes--listen-port=9256 --service-name=external_nodeprocess
+pmm-admin add external --group=processes --listen-port=9256 --service-name=external_nodeprocess
