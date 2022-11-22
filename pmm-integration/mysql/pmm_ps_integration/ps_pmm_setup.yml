@@ -7,7 +7,7 @@
   become_method: sudo
   vars:
     ps_version: "{{ lookup('vars', 'extra_ps_version', default=lookup('env','PS_VERSION') | default('8.0', true) ) }}"
-    ps_tarball: "{{ lookup('vars', 'extra_ps_tarball', default=lookup('env','PS_TARBALL') | default('', true) ) }}"
+    ps_tarball: "{{ lookup('vars', 'extra_ps_tarball', default=lookup('env','PS_TARBALL') | default('https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-8.0.29-21/binary/tarball/Percona-Server-8.0.29-21-Linux.x86_64.glibc2.17-minimal.tar.gz', true) ) }}"
     ps_container: "{{ lookup('vars', 'extra_ps_container', default=lookup('env','PS_CONTAINER') | default('ps_container', true) ) }}"
     query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('slowlog', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
