@@ -20,7 +20,7 @@ then
       export ps_version=8
 fi
 
-if [ -z "$ps_tarball" ]
+if [ "$ps_tarball" = "none" ]
 then
       export ps_tarball=https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-8.0.29-21/binary/tarball/Percona-Server-8.0.29-21-Linux.x86_64.glibc2.17-minimal.tar.gz
 fi
