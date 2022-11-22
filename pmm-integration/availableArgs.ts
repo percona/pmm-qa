@@ -51,6 +51,16 @@ export const availableSetups: SetupsInterface[] = [
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
       core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
+  },
+  {
+    arg: '--setup-pmm-haproxy-integration',
+    description: 'Use this option for Haproxy setup with PMM2',
+    function: async (parameters: SetupParameters) => {
+      await executeCommand('chmod +x ./otherConfigs/pmm-haproxy-setup.sh');
+      console.log(await executeCommand('./otherConfigs/pmm-haproxy-setup.sh'));
+      await setEnvVariable("INTEGRATION_FLAG", "@pmm-haproxy-integration");
+      core.exportVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
+    },
   }
 ];
 
