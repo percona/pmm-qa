@@ -51,6 +51,16 @@ export const availableSetups: SetupsInterface[] = [
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
       core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
+  },
+  {
+    arg: '--setup-external-service',
+    description: 'Use this option for Percona MongoDB setup with PMM2',
+    function: async (parameters: SetupParameters) => {
+      await executeCommand('chmod +x ./otherConfigs/setup_external_service.sh');
+      console.log(await executeCommand('./otherConfigs/setup_external_service.sh'));
+      await setEnvVariable("INTEGRATION_FLAG", "@external-service");
+      core.exportVariable('INTEGRATION_FLAG', '@external-service');
+    },
   }
 ];
 
