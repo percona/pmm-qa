@@ -40,6 +40,9 @@ touch sysbench_run.txt
 curl -L -s https://bit.ly/dbdeployer | bash || true
 
 ### Get the tarball
+echo "Tarball is: "
+echo ${ps_tarball}
+echo $ps_tarball
 wget ${ps_tarball}
 mkdir ~/ps${ps_version} || true
 
