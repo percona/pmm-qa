@@ -63,4 +63,4 @@
     - name: Execute Setup script inside the ps ps_container
       shell: "{{ item }}"
       with_items:
-        - docker exec {{ ps_container }} bash -xe ./client_container_ps_setup.sh --ps_version {{ ps_version }} --ps_tarball {{ ps_tarball.stdout }} --number_of_nodes {{ number_of_nodes }} --query_source {{ query_source }} > setup_ps_{{ ps_version }}.log
+        - docker exec {{ ps_container }} bash -xe ./client_container_ps_setup.sh --ps_version {{ ps_version }} --ps_tarball {{ ps_tarball }} --number_of_nodes {{ number_of_nodes }} --query_source {{ query_source }} > setup_ps_{{ ps_version }}.log
