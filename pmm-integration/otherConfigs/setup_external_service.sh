@@ -1,5 +1,5 @@
 wget https://github.com/oliver006/redis_exporter/releases/download/v1.14.0/redis_exporter-v1.14.0.linux-386.tar.gz
-export NODE_PROCESS_EXPORTER_VERSION="0.7.5"gz
+export NODE_PROCESS_EXPORTER_VERSION="0.7.5"
 tar -xvf redis_exporter-v1.14.0.linux-386.tar.gz
 rm redis_exporter*.tar.gz
 mv redis_* redis_exporter
