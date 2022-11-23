@@ -27,13 +27,13 @@
         docker run -d -p 42100:42100 --name={{ haproxy_container }}
         phusion/baseimage:focal-1.1.0
 
-#   - name: Copy all required Artifacts to the docker haproxy_container
-#     shell: '{{ item }}'
-#      with_items:
-#        - docker cp ./otherConfigs/haproxy/haproxy_setup.sh {{ haproxy_container }}:/
-#        - docker cp ./otherConfigs/haproxy/haproxy.cfg {{ haproxy_container }}:/
-#        - docker exec {{ haproxy_container }} apt-get update
-#        - docker exec {{ haproxy_container }} apt-get -y install wget curl git gnupg2 lsb-release
+   - name: Copy all required Artifacts to the docker haproxy_container
+     shell: '{{ item }}'
+      with_items:
+        - docker cp ./otherConfigs/haproxy/haproxy_setup.sh {{ haproxy_container }}:/
+        - docker cp ./otherConfigs/haproxy/haproxy.cfg {{ haproxy_container }}:/
+        - docker exec {{ haproxy_container }} apt-get update
+        - docker exec {{ haproxy_container }} apt-get -y install wget curl git gnupg2 lsb-release
 
 #    - name: Setup haproxy for monitoring
 #      shell: '{{ item }}'
