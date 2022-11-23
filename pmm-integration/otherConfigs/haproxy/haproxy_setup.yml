@@ -22,53 +22,52 @@
     - name: Create pmm-qa network if not exist
       shell: docker network create pmm-qa
       ignore_errors: true
+#    - name: Prepare Container for HAPROXY
+#      shell: >
+#        docker run -d -p 42100:42100 --name={{ haproxy_container }}
+#        phusion/baseimage:focal-1.1.0
 
-    - name: Prepare Container for HAPROXY
-      shell: >
-        docker run -d -p 42100:42100 --name={{ haproxy_container }}
-        phusion/baseimage:focal-1.1.0
+#   - name: Copy all required Artifacts to the docker haproxy_container
+#     shell: '{{ item }}'
+#      with_items:
+#        - docker cp ./otherConfigs/haproxy/haproxy_setup.sh {{ haproxy_container }}:/
+#        - docker cp ./otherConfigs/haproxy/haproxy.cfg {{ haproxy_container }}:/
+#        - docker exec {{ haproxy_container }} apt-get update
+#        - docker exec {{ haproxy_container }} apt-get -y install wget curl git gnupg2 lsb-release
 
-    - name: Copy all required Artifacts to the docker haproxy_container
-      shell: '{{ item }}'
-      with_items:
-        - docker cp ./otherConfigs/haproxy/haproxy_setup.sh {{ haproxy_container }}:/
-        - docker cp ./otherConfigs/haproxy/haproxy.cfg {{ haproxy_container }}:/
-        - docker exec {{ haproxy_container }} apt-get update
-        - docker exec {{ haproxy_container }} apt-get -y install wget curl git gnupg2 lsb-release
+#    - name: Setup haproxy for monitoring
+#      shell: '{{ item }}'
+#      with_items:
+#        - docker exec {{ haproxy_container }} bash -x ./haproxy_setup.sh > ~/setup_haproxy.log
 
-    - name: Setup haproxy for monitoring
-      shell: '{{ item }}'
-      with_items:
-        - docker exec {{ haproxy_container }} bash -x ./haproxy_setup.sh > ~/setup_haproxy.log
+#    - name: Install pmm2-client on the haproxy_container
+#      shell: '{{ item }}'
+#      with_items:
+#        - docker exec {{ haproxy_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
+#        - docker network connect pmm-qa {{ haproxy_container }}
+#        - docker exec {{ haproxy_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 
-    - name: Install pmm2-client on the haproxy_container
-      shell: '{{ item }}'
-      with_items:
-        - docker exec {{ haproxy_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
-        - docker network connect pmm-qa {{ haproxy_container }}
-        - docker exec {{ haproxy_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+#    - name: Wait for Haproxy building to be finished and binary available
+#      shell: docker exec {{ haproxy_container }} ls -la /usr/sbin/haproxy
+#      retries: 6
+#      delay: 10
 
-    - name: Wait for Haproxy building to be finished and binary available
-      shell: docker exec {{ haproxy_container }} ls -la /usr/sbin/haproxy
-      retries: 6
-      delay: 10
+#    - name: Start haproxy for monitoring
+#      shell: '{{ item }}'
+#      with_items:
+#        - docker exec {{ haproxy_container }} haproxy -f haproxy.cfg -D
 
-    - name: Start haproxy for monitoring
-      shell: '{{ item }}'
-      with_items:
-        - docker exec {{ haproxy_container }} haproxy -f haproxy.cfg -D
+#    - name: Remove HAPROXY for monitoring from PMM if already exist with same service name
+#      shell: '{{ item }}'
+#      with_items:
+#        - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove haproxy {{ haproxy_container }}_service'
+#      ignore_errors: true
 
-    - name: Remove HAPROXY for monitoring from PMM if already exist with same service name
-      shell: '{{ item }}'
-      with_items:
-        - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove haproxy {{ haproxy_container }}_service'
-      ignore_errors: true
+#    - name: Add HAPROXY for Monitoring to PMM via pmm-admin add haproxy command
+#      shell: '{{ item }}'
+#      with_items:
+#        - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
+#        - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add haproxy --listen-port=42100 --environment=haproxy {{ haproxy_container }}_service'
 
-    - name: Add HAPROXY for Monitoring to PMM via pmm-admin add haproxy command
-      shell: '{{ item }}'
-      with_items:
-        - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-        - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add haproxy --listen-port=42100 --environment=haproxy {{ haproxy_container }}_service'
-
-    - name: Run ping to FE of HAPROXY to monitore the load balancing
-      shell: while true; do curl http://localhost:42100/; sleep 10; done >/dev/null 2>&1 &
+#    - name: Run ping to FE of HAPROXY to monitore the load balancing
+#      shell: while true; do curl http://localhost:42100/; sleep 10; done >/dev/null 2>&1 &
