@@ -31,9 +31,9 @@
      shell: '{{ item }}'
       with_items:
         - docker cp ./haproxy_setup.sh {{ haproxy_container }}:/
-        - docker cp ./haproxy.cfg {{ haproxy_container }}:/
-        - docker exec {{ haproxy_container }} apt-get update
-        - docker exec {{ haproxy_container }} apt-get -y install wget curl git gnupg2 lsb-release
+#        - docker cp ./haproxy.cfg {{ haproxy_container }}:/
+#        - docker exec {{ haproxy_container }} apt-get update
+#        - docker exec {{ haproxy_container }} apt-get -y install wget curl git gnupg2 lsb-release
 
 #    - name: Setup haproxy for monitoring
 #      shell: '{{ item }}'
