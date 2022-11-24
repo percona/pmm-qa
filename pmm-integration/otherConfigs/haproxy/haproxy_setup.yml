@@ -44,8 +44,8 @@
       shell: '{{ item }}'
       with_items:
         - docker exec {{ haproxy_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
-        - docker network connect pmm-qa {{ haproxy_container }}
-        - docker exec {{ haproxy_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+#        - docker network connect pmm-qa {{ haproxy_container }}
+#        - docker exec {{ haproxy_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 
 #    - name: Wait for Haproxy building to be finished and binary available
 #      shell: docker exec {{ haproxy_container }} ls -la /usr/sbin/haproxy
