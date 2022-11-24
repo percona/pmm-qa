@@ -62,7 +62,6 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-haproxy-integration',
     description: 'Use this option for Haproxy setup with PMM2',
     function: async (parameters: SetupParameters) => {
-      console.log(await executeCommand('cat ./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
       await executeCommand('chmod +x ./otherConfigs/haproxy/pmm-haproxy-setup.sh');
       console.log(await executeCommand('./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
       console.log(await executeCommand('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml'));
