@@ -117,12 +117,13 @@ usage () {
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
   echo " --setup-pgsql-vacuum           Use this do setup postgres for vacuum monitoring tests "
   echo " --setup-pmm-ps-integration     Use this do setup for percona-server and PMM using dbdeployer "
+  echo " --setup-checks-basic           Use this to generate some basic checks failure for ps/pgsql/mongodb"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,setup-checks-basic,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -147,6 +148,10 @@ do
     ;;
     --setup-pmm-ps-integration )
     setup_pmm_ps_integration=1
+    shift
+    ;;
+    --setup-checks-basic )
+    setup_checks_basic=1
     shift
     ;;
     --with-replica )
@@ -2876,6 +2881,32 @@ setup_pmm_psmdb_integration () {
   popd
 }
 
+setup_checks_basic () {
+  echo "Setting up basic Checks Trigger"
+  export password=oFukiBRg7GujAJXq3tmd
+
+  docker run -d --name mongodb-advisor-checks \
+  -e MONGO_INITDB_ROOT_USERNAME=root \
+  -e MONGO_INITDB_ROOT_PASSWORD=${password} \
+  -p 27047:27017 \
+  percona/percona-server-mongodb:4.2
+
+  docker run -d --name postgres-advisor-checks \
+  -e POSTGRES_USER=pmm-agent \
+  -e POSTGRES_PASSWORD=${password} \
+  -p 5440:5432 \
+  postgres:14
+
+  docker run -d --name mysql-advisor-checks \
+  -e MYSQL_ROOT_PASSWORD=${password} \
+  -p 3310:3306 \
+  percona:5.7
+
+  ## Adding those services
+  pmm-admin add mysql --username=root --port=3310 --password=${password} --query-source=perfschema mysql_checks_service
+  pmm-admin add postgresql --username=pmm-agent --port=5440 --password=${password}  postgres_checks_service
+  pmm-admin add mongodb --username=root --port=27047 --password=${password} mongodb_checks_service
+}
 
 setup_pmm_ps_integration () {
   echo "Setting up PMM and Percona Server Integration"
@@ -3012,6 +3043,10 @@ fi
 
 if [ ! -z $setup_pmm_ps_integration ]; then
   setup_pmm_ps_integration
+fi
+
+if [ ! -z $setup_checks_basic ]; then
+  setup_checks_basic
 fi
 
 if [ ! -z $wipe_clients ]; then
