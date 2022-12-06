@@ -2,24 +2,22 @@ import { ChildProcess, exec } from 'child_process';
 import { promisify } from 'util';
 import SetupParameters from './setupParameters.interface';
 import * as core from '@actions/core';
+import shell from 'shelljs';
 
 const awaitExec = promisify(exec);
 
 export const executeCommand = async (command: string) => {
-  let response;
-  try {
-    response = await awaitExec(command)
-
-    if (response.stdout) {
-      console.log(`Command logged response: ${response.stdout}`)
-    }
-    return response;
-  } catch (err: any) {
-    console.log(response?.stdout)
-    console.log(response?.stdout)
-    throw new Error(err)
+  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
+  if (code === 0) {
+    `The command ${command} was run successfully with result: ${stdout}`;
+  } else {
+    `The command ${command} failed with error: ${stderr}`;
   }
+
+
+  return { stdout, stderr };
 }
+
 export const executeAnsiblePlaybook = async (command: string): Promise<ChildProcess> => {
   return exec(command, (error, stdout, stderr) => {
     console.log(`stdout: ${stdout}`);
