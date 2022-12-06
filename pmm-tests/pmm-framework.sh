@@ -2889,18 +2889,20 @@ setup_checks_basic () {
   -e MONGO_INITDB_ROOT_USERNAME=root \
   -e MONGO_INITDB_ROOT_PASSWORD=${password} \
   -p 27047:27017 \
-  percona/percona-server-mongodb:4.2
+  percona/percona-server-mongodb:4.2.20
 
   docker run -d --name postgres-advisor-checks \
   -e POSTGRES_USER=pmm-agent \
   -e POSTGRES_PASSWORD=${password} \
   -p 5440:5432 \
-  postgres:14
+  postgres:14.1
 
   docker run -d --name mysql-advisor-checks \
   -e MYSQL_ROOT_PASSWORD=${password} \
   -p 3310:3306 \
-  percona:5.7
+  percona:5.7.35
+
+  sleep 30
 
   ## Adding those services
   pmm-admin add mysql --username=root --port=3310 --password=${password} --query-source=perfschema mysql_checks_service
