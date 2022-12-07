@@ -1,5 +1,5 @@
 echo "Setting up PMM and PGSM Integration"
-sudo yum install -y ansible
+#sudo yum install -y ansible
 export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
 docker network create pmm-qa || true
 docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true

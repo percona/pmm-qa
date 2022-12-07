@@ -1,5 +1,5 @@
 import validateArgs from "./helpers/validateArgs";
-import { executeCommand, setDefaulEnvVariables, setEnvVariable } from "./helpers/commandLine";
+import { executeCommand, installAnsible, setDefaulEnvVariables, setEnvVariable } from "./helpers/commandLine";
 import { availableSetups, SetupsInterface } from "./availableArgs";
 import setup_pmm_client_tarball from "./pmmClient/pmm2ClientTarbal";
 import { recreateNetwork, stopAndRemoveContainer } from "./helpers/docker";
@@ -12,6 +12,11 @@ export const pmmIntegrationServerName = 'pmm-integration-server'
 const run = async () => {
   let parameters: SetupParameters = {};
   const commandLineArgs: string[] = process.argv.slice(2);
+
+  console.log('CI is:' + process.env.CI) 
+  if(process.env.CI) {
+    await installAnsible();
+  }
 
   validateArgs(commandLineArgs);
 

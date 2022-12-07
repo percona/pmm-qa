@@ -11,7 +11,7 @@ export const executeCommand = async (command: string) => {
   if (code === 0) {
     `The command ${command} was run successfully with result: ${stdout}`;
   } else {
-    `The command ${command} failed with error: ${stderr}`;
+    throw new Error(`The command ${command} failed with error: ${stderr}`);
   }
 
 
@@ -50,3 +50,8 @@ export const setDefaulEnvVariables = async (parameters: SetupParameters) => {
     core.exportVariable('MO_VERSION', '6.0');
   }
 }
+
+export const installAnsible = async () => {
+  await executeCommand('sudo apt-get update -y')
+  await executeCommand('sudo apt-get install -y ansible')
+};
