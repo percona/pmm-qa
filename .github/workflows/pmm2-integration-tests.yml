@@ -1,0 +1,122 @@
+---
+name: PMM2 Integration Tests
+
+on:
+  # run with default inputs
+  schedule:
+    - cron: '0 0 * * *'
+  push:
+    branches:
+      - main
+  pull_request:
+
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'Target branch for pmm-ui-tests repository'
+        default: 'main'
+        required: true
+      pmm_qa_branch:
+        description: 'Target branch for pmm-qa repository'
+        default: 'main'
+        required: true
+      integration_setup:
+        description: 'Add flag to test selected integration setup'
+        default: '--setup-pmm-pgsm-integration'
+        required: true
+      pmm_server_version:
+        description: 'Provide version of pmm server'
+        default: 'dev-latest'
+        required: true
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SHA: ${{ github.event.inputs.sha || 'null' }}
+
+      UI_TESTS_BRANCH: ${{ github.event.inputs.pmm_ui_tests_branch }}
+      QA_TESTS_BRANCH: ${{ github.event.inputs.pmm_qa_branch }}
+      INTEGRATION_SETUP: ${{ github.event.inputs.integration_setup }}
+      PMM_SERVER_VERSION: ${{ github.event.inputs.pmm_server_version }}
+
+    steps:
+      - name: Tests for ${{ github.event.inputs.branch || 'main' }} at ${{ github.event.inputs.repo || 'cicd' }} repo
+        if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' }}
+        uses: percona-platform/github-status-action@v1
+        with:
+          context: 'pmm2-ui-tests'
+          description: 'Tests execution has been started'
+          state: 'pending'
+          repository: ${{ github.event.inputs.repo }}
+          target_url: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          sha: ${{ env.SHA }}
+
+      - name: Install NodeJS v16
+        uses: percona-platform/setup-node@v2
+        with:
+          node-version: 16.14.1
+
+      - name: Checkout UI tests
+        uses: percona-platform/checkout@v2
+        with:
+          ref: ${{ env.UI_TESTS_BRANCH }}
+          repository: percona/pmm-ui-tests
+          path: ./pmm-ui-tests
+
+      - name: Checkout pmm-qa Repo
+        uses: percona-platform/checkout@v2
+        with:
+          # token: ${{ secrets.ROBOT_TOKEN }}
+          repository: percona/pmm-qa
+          path: ./pmm-qa
+          ref: ${{ env.QA_TESTS_BRANCH }}
+
+      - name: Start PMM-Sever
+        run: |
+          docker run -d --restart always \
+          -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
+          --network="${dockerNetworkName}" \
+          --publish 8080:80 \
+          --publish 8443:443 \
+          --name ${pmmIntegrationServerName} \
+          perconalab/pmm-server: ${{ env.PMM_SERVER_VERSION }}
+
+      - name: Setup Client for PMM-Server
+        run: |
+          wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+          sudo dpkg -i percona-release_latest.generic_all.deb
+          sudo apt update
+          sudo apt install -y pmm2-client
+          sudo pmm-admin config --server-url=https://admin:admin@127.0.0.1:443 --server-insecure-tls
+          cd  pmm-integration
+          sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
+          sleep 30
+          pmm-admin list
+        shell: bash
+
+      - name: Execute All UI Tests
+        id: pmm-ui-tests-all
+        if: ${{ env.UI_TESTS_TAG == null }}
+        run: |
+          cd ./pmm-ui-tests
+          npm install
+          ./node_modules/.bin/codeceptjs run-multiple parallel --debug --steps --reporter mochawesome -c pr.codecept.js --grep '(?=.*)^(?!.*@not-ui-pipeline)^(?!.*@dbaas)^(?!.*@ami-upgrade)^(?!.*@pmm-upgrade)^(?!.*@qan)^(?!.*@nightly)^(?!.*@settings)^(?!.*@menu)^(?!.*@pmm-portal-upgrade)'
+
+      - name: Generating the report
+        if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
+        run: |
+          cd ./pmm-ui-tests
+          ls ./tests/output/
+          npx mochawesome-merge tests/output/*/*.json > tests/output/output.json
+          ls ./tests/output/
+          marge tests/output/output.json
+
+      - name: Attaching the report
+        if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
+        uses: percona-platform/upload-artifact@v2
+        with:
+          name: pmm-ui-tests-report
+          path: pmm-ui-tests/tests/output
