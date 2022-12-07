@@ -88,6 +88,11 @@ jobs:
 
       - name: Setup Client for PMM-Server
         run: |
+          wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+          sudo dpkg -i percona-release_latest.generic_all.deb
+          sudo apt update
+          sudo apt install -y pmm2-client
+          sudo pmm-admin config --server-url=https://admin:admin@127.0.0.1:443 --server-insecure-tls
           cd pmm-qa/pmm-integration/
           sudo npm install
           sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
