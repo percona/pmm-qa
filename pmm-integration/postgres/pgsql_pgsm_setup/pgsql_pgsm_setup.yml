@@ -24,9 +24,9 @@
       tags:
         - cleanup
 
-    - name: Create pmm-qa network if not exist
-      shell: docker network create pmm-qa
-      ignore_errors: true
+#    - name: Create pmm-qa network if not exist
+#      shell: docker network create pmm-qa
+#      ignore_errors: true
 
     - name: Prepare Container for PostgreSQL
       shell: >
@@ -56,7 +56,7 @@
       shell: "{{ item }}"
       with_items:
         - docker exec {{ pgsql_pgsm_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
-        - docker network connect pmm-integration-network {{ pgsql_pgsm_container }}
+#        - docker network connect pmm-integration-network {{ pgsql_pgsm_container }}
         - docker exec {{ pgsql_pgsm_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 
     - name: Remove pgsql service if already added previously
