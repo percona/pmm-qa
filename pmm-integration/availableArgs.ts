@@ -1,4 +1,4 @@
-import { executeCommand, setEnvVariable } from "./helpers/commandLine";
+import { executeAnsiblePlaybook, executeCommand, setEnvVariable } from "./helpers/commandLine";
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
 import setup_pmm_pgsm_integration from "./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration";
@@ -26,8 +26,9 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
       //await setup_pmm_pgsm_integration(parameters)
-      console.log(await executeCommand('sudo ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
-      await setEnvVariable("INTEGRATION_FLAG", "@pmm-pgsm-integration");
+      await executeCommand('sudo ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
+      await executeAnsiblePlaybook('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgsm_setup/pgsql_pgsm_setup.yml')
+      await setEnvVariable("INTEGRATION_FLAG", "@pgsm-pmm-integration");
     },
   },
   {

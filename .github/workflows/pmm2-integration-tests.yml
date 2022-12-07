@@ -89,10 +89,7 @@ jobs:
       - name: Setup Client for PMM-Server
         run: |
           cd pmm-qa/pmm-integration/
-          echo "Env file reads: "
-          cat .env
           sudo npm install
-          echo ${{ env.CI }}
           sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
           sleep 30
           pmm-admin list

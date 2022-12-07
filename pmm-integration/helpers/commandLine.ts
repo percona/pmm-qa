@@ -39,24 +39,21 @@ export const executeCommandIgnoreErrors = async (command: string) => {
 }
 
 export const setEnvVariable = async (variable: string, value: string) => {
-  process.env[variable] = value;
+  if(process.env.CI) {
+    core.exportVariable(variable, value);
+  } else {
+    process.env[variable] = value;
+  }
+  
 }
 
 export const setDefaulEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.pgsqlVersion) {
-    if(process.env.CI) {
-      core.exportVariable('PGSQL_VERSION', '15');
-    } else {
       await setEnvVariable('PGSQL_VERSION', '15');
-    }
   }
 
   if (!parameters.moVersion) {
-    if(process.env.CI) {
-      core.exportVariable('MO_VERSION', '6.0');
-    } else {
       await setEnvVariable('MO_VERSION', '6.0')
-    }
   }
 }
 

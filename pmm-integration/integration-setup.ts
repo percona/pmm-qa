@@ -14,13 +14,13 @@ dotenv.config()
 const run = async () => {
   let parameters: SetupParameters = {};
   const commandLineArgs: string[] = process.argv.slice(2);
-  console.log('ENV VARS are:' + process.env.CI)
+
   if(process.env.CI) {
     await installAnsible();
   } else {
     await recreateNetwork(dockerNetworkName);
-      // await stopAndRemoveContainer(pmmIntegrationServerName);
-    // await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
+    await stopAndRemoveContainer(pmmIntegrationServerName);
+    await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
   }
 
   validateArgs(commandLineArgs);
