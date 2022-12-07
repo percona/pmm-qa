@@ -82,6 +82,7 @@ jobs:
 
       - name: Create env file
         run: |
+          cd pmm-qa/pmm-integration/
           touch .env
           echo CI=true >> .env
 
@@ -93,6 +94,7 @@ jobs:
           sudo apt install -y pmm2-client
           sudo pmm-admin config --server-url=https://admin:admin@127.0.0.1:443 --server-insecure-tls
           ls
+          cat .env
           cd pmm-qa/pmm-integration/
           sudo npm install
           echo ${{ env.CI }}
