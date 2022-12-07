@@ -47,6 +47,11 @@
       with_items:
         - docker exec {{ pgsql_pgsm_container }} bash -xe ./pg_stat_monitor_setup.sh --pgsql_version {{ pgsql_version }} --pgstat_monitor_branch {{ pgstat_monitor_branch }} --pgstat_monitor_repo {{ pgstat_monitor_repo }} > setup_pgsql_pgsm_{{ pgsql_version }}.log
 
+    - name: List All docker containers
+      shell: "{{ item }}"
+      with_items:
+        - docker ps -a
+
     - name: Install pmm2-client on the pgsql_pgsm_container
       shell: "{{ item }}"
       with_items:
