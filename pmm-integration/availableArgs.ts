@@ -26,9 +26,8 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
       //await setup_pmm_pgsm_integration(parameters)
-      console.log(await executeCommand('./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
+      console.log(await executeCommand('sudo ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-pgsm-integration");
-      core.exportVariable('INTEGRATION_FLAG', '@pmm-pgsm-integration');
     },
   },
   {
