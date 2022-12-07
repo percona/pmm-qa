@@ -76,13 +76,7 @@ jobs:
 
       - name: Start PMM-Sever
         run: |
-          docker run -d --restart always \
-          -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
-          --network="${dockerNetworkName}" \
-          --publish 8080:80 \
-          --publish 8443:443 \
-          --name ${pmmIntegrationServerName} \
-          perconalab/pmm-server: ${{ env.PMM_SERVER_VERSION }}
+          docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name pmm-integration-server perconalab/pmm-server: ${{ env.PMM_SERVER_VERSION }}
 
       - name: Setup Client for PMM-Server
         run: |
