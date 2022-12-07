@@ -5,7 +5,6 @@ import setup_pmm_client_tarball from "./pmmClient/pmm2ClientTarbal";
 import { recreateNetwork, stopAndRemoveContainer } from "./helpers/docker";
 import SetupParameters from "./helpers/setupParameters.interface";
 import * as core from '@actions/core';
-import { env } from 'node:process';
 
 export const dockerNetworkName = "pmm-integration-network"
 export const pmmIntegrationServerName = 'pmm-integration-server'
@@ -13,8 +12,7 @@ export const pmmIntegrationServerName = 'pmm-integration-server'
 const run = async () => {
   let parameters: SetupParameters = {};
   const commandLineArgs: string[] = process.argv.slice(2);
-
-  console.log('CI is:' + env.CI)
+  console.log('NODE_ENV is:' + process.env.NODE_ENV)
   if(process.env.CI) {
     await installAnsible();
   } else {

@@ -93,7 +93,7 @@ jobs:
           cd pmm-qa/pmm-integration/
           sudo npm install
           echo ${{ env.CI }}
-          CI=true sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
+          NODE_ENV=githubActions sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
           sleep 30
           pmm-admin list
         shell: bash
