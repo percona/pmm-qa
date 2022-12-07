@@ -3,8 +3,11 @@ import { promisify } from 'util';
 import SetupParameters from './setupParameters.interface';
 import * as core from '@actions/core';
 import shell from 'shelljs';
+import * as dotenv from 'dotenv'
 
 const awaitExec = promisify(exec);
+
+dotenv.config()
 
 export const executeCommand = async (command: string) => {
   const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
@@ -41,13 +44,19 @@ export const setEnvVariable = async (variable: string, value: string) => {
 
 export const setDefaulEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.pgsqlVersion) {
-    await setEnvVariable('PGSQL_VERSION', '15');
-    core.exportVariable('PGSQL_VERSION', '15');
+    if(process.env.CI) {
+      core.exportVariable('PGSQL_VERSION', '15');
+    } else {
+      await setEnvVariable('PGSQL_VERSION', '15');
+    }
   }
 
   if (!parameters.moVersion) {
-    await setEnvVariable('MO_VERSION', '6.0')
-    core.exportVariable('MO_VERSION', '6.0');
+    if(process.env.CI) {
+      core.exportVariable('MO_VERSION', '6.0');
+    } else {
+      await setEnvVariable('MO_VERSION', '6.0')
+    }
   }
 }
 
