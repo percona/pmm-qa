@@ -12,7 +12,7 @@ export const pmmIntegrationServerName = 'pmm-integration-server'
 const run = async () => {
   let parameters: SetupParameters = {};
   const commandLineArgs: string[] = process.argv.slice(2);
-  console.log('NODE_ENV is:' + process.env.NODE_ENV)
+  console.log('ENV VARS are:' + process.env)
   if(process.env.CI) {
     await installAnsible();
   } else {
