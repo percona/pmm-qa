@@ -36,7 +36,6 @@ jobs:
     timeout-minutes: 60
     env:
       SHA: ${{ github.event.inputs.sha || 'null' }}
-      CI: true
 
       UI_TESTS_BRANCH: ${{ github.event.inputs.pmm_ui_tests_branch }}
       QA_TESTS_BRANCH: ${{ github.event.inputs.pmm_qa_branch }}
@@ -88,17 +87,12 @@ jobs:
 
       - name: Setup Client for PMM-Server
         run: |
-          wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
-          sudo dpkg -i percona-release_latest.generic_all.deb
-          sudo apt update
-          sudo apt install -y pmm2-client
-          sudo pmm-admin config --server-url=https://admin:admin@127.0.0.1:443 --server-insecure-tls
           cd pmm-qa/pmm-integration/
-          ls
+          echo "Env file reads: "
           cat .env
           sudo npm install
           echo ${{ env.CI }}
-          NODE_ENV=githubActions sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
+          sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
           sleep 30
           pmm-admin list
         shell: bash
