@@ -98,13 +98,15 @@ jobs:
           sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
         shell: bash
 
-      - name: Execute All UI Tests
+      - name: Execute Integration Tests
         id: pmm-ui-tests-all
         if: ${{ env.UI_TESTS_TAG == null }}
         run: |
+          printenv 
+          printenv INTEGRATION_FLAG
           cd ./pmm-ui-tests
           npm install
-          ./node_modules/.bin/codeceptjs run-multiple parallel --debug --steps --reporter mochawesome -c pr.codecept.js --grep '(?=.*)^(?!.*@not-ui-pipeline)^(?!.*@dbaas)^(?!.*@ami-upgrade)^(?!.*@pmm-upgrade)^(?!.*@qan)^(?!.*@nightly)^(?!.*@settings)^(?!.*@menu)^(?!.*@pmm-portal-upgrade)'
+          ./node_modules/.bin/codeceptjs run-multiple parallel --debug --steps --reporter mochawesome -c pr.codecept.js  --grep '${{ env.INTEGRATION_FLAG }}'
 
       - name: Generating the report
         if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
