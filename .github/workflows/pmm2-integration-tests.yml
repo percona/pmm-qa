@@ -88,6 +88,7 @@ jobs:
           sudo pmm-admin config --server-url=https://admin:admin@127.0.0.1:443 --server-insecure-tls
           ls
           cd pmm-qa/pmm-integration/
+          sudo npm install
           sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
           sleep 30
           pmm-admin list
