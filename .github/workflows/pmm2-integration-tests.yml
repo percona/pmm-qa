@@ -1,5 +1,5 @@
 ---
-name: PMM2 Integration Tests
+name: pmm2-integration-tests
 
 on:
   # run with default inputs
