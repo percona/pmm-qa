@@ -32,7 +32,7 @@
       shell: >
         docker run -d --name={{ pgsql_pgsm_container }}
         -p 5437:5432
-        -network="pmm-integration-network"
+        --network="pmm-integration-network"
         phusion/baseimage:focal-1.2.0
 
     - name: Copy all required Artifacts to the docker pgsql_pgsm_container
