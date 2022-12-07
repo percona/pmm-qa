@@ -102,7 +102,6 @@ jobs:
         id: pmm-ui-tests-all
         if: ${{ env.UI_TESTS_TAG == null }}
         run: |
-          printenv 
           printenv INTEGRATION_FLAG
           cd ./pmm-ui-tests
           npm install

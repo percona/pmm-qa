@@ -26,7 +26,7 @@
 
     - name: Prepare Container for PostgreSQL
       shell: >
-        docker run -d --name={{ pgsql_pgsm_container }}
+        docker run -d --name={{ pgsql_pgsm_container  }}_{{ pgsql_version }}
         -p 5437:5432
         --network="pmm-integration-network"
         phusion/baseimage:focal-1.2.0
