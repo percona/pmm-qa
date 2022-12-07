@@ -16,15 +16,13 @@ const run = async () => {
   console.log('CI is:' + process.env.CI) 
   if(process.env.CI) {
     await installAnsible();
+  } else {
+    await recreateNetwork(dockerNetworkName);
+      // await stopAndRemoveContainer(pmmIntegrationServerName);
+    // await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
   }
 
   validateArgs(commandLineArgs);
-
-  // await stopAndRemoveContainer(pmmIntegrationServerName);
-
-  await recreateNetwork(dockerNetworkName);
-
-  // await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
 
   for await (const [_index, value] of commandLineArgs.entries()) {
     switch (true) {
