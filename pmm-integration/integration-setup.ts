@@ -5,14 +5,16 @@ import setup_pmm_client_tarball from "./pmmClient/pmm2ClientTarbal";
 import { recreateNetwork, stopAndRemoveContainer } from "./helpers/docker";
 import SetupParameters from "./helpers/setupParameters.interface";
 import * as core from '@actions/core';
+import * as dotenv from 'dotenv'
 
 export const dockerNetworkName = "pmm-integration-network"
 export const pmmIntegrationServerName = 'pmm-integration-server'
+dotenv.config()
 
 const run = async () => {
   let parameters: SetupParameters = {};
   const commandLineArgs: string[] = process.argv.slice(2);
-  console.log('ENV VARS are:' + JSON.stringify(process.env))
+  console.log('ENV VARS are:' + process.env.CI)
   if(process.env.CI) {
     await installAnsible();
   } else {
