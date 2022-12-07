@@ -81,7 +81,7 @@
     - name: Start PGAdmin docker container
       shell: "{{ item }}"
       with_items:
-        - docker run --name=pgadmin -d -p 9093:80 -network="pmm-integration-network" -e PGADMIN_DEFAULT_EMAIL=admin@admin.com -e PGADMIN_DEFAULT_PASSWORD=root dpage/pgadmin4
+        - docker run --name=pgadmin -d -p 9093:80 --network="pmm-integration-network" -e PGADMIN_DEFAULT_EMAIL=admin@admin.com -e PGADMIN_DEFAULT_PASSWORD=root dpage/pgadmin4
         - docker network connect pmm-qa pgadmin
 
     - name: Run queries for generating data
