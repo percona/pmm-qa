@@ -80,9 +80,12 @@ jobs:
           docker network create pmm-integration-network
           docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="pmm-integration-network" --publish 80:80 --publish 443:443 --name pmm-integration-server perconalab/pmm-server:${{ env.PMM_SERVER_VERSION }}
 
+      - name: Create env file
+        run: |
+          touch .env
+          echo CI=true >> .env
+
       - name: Setup Client for PMM-Server
-        env:
-          CI: true
         run: |
           wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
           sudo dpkg -i percona-release_latest.generic_all.deb
