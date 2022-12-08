@@ -28,6 +28,10 @@ on:
         description: 'Provide version of pmm server'
         default: 'dev-latest'
         required: true
+      pgsql_version:
+        description: 'Provide version of pgsql'
+        default: '15'
+        required: true
 
 jobs:
   integration-tests:
@@ -43,8 +47,7 @@ jobs:
       INTEGRATION_SETUP: ${{ github.event.inputs.integration_setup }}
       PMM_SERVER_VERSION: ${{ github.event.inputs.pmm_server_version }}
 
-
-      PGSQL_VERSION: 13
+      PGSQL_VERSION: ${{ github.event.inputs.pgsql_version || 15 }}
 
     steps:
       - name: Tests of pmm server version ${{ github.event.inputs.pmm_server_version }} for integration flag ${{ github.event.inputs.integration_setup }}
@@ -101,7 +104,7 @@ jobs:
         run: |
           cd pmm-qa/pmm-integration/
           sudo npm install
-          sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
+          sudo npx ts-node ./integration-setup.ts --pgsql-version=${{ env.PGSQL_VERSION }} ${{ env.INTEGRATION_SETUP }}
           echo "ENV Variables are:"
           printenv
           echo "$PGSQL_VERSION"
