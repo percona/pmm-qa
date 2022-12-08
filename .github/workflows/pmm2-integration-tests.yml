@@ -96,6 +96,8 @@ jobs:
           cd pmm-qa/pmm-integration/
           sudo npm install
           sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
+          echo "$PGSQL_VERSION"
+          echo "$MO_VERSION"
         shell: bash
 
       - name: Execute Integration Tests

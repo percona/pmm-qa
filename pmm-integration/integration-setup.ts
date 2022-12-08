@@ -49,7 +49,6 @@ const run = async () => {
 
   console.log(`PGSQL Version is: ${process.env.PGSQL_VERSION}`);
   console.log(`MO Version is: ${process.env.MO_VERSION}`);
-  console.log(`GITHUB ENV FILE location is: ${process.env.GITHUB_ENV}`);
 
   for await (const [_index, value] of commandLineArgs.entries()) {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)
