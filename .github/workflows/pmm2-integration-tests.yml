@@ -131,6 +131,7 @@ jobs:
         uses: phoenix-actions/test-reporting@v10
         if: success() || failure()
         with:
+          token: ${{ secrets.ROBOT_TOKEN }}
           name: Integration Tests    # Name of the check run which will be created
           path: pmm-ui-tests/tests/output/output.json
           reporter: mocha-json    
