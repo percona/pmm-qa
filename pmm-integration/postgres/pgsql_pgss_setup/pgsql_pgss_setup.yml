@@ -8,7 +8,7 @@
   vars:
     pgsql_version: "{{ lookup('vars', 'extra_pgsql_version', default=lookup('env','PGSQL_VERSION') | default('14', true) ) }}"
     pgsql_pgss_container: "{{ lookup('vars', 'extra_pgsql_pgss_container', default=lookup('env','PGSQL_PGSS_CONTAINER') | default('pgsql_pgss', true) ) }}"
-    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('pmm-integration-server', true) ) }}"
     client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
@@ -21,14 +21,11 @@
       tags:
         - cleanup
 
-    - name: Create pmm-qa network if not exist
-      shell: docker network create pmm-qa
-      ignore_errors: true
-
     - name: Prepare Container for PostgreSQL
       shell: >
         docker run -d --name={{ pgsql_pgss_container }}
         -p 5438:5432
+        --network="pmm-integration-network"
         phusion/baseimage:focal-1.1.0
 
     - name: Copy all required Artifacts to the docker pgsql_pgss_container
@@ -72,8 +69,8 @@
     - name: Start PGAdmin docker container
       shell: "{{ item }}"
       with_items:
-        - docker run --name=pgadmin -d -p 9093:80 -e PGADMIN_DEFAULT_EMAIL=admin@admin.com -e PGADMIN_DEFAULT_PASSWORD=root dpage/pgadmin4
-        - docker network connect pmm-qa pgadmin
+        - docker run --name=pgadmin -d -p 9093:80 --network="pmm-integration-network" -e PGADMIN_DEFAULT_EMAIL=admin@admin.com -e PGADMIN_DEFAULT_PASSWORD=root dpage/pgadmin4
+#        - docker network connect pmm-qa pgadmin
 
     - name: Run queries for generating data, using the same script for pgsm
       shell: "{{ item }}"
