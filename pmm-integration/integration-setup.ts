@@ -1,5 +1,5 @@
 import validateArgs from "./helpers/validateArgs";
-import { executeCommand, installAnsible, setDefaulEnvVariables, setEnvVariable } from "./helpers/commandLine";
+import { executeCommand, installAnsible, setDefaultEnvVariables, setEnvVariable } from "./helpers/commandLine";
 import { availableSetups, SetupsInterface } from "./availableArgs";
 import setup_pmm_client_tarball from "./pmmClient/pmm2ClientTarbal";
 import { recreateNetwork, stopAndRemoveContainer } from "./helpers/docker";
@@ -46,7 +46,11 @@ const run = async () => {
     }
   }
 
-  await setDefaulEnvVariables(parameters);
+  await setDefaultEnvVariables(parameters);
+
+
+  console.log(`PGSQL Version is: ${process.env.PGSQL_VERSION}`);
+  console.log(`MO Version is: ${process.env.MO_VERSION}`);
 
   for await (const [_index, value] of commandLineArgs.entries()) {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)
