@@ -47,7 +47,7 @@ export const setEnvVariable = async (variable: string, value: string) => {
   
 }
 
-export const setDefaulEnvVariables = async (parameters: SetupParameters) => {
+export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.pgsqlVersion) {
       await setEnvVariable('PGSQL_VERSION', '15');
   }
