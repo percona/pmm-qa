@@ -96,6 +96,9 @@ jobs:
           sudo apt update
           sudo apt install -y pmm2-client
           sudo pmm-admin config --server-url=https://admin:admin@127.0.0.1:443 --server-insecure-tls
+
+      - name: Setup Databases for PMM-Server
+        run: |
           cd pmm-qa/pmm-integration/
           sudo npm install
           sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
