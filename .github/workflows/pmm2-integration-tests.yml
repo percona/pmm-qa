@@ -97,6 +97,7 @@ jobs:
           sudo npm install
           sudo npx ts-node ./integration-setup.ts ${{ env.INTEGRATION_SETUP }}
           echo "ENV Variables are:"
+          printenv
           echo "$PGSQL_VERSION"
           echo "$MO_VERSION"
         shell: bash
