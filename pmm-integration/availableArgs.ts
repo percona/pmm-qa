@@ -36,9 +36,8 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this option to setup PMM-Client with PG Stat Statements for Integration Testing',
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
-      console.log(await executeCommand('./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh'));
-      await setEnvVariable("INTEGRATION_FLAG", "@pmm-pgss-integration");
-      core.exportVariable('INTEGRATION_FLAG', '@pmm-pgss-integration');
+      await executeCommand('./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
+      await setEnvVariable("INTEGRATION_FLAG", "@pgss-pmm-integration");
     },
   },
   {
