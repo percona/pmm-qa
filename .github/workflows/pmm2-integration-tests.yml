@@ -44,7 +44,7 @@ jobs:
       PMM_SERVER_VERSION: ${{ github.event.inputs.pmm_server_version }}
 
 
-      PGSQL_VERSION: 14
+      PGSQL_VERSION: 13
 
     steps:
       - name: Tests of pmm server version ${{ github.event.inputs.pmm_server_version }} for integration flag ${{ github.event.inputs.integration_setup }}

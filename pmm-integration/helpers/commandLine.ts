@@ -21,17 +21,12 @@ export const executeCommand = async (command: string) => {
   return { stdout, stderr };
 }
 
-export const executeAnsiblePlaybook = async (command: string): Promise<ChildProcess> => {
+export const executeAnsiblePlaybook = async (command: string) => {
   console.log(`Ansible command ${command} run`);
-  return exec(command, (error, stdout, stderr) => {
-    console.log(`stdout: ${stdout}`);
-    console.error(`stderr: ${stderr}`);
-    if (error) {
-      console.error(`exec error: ${error}`);
-      return;
-    }
-  });
-}
+  const { stdout, stderr } = await executeCommand(command)
+  console.log(`stdout: ${stdout}`);
+  console.error(`stderr: ${stderr}`);
+};
 
 export const executeCommandIgnoreErrors = async (command: string) => {
   return awaitExec(command)
