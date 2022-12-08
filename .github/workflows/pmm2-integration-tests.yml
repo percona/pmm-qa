@@ -43,6 +43,9 @@ jobs:
       INTEGRATION_SETUP: ${{ github.event.inputs.integration_setup }}
       PMM_SERVER_VERSION: ${{ github.event.inputs.pmm_server_version }}
 
+
+      PGSQL_VERSION: 14
+
     steps:
       - name: Tests of pmm server version ${{ github.event.inputs.pmm_server_version }} for integration flag ${{ github.event.inputs.integration_setup }}
         if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' }}
@@ -104,7 +107,6 @@ jobs:
 
       - name: Execute Integration Tests
         id: pmm-ui-tests-all
-        if: ${{ env.UI_TESTS_TAG == null }}
         run: |
           printenv INTEGRATION_FLAG
           cd ./pmm-ui-tests
