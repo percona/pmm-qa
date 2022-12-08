@@ -30,12 +30,10 @@ const run = async () => {
       case value.includes('--pgsql-version'):
         parameters.pgsqlVersion = value.split("=")[1];
         await setEnvVariable('PGSQL_VERSION', parameters.pgsqlVersion);
-        core.exportVariable('PGSQL_VERSION', parameters.pgsqlVersion);
         break
       case value.includes('--mo-version'):
         parameters.moVersion = value.split("=")[1];
         await setEnvVariable('MO_VERSION', parameters.moVersion);
-        core.exportVariable('MO_VERSION', parameters.moVersion);
         break
       case value.includes('--setup-pmm-client-tarball'):
         let tarballURL = value.split("=")[1];
@@ -51,6 +49,7 @@ const run = async () => {
 
   console.log(`PGSQL Version is: ${process.env.PGSQL_VERSION}`);
   console.log(`MO Version is: ${process.env.MO_VERSION}`);
+  console.log(`GITHUB ENV FILE location is: ${process.env.GITHUB_ENV}`);
 
   for await (const [_index, value] of commandLineArgs.entries()) {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)
