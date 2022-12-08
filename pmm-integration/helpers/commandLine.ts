@@ -22,6 +22,7 @@ export const executeCommand = async (command: string) => {
 }
 
 export const executeAnsiblePlaybook = async (command: string): Promise<ChildProcess> => {
+  console.log(`Ansible command ${command} run`);
   return exec(command, (error, stdout, stderr) => {
     console.log(`stdout: ${stdout}`);
     console.error(`stderr: ${stderr}`);
