@@ -6,7 +6,7 @@
   become: true
   become_method: sudo
   vars:
-    pgsql_version: "{{ PGSQL_VERSION | 14 }}"
+    pgsql_version: "{{ PGSQL_VERSION | default('14', true) }}"
     pgsql_pgss_container: "{{ lookup('vars', 'extra_pgsql_pgss_container', default=lookup('env','PGSQL_PGSS_CONTAINER') | default('pgsql_pgss', true) ) }}"
     pgsql_pgss_container_name: "{{ pgsql_pgss_container }}_{{ pgsql_version }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('pmm-integration-server', true) ) }}"
