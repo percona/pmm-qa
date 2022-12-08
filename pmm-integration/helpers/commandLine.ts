@@ -40,8 +40,10 @@ export const executeCommandIgnoreErrors = async (command: string) => {
 
 export const setEnvVariable = async (variable: string, value: string) => {
   if(process.env.CI) {
+    console.log(`Setting up github action env variable ${variable} with the value: ${value}`);
     core.exportVariable(variable, value);
   } else {
+    console.log(`Setting up local action env variable ${variable} with the value: ${value}`);
     process.env[variable] = value;
   }
   
