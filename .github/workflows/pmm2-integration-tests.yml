@@ -107,6 +107,14 @@ jobs:
           npm install
           ./node_modules/.bin/codeceptjs run-multiple parallel --debug --steps --reporter mochawesome -c pr.codecept.js  --grep '${{ env.INTEGRATION_FLAG }}'
 
+      - name: Create the report
+        uses: phoenix-actions/test-reporting@v10
+        if: success() || failure()
+        with:
+          name: Integration Tests    # Name of the check run which will be created
+          path: reports/jest-*.xml    # Path to test results
+          reporter: mocha-json
+
       - name: Generating the report
         if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
         run: |

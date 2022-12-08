@@ -37,6 +37,7 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
       await executeCommand('./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
+      await executeAnsiblePlaybook('sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgss_setup/pgsql_pgss_setup.yml')
       await setEnvVariable("INTEGRATION_FLAG", "@pgss-pmm-integration");
     },
   },
