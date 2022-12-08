@@ -46,10 +46,6 @@ const run = async () => {
 
   await setDefaultEnvVariables(parameters);
 
-
-  console.log(`PGSQL Version is: ${process.env.PGSQL_VERSION}`);
-  console.log(`MO Version is: ${process.env.MO_VERSION}`);
-
   for await (const [_index, value] of commandLineArgs.entries()) {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)
     if (setup) {
