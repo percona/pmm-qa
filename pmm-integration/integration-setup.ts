@@ -35,6 +35,10 @@ const run = async () => {
         parameters.moVersion = value.split("=")[1];
         await setEnvVariable('MO_VERSION', parameters.moVersion);
         break
+      case value.includes('--ps-version'):
+          parameters.psVersion = value.split("=")[1];
+          await setEnvVariable('PS_VERSION', parameters.psVersion);
+          break
       case value.includes('--setup-pmm-client-tarball'):
         let tarballURL = value.split("=")[1];
         await setup_pmm_client_tarball(tarballURL)

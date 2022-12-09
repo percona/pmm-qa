@@ -58,7 +58,7 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./mysql/pmm_ps_integration/pmm_ps_integration.sh');
       await executeCommand('./mysql/pmm_ps_integration/pmm_ps_integration.sh');
-      await executeAnsiblePlaybook('sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml');
+      await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml -e="PS_VERSION=${parameters.psVersion}"`);
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
     },
   }
