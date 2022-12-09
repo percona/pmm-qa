@@ -8,7 +8,7 @@
     psmdb_tarball: "{{ lookup('vars', 'extra_psmdb_tarball', default=lookup('env','PSMDB_TARBALL') | default('', true) ) }}"
     psmdb_setup: "{{ lookup('vars', 'extra_psmdb_setup', default=lookup('env','PSMDB_SETUP') | default('regular', true) ) }}"
     psmdb_container: "{{ lookup('vars', 'extra_psmdb_container', default=lookup('env','PSMDB_CONTAINER') | default('psmdb', true) ) }}"
-    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('pmm-integration-server', true) ) }}"
     client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
@@ -29,6 +29,7 @@
     - name: Prepare Container for PSMDB
       shell: >
         docker run -d --name={{ psmdb_container }}
+        --network="pmm-integration-network"
         phusion/baseimage:focal-1.1.0
 
     - name: Copy all required Artifacts to the docker psmdb_container
@@ -42,7 +43,8 @@
       shell: "{{ item }}"
       with_items:
         - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
-        - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-integration/mongoDb/mongodb_user_setup.js
+# Fix location after deploy        
+        - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/mongodb_user_setup.js
         - docker network connect pmm-qa {{ psmdb_container }}
         - docker exec {{ psmdb_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 
@@ -64,7 +66,7 @@
         - wget -P ~/psmdb_{{ psmdb_version }}/ "https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/mongodb_query.php"
         - docker build --tag php-db ~/psmdb_{{ psmdb_version }}/ > ~/docker-build_mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }}.log || true
         - docker rm mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} || true
-        - docker run --rm --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb || true
+        - docker run --rm --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} --network="pmm-integration-network" -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb || true
 
     - name: Run User setup script when Running Regular MongoDB setup
       shell: docker exec {{ psmdb_container }} ./nodes/cl.sh mongodb_user_setup.js
