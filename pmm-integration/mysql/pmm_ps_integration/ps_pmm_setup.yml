@@ -6,7 +6,7 @@
   become: true
   become_method: sudo
   vars:
-    ps_version: "{{ PS_VERSION' | default('8.0', true) }}"
+    ps_version: "{{ PS_VERSION | default('8.0', true) }}"
     ps_tarball: "{{ lookup('vars', 'extra_ps_tarball', default=lookup('env','PS_TARBALL') | default('none', true) ) }}"
     ps_container: "{{ lookup('vars', 'extra_ps_container', default=lookup('env','PS_CONTAINER') | default('ps_container', true) ) }}"
     ps_container_name: "{{ ps_container }}_{{ ps_version }}"
