@@ -57,11 +57,9 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this option for percona-server and PMM using dbdeployer',
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./mysql/pmm_ps_integration/pmm_ps_integration.sh');
-      const response = (await executeCommand('./mysql/pmm_ps_integration/pmm_ps_integration.sh'));
-      console.log(`Log is: ${response.stdout}`);
-      console.log(`Error is: ${response.stderr}`);
+      await executeCommand('./mysql/pmm_ps_integration/pmm_ps_integration.sh');
+      await executeAnsiblePlaybook('sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml');
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
-      core.exportVariable('INTEGRATION_FLAG', '@pmm-ps-integration');
     },
   }
 ];
