@@ -18,9 +18,9 @@
     - name: cleanup container for client and DB setup
       shell: >
         docker ps -a --filter "name={{ psmdb_container }}" | grep -q . && docker stop {{ psmdb_container }} && docker rm -fv {{ psmdb_container }}
-        ignore_errors: true
-        tags:
-          - cleanup
+      ignore_errors: true
+      tags:
+        - cleanup
 
     - name: Create pmm-qa network if not exist
       shell: docker network create pmm-qa
