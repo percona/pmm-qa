@@ -111,7 +111,6 @@ jobs:
         id: pmm-ui-tests-all
         run: |
           sudo docker ps -a
-          sudo docker exec ps_pmm_8.0 pmm-admin list
           printenv INTEGRATION_FLAG
           cd ./pmm-ui-tests
           npm install
