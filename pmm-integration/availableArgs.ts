@@ -46,10 +46,9 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this option for Percona MongoDB setup with PMM2',
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
-      console.log((await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh')).stderr);
-      console.log(await executeCommand('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml '))
+      await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
+      await executeCommand('sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml');
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
-      core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
   },
   {
