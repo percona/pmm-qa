@@ -105,15 +105,12 @@ jobs:
           cd pmm-qa/pmm-integration/
           sudo npm install
           sudo npx ts-node ./integration-setup.ts --pgsql-version=${{ env.PGSQL_VERSION }} ${{ env.INTEGRATION_SETUP }}
-          echo "ENV Variables are:"
-          printenv
-          echo "$PGSQL_VERSION"
-          echo "$MO_VERSION"
         shell: bash
 
       - name: Execute Integration Tests
         id: pmm-ui-tests-all
         run: |
+          sudo docker ps -a
           printenv INTEGRATION_FLAG
           cd ./pmm-ui-tests
           npm install
@@ -124,15 +121,13 @@ jobs:
         run: |
           cd ./pmm-ui-tests
           npx mochawesome-merge tests/output/*/*.json > tests/output/output.json
-#          ls ./tests/output/
-#          marge tests/output/output.json
 
       - name: Create the report
         uses: phoenix-actions/test-reporting@v10
         if: success() || failure()
         with:
           token: ${{ secrets.ROBOT_TOKEN }}
-          name: Integration Tests    # Name of the check run which will be created
+          name: Integration Tests
           path: pmm-ui-tests/tests/output/output.json
           reporter: mocha-json    
 
