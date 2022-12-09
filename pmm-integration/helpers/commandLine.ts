@@ -23,9 +23,11 @@ export const executeCommand = async (command: string) => {
 
 export const executeAnsiblePlaybook = async (command: string) => {
   console.log(`Ansible command ${command} run`);
-  const { stdout, stderr } = await executeCommand(command)
-  console.log(`stdout: ${stdout}`);
-  console.error(`stderr: ${stderr}`);
+  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
+  console.log(`The ansible playbook ${command} was run with result: ${stdout}`);
+  if (code !== 0) {
+    throw new Error(`The command ${command} failed with error: ${stderr}`);
+  }
 };
 
 export const executeCommandIgnoreErrors = async (command: string) => {
