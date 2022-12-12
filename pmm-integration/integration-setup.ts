@@ -15,11 +15,11 @@ const run = async () => {
 
   validateArgs(commandLineArgs);
 
-  await stopAndRemoveContainer(pmmIntegrationServerName);
-
-  await recreateNetwork(dockerNetworkName);
-
-  await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --publish 7777:7777 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
+  if(!process.env.CI) {
+    await stopAndRemoveContainer(pmmIntegrationServerName);
+    await recreateNetwork(dockerNetworkName);
+    await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
+  }
 
   for await (const [_index, value] of commandLineArgs.entries()) {
     switch (true) {
