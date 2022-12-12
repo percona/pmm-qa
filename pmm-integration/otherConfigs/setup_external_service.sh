@@ -11,8 +11,8 @@ JENKINS_NODE_COOKIE=dontKillMe nohup bash -c './redis_exporter -redis.password=o
 sleep 10
 pmm-admin add external --listen-port=42200 --group="redis" --service-name="redis_external"
 echo "Setting up node_process"
-wget https://github.com/ncabatoff/process-exporter/releases/download/v${NODE_PROCESS_EXPORTER_VERSION}/process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
-sudo rpm -i process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.rpm
+wget https://github.com/ncabatoff/process-exporter/releases/download/v${NODE_PROCESS_EXPORTER_VERSION}/process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.deb
+sudo dpkg -i process-exporter_${NODE_PROCESS_EXPORTER_VERSION}_linux_amd64.deb
 sudo service process-exporter start
 sleep 10
 pmm-admin add external --group=processes --listen-port=9256 --service-name=external_nodeprocess
