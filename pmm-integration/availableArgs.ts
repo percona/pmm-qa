@@ -57,7 +57,7 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./otherConfigs/haproxy/pmm-haproxy-setup.sh');
       console.log(await executeCommand('./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
-      console.log(await executeCommand('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml'));
+      console.log(await executeCommand('sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml'));
       await setEnvVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
       core.exportVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
     }
