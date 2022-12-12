@@ -2,6 +2,7 @@ import { executeAnsiblePlaybook, executeCommand, setEnvVariable } from "./helper
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
 import setup_pmm_pgsm_integration from "./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration";
+import setup_external_service from './otherConfigs/setup_external_service'
 import * as core from '@actions/core';
 
 export interface SetupsInterface {
@@ -49,6 +50,17 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
       await executeCommand('sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml');
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
+    },
+  },
+  {
+    arg: '--setup-external-service',
+    description: 'Use this option for Percona MongoDB setup with PMM2',
+    function: async (parameters: SetupParameters) => {
+      await executeCommand('chmod +x ./otherConfigs/setup_external_service.sh');
+      console.log(await executeCommand('./otherConfigs/setup_external_service.sh'));
+      // await setup_external_service(parameters);
+      await setEnvVariable("INTEGRATION_FLAG", "@external-service");
+      core.exportVariable('INTEGRATION_FLAG', '@external-service');
     },
   },
   {
