@@ -28,6 +28,10 @@ on:
         description: 'Provide version of pmm server'
         default: 'dev-latest'
         required: true
+      pmm_client_version:
+        description: 'Provide version of pmm server'
+        default: 'dev-latest'
+        required: true
       pgsql_version:
         description: 'Provide version of pgsql'
         default: '15'
@@ -46,6 +50,7 @@ jobs:
       QA_TESTS_BRANCH: ${{ github.event.inputs.pmm_qa_branch }}
       INTEGRATION_SETUP: ${{ github.event.inputs.integration_setup }}
       PMM_SERVER_VERSION: ${{ github.event.inputs.pmm_server_version }}
+      PMM_CLIENT_VERSION: ${{ github.event.inputs.pmm_client_version }}
 
       PGSQL_VERSION: ${{ github.event.inputs.pgsql_version || 15 }}
 
@@ -94,7 +99,7 @@ jobs:
 
       - name: Setup Docker client for PMM-Server
         run: |
-          docker run -d --name pmm-client --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=pmm-integration-server -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml percona/pmm-client:2
+          docker run -d --name pmm-client --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=pmm-integration-server -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${{ env.PMM_CLIENT_VERSION }}
 
 #      - name: Setup Client for PMM-Server
 #        run: |
