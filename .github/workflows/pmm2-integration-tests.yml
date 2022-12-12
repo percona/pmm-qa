@@ -113,7 +113,7 @@ jobs:
         run: |
           cd pmm-qa/pmm-integration/
           sudo npm install
-          sudo npx ts-node ./integration-setup.ts ----pmm-client-version={{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} ${{ env.INTEGRATION_SETUP }}
+          sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} ${{ env.INTEGRATION_SETUP }}
         shell: bash
 
       - name: Execute Integration Tests
