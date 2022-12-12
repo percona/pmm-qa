@@ -88,6 +88,7 @@ export const availableSetups: SetupsInterface[] = [
 export const availableConstMap = new Map<string, string>([
   ['--pgsql-version', 'Pass Postgre SQL server version Info'],
   ['--mo-version', 'Pass MongoDB Server version info'],
+  ['--ps-version', 'Pass Percona Server version info'],
   ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
   ['--pmm-client-version', 'Version of pmm client to use, default dev-latest']
 ]);
