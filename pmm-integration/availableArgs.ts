@@ -8,7 +8,7 @@ import * as core from '@actions/core';
 export interface SetupsInterface {
   arg: string;
   description: string;
-  function: (parameters: SetupParameters) => Promise<void>
+  function: (parameters: SetupParameters) => Promise<void>;
 }
 
 export const availableSetups: SetupsInterface[] = [
@@ -17,7 +17,7 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this do setup postgres for vacuum monitoring tests',
     function: async (parameters: SetupParameters) => {
       await pgsqlVacuumSetup(parameters);
-      await setEnvVariable("INTEGRATION_FLAG", "@pgsql_vacuum");
+      await setEnvVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
       core.exportVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
     },
   },
@@ -28,7 +28,7 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
       //await setup_pmm_pgsm_integration(parameters)
       console.log(await executeCommand('./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh'));
-      await setEnvVariable("INTEGRATION_FLAG", "@pmm-pgsm-integration");
+      await setEnvVariable('INTEGRATION_FLAG', '@pmm-pgsm-integration');
       core.exportVariable('INTEGRATION_FLAG', '@pmm-pgsm-integration');
     },
   },
@@ -38,7 +38,7 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
       console.log(await executeCommand('./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh'));
-      await setEnvVariable("INTEGRATION_FLAG", "@pmm-pgss-integration");
+      await setEnvVariable('INTEGRATION_FLAG', '@pmm-pgss-integration');
       core.exportVariable('INTEGRATION_FLAG', '@pmm-pgss-integration');
     },
   },
@@ -47,9 +47,15 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this option for Percona MongoDB setup with PMM2',
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
-      console.log((await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh')).stderr);
-      console.log(await executeCommand('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml '))
-      await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
+      console.log(
+        (await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh')).stderr
+      );
+      console.log(
+        await executeCommand(
+          'ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml '
+        )
+      );
+      await setEnvVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
       core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
   },
@@ -63,6 +69,17 @@ export const availableSetups: SetupsInterface[] = [
       await setEnvVariable("INTEGRATION_FLAG", "@external-service");
       core.exportVariable('INTEGRATION_FLAG', '@external-service');
     },
+  },
+  {
+    arg: '--setup-pmm-haproxy-integration',
+    description: 'Use this option for Haproxy setup with PMM2',
+    function: async (parameters: SetupParameters) => {
+      await executeCommand('chmod +x ./otherConfigs/haproxy/pmm-haproxy-setup.sh');
+      console.log(await executeCommand('./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
+      console.log(await executeCommand('ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml'));
+      await setEnvVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
+      core.exportVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
+    }
   },
   {
     arg: '--setup-pmm-ps-integration',
@@ -79,15 +96,15 @@ export const availableSetups: SetupsInterface[] = [
 ];
 
 export const availableConstMap = new Map<string, string>([
-  ["--pgsql-version", "Pass Postgre SQL server version Info"],
-  ["--mo-version", "Pass MongoDB Server version info"],
-  ["--setup-pmm-client-tarball", "Sets up pmm client from provided tarball"]
+  ['--pgsql-version', 'Pass Postgre SQL server version Info'],
+  ['--mo-version', 'Pass MongoDB Server version info'],
+  ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
 ]);
 
 export const availableSetupMap = new Map(
-  availableSetups.map(object => {
+  availableSetups.map((object) => {
     return [object.arg, object.description];
-  }),
+  })
 );
 
 export const availableArgsMap = new Map<string, string>([...availableConstMap, ...availableSetupMap]);
