@@ -5,7 +5,7 @@
   become_method: sudo
   vars:
     psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB_VERSION') | default('4.4', true) ) }}"
-    psmdb_tarball: "{{ lookup('vars', 'extra_psmdb_tarball', default=lookup('env','PSMDB_TARBALL') | default('', true) ) }}"
+    psmdb_tarball: "{{ lookup('vars', 'extra_psmdb_tarball', default=lookup('env','PSMDB_TARBALL') | default('https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz', true) ) }}"
     psmdb_setup: "{{ lookup('vars', 'extra_psmdb_setup', default=lookup('env','PSMDB_SETUP') | default('regular', true) ) }}"
     psmdb_container: "{{ lookup('vars', 'extra_psmdb_container', default=lookup('env','PSMDB_CONTAINER') | default('psmdb', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('pmm-integration-server', true) ) }}"
@@ -50,15 +50,16 @@
         - docker network connect pmm-qa {{ psmdb_container }}
         - docker exec {{ psmdb_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 
-    - name: Get Product tarball URL based on the version
-      shell: cat product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
-      register: psmdb_tarball
-      when: lookup('env', 'PSMDB_TARBALL') == ''
+#    - name: Get Product tarball URL based on the version
+#      shell: cat product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
+#      register: psmdb_tarball
+#      when: lookup('env', 'PSMDB_TARBALL') == ''
+#assing stdout to psmdb_tarball after this step.
 
     - name: Setup psmdb for monitoring
       shell: "{{ item }}"
       with_items:
-        - docker exec {{ psmdb_container }} bash -x ./psmdb_setup.sh --mongodb_version {{ psmdb_version }} --psmdb_tarball {{ psmdb_tarball.stdout }} --mongodb_setup {{ psmdb_setup }} > ~/setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+        - docker exec {{ psmdb_container }} bash -x ./psmdb_setup.sh --mongodb_version {{ psmdb_version }} --psmdb_tarball {{ psmdb_tarball }} --mongodb_setup {{ psmdb_setup }} > ~/setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
 
     - name: Setup Load Running Docker Container
       shell: "{{ item }}"
@@ -74,13 +75,8 @@
 
 
     - name: Run User setup script when Running Regular MongoDB setup
-#      shell: docker exec {{ psmdb_container }} ./nodes/cl.sh mongodb_user_setup.js
-      shell: docker exec {{ psmdb_container }} mongo mongodb_user_setup.js
+      shell: docker exec {{ psmdb_container }} ./nodes/cl.sh mongodb_user_setup.js
       when: psmdb_setup == "regular"
-#    - name: Get Product tarball URL based on the version
-#      shell: cat product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
-#      register: psmdb_tarball
-#      when: lookup('env', 'PSMDB_TARBALL') == ''
 
 #    - name: Run load on Replica Set Master
 #      shell: "{{ item }}"
@@ -88,11 +84,11 @@
 #        - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27018 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
 #      when: psmdb_setup == "replica"
 
-#    - name: Run load on Regular
-#      shell: "{{ item }}"
-#      with_items:
-#        - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
-#      when: psmdb_setup == "regular"
+    - name: Run load on Regular
+      shell: "{{ item }}"
+      with_items:
+        - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
+      when: psmdb_setup == "regular"
 
 #    - name: Run load on Sharded Clusters Master
 #      shell: "{{ item }}"
