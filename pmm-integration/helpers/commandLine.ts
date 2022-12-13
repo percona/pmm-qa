@@ -12,7 +12,7 @@ dotenv.config()
 export const executeCommand = async (command: string) => {
   const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
   if (code === 0) {
-    `The command ${command} was run successfully with result: ${stdout}`;
+    console.log(`The command ${command} was run successfully with result: ${stdout}`);
   } else {
     throw new Error(`The command ${command} failed with error: ${stderr}`);
   }
