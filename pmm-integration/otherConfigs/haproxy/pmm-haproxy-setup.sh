@@ -1,7 +1,5 @@
 echo "Setting up PMM and HAPROXY Integration"
 
-## only doing it for jenkins workers, need ansible installed on the host
-sudo yum install -y ansible || true
 export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
 docker network create pmm-qa || true
 docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
