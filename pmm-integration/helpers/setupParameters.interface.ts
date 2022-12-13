@@ -3,4 +3,5 @@ export default interface SetupParameters {
   moVersion?: string;
   psVersion?: string;
   pmmClientVersion?: string;
+  psmdbTarballURL?: string;
 };

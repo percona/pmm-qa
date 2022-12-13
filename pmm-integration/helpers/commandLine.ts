@@ -67,7 +67,7 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.psVersion) {
     await setEnvVariable('PS_VERSION', '8.0')
     parameters.psVersion = '8.0';
-}
+  }
 }
 
 export const installAnsible = async () => {
