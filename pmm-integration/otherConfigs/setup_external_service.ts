@@ -26,7 +26,7 @@ const setup_external_service = async (parameters: SetupParameters) => {
 
     await new Promise(r => setTimeout(r, 10000));
     await executeCommand(`docker exec ${externalServiceContainerName} pmm-admin --version`);
-    await executeCommand(`docker exec ${externalServiceContainerName} pmm-admin add external --server-url=https://${pmmIntegrationServerName}:443 --listen-port=42200 --group="redis" --service-name="redis_external"`);
+    await executeCommand(`sudo docker exec ${externalServiceContainerName} pmm-admin add external --server-url=https://${pmmIntegrationServerName}:443 --listen-port=42200 --group="redis" --service-name="redis_external"`);
 // pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=pmm-integration-server:443 --server-insecure-tls --server-username=admin --server-password=admin
 
 }
