@@ -31,9 +31,14 @@ export const executeAnsiblePlaybook = async (command: string) => {
 };
 
 export const executeCommandIgnoreErrors = async (command: string) => {
-  return awaitExec(command)
-    .then((response: any) => response)
-    .catch((e: Error) => { });
+  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
+  if (code === 0) {
+    console.log(`The command ${command} was run successfully with result: ${stdout}`);
+  } else {
+    console.log(`The command ${command} failed with error: ${stderr}`);
+  }
+
+  return { stdout, stderr };
 }
 
 export const setEnvVariable = async (variable: string, value: string) => {

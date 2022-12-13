@@ -5,6 +5,7 @@ import setup_pmm_pgsm_integration from "./postgres/pgsql_pgsm_setup/setup_pmm_pg
 import setup_external_service from './otherConfigs/setup_external_service'
 import * as core from '@actions/core';
 import installDockerCompose from "./otherConfigs/installDockerCompose";
+import clearAllSetups from "./otherConfigs/clearAllSetups";
 
 export interface SetupsInterface {
   arg: string;
@@ -57,9 +58,9 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-external-service',
     description: 'Use this option for Percona MongoDB setup with PMM2',
     function: async (parameters: SetupParameters) => {
-      // await executeCommand('chmod +x ./otherConfigs/setup_external_service.sh');
-      // await executeCommand('sudo ./otherConfigs/setup_external_service.sh');
-      await setup_external_service(parameters);
+      await executeCommand('chmod +x ./otherConfigs/setup_external_service.sh');
+      await executeCommand('sudo ./otherConfigs/setup_external_service.sh');
+      // await setup_external_service(parameters);
       await setEnvVariable("INTEGRATION_FLAG", "@external-service");
     },
   },
@@ -91,8 +92,16 @@ export const availableSetups: SetupsInterface[] = [
       await installDockerCompose();
       await executeCommand('chmod +x ./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
       await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
-      // await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml -e="PS_VERSION=${parameters.psVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`);
       await setEnvVariable("INTEGRATION_FLAG", "@fb");
+    },
+  },
+  {
+    arg: '--clear-all-setups',
+    description: 'Use this to clear your local env of any integration setups.',
+    function: async (parameters: SetupParameters) => {
+      await clearAllSetups();
+      await setEnvVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
+      core.exportVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
     },
   }
 ];
