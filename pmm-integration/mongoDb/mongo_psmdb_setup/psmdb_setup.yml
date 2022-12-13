@@ -5,11 +5,11 @@
   become_method: sudo
   vars:
     psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB_VERSION') | default('4.4', true) ) }}"
-    psmdb_tarball: "{{ PSMDB_TARBALL' | default('', true) }}"
+    psmdb_tarball: "{{ PSMDB_TARBALL | default('', true) }}"
     psmdb_setup: "{{ lookup('vars', 'extra_psmdb_setup', default=lookup('env','PSMDB_SETUP') | default('regular', true) ) }}"
     psmdb_container: "{{ lookup('vars', 'extra_psmdb_container', default=lookup('env','PSMDB_CONTAINER') | default('psmdb', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('pmm-integration-server', true) ) }}"
-    client_version: "{{ CLIENT_VERSION' | default('dev-latest', true) }}"
+    client_version: "{{ CLIENT_VERSION | default('dev-latest', true) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
     ansible_python_interpreter: "{{ ansible_playbook_python }}"
@@ -50,14 +50,12 @@
         - docker exec {{ psmdb_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 
     - name: Get Product tarball URL based on the version
-      shell: cat product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
+      shell: cat ../../../pmm-tests/product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
       register: psmdb_tarball
       when: psmdb_tarball == ''
 
     - set_fact: 
         psmdb_tarball={{ psmdb_tarball.stdout }}
-
-#assing stdout to psmdb_tarball after this step.
 
     - name: Setup psmdb for monitoring
       shell: "{{ item }}"
