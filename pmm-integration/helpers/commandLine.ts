@@ -68,6 +68,10 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
     await setEnvVariable('PS_VERSION', '8.0')
     parameters.psVersion = '8.0';
   }
+  if(!parameters.psmdbTarballURL) {
+    parameters.psmdbTarballURL = '';
+    await setEnvVariable('PSMDB_TARBALL', '')
+  }
 }
 
 export const installAnsible = async () => {
