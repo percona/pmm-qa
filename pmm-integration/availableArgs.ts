@@ -92,7 +92,7 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
       await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
       // await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml -e="PS_VERSION=${parameters.psVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`);
-      // await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
+      await setEnvVariable("INTEGRATION_FLAG", "@fb");
     },
   }
 ];
