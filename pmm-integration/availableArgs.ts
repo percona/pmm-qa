@@ -4,6 +4,7 @@ import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
 import setup_pmm_pgsm_integration from "./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration";
 import setup_external_service from './otherConfigs/setup_external_service'
 import * as core from '@actions/core';
+import installDockerCompose from "./otherConfigs/installDockerCompose";
 
 export interface SetupsInterface {
   arg: string;
@@ -81,6 +82,17 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('./mysql/pmm_ps_integration/pmm_ps_integration.sh');
       await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml -e="PS_VERSION=${parameters.psVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`);
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
+    },
+  },
+  {
+    arg: '--mongo-replica-for-backup',
+    description: 'Use this option to setup MongoDB Replica Set and PBM for each replica member on client node',
+    function: async (parameters: SetupParameters) => {
+      await installDockerCompose();
+      await executeCommand('chmod +x ./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
+      await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
+      // await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml -e="PS_VERSION=${parameters.psVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`);
+      // await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
     },
   }
 ];
