@@ -1,8 +1,6 @@
 import { executeAnsiblePlaybook, executeCommand, setEnvVariable } from "./helpers/commandLine";
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
-import setup_pmm_pgsm_integration from "./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration";
-import setup_external_service from './otherConfigs/setup_external_service'
 import * as core from '@actions/core';
 import installDockerCompose from "./otherConfigs/installDockerCompose";
 import clearAllSetups from "./otherConfigs/clearAllSetups";
@@ -27,9 +25,6 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-pgsm-integration',
     description: 'Use this option to setup PMM-Client with PGSM for integration testing',
     function: async (parameters: SetupParameters) => {
-      // await executeCommand('chmod +x ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
-      // await setup_pmm_pgsm_integration(parameters)
-      // await executeCommand('sudo ./postgres/pgsql_pgsm_setup/setup_pmm_pgsm_integration.sh');
       await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgsm_setup/pgsql_pgsm_setup.yml -e="PGSQL_VERSION=${parameters.pgsqlVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`)
       core.exportVariable("INTEGRATION_FLAG", "@pgsm-pmm-integration");
     },
@@ -38,8 +33,6 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-pgss-integration',
     description: 'Use this option to setup PMM-Client with PG Stat Statements for Integration Testing',
     function: async (parameters: SetupParameters) => {
-      // await executeCommand('chmod +x ./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
-      // await executeCommand('./postgres/pgsql_pgss_setup/setup_pmm_pgss_integration.sh');
       await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgss_setup/pgsql_pgss_setup.yml -e="PGSQL_VERSION=${parameters.pgsqlVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`)
       core.exportVariable("INTEGRATION_FLAG", "@pgss-pmm-integration");
     },
