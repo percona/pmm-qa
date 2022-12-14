@@ -15,14 +15,6 @@ const run = async () => {
   let parameters: SetupParameters = {};
   const commandLineArgs: string[] = process.argv.slice(2);
 
-  if(process.env.CI) {
-    await installAnsible();
-  } else {
-    await recreateNetwork(dockerNetworkName);
-    await stopAndRemoveContainer(pmmIntegrationServerName);
-    await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
-  }
-
   validateArgs(commandLineArgs);
 
   for await (const [_index, value] of commandLineArgs.entries()) {
@@ -53,6 +45,17 @@ const run = async () => {
   }
 
   await setDefaultEnvVariables(parameters);
+
+  
+  if(process.env.CI) {
+    await installAnsible();
+  } else {
+    await recreateNetwork(dockerNetworkName);
+    await stopAndRemoveContainer(pmmIntegrationServerName);
+    await stopAndRemoveContainer('pmm-client');
+    await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
+    await executeCommand(`docker run -d --name pmm-client --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`);
+  }
 
   for await (const [_index, value] of commandLineArgs.entries()) {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)

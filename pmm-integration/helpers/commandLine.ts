@@ -55,7 +55,7 @@ export const setEnvVariable = async (variable: string, value: string) => {
 
 export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.pgsqlVersion) {
-      await setEnvVariable('PGSQL_VERSION', '15');
+      core.exportVariable('PGSQL_VERSION', '15');
       parameters.pgsqlVersion = '15';
   }
 
@@ -68,6 +68,12 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
     await setEnvVariable('PS_VERSION', '8.0')
     parameters.psVersion = '8.0';
   }
+
+  if (!parameters.pmmClientVersion) {
+    core.exportVariable('CLIENT_VERSION', 'dev-latest');
+    parameters.pmmClientVersion = 'dev-latest';
+  }
+
   if(!parameters.psmdbTarballURL) {
     parameters.psmdbTarballURL = '';
     await setEnvVariable('PSMDB_TARBALL', '')
