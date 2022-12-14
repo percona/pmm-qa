@@ -27,6 +27,10 @@ const run = async () => {
         parameters.moVersion = value.split("=")[1];
         await setEnvVariable('MO_VERSION', parameters.moVersion);
         break;
+      case value.includes('--mo-setup'):
+        parameters.moSetup = value.split("=")[1];
+        await setEnvVariable('MO_SETUP', parameters.moSetup);
+        break;
       case value.includes('--ps-version'):
         parameters.psVersion = value.split("=")[1];
         await setEnvVariable('PS_VERSION', parameters.psVersion);

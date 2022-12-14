@@ -33,12 +33,25 @@ on:
         default: 'dev-latest'
         required: true
       pgsql_version:
-        description: 'Provide version of pgsql'
+        description: 'Provide version of PostgreSQL'
         default: '15'
         required: true
       ps_version:
-        description: 'Provide version of pgsql'
+        description: 'Provide version of Percona Server for MySQL'
         default: '8.0'
+        required: true
+      mongo_version:
+        description: 'Provide version of Mongo DB'
+        default: '4.4'
+        required: true
+      mongo_setup:
+        description: 'Provide setup type for Mongo DB'
+        type: choice
+        options: 
+          - regular
+          - replica
+          - sharded
+        default: 'regular'
         required: true
 
 jobs:
@@ -58,6 +71,10 @@ jobs:
 
       PGSQL_VERSION: ${{ github.event.inputs.pgsql_version }}
       PS_VERSION: ${{ github.event.inputs.ps_version }}
+      MONGO_VERSION: ${{ github.event.inputs.mongo_version }}
+      MONGO_SETUP: ${{ github.event.inputs.mongo_setup }}
+      
+      
 
     steps:
       - name: Tests of pmm server version ${{ github.event.inputs.pmm_server_version }} for integration flag ${{ github.event.inputs.integration_setup }}
@@ -106,19 +123,11 @@ jobs:
         run: |
           docker run -d --name pmm-client --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=pmm-integration-server -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${{ env.PMM_CLIENT_VERSION }}
 
-#      - name: Setup Client for PMM-Server
-#        run: |
-#          wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
-#          sudo dpkg -i percona-release_latest.generic_all.deb
-#          sudo apt update
-#          sudo apt install -y pmm2-client
-#          sudo pmm-admin config --server-url=https://admin:admin@127.0.0.1:443 --server-insecure-tls
-
       - name: Setup Databases for PMM-Server
         run: |
           cd pmm-qa/pmm-integration/
           sudo npm install
-          sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} ${{ env.INTEGRATION_SETUP }}
+          sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} --mo-version ${{ env.MONGO_VERSION }} --mo-setup ${{ env.MONGO_SETUP }} ${{ env.INTEGRATION_SETUP }}
         shell: bash
 
       - name: Execute Integration Tests

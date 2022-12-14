@@ -63,6 +63,11 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
       await setEnvVariable('MO_VERSION', '6.0')
       parameters.moVersion = '6.0';
   }
+
+  if (!parameters.moSetup) {
+    core.exportVariable('MO_SETUP', 'regular');
+    parameters.moSetup = 'regular';
+  }
   
   if (!parameters.psVersion) {
     await setEnvVariable('PS_VERSION', '8.0')

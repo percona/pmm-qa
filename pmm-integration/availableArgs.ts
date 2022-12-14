@@ -50,7 +50,7 @@ export const availableSetups: SetupsInterface[] = [
     function: async (parameters: SetupParameters) => {
       await executeCommand('chmod +x ./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
       await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
-      await executeCommand(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml -e="CLIENT_VERSION=${parameters.pmmClientVersion} PSMDB_TARBALL=${parameters.psmdbTarballURL}"`);
+      await executeCommand(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml -e="CLIENT_VERSION=${parameters.pmmClientVersion} PSMDB_TARBALL=${parameters.psmdbTarballURL}  PSMDB_VERSION=${parameters.moVersion} PSMDB_SETUP=${parameters.moSetup}"`);
       await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
     },
   },
