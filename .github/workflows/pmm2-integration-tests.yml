@@ -80,10 +80,10 @@ jobs:
           target_url: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
           sha: ${{ env.SHA }}
 
-#      - name: Install NodeJS v16
-#        uses: percona-platform/setup-node@v2
-#        with:
-#          node-version: 16.14.1
+      - name: Install NodeJS v16
+        uses: percona-platform/setup-node@v2
+        with:
+          node-version: 16.14.1
 
       - name: Checkout UI tests
         uses: percona-platform/checkout@v2
@@ -105,8 +105,8 @@ jobs:
           docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="pmm-integration-network" --publish 80:80 --publish 443:443 --name pmm-integration-server perconalab/pmm-server:${{ env.PMM_SERVER_VERSION }}
 
       - name: Create env file
+        working-directory: pmm-qa/pmm-integration
         run: |
-          cd pmm-qa/pmm-integration/
           touch .env
           echo CI=true >> .env
 
@@ -115,25 +115,25 @@ jobs:
           docker run -d --name pmm-client --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=pmm-integration-server -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${{ env.PMM_CLIENT_VERSION }}
 
       - name: Setup Databases for PMM-Server
+        working-directory: pmm-qa/pmm-integration
         run: |
-          cd pmm-qa/pmm-integration/
           sudo npm install
           sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} --mo-version=${{ env.MONGO_VERSION }} --mo-setup=${{ env.MONGO_SETUP }} ${{ env.INTEGRATION_SETUP }}
         shell: bash
 
       - name: Execute Integration Tests
-        id: pmm-ui-tests-all
+        working-directory: pmm-ui-tests
+        id: pmm-ui-tests
         run: |
           sudo docker ps -a
           node -v
-          cd ./pmm-ui-tests
           npm install
           ./node_modules/.bin/codeceptjs run --debug --steps --reporter mochawesome -c pr.codecept.js  --grep '${{ env.INTEGRATION_FLAG }}'
 
       - name: Generating the report
         if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
+        working-directory: pmm-ui-tests
         run: |
-          cd ./pmm-ui-tests
           npx mochawesome-merge tests/output/*/*.json > tests/output/output.json
 
       - name: Create the report
