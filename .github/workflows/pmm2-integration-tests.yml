@@ -71,7 +71,7 @@ jobs:
     steps:
       - name: Tests of pmm server version ${{ github.event.inputs.pmm_server_version }} for integration flag ${{ github.event.inputs.integration_setup }}
         if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' }}
-        uses: percona-platform/github-status-action@v1
+        uses: actions/github-status-action
         with:
           context: 'pmm2-ui-tests'
           description: 'Tests execution has been started'
@@ -80,10 +80,10 @@ jobs:
           target_url: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
           sha: ${{ env.SHA }}
 
-      - name: Install NodeJS v16
-        uses: percona-platform/setup-node@v2
-        with:
-          node-version: 16.14.1
+#      - name: Install NodeJS v16
+#        uses: percona-platform/setup-node@v2
+#        with:
+#          node-version: 16.14.1
 
       - name: Checkout UI tests
         uses: percona-platform/checkout@v2
@@ -95,7 +95,6 @@ jobs:
       - name: Checkout pmm-qa Repo
         uses: percona-platform/checkout@v2
         with:
-          # token: ${{ secrets.ROBOT_TOKEN }}
           repository: percona/pmm-qa
           path: ./pmm-qa
           ref: ${{ env.QA_TESTS_BRANCH }}
