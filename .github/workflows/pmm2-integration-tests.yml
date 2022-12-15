@@ -71,7 +71,7 @@ jobs:
     steps:
       - name: Tests of pmm server version ${{ github.event.inputs.pmm_server_version }} for integration flag ${{ github.event.inputs.integration_setup }}
         if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' }}
-        uses: actions/github-status-action
+        uses: Sibz/github-status-action@v1
         with:
           context: 'pmm2-ui-tests'
           description: 'Tests execution has been started'
