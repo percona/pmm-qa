@@ -125,7 +125,7 @@ jobs:
         id: pmm-ui-tests-all
         run: |
           sudo docker ps -a
-          printenv INTEGRATION_FLAG
+          node -v
           cd ./pmm-ui-tests
           npm install
           ./node_modules/.bin/codeceptjs run --debug --steps --reporter mochawesome -c pr.codecept.js  --grep '${{ env.INTEGRATION_FLAG }}'
