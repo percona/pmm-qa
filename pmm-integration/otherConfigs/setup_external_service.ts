@@ -14,8 +14,6 @@ const setup_external_service = async (parameters: SetupParameters) => {
     await executeCommand(`docker exec ${externalServiceContainerName} apt-get update -y`);
     await executeCommand(`docker exec ${externalServiceContainerName} apt-get install wget -y`);
 
-    await installPmmClient(externalServiceContainerName);
-    await connectPmmClient(externalServiceContainerName, `${pmmIntegrationServerName}:443`);
     await executeCommandIgnoreErrors(`docker exec ${externalServiceContainerName} rm redis_exporter*.tar.gz`);
     await executeCommand(`docker exec ${externalServiceContainerName} wget https://github.com/oliver006/redis_exporter/releases/download/v1.14.0/redis_exporter-v1.14.0.linux-386.tar.gz`);
     await executeCommand(`docker exec ${externalServiceContainerName} tar -xvf redis_exporter-v1.14.0.linux-386.tar.gz`);
@@ -23,10 +21,14 @@ const setup_external_service = async (parameters: SetupParameters) => {
     await executeCommand(`docker exec -i ${externalServiceContainerName} bash -c cd redis_exporter`);
     await executeCommand(`docker run -d -p 6379:6379 --network=${dockerNetworkName} --name=redis_container redis '--requirepass oFukiBRg7GujAJXq3tmd'`);
     await executeCommand(`docker exec ${externalServiceContainerName} bash -c "./redis_exporter -redis.password=oFukiBRg7GujAJXq3tmd -redis.addr=redis_container:6379 -web.listen-address=:42200 > redis.log 2>&1 &"`);
+    await executeCommand(`docker exec ${externalServiceContainerName} wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/pmm2-client-setup.sh`);
+    await executeCommand(`- docker exec ${externalServiceContainerName} bash -x ./pmm2-client-setup.sh --pmm_server_ip https://${pmmIntegrationServerName}:443 --client_version ${parameters.pmmClientVersion} --admin_password admin --use_metrics_mode no`);
+    
+        
 
     await new Promise(r => setTimeout(r, 10000));
     await executeCommand(`docker exec ${externalServiceContainerName} pmm-admin --version`);
-    await executeCommand(`sudo docker exec ${externalServiceContainerName} pmm-admin add external --server-url=https://${pmmIntegrationServerName}:443 --listen-port=42200 --group="redis" --service-name="redis_external"`);
+    // await executeCommand(`sudo docker exec ${externalServiceContainerName} pmm-admin add external --server-url=https://${pmmIntegrationServerName}:443 --listen-port=42200 --group="redis" --service-name="redis_external"`);
 // pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=pmm-integration-server:443 --server-insecure-tls --server-username=admin --server-password=admin
 
 }
