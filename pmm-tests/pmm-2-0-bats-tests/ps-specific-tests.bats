@@ -54,7 +54,7 @@ echo "$output"
         done
 }
 
-@test "run pmm-admin remove mysql" {
+@test "run pmm-admin remove mysql added with basic" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
@@ -66,14 +66,14 @@ echo "$output"
         done
 }
 
-@test "run pmm-admin add mysql --help" {
+@test "run pmm-admin add mysql --help contains disable-tablestats" {
     run pmm-admin add mysql --help
     echo "$output"
     [ "$status" -eq 0 ]
     echo "${output}" | grep "disable-tablestats"
 }
 
-@test "run pmm-admin add mysql --help" {
+@test "run pmm-admin add mysql --help contains disable-tablestats-limit" {
     run pmm-admin add mysql --help
     echo "$output"
     [ "$status" -eq 0 ]
@@ -117,7 +117,7 @@ echo "$output"
         done
 }
 
-@test "run pmm-admin remove mysql" {
+@test "run pmm-admin remove mysql added using host, port and servicename" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
@@ -157,7 +157,7 @@ echo "$output"
     done
 }
 
-@test "run pmm-admin remove mysql" {
+@test "run pmm-admin remove mysql add using disable-tablestats" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
@@ -183,7 +183,7 @@ echo "$output"
     done
 }
 
-@test "run pmm-admin remove mysql" {
+@test "run pmm-admin remove mysql added using disable-tablestats-limit" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
