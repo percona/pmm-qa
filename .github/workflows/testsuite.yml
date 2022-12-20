@@ -1,5 +1,4 @@
 name: Test pipeline
-
 on: pull_request
 
 jobs:
