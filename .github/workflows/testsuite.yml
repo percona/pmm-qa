@@ -2,7 +2,7 @@ name: Test pipeline
 on: pull_request
 
 jobs:
-  e2e:
+  bats-testsuite:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -25,11 +25,11 @@ jobs:
 
       - name: Run Setup for ps5.7
         if: ${{ matrix.db-type }} == 'ps5.7'
-        run: bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=5.7 --pmm2
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=5.7 --pmm2
 
       - name: Run Setup for ps8.0
         if: ${{ matrix.db-type }} == 'ps8'
-        run: bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=8 --pmm2
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=8 --pmm2
 
       - name: Run bats tests for PS
         if: ${{ matrix.db-type }} == 'ps8' || ${{ matrix.db-type }} == 'ps5.7'
