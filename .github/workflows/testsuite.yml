@@ -21,7 +21,7 @@ jobs:
           docker run -d -p 80:80 -p 443:443 -p 9000:9000 --volumes-from pmm-server-data --name pmm-server --restart always perconalab/pmm-server:dev-latest
           sleep 30
       - name: Setup PMM2-Client
-        run: bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version dev-latest --admin_password admin --use_metrics_mode no
+        run: sudo bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version dev-latest --admin_password admin --use_metrics_mode no
 
       - name: Run Setup for ps5.7
         if: ${{ matrix.db-type }} == 'ps5.7'
