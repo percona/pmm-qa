@@ -263,8 +263,8 @@ skip "Skipping this test, because of Random Failures, need to fix this"
     for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
         let COUNTER=COUNTER+1
         run sleep 20
-        run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
-        run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh mongo_inst_$COUNTER mongodb_up ${pmm_server_ip} mongodb_exporter pmm mypass
+        run sudo chmod +x ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+        run ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh mongo_inst_$COUNTER mongodb_up ${pmm_server_ip} mongodb_exporter pmm mypass
         echo "$output"
         [ "$status" -eq 0 ]
         [ "${lines[0]}" = "mongodb_up 1" ]

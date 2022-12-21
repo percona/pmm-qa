@@ -36,7 +36,7 @@ jobs:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     strategy:
       matrix:
-        db-type: [ps5.7, ps8]
+        db-type: [ps5.7, ps8, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6]
 
     steps:
       - name: Checkout PMM-QA tests when Workflow_dispatch
@@ -76,3 +76,35 @@ jobs:
       - name: Run bats tests for PS
         if: ${{ matrix.db-type == 'ps5.7' || matrix.db-type == 'ps8' }}
         run: sudo bats ./pmm-tests/pmm-2-0-bats-tests/ps-specific-tests.bats
+
+      - name: Run Setup for pdpgsql 13
+        if: ${{ matrix.db-type == 'pdpgsql13' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=pdpgsql,1 --pdpgsql-version=13 --pmm2
+
+      - name: Run Setup for pdpgsql 14
+        if: ${{ matrix.db-type == 'pdpgsql14' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=pdpgsql,1 --pdpgsql-version=14 --pmm2
+
+      - name: Run Setup for pdpgsql 15
+        if: ${{ matrix.db-type == 'pdpgsql15' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=pdpgsql,1 --pdpgsql-version=15 --pmm2
+
+      - name: Run bats tests for PDPGSQL
+        if: ${{ matrix.db-type == 'pdpgsql13' || matrix.db-type == 'pdpgsql14' || matrix.db-type == 'pdpgsql15' }}
+        run: sudo bats ./pmm-tests/pmm-2-0-bats-tests/pdpgsql-tests.bats
+
+      - name: Run Setup for PSMDB 4.4
+        if: ${{ matrix.db-type == 'modb4.4' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=modb,1 --modb-version=4.4 --pmm2
+
+      - name: Run Setup for PSMDB 5
+        if: ${{ matrix.db-type == 'modb5' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=modb,1 --modb-version=5 --pmm2
+
+      - name: Run Setup for PSMDB 6
+        if: ${{ matrix.db-type == 'modb6' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=modb,1 --modb-version=6 --pmm2
+
+      - name: Run bats tests for PSMDB
+        if: ${{ matrix.db-type == 'modb6' || matrix.db-type == 'modb5' || matrix.db-type == 'modb4.4' }}
+        run: sudo bats ./pmm-tests/pmm-2-0-bats-tests/modb-tests.bats
