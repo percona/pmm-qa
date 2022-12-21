@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        db-type: [ps5.7, ps8]
+        db-type: [ps5.7]
     steps:
       - name: Clone QA repository
         uses: actions/checkout@v3
