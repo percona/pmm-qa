@@ -21,12 +21,15 @@ jobs:
           sleep 30
       - name: Setup PMM2-Client
         run: sudo bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version dev-latest --admin_password admin --use_metrics_mode no
+
       - name: Run Setup for ps5.7
-        if: "${{ matrix.db-type }}" == "ps5.7"
+        if: contains("ps5.7", '${{ matrix.db-type }}')
         run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=5.7 --pmm2
+
       - name: Run Setup for ps8.0
-        if: "${{ matrix.db-type }}" == "ps8"
+        if: contains("ps8", '${{ matrix.db-type }}')
         run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=8 --pmm2
+
       - name: Wait for Metrics to start Hitting
         run: |
           echo ${{ matrix.db-type }}
