@@ -7,38 +7,38 @@ jobs:
     strategy:
       matrix:
         db-type: [ps5.7, ps8]
-        
+
     steps:
       - name: Clone QA repository
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref }}
-          
+
       - name: Setup Bats
         run: npm install -g bats
-        
+
       - name: Setup PMM2-Server
         run: |
           docker create -v /srv --name pmm-server-data perconalab/pmm-server:dev-latest
           docker run -d -p 80:80 -p 443:443 -p 9000:9000 --volumes-from pmm-server-data --name pmm-server --restart always perconalab/pmm-server:dev-latest
           sleep 30
-          
+
       - name: Setup PMM2-Client
         run: sudo bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version dev-latest --admin_password admin --use_metrics_mode no
-        
+
       - name: Run Setup for ps5.7
-        if: ${{ matrix.db-type == ps5.7 }}
+        if: contains("ps5.7", '${{ matrix.db-type }}')
         run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=5.7 --pmm2
-        
+
       - name: Run Setup for ps8.0
-        if: ${{ matrix.db-type == ps8 }}
+        if: contains("ps8", '${{ matrix.db-type }}')
         run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=8 --pmm2
-        
+
       - name: Wait for Metrics to start Hitting
         run: |
           echo ${{ matrix.db-type }}
           sleep 20
-          
+
       - name: Run bats tests for PS
-        if: ${{ matrix.db-type }} == 'ps8' || ${{ matrix.db-type }} == 'ps5.7'
+        if: contains("ps8", '${{ matrix.db-type }}') || contains("ps5.7", '${{ matrix.db-type }}')
         run: sudo bats ./pmm-tests/pmm-2-0-bats-tests/ps-specific-tests.bats
