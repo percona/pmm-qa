@@ -227,7 +227,7 @@ echo "$output"
                 let COUNTER=COUNTER+1
                 run sleep 20
                 run chmod +x ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh
-                run ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh mysql_$COUNTER mysql_up ${pmm_server_ip} mysqld_exporter pmm mypass
+                run ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh mysql_$COUNTER mysql_up 127.0.0.1 mysqld_exporter pmm mypass
                 echo "$output"
                 [ "$status" -eq 0 ]
                 [ "${lines[0]}" = "mysql_up 1" ]
