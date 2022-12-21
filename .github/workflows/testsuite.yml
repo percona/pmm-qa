@@ -8,11 +8,6 @@ jobs:
       matrix:
         db-type: [ps5.7, ps8]
     steps:
-      - name: Clone QA repository
-        uses: actions/checkout@v3
-        with:
-          repository: 'percona/pmm-qa'
-          ref: 'main'
       - name: Setup Bats
         run: npm install -g bats
       - name: Setup PMM2-Server
