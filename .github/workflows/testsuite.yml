@@ -22,6 +22,9 @@ jobs:
       - name: Setup PMM2-Client
         run: sudo bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version dev-latest --admin_password admin --use_metrics_mode no
 
+      - name: Echo Matrix value
+        run: echo ${{ matrix.db-type }}
+
       - name: Run Setup for ps5.7
         if: ${{ matrix.db-type }} == 'ps5.7'
         run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=5.7 --pmm2
