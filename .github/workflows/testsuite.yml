@@ -32,4 +32,4 @@ jobs:
 
       - name: Run bats tests for PS
         if: ${{ matrix.db-type }} == 'ps8' || ${{ matrix.db-type }} == 'ps5.7'
-        run: bats ./pmm-tests/pmm-2-0-bats-tests/ps-specific-tests.bats
+        run: sudo bats ./pmm-tests/pmm-2-0-bats-tests/ps-specific-tests.bats
