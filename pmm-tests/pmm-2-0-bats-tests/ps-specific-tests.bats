@@ -226,7 +226,7 @@ echo "$output"
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
                 let COUNTER=COUNTER+1
                 run sleep 20
-                run sudo chmod +x ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+                run chmod +x ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh
                 run ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh mysql_$COUNTER mysql_up ${pmm_server_ip} mysqld_exporter pmm mypass
                 echo "$output"
                 [ "$status" -eq 0 ]
