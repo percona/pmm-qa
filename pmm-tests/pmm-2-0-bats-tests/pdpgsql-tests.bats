@@ -23,11 +23,12 @@ PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
 }
 
 @test "PMM-T442 run pmm-admin inventory list agents for check agent postgresql_pgstatmonitor_agent" {
+    run sleep 30
     run pmm-admin inventory list agents
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "postgres_exporter           Running "
-    echo "${output}" | grep "postgresql_pgstatmonitor_agent Running "
+    echo "${output}" | grep "postgres_exporter           Running"
+    echo "${output}" | grep "postgresql_pgstatmonitor_agent Running"
 }
 
 @test "PMM-T442 run pmm-admin add postgreSQL with default query source" {
