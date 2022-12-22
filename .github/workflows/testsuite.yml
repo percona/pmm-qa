@@ -48,10 +48,10 @@ jobs:
         uses: percona-platform/github-status-action@v1
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "pmm2-testsuite"
+          context: "pmm2-testsuite for ${{ matrix.db-type }}"
           description: "Tests execution has been started"
           state: "pending"
-          repository: ${{ github.event.inputs.repo }}
+          repository: Percona-Lab/pmm-submodules
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
       - name: Checkout PMM-QA tests when Workflow_dispatch
@@ -65,7 +65,6 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: percona-platform/checkout@v2
         with:
-          ref: ${{ github.ref }}
           path: ./
 
       - name: Setup tools
@@ -184,9 +183,9 @@ jobs:
         uses: percona-platform/github-status-action@v1
         with:
           authToken: ${{ github.repository }}
-          context: "pmm2-testsuite"
+          context: "pmm2-testsuite for ${{ matrix.db-type }}"
           description: "Test execution ${{ job.status }}"
           state: ${{ job.status }}
-          repository: ${{ github.event.inputs.repo }}
+          repository: Percona-Lab/pmm-submodules
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
