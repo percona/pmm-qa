@@ -288,6 +288,18 @@ echo "$output"
         done
 }
 
+@test "run pmm-admin remove mysql added with custom agent password" {
+        COUNTER=0
+        IFS=$'\n'
+        for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
+                let COUNTER=COUNTER+1
+                run pmm-admin remove mysql mysql_$COUNTER
+                echo "$output"
+                        [ "$status" -eq 0 ]
+                        echo "${output}" | grep "Service removed."
+        done
+}
+
 @test "run pmm-admin add mysql using metrics-mode as push" {
         COUNTER=0
         IFS=$'\n'
@@ -376,18 +388,6 @@ echo "$output"
         done
 }
 
-
-@test "run pmm-admin remove mysql added with custom agent password" {
-        COUNTER=0
-        IFS=$'\n'
-        for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
-                let COUNTER=COUNTER+1
-                run pmm-admin remove mysql mysql_$COUNTER
-                echo "$output"
-                        [ "$status" -eq 0 ]
-                        echo "${output}" | grep "Service removed."
-        done
-}
 
 @test "PMM-T789 - Verify help for pmm-admin add mysql has TLS-related flags" {
     run pmm-admin add mysql --help

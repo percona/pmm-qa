@@ -147,7 +147,7 @@ echo "$output"
         done
 }
 
-@test "run pmm-admin remove mysql added using host, port and service name" {
+@test "run pmm-admin remove mysql added using socket" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "MySQL" | grep "mysql_") ; do
