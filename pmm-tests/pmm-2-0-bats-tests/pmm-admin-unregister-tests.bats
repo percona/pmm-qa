@@ -1,4 +1,4 @@
-if [ ${CLIENT_VERSION} == "dev-latest" ]; then
+if [ "${CLIENT_VERSION}" == "dev-latest" ]; then
    export PMM_VERSION=$(curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/PMM-2.0/VERSION | xargs)
 fi
 
@@ -8,7 +8,7 @@ fi
 }
 
 @test "run pmm-admin --version --json and grep PMMVersion" {
-    if [ -z ${PMM_VERSION+x} ]; then
+    if [ ! -z ${PMM_VERSION+x} ]; then
         run pmm-admin --version --json
         echo $output
         [ "$status" -eq 0 ]
