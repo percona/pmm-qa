@@ -66,6 +66,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clickhouse-client
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
+          wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
 
       - name: Setup PMM2-Server
         run: |
@@ -151,16 +152,16 @@ jobs:
         if: ${{ matrix.db-type == 'proxysql' }}
         run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=pxc,1 --pmm2 --pxc-version=5.7
 
-      - name: Run bats tests for Client Container Scenarios
+      - name: Run bats tests for ProxySQL
         if: ${{ matrix.db-type == 'proxysql' }}
         run: |
-          sudo bats ./pmm-tests/pmm-2-0-bats-tests/proxysql-tests.bats
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/proxysql-specific-tests.bats
 
       - name: Run Setup for MySQL
         if: ${{ matrix.db-type == 'ms8.0' }}
         run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ms,1 --pmm2 --ms-version=8.0
 
-      - name: Run bats tests for Client Container Scenarios
+      - name: Run bats tests for MySQL Tests
         if: ${{ matrix.db-type == 'ms8.0' }}
         run: |
           sudo bats ./pmm-tests/pmm-2-0-bats-tests/ms-specific-tests.bats
