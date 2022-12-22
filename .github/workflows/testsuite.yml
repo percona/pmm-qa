@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db-type: [ps5.7, ps8, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6, generic, clientContainer, haproxy]
+        db-type: [ps5.7, ps8, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6, generic, clientContainer, haproxy, proxysql, ms8.0]
 
     steps:
       - name: Checkout PMM-QA tests when Workflow_dispatch
@@ -146,3 +146,21 @@ jobs:
         if: ${{ matrix.db-type == 'haproxy' }}
         run: |
           sudo bats ./pmm-tests/pmm-2-0-bats-tests/haproxy-tests.bats
+
+      - name: Run Setup for ProxySQL
+        if: ${{ matrix.db-type == 'proxysql' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=pxc,1 --pmm2 --pxc-version=5.7
+
+      - name: Run bats tests for Client Container Scenarios
+        if: ${{ matrix.db-type == 'proxysql' }}
+        run: |
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/proxysql-tests.bats
+
+      - name: Run Setup for MySQL
+        if: ${{ matrix.db-type == 'ms8.0' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=ms,1 --pmm2 --ms-version=8.0
+
+      - name: Run bats tests for Client Container Scenarios
+        if: ${{ matrix.db-type == 'ms8.0' }}
+        run: |
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/ms-specific-tests.bats
