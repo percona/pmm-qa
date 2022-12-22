@@ -36,7 +36,7 @@ jobs:
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
     strategy:
       matrix:
-        db-type: [ps5.7, ps8, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6]
+        db-type: [ps5.7, ps8, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6, generic]
 
     steps:
       - name: Checkout PMM-QA tests when Workflow_dispatch
@@ -110,3 +110,10 @@ jobs:
       - name: Run bats tests for PSMDB
         if: ${{ matrix.db-type == 'modb6' || matrix.db-type == 'modb5' || matrix.db-type == 'modb4.4' }}
         run: sudo bats ./pmm-tests/pmm-2-0-bats-tests/modb-tests.bats
+      - name: Run bats tests for generic Scenarios
+        if: ${{ matrix.db-type == 'generic' }}
+        run: |
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/generic-tests.bats
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/docker-env-variable-tests.bats
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/pmm-client-docker-tests.bats
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/pmm-admin-unregister-tests.bats
