@@ -54,7 +54,7 @@ echo "$output"
 }
 
 
-@test "run pmm-admin remove postgresql" {
+@test "run pmm-admin remove postgresql added with default parameters" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
@@ -102,7 +102,7 @@ echo "$output"
         done
 }
 
-@test "run pmm-admin remove postgresql" {
+@test "run pmm-admin remove postgresql adding using host, port and service name flags" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do

@@ -17,6 +17,7 @@ run pmm-admin
 echo "$output"
     [ "$status" -eq 1 ]
     [ "${lines[0]}" = "Usage: pmm-admin <command>" ]
+}
 
 @test "run pmm-admin under root privileges" {
 if [[ $(id -u) -ne 0 ]] ; then
@@ -41,7 +42,7 @@ echo "$output"
   done
 }
 
-@test "run pmm-admin remove mongodb" {
+@test "run pmm-admin remove mongodb instance added with metrics mode push" {
     COUNTER=0
     IFS=$'\n'
     for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
@@ -66,7 +67,7 @@ echo "$output"
   done
 }
 
-@test "run pmm-admin remove mongodb" {
+@test "run pmm-admin remove mongodb instance added with metrics mode pull" {
     COUNTER=0
     IFS=$'\n'
     for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
@@ -92,7 +93,7 @@ echo "$output"
   done
 }
 
-@test "run pmm-admin add mongodb again based on running instances" {
+@test "run pmm-admin add mongodb again based on running instances to check if fails with error message exists" {
 	COUNTER=0
 	IFS=$'\n'
 	for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
@@ -119,7 +120,7 @@ echo "$output"
     done
 }
 
-@test "run pmm-admin remove mongodb" {
+@test "run pmm-admin remove mongodb instance added based on running instances" {
 	COUNTER=0
 	IFS=$'\n'
 	for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
@@ -165,7 +166,7 @@ skip "Skipping this test, because of random Failure"
 }
 
 
-@test "run pmm-admin remove mongodb" {
+@test "run pmm-admin remove mongodb Instance added with Socket Specified" {
 	COUNTER=0
 	IFS=$'\n'
 	for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
@@ -215,7 +216,7 @@ skip "Skipping this test, because of random Failure"
     echo "${output}" | grep "service-name"
 }
 
-@test "run pmm-admin add mongodb based on running instances" {
+@test "run pmm-admin add mongodb based on running instances using servicename, port, username and password labels" {
 	COUNTER=0
 	IFS=$'\n'
   for i in $(pmm-admin list | grep "MongoDB" | awk -F" " '{print $3}') ; do
@@ -229,7 +230,7 @@ skip "Skipping this test, because of random Failure"
   done
 }
 
-@test "run pmm-admin remove mongodb" {
+@test "run pmm-admin remove mongodb for instances added with servicename and username password labels" {
 	COUNTER=0
 	IFS=$'\n'
 	for i in $(pmm-admin list | grep "MongoDB" | grep "mongo_inst_" | awk -F" " '{print $3}') ; do
