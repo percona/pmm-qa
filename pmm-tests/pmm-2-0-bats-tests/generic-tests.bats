@@ -72,8 +72,8 @@ if $(which pmm-admin | grep -q 'pmm2-client'); then
 fi
 run sudo pmm-admin config
 echo "$output"
-    [ "$status" -eq 1 ]
-    echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "pmm-agent is running."
 }
 
 @test "run pmm-admin config without parameters tarball installation" {
