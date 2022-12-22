@@ -6,15 +6,15 @@ on:
     inputs:
       server_image:
         description: "pmm-server docker image, default perconalab/pmm-server:dev-latest"
-        required: true
+        required: false
         type: string
       client_version:
         description: "pmm2-client version Tarball or Dev-latest, default is dev-latest"
-        required: true
+        required: false
         type: string
       client_image:
         description: "pmm2-client docker image, default perconalab/pmm-client:dev-latest"
-        required: true
+        required: false
         type: string
       pmm_qa_branch:
         description: "Branch for PMM-QA to checkout"
