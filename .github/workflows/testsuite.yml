@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        db-type: [ps5.7, ps8, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6, generic, clientContainer]
+        db-type: [ps5.7, ps8, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6, generic, clientContainer, haproxy]
 
     steps:
       - name: Checkout PMM-QA tests when Workflow_dispatch
@@ -137,3 +137,12 @@ jobs:
         if: ${{ matrix.db-type == 'clientContainer' }}
         run: |
           sudo bats ./pmm-tests/pmm-2-0-bats-tests/pmm-client-docker-tests.bats
+
+      - name: Run Setup for HAPROXY
+        if: ${{ matrix.db-type == 'haproxy' }}
+        run: sudo bash -x ./pmm-tests/pmm-framework.sh --addclient=haproxy,1 --pmm2
+
+      - name: Run bats tests for Client Container Scenarios
+        if: ${{ matrix.db-type == 'haproxy' }}
+        run: |
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/haproxy-tests.bats
