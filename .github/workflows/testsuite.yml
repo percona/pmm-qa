@@ -1,9 +1,6 @@
-name: Test pipeline
+name: Testsuite pipeline
 on:
   # run with default inputs
-  push:
-    branches:
-      - main
   pull_request:
 
   workflow_dispatch:
@@ -24,6 +21,9 @@ on:
         description: "Branch for PMM-QA to checkout"
         required: false
         type: string
+      sha:
+        description: "SHA (leave empty if running manually, default - 'null')"
+        required: false
 
 jobs:
   bats-testsuite:
@@ -59,7 +59,7 @@ jobs:
       - name: Setup tools
         run: |
           npm install -g bats
-          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible
+          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
           echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
               /etc/apt/sources.list.d/clickhouse.list
