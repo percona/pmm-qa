@@ -58,7 +58,7 @@ jobs:
         run: |
           npm install -g bats
           sudo apt-get install -y clickhouse-client
-          curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
+          sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
 
       - name: Setup PMM2-Server
         run: |
