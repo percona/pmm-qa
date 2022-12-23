@@ -52,6 +52,7 @@ jobs:
           context: "pmm2-testsuite for ${{ matrix.db-type }}"
           description: "Test execution ${{ job.status }}"
           state: 'pending'
+          owner: Percona-Lab
           repository: Percona-Lab/pmm-submodules
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
@@ -188,6 +189,7 @@ jobs:
           context: "pmm2-testsuite for ${{ matrix.db-type }}"
           description: "Test execution ${{ job.status }}"
           state: ${{ job.status }}
+          owner: Percona-Lab
           repository: Percona-Lab/pmm-submodules
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
