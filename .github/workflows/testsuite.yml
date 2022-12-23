@@ -2,7 +2,7 @@ name: pmm2-testsuite pipeline
 on:
   # run with default inputs
   pull_request:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       server_image:
         description: "pmm-server docker image, default perconalab/pmm-server:dev-latest"
@@ -43,20 +43,20 @@ jobs:
         db-type: [ps5.7, ps8, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6, generic, clientContainer, haproxy, proxysql, ms8.0]
 
     steps:
-    
-      - name: Status init
-        if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' && always() }}
-        uses: percona-platform/github-status-action@v1
-        with:
-          authToken: ${{ env.GITHUB_TOKEN }}
-          context: "pmm2-testsuite for ${{ matrix.db-type }}"
-          description: "Test execution ${{ job.status }}"
-          state: 'pending'
-          owner: Percona-Lab
-          repository: Percona-Lab/pmm-submodules
-          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          sha: ${{ env.SHA }}
-          
+
+#      - name: Status init
+#        if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' && always() }}
+#        uses: percona-platform/github-status-action@v1
+#        with:
+#          authToken: ${{ env.GITHUB_TOKEN }}
+#          context: "pmm2-testsuite for ${{ matrix.db-type }}"
+#          description: "Test execution ${{ job.status }}"
+#          state: 'pending'
+#          owner: Percona-Lab
+#          repository: Percona-Lab/pmm-submodules
+#          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+#          sha: ${{ env.SHA }}
+
       - name: Checkout PMM-QA tests when Workflow_dispatch
         if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
         uses: percona-platform/checkout@v2
@@ -181,15 +181,15 @@ jobs:
         run: |
           sudo bats ./pmm-tests/pmm-2-0-bats-tests/ms-specific-tests.bats
 
-      - name: Final status for FB tests
-        if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' && always() }}
-        uses: percona-platform/github-status-action@v1
-        with:
-          authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "pmm2-testsuite for ${{ matrix.db-type }}"
-          description: "Test execution ${{ job.status }}"
-          state: ${{ job.status }}
-          owner: Percona-Lab
-          repository: Percona-Lab/pmm-submodules
-          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          sha: ${{ env.SHA }}
+#      - name: Final status for FB tests
+#        if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' && always() }}
+#        uses: percona-platform/github-status-action@v1
+#        with:
+#          authToken: ${{ secrets.GITHUB_TOKEN }}
+#          context: "pmm2-testsuite for ${{ matrix.db-type }}"
+#          description: "Test execution ${{ job.status }}"
+#          state: ${{ job.status }}
+#          owner: Percona-Lab
+#          repository: Percona-Lab/pmm-submodules
+#          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+#          sha: ${{ env.SHA }}
