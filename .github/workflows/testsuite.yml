@@ -59,7 +59,7 @@ jobs:
           gh api \
             --method POST \
             -H "Accept: application/vnd.github.v3+json" \
-            /repos/$REPO/statuses/$SHA \
+            /repos/Percona-Lab/pmm-submodules/statuses/$SHA \
             -f state="$STATUS" \
             -f target_url="https://github.com/$REPO/actions/runs/$RUN_ID" \
             -f description="pmm2-testsuite tests execution has been started for bats tests $MATRIX status: $STATUS" \
