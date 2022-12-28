@@ -2450,33 +2450,33 @@ setup_pmm2_client_docker_image () {
   sleep 5
 
   # Start PMM-Server on a different port for testing purpose
-  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 ${DOCKER_VERSION}
+  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name docker-client-check-pmm-server -d --network docker-client-check -e PMM_DEBUG=1 ${DOCKER_VERSION}
   sleep 20
   echo "PMM Server Dev Latest connected using port 8081"
 
   # Start pmm-client and use same network, connect it to pmm-server
-  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml -d --network docker-client-check --name=pmm-client ${CLIENT_DOCKER_VERSION}
+  docker run -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml -d --network docker-client-check --name=pmm-client ${CLIENT_DOCKER_VERSION}
   sleep 20
   echo "PMM Client Start and connected to PMM-Server"
   ## Start Percona Server 5.7 latest image and connect it to same network
 
-  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent -d --network docker-client-check --name=ps5.7 percona:5.7
+  docker run -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent -d --network docker-client-check --name=ps5.7 percona:5.7
   sleep 20
 
   ## Add mysql instance for monitoring.
-  docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7 --query-source=perfschema --host=ps5.7 --port=3306 --server-url=http://admin:admin@pmm-server/
+  docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7 --query-source=perfschema --host=ps5.7 --port=3306 --server-url=http://admin:admin@docker-client-check-pmm-server/
   sleep 5
 
   ## Add Percona Server for MongoDB instance for monitoring
-  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -d --network docker-client-check --name mongodb mongo:4.0
+  docker run -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -d --network docker-client-check --name mongodb mongo:4.0
   sleep 10
   docker exec mongodb mongo --eval 'db.setProfilingLevel(2)'
-  docker exec pmm-client pmm-admin add mongodb --service-name=mongodb-4.0  --host=mongodb --port=27017 --server-url=http://admin:admin@pmm-server/
+  docker exec pmm-client pmm-admin add mongodb --service-name=mongodb-4.0  --host=mongodb --port=27017 --server-url=http://admin:admin@docker-client-check-pmm-server/
 
   ## Add PostgreSQL instance for Monitoring
-  docker run  -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d --network docker-client-check --name=postgres-10 postgres:10
+  docker run  -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d --network docker-client-check --name=postgres-10 postgres:10
   sleep 10
-  docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@pmm-server/
+  docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@docker-client-check-pmm-server/
   sleep 5
 }
 
