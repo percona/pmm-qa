@@ -79,7 +79,7 @@ echo "$output"
 }
 
 @test "run pmm-admin status --json check for Running string in output" {
-    run bash -c 'pmm-admin status --json | grep "Running"'
+    run bash -c 'pmm-admin status --json | grep "Runnings"'
     echo "$output"
     [ "$status" -eq 1 ]
 }
