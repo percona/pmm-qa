@@ -1,37 +1,13 @@
-name: Test pipeline
-
-on: pull_request
+name: pmm2-testsuite pipeline
+on:
+  # run with default inputs
+  pull_request:
 
 jobs:
-  e2e:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        db-type: [ps5.7, ps8]
-    steps:
-      - name: Clone QA repository
-        uses: actions/checkout@v3
-        with:
-          repository: 'percona/pmm-qa'
-          ref: 'main'
-      - name: Setup Bats
-        run: npm install -g bats
-      - name: Setup PMM2-Server
-        run: docker create -v /srv --name pmm-server-data perconalab/pmm-server:dev-latest
-        run: docker run -d -p 80:80 -p 443:443 -p 9000:9000 --volumes-from pmm-server-data --name pmm-server --restart always perconalab/pmm-server:dev-latest
-        run: sleep 30
-
-      - name: Setup PMM2-Client
-        run: bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version dev-latest --admin_password admin --use_metrics_mode no
-
-      - name: Run Setup for ps5.7
-        if: ${{ matrix.db-type }} == 'ps5.7'
-        run: bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=5.7 --pmm2
-
-      - name: Run Setup for ps8.0
-        if: ${{ matrix.db-type }} == 'ps8'
-        run: bash -x ./pmm-tests/pmm-framework.sh --addclient=ps,1 --ps-version=8 --pmm2
-
-      - name: Run bats tests for PS
-        if: ${{ matrix.db-type }} == 'ps8' || ${{ matrix.db-type }} == 'ps5.7'
-        run: bats ./pmm-tests/pmm-2-0-bats-tests/ps-specific-tests.bats
+  bats-testsuite:
+    uses: Percona-Lab/pmm-submodules/.github/workflows/pmm2-testsuite.yml@PMM-2.0
+    with:
+      server_image: ${{ github.event.inputs.server_image || 'perconalab/pmm-server:dev-latest' }}
+      client_version: ${{ github.event.inputs.client_version || 'dev-latest' }}
+      client_image: ${{ github.event.inputs.client_image || 'perconalab/pmm-client:dev-latest' }}
+      pmm_qa_branch: ${{ github.head_ref || 'main' }}

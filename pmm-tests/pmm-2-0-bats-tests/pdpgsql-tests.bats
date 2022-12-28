@@ -23,11 +23,12 @@ PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
 }
 
 @test "PMM-T442 run pmm-admin inventory list agents for check agent postgresql_pgstatmonitor_agent" {
+    run sleep 30
     run pmm-admin inventory list agents
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "postgres_exporter           Running "
-    echo "${output}" | grep "postgresql_pgstatmonitor_agent Running "
+    echo "${output}" | grep "postgres_exporter           Running"
+    echo "${output}" | grep "postgresql_pgstatmonitor_agent Running"
 }
 
 @test "PMM-T442 run pmm-admin add postgreSQL with default query source" {
@@ -119,7 +120,7 @@ PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "metrics-mode=auto"
+    echo "${output}" | grep 'metrics-mode="auto"'
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check server-url" {
@@ -161,21 +162,21 @@ PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "socket=SOCKET"
+    echo "${output}" | grep "socket=STRING"
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check node-id" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "node-id=NODE-ID"
+    echo "${output}" | grep "node-id=STRING"
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check pmm-agent-id" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "pmm-agent-id=PMM-AGENT-ID"
+    echo "${output}" | grep "pmm-agent-id=STRING"
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check username" {
@@ -189,42 +190,42 @@ PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "password=PASSWORD"
+    echo "${output}" | grep "password=STRING"
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check query-source" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "query-source=pgstatements"
+    echo "${output}" | grep 'query-source="pgstatements"'
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check evironment" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "environment=ENVIRONMENT"
+    echo "${output}" | grep "environment=STRING"
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check cluster" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "cluster=CLUSTER"
+    echo "${output}" | grep "cluster=STRING"
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check replication-set" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "replication-set=REPLICATION-SET"
+    echo "${output}" | grep "replication-set=STRING"
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check custom-labels" {
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "custom-labels=CUSTOM-LABELS"
+    echo "${output}" | grep "custom-labels=KEY=VALUE,..."
 }
 
 @test "PMM-T443 run pmm-admin add postgresql --help to check skip-connection-check" {
@@ -259,7 +260,7 @@ PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "database=DATABASE"
+    echo "${output}" | grep "database=STRING            PostgreSQL database"
 }
 
 
@@ -309,8 +310,8 @@ skip "Skipping this test, because of random failure and flaky behaviour"
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
                 let COUNTER=COUNTER+1
                 run sleep 20
-                run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
-                run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh pgsql_$COUNTER pg_up ${pmm_server_ip} postgres_exporter pmm mypass
+                run sudo chmod +x ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+                run ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh pgsql_$COUNTER pg_up 127.0.0.1 postgres_exporter pmm mypass
                 echo "$output"
                 [ "$status" -eq 0 ]
                 [ "${lines[0]}" = "pg_up 1" ]
@@ -333,11 +334,11 @@ skip "Skipping this test, because of random failure and flaky behaviour"
     run pmm-admin add postgresql --help
     echo "$output"
     [ "$status" -eq 0 ]
-    echo "${output}" | grep "tls                      Use TLS to connect to the database"
-    echo "${output}" | grep "tls-skip-verify          Skip TLS certificates validation"
-    echo "${output}" | grep "tls-cert-file=TLS-CERT-FILE"
-    echo "${output}" | grep "tls-key-file=TLS-KEY-FILE"
-    echo "${output}" | grep "tls-ca-file=TLS-CA-FILE  TLS CA certificate file"
+    echo "${output}" | grep "tls                        Use TLS to connect to the database"
+    echo "${output}" | grep "tls-skip-verify            Skip TLS certificates validation"
+    echo "${output}" | grep "tls-cert-file=STRING       TLS certificate file"
+    echo "${output}" | grep "tls-key-file=STRING        TLS certificate key file"
+    echo "${output}" | grep "tls-ca-file=STRING         TLS CA certificate file"
 }
 
 function teardown() {

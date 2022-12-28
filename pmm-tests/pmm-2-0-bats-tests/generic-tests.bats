@@ -66,25 +66,6 @@ echo "$output"
 	echo "$output" | grep "Version: ${PMM_VERSION}"
 }
 
-@test "run pmm-admin config without parameters package installation" {
-if $(which pmm-admin | grep -q 'pmm2-client'); then
-    skip "Skipping this test, because pmm2-client is a tarball setup"
-fi
-run sudo pmm-admin config
-echo "$output"
-    [ "$status" -eq 1 ]
-    echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name"
-}
-
-@test "run pmm-admin config without parameters tarball installation" {
-if $(which pmm-admin | grep -qv 'pmm2-client'); then
-    skip "Skipping this test, because pmm2-client is a package installation"
-fi
-run pmm-admin config
-echo "$output"
-    [ "$status" -eq 1 ]
-    echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name" # no information about failure reasons is shown
-}
 
 @test "run pmm-admin summary --help" {
 run pmm-admin summary --help
@@ -383,10 +364,6 @@ echo "$output"
                                     chosen by server."
 }
 
-function teardown() {
-        echo "$output"
-}
-
 check_postgres_encoding() {
     database_name=$1
     container_name="$(docker ps -f name=-server --format "{{ .Names }}")"
@@ -401,4 +378,28 @@ check_postgres_encoding() {
 
 @test "Check that template1 database encoding is UTF8" {
     run check_postgres_encoding template1
+}
+
+@test "run pmm-admin config without parameters package installation" {
+if $(which pmm-admin | grep -q 'pmm2-client'); then
+    skip "Skipping this test, because pmm2-client is a tarball setup"
+fi
+run sudo pmm-admin config
+echo "$output"
+    [ "$status" -eq 0 ]
+    echo "${output}" | grep "pmm-agent is running."
+}
+
+@test "run pmm-admin config without parameters tarball installation" {
+if $(which pmm-admin | grep -qv 'pmm2-client'); then
+    skip "Skipping this test, because pmm2-client is a package installation"
+fi
+run pmm-admin config
+echo "$output"
+    [ "$status" -eq 1 ]
+    echo "${output}" | grep "Failed to register pmm-agent on PMM Server: Node with name" # no information about failure reasons is shown
+}
+
+function teardown() {
+        echo "$output"
 }
