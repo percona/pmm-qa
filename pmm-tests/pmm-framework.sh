@@ -2970,7 +2970,9 @@ setup_remote_db_docker_compose () {
 
 setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
-  sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb
+  sudo percona-release enable pbm release
+  sudo yum -y install percona-backup-mongodb || sudo apt install percona-backup-mongodb
+  sudo 
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
