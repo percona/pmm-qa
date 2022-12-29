@@ -1036,7 +1036,7 @@ get_basedir(){
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "5.0" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.13-11/binary/tarball/percona-server-mongodb-5.0.13-11-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "6.0" ]]; then
-        LINK="https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz"	
+        LINK="https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.0" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.28-23/binary/tarball/percona-server-mongodb-4.0.28-23-x86_64.glibc2.17-minimal.tar.gz"
       else
@@ -2971,8 +2971,16 @@ setup_remote_db_docker_compose () {
 setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
   sudo percona-release enable pbm release
-  sudo yum -y install percona-backup-mongodb || sudo apt install percona-backup-mongodb
-  sudo 
+  if grep -iq "ubuntu"  /etc/os-release ; then
+    sudo apt update
+    sudo apt install -y percona-backup-mongodb
+  fi
+  if grep -iq "centos"  /etc/os-release ; then
+    sudo yum install -y percona-backup-mongodb
+  fi
+  if grep -iq "rhel"  /etc/os-release ; then
+    sudo yum install -y percona-backup-mongodb
+  fi
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
@@ -3013,7 +3021,7 @@ setup_pgsql_vacuum() {
     ${DIRNAME}/pgsql-vacuum.sh $pgsql_version
   else
     ${DIRNAME}/pgsql-vacuum.sh
-  fi  
+  fi
 }
 
 prepare_service_name() {
