@@ -8,10 +8,17 @@ import clearAllSetups from "./otherConfigs/clearAllSetups";
 export interface SetupsInterface {
   arg: string;
   description: string;
-  function: (parameters: SetupParameters) => Promise<void>;
+  function: (parameters: SetupParameters, client?: string) => Promise<void>;
 }
 
 export const availableSetups: SetupsInterface[] = [
+  {
+    arg: '--addclient',
+    description: 'Use this do setup postgres for vacuum monitoring tests',
+    function: async (parameters: SetupParameters, client: string = "") => {
+      console.log('Ran command addclient: ' + client)
+    },
+  },
   {
     arg: '--setup-pgsql-vacuum',
     description: 'Use this do setup postgres for vacuum monitoring tests',

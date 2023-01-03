@@ -62,9 +62,9 @@ const run = async () => {
   }
 
   for await (const [_index, value] of commandLineArgs.entries()) {
-    const setup: SetupsInterface | undefined = availableSetups.find((setup) => setup.arg === value)
+    const setup: SetupsInterface | undefined = availableSetups.find((setup) => value.includes(setup.arg) )
     if (setup) {
-      await setup.function(parameters)
+      await setup.function(parameters, value)
     }
   }
 }
