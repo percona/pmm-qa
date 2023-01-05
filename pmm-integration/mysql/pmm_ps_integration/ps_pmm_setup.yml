@@ -9,7 +9,8 @@
     ps_version: "{{ PS_VERSION | default('8.0', true) }}"
     ps_tarball: "{{ lookup('vars', 'extra_ps_tarball', default=lookup('env','PS_TARBALL') | default('none', true) ) }}"
     ps_container: "{{ lookup('vars', 'extra_ps_container', default=lookup('env','PS_CONTAINER') | default('ps_pmm', true) ) }}"
-    ps_container_name: "{{ ps_container }}_{{ ps_version }}"
+    ps_number: "{{ PS_NUMBER | default('', true) }}"
+    ps_container_name: "{{ ps_container }}_{{ ps_version }}{{ps_number}}"
     query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('slowlog', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('pmm-integration-server', true) ) }}"
     client_version: "{{ CLIENT_VERSION| default('dev-latest', true) }}"
@@ -36,7 +37,7 @@
         --network="pmm-integration-network"
         phusion/baseimage:focal-1.2.0
 
-    - name: Copy all required Artifacts to the docker ps_container_name
+    - name: Copy all required Artifacts to the docker {{ ps_container_name }}
       shell: "{{ item }}"
       with_items:
         - docker exec {{ ps_container_name }} mkdir -p artifacts

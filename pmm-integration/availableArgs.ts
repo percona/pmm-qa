@@ -4,6 +4,7 @@ import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
 import * as core from '@actions/core';
 import installDockerCompose from "./otherConfigs/installDockerCompose";
 import clearAllSetups from "./otherConfigs/clearAllSetups";
+import addClientPs from './mysql/addClientPs/addClientPs'
 
 export interface SetupsInterface {
   arg: string;
@@ -16,7 +17,17 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--addclient',
     description: 'Use this do setup postgres for vacuum monitoring tests',
     function: async (parameters: SetupParameters, client: string = "") => {
-      console.log('Ran command addclient: ' + client)
+      let commandLineValue = client.split("=")[1];
+      let selectedDB = commandLineValue.split(',')[0];
+      let numberOfDbs: number = parseInt(commandLineValue.split(',')[1]);
+      switch (true) {
+        case selectedDB.includes('ps'):
+          await addClientPs(parameters, numberOfDbs);
+          break
+        default:
+          break
+      }
+
     },
   },
   {
@@ -90,8 +101,6 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this to clear your local env of any integration setups.',
     function: async (parameters: SetupParameters) => {
       await clearAllSetups();
-      await setEnvVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
-      core.exportVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
     },
   }
 ];
@@ -102,7 +111,8 @@ export const availableConstMap = new Map<string, string>([
   ['--mo-setup', 'Pass MongoDB Server type info'],
   ['--ps-version', 'Pass Percona Server version info'],
   ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
-  ['--pmm-client-version', 'Version of pmm client to use, default dev-latest']
+  ['--pmm-client-version', 'Version of pmm client to use, default dev-latest'],
+  ['--query-source', 'Query Source for MySql options are perfschema or slowlog']
 ]);
 
 export const availableSetupMap = new Map(

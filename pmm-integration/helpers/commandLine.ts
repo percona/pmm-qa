@@ -83,6 +83,10 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
     parameters.psmdbTarballURL = '';
     await setEnvVariable('PSMDB_TARBALL', '')
   }
+
+  if(!parameters.querySource) {
+    parameters.querySource = "perfschema";
+  }
 }
 
 export const installAnsible = async () => {
