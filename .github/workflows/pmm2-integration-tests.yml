@@ -1,0 +1,153 @@
+---
+name: pmm2-integration-tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'Target branch for pmm-ui-tests repository'
+        default: 'main'
+        required: true
+      pmm_qa_branch:
+        description: 'Target branch for pmm-qa repository'
+        default: 'main'
+        required: true
+      integration_setup:
+        description: 'Add flag to test selected integration setup'
+        default: '--setup-pmm-pgsm-integration'
+        required: true
+      pmm_server_version:
+        description: 'Provide version of pmm server'
+        default: 'dev-latest'
+        required: true
+      pmm_client_version:
+        description: 'Provide version of pmm server'
+        default: 'dev-latest'
+        required: true
+      pgsql_version:
+        description: 'Provide version of PostgreSQL'
+        default: '15'
+        required: true
+      ps_version:
+        description: 'Provide version of Percona Server for MySQL'
+        default: '8.0'
+        required: true
+      mongo_version:
+        description: 'Provide version of Mongo DB'
+        default: '4.4'
+        required: true
+      mongo_setup:
+        description: 'Provide setup type for Mongo DB'
+        type: choice
+        options: 
+          - regular
+          - replica
+          - sharded
+        default: 'regular'
+        required: true
+
+jobs:
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SHA: ${{ github.event.inputs.sha || 'null' }}
+      ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+
+      UI_TESTS_BRANCH: ${{ github.event.inputs.pmm_ui_tests_branch }}
+      QA_TESTS_BRANCH: ${{ github.event.inputs.pmm_qa_branch }}
+      INTEGRATION_SETUP: ${{ github.event.inputs.integration_setup }}
+      PMM_SERVER_VERSION: ${{ github.event.inputs.pmm_server_version }}
+      PMM_CLIENT_VERSION: ${{ github.event.inputs.pmm_client_version }}
+
+      PGSQL_VERSION: ${{ github.event.inputs.pgsql_version }}
+      PS_VERSION: ${{ github.event.inputs.ps_version }}
+      MONGO_VERSION: ${{ github.event.inputs.mongo_version }}
+      MONGO_SETUP: ${{ github.event.inputs.mongo_setup }}
+      
+      
+
+    steps:
+      - name: Tests of pmm server version ${{ github.event.inputs.pmm_server_version }} for integration flag ${{ github.event.inputs.integration_setup }}
+        if: ${{ github.event_name == 'workflow_dispatch' && env.SHA != 'null' }}
+        uses: Sibz/github-status-action@v1
+        with:
+          context: 'pmm2-ui-tests'
+          description: 'Tests execution has been started'
+          state: 'pending'
+          repository: ${{ github.event.inputs.repo }}
+          target_url: 'https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+          sha: ${{ env.SHA }}
+
+      - name: Install NodeJS v16
+        uses: percona-platform/setup-node@v2
+        with:
+          node-version: 16.14.1
+
+      - name: Checkout UI tests
+        uses: percona-platform/checkout@v2
+        with:
+          ref: ${{ env.UI_TESTS_BRANCH }}
+          repository: percona/pmm-ui-tests
+          path: ./pmm-ui-tests
+
+      - name: Checkout pmm-qa Repo
+        uses: percona-platform/checkout@v2
+        with:
+          repository: percona/pmm-qa
+          path: ./pmm-qa
+          ref: ${{ env.QA_TESTS_BRANCH }}
+
+      - name: Start PMM-Sever
+        run: |
+          docker network create pmm-integration-network
+          docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="pmm-integration-network" --publish 80:80 --publish 443:443 --name pmm-integration-server perconalab/pmm-server:${{ env.PMM_SERVER_VERSION }}
+
+      - name: Create env file
+        working-directory: pmm-qa/pmm-integration
+        run: |
+          touch .env
+          echo CI=true >> .env
+
+      - name: Setup Docker client for PMM-Server
+        run: |
+          docker run -d --name pmm-client --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=pmm-integration-server -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${{ env.PMM_CLIENT_VERSION }}
+
+      - name: Setup Databases for PMM-Server
+        working-directory: pmm-qa/pmm-integration
+        run: |
+          sudo npm install
+          sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} --mo-version=${{ env.MONGO_VERSION }} --mo-setup=${{ env.MONGO_SETUP }} ${{ env.INTEGRATION_SETUP }}
+        shell: bash
+
+      - name: Execute Integration Tests
+        working-directory: pmm-ui-tests
+        id: pmm-ui-tests
+        run: |
+          sudo docker ps -a
+          node -v
+          npm install
+          ./node_modules/.bin/codeceptjs run --debug --steps --reporter mochawesome -c pr.codecept.js  --grep '${{ env.INTEGRATION_FLAG }}'
+
+      - name: Generating the report
+        if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
+        working-directory: pmm-ui-tests
+        run: |
+          npx mochawesome-merge tests/output/*/*.json > tests/output/output.json
+
+      - name: Create the report
+        uses: phoenix-actions/test-reporting@v10
+        if: success() || failure()
+        with:
+          token: ${{ secrets.ROBOT_TOKEN }}
+          name: Integration Tests
+          path: pmm-ui-tests/tests/output/output.json
+          reporter: mocha-json    
+
+      - name: Attaching the report
+        if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
+        uses: percona-platform/upload-artifact@v2
+        with:
+          name: pmm-ui-tests-report
+          path: pmm-ui-tests/tests/output

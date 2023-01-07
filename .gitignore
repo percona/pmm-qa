@@ -1,4 +1,5 @@
 node_modules/*
+pmm-integration/node_modules/*
 tests/output/*
 .idea
 pmm-tests/backup/.vagrant
