@@ -13,9 +13,11 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
   for (let index = 0; index < numberOfClients; index++) {
     const containerName = `ps_integration_${timeStamp}_${index}`
     // docker exec pmm-client touch ps-log-index.log
-    await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} mkdir /var/log/${containerName}/`);
-    await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} touch /var/log/${containerName}/ps_${index}_slowlog.log`);
-    await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} chmod 777 /var/log/${containerName}/ps_${index}_slowlog.log`);
+    if(parameters.querySource === "slowlog") {
+      await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} mkdir /var/log/${containerName}/`);
+      await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} touch /var/log/${containerName}/ps_${index}_slowlog.log`);
+      await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} chmod 777 /var/log/${containerName}/ps_${index}_slowlog.log`);
+    }
     await executeCommand(`sudo docker run -d --name ${containerName} -v ${pmmIntegrationDataName}:/var/log/${containerName}/ -p ${ps_port + index}:3306 -e MYSQL_ROOT_PASSWORD=${ps_password} -e UMASK=0777 percona:${parameters.psVersion} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci`);
   }
   await executeCommand('sleep 30');

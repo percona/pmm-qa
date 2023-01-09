@@ -52,17 +52,18 @@ const run = async () => {
 
   await setDefaultEnvVariables(parameters);
 
-  
-  if(process.env.CI) {
-    await installAnsible();
-  } else {
-    await recreateNetwork(dockerNetworkName);
-    await stopAndRemoveContainer(pmmIntegrationServerName);
-    await stopAndRemoveContainer(pmmIntegrationClientName);
-    await executeCommand(`docker volume create ${pmmIntegrationDataName}`)
-    await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
-    await executeCommand('sleep 30');
-    await executeCommand(`docker run -d --name ${pmmIntegrationClientName} -v ${pmmIntegrationDataName}:/var/log/ --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`);
+  if(!commandLineArgs.includes('--clear-all-setups')) {
+    if(process.env.CI) {
+      await installAnsible();
+    } else {
+      await recreateNetwork(dockerNetworkName);
+      await stopAndRemoveContainer(pmmIntegrationServerName);
+      await stopAndRemoveContainer(pmmIntegrationClientName);
+      await executeCommand(`docker volume create ${pmmIntegrationDataName}`)
+      await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
+      await executeCommand('sleep 60');
+      await executeCommand(`docker run -d --name ${pmmIntegrationClientName} -v ${pmmIntegrationDataName}:/var/log/ --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`);
+    }
   }
 
   for await (const [_index, value] of commandLineArgs.entries()) {
