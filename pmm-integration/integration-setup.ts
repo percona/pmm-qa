@@ -42,6 +42,10 @@ const run = async () => {
         parameters.pmmClientVersion = value.split("=")[1];
         await setEnvVariable('PMM_CLIENT_VERSION', parameters.pmmClientVersion);
         break;
+      case value.includes('--pmm-server-version'):
+          parameters.pmmServerVersion = value.split("=")[1];
+          await setEnvVariable('PMM_CLIENT_VERSION', parameters.pmmServerVersion);
+          break;
       case value.includes('--query-source'):
         parameters.querySource = value.split("=")[1];
         break;
@@ -60,7 +64,7 @@ const run = async () => {
       await stopAndRemoveContainer(pmmIntegrationServerName);
       await stopAndRemoveContainer(pmmIntegrationClientName);
       await executeCommand(`docker volume create ${pmmIntegrationDataName}`)
-      await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} percona/pmm-server:latest`);
+      await executeCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="${dockerNetworkName}" --publish 8080:80 --publish 8443:443 --name ${pmmIntegrationServerName} perconalab/pmm-server:${parameters.pmmServerVersion}`);
       await executeCommand('sleep 60');
       await executeCommand(`docker run -d --name ${pmmIntegrationClientName} -v ${pmmIntegrationDataName}:/var/log/ --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`);
     }

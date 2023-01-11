@@ -79,6 +79,10 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
     parameters.pmmClientVersion = 'dev-latest';
   }
 
+  if (!parameters.pmmServerVersion) {
+    parameters.pmmServerVersion = 'dev-latest';
+  }
+
   if(!parameters.psmdbTarballURL) {
     parameters.psmdbTarballURL = '';
     await setEnvVariable('PSMDB_TARBALL', '')

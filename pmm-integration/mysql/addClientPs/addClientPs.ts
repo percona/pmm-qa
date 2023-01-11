@@ -12,7 +12,6 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
   // Start requested number of Percona Server containers 
   for (let index = 0; index < numberOfClients; index++) {
     const containerName = `ps_integration_${timeStamp}_${index}`
-    // docker exec pmm-client touch ps-log-index.log
     if(parameters.querySource === "slowlog") {
       await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} mkdir /var/log/${containerName}/`);
       await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} touch /var/log/${containerName}/ps_${index}_slowlog.log`);
