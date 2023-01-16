@@ -8,7 +8,13 @@ const clearAllSetups = async () => {
     await stopAndRemoveContainer('redis_container');
     const runningContainers: string[] = (await executeCommand('sudo docker container ls -a --format "{{.Names}}"')).stdout.split(os.EOL);
     runningContainers.forEach(async (container) => {
-        if(container.includes('ps_integration')) {
+        if(container.includes('ps_integration') ||
+        container.includes('pgsql_vacuum_db') ||
+        container.includes('pgsql_pgss') ||
+        container.includes('psmdb') ||
+        container.includes('mongodb_load') ||
+        container.includes('HAPROXY') ||
+        container.includes('pgsql_pgsm')) {
             await stopAndRemoveContainer(container);
         }
     });

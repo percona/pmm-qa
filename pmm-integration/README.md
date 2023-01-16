@@ -1,5 +1,9 @@
 New setup that will create start and integrate PMM2 with selected databases. Can be used locally or in CI.
 
+New Integration setup prerequisite:
+
+    - Installed ansible, nodejs, and docker.
+
 Basic how to use integration setup:
 
     sudo npx ts-node ./integration-setup.ts --selected-flag
