@@ -1,13 +1,13 @@
 wait_for_pmm()
 {
     sleep 5
-    kubectl wait --for=condition=Ready --selector=app.kubernetes.io/name=pmm pod --timeout=90s
+    kubectl wait --for=condition=Ready --selector=app.kubernetes.io/name=pmm pod --timeout=5m
 }
 
 delete_pvc()
 {
     kubectl delete pvc --selector=app.kubernetes.io/name=pmm
-    kubectl wait --for=delete --selector=app.kubernetes.io/name=pmm pvc --timeout=90s
+    kubectl wait --for=delete --selector=app.kubernetes.io/name=pmm pvc --timeout=5m
 }
 
 get_pmm_pswd()

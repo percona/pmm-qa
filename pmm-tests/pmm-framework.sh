@@ -117,12 +117,13 @@ usage () {
   echo " --deploy-service-with-name     Use this to deploy a service with user specified service name expected values to be used with --addclient=ps,1 example: --deploy-service-with-name=psserviceName"
   echo " --setup-pgsql-vacuum           Use this do setup postgres for vacuum monitoring tests "
   echo " --setup-pmm-ps-integration     Use this do setup for percona-server and PMM using dbdeployer "
+  echo " --setup-checks-basic           Use this to generate some basic checks failure for ps/pgsql/mongodb"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,setup-checks-basic,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -147,6 +148,10 @@ do
     ;;
     --setup-pmm-ps-integration )
     setup_pmm_ps_integration=1
+    shift
+    ;;
+    --setup-checks-basic )
+    setup_checks_basic=1
     shift
     ;;
     --with-replica )
@@ -1031,7 +1036,7 @@ get_basedir(){
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "5.0" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.13-11/binary/tarball/percona-server-mongodb-5.0.13-11-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "6.0" ]]; then
-        LINK="https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz"	
+        LINK="https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz"
       elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.0" ]]; then
         LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.28-23/binary/tarball/percona-server-mongodb-4.0.28-23-x86_64.glibc2.17-minimal.tar.gz"
       else
@@ -2445,33 +2450,33 @@ setup_pmm2_client_docker_image () {
   sleep 5
 
   # Start PMM-Server on a different port for testing purpose
-  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name pmm-server -d --network docker-client-check -e PMM_DEBUG=1 ${DOCKER_VERSION}
+  docker run -p 8081:80 -p 445:443 -p 9095:9093 --name docker-client-check-pmm-server -d --network docker-client-check -e PMM_DEBUG=1 ${DOCKER_VERSION}
   sleep 20
   echo "PMM Server Dev Latest connected using port 8081"
 
   # Start pmm-client and use same network, connect it to pmm-server
-  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml -d --network docker-client-check --name=pmm-client ${CLIENT_DOCKER_VERSION}
+  docker run -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=pmm-agent.yml -d --network docker-client-check --name=pmm-client ${CLIENT_DOCKER_VERSION}
   sleep 20
   echo "PMM Client Start and connected to PMM-Server"
   ## Start Percona Server 5.7 latest image and connect it to same network
 
-  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent -d --network docker-client-check --name=ps5.7 percona:5.7
+  docker run -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -e MYSQL_ROOT_PASSWORD=root -e MYSQL_USER=pmm-agent -e MYSQL_PASSWORD=pmm-agent -d --network docker-client-check --name=ps5.7 percona:5.7
   sleep 20
 
   ## Add mysql instance for monitoring.
-  docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7 --query-source=perfschema --host=ps5.7 --port=3306 --server-url=http://admin:admin@pmm-server/
+  docker exec pmm-client pmm-admin add mysql --username=root --password=root --service-name=ps5.7 --query-source=perfschema --host=ps5.7 --port=3306 --server-url=http://admin:admin@docker-client-check-pmm-server/
   sleep 5
 
   ## Add Percona Server for MongoDB instance for monitoring
-  docker run -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -d --network docker-client-check --name mongodb mongo:4.0
+  docker run -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -d --network docker-client-check --name mongodb mongo:4.0
   sleep 10
   docker exec mongodb mongo --eval 'db.setProfilingLevel(2)'
-  docker exec pmm-client pmm-admin add mongodb --service-name=mongodb-4.0  --host=mongodb --port=27017 --server-url=http://admin:admin@pmm-server/
+  docker exec pmm-client pmm-admin add mongodb --service-name=mongodb-4.0  --host=mongodb --port=27017 --server-url=http://admin:admin@docker-client-check-pmm-server/
 
   ## Add PostgreSQL instance for Monitoring
-  docker run  -e PMM_AGENT_SERVER_ADDRESS=pmm-server:443 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d --network docker-client-check --name=postgres-10 postgres:10
+  docker run  -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d --network docker-client-check --name=postgres-10 postgres:10
   sleep 10
-  docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@pmm-server/
+  docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@docker-client-check-pmm-server/
   sleep 5
 }
 
@@ -2742,8 +2747,6 @@ setup_pmm_pgsm_integration () {
   if [ -z "${PGSQL_PGSM_CONTAINER}" ]
   then
     export PGSQL_PGSM_CONTAINER=pgsql_pgsm_${PGSQL_VERSION}
-  else
-    export PGSQL_PGSM_CONTAINER=${PGSQL_PGSM_CONTAINER}_${PGSQL_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgsm_setup.yml
@@ -2790,8 +2793,6 @@ setup_pmm_pgss_integration () {
   if [ -z "${PGSQL_PGSS_CONTAINER}" ]
   then
     export PGSQL_PGSS_CONTAINER=pgsql_pgss_${PGSQL_VERSION}
-  else
-    export PGSQL_PGSS_CONTAINER=${PGSQL_PGSS_CONTAINER}_${PGSQL_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgss_setup.yml
@@ -2829,8 +2830,6 @@ setup_pxc_client_container () {
   if [ -z "${PXC_CONTAINER}" ]
   then
     export PXC_CONTAINER=pxc_container_${PXC_VERSION}
-  else
-    export PXC_CONTAINER=${PXC_CONTAINER}_${PXC_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
@@ -2876,14 +2875,40 @@ setup_pmm_psmdb_integration () {
   if [ -z "${PSMDB_CONTAINER}" ]
   then
     export PSMDB_CONTAINER=psmdb_pmm_${PSMDB_VERSION}_${PSMDB_SETUP}
-  else
-    export PSMDB_CONTAINER=${PSMDB_CONTAINER}_${PSMDB_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 psmdb_setup.yml
   popd
 }
 
+setup_checks_basic () {
+  echo "Setting up basic Checks Trigger"
+  export password=oFukiBRg7GujAJXq3tmd
+
+  docker run -d --name mongodb-advisor-checks \
+  -e MONGO_INITDB_ROOT_USERNAME=root \
+  -e MONGO_INITDB_ROOT_PASSWORD=${password} \
+  -p 27047:27017 \
+  percona/percona-server-mongodb:4.2.20
+
+  docker run -d --name postgres-advisor-checks \
+  -e POSTGRES_USER=pmm-agent \
+  -e POSTGRES_PASSWORD=${password} \
+  -p 5440:5432 \
+  postgres:14.1
+
+  docker run -d --name mysql-advisor-checks \
+  -e MYSQL_ROOT_PASSWORD=${password} \
+  -p 3310:3306 \
+  percona:5.7.35
+
+  sleep 30
+
+  ## Adding those services
+  pmm-admin add mysql --username=root --port=3310 --password=${password} --query-source=perfschema mysql_checks_service
+  pmm-admin add postgresql --username=pmm-agent --port=5440 --password=${password}  postgres_checks_service
+  pmm-admin add mongodb --username=root --port=27047 --password=${password} mongodb_checks_service
+}
 
 setup_pmm_ps_integration () {
   echo "Setting up PMM and Percona Server Integration"
@@ -2904,7 +2929,7 @@ setup_pmm_ps_integration () {
   fi
   if [ -z "$QUERY_SOURCE" ]
   then
-    export $QUERY_SOURCE=${query_source}
+    export QUERY_SOURCE=${query_source}
   fi
   if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
   then
@@ -2920,8 +2945,6 @@ setup_pmm_ps_integration () {
   if [ -z "${PS_CONTAINER}" ]
   then
     export PS_CONTAINER=ps_pmm_${PS_VERSION}
-  else
-    export PS_CONTAINER=${PS_CONTAINER}_${PS_VERSION}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ps_pmm_setup.yml
@@ -2947,7 +2970,17 @@ setup_remote_db_docker_compose () {
 
 setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
-  sudo percona-release enable pbm release && sudo yum -y install percona-backup-mongodb
+  sudo percona-release enable pbm release
+  if grep -iq "ubuntu"  /etc/os-release ; then
+    sudo apt update
+    sudo apt install -y percona-backup-mongodb
+  fi
+  if grep -iq "centos"  /etc/os-release ; then
+    sudo yum install -y percona-backup-mongodb
+  fi
+  if grep -iq "rhel"  /etc/os-release ; then
+    sudo yum install -y percona-backup-mongodb
+  fi
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
@@ -2988,7 +3021,7 @@ setup_pgsql_vacuum() {
     ${DIRNAME}/pgsql-vacuum.sh $pgsql_version
   else
     ${DIRNAME}/pgsql-vacuum.sh
-  fi  
+  fi
 }
 
 prepare_service_name() {
@@ -3022,6 +3055,10 @@ fi
 
 if [ ! -z $setup_pmm_ps_integration ]; then
   setup_pmm_ps_integration
+fi
+
+if [ ! -z $setup_checks_basic ]; then
+  setup_checks_basic
 fi
 
 if [ ! -z $wipe_clients ]; then

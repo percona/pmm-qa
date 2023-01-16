@@ -48,6 +48,9 @@ const run = async () => {
           break;
       case value.includes('--query-source'):
         parameters.querySource = value.split("=")[1];
+      case value.includes('--setup-pmm-client-tarball'):
+        let tarballURL = value.split("=")[1];
+        await setup_pmm_client_tarball(tarballURL)
         break;
       default:
         break

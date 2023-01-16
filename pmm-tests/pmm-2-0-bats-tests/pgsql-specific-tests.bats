@@ -54,7 +54,7 @@ echo "$output"
 }
 
 
-@test "run pmm-admin remove postgresql" {
+@test "run pmm-admin remove postgresql added with default parameters" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
@@ -102,7 +102,7 @@ echo "$output"
         done
 }
 
-@test "run pmm-admin remove postgresql" {
+@test "run pmm-admin remove postgresql adding using host, port and service name flags" {
         COUNTER=0
         IFS=$'\n'
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
@@ -148,8 +148,8 @@ skip "Skipping this test, because of random failure and flaky behaviour"
         for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
                 let COUNTER=COUNTER+1
                 run sleep 20
-                run sudo chmod +x /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh
-                run /srv/pmm-qa/pmm-tests/pmm-2-0-bats-tests/check_metric.sh pgsql_$COUNTER pg_up ${pmm_server_ip} postgres_exporter pmm mypass
+                run sudo chmod +x ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh
+                run ./pmm-tests/pmm-2-0-bats-tests/check_metric.sh pgsql_$COUNTER pg_up 127.0.0.1 postgres_exporter pmm mypass
                 echo "$output"
                 [ "$status" -eq 0 ]
                 [ "${lines[0]}" = "pg_up 1" ]

@@ -51,7 +51,7 @@ def main():
             verify_command('sudo supervisorctl status | grep vmalert | grep RUNNING')
             verify_command('grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.4.4"')
             verify_command('grafana-cli plugins ls | grep alexanderzobnin-zabbix-app')
-            verify_command('sudo victoriametrics --version | grep victoria-metrics-20221031-101137-pmm-6401-v1.82.1')
+            verify_command('sudo victoriametrics --version | grep victoria-metrics-20230102-144906-pmm-6401-v1.82.1')
     else:
         pmm_server_docker_container = subprocess.getoutput("docker ps --format \"table {{.ID}}\t{{.Image}}\t{{"
                                                            ".Names}}\" | grep 'pmm-server' | awk '{print $3}'")
@@ -92,7 +92,7 @@ def main():
                 f"docker exec {pmm_server_docker_container} supervisorctl status | grep vmalert | grep "
                 f"RUNNING")
             verify_command(
-                f"docker exec {pmm_server_docker_container} victoriametrics --version | grep victoria-metrics-20221031-101137-pmm-6401-v1.82.1")
+                f"docker exec {pmm_server_docker_container} victoriametrics --version | grep victoria-metrics-20230102-144906-pmm-6401-v1.82.1")
 
             docker_version = os.getenv("DOCKER_VERSION")
             do_docker_way = os.getenv("PERFORM_DOCKER_WAY_UPGRADE")

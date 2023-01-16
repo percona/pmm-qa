@@ -5,9 +5,6 @@ if [ -z ${DOCKER_VERSION+x} ]; then
 fi
 
 @test "PMM-T224 run docker container with a invalid value for a environment variable DATA_RETENTION=48" {
-    if [[ $(id -u) -eq 0 ]] ; then
-            skip "Skipping this test, because you are running under root"
-    fi
     run docker run -d -p 81:80 -p 446:443 --name PMM-T224 -e DATA_RETENTION=48 ${DOCKER_VERSION}
     run sleep 60
     run bash -c 'docker ps | grep PMM-T224'
@@ -21,9 +18,6 @@ fi
 }
 
 @test "PMM-T225 run docker container with a unexpected environment variable DATA_TENTION=48" {
-    if [[ $(id -u) -eq 0 ]] ; then
-            skip "Skipping this test, because you are running under root"
-    fi
     run docker run -d -p 82:80 -p 447:443 --name PMM-T225 -e DATA_TENTION=48 ${DOCKER_VERSION}
     run sleep 20
     run bash -c 'docker ps | grep PMM-T225'
@@ -39,9 +33,6 @@ fi
 }
 
 @test "PMM-T226 run docker container with all valid environment variables not causing any warning or error message" {
-    if [[ $(id -u) -eq 0 ]] ; then
-        skip "Skipping this test, because you are running under root"
-    fi
     run docker run -d -p 83:80 -p 447:443 --name PMM-T226 -e DATA_RETENTION=48h -e DISABLE_UPDATES=true -e DISABLE_TELEMETRY=false -e METRICS_RESOLUTION=24h -e METRICS_RESOLUTION_LR=24h -e METRICS_RESOLUTION_MR=24h ${DOCKER_VERSION}
     run sleep 20
     run bash -c 'docker ps | grep PMM-T226'
@@ -62,7 +53,7 @@ fi
 @test "PMM-T526 Use Invalid Prometheus Custom Config File to Check if Container is unhealthy" {
     run docker run -d -p 84:80 -p 449:443 --name PMM-T526 ${DOCKER_VERSION}
     run sleep 30
-    run docker cp /srv/pmm-qa/pmm-tests/broken_prometheus.base.yml PMM-T526:/srv/prometheus/prometheus.base.yml
+    run docker cp ./pmm-tests/broken_prometheus.base.yml PMM-T526:/srv/prometheus/prometheus.base.yml
     run docker restart PMM-T526
     run sleep 30
     run bash -c "echo $(docker ps --format '{{.Names}}\t{{.Status}}' | grep PMM-T526 | awk -F' ' '{print $5}' | awk -F'(' '{print $2}' | awk -F')' '{print $1}')"
