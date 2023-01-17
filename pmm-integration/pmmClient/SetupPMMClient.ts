@@ -20,7 +20,8 @@ const SetupPMMClient = async (params: SetupParameters) => {
     } else if(params.pmmClientVersion?.includes('2.')) {
         console.log('pmm client includes 2');
         await executeCommand('sudo apt list -a pmm2-client');
-        await executeCommand(`sudo apt -y install pmm2-client=${params.pmmClientVersion}.0-6.jammy_amd64`);
+        await executeCommand(`wget https://downloads.percona.com/downloads/pmm2/${params.pmmClientVersion}/binary/debian/jammy/x86_64/pmm2-client_${params.pmmClientVersion}-6.jammy_amd64.deb`);
+        await executeCommand(`sudo dpkg -i pmm2-client_${params.pmmClientVersion}-6.jammy_amd64.deb`);
         await executeCommand('sudo apt update');
         await executeCommand('sudo percona-release enable-only original experimental');
     }
