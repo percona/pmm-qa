@@ -115,7 +115,7 @@ jobs:
         run: |
           docker run -d --name pmm-integration-client --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=pmm-integration-server -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${{ env.PMM_CLIENT_VERSION }}
           sudo npm install
-          sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} --mo-version=${{ env.MONGO_VERSION }} --mo-setup=${{ env.MONGO_SETUP }} --setup-pmm-client
+#          sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} --mo-version=${{ env.MONGO_VERSION }} --mo-setup=${{ env.MONGO_SETUP }} --setup-pmm-client
 
       - name: Setup Databases for PMM-Server
         working-directory: pmm-qa/pmm-integration
@@ -142,7 +142,7 @@ jobs:
         uses: phoenix-actions/test-reporting@v10
         if: success() || failure()
         with:
-          token: ${{ secrets.ROBOT_TOKEN }}
+          token: ${{ secrets.MY_TOKEN }}
           name: Integration Tests
           path: pmm-ui-tests/tests/output/output.json
           reporter: mocha-json    
