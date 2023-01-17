@@ -7,8 +7,8 @@ const SetupPMMClient = async (params: SetupParameters) => {
     await executeCommand('sudo apt update');
     if(params.pmmClientVersion?.includes('dev-latest')) {
         await executeCommand('sudo percona-release enable-only original experimental');
+        await executeCommand('sudo apt update');
         await executeCommand('sudo apt install -y pmm2-client');
-        await executeCommand('sudo apt update')
     } else if(params.pmmClientVersion?.includes('pmm2-rc')) {
         await executeCommand('sudo percona-release enable-only original testing');
         await executeCommand('sudo apt -y install pmm2-client');
