@@ -20,7 +20,7 @@ const SetupPMMClient = async (params: SetupParameters) => {
     } else if(params.pmmClientVersion?.includes('2.')) {
         console.log('pmm client includes 2');
         await executeCommand('sudo apt list -a pmm2-client');
-        await executeCommand(`sudo apt -y install pmm2-client-${params.pmmClientVersion}-6.el7.x86_64`);
+        await executeCommand(`sudo apt -y install pmm2-client=${params.pmmClientVersion}`);
         await executeCommand('sudo apt update');
         await executeCommand('sudo percona-release enable-only original experimental');
     }
