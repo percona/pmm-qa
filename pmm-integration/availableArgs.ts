@@ -5,6 +5,7 @@ import * as core from '@actions/core';
 import installDockerCompose from "./otherConfigs/installDockerCompose";
 import clearAllSetups from "./otherConfigs/clearAllSetups";
 import addClientPs from './mysql/addClientPs/addClientPs'
+import SetupPMMClient from "./pmmClient/SetupPMMClient";
 
 export interface SetupsInterface {
   arg: string;
@@ -94,6 +95,13 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
       await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
       await setEnvVariable("INTEGRATION_FLAG", "@fb");
+    },
+  },
+  {
+    arg: '--setup-pmm-client',
+    description: 'This flags will setup pmm client directly on your machine, works on Ubuntu.',
+    function: async (parameters: SetupParameters) => {
+      await SetupPMMClient(parameters);
     },
   },
   {
