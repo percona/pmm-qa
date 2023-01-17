@@ -136,7 +136,7 @@ jobs:
         if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
         working-directory: pmm-ui-tests
         run: |
-          ls
+          ls tests/
           ls tests/output/
           npx mochawesome-merge tests/output/*/*.json > tests/output/output.json
 
