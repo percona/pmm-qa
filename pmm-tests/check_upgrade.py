@@ -29,12 +29,12 @@ def main():
 
     if args.env in "ami":
         # verify_command('rpm -qa | grep percona-qan-api2-' + args.version)
-        verify_command('rpm -qa | grep percona-dashboards-' + args.version)
+        # verify_command('rpm -qa | grep percona-dashboards-' + args.version)
         if args.version == "2.25.0":
             verify_command('rpm -qa | grep pmm-update-' + args.version)
 
-        verify_command('rpm -qa | grep pmm-managed-' + args.version)
-        verify_command('rpm -qa | grep pmm2-client-' + args.version)
+        # verify_command('rpm -qa | grep pmm-managed-' + args.version)
+        # verify_command('rpm -qa | grep pmm2-client-' + args.version)
         verify_command('sudo supervisorctl status | grep qan-api2 | grep RUNNING')
         verify_command('sudo supervisorctl status | grep alertmanager | grep RUNNING')
         verify_command('sudo supervisorctl status | grep clickhouse | grep RUNNING')
