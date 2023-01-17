@@ -146,7 +146,7 @@ jobs:
         with:
           token: ${{ secrets.MY_TOKEN }}
           name: Integration Tests
-          path: pmm-ui-tests/tests/output/output.json
+          path: pmm-ui-tests/tests/output/mochawesome.json
           reporter: mocha-json    
 
       - name: Attaching the report
