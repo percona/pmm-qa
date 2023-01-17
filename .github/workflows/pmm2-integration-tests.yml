@@ -144,7 +144,7 @@ jobs:
         uses: phoenix-actions/test-reporting@v10
         if: success() || failure()
         with:
-          token: ${{ secrets.MY_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           name: Integration Tests
           path: pmm-ui-tests/tests/output/mochawesome.json
           reporter: mocha-json    
