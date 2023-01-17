@@ -2,8 +2,9 @@ import { executeCommand } from "../helpers/commandLine";
 import SetupParameters from "../helpers/setupParameters.interface";
 
 const SetupPMMClient = async (params: SetupParameters) => {
-    await executeCommand('sudo apt-get -y install https://repo.percona.com/apt/percona-release_latest.focal_all.deb')
-    await executeCommand('sudo apt-get update')
+    await executeCommand('sudo wget https://repo.percona.com/apt/percona-release_latest.focal_all.deb');
+    await executeCommand('sudo dpkg -i percona-release_latest.focal_all.deb');
+    await executeCommand('sudo apt-get update');
     if(params.pmmClientVersion?.includes('dev-latest')) {
         await executeCommand('sudo percona-release enable-only original experimental');
         await executeCommand('sudo apt-get -y install pmm2-client');
