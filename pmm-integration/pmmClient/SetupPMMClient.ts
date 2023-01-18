@@ -18,13 +18,36 @@ const SetupPMMClient = async (params: SetupParameters) => {
         await executeCommand('sudo apt update');
         await executeCommand('sudo percona-release enable-only original experimental');
     } else if(params.pmmClientVersion?.includes('2.')) {
-        console.log('pmm client includes 2');
-        await executeCommand('sudo apt list -a pmm2-client');
         await executeCommand(`wget https://downloads.percona.com/downloads/pmm2/${params.pmmClientVersion}/binary/debian/jammy/x86_64/pmm2-client_${params.pmmClientVersion}-6.jammy_amd64.deb`);
         await executeCommand(`sudo dpkg -i pmm2-client_${params.pmmClientVersion}-6.jammy_amd64.deb`);
         await executeCommand('sudo apt update');
         await executeCommand('sudo percona-release enable-only original experimental');
+    } else if(params.pmmClientVersion?.includes('http')) {
+        console.log('pmm client contains address.')
+        await executeCommand('sudo apt list -a pmm2-client');
+        await executeCommand(`sudo wget -O pmm2-client.tar.gz --progress=dot:giga "${params.pmmClientVersion}"`);
+        await executeCommand(`sudo tar -zxpf pmm2-client.tar.gz`);
+        await executeCommand(`sudo rm -r pmm2-client.tar.gz`);
+        await executeCommand(`sudo mv pmm2-client-* pmm2-client`);
+        await executeCommand(`sudo cd pmm2-client`);
+        await executeCommand(`sudo sudo bash -x ./install_tarball`);
+        await executeCommand('sudo apt update');
+        await executeCommand('sudo percona-release enable-only original experimental');
     }
+/*
+
+
+
+cd pmm2-client
+sudo bash -x ./install_tarball
+pwd
+cd ../
+export PMM_CLIENT_BASEDIR=`ls -1td pmm2-client 2>/dev/null | grep -v ".tar" | head -n1`
+export PATH="`pwd`/pmm2-client/bin:\$PATH"
+echo "export PATH=`pwd`/pmm2-client/bin:\$PATH" >> ~/.bash_profile
+source ~/.bash_profile
+pmm-admin --version
+*/
 };
 
 export default SetupPMMClient;
