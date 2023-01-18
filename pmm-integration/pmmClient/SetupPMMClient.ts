@@ -30,7 +30,7 @@ const SetupPMMClient = async (params: SetupParameters) => {
         await executeCommand(`sudo rm -r pmm2-client.tar.gz`);
         await executeCommand(`sudo mv pmm2-client-* pmm2-client`);
         await executeCommand(`sudo bash -x ./pmm2-client/install_tarball`);
-        await executeCommand('ls pmm2-client/bit/')
+        await executeCommand('ls pmm2-client/bin/')
         await executeCommand(`sudo echo "$(pwd)/pmm2-client/bin"`);
         await executeCommand(`sudo echo $PATH`);
 //         await executeCommand('pmm-admin --version');
