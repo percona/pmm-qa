@@ -118,6 +118,8 @@ jobs:
           sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} --mo-version=${{ env.MONGO_VERSION }} --mo-setup=${{ env.MONGO_SETUP }} --setup-pmm-client
           echo "/home/runner/work/pmm-qa/pmm-qa/pmm-qa/pmm-integration/pmm2-client/bin" >> $GITHUB_PATH
           echo $GITHUB_PATH
+          ls /home/runner/work/pmm-qa/pmm-qa/pmm-qa/pmm-integration/pmm2-client/bin
+          echo $PATH
           pmm-admin --version
 
       - name: Setup Databases for PMM-Server
