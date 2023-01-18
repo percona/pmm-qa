@@ -31,7 +31,7 @@ const SetupPMMClient = async (params: SetupParameters) => {
         await executeCommand(`sudo mv pmm2-client-* pmm2-client`);
         await executeCommand(`sudo bash -x ./pmm2-client/install_tarball`);
         await executeCommand(`sudo echo "$(pwd)/pmm2-client/bin:$PATH"`);
-        await executeCommand(`sudo export PATH="$(pwd)/pmm2-client/bin:$PATH"`);
+        await executeCommand(`sudo echo "$(pwd)/pmm2-client/bin" >> $GITHUB_PATH`);
         await executeCommand('sudo apt update');
         await executeCommand('sudo percona-release enable-only original experimental');
     }
