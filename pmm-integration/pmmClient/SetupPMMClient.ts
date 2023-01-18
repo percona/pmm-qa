@@ -29,8 +29,7 @@ const SetupPMMClient = async (params: SetupParameters) => {
         await executeCommand(`sudo tar -zxpf pmm2-client.tar.gz`);
         await executeCommand(`sudo rm -r pmm2-client.tar.gz`);
         await executeCommand(`sudo mv pmm2-client-* pmm2-client`);
-        await executeCommand(`sudo cd pmm2-client`);
-        await executeCommand(`sudo sudo bash -x ./install_tarball`);
+        await executeCommand(`sudo sudo bash -x ./pmm2-client/install_tarball`);
         await executeCommand('sudo apt update');
         await executeCommand('sudo percona-release enable-only original experimental');
     }
