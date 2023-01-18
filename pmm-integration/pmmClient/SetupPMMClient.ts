@@ -33,7 +33,7 @@ const SetupPMMClient = async (params: SetupParameters) => {
         await executeCommand('ls pmm2-client/')
         await executeCommand(`sudo echo "$(pwd)/pmm2-client/bin"`);
         await executeCommand(`sudo echo $PATH`);
-        await executeCommand('pmm-admin --version');
+//         await executeCommand('pmm-admin --version');
         await executeCommand('sudo apt update');
         await executeCommand('sudo percona-release enable-only original experimental');
     }
