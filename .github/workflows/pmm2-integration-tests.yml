@@ -120,7 +120,7 @@ jobs:
           echo $GITHUB_PATH
           ls /home/runner/work/pmm-qa/pmm-qa/pmm-qa/pmm-integration/pmm2-client/bin
           echo $PATH
-          pmm-admin --version
+          /home/runner/work/pmm-qa/pmm-qa/pmm-qa/pmm-integration/pmm2-client/bin/pmm-admin --version
 
       - name: Setup Databases for PMM-Server
         working-directory: pmm-qa/pmm-integration
