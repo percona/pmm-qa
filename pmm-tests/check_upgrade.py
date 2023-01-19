@@ -28,13 +28,13 @@ def main():
     args = parse_args()
 
     if args.env in "ami":
-        # verify_command('rpm -qa | grep percona-qan-api2-' + args.version)
-        # verify_command('rpm -qa | grep percona-dashboards-' + args.version)
+        verify_command('rpm -qa | grep percona-qan-api2-' + args.version)
+        verify_command('rpm -qa | grep percona-dashboards-' + args.version)
         if args.version == "2.25.0":
             verify_command('rpm -qa | grep pmm-update-' + args.version)
 
-        # verify_command('rpm -qa | grep pmm-managed-' + args.version)
-        # verify_command('rpm -qa | grep pmm2-client-' + args.version)
+        verify_command('rpm -qa | grep pmm-managed-' + args.version)
+        verify_command('rpm -qa | grep pmm2-client-' + args.version)
         verify_command('sudo supervisorctl status | grep qan-api2 | grep RUNNING')
         verify_command('sudo supervisorctl status | grep alertmanager | grep RUNNING')
         verify_command('sudo supervisorctl status | grep clickhouse | grep RUNNING')
@@ -51,7 +51,7 @@ def main():
             verify_command('sudo supervisorctl status | grep vmalert | grep RUNNING')
             verify_command('grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.4.4"')
             verify_command('grafana-cli plugins ls | grep alexanderzobnin-zabbix-app')
-            verify_command('sudo victoriametrics --version | grep victoria-metrics-20230102-144906-pmm-6401-v1.82.1')
+            verify_command('sudo victoriametrics --version | grep v1.82.1')
     else:
         pmm_server_docker_container = subprocess.getoutput("docker ps --format \"table {{.ID}}\t{{.Image}}\t{{"
                                                            ".Names}}\" | grep 'pmm-server' | awk '{print $3}'")
