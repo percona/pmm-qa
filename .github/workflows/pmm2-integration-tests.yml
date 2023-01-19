@@ -111,17 +111,15 @@ jobs:
           echo CI=true >> .env
 
       - name: Setup Docker client for PMM-Server
-        working-directory: pmm-qa/pmm-integration
-        # docker run -d --name pmm-integration-client --network="pmm-integration-network" -e PMM_AGENT_SERVER_ADDRESS=pmm-integration-server -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${{ env.PMM_CLIENT_VERSION }}
         run: |
-          sudo npm install
-          sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --setup-pmm-client
-          echo "/home/runner/work/pmm-qa/pmm-qa/pmm-qa/pmm-integration/pmm2-client/bin" >> $GITHUB_PATH
+          ls
+          sudo -E bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm2-client/pmm2-client-PR-3017-756513c.tar.gz --admin_password admin --use_metrics_mode no
           pmm-admin --version
 
       - name: Setup Databases for PMM-Server
         working-directory: pmm-qa/pmm-integration
         run: |
+          sudo npm install
           sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} --mo-version=${{ env.MONGO_VERSION }} --mo-setup=${{ env.MONGO_SETUP }} ${{ env.INTEGRATION_SETUP }}
         shell: bash
 
