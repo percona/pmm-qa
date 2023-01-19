@@ -112,8 +112,8 @@ jobs:
 
       - name: Setup Docker client for PMM-Server
         run: |
-          ls
-          sudo -E bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm2-client/pmm2-client-PR-3017-756513c.tar.gz --admin_password admin --use_metrics_mode no
+          ls pmm-qa/
+          sudo -E bash -x .pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm2-client/pmm2-client-PR-3017-756513c.tar.gz --admin_password admin --use_metrics_mode no
           pmm-admin --version
 
       - name: Setup Databases for PMM-Server
