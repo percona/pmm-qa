@@ -37,6 +37,7 @@ sudo yum install -y proxysql2
 if [ "$query_source" == "slowlog" ]; then
 	for j in `seq 1  ${number_of_nodes}`;
 	do
+		export node$j_port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}')
 		bin/mysql -A -uroot -Snode$j/socket.sock -e "SET GLOBAL slow_query_log='ON';"
 		bin/mysql -A -uroot -Snode$j/socket.sock -e "SET GLOBAL long_query_time=0;"
 		bin/mysql -A -uroot -Snode$j/socket.sock -e "SET GLOBAL log_slow_rate_limit=1;"
@@ -52,13 +53,25 @@ bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to sysbench@'%';"
 bin/mysql -A -uroot -Snode1/socket.sock -e "drop database if exists sbtest;create database sbtest;"
 
 ### update proxysql configuration use, correct port
-export node1_port=$(cat node1.cnf | grep port | awk -F"=" '{print $2}')
+for j in `seq 1  ${number_of_nodes}`;
+do
+	export node$j_port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}')
+done
 sudo sed -i "s/3306/${node1_port}/" /etc/proxysql-admin.cnf
 
 sudo service proxysql start
 sleep 20
 sudo proxysql-admin -e
-
+for j in `seq 1  ${number_of_nodes}`;
+do
+	export port=$(echo node$j_port)
+	mysql -u admin -padmin -h 127.0.0.1 -P6032 -e "INSERT INTO mysql_servers(hostgroup_id,hostname,port) VALUES (1,'127.0.0.1',${port});"
+done
+mysql -u admin -padmin -h 127.0.0.1 -P6032 -e "UPDATE global_variables SET variable_value='monitor' WHERE variable_name='mysql-monitor_username';"
+mysql -u admin -padmin -h 127.0.0.1 -P6032 -e "UPDATE global_variables SET variable_value='monitor' WHERE variable_name='mysql-monitor_password';"
+mysql -u admin -padmin -h 127.0.0.1 -P6032 -e "UPDATE global_variables SET variable_value='2000' WHERE variable_name IN ('mysql-monitor_connect_interval','mysql-monitor_ping_interval','mysql-monitor_read_only_interval');"
+mysql -u admin -padmin -h 127.0.0.1 -P6032 -e "LOAD MYSQL VARIABLES TO RUNTIME;"
+mysql -u admin -padmin -h 127.0.0.1 -P6032 -e "SAVE MYSQL VARIABLES TO DISK;"
 ## Start Running Load
 #sysbench /usr/share/sysbench/oltp_insert.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=node1/socket.sock --mysql-password=test --db-driver=mysql --threads=5 --tables=10 --table-size=1000 prepare > sysbench_run_node1_prepare.txt 2>&1 &
 #sleep 20
