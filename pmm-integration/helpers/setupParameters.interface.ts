@@ -7,4 +7,5 @@ export default interface SetupParameters {
   pmmServerVersion?: string;
   psmdbTarballURL?: string;
   querySource?: string;
+  ci?: boolean;
 };

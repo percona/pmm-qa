@@ -52,6 +52,9 @@ const run = async () => {
         let tarballURL = value.split("=")[1];
         await setup_pmm_client_tarball(tarballURL)
         break;
+      case value.includes('--ci'):
+        parameters.ci = true;
+        break;
       default:
         break
     }
