@@ -112,9 +112,8 @@ jobs:
 
       - name: Setup Docker client for PMM-Server
         run: |
-          sudo -E bash -x ./pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
-          sudo apt-get update
-          sudo pmm-admin status
+          bash -x ./pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
+          pmm-admin status
 
       - name: Setup Databases for PMM-Server
         working-directory: pmm-qa/pmm-integration
