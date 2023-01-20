@@ -125,7 +125,7 @@ jobs:
       - name: Execute Bash Tests
         working-directory: pmm-qa
         run: |
-          npm install -g bats
+          sudo npm install -g bats
           sudo bats ./pmm-tests/pmm-2-0-bats-tests/ps-specific-tests.bats
 
 
