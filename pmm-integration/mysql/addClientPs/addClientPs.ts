@@ -14,14 +14,22 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
     const containerName = `ps_integration_${timeStamp}_${index}`
     if (parameters.querySource === "slowlog") {
       if (parameters.ci) {
-
+        await executeCommand(`sudo mkdir /var/log/${containerName}/`);
+        await executeCommand(`sudo touch /var/log/${containerName}/ps_${index}_slowlog.log`);
+        await executeCommand(`sudo chmod 777 /var/log/${containerName}/ps_${index}_slowlog.log`);
       } else {
         await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} mkdir /var/log/${containerName}/`);
         await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} touch /var/log/${containerName}/ps_${index}_slowlog.log`);
         await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} chmod 777 /var/log/${containerName}/ps_${index}_slowlog.log`);
       }
     }
-    await executeCommand(`sudo docker run -d --name ${containerName} -v ${pmmIntegrationDataName}:/var/log/${containerName}/ -p ${ps_port + index}:3306 -e MYSQL_ROOT_PASSWORD=${ps_password} -e UMASK=0777 percona:${parameters.psVersion} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci`);
+    let volumeLocation;
+    if (parameters.ci) {
+      volumeLocation = `/var/log/${containerName}/`;
+    } else {
+      volumeLocation = pmmIntegrationDataName;
+    }
+    await executeCommand(`sudo docker run -d --name ${containerName} -v ${volumeLocation}:/var/log/${containerName}/ -p ${ps_port + index}:3306 -e MYSQL_ROOT_PASSWORD=${ps_password} -e UMASK=0777 percona:${parameters.psVersion} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci`);
   }
 
   await executeCommand('sleep 30');
@@ -46,7 +54,7 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
       // Connect MySql to the PMM-Client with query source slowlog.
       await executeCommand(`sudo docker network connect ${dockerNetworkName} ${containerName}`);
       if (parameters.ci) {
-
+        await executeCommand(`sudo pmm-admin add mysql --query-source=slowlog --size-slow-logs=1GiB --username=root --password=${ps_password} ps_${timeStamp}_${index} --host=127.0.0.1 --port=${ps_port + index}`);
       } else {
         await executeCommand(`sudo docker exec ${pmmIntegrationClientName} pmm-admin add mysql --query-source=slowlog --size-slow-logs=1GiB --username=root --password=${ps_password} ps_${timeStamp}_${index} --host=${containerName} --port=3306`);
       }
