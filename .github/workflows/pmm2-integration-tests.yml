@@ -122,6 +122,13 @@ jobs:
           sudo npx ts-node ./integration-setup.ts --pmm-client-version=${{ env.PMM_CLIENT_VERSION }} --pgsql-version=${{ env.PGSQL_VERSION }} --ps-version=${{ env.PS_VERSION }} --mo-version=${{ env.MONGO_VERSION }} --mo-setup=${{ env.MONGO_SETUP }} --ci ${{ env.INTEGRATION_SETUP }}
         shell: bash
 
+      - name: Execute Bash Tests
+        working-directory: pmm-qa
+        run: |
+          npm install -g bats
+          sudo bats ./pmm-tests/pmm-2-0-bats-tests/ps-specific-tests.bats
+
+
       - name: Execute Integration Tests
         working-directory: pmm-ui-tests
         id: pmm-ui-tests
