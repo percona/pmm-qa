@@ -120,7 +120,9 @@ export const availableConstMap = new Map<string, string>([
   ['--ps-version', 'Pass Percona Server version info'],
   ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
   ['--pmm-client-version', 'Version of pmm client to use, default dev-latest'],
-  ['--query-source', 'Query Source for MySql options are perfschema or slowlog']
+  ['--query-source', 'Query Source for MySql options are perfschema or slowlog'],
+  ['--ci', 'Use this when using in ci (Jenkins, Github Action)']
+  
 ]);
 
 export const availableSetupMap = new Map(
