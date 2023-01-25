@@ -98,13 +98,6 @@ export const availableSetups: SetupsInterface[] = [
     },
   },
   {
-    arg: '--setup-pmm-client',
-    description: 'This flags will setup pmm client directly on your machine, works on Ubuntu.',
-    function: async (parameters: SetupParameters) => {
-      await SetupPMMClient(parameters);
-    },
-  },
-  {
     arg: '--clear-all-setups',
     description: 'Use this to clear your local env of any integration setups.',
     function: async (parameters: SetupParameters) => {
