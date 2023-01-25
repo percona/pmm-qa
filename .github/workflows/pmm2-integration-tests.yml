@@ -141,15 +141,13 @@ jobs:
         if: ${{ always() && (steps.pmm-ui-tests-all.outcome != 'skipped' || steps.pmm-ui-tests-tagged.outcome != 'skipped' ) }}
         working-directory: pmm-ui-tests
         run: |
-          ls tests/
-          ls tests/output/
           npx mochawesome-merge tests/output/*/*.json > tests/output/output.json
 
       - name: Create the report
         uses: phoenix-actions/test-reporting@v10
         if: success() || failure()
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.ROBOT_TOKEN }}
           name: Integration Tests
           path: pmm-ui-tests/tests/output/mochawesome.json
           reporter: mocha-json    
