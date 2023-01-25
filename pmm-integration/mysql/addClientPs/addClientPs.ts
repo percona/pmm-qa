@@ -45,11 +45,13 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
       await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL log_slow_rate_limit=1;"`)
       await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL log_slow_admin_statements=ON;"`)
       await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL log_slow_slave_statements=ON;"`)
-      // await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"`)
-      // await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"`)
-      // await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"`)
-      // await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"`)
-      // await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL query_response_time_stats=ON;"`)
+      if(parameters.psVersion! < 8) {
+        await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"`)
+        await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"`)
+        await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"`)
+        await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"`)
+        await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL query_response_time_stats=ON;"`)
+      }
       await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL slow_query_log_file='/var/log/${containerName}/ps_${index}_slowlog.log';"`)
       // Connect MySql to the PMM-Client with query source slowlog.
       await executeCommand(`sudo docker network connect ${dockerNetworkName} ${containerName}`);

@@ -35,8 +35,8 @@ const run = async () => {
         await setEnvVariable('MO_SETUP', parameters.moSetup);
         break;
       case value.includes('--ps-version'):
-        parameters.psVersion = value.split("=")[1];
-        await setEnvVariable('PS_VERSION', parameters.psVersion);
+        parameters.psVersion = parseFloat(value.split("=")[1]);
+        await setEnvVariable('PS_VERSION', parameters.psVersion.toString());
         break;
       case value.includes('--pmm-client-version'):
         parameters.pmmClientVersion = value.split("=")[1];

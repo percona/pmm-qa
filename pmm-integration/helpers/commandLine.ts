@@ -71,7 +71,7 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   
   if (!parameters.psVersion) {
     await setEnvVariable('PS_VERSION', '8.0')
-    parameters.psVersion = '8.0';
+    parameters.psVersion = parseFloat('8.0');
   }
 
   if (!parameters.pmmClientVersion) {
@@ -90,6 +90,10 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
 
   if(!parameters.querySource) {
     parameters.querySource = "perfschema";
+  }
+
+  if(!parameters.ci) {
+    parameters.ci = false;
   }
 }
 
