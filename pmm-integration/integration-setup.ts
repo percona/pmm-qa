@@ -1,5 +1,5 @@
 import validateArgs from "./helpers/validateArgs";
-import { executeCommand, installAnsible, setDefaultEnvVariables, setEnvVariable } from "./helpers/commandLine";
+import { executeCommand, installAnsible, setDefaultEnvVariables } from "./helpers/commandLine";
 import { availableSetups, SetupsInterface } from "./availableArgs";
 import setup_pmm_client_tarball from "./pmmClient/pmm2ClientTarbal";
 import { recreateNetwork, stopAndRemoveContainer } from "./helpers/docker";
@@ -24,27 +24,21 @@ const run = async () => {
     switch (true) {
       case value.includes('--pgsql-version'):
         parameters.pgsqlVersion = value.split("=")[1];
-        // await setEnvVariable('PGSQL_VERSION', parameters.pgsqlVersion);
         break;
       case value.includes('--mo-version'):
         parameters.moVersion = value.split("=")[1];
-        // await setEnvVariable('MO_VERSION', parameters.moVersion);
         break;
       case value.includes('--mo-setup'):
         parameters.moSetup = value.split("=")[1];
-        // await setEnvVariable('MO_SETUP', parameters.moSetup);
         break;
       case value.includes('--ps-version'):
         parameters.psVersion = parseFloat(value.split("=")[1]);
-        // await setEnvVariable('PS_VERSION', parameters.psVersion.toString());
         break;
       case value.includes('--pmm-client-version'):
         parameters.pmmClientVersion = value.split("=")[1];
-        // await setEnvVariable('PMM_CLIENT_VERSION', parameters.pmmClientVersion);
         break;
       case value.includes('--pmm-server-version'):
         parameters.pmmServerVersion = value.split("=")[1];
-        // await setEnvVariable('PMM_CLIENT_VERSION', parameters.pmmServerVersion);
         break;
       case value.includes('--query-source'):
         parameters.querySource = value.split("=")[1];

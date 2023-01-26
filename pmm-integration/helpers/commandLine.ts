@@ -42,40 +42,24 @@ export const executeCommandIgnoreErrors = async (command: string) => {
   return { stdout, stderr };
 }
 
-export const setEnvVariable = async (variable: string, value: string) => {
-  if(process.env.CI) {
-    console.log(`Setting up github action env variable ${variable} with the value: ${value}`);
-    core.exportVariable(variable, value);
-  } else {
-    console.log(`Setting up local action env variable ${variable} with the value: ${value}`);
-    process.env[variable] = value;
-  }
-  
-}
-
 export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.pgsqlVersion) {
-    core.exportVariable('PGSQL_VERSION', '15');
     parameters.pgsqlVersion = '15';
   }
 
   if (!parameters.moVersion) {
-    core.exportVariable('MO_VERSION', '6.0');
     parameters.moVersion = '6.0';
   }
 
   if (!parameters.moSetup) {
-    core.exportVariable('MO_SETUP', 'regular');
     parameters.moSetup = 'regular';
   }
   
   if (!parameters.psVersion) {
-    core.exportVariable('PS_VERSION', '8.0');
     parameters.psVersion = parseFloat('8.0');
   }
 
   if (!parameters.pmmClientVersion) {
-    core.exportVariable('CLIENT_VERSION', 'dev-latest');
     parameters.pmmClientVersion = 'dev-latest';
   }
 
@@ -85,7 +69,6 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
 
   if(!parameters.psmdbTarballURL) {
     parameters.psmdbTarballURL = '';
-    core.exportVariable('PSMDB_TARBALL', '');
   }
 
   if(!parameters.querySource) {

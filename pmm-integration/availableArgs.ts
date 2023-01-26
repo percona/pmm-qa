@@ -1,4 +1,4 @@
-import { executeAnsiblePlaybook, executeCommand, setEnvVariable } from "./helpers/commandLine";
+import { executeAnsiblePlaybook, executeCommand } from "./helpers/commandLine";
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
 import * as core from '@actions/core';
@@ -35,7 +35,6 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this do setup postgres for vacuum monitoring tests',
     function: async (parameters: SetupParameters) => {
       await pgsqlVacuumSetup(parameters);
-      // await setEnvVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
       core.exportVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
     },
   },
