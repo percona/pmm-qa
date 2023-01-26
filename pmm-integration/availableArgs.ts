@@ -1,4 +1,4 @@
-import { executeAnsiblePlaybook, executeCommand } from "./helpers/commandLine";
+import { executeAnsiblePlaybook, executeCommand, installAnsibleInCI } from "./helpers/commandLine";
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
 import * as core from '@actions/core';
@@ -42,6 +42,7 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-pgsm-integration',
     description: 'Use this option to setup PMM-Client with PGSM for integration testing',
     function: async (parameters: SetupParameters) => {
+      await installAnsibleInCI(parameters.ci)
       await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgsm_setup/pgsql_pgsm_setup.yml -e="PGSQL_VERSION=${parameters.pgsqlVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`)
       core.exportVariable("INTEGRATION_FLAG", "@pgsm-pmm-integration");
     },
@@ -50,6 +51,7 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-pgss-integration',
     description: 'Use this option to setup PMM-Client with PG Stat Statements for Integration Testing',
     function: async (parameters: SetupParameters) => {
+      await installAnsibleInCI(parameters.ci)
       await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./postgres/pgsql_pgss_setup/pgsql_pgss_setup.yml -e="PGSQL_VERSION=${parameters.pgsqlVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`)
       core.exportVariable("INTEGRATION_FLAG", "@pgss-pmm-integration");
     },
@@ -58,10 +60,10 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-psmdb-integration',
     description: 'Use this option for Percona MongoDB setup with PMM2',
     function: async (parameters: SetupParameters) => {
+      await installAnsibleInCI(parameters.ci)
       await executeCommand('chmod +x ./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
       await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
       await executeCommand(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml -e="CLIENT_VERSION=${parameters.pmmClientVersion} PSMDB_TARBALL=${parameters.psmdbTarballURL}  PSMDB_VERSION=${parameters.moVersion} PSMDB_SETUP=${parameters.moSetup}"`);
-      // await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
       core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
   },
@@ -69,10 +71,10 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-haproxy-integration',
     description: 'Use this option for Haproxy setup with PMM2',
     function: async (parameters: SetupParameters) => {
+      await installAnsibleInCI(parameters.ci)
       await executeCommand('chmod +x ./otherConfigs/haproxy/pmm-haproxy-setup.sh');
       console.log(await executeCommand('./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
       console.log(await executeCommand('sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml'));
-      // await setEnvVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
       core.exportVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
     }
   },
@@ -80,10 +82,10 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-ps-integration',
     description: 'Use this option for percona-server and PMM using dbdeployer',
     function: async (parameters: SetupParameters) => {
+      await installAnsibleInCI(parameters.ci)
       await executeCommand('chmod +x ./mysql/pmm_ps_integration/pmm_ps_integration.sh');
       await executeCommand('./mysql/pmm_ps_integration/pmm_ps_integration.sh');
       await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml -e="PS_VERSION=${parameters.psVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`);
-      // await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
       core.exportVariable('INTEGRATION_FLAG', '@pmm-ps-integration');
     },
   },
@@ -94,7 +96,6 @@ export const availableSetups: SetupsInterface[] = [
       await installDockerCompose();
       await executeCommand('chmod +x ./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
       await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
-      // await setEnvVariable("INTEGRATION_FLAG", "@fb");
       core.exportVariable('INTEGRATION_FLAG', '@fb');
     },
   },
