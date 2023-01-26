@@ -58,8 +58,8 @@ const run = async () => {
   await setDefaultEnvVariables(parameters);
 
   if(!commandLineArgs.includes('--clear-all-setups')) {
+    await recreateNetwork(dockerNetworkName);
     if(!parameters.ci) {
-      await recreateNetwork(dockerNetworkName);
       await stopAndRemoveContainer(pmmIntegrationServerName);
       await stopAndRemoveContainer(pmmIntegrationClientName);
       await executeCommand(`docker volume create ${pmmIntegrationDataName}`)
