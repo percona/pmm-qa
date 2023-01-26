@@ -4,15 +4,11 @@ import { availableSetups, SetupsInterface } from "./availableArgs";
 import setup_pmm_client_tarball from "./pmmClient/pmm2ClientTarbal";
 import { recreateNetwork, stopAndRemoveContainer } from "./helpers/docker";
 import SetupParameters from "./helpers/setupParameters.interface";
-import * as core from '@actions/core';
-import * as dotenv from 'dotenv'
 
 export const dockerNetworkName = "pmm-integration-network"
 export const pmmIntegrationClientName = 'pmm-integration-client'
 export const pmmIntegrationServerName = 'pmm-integration-server'
 export const pmmIntegrationDataName = 'pmm-integration-data'
-
-dotenv.config()
 
 const run = async () => {
   let parameters: SetupParameters = {};

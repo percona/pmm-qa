@@ -104,12 +104,6 @@ jobs:
           docker network create pmm-integration-network
           docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 --network="pmm-integration-network" --publish 80:80 --publish 443:443 --name pmm-integration-server perconalab/pmm-server:${{ env.PMM_SERVER_VERSION }}
 
-      - name: Create env file
-        working-directory: pmm-qa/pmm-integration
-        run: |
-          touch .env
-          echo CI=true >> .env
-
       - name: Setup Docker client for PMM-Server
         run: |
           sudo bash -x ./pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no

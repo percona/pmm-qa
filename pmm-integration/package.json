@@ -13,9 +13,9 @@
     "typescript": "^4.8.4"
   },
   "dependencies": {
+    "prettier": "^2.5.1",
     "@actions/core": "^1.10.0",
     "decompress": "^4.2.1",
-    "dotenv": "^16.0.3",
     "shelljs": "^0.8.5"
   }
 }
