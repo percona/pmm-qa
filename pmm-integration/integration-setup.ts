@@ -58,9 +58,7 @@ const run = async () => {
   await setDefaultEnvVariables(parameters);
 
   if(!commandLineArgs.includes('--clear-all-setups')) {
-    if(process.env.CI) {
-      await installAnsible();
-    } else {
+    if(!parameters.ci) {
       await recreateNetwork(dockerNetworkName);
       await stopAndRemoveContainer(pmmIntegrationServerName);
       await stopAndRemoveContainer(pmmIntegrationClientName);

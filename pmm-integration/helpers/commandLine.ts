@@ -84,3 +84,9 @@ export const installAnsible = async () => {
   await executeCommand('sudo apt-get update -y')
   await executeCommand('sudo apt-get install -y ansible')
 };
+
+export const installAnsibleInCI = async (isCI?: boolean) => {
+  if (isCI) {
+    await installAnsible()
+  }
+}
