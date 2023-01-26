@@ -5,7 +5,6 @@ import * as core from '@actions/core';
 import installDockerCompose from "./otherConfigs/installDockerCompose";
 import clearAllSetups from "./otherConfigs/clearAllSetups";
 import addClientPs from './mysql/addClientPs/addClientPs'
-import SetupPMMClient from "./pmmClient/SetupPMMClient";
 
 export interface SetupsInterface {
   arg: string;
