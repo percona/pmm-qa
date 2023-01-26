@@ -24,28 +24,28 @@ const run = async () => {
     switch (true) {
       case value.includes('--pgsql-version'):
         parameters.pgsqlVersion = value.split("=")[1];
-        await setEnvVariable('PGSQL_VERSION', parameters.pgsqlVersion);
+        // await setEnvVariable('PGSQL_VERSION', parameters.pgsqlVersion);
         break;
       case value.includes('--mo-version'):
         parameters.moVersion = value.split("=")[1];
-        await setEnvVariable('MO_VERSION', parameters.moVersion);
+        // await setEnvVariable('MO_VERSION', parameters.moVersion);
         break;
       case value.includes('--mo-setup'):
         parameters.moSetup = value.split("=")[1];
-        await setEnvVariable('MO_SETUP', parameters.moSetup);
+        // await setEnvVariable('MO_SETUP', parameters.moSetup);
         break;
       case value.includes('--ps-version'):
         parameters.psVersion = parseFloat(value.split("=")[1]);
-        await setEnvVariable('PS_VERSION', parameters.psVersion.toString());
+        // await setEnvVariable('PS_VERSION', parameters.psVersion.toString());
         break;
       case value.includes('--pmm-client-version'):
         parameters.pmmClientVersion = value.split("=")[1];
-        await setEnvVariable('PMM_CLIENT_VERSION', parameters.pmmClientVersion);
+        // await setEnvVariable('PMM_CLIENT_VERSION', parameters.pmmClientVersion);
         break;
       case value.includes('--pmm-server-version'):
-          parameters.pmmServerVersion = value.split("=")[1];
-          await setEnvVariable('PMM_CLIENT_VERSION', parameters.pmmServerVersion);
-          break;
+        parameters.pmmServerVersion = value.split("=")[1];
+        // await setEnvVariable('PMM_CLIENT_VERSION', parameters.pmmServerVersion);
+        break;
       case value.includes('--query-source'):
         parameters.querySource = value.split("=")[1];
         break;

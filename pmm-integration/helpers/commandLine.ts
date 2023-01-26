@@ -55,13 +55,13 @@ export const setEnvVariable = async (variable: string, value: string) => {
 
 export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.pgsqlVersion) {
-      core.exportVariable('PGSQL_VERSION', '15');
-      parameters.pgsqlVersion = '15';
+    core.exportVariable('PGSQL_VERSION', '15');
+    parameters.pgsqlVersion = '15';
   }
 
   if (!parameters.moVersion) {
-      await setEnvVariable('MO_VERSION', '6.0')
-      parameters.moVersion = '6.0';
+    core.exportVariable('MO_VERSION', '6.0');
+    parameters.moVersion = '6.0';
   }
 
   if (!parameters.moSetup) {
@@ -70,7 +70,7 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   }
   
   if (!parameters.psVersion) {
-    await setEnvVariable('PS_VERSION', '8.0')
+    core.exportVariable('PS_VERSION', '8.0');
     parameters.psVersion = parseFloat('8.0');
   }
 
@@ -85,7 +85,7 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
 
   if(!parameters.psmdbTarballURL) {
     parameters.psmdbTarballURL = '';
-    await setEnvVariable('PSMDB_TARBALL', '')
+    core.exportVariable('PSMDB_TARBALL', '');
   }
 
   if(!parameters.querySource) {
