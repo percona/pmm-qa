@@ -2,7 +2,10 @@ export default interface SetupParameters {
   pgsqlVersion?: string;
   moVersion?: string;
   moSetup?: string;
-  psVersion?: string;
+  psVersion?: number;
   pmmClientVersion?: string;
+  pmmServerVersion?: string;
   psmdbTarballURL?: string;
+  querySource?: string;
+  ci?: boolean;
 };

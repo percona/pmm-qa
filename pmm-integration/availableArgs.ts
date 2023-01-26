@@ -1,23 +1,40 @@
-import { executeAnsiblePlaybook, executeCommand, setEnvVariable } from "./helpers/commandLine";
+import { executeAnsiblePlaybook, executeCommand } from "./helpers/commandLine";
 import SetupParameters from "./helpers/setupParameters.interface";
 import pgsqlVacuumSetup from "./postgres/pgsql-vacuum-setup";
 import * as core from '@actions/core';
 import installDockerCompose from "./otherConfigs/installDockerCompose";
 import clearAllSetups from "./otherConfigs/clearAllSetups";
+import addClientPs from './mysql/addClientPs/addClientPs'
 
 export interface SetupsInterface {
   arg: string;
   description: string;
-  function: (parameters: SetupParameters) => Promise<void>;
+  function: (parameters: SetupParameters, client?: string) => Promise<void>;
 }
 
 export const availableSetups: SetupsInterface[] = [
+  {
+    arg: '--addclient',
+    description: 'Use this do setup postgres for vacuum monitoring tests',
+    function: async (parameters: SetupParameters, client: string = "") => {
+      let commandLineValue = client.split("=")[1];
+      let selectedDB = commandLineValue.split(',')[0];
+      let numberOfDbs: number = parseInt(commandLineValue.split(',')[1]);
+      switch (true) {
+        case selectedDB.includes('ps'):
+          await addClientPs(parameters, numberOfDbs);
+          break
+        default:
+          break
+      }
+
+    },
+  },
   {
     arg: '--setup-pgsql-vacuum',
     description: 'Use this do setup postgres for vacuum monitoring tests',
     function: async (parameters: SetupParameters) => {
       await pgsqlVacuumSetup(parameters);
-      await setEnvVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
       core.exportVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
     },
   },
@@ -44,7 +61,8 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
       await executeCommand('./mongoDb/mongo_psmdb_setup/setup_pmm_psmdb_integration.sh');
       await executeCommand(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml -e="CLIENT_VERSION=${parameters.pmmClientVersion} PSMDB_TARBALL=${parameters.psmdbTarballURL}  PSMDB_VERSION=${parameters.moVersion} PSMDB_SETUP=${parameters.moSetup}"`);
-      await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
+      // await setEnvVariable("INTEGRATION_FLAG", "@pmm-psmdb-integration");
+      core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
   },
   {
@@ -54,7 +72,7 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./otherConfigs/haproxy/pmm-haproxy-setup.sh');
       console.log(await executeCommand('./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
       console.log(await executeCommand('sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml'));
-      await setEnvVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
+      // await setEnvVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
       core.exportVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
     }
   },
@@ -65,7 +83,8 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('chmod +x ./mysql/pmm_ps_integration/pmm_ps_integration.sh');
       await executeCommand('./mysql/pmm_ps_integration/pmm_ps_integration.sh');
       await executeAnsiblePlaybook(`sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml -e="PS_VERSION=${parameters.psVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`);
-      await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
+      // await setEnvVariable("INTEGRATION_FLAG", "@pmm-ps-integration");
+      core.exportVariable('INTEGRATION_FLAG', '@pmm-ps-integration');
     },
   },
   {
@@ -75,7 +94,8 @@ export const availableSetups: SetupsInterface[] = [
       await installDockerCompose();
       await executeCommand('chmod +x ./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
       await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
-      await setEnvVariable("INTEGRATION_FLAG", "@fb");
+      // await setEnvVariable("INTEGRATION_FLAG", "@fb");
+      core.exportVariable('INTEGRATION_FLAG', '@fb');
     },
   },
   {
@@ -83,8 +103,6 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this to clear your local env of any integration setups.',
     function: async (parameters: SetupParameters) => {
       await clearAllSetups();
-      await setEnvVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
-      core.exportVariable('INTEGRATION_FLAG', '@pgsql_vacuum');
     },
   }
 ];
@@ -95,7 +113,10 @@ export const availableConstMap = new Map<string, string>([
   ['--mo-setup', 'Pass MongoDB Server type info'],
   ['--ps-version', 'Pass Percona Server version info'],
   ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
-  ['--pmm-client-version', 'Version of pmm client to use, default dev-latest']
+  ['--pmm-client-version', 'Version of pmm client to use, default dev-latest'],
+  ['--query-source', 'Query Source for MySql options are perfschema or slowlog'],
+  ['--ci', 'Use this when using in ci (Jenkins, Github Action)']
+  
 ]);
 
 export const availableSetupMap = new Map(

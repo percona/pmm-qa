@@ -36,7 +36,7 @@
         --network="pmm-integration-network"
         phusion/baseimage:focal-1.2.0
 
-    - name: Copy all required Artifacts to the docker ps_container_name
+    - name: Copy all required Artifacts to the docker {{ ps_container_name }}
       shell: "{{ item }}"
       with_items:
         - docker exec {{ ps_container_name }} mkdir -p artifacts
