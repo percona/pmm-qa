@@ -9,6 +9,7 @@ const clearAllSetups = async () => {
     const runningContainers: string[] = (await executeCommand('sudo docker container ls -a --format "{{.Names}}"')).stdout.split(os.EOL);
     runningContainers.forEach(async (container) => {
         if(container.includes('ps_integration') ||
+        container.includes('pdpgsql_integration') ||
         container.includes('pgsql_vacuum_db') ||
         container.includes('pgsql_pgss') ||
         container.includes('psmdb') ||

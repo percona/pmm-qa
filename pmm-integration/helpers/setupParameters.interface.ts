@@ -8,4 +8,5 @@ export default interface SetupParameters {
   psmdbTarballURL?: string;
   querySource?: string;
   ci?: boolean;
+  metricsMode?: string;
 };

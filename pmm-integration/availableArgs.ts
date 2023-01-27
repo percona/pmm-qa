@@ -5,6 +5,7 @@ import * as core from '@actions/core';
 import installDockerCompose from "./otherConfigs/installDockerCompose";
 import clearAllSetups from "./otherConfigs/clearAllSetups";
 import addClientPs from './mysql/addClientPs/addClientPs'
+import addClientPdPgsql from "./postgres/addClientPdPgsql";
 
 export interface SetupsInterface {
   arg: string;
@@ -24,6 +25,9 @@ export const availableSetups: SetupsInterface[] = [
         case selectedDB.includes('ps'):
           await addClientPs(parameters, numberOfDbs);
           break
+        case selectedDB.includes('pdpgsql'):
+          await addClientPdPgsql(parameters, numberOfDbs);
+          break;
         default:
           break
       }
