@@ -14,7 +14,7 @@ const addClientPdPgsql = async (parameters: SetupParameters, numberOfClients: nu
     await executeCommand(`sudo docker network connect ${dockerNetworkName} ${containerName}`);
     await executeCommand(`docker exec ${containerName} psql -h localhost -U postgres -c 'create extension pg_stat_monitor'`);
     await executeCommand(`docker exec ${containerName} psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'`);
-    const prefix = parameters.ci? '' : `sudo docker exec ${pmmIntegrationClientName} `
+    const prefix = parameters.ci? 'sudo ' : `sudo docker exec ${pmmIntegrationClientName} `
     const serviceAddress = parameters.ci? `127.0.0.1:${pdpgsql_port + index}` : `${containerName}:5432`
     if ((index & 2) === 0) {
       if (parameters.metricsMode) {
