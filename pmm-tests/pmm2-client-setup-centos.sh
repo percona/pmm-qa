@@ -62,9 +62,8 @@ if [[ "$client_version" == "pmm2-latest" ]]; then
 fi
 
 ## only supported for debian based systems for now
-if [[ "$client_version" == 2* && $(dpkg --list vim) ]]; then
-    export distro=$(cat /etc/*-release | grep DISTRIB_CODENAME | awk -F'=' '{print $2}')
-    yum install -y https://repo.percona.com/pmm2-client/yum/release/2/RPMS/x86_64/pmm2-client-${client_version}.el7.x86_64.rpm
+if [[ "$client_version" == 2* ]]; then
+    yum install -y https://repo.percona.com/pmm2-client/yum/release/2/RPMS/x86_64/pmm2-client-${client_version}-6.el7.x86_64.rpm
     percona-release enable-only original experimental
 fi
 
