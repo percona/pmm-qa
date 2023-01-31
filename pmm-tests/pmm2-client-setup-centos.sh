@@ -69,6 +69,7 @@ fi
 
 if [[ "$client_version" == http* ]]; then
 	if [[ "$install_client" == "yes" ]]; then
+        yum install wget -y
 		wget -O pmm2-client.tar.gz --progress=dot:giga "${client_version}"
 	fi
     tar -zxpf pmm2-client.tar.gz
@@ -100,7 +101,7 @@ else
         echo "install pmm-agent 3"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
 	else
-	      echo "install pmm-agent 4"
+	    echo "install pmm-agent 4"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
     fi    
     sleep 10
