@@ -4,7 +4,7 @@ import { dockerNetworkName, pmmIntegrationServerName } from "../integration-setu
 
 const pmmServerSetup = async (parameters: SetupParameters) => {
     let portalVariables;
-    if(!parameters.pmmServerVersions || parameters.pmmServerVersions?.versionMinor >= 30) {
+    if(!parameters.pmmServerVersions?.versionMinor || parameters.pmmServerVersions?.versionMinor >= 30) {
       portalVariables = '-e PERCONA_PORTAL_URL=https://portal-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443'
     } else {
       portalVariables = '-e PERCONA_TEST_SAAS_HOST=check-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443'
