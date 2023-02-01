@@ -5,8 +5,14 @@ export default interface SetupParameters {
   psVersion?: number;
   pmmClientVersion?: string;
   pmmServerVersion?: string;
+  pmmServerVersions?: PMMVersions;
   psmdbTarballURL?: string;
   querySource?: string;
   ci?: boolean;
-  metricsMode?: string;
 };
+
+export interface PMMVersions {
+  versionMajor: number;
+  versionMinor: number;
+  versionPatch: number;
+}
