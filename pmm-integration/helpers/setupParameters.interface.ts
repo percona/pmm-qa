@@ -8,6 +8,7 @@ export default interface SetupParameters {
   pmmServerVersions?: PMMVersions;
   psmdbTarballURL?: string;
   querySource?: string;
+  metricsMode?: string;
   ci?: boolean;
 };
 
