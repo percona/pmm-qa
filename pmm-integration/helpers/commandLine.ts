@@ -38,6 +38,10 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
     parameters.pgsqlVersion = '15.0';
   }
 
+  if (!parameters.pdpgsqlVersion) {
+    parameters.pdpgsqlVersion = '15.0';
+  }
+
   if (!parameters.moVersion) {
     parameters.moVersion = '6.0';
   }

@@ -6,6 +6,7 @@ PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
 PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
 
+
 @test "PMM-T442 run pmm-admin add postgreSQL with pgstatmonitor" {
         COUNTER=0
         IFS=$'\n'

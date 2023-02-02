@@ -43,12 +43,6 @@ const addClientPdPgsql = async (parameters: SetupParameters, numberOfClients: nu
         await executeCommand(`${prefix}pmm-admin add postgresql --username=postgres --password=${pdpgsql_password} --environment=pdpgsql-dev --cluster=pdpgsql-dev-cluster --query-source=pgstatmonitor --replication-set=pdpgsql-repl1 ${containerName} ${serviceAddress}`);
       }
     }
-    /*await executeCommand(`sudo docker exec ${containerName} mkdir /tmp/sql`)
-    await executeCommand('wget https://raw.githubusercontent.com/percona/pmm-agent/main/testqueries/postgres/pg_stat_monitor_load.sql');
-    await executeCommand(`sudo docker cp pg_stat_monitor_load.sql ${containerName}:/tmp/sql/pg_stat_monitor_load.sql`)
-    await executeCommand('rm pg_stat_monitor_load.sql');
-    await executeCommand(`sudo docker exec ${containerName} bash -c "psql -h localhost -U postgres -c 'create database test1'"`)*/
-    // await executeCommand(`sudo docker exec -u postgres ${containerName} psql test1 postgres -f /tmp/sql/pg_stat_monitor_load.sql`)
     await executeCommand(`bash ./pgstatmonitor_metrics_queries.sh ${containerName} > /dev/null 2>&1 &`);
   }
 }
