@@ -2978,7 +2978,7 @@ setup_mongo_replica_for_backup() {
     git clone -b PMM-11500-reuse-setup https://github.com/Percona-Lab/qa-integration
   fi
   pushd qa-integration/pmm_psmdb-pbm_setup
-  bash -x start-rs-only.sh
+  PSMDB_VERSION=4.4.18-18 ./start-rs-only.sh
   popd
   popd
 }
