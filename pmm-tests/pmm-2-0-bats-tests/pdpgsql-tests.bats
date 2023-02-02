@@ -7,7 +7,8 @@ PGSQL_HOST='localhost'
 PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
 
 echo "Debug command: "
-$PGSQL_IP_PORT = $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}')
+PGSQL_IP_PORT=$(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}')
+echo $PGSQL_IP_PORT
 echo "Address is: "
 echo $(cut -d':' -f1 <<< $PGSQL_IP_PORT)
 echo "Port Is is: "
