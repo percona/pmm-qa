@@ -8,7 +8,7 @@ const addClientPdPgsql = async (parameters: SetupParameters, numberOfClients: nu
   let pdpgsql_port: number = 6432;
   const pdpgsql_password = 'oFukiBRg7GujAJXq3tmd';
   for (let index = 0; index < numberOfClients; index++) {
-    const containerName = `pdpgsql_integration_${timeStamp}_${index}`;
+    const containerName = `pdpgsql-integration-${timeStamp}-${index}`;
     await executeCommand(`docker run --name ${containerName} -p ${pdpgsql_port + index}:5432 \
       -d -e POSTGRES_PASSWORD=${pdpgsql_password} perconalab/percona-distribution-postgresql:${parameters.pdpgsqlVersion} \
       -c shared_preload_libraries=pg_stat_statements,pg_stat_monitor \

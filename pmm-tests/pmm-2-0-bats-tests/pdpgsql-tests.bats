@@ -320,8 +320,7 @@ skip "Skipping this test, because of random failure and flaky behaviour"
 @test "PMM-T963 run pmm-admin remove postgresql added with custom agent password" {
         COUNTER=0
         IFS=$'\n'
-        echo $(pmm-admin list | grep "PostgreSQL" | grep -v "pdpgsql_integration_" | grep "pgsql_")
-        for i in $(pmm-admin list | grep "PostgreSQL" | grep -v "pdpgsql_integration_" | grep "pgsql_") ; do
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
                 let COUNTER=COUNTER+1
                 run pmm-admin remove postgresql pgsql_$COUNTER
                 echo "$output"
