@@ -7,9 +7,9 @@ PGSQL_HOST='localhost'
 PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
 
 echo "Debug command: "
-echo PGSQL_IP_PORT=$(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}')
 echo $(cut -d':' -f1 <<< $PGSQL_IP_PORT)
 echo $(cut -d':' -f2 <<< $PGSQL_IP_PORT)
+pmm-admin list
 
 @test "PMM-T442 run pmm-admin add postgreSQL with pgstatmonitor" {
         COUNTER=0
