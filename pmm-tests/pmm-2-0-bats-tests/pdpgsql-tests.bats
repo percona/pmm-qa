@@ -7,6 +7,8 @@ PGSQL_HOST='localhost'
 PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
 
 
+echo $(pmm-admin list | grep "PostgreSQL" | awk -F" " '{print $3}')
+
 @test "PMM-T442 run pmm-admin add postgreSQL with pgstatmonitor" {
         COUNTER=0
         IFS=$'\n'
