@@ -6,15 +6,6 @@ PGSQL_USER='postgres'
 PGSQL_HOST='localhost'
 PGSQL_PASSWORD='oFukiBRg7GujAJXq3tmd'
 
-echo "Debug command: "
-PGSQL_IP_PORT=$(pmm-admin list | grep "PostgreSQL" | grep -v "pdpgsql_integration_" | grep "pgsql_")
-echo $PGSQL_IP_PORT
-echo "Address is: "
-echo $(cut -d':' -f1 <<< $PGSQL_IP_PORT)
-echo "Port Is is: "
-echo $(cut -d':' -f2 <<< $PGSQL_IP_PORT)
-pmm-admin list
-
 @test "PMM-T442 run pmm-admin add postgreSQL with pgstatmonitor" {
         COUNTER=0
         IFS=$'\n'
@@ -329,7 +320,7 @@ skip "Skipping this test, because of random failure and flaky behaviour"
 @test "PMM-T963 run pmm-admin remove postgresql added with custom agent password" {
         COUNTER=0
         IFS=$'\n'
-        for i in $(pmm-admin list | grep "PostgreSQL" | grep "pgsql_") ; do
+        for i in $(pmm-admin list | grep "PostgreSQL" | grep -v "pdpgsql_integration_" | grep "pgsql_") ; do
                 let COUNTER=COUNTER+1
                 run pmm-admin remove postgresql pgsql_$COUNTER
                 echo "$output"
