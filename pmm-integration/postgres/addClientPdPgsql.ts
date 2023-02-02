@@ -3,14 +3,14 @@ import SetupParameters from "../helpers/setupParameters.interface";
 import { dockerNetworkName, pmmIntegrationClientName } from "../integration-setup";
 
 const addClientPdPgsql = async (parameters: SetupParameters, numberOfClients: number) => {
-  console.log(`Installing ${numberOfClients} Percona Distribution for PostgreSQL with version ${parameters.pgsqlVersion}`);
+  console.log(`Installing ${numberOfClients} Percona Distribution for PostgreSQL with version ${parameters.pdpgsqlVersion}`);
   const timeStamp = Date.now();
   let pdpgsql_port: number = 6432;
   const pdpgsql_password = 'oFukiBRg7GujAJXq3tmd';
   for (let index = 0; index < numberOfClients; index++) {
     const containerName = `pdpgsql_integration_${timeStamp}_${index}`;
     await executeCommand(`docker run --name ${containerName} -p ${pdpgsql_port + index}:5432 \
-      -d -e POSTGRES_PASSWORD=${pdpgsql_password} perconalab/percona-distribution-postgresql:${parameters.pgsqlVersion} \
+      -d -e POSTGRES_PASSWORD=${pdpgsql_password} perconalab/percona-distribution-postgresql:${parameters.pdpgsqlVersion} \
       -c shared_preload_libraries=pg_stat_statements,pg_stat_monitor \
       -c pg_stat_monitor.pgsm_bucket_time=60 
       -c pg_stat_monitor.pgsm_max_buckets=10 

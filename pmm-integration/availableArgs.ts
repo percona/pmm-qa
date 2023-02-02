@@ -121,7 +121,8 @@ export const availableSetups: SetupsInterface[] = [
 ];
 
 export const availableConstMap = new Map<string, string>([
-  ['--pgsql-version', 'Pass Postgre SQL server version Info'],
+  ['--pgsql-version', 'Pass Postgres SQL server version Info'],
+  ['--pdpgsql-version', 'Pass Percona Distribution Postgres SQL server version Info'],
   ['--mo-version', 'Pass MongoDB Server version info'],
   ['--mo-setup', 'Pass MongoDB Server type info'],
   ['--ps-version', 'Pass Percona Server version info'],
