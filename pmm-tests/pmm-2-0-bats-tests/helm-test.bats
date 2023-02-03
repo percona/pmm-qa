@@ -44,6 +44,7 @@ teardown() {
     helm install pmm \
         --set image.repository=$IMAGE_REPO \
         --set image.tag=$IMAGE_TAG \
+        --wait \
         percona/pmm
     wait_for_pmm
 
@@ -76,6 +77,7 @@ teardown() {
         --set image.tag=$IMAGE_TAG \
         --set-string pmmEnv.ENABLE_DBAAS="1" \
         --set service.type="NodePort" \
+        --wait \
         percona/pmm
     wait_for_pmm
     run bash -c "kubectl get sa pmm-service-account -o json | jq  '.secrets[]|length'"
@@ -90,7 +92,7 @@ teardown() {
     sed -i "s|tag: .*|tag: \"$IMAGE_TAG\"|g" values.yaml
     sed -i "s|repository:.*|repository: $IMAGE_REPO|g" values.yaml
 
-    helm install pmm -f values.yaml percona/pmm
+    helm install pmm -f values.yaml --wait percona/pmm
     wait_for_pmm
 
     helm uninstall --wait --timeout 60s pmm
@@ -103,7 +105,7 @@ teardown() {
     sed -i "s|tag: .*|tag: \"$IMAGE_TAG\"|g" values.yaml
     sed -i "s|repository:.*|repository: $IMAGE_REPO|g" values.yaml
 
-    helm install pmm3 -f values.yaml percona/pmm
+    helm install pmm3 -f values.yaml --wait percona/pmm
     wait_for_pmm
 
     sed -i "s|tag: .*|tag: \"dev-latest\"|g" values.yaml
