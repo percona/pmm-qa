@@ -5,6 +5,8 @@ import * as core from '@actions/core';
 import installDockerCompose from "./otherConfigs/installDockerCompose";
 import clearAllSetups from "./otherConfigs/clearAllSetups";
 import addClientPs from './mysql/addClientPs/addClientPs'
+import addClientPdPgsql from "./postgres/addClientPdPgsql";
+import pmmServerSetup from "./pmmServer/pmmServerSetup";
 
 export interface SetupsInterface {
   arg: string;
@@ -24,6 +26,9 @@ export const availableSetups: SetupsInterface[] = [
         case selectedDB.includes('ps'):
           await addClientPs(parameters, numberOfDbs);
           break
+        case selectedDB.includes('pdpgsql'):
+          await addClientPdPgsql(parameters, numberOfDbs);
+          break;
         default:
           break
       }
@@ -100,6 +105,13 @@ export const availableSetups: SetupsInterface[] = [
     },
   },
   {
+    arg: '--setup-docker-pmm-server',
+    description: 'Use this to setup pmm server in docker container.',
+    function: async (parameters: SetupParameters) => {
+      await pmmServerSetup(parameters);
+    },
+  },
+  {
     arg: '--clear-all-setups',
     description: 'Use this to clear your local env of any integration setups.',
     function: async (parameters: SetupParameters) => {
@@ -109,11 +121,13 @@ export const availableSetups: SetupsInterface[] = [
 ];
 
 export const availableConstMap = new Map<string, string>([
-  ['--pgsql-version', 'Pass Postgre SQL server version Info'],
+  ['--pgsql-version', 'Pass Postgres SQL server version Info'],
+  ['--pdpgsql-version', 'Pass Percona Distribution Postgres SQL server version Info'],
   ['--mo-version', 'Pass MongoDB Server version info'],
   ['--mo-setup', 'Pass MongoDB Server type info'],
   ['--ps-version', 'Pass Percona Server version info'],
   ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
+  ['--pmm-server-version', 'Version of pmm server to use, default dev-latest'],
   ['--pmm-client-version', 'Version of pmm client to use, default dev-latest'],
   ['--query-source', 'Query Source for MySql options are perfschema or slowlog'],
   ['--ci', 'Use this when using in ci (Jenkins, Github Action)']

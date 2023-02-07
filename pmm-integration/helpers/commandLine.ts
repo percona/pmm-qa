@@ -35,7 +35,11 @@ export const executeCommandIgnoreErrors = async (command: string) => {
 
 export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.pgsqlVersion) {
-    parameters.pgsqlVersion = '15';
+    parameters.pgsqlVersion = '15.0';
+  }
+
+  if (!parameters.pdpgsqlVersion) {
+    parameters.pdpgsqlVersion = '15.0';
   }
 
   if (!parameters.moVersion) {
