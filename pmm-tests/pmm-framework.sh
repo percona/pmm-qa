@@ -2979,7 +2979,6 @@ setup_mongo_replica_for_backup() {
   fi
   pushd qa-integration/pmm_psmdb-pbm_setup
   PSMDB_VERSION=4.4.18-18 ./start-rs-only.sh
-  sudo echo '127.0.0.1 rs101 rs102 rs103' >> /etc/hosts
   popd
   popd
 }
