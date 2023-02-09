@@ -153,7 +153,7 @@ EOF
         --set secret.create=false \
         --set secret.name=pmm-secret \
         --wait \
-        ../../percona-helm-charts/charts/pmm/
+        percona/pmm
     wait_for_pmm
 
     local admin_pass=$(get_pmm_pswd)
@@ -191,7 +191,7 @@ EOF
         --set secret.create=false \
         --set secret.name=pmm-secret \
         --wait \
-        ../../percona-helm-charts/charts/pmm/
+        percona/pmm
     wait_for_pmm
 
     admin_pass=$(get_pmm_pswd)
@@ -216,7 +216,7 @@ EOF
         --set storage.dataSource.apiGroup="snapshot.storage.k8s.io" \
         --set secret.create=false \
         --set secret.name=pmm-secret \
-        ../../percona-helm-charts/charts/pmm/
+        percona/pmm
     wait_for_pmm
 
     admin_pass=$(get_pmm_pswd)
