@@ -178,7 +178,7 @@ spec:
     persistentVolumeClaimName: pmm-storage-pmm4-0
 EOF
 
-    kubectl wait --for=jsonpath='{.status.readyToUse}'=true VolumeSnapshot/before-upgrade-from-v$some_old_version
+    kubectl wait --for=jsonpath='{.status.readyToUse}'=true VolumeSnapshot/before-upgrade-from-v$some_old_version --timeout=5m
     kubectl scale statefulset pmm4 --replicas=1
 
     kubectl get volumesnapshot
