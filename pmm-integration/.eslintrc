@@ -1,26 +1,12 @@
 {
-  "extends": ["react-app", "airbnb", "prettier"],
+  "extends": ["airbnb"],
+  "parser": "@typescript-eslint/parser",
   "env": {
-    "jest/globals": true,
     "browser": true
   },
   "root": true,
-  "ignorePatterns": "src/core/gen/**/*",
-  "settings": {
-    "react": {
-      "version": "detect"
-    },
-    "import/resolver": {
-      "node": {
-        "extensions": [".ts", ".tsx"]
-      }
-    }
-  },
-  "plugins": ["react-hooks", "jest", "eslint-plugin-no-inline-styles", "prettier"],
+  "plugins": ["eslint-plugin-no-inline-styles"],
   "rules": {
-    "prettier/prettier": "off", 
-    "no-console": ["warn", { "allow": ["warn", "error"] }],
-    "semi": ["error", "always"],
     "comma-dangle": [
       "error",
       {
@@ -31,40 +17,35 @@
         "functions": "always-multiline"
       }
     ],
-    "no-restricted-imports": "error",
+    "no-restricted-imports": 0,
     "no-param-reassign": ["error", { "ignorePropertyModificationsForRegex": ["^acc$"] }],
-    "react/jsx-curly-brace-presence": ["error"],
-    "react/jsx-boolean-value": ["error"],
-    "react/jsx-filename-extension": ["off"],
-    // It's a bad practice, but in certain use cases we have no choice
-    "react/jsx-props-no-spreading": ["off"],
-    "react/prop-types": ["off"],
-    "react/display-name": ["off"],
-    "react/no-array-index-key": ["error"],
-    "max-len": ["error", { "code": 110, "ignoreStrings": true, "ignoreRegExpLiterals": true }],
-    "quotes": ["error", "single", { "avoidEscape": true }],
+    "max-len": ["error", { "code": 130, "ignoreStrings": true, "ignoreRegExpLiterals": true }],
+    "prettier/prettier": ["off"],
+    "quotes": ["error", "single"],
     "import/extensions": ["off"],
     "import/no-extraneous-dependencies": [
       "error",
       { "devDependencies": true, "optionalDependencies": false, "peerDependencies": false }
     ],
+    "prefer-destructuring": "off",
+    "no-plusplus": "off",
+    "no-await-in-loop": "off",
     "import/prefer-default-export": ["off"],
     "import/no-unresolved": ["off"],
+    "no-duplicate-imports": [
+        "error",
+        { "includeExports": true }
+      ],
     // no-unused-vars doesn't work with typescript
     "no-unused-vars": "off",
-    "@typescript-eslint/no-unused-vars": ["error"],
     // We use a lot of snake case variables in code interacting with API
     "camelcase": ["off"],
     // It's more convinient to declare big helpers functions below the main method
     "no-use-before-define": ["off"],
-    "jsx-a11y": ["off"],
-    "jsx-a11y/anchor-is-valid": ["off"],
-    "jsx-a11y/click-events-have-key-events": ["off"],
-    "jsx-a11y/no-static-element-interactions": ["off"],
-    "jsx-a11y/no-noninteractive-element-interactions": ["error"],
-    "jsx-a11y/label-has-associated-control": ["error"],
     "no-dupe-args": ["error"],
     "no-new-object": ["error"],
+    "no-inline-comments": ["error"],
+    // "no-magic-numbers": ["error"],
     "padding-line-between-statements": [
       "error",
       { "blankLine": "always", "prev": "*", "next": "return" },
@@ -76,24 +57,12 @@
       { "blankLine": "always", "prev": ["const", "let", "var"], "next": "*" },
       { "blankLine": "any", "prev": ["const", "let", "var"], "next": ["const", "let", "var"] }
     ],
-    "no-inline-styles/no-inline-styles": ["warn"],
-    "max-classes-per-file": ["error"],
+    // "no-inline-styles/no-inline-styles": [2],
+    // ENABLE LATER
+    "max-classes-per-file": ["off"],
     "no-shadow": ["off"],
-    "@typescript-eslint/no-shadow": ["error"],
-    "no-unused-expressions": ["error"],
-    "arrow-parens": ["error"],
-    "eol-last": ["error"]
-  },
-  "overrides": [
-    {
-      "files": ["**/*.test.ts", "**/*.test.tsx"],
-      "env": {
-        "jest": true
-      },
-      "plugins": ["jest"],
-      "rules": {
-        "no-magic-numbers": ["off"]
-      }
-    }
-  ]
+    // enable it later, it happens because null coalesion operator
+    "no-unused-expressions": ["off"],
+    "class-methods-use-this": ["off"]
+  }
 }

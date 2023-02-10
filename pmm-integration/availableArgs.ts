@@ -8,6 +8,7 @@ import addClientPs from './mysql/addClientPs/addClientPs';
 import addClientPdPgsql from './postgres/addClientPdPgsql';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
 import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
+import addClientMoDB from './mongoDb/addClientMoDB';
 
 export interface SetupsInterface {
   arg: string;
@@ -30,6 +31,9 @@ export const availableSetups: SetupsInterface[] = [
           break;
         case selectedDB.includes('pdpgsql'):
           await addClientPdPgsql(parameters, numberOfDbs);
+          break;
+        case selectedDB.includes('modb'):
+          await addClientMoDB(parameters, numberOfDbs);
           break;
         default:
           break;
@@ -157,6 +161,8 @@ export const availableConstMap = new Map<string, string>([
   ['--pmm-client-version', 'Version of pmm client to use, default dev-latest'],
   ['--query-source', 'Query Source for MySql options are perfschema or slowlog'],
   ['--ci', 'Use this when using in ci (Jenkins, Github Action)'],
+  ['--use-socket', 'Use DB Socket for PMM Client Connection (MongoDb)'],
+ 
 ]);
 
 export const availableSetupMap = new Map(availableSetups.map((object) => [object.arg, object.description]));
