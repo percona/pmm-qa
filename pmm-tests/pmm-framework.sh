@@ -2971,25 +2971,14 @@ setup_remote_db_docker_compose () {
 
 setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
-  sudo percona-release enable pbm release
-  if grep -iq "ubuntu"  /etc/os-release ; then
-    sudo apt update
-    sudo apt install -y percona-backup-mongodb
-  fi
-  if grep -iq "centos"  /etc/os-release ; then
-    sudo yum install -y percona-backup-mongodb
-  fi
-  if grep -iq "rhel"  /etc/os-release ; then
-    sudo yum install -y percona-backup-mongodb
-  fi
   setup_docker_compose
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
-  if [ ! -d "pmm-ui-tests" ]; then
-    git clone -b main https://github.com/percona/pmm-ui-tests
+  if [ ! -d "qa-integration" ]; then
+    git clone -b main https://github.com/Percona-Lab/qa-integration
   fi
-  pushd pmm-ui-tests
-  bash -x testdata/backup-management/mongodb/setup-replica-and-pbm.sh
+  pushd qa-integration/pmm_psmdb-pbm_setup
+  PSMDB_VERSION=4.4.18-18 ./start-rs-only.sh
   popd
   popd
 }
