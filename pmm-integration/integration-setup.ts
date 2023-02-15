@@ -59,6 +59,9 @@ const run = async () => {
       case value.includes('--ci'):
         parameters.ci = true;
         break;
+      case value.includes('--rbac'):
+        parameters.rbac = true;
+        break;
       default:
         break
     }

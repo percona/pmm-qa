@@ -9,6 +9,11 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
     } else {
       portalVariables = '-e PERCONA_TEST_SAAS_HOST=check-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443'
     }
+
+    if (parameters.rbac) {
+      portalVariables += ' -e ENABLE_RBAC=1';
+    }
+
     await executeCommand(`docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} perconalab/pmm-server:${parameters.pmmServerVersion}`);
 }
 
