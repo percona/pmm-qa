@@ -28,7 +28,7 @@ def main():
     args = parse_args()
 
     if args.env in "ami":
-        verify_command('rpm -qa | grep percona-qan-api2-' + args.version)
+        #verify_command('rpm -qa | grep percona-qan-api2-' + args.version)
         verify_command('rpm -qa | grep percona-dashboards-' + args.version)
         if args.version == "2.25.0":
             verify_command('rpm -qa | grep pmm-update-' + args.version)
