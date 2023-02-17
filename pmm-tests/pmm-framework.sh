@@ -2972,6 +2972,10 @@ setup_remote_db_docker_compose () {
 setup_mongo_replica_for_backup() {
   echo "Setting up MongoDB replica set with PBM"
   setup_docker_compose
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  if [ $PMM_SERVER_DOCKER_CONTAINER != "pmm-server" ]; then
+    export PMM_SERVER_CONTAINER_ADDRESS=${PMM_SERVER_DOCKER_CONTAINER}:443
+  fi
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
   if [ ! -d "qa-integration" ]; then

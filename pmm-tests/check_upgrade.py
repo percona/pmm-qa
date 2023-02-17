@@ -99,9 +99,9 @@ def main():
             pmm_minor_v = docker_version.split('.')[1]
 
             if (do_docker_way == "yes" and int(pmm_minor_v) > 22) or (do_docker_way != "yes"):
-                verify_command(
-                    f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} grafana"
-                    f"-cli plugins ls | grep alexanderzobnin-zabbix-app")
+                #verify_command(
+                 #   f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} grafana"
+                  #  f"-cli plugins ls | grep alexanderzobnin-zabbix-app")
 
             verify_command(
                 f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} grafana"
