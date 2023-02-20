@@ -1,5 +1,5 @@
 ## pmm k8s helm tests
-### needs: helm, kubectl, k8s cluster, default kubeconfig
+### needs: helm, kubectl, k8s cluster with snapshotclass, default kubeconfig
 
 setup() {
 
@@ -26,7 +26,7 @@ teardown() {
 
     echo "--------cleanup---------"
     helm list --short | xargs helm uninstall || true
-    kubectl delete pods,services,statefulsets,configmaps,secrets,serviceaccount --selector=app.kubernetes.io/name=pmm --force || true
+    kubectl delete pod,service,statefulset,configmap,secret,serviceaccount,volumesnapshot --selector=app.kubernetes.io/name=pmm --force || true
     delete_pvc || true
     rm values.yaml || true
     echo "------------------------"
@@ -80,8 +80,11 @@ teardown() {
         --wait \
         percona/pmm
     wait_for_pmm
-    run bash -c "kubectl get sa pmm-service-account -o json | jq  '.secrets[]|length'"
-    [ "$output" -eq 1 ]
+
+    # this returns 1 with k8s>1.24, but will return 2 with k8s<1.24 
+    run bash -c "kubectl get sa pmm-service-account -o json | jq  '.secrets|length'"
+    [ "$output" = "1" ] || [ "$output" = "2" ]
+
     helm uninstall --wait --timeout 60s pmm1
     delete_pvc
 }
@@ -124,5 +127,112 @@ teardown() {
     fi
 
     helm uninstall --wait --timeout 60s pmm3
+    delete_pvc
+}
+
+@test "Backup and restore test" {
+
+    cat << EOF | kubectl create -f -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pmm-secret
+  labels:
+    app.kubernetes.io/name: "pmm"
+type: Opaque
+data:
+# base64 encoded password
+# encode some password: `echo -n "admin" | base64`
+  PMM_ADMIN_PASSWORD: YWRtaW4=
+EOF
+
+    local some_old_version=2.33.0
+
+    helm install pmm4 \
+        --set image.tag=$some_old_version \
+        --set secret.create=false \
+        --set secret.name=pmm-secret \
+        --wait \
+        percona/pmm
+    wait_for_pmm
+
+    local admin_pass=$(get_pmm_pswd)
+    local pmm_address=$(get_pmm_addr)
+    local encoded_u_p=$(echo -n admin:${admin_pass} | base64)
+
+    ### -------- Backup
+
+    kubectl scale statefulset pmm4 --replicas=0
+    kubectl wait --for=jsonpath='{.status.replicas}'=0 statefulset pmm4
+
+    cat << EOF | kubectl create -f -
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: before-upgrade-from-v$some_old_version
+  labels:
+    app.kubernetes.io/name: "pmm"
+spec:
+  volumeSnapshotClassName: csi-hostpath-snapclass
+  source:
+    persistentVolumeClaimName: pmm-storage-pmm4-0
+EOF
+
+    kubectl wait --for=jsonpath='{.status.readyToUse}'=true VolumeSnapshot/before-upgrade-from-v$some_old_version --timeout=5m
+    kubectl scale statefulset pmm4 --replicas=1
+
+    kubectl get volumesnapshot
+
+    ### -------- Upgrade
+
+    helm upgrade pmm4 \
+        --set image.repository=$IMAGE_REPO \
+        --set image.tag=$IMAGE_TAG \
+        --set secret.create=false \
+        --set secret.name=pmm-secret \
+        --wait \
+        percona/pmm
+    wait_for_pmm
+
+    admin_pass=$(get_pmm_pswd)
+    pmm_address=$(get_pmm_addr)
+    encoded_u_p=$(echo -n admin:${admin_pass} | base64)
+
+    run bash -c "curl -sk -H 'Authorization: Basic ${encoded_u_p}' https://${pmm_address}/v1/version | jq .version"
+    echo "New version: $output"
+    [ "$status" -eq 0 ]
+
+    [ "${output//\"}" = "$IMAGE_TAG" ] || [ "$IMAGE_TAG" = "2" ]
+
+    helm uninstall --wait --timeout 60s pmm4
+
+    ### -------- Restore
+
+    helm install pmm5 \
+        --set image.tag=$some_old_version \
+        --set storage.name="pmm-storage-old" \
+        --set storage.dataSource.name="before-upgrade-from-v$some_old_version" \
+        --set storage.dataSource.kind="VolumeSnapshot" \
+        --set storage.dataSource.apiGroup="snapshot.storage.k8s.io" \
+        --set secret.create=false \
+        --set secret.name=pmm-secret \
+        percona/pmm
+    wait_for_pmm
+
+    admin_pass=$(get_pmm_pswd)
+    pmm_address=$(get_pmm_addr)
+    encoded_u_p=$(echo -n admin:${admin_pass} | base64)
+
+    run bash -c "curl -sk -H 'Authorization: Basic ${encoded_u_p}' https://${pmm_address}/v1/version | jq .version"
+    echo "Old version: $output"
+    [ "$status" -eq 0 ]
+
+    [ "${output//\"}" = "$some_old_version" ]
+
+    helm uninstall --wait --timeout 60s pmm5
+
+    kubectl delete secret pmm-secret
+    kubectl delete volumesnapshot --selector=app.kubernetes.io/name=pmm
+    kubectl wait --for=delete --selector=app.kubernetes.io/name=pmm volumesnapshot --timeout=5m
     delete_pvc
 }
