@@ -2979,7 +2979,7 @@ setup_mongo_replica_for_backup() {
   mkdir -p /tmp/mongodb_backup_replica || :
   pushd /tmp/mongodb_backup_replica
   if [ ! -d "qa-integration" ]; then
-    git clone -b PMM-7-rename-env-var https://github.com/Percona-Lab/qa-integration
+    git clone -b main https://github.com/Percona-Lab/qa-integration
   fi
   pushd qa-integration/pmm_psmdb-pbm_setup
   PSMDB_VERSION=4.4.18-18 ./start-rs-only.sh
