@@ -11,6 +11,7 @@ export default interface SetupParameters {
   querySource?: string;
   metricsMode?: string;
   ci?: boolean;
+  featureBuild?: boolean;
 };
 
 export interface PMMVersions {

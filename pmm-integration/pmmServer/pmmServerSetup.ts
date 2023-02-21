@@ -4,12 +4,17 @@ import { dockerNetworkName, pmmIntegrationServerName } from "../integration-setu
 
 const pmmServerSetup = async (parameters: SetupParameters) => {
     let portalVariables;
+    let featureBuild;
     if(!parameters.pmmServerVersions?.versionMinor || parameters.pmmServerVersions?.versionMinor >= 30) {
       portalVariables = '-e PERCONA_PORTAL_URL=https://portal-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443'
     } else {
       portalVariables = '-e PERCONA_TEST_SAAS_HOST=check-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443'
     }
-    await executeCommand(`docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} perconalab/pmm-server-fb:${parameters.pmmServerVersion}`);
+
+    if (parameters.featureBuild) {
+      featureBuild = "-fb";
+    }
+    await executeCommand(`docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} perconalab/pmm-server${featureBuild}:${parameters.pmmServerVersion}`);
 }
 
 export default pmmServerSetup

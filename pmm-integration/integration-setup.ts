@@ -59,6 +59,9 @@ const run = async () => {
       case value.includes('--ci'):
         parameters.ci = true;
         break;
+      case value.includes('--fb'):
+        parameters.featureBuild = true;
+        break;
       default:
         break
     }
