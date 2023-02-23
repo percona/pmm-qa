@@ -130,8 +130,8 @@ export const availableConstMap = new Map<string, string>([
   ['--pmm-server-version', 'Version of pmm server to use, default dev-latest'],
   ['--pmm-client-version', 'Version of pmm client to use, default dev-latest'],
   ['--query-source', 'Query Source for MySql options are perfschema or slowlog'],
-  ['--ci', 'Use this when using in ci (Jenkins, Github Action)']
-  
+  ['--ci', 'Use this when using in ci (Jenkins, Github Action)'],
+  ['--rbac', 'Use this to allow Access Control']
 ]);
 
 export const availableSetupMap = new Map(
