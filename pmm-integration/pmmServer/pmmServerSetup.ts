@@ -14,7 +14,15 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
       portalVariables += ' -e ENABLE_RBAC=1';
     }
 
-    await executeCommand(`docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} perconalab/pmm-server:${parameters.pmmServerVersion}`);
+    let pmmServerDockerTag;
+
+    if (parameters.pmmServerDockerTag) {
+      pmmServerDockerTag = parameters.pmmServerDockerTag;
+    } else {
+      pmmServerDockerTag = `perconalab/pmm-server:${parameters.pmmServerVersion}`;
+    }
+
+    await executeCommand(`docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} ${pmmServerDockerTag}`);
 }
 
 export default pmmServerSetup
