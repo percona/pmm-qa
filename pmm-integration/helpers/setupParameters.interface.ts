@@ -12,6 +12,7 @@ export default interface SetupParameters {
   metricsMode?: string;
   ci?: boolean;
   rbac?: boolean;
+  pmmServerDockerTag?: string;
 };
 
 export interface PMMVersions {

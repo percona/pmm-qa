@@ -131,7 +131,8 @@ export const availableConstMap = new Map<string, string>([
   ['--pmm-client-version', 'Version of pmm client to use, default dev-latest'],
   ['--query-source', 'Query Source for MySql options are perfschema or slowlog'],
   ['--ci', 'Use this when using in ci (Jenkins, Github Action)'],
-  ['--rbac', 'Use this to allow Access Control']
+  ['--rbac', 'Use this to allow Access Control'],
+  ['--pmm-server-docker-tag', 'Use this tag to select different docker tag, useful for RC and Release testing.'],
 ]);
 
 export const availableSetupMap = new Map(

@@ -62,6 +62,9 @@ const run = async () => {
       case value.includes('--rbac'):
         parameters.rbac = true;
         break;
+      case value.includes('--pmm-server-docker-tag'):
+        parameters.pmmServerDockerTag = value.split('=')[1];
+        break;
       default:
         break
     }
