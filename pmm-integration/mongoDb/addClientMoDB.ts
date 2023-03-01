@@ -1,6 +1,10 @@
 import { executeCommand } from '../helpers/commandLine';
 import SetupParameters from '../helpers/setupParameters.interface';
-import { dockerNetworkName, pmmIntegrationClientName, pmmIntegrationDataMongoVolume } from '../integration-setup';
+import {
+  dockerNetworkName,
+  pmmIntegrationClientName,
+  pmmIntegrationDataMongoVolume,
+} from '../integration-setup';
 
 const addClientMoDB = async (parameters: SetupParameters, numberOfClients: number) => {
   console.log(`Installing ${numberOfClients} MongoDB's with version ${parameters.moVersion}`);
@@ -21,8 +25,13 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       volumeLocation = pmmIntegrationDataMongoVolume;
     }
 
-    await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} mkdir -p /tmp/mo-integration-${clientPort}/`);
-    await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} chmod -R 0777 /tmp/mo-integration-${clientPort}`);
+    await executeCommand(
+      `sudo docker exec -u 0 ${pmmIntegrationClientName} mkdir -p /tmp/mo-integration-${clientPort}/`
+    );
+    await executeCommand(
+      `sudo docker exec -u 0 ${pmmIntegrationClientName} chmod -R 0777 /tmp/mo-integration-${clientPort}`
+    );
+
     await executeCommand(
       `sudo docker run -d -p ${clientPort}:27017 \
       -v ${volumeLocation}:/tmp/ \
@@ -31,44 +40,43 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       -e MONGO_INITDB_ROOT_PASSWORD=${password} \
       -e UMASK=0777 \
       --name ${containerName} mongo:${parameters.moVersion} \
-      --unixSocketPrefix /tmp/mo-integration-${clientPort}`,
+      --unixSocketPrefix /tmp/mo-integration-${clientPort}
+      --profile 2`
     );
     await executeCommand('sleep 20');
     if (parameters.moVersion && parameters.moVersion >= 5) {
-      await executeCommand(
-        `sudo docker exec -u 0  ${containerName} mongosh -u mongoadmin -p ${password} --eval 'db.setProfilingLevel(2)'`,
-      );
       await executeCommand(`sudo docker cp ./mongoDb/mongodb_user_setup.js ${containerName}:/`);
-      await executeCommand(`sudo docker exec -u 0  ${containerName} mongosh -u mongoadmin -p ${password} mongodb_user_setup.js`);
+      await executeCommand(
+        `sudo docker exec -u 0  ${containerName} mongosh -u mongoadmin -p ${password} mongodb_user_setup.js`
+      );
     } else {
-      await executeCommand(
-        `sudo docker exec -u 0  ${containerName} mongo -u mongoadmin -p ${password} --eval 'db.setProfilingLevel(2)'`,
-      );
       await executeCommand(`sudo docker cp ./mongoDb/mongodb_user_setup.js ${containerName}:/`);
-      await executeCommand(`sudo docker exec -u 0  ${containerName} mongo -u mongoadmin -p ${password} mongodb_user_setup.js`);
+      await executeCommand(
+        `sudo docker exec -u 0  ${containerName} mongo -u mongoadmin -p ${password} mongodb_user_setup.js`
+      );
     }
 
-    await executeCommand(
-      `sudo docker exec -u 0 ${pmmIntegrationClientName} chmod -R 0777 /tmp/mo-integration-${clientPort}/mongodb-27017.sock`,
-    );
     if (parameters.useSocket) {
+      await executeCommand(
+        `sudo docker exec -u 0 ${pmmIntegrationClientName} chmod -R 0777 /tmp/mo-integration-${clientPort}/mongodb-27017.sock`
+      );
       if (parameters.metricsMode) {
         await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} pmm-admin add mongodb --cluster=${containerName} \
-        --username=pmm_mongodb --password=${password} --metrics-mode=${parameters.metricsMode} \
+        --username=mongoadmin --password=${password} --metrics-mode=${parameters.metricsMode} \
         --environment=modb-prod ${containerName} --socket=/tmp/mo-integration-${clientPort}/mongodb-27017.sock --debug`);
       } else {
         await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} pmm-admin add mongodb --cluster=${containerName} \
-        --username=pmm_mongodb --password=${password} --environment=modb-prod ${containerName} \
+        --username=mongoadmin --password=${password} --environment=modb-prod ${containerName} \
         --socket=/tmp/mo-integration-${clientPort}/mongodb-27017.sock --debug`);
       }
     } else if (parameters.metricsMode) {
       await executeCommand(`sudo docker exec ${pmmIntegrationClientName} pmm-admin add mongodb --cluster=${containerName} \
-        --username=pmm_mongodb --password=${password} --metrics-mode=${parameters.metricsMode} \
+        --username=mongoadmin --password=${password} --metrics-mode=${parameters.metricsMode} \
         --environment=modb-prod ${containerName} --debug ${containerName}:27017
         `);
     } else {
       await executeCommand(`sudo docker exec ${pmmIntegrationClientName} pmm-admin add mongodb --cluster=${containerName} \
-        --username=pmm_mongodb --password=${password} --environment=modb-prod ${containerName} --debug ${containerName}:27017
+        --username=mongoadmin --password=${password} --environment=modb-prod ${containerName} --debug ${containerName}:27017
         `);
     }
   }

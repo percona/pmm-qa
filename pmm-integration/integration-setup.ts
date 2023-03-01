@@ -1,5 +1,5 @@
 import validateArgs from './helpers/validateArgs';
-import { executeCommand, executeCommandIgnoreErrors, installAnsible, setDefaultEnvVariables } from './helpers/commandLine';
+import { executeCommand, executeCommandIgnoreErrors, setDefaultEnvVariables } from './helpers/commandLine';
 import { availableSetups, SetupsInterface } from './availableArgs';
 import setup_pmm_client_tarball from './pmmClient/pmm2ClientTarbal';
 import { recreateNetwork, stopAndRemoveContainer } from './helpers/docker';
@@ -89,7 +89,7 @@ const run = async () => {
         -v ${pmmIntegrationDataName}:/var/log/ -v ${pmmIntegrationDataMongoVolume}:/tmp/ \
         --network="${dockerNetworkName}" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} \
         -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 \
-        -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`,
+        -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`
       );
     }
   }
