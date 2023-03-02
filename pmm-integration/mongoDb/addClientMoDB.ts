@@ -39,6 +39,8 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
     );
     await executeCommand('sleep 20');
 
+    await executeCommand(`sudo docker logs ${containerName}`);
+
     if (parameters.moVersion && parameters.moVersion >= 5) {
       await executeCommand(`sudo docker cp ./mongoDb/mongodb_user_setup.js ${containerName}:/`);
       await executeCommand(`sudo docker exec -u 0  ${containerName} mongosh -u mongoadmin -p ${password} mongodb_user_setup.js`);
