@@ -14,14 +14,18 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
     const clientPort = port + index;
     const containerName = `mo-integration-${timeStamp}-${index}`;
     let volumeLocation;
+    let serviceAddress;
+    let prefix;
 
     if (parameters.ci) {
       volumeLocation = '/tmp/';
+      serviceAddress = `127.0.0.1:${clientPort}`;
+      prefix = 'sudo';
     } else {
       volumeLocation = pmmIntegrationDataMongoVolume;
+      serviceAddress = `${containerName}:5432`;
+      prefix = `sudo docker exec -u 0 ${pmmIntegrationClientName} `;
     }
-
-    const prefix = parameters.ci ? 'sudo ' : `sudo docker exec  -u 0 ${pmmIntegrationClientName} `;
 
     await executeCommand(`${prefix} mkdir -p /tmp/mo-integration-${clientPort}/`);
     await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-integration-${clientPort}`);
@@ -38,8 +42,6 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       --profile 2`,
     );
     await executeCommand('sleep 20');
-
-    await executeCommand(`sudo docker logs ${containerName}`);
 
     if (parameters.moVersion && parameters.moVersion >= 5) {
       await executeCommand(`sudo docker cp ./mongoDb/mongodb_user_setup.js ${containerName}:/`);
@@ -63,11 +65,11 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
     } else if (parameters.metricsMode) {
       await executeCommand(`${prefix} pmm-admin add mongodb --cluster=${containerName} \
         --username=mongoadmin --password=${password} --metrics-mode=${parameters.metricsMode} \
-        --environment=modb-prod ${containerName} --debug ${containerName}:27017
+        --environment=modb-prod ${containerName} --debug ${serviceAddress}
         `);
     } else {
       await executeCommand(`${prefix} pmm-admin add mongodb --cluster=${containerName} \
-        --username=mongoadmin --password=${password} --environment=modb-prod ${containerName} --debug ${containerName}:27017
+        --username=mongoadmin --password=${password} --environment=modb-prod ${containerName} --debug ${serviceAddress}
         `);
     }
   }
