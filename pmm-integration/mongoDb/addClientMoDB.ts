@@ -16,7 +16,7 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
     let volumeLocation;
 
     if (parameters.ci) {
-      volumeLocation = `/tmp/modb_${clientPort}`;
+      volumeLocation = `/tmp/mo-integration-${clientPort}`;
     } else {
       volumeLocation = pmmIntegrationDataMongoVolume;
     }
