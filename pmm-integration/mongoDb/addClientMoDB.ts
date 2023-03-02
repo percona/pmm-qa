@@ -21,8 +21,10 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       volumeLocation = pmmIntegrationDataMongoVolume;
     }
 
-    await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} mkdir -p /tmp/mo-integration-${clientPort}/`);
-    await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} chmod -R 0777 /tmp/mo-integration-${clientPort}`);
+    const prefix = parameters.ci ? 'sudo ' : `sudo docker exec  -u 0 ${pmmIntegrationClientName} `;
+
+    await executeCommand(`${prefix} mkdir -p /tmp/mo-integration-${clientPort}/`);
+    await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-integration-${clientPort}`);
 
     await executeCommand(
       `sudo docker run -d -p ${clientPort}:27017 \
@@ -44,8 +46,6 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       await executeCommand(`sudo docker cp ./mongoDb/mongodb_user_setup.js ${containerName}:/`);
       await executeCommand(`sudo docker exec -u 0  ${containerName} mongo -u mongoadmin -p ${password} mongodb_user_setup.js`);
     }
-
-    const prefix = parameters.ci ? 'sudo ' : `sudo docker exec  -u 0 ${pmmIntegrationClientName} `;
 
     if (parameters.useSocket) {
       await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-integration-${clientPort}/mongodb-27017.sock`);
