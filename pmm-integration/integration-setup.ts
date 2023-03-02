@@ -66,6 +66,12 @@ const run = async () => {
       case value.includes('--use-socket'):
         parameters.useSocket = true;
         break;
+      case value.includes('--rbac'):
+        parameters.rbac = true;
+        break;
+      case value.includes('--pmm-server-docker-tag'):
+        parameters.pmmServerDockerTag = value.split('=')[1];
+        break;
       default:
         break;
     }
@@ -89,7 +95,7 @@ const run = async () => {
         -v ${pmmIntegrationDataName}:/var/log/ -v ${pmmIntegrationDataMongoVolume}:/tmp/ \
         --network="${dockerNetworkName}" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} \
         -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 \
-        -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`
+        -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`,
       );
     }
   }

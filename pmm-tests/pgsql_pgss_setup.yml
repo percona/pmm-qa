@@ -8,6 +8,7 @@
   vars:
     pgsql_version: "{{ lookup('vars', 'extra_pgsql_version', default=lookup('env','PGSQL_VERSION') | default('14', true) ) }}"
     pgsql_pgss_container: "{{ lookup('vars', 'extra_pgsql_pgss_container', default=lookup('env','PGSQL_PGSS_CONTAINER') | default('pgsql_pgss', true) ) }}"
+    pgsql_pgss_port: "{{ lookup('vars', 'extra_pgsql_port', default=lookup('env','PGSQL_PGSS_PORT') | default('5438', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
     client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
     admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
@@ -28,7 +29,7 @@
   - name: Prepare Container for PostgreSQL
     shell: >
       docker run -d --name={{ pgsql_pgss_container }}
-      -p 5438:5432
+      -p {{ pgsql_pgss_port }}:5432
       phusion/baseimage:focal-1.1.0
 
   - name: Copy all required Artifacts to the docker pgsql_pgss_container
