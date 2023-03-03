@@ -1,7 +1,7 @@
 export default interface SetupParameters {
   pgsqlVersion?: string;
   pdpgsqlVersion?: string;
-  moVersion?: string;
+  moVersion?: number;
   moSetup?: string;
   psVersion?: number;
   pmmClientVersion?: string;
@@ -11,9 +11,10 @@ export default interface SetupParameters {
   querySource?: string;
   metricsMode?: string;
   ci?: boolean;
+  useSocket?: boolean;
   rbac?: boolean;
   pmmServerDockerTag?: string;
-};
+}
 
 export interface PMMVersions {
   versionMajor: number;
