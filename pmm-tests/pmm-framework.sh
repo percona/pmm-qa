@@ -2734,6 +2734,10 @@ setup_pmm_pgsm_integration () {
   if echo "$pdpgsql_version" | grep '15'; then
     export PGSQL_VERSION=15
   fi
+  if [ -z "$PGSTAT_MONITOR_BRANCH" ]
+  then
+    export PGSTAT_MONITOR_BRANCH=main
+  fi
   if [ -z "$CLIENT_VERSION" ]
   then
     export CLIENT_VERSION=dev-latest
