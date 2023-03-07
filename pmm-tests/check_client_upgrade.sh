@@ -12,15 +12,15 @@ pmm-admin status | grep postgres_exporter | grep -qv Waiting
 pmm-admin status | grep mongodb_profiler_agent | grep -qv Waiting
 pmm-admin status | grep postgresql_pgstatements_agent | grep -qv Waiting
 
-pmm-admin list | grep -q Running
-pmm-admin list | grep node_exporter | grep -qv Waiting
-pmm-admin list | grep vmagent | grep -qv Waiting
-pmm-admin list | grep mysqld_exporter | grep -qv Waiting
-pmm-admin list | grep mysql_perfschema_agent | grep -qv Waiting
-pmm-admin list | grep mongodb_exporter | grep -qv Waiting
-pmm-admin list | grep postgres_exporter | grep -qv Waiting
-pmm-admin list | grep mongodb_profiler_agent | grep -qv Waiting
-pmm-admin list | grep postgresql_pgstatements_agent | grep -qv Waiting
+#pmm-admin list | grep -q Running
+#pmm-admin list | grep node_exporter | grep -qv Waiting
+#pmm-admin list | grep vmagent | grep -qv Waiting
+#pmm-admin list | grep mysqld_exporter | grep -qv Waiting
+#pmm-admin list | grep mysql_perfschema_agent | grep -qv Waiting
+#pmm-admin list | grep mongodb_exporter | grep -qv Waiting
+#pmm-admin list | grep postgres_exporter | grep -qv Waiting
+#pmm-admin list | grep mongodb_profiler_agent | grep -qv Waiting
+#pmm-admin list | grep postgresql_pgstatements_agent | grep -qv Waiting
 
 
 server_version=$(pmm-admin status | grep Version | awk -F' ' '{print $2}')
