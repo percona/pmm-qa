@@ -30,7 +30,7 @@ if [ "$server_version" != "$1" ]; then
 fi
 admin_version=$(pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}')
 if [ -z "$2" ]; then
-    if [ "$admin_version" != "$1" ] ||; then
+    if [ "$admin_version" != "$1" ]; then
         echo "PMM Admin Version is not equal to expected $1";
         exit 1;
     fi
