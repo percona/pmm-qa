@@ -44,7 +44,7 @@ if [ -z "$2" ]; then
         exit 1;
     fi
 else
-    if [ "$admin_version" != "$2" ] ||; then
+    if [ "$admin_version" != "$2" ]; then
         echo "PMM Admin Version is not equal to expected $2";
         exit 1;
     fi
