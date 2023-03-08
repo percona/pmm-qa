@@ -12,34 +12,26 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
   const timeStamp = Date.now();
   const ps_port: number = 43306;
   const ps_password = 'GRgrO9301RuF';
+  let prefix;
 
-  await executeCommand(`docker pull percona:${parameters.psVersion}`);
+  await executeCommand(`sudo docker pull percona:${parameters.psVersion}`);
   // Start requested number of Percona Server containers
   for (let index = 0; index < numberOfClients; index++) {
     const containerName = `ps_integration_${timeStamp}_${index}`;
-
-    if (parameters.querySource === 'slowlog') {
-      if (parameters.ci) {
-        await executeCommand(`sudo mkdir /var/log/${containerName}/`);
-        await executeCommand(`sudo touch /var/log/${containerName}/ps_${index}_slowlog.log`);
-        await executeCommand(`sudo chmod 777 /var/log/${containerName}/ps_${index}_slowlog.log`);
-      } else {
-        await executeCommand(`sudo docker exec -u 0 ${pmmIntegrationClientName} mkdir /var/log/${containerName}/`);
-        await executeCommand(
-          `sudo docker exec -u 0 ${pmmIntegrationClientName} touch /var/log/${containerName}/ps_${index}_slowlog.log`,
-        );
-        await executeCommand(
-          `sudo docker exec -u 0 ${pmmIntegrationClientName} chmod 777 /var/log/${containerName}/ps_${index}_slowlog.log`,
-        );
-      }
-    }
-
     let volumeLocation;
 
     if (parameters.ci) {
       volumeLocation = `/var/log/${containerName}/`;
+      prefix = 'sudo';
     } else {
       volumeLocation = pmmIntegrationDataName;
+      prefix = `sudo docker exec -u 0 ${pmmIntegrationClientName}`;
+    }
+
+    if (parameters.querySource === 'slowlog') {
+      await executeCommand(`${prefix} mkdir /var/log/${containerName}/`);
+      await executeCommand(`${prefix} touch /var/log/${containerName}/ps_${index}_slowlog.log`);
+      await executeCommand(`${prefix} chmod 777 /var/log/${containerName}/ps_${index}_slowlog.log`);
     }
 
     await executeCommand(
@@ -47,7 +39,7 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
         ps_port + index
       }:3306 -e MYSQL_ROOT_PASSWORD=${ps_password} -e UMASK=0777 percona:${
         parameters.psVersion
-      } --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci`,
+      } --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci`
     );
   }
 
@@ -55,71 +47,74 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
 
   for (let index = 0; index < numberOfClients; index++) {
     const containerName = `ps_integration_${timeStamp}_${index}`;
+    const containerPrefix = `sudo docker exec ${containerName}`;
 
-    await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL userstat=1;"`);
     await executeCommand(
-      `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL innodb_monitor_enable=all;"`,
+      `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL userstat=1;"`
+    );
+    await executeCommand(
+      `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL innodb_monitor_enable=all;"`
     );
     await executeCommand(
       `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-      "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '${ps_password}';"`,
+      "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '${ps_password}';"`
     );
     if (parameters.querySource !== 'perfschema') {
       await executeCommand(
-        `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL slow_query_log='ON';"`,
+        `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL slow_query_log='ON';"`
       );
       await executeCommand(`sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
       "SET GLOBAL long_query_time=0;"`);
       await executeCommand(
         `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-        "SET GLOBAL log_slow_rate_limit=1;"`,
+        "SET GLOBAL log_slow_rate_limit=1;"`
       );
       await executeCommand(
         `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-        "SET GLOBAL log_slow_admin_statements=ON;"`,
+        "SET GLOBAL log_slow_admin_statements=ON;"`
       );
       await executeCommand(
         `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-        "SET GLOBAL log_slow_slave_statements=ON;"`,
+        "SET GLOBAL log_slow_slave_statements=ON;"`
       );
       if (parameters.psVersion! < 8) {
         await executeCommand(
           `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-          "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"`,
+          "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"`
         );
         await executeCommand(
           `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-          "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"`,
+          "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"`
         );
         await executeCommand(
           `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-          "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"`,
+          "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"`
         );
         await executeCommand(
           `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-          "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"`,
+          "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"`
         );
         await executeCommand(
-          `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL query_response_time_stats=ON;"`,
+          `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL query_response_time_stats=ON;"`
         );
       }
 
       await executeCommand(
         `sudo docker exec ${containerName} mysql -u root -p${ps_password} \
-        -e "SET GLOBAL slow_query_log_file='/var/log/${containerName}/ps_${index}_slowlog.log';"`,
+        -e "SET GLOBAL slow_query_log_file='/var/log/${containerName}/ps_${index}_slowlog.log';"`
       );
       // Connect MySql to the PMM-Client with query source slowlog.
       await executeCommand(`sudo docker network connect ${dockerNetworkName} ${containerName}`);
       if (parameters.ci) {
         await executeCommand(
-          `sudo pmm-admin add mysql --query-source=slowlog --size-slow-logs=1GiB --username=root \
-          --password=${ps_password} ps_${timeStamp}_${index} --host=127.0.0.1 --port=${ps_port + index}`,
+          `${prefix} pmm-admin add mysql --query-source=slowlog --size-slow-logs=1GiB --username=root \
+          --password=${ps_password} ps_${timeStamp}_${index} --host=127.0.0.1 --port=${ps_port + index}`
         );
       } else {
         await executeCommand(
           `sudo docker exec ${pmmIntegrationClientName} pmm-admin add mysql --query-source=slowlog \
           --size-slow-logs=1GiB --username=root --password=${ps_password} ps_${timeStamp}_${index} \
-          --host=${containerName} --port=3306`,
+          --host=${containerName} --port=3306`
         );
       }
     } else {
@@ -128,12 +123,12 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
       if (parameters.ci) {
         await executeCommand(
           `sudo pmm-admin add mysql --query-source=perfschema --username=root --password=${ps_password} \
-          ps_${timeStamp}_${index} --host=127.0.0.1 --port=${ps_port + index}`,
+          ps_${timeStamp}_${index} --host=127.0.0.1 --port=${ps_port + index}`
         );
       } else {
         await executeCommand(
           `sudo docker exec ${pmmIntegrationClientName} pmm-admin add mysql --query-source=perfschema \
-          --username=root --password=${ps_password} ps_${timeStamp}_${index} --host=${containerName} --port=3306`,
+          --username=root --password=${ps_password} ps_${timeStamp}_${index} --host=${containerName} --port=3306`
         );
       }
     }
