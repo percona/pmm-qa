@@ -76,6 +76,9 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.ci) {
     parameters.ci = false;
   }
+  if (!parameters.haproxyVersion) {
+    parameters.haproxyVersion = '2.7';
+  }
 };
 
 export const installAnsible = async () => {

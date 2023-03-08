@@ -9,6 +9,7 @@ import addClientPdPgsql from './postgres/addClientPdPgsql';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
 import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
 import addClientMoDB from './mongoDb/addClientMoDB';
+import instalHaproxy from './otherConfigs/haproxy/instalHaproxy';
 
 export interface SetupsInterface {
   arg: string;
@@ -56,7 +57,7 @@ export const availableSetups: SetupsInterface[] = [
       await executeAnsiblePlaybook(
         `sudo ansible-playbook --connection=local --inventory 127.0.0.1 \
          --limit 127.0.0.1 ./postgres/pgsql_pgsm_setup/pgsql_pgsm_setup.yml \
-         -e="PGSQL_VERSION=${parameters.pgsqlVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`,
+         -e="PGSQL_VERSION=${parameters.pgsqlVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`
       );
       core.exportVariable('INTEGRATION_FLAG', '@pgsm-pmm-integration');
     },
@@ -69,7 +70,7 @@ export const availableSetups: SetupsInterface[] = [
       await executeAnsiblePlaybook(
         `sudo ansible-playbook --connection=local --inventory 127.0.0.1 \
          --limit 127.0.0.1 ./postgres/pgsql_pgss_setup/pgsql_pgss_setup.yml \
-         -e="PGSQL_VERSION=${parameters.pgsqlVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`,
+         -e="PGSQL_VERSION=${parameters.pgsqlVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`
       );
       core.exportVariable('INTEGRATION_FLAG', '@pgss-pmm-integration');
     },
@@ -85,7 +86,7 @@ export const availableSetups: SetupsInterface[] = [
         `sudo ansible-playbook --connection=local --inventory 127.0.0.1 \
          --limit 127.0.0.1 ./mongoDb/mongo_psmdb_setup/psmdb_setup.yml \
          -e="CLIENT_VERSION=${parameters.pmmClientVersion} PSMDB_TARBALL=${parameters.psmdbTarballURL} \
-          PSMDB_VERSION=${parameters.moVersion} PSMDB_SETUP=${parameters.moSetup}"`,
+          PSMDB_VERSION=${parameters.moVersion} PSMDB_SETUP=${parameters.moSetup}"`
       );
       core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
     },
@@ -94,15 +95,7 @@ export const availableSetups: SetupsInterface[] = [
     arg: '--setup-pmm-haproxy-integration',
     description: 'Use this option for Haproxy setup with PMM2',
     function: async (parameters: SetupParameters) => {
-      await installAnsibleInCI(parameters.ci);
-      await executeCommand('chmod +x ./otherConfigs/haproxy/pmm-haproxy-setup.sh');
-      console.log(await executeCommand('./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
-      console.log(
-        await executeCommand(
-          'sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml',
-        ),
-      );
-      core.exportVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
+      await instalHaproxy(parameters);
     },
   },
   {
@@ -115,14 +108,15 @@ export const availableSetups: SetupsInterface[] = [
       await executeAnsiblePlaybook(
         `sudo ansible-playbook --connection=local \
         --inventory 127.0.0.1, --limit 127.0.0.1 ./mysql/pmm_ps_integration/ps_pmm_setup.yml \
-         -e="PS_VERSION=${parameters.psVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`,
+         -e="PS_VERSION=${parameters.psVersion} CLIENT_VERSION=${parameters.pmmClientVersion}"`
       );
       core.exportVariable('INTEGRATION_FLAG', '@pmm-ps-integration');
     },
   },
   {
     arg: '--mongo-replica-for-backup',
-    description: 'Use this option to setup MongoDB Replica Set and PBM for each replica member on client node',
+    description:
+      'Use this option to setup MongoDB Replica Set and PBM for each replica member on client node',
     function: async (parameters: SetupParameters) => {
       if (parameters.ci) {
         await installDockerCompose();
@@ -163,7 +157,10 @@ export const availableConstMap = new Map<string, string>([
   ['--ci', 'Use this when using in ci (Jenkins, Github Action)'],
   ['--use-socket', 'Use DB Socket for PMM Client Connection (MongoDb)'],
   ['--rbac', 'Use this to allow Access Control'],
-  ['--pmm-server-docker-tag', 'Use this tag to select different docker tag, useful for RC and Release testing.'],
+  [
+    '--pmm-server-docker-tag',
+    'Use this tag to select different docker tag, useful for RC and Release testing.',
+  ],
 ]);
 
 export const availableSetupMap = new Map(availableSetups.map((object) => [object.arg, object.description]));
