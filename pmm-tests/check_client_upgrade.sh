@@ -28,8 +28,9 @@ if [ "$server_version" != "$1" ]; then
     echo "PMM Server Version is not equal to expected $1";
     exit 1;
 fi
-admin_version=$(pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}')
+
 if [ -z "$2" ]; then
+    admin_version=$(pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}')
     if [ "$admin_version" != "$1" ]; then
         echo "PMM Admin Version is not equal to expected $1";
         exit 1;
@@ -44,6 +45,7 @@ if [ -z "$2" ]; then
         exit 1;
     fi
 else
+    admin_version=$(pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}')
     if [ "$admin_version" != "$2" ]; then
         echo "PMM Admin Version is not equal to expected $2";
         exit 1;
