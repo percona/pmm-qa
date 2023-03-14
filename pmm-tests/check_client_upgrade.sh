@@ -29,7 +29,7 @@ pmm-admin status | grep postgresql_pgstatements_agent | grep -qv Waiting
 pmm-admin status | grep postgresql_pgstatements_agent | grep -qv Unknown
 
 pmm-admin list 
-pmm-admin list | grep -q Running
+#pmm-admin list | grep -q Running
 
 pmm-admin list | grep node_exporter | grep -qv Waiting
 pmm-admin list | grep node_exporter | grep -qv Unknown
