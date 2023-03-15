@@ -104,7 +104,7 @@ echo "track_io_timing=ON"  >> /etc/postgresql/${pgsql_version}/main/postgresql.c
 # Create init.sql file required by PMM
 echo "CREATE DATABASE sbtest1;" >> /home/postgres/init.sql
 echo "CREATE DATABASE sbtest2;" >> /home/postgres/init.sql
-echo "CREATE USER pmm WITH PASSWORD 'pmm';" >> /home/postgres/init.sql
+echo "CREATE USER pmm WITH SUPERUSER ENCRYPTED PASSWORD 'pmm';" >> /home/postgres/init.sql
 echo "GRANT pg_monitor TO pmm;" >> /home/postgres/init.sql
 echo "ALTER USER postgres PASSWORD 'pass+this';" >> /home/postgres/init.sql
 
