@@ -24,15 +24,17 @@ const setup_pmm_client_tarball = async (tarballURL: string) => {
 
   // Run empty base ubuntu container
   await executeCommand(
-    `docker run -d -e PATH=/pmm2Client/bin:$PATH  --network="${dockerNetworkName}" --name=${containerName} phusion/baseimage:focal-1.2.0`,
+    `sudo docker run -d -e PATH=/pmm2Client/bin:$PATH  --network="${dockerNetworkName}" 
+    --name=${containerName} phusion/baseimage:focal-1.2.0`,
   );
 
   // Copy pmm client into docker container
-  await executeCommand(`docker cp ./pmmClient/. ${containerName}:/`);
+  await executeCommand(`sudo docker cp ./pmmClient/. ${containerName}:/`);
 
   // Test that pmm client is running
-  await executeCommand(`docker exec ${containerName} pmm-admin --version`);
-  // await executeCommand(`pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=pmm-server-integration --server-insecure-tls --server-username=admin --server-password=admin`)
+  await executeCommand(`sudo docker exec ${containerName} pmm-admin --version`);
+  // await executeCommand(`pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml
+  // --server-address=pmm-server-integration --server-insecure-tls --server-username=admin --server-password=admin`)
 };
 
 const getTarball = (address: string, file: fs.WriteStream): Promise<string> => new Promise((resolve, reject) => {

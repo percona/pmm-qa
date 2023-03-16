@@ -82,16 +82,16 @@ const run = async () => {
   if (!commandLineArgs.includes('--clear-all-setups')) {
     await recreateNetwork(dockerNetworkName);
     if (!parameters.ci) {
-      await executeCommandIgnoreErrors(`docker volume rm ${pmmIntegrationDataName}`);
-      await executeCommandIgnoreErrors(`docker volume rm ${pmmIntegrationDataMongoVolume}`);
+      await executeCommandIgnoreErrors(`sudo docker volume rm ${pmmIntegrationDataName}`);
+      await executeCommandIgnoreErrors(`sudo docker volume rm ${pmmIntegrationDataMongoVolume}`);
       await stopAndRemoveContainer(pmmIntegrationServerName);
       await stopAndRemoveContainer(pmmIntegrationClientName);
-      await executeCommand(`docker volume create ${pmmIntegrationDataName}`);
-      await executeCommand(`docker volume create ${pmmIntegrationDataMongoVolume}`);
+      await executeCommand(`sudo docker volume create ${pmmIntegrationDataName}`);
+      await executeCommand(`sudo docker volume create ${pmmIntegrationDataMongoVolume}`);
       await pmmServerSetup(parameters);
       await executeCommand('sleep 60');
       await executeCommand(
-        `docker run -d --name ${pmmIntegrationClientName} \
+        `sudo docker run -d --name ${pmmIntegrationClientName} \
         -v ${pmmIntegrationDataName}:/var/log/ -v ${pmmIntegrationDataMongoVolume}:/tmp/ \
         --network="${dockerNetworkName}" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} \
         -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 \

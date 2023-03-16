@@ -13,7 +13,7 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
   const ps_port: number = 43306;
   const ps_password = 'GRgrO9301RuF';
 
-  await executeCommand(`docker pull percona:${parameters.psVersion}`);
+  await executeCommand(`sudo docker pull percona:${parameters.psVersion}`);
   // Start requested number of Percona Server containers
   for (let index = 0; index < numberOfClients; index++) {
     const containerName = `ps_integration_${timeStamp}_${index}`;

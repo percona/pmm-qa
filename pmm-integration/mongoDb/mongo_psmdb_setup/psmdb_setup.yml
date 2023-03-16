@@ -28,7 +28,7 @@
 
     - name: Prepare Container for PSMDB
       shell: >
-        docker run -d --name={{ psmdb_container }}
+        sudo docker run -d --name={{ psmdb_container }}
         --network="pmm-integration-network"
         phusion/baseimage:focal-1.1.0
 
