@@ -8,7 +8,7 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
   const password = 'GRgrO9301RuF';
   const timeStamp = Date.now();
 
-  await executeCommand(`docker pull mongo:${parameters.moVersion}`);
+  await executeCommand(`sudo docker pull mongo:${parameters.moVersion}`);
 
   for (let index = 0; index < numberOfClients; index++) {
     const clientPort = port + index;
@@ -24,14 +24,14 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
     } else {
       volumeLocation = pmmIntegrationDataMongoVolume;
       serviceAddress = `${containerName}:5432`;
-      prefix = `sudo docker exec -u 0 ${pmmIntegrationClientName} `;
+      prefix = `sudo sudo docker exec -u 0 ${pmmIntegrationClientName} `;
     }
 
     await executeCommand(`${prefix} mkdir -p /tmp/mo-integration-${clientPort}/`);
     await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-integration-${clientPort}`);
 
     await executeCommand(
-      `sudo docker run -d -p ${clientPort}:27017 \
+      `sudo sudo docker run -d -p ${clientPort}:27017 \
       -v ${volumeLocation}:/tmp/ \
       --network="${dockerNetworkName}" \
       -e MONGO_INITDB_ROOT_USERNAME=mongoadmin \

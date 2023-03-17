@@ -28,7 +28,7 @@
 
   - name: Prepare Container for PostgreSQL
     shell: >
-      docker run -d --name={{ pgsql_pgss_container }}
+      sudo docker run -d --name={{ pgsql_pgss_container }}
       -p {{ pgsql_pgss_port }}:5432
       phusion/baseimage:focal-1.1.0
 

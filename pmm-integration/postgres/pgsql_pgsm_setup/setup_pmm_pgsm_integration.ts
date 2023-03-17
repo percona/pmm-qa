@@ -10,8 +10,8 @@ const setup_pmm_pgsm_integration = async (parameters: SetupParameters) => {
   );
 
   console.log('Create Network');
-  await executeCommandIgnoreErrors('docker network create pmm-qa');
-  await executeCommandIgnoreErrors(`docker network connect ${pmmServerContainer}`);
+  await executeCommandIgnoreErrors('sudo docker network create pmm-qa');
+  await executeCommandIgnoreErrors(`sudodocker network connect ${pmmServerContainer}`);
   console.log('Run Ansible Playbook.');
   console.log(
     await executeAnsiblePlaybook(

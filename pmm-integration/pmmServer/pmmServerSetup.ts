@@ -23,9 +23,9 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
     pmmServerDockerTag = `perconalab/pmm-server:${parameters.pmmServerVersion}`;
   }
 
-  await executeCommand(`docker pull ${pmmServerDockerTag}`);
+  await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
   await executeCommand(
-    `docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
+    `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
     --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} ${pmmServerDockerTag}`,
   );
 };

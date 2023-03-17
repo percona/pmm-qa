@@ -1,7 +1,9 @@
 import os from 'os';
 import { executeCommand, executeCommandIgnoreErrors } from '../helpers/commandLine';
 import { stopAndRemoveContainer } from '../helpers/docker';
-import { pmmIntegrationClientName, pmmIntegrationDataMongoVolume, pmmIntegrationDataName, pmmIntegrationServerName } from '../integration-setup';
+import {
+  pmmIntegrationClientName, pmmIntegrationDataMongoVolume, pmmIntegrationDataName, pmmIntegrationServerName,
+} from '../integration-setup';
 
 const clearAllSetups = async () => {
   await stopAndRemoveContainer('external_service_container');
@@ -28,8 +30,8 @@ const clearAllSetups = async () => {
   });
   await stopAndRemoveContainer(pmmIntegrationClientName);
   await stopAndRemoveContainer(pmmIntegrationServerName);
-  await executeCommandIgnoreErrors(`docker volume rm ${pmmIntegrationDataName}`);
-  await executeCommandIgnoreErrors(`docker volume rm ${pmmIntegrationDataMongoVolume}`);
+  await executeCommandIgnoreErrors(`sudo docker volume rm ${pmmIntegrationDataName}`);
+  await executeCommandIgnoreErrors(`sudo docker volume rm ${pmmIntegrationDataMongoVolume}`);
 };
 
 export default clearAllSetups;

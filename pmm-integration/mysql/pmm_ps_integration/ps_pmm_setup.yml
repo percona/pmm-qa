@@ -32,7 +32,7 @@
 
     - name: Prepare Container for ps and Proxysql
       shell: >
-        docker run -d --name={{ ps_container_name }}
+        sudo docker run -d --name={{ ps_container_name }}
         --network="pmm-integration-network"
         phusion/baseimage:focal-1.2.0
 
