@@ -1,5 +1,9 @@
 #!/bin/sh
 
+
+versionMinor = (echo $1 | cut -d "." -f 2)
+echo "Minor Version is: $versionMinor"
+
 #check for packages after upgrade
 pmm-admin status
 pmm-admin status | grep -q Running
