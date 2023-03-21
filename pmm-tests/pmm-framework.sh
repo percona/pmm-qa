@@ -2992,7 +2992,6 @@ setup_mongo_replica_for_backup() {
   if [ ! -d "qa-integration" ]; then
     git clone -b PMM-7-tweaks-for-local-storage-tests https://github.com/Percona-Lab/qa-integration
   fi
-  mkdir /tmp/backup_data && chmod 777 /tmp/backup_data
   pushd qa-integration/pmm_psmdb-pbm_setup
   PSMDB_VERSION=4.4.18-18 ./start-rs-only.sh
   popd
