@@ -3,7 +3,7 @@ import SetupParameters from '../helpers/setupParameters.interface';
 import { dockerNetworkName, pmmIntegrationServerName } from '../integration-setup';
 
 const addClientHaProxy = async (parameters: SetupParameters, numberOfClients: number) => {
-  console.log(`Installing ${numberOfClients} HaProxy with version ${parameters.psVersion}`);
+  console.log(`Installing ${numberOfClients} HaProxy database(s).`);
 
   for (let index = 0; index < numberOfClients; index++) {
     const containerName = `haproxy-${index}`;
