@@ -31,7 +31,7 @@ const addClientHaProxy = async (parameters: SetupParameters, numberOfClients: nu
     await executeCommand('sleep 60');
     await executeCommand(`sudo docker exec ${containerName} haproxy -f haproxy.cfg -D`);
     await executeCommand(`sudo docker exec ${containerName} bash -c 'source ~/.bash_profile || true; pmm-admin add haproxy \
-    --listen-port=${port} --environment=haproxy ${containerName}_service'`);
+    --listen-port=42100 --environment=haproxy ${containerName}_service'`);
   }
 };
 
