@@ -100,7 +100,10 @@ else
     fi
 fi
 
-ls -la /usr/local/percona/pmm2/exporters | grep -q azure_exporter
+if [ "$versionMinor" -ge "23" ]; then
+    echo "Exporter for azure was added in 2.23.0";
+    ls -la /usr/local/percona/pmm2/exporters | grep -q azure_exporter
+fi
 ls -la /usr/local/percona/pmm2/exporters | grep -q mongodb_exporter
 ls -la /usr/local/percona/pmm2/exporters | grep -q mysqld_exporter
 ls -la /usr/local/percona/pmm2/exporters | grep -q node_exporter
