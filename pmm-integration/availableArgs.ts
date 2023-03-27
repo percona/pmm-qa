@@ -9,8 +9,6 @@ import addClientPdPgsql from './postgres/addClientPdPgsql';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
 import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
 import addClientMoDB from './mongoDb/addClientMoDB';
-import addClientHaProxy from './haProxy/addClientHaProxy';
-import pmm2ClientLocalSetup from './pmmClient/pmm2LocalClient';
 
 export interface SetupsInterface {
   arg: string;
@@ -36,9 +34,6 @@ export const availableSetups: SetupsInterface[] = [
           break;
         case selectedDB.includes('modb'):
           await addClientMoDB(parameters, numberOfDbs);
-          break;
-        case selectedDB.includes('haproxy'):
-          await addClientHaProxy(parameters, numberOfDbs);
           break;
         default:
           break;
@@ -96,6 +91,21 @@ export const availableSetups: SetupsInterface[] = [
     },
   },
   {
+    arg: '--setup-pmm-haproxy-integration',
+    description: 'Use this option for Haproxy setup with PMM2',
+    function: async (parameters: SetupParameters) => {
+      await installAnsibleInCI(parameters.ci);
+      await executeCommand('chmod +x ./otherConfigs/haproxy/pmm-haproxy-setup.sh');
+      console.log(await executeCommand('./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
+      console.log(
+        await executeCommand(
+          'sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml',
+        ),
+      );
+      core.exportVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
+    },
+  },
+  {
     arg: '--setup-pmm-ps-integration',
     description: 'Use this option for percona-server and PMM using dbdeployer',
     function: async (parameters: SetupParameters) => {
@@ -129,13 +139,6 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this to setup pmm server in docker container.',
     function: async (parameters: SetupParameters) => {
       await pmmServerSetup(parameters);
-    },
-  },
-  {
-    arg: '--setup-pmm-client-local',
-    description: 'Use this to setup pmm client DIRECTLY into your machine.',
-    function: async (parameters: SetupParameters) => {
-      await pmm2ClientLocalSetup(parameters);
     },
   },
   {
