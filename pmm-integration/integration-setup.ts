@@ -39,6 +39,12 @@ const run = async () => {
       case value.includes('--pmm-client-version'):
         parameters.pmmClientVersion = value.split('=')[1];
         break;
+      case value.includes('--pmm-server-password'):
+        parameters.pmmServerPassword = value.split('=')[1];
+        break;
+      case value.includes('--pmm-server-ip'):
+        parameters.pmmServerIp = value.split('=')[1];
+        break;
       case value.includes('--pmm-server-version'):
         const pmmServerVersion = value.split('=')[1];
 
@@ -89,7 +95,6 @@ const run = async () => {
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataName}`);
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataMongoVolume}`);
       await pmmServerSetup(parameters);
-      await executeCommand('sleep 60');
       await executeCommand(
         `sudo docker run -d --name ${pmmIntegrationClientName} \
         -v ${pmmIntegrationDataName}:/var/log/ -v ${pmmIntegrationDataMongoVolume}:/tmp/ \

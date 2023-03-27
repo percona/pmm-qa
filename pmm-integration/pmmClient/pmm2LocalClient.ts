@@ -18,6 +18,14 @@ const pmm2ClientLocalSetup = async (parameters: SetupParameters) => {
   await executeCommand('pushd /usr/local/bin/pmm2-client');
   await executeCommand('bash -x ./install_tarball');
   console.log(await executeCommand('pmm-admin --version'));
+  const pmmServerPassword = parameters.pmmServerPassword || 'admin';
+  const pmmServerIp = parameters.pmmServerIp || '127.0.0.1';
+
+  if (parameters.metricsMode) {
+    await executeCommand(`pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml \
+    --server-address=${pmmServerIp}:443 --server-insecure-tls \
+    --metrics-mode=${parameters.metricsMode} --server-username=admin --server-password=${pmmServerPassword}`);
+  }
 };
 
 export default pmm2ClientLocalSetup;
