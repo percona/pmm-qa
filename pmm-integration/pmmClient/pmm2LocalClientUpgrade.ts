@@ -2,14 +2,15 @@ import { executeCommand } from '../helpers/commandLine';
 import SetupParameters from '../helpers/setupParameters.interface';
 
 const pmm2ClientLocalUpgrade = async (parameters: SetupParameters) => {
-  // eslint-disable-next-line max-len
-  const downloadUrl = `https://downloads.percona.com/downloads/pmm2/${parameters.pmmClientVersion}/binary/tarball/pmm2-client-${parameters.pmmClientVersion}.tar.gz`;
+  let downloadUrl = '';
 
-  await executeCommand('sudo apt-get update');
-  await executeCommand('sudo apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client');
-  await executeCommand('wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb');
-  await executeCommand('sudo dpkg -i percona-release_latest.$(lsb_release -sc)_all.deb');
-  await executeCommand('sudo apt-get update');
+  if (parameters.pmmClientVersion?.includes('http')) {
+    // eslint-disable-next-line max-len
+    downloadUrl = `https://downloads.percona.com/downloads/pmm2/${parameters.pmmClientVersion}/binary/tarball/pmm2-client-${parameters.pmmClientVersion}.tar.gz`;
+  } else {
+    downloadUrl = parameters.pmmClientVersion!;
+  }
+
   await executeCommand(`wget -O pmm2-client.tar.gz --progress=dot:giga ${downloadUrl}`);
   await executeCommand('tar -zxpf pmm2-client.tar.gz');
   await executeCommand('rm -r pmm2-client.tar.gz');
