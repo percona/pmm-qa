@@ -28,13 +28,11 @@ const pmm2ClientLocalUpgrade = async (parameters: SetupParameters) => {
     await executeCommand('rm -r pmm2-client.tar.gz');
     const clientLocation = (await executeCommand('ls -1td pmm2-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1')).stdout;
 
-    console.log(`Client location is: ${clientLocation}`);
     await executeCommand(`mv ${clientLocation} pmm2-client`);
     await executeCommand('mv pmm2-client /usr/local/bin');
     await executeCommand('bash -x /usr/local/bin/pmm2-client/install_tarball -u');
     console.log(await executeCommand('pmm-admin --version'));
   }
-
 };
 
 export default pmm2ClientLocalUpgrade;
