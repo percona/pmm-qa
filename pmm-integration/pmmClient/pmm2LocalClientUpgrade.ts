@@ -5,10 +5,10 @@ const pmm2ClientLocalUpgrade = async (parameters: SetupParameters) => {
   let downloadUrl = '';
 
   if (parameters.pmmClientVersion?.includes('http')) {
+    downloadUrl = parameters.pmmClientVersion;
+  } else {
     // eslint-disable-next-line max-len
     downloadUrl = `https://downloads.percona.com/downloads/pmm2/${parameters.pmmClientVersion}/binary/tarball/pmm2-client-${parameters.pmmClientVersion}.tar.gz`;
-  } else {
-    downloadUrl = parameters.pmmClientVersion!;
   }
 
   await executeCommand(`wget -O pmm2-client.tar.gz --progress=dot:giga ${downloadUrl}`);
