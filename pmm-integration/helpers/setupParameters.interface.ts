@@ -4,13 +4,10 @@ export default interface SetupParameters {
   moVersion?: number;
   moSetup?: string;
   psVersion?: number;
-  proxySQLVersion?: number;
   pmmClientVersion?: string;
   upgradePmmClientVersion?: string;
   pmmServerVersion?: string;
   pmmServerVersions?: PMMVersions;
-  pmmServerPassword?: string;
-  pmmServerIp?: string;
   psmdbTarballURL?: string;
   querySource?: string;
   metricsMode?: string;
