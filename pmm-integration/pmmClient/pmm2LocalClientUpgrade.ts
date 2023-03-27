@@ -13,14 +13,14 @@ const pmm2ClientLocalUpgrade = async (parameters: SetupParameters) => {
 
   if (parameters.upgradePmmClientVersion?.includes('experimental') || parameters.upgradePmmClientVersion?.includes('dev-latest')) {
     await executeCommand('sudo percona-release enable pmm2-client testing');
-    await executeCommand('sudo apt-get upgrade');
+    await executeCommand('sudo apt-get update');
     await executeCommand('sudo apt -y install pmm2-client');
   } else if (parameters.upgradePmmClientVersion?.includes('testing') || parameters.upgradePmmClientVersion?.includes('pmm2-rc')) {
     await executeCommand('sudo percona-release enable pmm2-client experimental');
-    await executeCommand('sudo apt-get upgrade');
+    await executeCommand('sudo apt-get update');
     await executeCommand('sudo apt -y install pmm2-client');
   } else if (parameters.upgradePmmClientVersion?.includes('pmm2-latest')) {
-    await executeCommand('sudo apt-get upgrade');
+    await executeCommand('sudo apt-get update');
     await executeCommand('sudo apt -y install pmm2-client');
   } else {
     await executeCommand(`wget -O pmm2-client.tar.gz --progress=dot:giga ${downloadUrl}`);
