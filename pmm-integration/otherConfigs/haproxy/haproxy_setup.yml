@@ -28,7 +28,6 @@
         sudo docker run -d -p 42100:42100 --name={{ haproxy_container }}
         --network="pmm-integration-network"
         phusion/baseimage:focal-1.1.0
-
     - name: Copy all required Artifacts to the docker haproxy_container
       shell: '{{ item }}'
       with_items:

@@ -5,6 +5,7 @@ export default interface SetupParameters {
   moSetup?: string;
   psVersion?: number;
   pmmClientVersion?: string;
+  upgradePmmClientVersion?: string;
   pmmServerVersion?: string;
   pmmServerVersions?: PMMVersions;
   psmdbTarballURL?: string;
