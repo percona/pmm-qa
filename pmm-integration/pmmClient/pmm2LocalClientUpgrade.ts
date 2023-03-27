@@ -1,13 +1,16 @@
 import { executeCommand } from '../helpers/commandLine';
 import SetupParameters from '../helpers/setupParameters.interface';
 
-const pmm2ClientLocalSetup = async (parameters: SetupParameters) => {
+const pmm2ClientLocalUpgrade = async (parameters: SetupParameters) => {
+  // eslint-disable-next-line max-len
+  const downloadUrl = `https://downloads.percona.com/downloads/pmm2/${parameters.pmmClientVersion}/binary/tarball/pmm2-client-${parameters.pmmClientVersion}.tar.gz`;
+
   await executeCommand('sudo apt-get update');
   await executeCommand('sudo apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client');
   await executeCommand('wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb');
   await executeCommand('sudo dpkg -i percona-release_latest.$(lsb_release -sc)_all.deb');
   await executeCommand('sudo apt-get update');
-  await executeCommand(`wget -O pmm2-client.tar.gz --progress=dot:giga "${parameters.pmmClientVersion}"`);
+  await executeCommand(`wget -O pmm2-client.tar.gz --progress=dot:giga ${downloadUrl}`);
   await executeCommand('tar -zxpf pmm2-client.tar.gz');
   await executeCommand('rm -r pmm2-client.tar.gz');
   const clientLocation = (await executeCommand('ls -1td pmm2-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1')).stdout;
@@ -16,19 +19,8 @@ const pmm2ClientLocalSetup = async (parameters: SetupParameters) => {
   await executeCommand(`mv ${clientLocation} pmm2-client`);
   await executeCommand('mv pmm2-client /usr/local/bin');
   await executeCommand('pushd /usr/local/bin/pmm2-client');
-  await executeCommand('bash -x ./install_tarball');
+  await executeCommand('bash -x ./install_tarball -u');
   console.log(await executeCommand('pmm-admin --version'));
-  const pmmServerPassword = parameters.pmmServerPassword || 'admin';
-  const pmmServerIp = parameters.pmmServerIp || '127.0.0.1';
-  let metricsMode = '';
-
-  if (parameters.metricsMode) {
-    metricsMode = `--metrics-mode=${parameters.metricsMode}`;
-  }
-
-  await executeCommand(`pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml \
-  --server-address=${pmmServerIp}:443 --server-insecure-tls \
-  ${metricsMode} --server-username=admin --server-password=${pmmServerPassword}`);
 };
 
-export default pmm2ClientLocalSetup;
+export default pmm2ClientLocalUpgrade;

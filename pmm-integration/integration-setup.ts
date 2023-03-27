@@ -5,6 +5,7 @@ import setup_pmm_client_tarball from './pmmClient/pmm2ClientTarbal';
 import { recreateNetwork, stopAndRemoveContainer } from './helpers/docker';
 import SetupParameters from './helpers/setupParameters.interface';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
+import pmm2ClientLocalUpgrade from './pmmClient/pmm2LocalClientUpgrade';
 
 export const dockerNetworkName = 'pmm-integration-network';
 export const pmmIntegrationClientName = 'pmm-integration-client';
@@ -38,6 +39,10 @@ const run = async () => {
         break;
       case value.includes('--pmm-client-version'):
         parameters.pmmClientVersion = value.split('=')[1];
+        break;
+      case value.includes('--upgrade-pmm-client-version'):
+        parameters.upgradePmmClientVersion = value.split('=')[1];
+        await pmm2ClientLocalUpgrade(parameters);
         break;
       case value.includes('--pmm-server-password'):
         parameters.pmmServerPassword = value.split('=')[1];

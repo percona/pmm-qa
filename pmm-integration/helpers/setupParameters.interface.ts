@@ -6,6 +6,7 @@ export default interface SetupParameters {
   psVersion?: number;
   proxySQLVersion?: number;
   pmmClientVersion?: string;
+  upgradePmmClientVersion?: string;
   pmmServerVersion?: string;
   pmmServerVersions?: PMMVersions;
   pmmServerPassword?: string;
