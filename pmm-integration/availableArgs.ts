@@ -10,6 +10,7 @@ import pmmServerSetup from './pmmServer/pmmServerSetup';
 import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
 import addClientMoDB from './mongoDb/addClientMoDB';
 import addClientHaProxy from './haProxy/addClientHaProxy';
+import pmm2ClientLocalSetup from './pmmClient/pmm2LocalClient';
 
 export interface SetupsInterface {
   arg: string;
@@ -128,6 +129,13 @@ export const availableSetups: SetupsInterface[] = [
     description: 'Use this to setup pmm server in docker container.',
     function: async (parameters: SetupParameters) => {
       await pmmServerSetup(parameters);
+    },
+  },
+  {
+    arg: '--setup-pmm-client-local',
+    description: 'Use this to setup pmm client DIRECTLY into your machine.',
+    function: async (parameters: SetupParameters) => {
+      await pmm2ClientLocalSetup(parameters);
     },
   },
   {
