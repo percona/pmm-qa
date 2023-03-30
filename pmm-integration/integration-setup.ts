@@ -92,7 +92,6 @@ const run = async () => {
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataName}`);
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataMongoVolume}`);
       await pmmServerSetup(parameters);
-      await executeCommand('sleep 60');
       if (parameters.setupTarballDocker) {
         await executeCommand(
           `sudo docker run -d --name ${pmmIntegrationClientName} \
