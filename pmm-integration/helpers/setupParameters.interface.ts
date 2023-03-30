@@ -14,6 +14,7 @@ export default interface SetupParameters {
   useSocket?: boolean;
   rbac?: boolean;
   pmmServerDockerTag?: string;
+  setupTarballDocker?: boolean;
 }
 
 export interface PMMVersions {
