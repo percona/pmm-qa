@@ -71,7 +71,7 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pgsql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-      - docker exec {{ pgsql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --tls --tls-ca-file=./certificates/ca.crt --tls-cert-file=./certificates/client.crt --tls-key-file=./certificates/client.pem {{ pgsql_ssl_container }}_ssl_service'
+      - docker exec {{ pgsql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source="pgstatements" --tls --tls-ca-file=./certificates/ca.crt --tls-cert-file=./certificates/client.crt --tls-key-file=./certificates/client.pem {{ pgsql_ssl_container }}_ssl_service'
      # - docker exec {{ pgsql_ssl_container }} bash -c 'source ~/.bash_profile; pmm-admin add postgresql --socket=/var/run/postgresql postgresql_socket'
 
   - name: Get client cert Files on host

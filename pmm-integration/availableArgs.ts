@@ -9,6 +9,7 @@ import addClientPdPgsql from './postgres/addClientPdPgsql';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
 import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
 import addClientMoDB from './mongoDb/addClientMoDB';
+import addClientHaProxy from './haProxy/addClientHaProxy';
 
 export interface SetupsInterface {
   arg: string;
@@ -34,6 +35,9 @@ export const availableSetups: SetupsInterface[] = [
           break;
         case selectedDB.includes('modb'):
           await addClientMoDB(parameters, numberOfDbs);
+          break;
+        case selectedDB.includes('haproxy'):
+          await addClientHaProxy(parameters, numberOfDbs);
           break;
         default:
           break;
@@ -88,21 +92,6 @@ export const availableSetups: SetupsInterface[] = [
           PSMDB_VERSION=${parameters.moVersion} PSMDB_SETUP=${parameters.moSetup}"`,
       );
       core.exportVariable('INTEGRATION_FLAG', '@pmm-psmdb-integration');
-    },
-  },
-  {
-    arg: '--setup-pmm-haproxy-integration',
-    description: 'Use this option for Haproxy setup with PMM2',
-    function: async (parameters: SetupParameters) => {
-      await installAnsibleInCI(parameters.ci);
-      await executeCommand('chmod +x ./otherConfigs/haproxy/pmm-haproxy-setup.sh');
-      console.log(await executeCommand('./otherConfigs/haproxy/pmm-haproxy-setup.sh'));
-      console.log(
-        await executeCommand(
-          'sudo ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ./otherConfigs/haproxy/haproxy_setup.yml',
-        ),
-      );
-      core.exportVariable('INTEGRATION_FLAG', '@pmm-haproxy-integration');
     },
   },
   {
@@ -165,6 +154,7 @@ export const availableConstMap = new Map<string, string>([
   ['--rbac', 'Use this to allow Access Control'],
   ['--pmm-server-docker-tag', 'Use this tag to select different docker tag, useful for RC and Release testing.'],
   ['--setup-tarball-docker', 'Use this flag in local setup when you do not want to use pmm client container.'],
+  ['--upgrade-pmm-client-version', 'Use this tag to upgrade locally installed pmm client version.'],
 ]);
 
 export const availableSetupMap = new Map(availableSetups.map((object) => [object.arg, object.description]));
