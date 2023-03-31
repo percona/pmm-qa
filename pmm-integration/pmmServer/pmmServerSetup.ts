@@ -26,8 +26,21 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
   await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
   await executeCommand(
     `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
+    -e PMM_DEBUG=1 -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTkF7Snv08FCboTne4djQfN5qbrLfAjb8SY3/wwEP+X5nUrkxCEvUDJ \
     --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} ${pmmServerDockerTag}`,
   );
+
+  for (let i = 0; i <= 100; i++) {
+    if (i === 100) {
+      throw new Error('PMM Server was not properly started.');
+    }
+
+    const status = await executeCommand(`sudo docker ps -a --filter="name=${pmmIntegrationServerName}" --format="{{.Status}}"`);
+
+    if (status.stdout.includes('healthy')) break;
+
+    await new Promise((r) => setTimeout(r, 1000));
+  }
 };
 
 export default pmmServerSetup;

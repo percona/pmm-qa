@@ -1,10 +1,10 @@
 import validateArgs from './helpers/validateArgs';
 import { executeCommand, executeCommandIgnoreErrors, setDefaultEnvVariables } from './helpers/commandLine';
 import { availableSetups, SetupsInterface } from './availableArgs';
-import setup_pmm_client_tarball from './pmmClient/pmm2ClientTarbal';
 import { recreateNetwork, stopAndRemoveContainer } from './helpers/docker';
 import SetupParameters from './helpers/setupParameters.interface';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
+import setup_pmm_client_docker_tarball from './pmmClient/pmm2ClientTarbalDocker';
 import pmm2ClientLocalUpgrade from './pmmClient/pmm2LocalClientUpgrade';
 
 export const dockerNetworkName = 'pmm-integration-network';
@@ -60,11 +60,6 @@ const run = async () => {
       case value.includes('--query-source'):
         parameters.querySource = value.split('=')[1];
         break;
-      case value.includes('--setup-pmm-client-tarball'):
-        const tarballURL = value.split('=')[1];
-
-        await setup_pmm_client_tarball(tarballURL);
-        break;
       case value.includes('--ci'):
         parameters.ci = true;
         break;
@@ -76,6 +71,9 @@ const run = async () => {
         break;
       case value.includes('--pmm-server-docker-tag'):
         parameters.pmmServerDockerTag = value.split('=')[1];
+        break;
+      case value.includes('--setup-tarball-docker'):
+        parameters.setupTarballDocker = true;
         break;
       default:
         break;
@@ -94,14 +92,18 @@ const run = async () => {
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataName}`);
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataMongoVolume}`);
       await pmmServerSetup(parameters);
-      await executeCommand('sleep 60');
-      await executeCommand(
-        `sudo docker run -d --name ${pmmIntegrationClientName} \
-        -v ${pmmIntegrationDataName}:/var/log/ -v ${pmmIntegrationDataMongoVolume}:/tmp/ \
-        --network="${dockerNetworkName}" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} \
-        -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 \
-        -e PMM_AGENT_SETUP=1 -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`,
-      );
+      if (parameters.setupTarballDocker) {
+        await executeCommand(
+          `sudo docker run -d --name ${pmmIntegrationClientName} \
+          -v ${pmmIntegrationDataName}:/var/log/ -v ${pmmIntegrationDataMongoVolume}:/tmp/ \
+          --network="${dockerNetworkName}" -e PMM_AGENT_SERVER_ADDRESS=${pmmIntegrationServerName} \
+          -e PMM_AGENT_SERVER_USERNAME=admin -e PMM_AGENT_SERVER_PASSWORD=admin -e PMM_AGENT_SERVER_INSECURE_TLS=1 \
+          -e PMM_AGENT_SETUP=1 \
+          -e PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml perconalab/pmm-client:${parameters.pmmClientVersion}`,
+        );
+      } else {
+        await setup_pmm_client_docker_tarball(parameters);
+      }
     }
   }
 
