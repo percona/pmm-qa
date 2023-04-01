@@ -24,7 +24,7 @@
 
   - name: Prepare Container for HAPROXY
     shell: >
-      docker run -d -p 42100:42100 --name={{ haproxy_container }}
+      sudo docker run -d -p 42100:42100 --name={{ haproxy_container }}
       phusion/baseimage:focal-1.1.0
   
   - name: Copy all required Artifacts to the docker haproxy_container
