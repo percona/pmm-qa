@@ -1423,10 +1423,10 @@ add_clients(){
         sudo -H -u ${PGSQL_USER} bash -c "./pg_ctl -D ${BASEDIR}/${NODE_NAME}_${j}/data -l ${BASEDIR}/${NODE_NAME}_${j}/data/logfile -o '-F -p ${PGSQL_PORT}' start" > /dev/null 2>&1;
         sudo -H -u ${PGSQL_USER} bash -c "./createdb psql --username=postgres"
         if [ $disable_ssl -eq 1 ]; then
-          sudo pmm-admin add postgresql --user postgres --host localhost --port ${PGSQL_PORT} --disable-ssl PGSQL-${NODE_NAME}-${j}
+          sudo pmm-admin add postgresql --query-source=pgstatements --user postgres --host localhost --port ${PGSQL_PORT} --disable-ssl PGSQL-${NODE_NAME}-${j}
           check_disable_ssl PGSQL-${NODE_NAME}-${j}
         else
-          sudo pmm-admin add postgresql --user postgres --host localhost --port ${PGSQL_PORT} PGSQL-${NODE_NAME}-${j}
+          sudo pmm-admin add postgresql --query-source=pgstatements --user postgres --host localhost --port ${PGSQL_PORT} PGSQL-${NODE_NAME}-${j}
         fi
       done
     elif [[ "${CLIENT_NAME}" == "pgsql" && ! -z $PMM2 ]]; then
@@ -1440,15 +1440,15 @@ add_clients(){
         docker exec PGSQL_${pgsql_version}_${IP_ADDRESS}_$j psql -h localhost -U postgres -c 'CREATE DATABASE mydat;'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add postgresql --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-prod --cluster=pgsql-prod-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+            pmm-admin add postgresql --query-source=pgstatements --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-prod --cluster=pgsql-prod-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           else
-            pmm-admin add postgresql --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+            pmm-admin add postgresql --query-source=pgstatements --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-prod --cluster=pgsql-prod-cluster --replication-set=pgsql-repl2 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           fi
         else
           if [[ ! -z $metrics_mode ]]; then
-            pmm-admin add postgresql --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-dev --cluster=pgsql-dev-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+            pmm-admin add postgresql --query-source=pgstatements --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-dev --cluster=pgsql-dev-cluster --metrics-mode=$metrics_mode --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           else
-            pmm-admin add postgresql --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-dev --cluster=pgsql-dev-cluster --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
+            pmm-admin add postgresql --query-source=pgstatements --username=postgres --password=${PGSQL_PASSWORD} --environment=pgsql-dev --cluster=pgsql-dev-cluster --replication-set=pgsql-repl1 PGSQL_${pgsql_version}_${IP_ADDRESS}_$j localhost:$PGSQL_PORT
           fi
         fi
         PGSQL_PORT=$((PGSQL_PORT+j))
@@ -2481,7 +2481,7 @@ setup_pmm2_client_docker_image () {
   ## Add PostgreSQL instance for Monitoring
   docker run  -e PMM_AGENT_SERVER_ADDRESS=docker-client-check-pmm-server:443 -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -d --network docker-client-check --name=postgres-10 postgres:10
   sleep 10
-  docker exec pmm-client pmm-admin add postgresql --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@docker-client-check-pmm-server/
+  docker exec pmm-client pmm-admin add postgresql --query-source=pgstatements --username=postgres --password=postgres --service-name=postgres-10  --host=postgres-10 --port=5432 --server-url=http://admin:admin@docker-client-check-pmm-server/
   sleep 5
 }
 
@@ -2734,6 +2734,10 @@ setup_pmm_pgsm_integration () {
   if echo "$pdpgsql_version" | grep '15'; then
     export PGSQL_VERSION=15
   fi
+  if [ -z "$PGSTAT_MONITOR_BRANCH" ]
+  then
+    export PGSTAT_MONITOR_BRANCH=main
+  fi
   if [ -z "$CLIENT_VERSION" ]
   then
     export CLIENT_VERSION=dev-latest
@@ -2839,6 +2843,10 @@ setup_pxc_client_container () {
   then
     export PXC_CONTAINER=pxc_container_${PXC_VERSION}
   fi
+  if [ -z "$QUERY_SOURCE" ]
+  then
+    export QUERY_SOURCE=${query_source}
+  fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
   popd
@@ -2914,7 +2922,7 @@ setup_checks_basic () {
 
   ## Adding those services
   pmm-admin add mysql --username=root --port=3310 --password=${password} --query-source=perfschema mysql_checks_service
-  pmm-admin add postgresql --username=pmm-agent --port=5440 --password=${password}  postgres_checks_service
+  pmm-admin add postgresql --query-source=pgstatements --username=pmm-agent --port=5440 --password=${password}  postgres_checks_service
   pmm-admin add mongodb --username=root --port=27047 --password=${password} mongodb_checks_service
 }
 
@@ -2988,6 +2996,7 @@ setup_mongo_replica_for_backup() {
   if [ ! -d "qa-integration" ]; then
     git clone -b main https://github.com/Percona-Lab/qa-integration
   fi
+  mkdir /tmp/backup_data && chmod 777 /tmp/backup_data
   pushd qa-integration/pmm_psmdb-pbm_setup
   PSMDB_VERSION=4.4.18-18 ./start-rs-only.sh
   popd
