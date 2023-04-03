@@ -7,8 +7,13 @@ const validateArgs = async (args: string[]) => {
       availableArgsMap.forEach((value, key) => {
         console.log(`   ${key}:    ${value}`);
       });
-      throw new Error(`Arg "${arg}" in not a valid parameter.\nPlease select one from the list:`);
-      exit();
+      if (arg.includes('-h') || arg.includes('--help')) {
+        console.log('List of available arguments for integration setup.');
+      } else {
+        console.error(`Arg "${arg}" in not a valid parameter.\nPlease select from the list.`);
+      }
+
+      exit(1);
     }
   });
 };
