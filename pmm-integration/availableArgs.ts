@@ -20,7 +20,7 @@ export interface SetupsInterface {
 export const availableSetups: SetupsInterface[] = [
   {
     arg: '--addclient',
-    description: 'Use this do setup postgres for vacuum monitoring tests',
+    description: 'Use this do setup databases valid valid values are: ps, pdpgsql, modb, haproxy. Example: --addClient=ps,1',
     function: async (parameters: SetupParameters, client: string = '') => {
       const commandLineValue = client.split('=')[1];
       const selectedDB = commandLineValue.split(',')[0];
