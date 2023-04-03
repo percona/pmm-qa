@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 mysql -u admin -padmin -h 127.0.0.1 -P 6032  -e "DELETE FROM mysql_users WHERE username='sysbench';"
 mysql -u admin -padmin -h 127.0.0.1 -P 6032  -e "INSERT INTO mysql_users(username,password,default_hostgroup) VALUES ('sysbench','test',10); LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
 
