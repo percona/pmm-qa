@@ -25,6 +25,7 @@ const clearAllSetups = async () => {
       || container.includes('mongors')
       || container.includes('mo-integration')
       || container.includes('haproxy-')
+      || container.includes('pxc-')
     ) {
       await stopAndRemoveContainer(container);
     }

@@ -14,7 +14,7 @@ export const pmmIntegrationDataName = 'pmm-integration-data';
 export const pmmIntegrationDataMongoVolume = 'pmm-integration-mongo-data';
 
 const run = async () => {
-  const parameters: SetupParameters = {};
+  const parameters: SetupParameters = { versions: {} };
   const commandLineArgs: string[] = process.argv.slice(2);
 
   validateArgs(commandLineArgs);
@@ -75,6 +75,9 @@ const run = async () => {
       case value.includes('--setup-tarball-docker'):
         parameters.setupTarballDocker = true;
         break;
+      case value.includes('--pxc-version'):
+        parameters.versions.pxcVersion = parseFloat(value.split('=')[1]);
+        break;
       default:
         break;
     }
@@ -92,7 +95,7 @@ const run = async () => {
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataName}`);
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataMongoVolume}`);
       await pmmServerSetup(parameters);
-      if (parameters.setupTarballDocker) {
+      if (!parameters.setupTarballDocker) {
         await executeCommand(
           `sudo docker run -d --name ${pmmIntegrationClientName} \
           -v ${pmmIntegrationDataName}:/var/log/ -v ${pmmIntegrationDataMongoVolume}:/tmp/ \
