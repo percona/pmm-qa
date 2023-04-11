@@ -317,8 +317,8 @@ start_proxysql_container(){
     docker run -d \
     --name=proxysql-server \
     --net=$2 \
-    -v ./proxysql-admin.cnf:/etc/proxysql-admin.cnf \
-    -v ./proxysql.cnf:/etc/proxysql.cnf \
+    -v $PWD/proxysql-admin.cnf:/etc/proxysql-admin.cnf \
+    -v $PWD/proxysql.cnf:/etc/proxysql.cnf \
     percona/proxysql2:$1
     sleep 90
 
@@ -362,8 +362,8 @@ bootstrap_pxc_80_container(){
     -e CLUSTER_NAME=$2 \
     --name=$3 \
     --net=$4 \
-    -v ./cert:/cert \
-    -v ./config:/etc/percona-xtradb-cluster.conf.d \
+    -v $PWD/cert:/cert \
+    -v $PWD/config:/etc/percona-xtradb-cluster.conf.d \
     percona/percona-xtradb-cluster:$5
     
     sleep 90
@@ -396,8 +396,8 @@ add_pxc_80_container_to_cluster(){
     -e CLUSTER_JOIN=$3 \
     --name=$4 \
     --net=$5 \
-    -v ./cert:/cert \
-    -v ./config:/etc/percona-xtradb-cluster.conf.d \
+    -v $PWD/cert:/cert \
+    -v $PWD/config:/etc/percona-xtradb-cluster.conf.d \
     percona/percona-xtradb-cluster:$6
 
 }
@@ -515,7 +515,7 @@ setup_pxc_8.0(){
     create_certs
 
     mkdir -m 777 -p cert
-    docker run --name pxc-cert --network host --rm -v ./cert:/cert percona/percona-xtradb-cluster:8.0 mysql_ssl_rsa_setup -d /cert
+    docker run --name pxc-cert --network host --rm -v $PWD/cert:/cert percona/percona-xtradb-cluster:8.0 mysql_ssl_rsa_setup -d /cert
     create_network network80
     start_pmm_container $3 network80
     change_pmm_password admin123
