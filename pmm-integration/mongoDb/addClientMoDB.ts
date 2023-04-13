@@ -65,11 +65,12 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
     } else if (parameters.metricsMode) {
       await executeCommand(`${prefix} pmm-admin add mongodb --cluster=${containerName} \
         --username=mongoadmin --password=${password} --metrics-mode=${parameters.metricsMode} \
-        --environment=modb-prod ${containerName} --debug ${serviceAddress}
+        --environment=modb-prod ${containerName} ${containerName} --debug ${serviceAddress}
         `);
     } else {
       await executeCommand(`${prefix} pmm-admin add mongodb --cluster=${containerName} \
-        --username=mongoadmin --password=${password} --environment=modb-prod ${containerName} --debug ${serviceAddress}
+        --username=mongoadmin --password=${password} ${containerName}  --environment=modb-prod ${containerName} \
+        --debug ${serviceAddress}
         `);
     }
   }
