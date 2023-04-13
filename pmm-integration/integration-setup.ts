@@ -5,7 +5,7 @@ import { recreateNetwork, stopAndRemoveContainer } from './helpers/docker';
 import SetupParameters from './helpers/setupParameters.interface';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
 import setup_pmm_client_docker_tarball from './pmmClient/pmm2ClientTarbalDocker';
-import pmm2ClientLocalUpgrade from './pmmClient/pmm2LocalClientUpgrade';
+import parseFlags from './helpers/parseFlags';
 
 export const dockerNetworkName = 'pmm-integration-network';
 export const pmmIntegrationClientName = 'pmm-integration-client';
@@ -17,72 +17,8 @@ const run = async () => {
   const parameters: SetupParameters = { versions: {} };
   const commandLineArgs: string[] = process.argv.slice(2);
 
-  validateArgs(commandLineArgs);
-
-  // eslint-disable-next-line no-restricted-syntax
-  for await (const [_index, value] of commandLineArgs.entries()) {
-    switch (true) {
-      case value.includes('--pgsql-version'):
-        parameters.pgsqlVersion = value.split('=')[1];
-        break;
-      case value.includes('--pdpgsql-version'):
-        parameters.pdpgsqlVersion = value.split('=')[1];
-        break;
-      case value.includes('--mo-version'):
-        parameters.moVersion = parseFloat(value.split('=')[1]);
-        break;
-      case value.includes('--mo-setup'):
-        parameters.moSetup = value.split('=')[1];
-        break;
-      case value.includes('--ps-version'):
-        parameters.psVersion = parseFloat(value.split('=')[1]);
-        break;
-      case value.includes('--pmm-client-version'):
-        parameters.pmmClientVersion = value.split('=')[1];
-        break;
-      case value.includes('--upgrade-pmm-client-version'):
-        parameters.upgradePmmClientVersion = value.split('=')[1];
-        await pmm2ClientLocalUpgrade(parameters);
-        break;
-      case value.includes('--pmm-server-version'):
-        const pmmServerVersion = value.split('=')[1];
-
-        if (pmmServerVersion.length > 0) {
-          parameters.pmmServerVersions = {
-            versionMajor: parseInt(pmmServerVersion.split('.')[0], 10),
-            versionMinor: parseInt(pmmServerVersion.split('.')[1], 10),
-            versionPatch: parseInt(pmmServerVersion.split('.')[2], 10),
-          };
-        }
-
-        parameters.pmmServerVersion = value.split('=')[1];
-        break;
-      case value.includes('--query-source'):
-        parameters.querySource = value.split('=')[1];
-        break;
-      case value.includes('--ci'):
-        parameters.ci = true;
-        break;
-      case value.includes('--use-socket'):
-        parameters.useSocket = true;
-        break;
-      case value.includes('--rbac'):
-        parameters.rbac = true;
-        break;
-      case value.includes('--pmm-server-docker-tag'):
-        parameters.pmmServerDockerTag = value.split('=')[1];
-        break;
-      case value.includes('--setup-tarball-docker'):
-        parameters.setupTarballDocker = true;
-        break;
-      case value.includes('--pxc-version'):
-        parameters.versions.pxcVersion = parseFloat(value.split('=')[1]);
-        break;
-      default:
-        break;
-    }
-  }
-
+  await validateArgs(commandLineArgs);
+  await parseFlags(commandLineArgs, parameters);
   await setDefaultEnvVariables(parameters);
 
   if (!commandLineArgs.includes('--clear-all-setups')) {
@@ -110,14 +46,18 @@ const run = async () => {
     }
   }
 
+  const promises = [];
+
   // eslint-disable-next-line no-restricted-syntax
   for await (const [_index, value] of commandLineArgs.entries()) {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => value.includes(setup.arg));
 
     if (setup) {
-      await setup.function(parameters, value);
+      promises.push(setup.function(parameters, value));
     }
   }
+
+  await Promise.all(promises);
 };
 
 run();

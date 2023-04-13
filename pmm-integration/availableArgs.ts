@@ -29,22 +29,18 @@ export const availableSetups: SetupsInterface[] = [
 
       switch (true) {
         case selectedDB.includes('ps'):
-          await addClientPs(parameters, numberOfDbs);
-          break;
+          return addClientPs(parameters, numberOfDbs);
         case selectedDB.includes('pdpgsql'):
-          await addClientPdPgsql(parameters, numberOfDbs);
-          break;
+          return addClientPdPgsql(parameters, numberOfDbs);
         case selectedDB.includes('modb'):
-          await addClientMoDB(parameters, numberOfDbs);
-          break;
+          return addClientMoDB(parameters, numberOfDbs);
         case selectedDB.includes('haproxy'):
-          await addClientHaProxy(parameters, numberOfDbs);
-          break;
+          return addClientHaProxy(parameters, numberOfDbs);
         case selectedDB.includes('pxc'):
-          await addClientPxc(parameters, numberOfDbs);
-          break;
+          return addClientPxc(parameters, numberOfDbs);
         default:
-          break;
+          // eslint-disable-next-line consistent-return, no-useless-return
+          return;
       }
     },
   },
