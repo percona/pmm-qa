@@ -43,10 +43,8 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
     }
 
     await executeCommand(
-      `sudo docker run -d --name ${containerName} -v ${volumeLocation}:/var/log/${containerName}/ -p ${
-        ps_port + index
-      }:3306 -e MYSQL_ROOT_PASSWORD=${ps_password} -e UMASK=0777 percona:${
-        parameters.psVersion
+      `sudo docker run -d --name ${containerName} -v ${volumeLocation}:/var/log/${containerName}/ -p ${ps_port + index
+      }:3306 -e MYSQL_ROOT_PASSWORD=${ps_password} -e UMASK=0777 percona:${parameters.psVersion
       } --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci`,
     );
   }
@@ -113,12 +111,12 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
       if (parameters.ci) {
         await executeCommand(
           `sudo pmm-admin add mysql --query-source=slowlog --size-slow-logs=1GiB --username=root \
-          --password=${ps_password} ps_${timeStamp}_${index} --host=127.0.0.1 --port=${ps_port + index}`,
+          --password=${ps_password} ${containerName} --host=127.0.0.1 --port=${ps_port + index}`,
         );
       } else {
         await executeCommand(
           `sudo docker exec ${pmmIntegrationClientName} pmm-admin add mysql --query-source=slowlog \
-          --size-slow-logs=1GiB --username=root --password=${ps_password} ps_${timeStamp}_${index} \
+          --size-slow-logs=1GiB --username=root --password=${ps_password} ${containerName} \
           --host=${containerName} --port=3306`,
         );
       }
@@ -128,12 +126,12 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
       if (parameters.ci) {
         await executeCommand(
           `sudo pmm-admin add mysql --query-source=perfschema --username=root --password=${ps_password} \
-          ps_${timeStamp}_${index} --host=127.0.0.1 --port=${ps_port + index}`,
+          ${containerName} --host=127.0.0.1 --port=${ps_port + index}`,
         );
       } else {
         await executeCommand(
           `sudo docker exec ${pmmIntegrationClientName} pmm-admin add mysql --query-source=perfschema \
-          --username=root --password=${ps_password} ps_${timeStamp}_${index} --host=${containerName} --port=3306`,
+          --username=root --password=${ps_password} ${containerName} --host=${containerName} --port=3306`,
         );
       }
     }
