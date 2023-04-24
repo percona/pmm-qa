@@ -2422,6 +2422,7 @@ setup_replication_ps_pmm2 () {
   fi
   for j in `seq 1  3`;do
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
+    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL max_connections=1000;"
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
     mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
