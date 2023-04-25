@@ -17,10 +17,15 @@ export default interface SetupParameters {
   rbac?: boolean;
   pmmServerDockerTag?: string;
   setupTarballDocker?: boolean;
+  versions: Versions;
 }
 
 export interface PMMVersions {
   versionMajor: number;
   versionMinor: number;
   versionPatch: number;
+}
+
+export interface Versions {
+  pxcVersion?: number;
 }

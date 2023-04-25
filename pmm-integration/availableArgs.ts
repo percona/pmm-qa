@@ -10,7 +10,7 @@ import pmmServerSetup from './pmmServer/pmmServerSetup';
 import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
 import addClientMoDB from './mongoDb/addClientMoDB';
 import addClientHaProxy from './haProxy/addClientHaProxy';
-import { enableTestingRepository } from './otherConfigs/enableRepository';
+import addClientPxc from './otherConfigs/addClientPxc';
 import addClientPsMoDB from './mongoDb/addClientPsMoDB';
 
 export interface SetupsInterface {
@@ -22,7 +22,7 @@ export interface SetupsInterface {
 export const availableSetups: SetupsInterface[] = [
   {
     arg: '--addclient',
-    description: 'Use this do setup databases valid valid values are: ps, pdpgsql, modb, haproxy. Example: --addClient=ps,1',
+    description: 'Use this do setup databases valid valid values are: ps, pdpgsql, modb, haproxy, pxc. Example: --addClient=ps,1',
     function: async (parameters: SetupParameters, client: string = '') => {
       const commandLineValue = client.split('=')[1];
       const selectedDB = commandLineValue.split(',')[0];
@@ -43,6 +43,9 @@ export const availableSetups: SetupsInterface[] = [
           break;
         case selectedDB === 'haproxy':
           await addClientHaProxy(parameters, numberOfDbs);
+          break;
+        case selectedDB.includes('pxc'):
+          await addClientPxc(parameters, numberOfDbs);
           break;
         default:
           break;
@@ -147,6 +150,7 @@ export const availableSetups: SetupsInterface[] = [
 export const availableConstMap = new Map<string, string>([
   ['--pgsql-version', 'Pass Postgres SQL server version Info'],
   ['--pdpgsql-version', 'Pass Percona Distribution Postgres SQL server version Info'],
+  ['--pxc-version', 'Pass Percona XtraDB Cluster version info'],
   ['--mo-version', 'Pass MongoDB Server version info'],
   ['--psmo-version', 'Pass Percona Server MongoDB version info'],
   ['--mo-setup', 'Pass MongoDB Server type info'],

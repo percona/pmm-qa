@@ -26,6 +26,7 @@ const clearAllSetups = async () => {
       || container.includes('mo-integration')
       || container.includes('psmo-integration')
       || container.includes('haproxy-')
+      || container.includes('pxc-')
     ) {
       await stopAndRemoveContainer(container);
     }
