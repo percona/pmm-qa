@@ -31,6 +31,9 @@ const run = async () => {
       case value.includes('--mo-version'):
         parameters.moVersion = parseFloat(value.split('=')[1]);
         break;
+      case value.includes('--psmo-version'):
+        parameters.psMoVersion = value.split('=')[1];
+        break;
       case value.includes('--mo-setup'):
         parameters.moSetup = value.split('=')[1];
         break;
@@ -92,7 +95,7 @@ const run = async () => {
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataName}`);
       await executeCommand(`sudo docker volume create ${pmmIntegrationDataMongoVolume}`);
       await pmmServerSetup(parameters);
-      if (parameters.setupTarballDocker) {
+      if (!parameters.setupTarballDocker) {
         await executeCommand(
           `sudo docker run -d --name ${pmmIntegrationClientName} \
           -v ${pmmIntegrationDataName}:/var/log/ -v ${pmmIntegrationDataMongoVolume}:/tmp/ \

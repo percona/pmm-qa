@@ -49,6 +49,10 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
     parameters.moVersion = 6.0;
   }
 
+  if (!parameters.psMoVersion) {
+    parameters.psMoVersion = '6.0';
+  }
+
   if (!parameters.moSetup) {
     parameters.moSetup = 'regular';
   }

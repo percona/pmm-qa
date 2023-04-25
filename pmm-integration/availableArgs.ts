@@ -10,6 +10,8 @@ import pmmServerSetup from './pmmServer/pmmServerSetup';
 import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
 import addClientMoDB from './mongoDb/addClientMoDB';
 import addClientHaProxy from './haProxy/addClientHaProxy';
+import { enableTestingRepository } from './otherConfigs/enableRepository';
+import addClientPsMoDB from './mongoDb/addClientPsMoDB';
 
 export interface SetupsInterface {
   arg: string;
@@ -27,16 +29,19 @@ export const availableSetups: SetupsInterface[] = [
       const numberOfDbs: number = parseInt(commandLineValue.split(',')[1], 10);
 
       switch (true) {
-        case selectedDB.includes('ps'):
+        case selectedDB === 'ps':
           await addClientPs(parameters, numberOfDbs);
           break;
-        case selectedDB.includes('pdpgsql'):
+        case selectedDB === 'pdpgsql':
           await addClientPdPgsql(parameters, numberOfDbs);
           break;
-        case selectedDB.includes('modb'):
+        case selectedDB === 'modb':
           await addClientMoDB(parameters, numberOfDbs);
           break;
-        case selectedDB.includes('haproxy'):
+        case selectedDB === 'psmodb':
+          await addClientPsMoDB(parameters, numberOfDbs);
+          break;
+        case selectedDB === 'haproxy':
           await addClientHaProxy(parameters, numberOfDbs);
           break;
         default:
@@ -143,6 +148,7 @@ export const availableConstMap = new Map<string, string>([
   ['--pgsql-version', 'Pass Postgres SQL server version Info'],
   ['--pdpgsql-version', 'Pass Percona Distribution Postgres SQL server version Info'],
   ['--mo-version', 'Pass MongoDB Server version info'],
+  ['--psmo-version', 'Pass Percona Server MongoDB version info'],
   ['--mo-setup', 'Pass MongoDB Server type info'],
   ['--ps-version', 'Pass Percona Server version info'],
   ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
