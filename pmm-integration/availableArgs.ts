@@ -30,23 +30,17 @@ export const availableSetups: SetupsInterface[] = [
 
       switch (true) {
         case selectedDB === 'ps':
-          await addClientPs(parameters, numberOfDbs);
-          break;
+          return addClientPs(parameters, numberOfDbs);
         case selectedDB === 'pdpgsql':
-          await addClientPdPgsql(parameters, numberOfDbs);
-          break;
+          return addClientPdPgsql(parameters, numberOfDbs);
         case selectedDB === 'modb':
-          await addClientMoDB(parameters, numberOfDbs);
-          break;
+          return addClientMoDB(parameters, numberOfDbs);
         case selectedDB === 'psmodb':
-          await addClientPsMoDB(parameters, numberOfDbs);
-          break;
+          return addClientPsMoDB(parameters, numberOfDbs);
         case selectedDB === 'haproxy':
-          await addClientHaProxy(parameters, numberOfDbs);
-          break;
+          return addClientHaProxy(parameters, numberOfDbs);
         case selectedDB.includes('pxc'):
-          await addClientPxc(parameters, numberOfDbs);
-          break;
+          return addClientPxc(parameters, numberOfDbs);
         default:
           break;
       }

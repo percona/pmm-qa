@@ -29,7 +29,7 @@ const run = async () => {
         parameters.pdpgsqlVersion = value.split('=')[1];
         break;
       case value.includes('--mo-version'):
-        parameters.moVersion = parseFloat(value.split('=')[1]);
+        parameters.moVersion = value.split('=')[1];
         break;
       case value.includes('--psmo-version'):
         parameters.psMoVersion = value.split('=')[1];
@@ -38,7 +38,7 @@ const run = async () => {
         parameters.moSetup = value.split('=')[1];
         break;
       case value.includes('--ps-version'):
-        parameters.psVersion = parseFloat(value.split('=')[1]);
+        parameters.psVersion = value.split('=')[1];
         break;
       case value.includes('--pmm-client-version'):
         parameters.pmmClientVersion = value.split('=')[1];
@@ -113,14 +113,18 @@ const run = async () => {
     }
   }
 
+  const clientPromises = [];
+
   // eslint-disable-next-line no-restricted-syntax
   for await (const [_index, value] of commandLineArgs.entries()) {
     const setup: SetupsInterface | undefined = availableSetups.find((setup) => value.includes(setup.arg));
 
     if (setup) {
-      await setup.function(parameters, value);
+      clientPromises.push(setup.function(parameters, value));
     }
   }
+
+  await Promise.all(clientPromises);
 };
 
 run();

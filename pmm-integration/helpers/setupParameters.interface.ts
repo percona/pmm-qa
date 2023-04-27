@@ -1,10 +1,10 @@
 export default interface SetupParameters {
   pgsqlVersion?: string;
   pdpgsqlVersion?: string;
-  moVersion?: number;
+  moVersion?: string;
   psMoVersion?: string;
   moSetup?: string;
-  psVersion?: number;
+  psVersion?: string;
   pmmClientVersion?: string;
   upgradePmmClientVersion?: string;
   pmmServerVersion?: string;

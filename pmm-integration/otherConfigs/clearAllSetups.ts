@@ -24,7 +24,7 @@ const clearAllSetups = async () => {
       || container.includes('pgsql_pgsm')
       || container.includes('mongors')
       || container.includes('mo-integration')
-      || container.includes('psmo-integration')
+      || container.includes('mo-ps-integration')
       || container.includes('haproxy-')
       || container.includes('pxc-')
     ) {
