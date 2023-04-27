@@ -1,11 +1,12 @@
 import validateArgs from './helpers/validateArgs';
-import { executeCommand, executeCommandIgnoreErrors, setDefaultEnvVariables } from './helpers/commandLine';
+import { executeCommand, executeCommandIgnoreErrors } from './helpers/commandLine';
 import { availableSetups, SetupsInterface } from './availableArgs';
 import { recreateNetwork, stopAndRemoveContainer } from './helpers/docker';
 import SetupParameters from './helpers/setupParameters.interface';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
 import setup_pmm_client_docker_tarball from './pmmClient/pmm2ClientTarbalDocker';
 import pmm2ClientLocalUpgrade from './pmmClient/pmm2LocalClientUpgrade';
+import setDefaultVariables from './helpers/defaultVariables';
 
 export const dockerNetworkName = 'pmm-integration-network';
 export const pmmIntegrationClientName = 'pmm-integration-client';
@@ -86,7 +87,7 @@ const run = async () => {
     }
   }
 
-  await setDefaultEnvVariables(parameters);
+  await setDefaultVariables(parameters);
 
   if (!commandLineArgs.includes('--clear-all-setups')) {
     await recreateNetwork(dockerNetworkName);
