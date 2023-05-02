@@ -47,7 +47,7 @@ if echo "$pxc_version" | grep '8'; then
   sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
 fi
 
-wget -O Percona-XtraDB-Cluster.tar.gz ${pxc_tarball}
+curl ${pxc_tarball} -o Percona-XtraDB-Cluster.tar.gz
 tar -xzf Percona-XtraDB-Cluster.tar.gz
 rm -r Percona-XtraDB-Cluster.tar.gz
 mv Percona-XtraDB-Cluster* PXC
@@ -75,9 +75,6 @@ fi
 
 bin/mysql -A -uroot -Snode1/socket.sock -e "create user admin@localhost identified with mysql_native_password by 'admin';"
 bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to admin@localhost;"
-bin/mysql -A -uroot -Snode1/socket.sock -e "create user sysbench@'%' identified with  mysql_native_password by 'test';"
-bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to sysbench@'%';"
-bin/mysql -A -uroot -Snode1/socket.sock -e "drop database if exists sbtest;create database sbtest;"
 
 
 export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
