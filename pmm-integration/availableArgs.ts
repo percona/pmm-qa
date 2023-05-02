@@ -153,6 +153,7 @@ export const availableConstMap = new Map<string, string>([
   ['--use-socket', 'Use DB Socket for PMM Client Connection (MongoDb)'],
   ['--rbac', 'Use this to allow Access Control'],
   ['--pmm-server-docker-tag', 'Use this tag to select different docker tag, useful for RC and Release testing.'],
+  ['--setup-tarball-docker', 'Use this flag in local setup when you do not want to use pmm client container.'],
   ['--upgrade-pmm-client-version', 'Use this tag to upgrade locally installed pmm client version.'],
 ]);
 

@@ -14,6 +14,7 @@
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
     number_of_nodes: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','PXC_NODES') | default('3', true) ) }}"
     pxc_dev_cluster: "{{ lookup('vars', 'extra_pxc_cluster_name', default=lookup('env','PXC_CLUSTER_NAME') | default('pxc-dev-cluster', true) ) }}"
+    query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('perfschema', true) ) }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -73,8 +74,8 @@
   - name: Execute Setup script inside the PXC pxc_container
     shell: "{{ item }}"
     with_items:
-      - docker exec --user pxc {{ pxc_container }} bash -xe ./client_container_pxc_setup.sh --pxc_version {{ pxc_version }} --pxc_tarball {{ pxc_tarball.stdout }} --number_of_nodes {{ number_of_nodes }} --pxc_dev_cluster {{ pxc_dev_cluster }} > setup_pxc_{{ pxc_version }}.log
-  
+      - docker exec --user pxc {{ pxc_container }} bash -xe ./client_container_pxc_setup.sh --pxc_version {{ pxc_version }} --pxc_tarball {{ pxc_tarball.stdout }} --number_of_nodes {{ number_of_nodes }} --pxc_dev_cluster {{ pxc_dev_cluster }} --query_source {{query_source}} > setup_pxc_{{ pxc_version }}.log
+
   - name: Start ProxySQL inside the PXC 1 extra_pxc_container
     shell: "{{ item }}"
     with_items:

@@ -2843,6 +2843,10 @@ setup_pxc_client_container () {
   then
     export PXC_CONTAINER=pxc_container_${PXC_VERSION}
   fi
+  if [ -z "$QUERY_SOURCE" ]
+  then
+    export QUERY_SOURCE=${query_source}
+  fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
   popd

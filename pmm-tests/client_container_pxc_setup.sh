@@ -61,7 +61,8 @@ touch sysbench_run_node1_read_write.txt
 touch sysbench_run_node1_read_only.txt
 
 ### enable slow log
-#if [ "$query_source" == "slowlog" ]; then
+
+if [ "$query_source" == "slowlog" ]; then
   for j in `seq 1  ${number_of_nodes}`;
   do
     bin/mysql -A -uroot -Snode$j/socket.sock -e "SET GLOBAL slow_query_log='ON';"
@@ -70,7 +71,7 @@ touch sysbench_run_node1_read_only.txt
     bin/mysql -A -uroot -Snode$j/socket.sock -e "SET GLOBAL log_slow_verbosity='full';"
     bin/mysql -A -uroot -Snode$j/socket.sock -e "SET GLOBAL log_slow_rate_type='query';"
   done
-#fi
+fi
 
 bin/mysql -A -uroot -Snode1/socket.sock -e "create user admin@localhost identified with mysql_native_password by 'admin';"
 bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to admin@localhost;"
@@ -78,3 +79,8 @@ bin/mysql -A -uroot -Snode1/socket.sock -e "create user sysbench@'%' identified 
 bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to sysbench@'%';"
 bin/mysql -A -uroot -Snode1/socket.sock -e "drop database if exists sbtest;create database sbtest;"
 
+
+export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
+for j in `seq 1  ${number_of_nodes}`;do
+    pmm-admin add mysql --query-source=${query_source} --username=sysbench --password=test --host=127.0.0.1 --port=$(cat /home/pxc/PXC/node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=${pxc_dev_cluster} --replication-set=pxc-repl pxc_node__${j}_${SERVICE_RANDOM_NUMBER}
+done

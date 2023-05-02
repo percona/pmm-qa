@@ -23,7 +23,7 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       prefix = 'sudo';
     } else {
       volumeLocation = pmmIntegrationDataMongoVolume;
-      serviceAddress = `${containerName}:5432`;
+      serviceAddress = `${containerName}:27017`;
       prefix = `sudo sudo docker exec -u 0 ${pmmIntegrationClientName} `;
     }
 
