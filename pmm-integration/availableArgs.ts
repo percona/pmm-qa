@@ -7,11 +7,13 @@ import clearAllSetups from './otherConfigs/clearAllSetups';
 import addClientPs from './mysql/addClientPs/addClientPs';
 import addClientPdPgsql from './postgres/addClientPdPgsql';
 import pmmServerSetup from './pmmServer/pmmServerSetup';
-import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
+import mongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoReplicaForBackup';
 import addClientMoDB from './mongoDb/addClientMoDB';
 import addClientHaProxy from './haProxy/addClientHaProxy';
 import addClientPxc from './otherConfigs/addClientPxc';
 import addClientPsMoDB from './mongoDb/addClientPsMoDB';
+import addClientMs from './mysql/addClientMs';
+import mongoReplicaShardedForBackup from './mongoDb/mongo_replica_sharded_for_backup/mongoReplicaShardedForBackup';
 
 export interface SetupsInterface {
   arg: string;
@@ -31,6 +33,8 @@ export const availableSetups: SetupsInterface[] = [
       switch (true) {
         case selectedDB === 'ps':
           return addClientPs(parameters, numberOfDbs);
+        case selectedDB === 'ms':
+          return addClientMs(parameters, numberOfDbs);
         case selectedDB === 'pdpgsql':
           return addClientPdPgsql(parameters, numberOfDbs);
         case selectedDB === 'modb':
@@ -114,16 +118,12 @@ export const availableSetups: SetupsInterface[] = [
   {
     arg: '--mongo-replica-for-backup',
     description: 'Use this option to setup MongoDB Replica Set and PBM for each replica member on client node',
-    function: async (parameters: SetupParameters) => {
-      if (parameters.ci) {
-        await installDockerCompose();
-      }
-
-      await executeCommand('chmod +x ./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
-      await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
-      await MongoReplicaForBackup(parameters);
-      core.exportVariable('INTEGRATION_FLAG', '@fb');
-    },
+    function: async (parameters: SetupParameters) => mongoReplicaForBackup(parameters),
+  },
+  {
+    arg: '--mongo-replica-sharded-for-backup',
+    description: 'Use this option to setup MongoDB Sharded Replica Set and PBM for each replica member on client node',
+    function: async (parameters: SetupParameters) => mongoReplicaShardedForBackup(parameters),
   },
   {
     arg: '--setup-docker-pmm-server',
@@ -149,6 +149,7 @@ export const availableConstMap = new Map<string, string>([
   ['--psmo-version', 'Pass Percona Server MongoDB version info'],
   ['--mo-setup', 'Pass MongoDB Server type info'],
   ['--ps-version', 'Pass Percona Server version info'],
+  ['--ms-version', 'Pass MySql version info'],
   ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
   ['--pmm-server-version', 'Version of pmm server to use, default dev-latest'],
   ['--pmm-client-version', 'Version of pmm client to use, default dev-latest'],

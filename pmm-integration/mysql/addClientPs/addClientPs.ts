@@ -50,7 +50,7 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
 
     await executeCommandLogResponse(
       `sudo docker run -d --name ${containerName} -v ${volumeLocation}:/var/log/${containerName}/ -p ${ps_port + index
-      }:3306 -e MYSQL_ROOT_PASSWORD=${ps_password} -e UMASK=0777 percona:${parameters.psVersion
+      }:3306 -e MYSQL_ROOT_PASSWORD=${ps_password} -e UMASK=0777 percona/percona-server:${parameters.psVersion
       } --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci`,
       response,
     );
@@ -67,11 +67,6 @@ const addClientPs = async (parameters: SetupParameters, numberOfClients: number)
     );
     await executeCommandLogResponse(
       `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e "SET GLOBAL innodb_monitor_enable=all;"`,
-      response,
-    );
-    await executeCommandLogResponse(
-      `sudo docker exec ${containerName} mysql -u root -p${ps_password} -e \
-      "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY '${ps_password}';"`,
       response,
     );
 

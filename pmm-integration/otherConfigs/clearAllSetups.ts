@@ -15,6 +15,7 @@ const clearAllSetups = async () => {
   runningContainers.forEach(async (container) => {
     if (
       container.includes('ps_integration')
+      || container.includes('ms-integration-')
       || container.includes('pdpgsql-integration')
       || container.includes('pgsql_vacuum_db')
       || container.includes('pgsql_pgss')
@@ -27,10 +28,13 @@ const clearAllSetups = async () => {
       || container.includes('mo-ps-integration')
       || container.includes('haproxy-')
       || container.includes('pxc-')
+      || container.includes('mo-replica-integration-')
+      || container.includes('mo-replica-set-')
     ) {
       await stopAndRemoveContainer(container);
     }
   });
+
   await stopAndRemoveContainer(pmmIntegrationClientName);
   await stopAndRemoveContainer(pmmIntegrationServerName);
   await executeCommandIgnoreErrors(`sudo docker volume rm ${pmmIntegrationDataName}`);

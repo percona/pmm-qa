@@ -48,6 +48,10 @@ const setDefaultVariables = async (parameters: SetupParameters) => {
   if (!parameters.versions?.pxcVersion) {
     parameters.versions.pxcVersion = parseFloat('8.0');
   }
+
+  if (!parameters.serverPort) parameters.serverPort = 80;
+
+  if (!parameters.secureServerPort) parameters.secureServerPort = 443;
 };
 
 export default setDefaultVariables;

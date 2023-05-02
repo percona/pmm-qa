@@ -41,6 +41,9 @@ const run = async () => {
       case value.includes('--ps-version'):
         parameters.psVersion = value.split('=')[1];
         break;
+      case value.includes('--ms-version'):
+        parameters.versions.msVersion = value.split('=')[1];
+        break;
       case value.includes('--pmm-client-version'):
         parameters.pmmClientVersion = value.split('=')[1];
         break;
@@ -81,6 +84,12 @@ const run = async () => {
         break;
       case value.includes('--pxc-version'):
         parameters.versions.pxcVersion = parseFloat(value.split('=')[1]);
+        break;
+      case value.includes('--pmm-server-port'):
+        parameters.serverPort = parseInt(value.split('=')[1], 10);
+        break;
+      case value.includes('--pmm-secure-server-port'):
+        parameters.secureServerPort = parseInt(value.split('=')[1], 10);
         break;
       default:
         break;
