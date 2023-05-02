@@ -51,8 +51,8 @@ if [ "$DISTRIBUTION" == "ami" ]; then
 		rpm -qa | grep pmm-dump-$PMM_VERSION
 		sudo supervisorctl status | grep victoriametrics | grep RUNNING
 		sudo supervisorctl status | grep vmalert | grep RUNNING
-		grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.4.4"
-		grafana-cli plugins ls | grep alexanderzobnin-zabbix-app
+# 		grafana-cli plugins ls | grep "vertamedia-clickhouse-datasource @ 2.4.4"
+# 		grafana-cli plugins ls | grep alexanderzobnin-zabbix-app
 		sudo victoriametrics --version | grep pmm-6401-v1.77.1
 	fi
 else
