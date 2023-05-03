@@ -20,6 +20,7 @@ export default interface SetupParameters {
   versions: Versions;
   serverPort?: number;
   secureServerPort?: number;
+  serverFlags?: string;
 }
 
 export interface PMMVersions {

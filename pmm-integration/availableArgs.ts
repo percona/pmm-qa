@@ -160,6 +160,7 @@ export const availableConstMap = new Map<string, string>([
   ['--pmm-server-docker-tag', 'Use this tag to select different docker tag, useful for RC and Release testing.'],
   ['--setup-tarball-docker', 'Use this flag in local setup when you do not want to use pmm client container.'],
   ['--upgrade-pmm-client-version', 'Use this tag to upgrade locally installed pmm client version.'],
+  ['--pmm-server-flags', 'Flag to pass flags to the pmm server.'],
 ]);
 
 export const availableSetupMap = new Map(availableSetups.map((object) => [object.arg, object.description]));

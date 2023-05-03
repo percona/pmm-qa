@@ -49,6 +49,8 @@ const setDefaultVariables = async (parameters: SetupParameters) => {
     parameters.versions.pxcVersion = parseFloat('8.0');
   }
 
+  if (!parameters.versions.msVersion) parameters.versions.msVersion = '8.0';
+
   if (!parameters.serverPort) parameters.serverPort = 80;
 
   if (!parameters.secureServerPort) parameters.secureServerPort = 443;

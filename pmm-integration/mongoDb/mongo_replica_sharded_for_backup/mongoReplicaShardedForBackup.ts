@@ -1,7 +1,6 @@
 import { executeCommand } from '../../helpers/commandLine';
 import SetupParameters from '../../helpers/setupParameters.interface';
 import { dockerNetworkName, pmmIntegrationClientName } from '../../integration-setup';
-import setupCluster from '../mongo_replica_for_backup/setupCluster';
 
 const mongoReplicaShardedForBackup = async (parameters: SetupParameters, numberOfNodes: number = 3) => {
   console.log('Setting up Mongo with sharded replica set and backup.');

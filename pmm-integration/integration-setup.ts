@@ -91,6 +91,9 @@ const run = async () => {
       case value.includes('--pmm-secure-server-port'):
         parameters.secureServerPort = parseInt(value.split('=')[1], 10);
         break;
+      case value.includes('--pmm-server-flags'):
+        parameters.serverFlags = value.split(/=(.*)/s)[1];
+        break;
       default:
         break;
     }
