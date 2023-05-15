@@ -2442,7 +2442,9 @@ setup_replication_ps_pmm2 () {
   else
     export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
-
+  
+  echo "Wiating for PMM Server to start"
+  sleep 20
   bash ./pmm2-client-setup.sh --pmm_server_ip $PMM_SERVER_IP --client_version $CLIENT_VERSION --admin_password "admin" --use_metrics_mode no
 
   check_dbdeployer
