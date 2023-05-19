@@ -2820,6 +2820,10 @@ setup_pxc_client_container () {
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/
+  if [ -z "$ADMIN_PASSWORD" ]
+  then
+    export ADMIN_PASSWORD="admin"
+  fi
   if [ -z "$PXC_VERSION" ]
   then
     export PXC_VERSION=${pxc_version}
