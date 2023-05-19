@@ -22,7 +22,7 @@ fi
 
 if [ -z "$pxc_tarball" ]
 then
-      export pxc_tarball=https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-8.0.29/binary/tarball/Percona-XtraDB-Cluster_8.0.29-21.1_Linux.x86_64.glibc2.17-minimal.tar.gz
+      export pxc_tarball=https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-80/Percona-XtraDB-Cluster-8.0.32/binary/tarball/Percona-XtraDB-Cluster_8.0.32-24.1_Linux.x86_64.glibc2.34-minimal.tar.gz
 fi
 
 if [ -z "$query_source" ]
