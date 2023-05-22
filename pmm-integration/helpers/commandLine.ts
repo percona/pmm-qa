@@ -80,6 +80,10 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.versions?.pxcVersion) {
     parameters.versions.pxcVersion = parseFloat('8.0');
   }
+
+  if (!parameters.versions.psMoVersion) {
+    parameters.versions.psMoVersion = '6.0';
+  }
 };
 
 export const installAnsible = async () => {

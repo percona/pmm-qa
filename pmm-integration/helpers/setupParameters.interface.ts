@@ -27,4 +27,5 @@ export interface PMMVersions {
 
 export interface Versions {
   pxcVersion?: number;
+  psMoVersion?: string;
 }
