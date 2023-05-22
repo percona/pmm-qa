@@ -29,10 +29,13 @@ const run = async () => {
         parameters.pdpgsqlVersion = value.split('=')[1];
         break;
       case value.includes('--mo-version'):
-        parameters.moVersion = parseFloat(value.split('=')[1]);
+        parameters.moVersion = value.split('=')[1];
         break;
       case value.includes('--mo-setup'):
         parameters.moSetup = value.split('=')[1];
+        break;
+      case value.includes('--psmo-version'):
+        parameters.versions.psMoVersion = value.split('=')[1];
         break;
       case value.includes('--ps-version'):
         parameters.psVersion = parseFloat(value.split('=')[1]);

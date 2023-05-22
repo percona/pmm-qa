@@ -11,6 +11,7 @@ import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoRepli
 import addClientMoDB from './mongoDb/addClientMoDB';
 import addClientHaProxy from './haProxy/addClientHaProxy';
 import addClientPxc from './otherConfigs/addClientPxc';
+import addClientPsMoDB from './mongoDb/addClientPsMoDB';
 
 export interface SetupsInterface {
   arg: string;
@@ -28,21 +29,18 @@ export const availableSetups: SetupsInterface[] = [
       const numberOfDbs: number = parseInt(commandLineValue.split(',')[1], 10);
 
       switch (true) {
-        case selectedDB.includes('ps'):
-          await addClientPs(parameters, numberOfDbs);
-          break;
-        case selectedDB.includes('pdpgsql'):
-          await addClientPdPgsql(parameters, numberOfDbs);
-          break;
-        case selectedDB.includes('modb'):
-          await addClientMoDB(parameters, numberOfDbs);
-          break;
-        case selectedDB.includes('haproxy'):
-          await addClientHaProxy(parameters, numberOfDbs);
-          break;
-        case selectedDB.includes('pxc'):
-          await addClientPxc(parameters, numberOfDbs);
-          break;
+        case selectedDB === 'ps':
+          return addClientPs(parameters, numberOfDbs);
+        case selectedDB === 'pdpgsql':
+          return addClientPdPgsql(parameters, numberOfDbs);
+        case selectedDB === 'modb':
+          return addClientMoDB(parameters, numberOfDbs);
+        case selectedDB === 'psmodb':
+          return addClientPsMoDB(parameters, numberOfDbs);
+        case selectedDB === 'haproxy':
+          return addClientHaProxy(parameters, numberOfDbs);
+        case selectedDB === 'pxc':
+          return addClientPxc(parameters, numberOfDbs);
         default:
           break;
       }
@@ -149,6 +147,7 @@ export const availableConstMap = new Map<string, string>([
   ['--pxc-version', 'Pass Percona XtraDB Cluster version info'],
   ['--mo-version', 'Pass MongoDB Server version info'],
   ['--mo-setup', 'Pass MongoDB Server type info'],
+  ['--psmo-version', 'Pass Percona Server MongoDB version info'],
   ['--ps-version', 'Pass Percona Server version info'],
   ['--setup-pmm-client-tarball', 'Sets up pmm client from provided tarball'],
   ['--pmm-server-version', 'Version of pmm server to use, default dev-latest'],
