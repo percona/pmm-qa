@@ -55,6 +55,7 @@ cd PXC
 
 ## start PXC
 bash ../pxc-startup.sh
+#bash /home/pxc/pxc-startup.sh
 bash ./start_pxc $number_of_nodes
 touch sysbench_run_node1_prepare.txt
 touch sysbench_run_node1_read_write.txt

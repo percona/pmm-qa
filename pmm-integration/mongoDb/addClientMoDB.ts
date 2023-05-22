@@ -1,4 +1,4 @@
-import { executeCommand } from '../helpers/commandLine';
+import { executeCommand, executePHPScript } from '../helpers/commandLine';
 import SetupParameters from '../helpers/setupParameters.interface';
 import { dockerNetworkName, pmmIntegrationClientName, pmmIntegrationDataMongoVolume } from '../integration-setup';
 
@@ -39,17 +39,19 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       -e UMASK=0777 \
       --name ${containerName} mongo:${parameters.moVersion} \
       --unixSocketPrefix /tmp/mo-integration-${clientPort}
-      --profile 2`,
+      --profile 2 --slowms 1`,
     );
     await executeCommand('sleep 20');
 
-    if (parameters.moVersion && parameters.moVersion >= 5) {
+    if (parameters.moVersion && parseFloat(parameters.moVersion) >= 5) {
       await executeCommand(`sudo docker cp ./mongoDb/mongodb_user_setup.js ${containerName}:/`);
       await executeCommand(`sudo docker exec -u 0  ${containerName} mongosh -u mongoadmin -p ${password} mongodb_user_setup.js`);
     } else {
       await executeCommand(`sudo docker cp ./mongoDb/mongodb_user_setup.js ${containerName}:/`);
       await executeCommand(`sudo docker exec -u 0  ${containerName} mongo -u mongoadmin -p ${password} mongodb_user_setup.js`);
     }
+
+    // executePHPScript('../pmm-tests/mongodb_query.php');
 
     if (parameters.useSocket) {
       await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-integration-${clientPort}/mongodb-27017.sock`);

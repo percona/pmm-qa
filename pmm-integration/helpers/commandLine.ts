@@ -1,4 +1,6 @@
 import shell from 'shelljs';
+import runner from 'child_process';
+
 import SetupParameters from './setupParameters.interface';
 
 export const executeCommand = async (command: string) => {
@@ -36,6 +38,14 @@ export const executeCommandIgnoreErrors = async (command: string) => {
   return { stdout, stderr };
 };
 
+export const executePHPScript = (scriptLocation: string) => {
+  runner.exec(`php ${scriptLocation}`, (err, phpResponse, stderr) => {
+    if (err) console.log(err);
+
+    console.log(phpResponse);
+  });
+};
+
 export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   if (!parameters.pgsqlVersion) {
     parameters.pgsqlVersion = '15.0';
@@ -46,7 +56,7 @@ export const setDefaultEnvVariables = async (parameters: SetupParameters) => {
   }
 
   if (!parameters.moVersion) {
-    parameters.moVersion = 6.0;
+    parameters.moVersion = '6.0';
   }
 
   if (!parameters.moSetup) {

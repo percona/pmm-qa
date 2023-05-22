@@ -11,6 +11,7 @@ import MongoReplicaForBackup from './mongoDb/mongo_replica_for_backup/mongoRepli
 import addClientMoDB from './mongoDb/addClientMoDB';
 import addClientHaProxy from './haProxy/addClientHaProxy';
 import addClientPxc from './otherConfigs/addClientPxc';
+import mongoReplicaShardedForBackup from './mongoDb/mongo_replica_sharded_for_backup/mongoReplicaShardedForBackup';
 
 export interface SetupsInterface {
   arg: string;
@@ -125,6 +126,13 @@ export const availableSetups: SetupsInterface[] = [
       await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
       await MongoReplicaForBackup(parameters);
       core.exportVariable('INTEGRATION_FLAG', '@fb');
+    },
+  },
+  {
+    arg: '--mongo--sharded-replica-for-backup',
+    description: 'Use this option to setup Sharded MongoDB Replica Set and PBM for each replica member on client node',
+    function: async (parameters: SetupParameters) => {
+      await mongoReplicaShardedForBackup(parameters);
     },
   },
   {

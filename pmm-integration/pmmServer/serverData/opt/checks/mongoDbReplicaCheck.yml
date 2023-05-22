@@ -1,0 +1,25 @@
+---
+checks:
+  - version: 2
+    name: test_check
+    summary: Check that advisor hits proper service
+    description: Checks to see if the currently installed version is outdated for it's release level
+    advisor: dev
+    category: test
+    interval: standard
+    family: MONGODB
+    queries:
+      - type: MONGODB_GETDIAGNOSTICDATA
+    script: |
+      def check_context(docs, context):
+          info = docs[0]
+          results = []
+          for row in info:
+              host = row["data"]["serverStatus"]["host"]
+              results.append({
+                  "summary": "Query was executed on {}".format(host),
+                  "description": "Test check",
+                  "read_more_url": "",
+                  "severity": "notice",
+              })
+          return results

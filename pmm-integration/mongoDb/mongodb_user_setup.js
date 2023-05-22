@@ -4,7 +4,7 @@ db.getSiblingDB("admin").createRole({
         resource: {
             db: "",
             collection: ""
-            },
+        },
         actions: [
             "listIndexes",
             "listCollections",
@@ -12,17 +12,21 @@ db.getSiblingDB("admin").createRole({
             "dbHash",
             "collStats",
             "find"
-            ]
-        }],
-    roles:[]
+        ]
+    }],
+    roles: []
 })
 
 db.getSiblingDB("admin").createUser({
-   user: "pmm_mongodb",
-   pwd: "GRgrO9301RuF",
-   roles: [
-      { role: "explainRole", db: "admin" },
-      { role: "clusterMonitor", db: "admin" },
-      { role: "read", db: "local" }
-   ]
+    user: "pmm_mongodb",
+    pwd: "GRgrO9301RuF",
+    roles: [
+        { role: "explainRole", db: "admin" },
+        { role: "clusterMonitor", db: "admin" },
+        { role: "read", db: "local" }
+    ]
 })
+
+db.myCollection.insertOne({ x: 1 });
+
+db.myCollection.insertOne({ x: 1 });
