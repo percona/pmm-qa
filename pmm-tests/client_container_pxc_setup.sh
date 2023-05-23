@@ -22,7 +22,7 @@ fi
 
 if [ -z "$pxc_tarball" ]
 then
-      export pxc_tarball=https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-8.0.29/binary/tarball/Percona-XtraDB-Cluster_8.0.29-21.1_Linux.x86_64.glibc2.17-minimal.tar.gz
+      export pxc_tarball=https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-80/Percona-XtraDB-Cluster-8.0.32/binary/tarball/Percona-XtraDB-Cluster_8.0.32-24.1_Linux.x86_64.glibc2.34-minimal.tar.gz
 fi
 
 if [ -z "$query_source" ]
@@ -47,8 +47,10 @@ if echo "$pxc_version" | grep '8'; then
   sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
 fi
 
-wget -O Percona-XtraDB-Cluster.tar.gz ${pxc_tarball}
+curl ${pxc_tarball} -o Percona-XtraDB-Cluster.tar.gz
+sleep 10
 tar -xzf Percona-XtraDB-Cluster.tar.gz
+sleep 10
 rm -r Percona-XtraDB-Cluster.tar.gz
 mv Percona-XtraDB-Cluster* PXC
 cd PXC
@@ -72,20 +74,10 @@ if [ "$query_source" == "slowlog" ]; then
   done
 fi
 
-bin/mysql -A -uroot -Snode1/socket.sock -e "create user admin@localhost identified with mysql_native_password by 'admin';"
-bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to admin@localhost;"
-bin/mysql -A -uroot -Snode1/socket.sock -e "create user sysbench@'%' identified with  mysql_native_password by 'test';"
-bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to sysbench@'%';"
-bin/mysql -A -uroot -Snode1/socket.sock -e "drop database if exists sbtest;create database sbtest;"
-
+bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'admin'@'127.0.0.1' identified with mysql_native_password by 'admin';"
+bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "grant all on *.* to 'admin'@'127.0.0.1';"
 
 export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
 for j in `seq 1  ${number_of_nodes}`;do
-    pmm-admin add mysql --query-source=perfschema --username=sysbench --password=test --host=127.0.0.1 --port=$(cat node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=${pxc_dev_cluster} --replication-set=pxc-repl pxc_node__${j}_${SERVICE_RANDOM_NUMBER}
+	pmm-admin add mysql --query-source=${query_source} --username=admin --password=admin --host=127.0.0.1 --port=$(cat /home/pxc/PXC/node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=${pxc_dev_cluster} --replication-set=pxc-repl pxc_node__${j}_${SERVICE_RANDOM_NUMBER}
 done
-
-## Start Running Load
-sysbench /usr/share/sysbench/oltp_insert.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=/home/pxc/PXC/node1/socket.sock --mysql-password=test --db-driver=mysql --threads=1 --tables=10 --table-size=1000 prepare > sysbench_run_node1_prepare.txt 2>&1 &
-sleep 20
-sysbench /usr/share/sysbench/oltp_read_only.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=/home/pxc/PXC/node1/socket.sock --mysql-password=test --db-driver=mysql --threads=1 --tables=10 --table-size=1000 --time=12000 run > sysbench_run_node1_read_only.txt 2>&1 &
-sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-db=sbtest --mysql-user=sysbench --mysql-socket=/home/pxc/PXC/node1/socket.sock --mysql-password=test --db-driver=mysql --threads=1 --tables=10 --table-size=1000 --time=0 run > sysbench_run_node1_read_write.txt 2>&1 &
