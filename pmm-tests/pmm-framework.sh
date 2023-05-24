@@ -1518,6 +1518,8 @@ add_clients(){
       ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 haproxy_setup.yml
       popd
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
+      MS_PORT=43331
+      MS_PASSWORD=GRgrO9301RuF
       check_dbdeployer
       echo "Checking if Percona-xtrabackup required"
       if [[ ! -z $install_backup_toolkit ]]; then
@@ -1536,11 +1538,18 @@ add_clients(){
           dbdeployer deploy --topology=group replication $VERSION_ACCURATE --single-primary --sandbox-binary $WORKDIR/mysql --force
           node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
         else
-          dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
-          node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
+            docker pull mysql:${ms_version}
+            sudo chmod 777 -R /var/log
+            mkdir ms_socket_${MS_PORT}
+            sudo chmod 777 -R ms_socket_${MS_PORT}
+            ms_service_name=$(prepare_service_name ms_${ms_version}_${IP_ADDRESS}_$j)
+            docker run --name $ms_service_name -v /var/log:/var/log -v ${WORKDIR}/ms_socket_${MS_PORT}/:/var/lib/mysql/ -p $MS_PORT:3306 -e MYSQL_ROOT_PASSWORD=${MS_PASSWORD} -e UMASK=0777 -d mysql:${ms_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+            sleep 30
+          # dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
+          # node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+          # mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
+          # mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
+          # mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
         fi
         if [[ ! -z $setup_group_replication ]]; then
           for j in `seq 1  3`;do
@@ -1565,63 +1574,110 @@ add_clients(){
             sleep 20
           done
         else
-          #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
-          if [[ -z $use_socket ]]; then
-            if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
-            else
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
+          mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL userstat=1;"
+          mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
+          mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'GRgrO9301RuF';"
+            if [[ "$query_source" != "perfschema" ]]; then
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL slow_query_log='ON';"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL long_query_time=0;"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL log_slow_admin_statements=ON;"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL log_slow_slave_statements=ON;"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL query_response_time_stats=ON;"
+              mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ms_slowlog.log';"
             fi
-          else
-            if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
-            else
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
-            fi
-          fi
+              if [[ -z $use_socket ]]; then
+                  if [[ ! -z $metrics_mode ]]; then
+                  pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --metrics-mode=$metrics_mode --environment=ms --cluster=ms-cluster --replication-set=repl1 ms-single-$IP_ADDRESS --debug 127.0.0.1:$MS_PORT
+                  else
+                  pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --environment=ms --cluster=ms-cluster --replication-set=repl1 ms-single-$IP_ADDRESS --debug 127.0.0.1:$MS_PORT
+                  fi
+              else
+                  if [[ ! -z $metrics_mode ]]; then
+                  pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --metrics-mode=$metrics_mode --socket=${WORKDIR}/ms_socket_${MS_PORT}/mysql.sock --environment=ms --cluster=ms-cluster --replication-set=repl1 ms-single-$IP_ADDRESS --debug
+                  else
+                  pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --socket=${WORKDIR}/ms_socket_${MS_PORT}/mysql.sock --environment=ms --cluster=ms-cluster --replication-set=repl1 ms-single-$IP_ADDRESS --debug
+                  fi
+              fi
+          # #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
+          # if [[ -z $use_socket ]]; then
+          #   if [[ ! -z $metrics_mode ]]; then
+          #     pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
+          #   else
+          #     pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
+          #   fi
+          # else
+          #   if [[ ! -z $metrics_mode ]]; then
+          #     pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
+          #   else
+          #     pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
+          #   fi
+          # fi
         fi
       else
-        dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
-        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
+        docker pull mysql:${ms_version}
+        sudo chmod 777 -R /var/log
+        mkdir ms_socket_${MS_PORT}
+        sudo chmod 777 -R ms_socket_${MS_PORT}
+        ms_service_name=$(prepare_service_name ms_${ms_version}_${IP_ADDRESS}_$j)
+        docker run --name $ms_service_name -v /var/log:/var/log -v ${WORKDIR}/ms_socket_${MS_PORT}/:/var/lib/mysql/ -p $MS_PORT:3306 -e MYSQL_ROOT_PASSWORD=${MS_PASSWORD} -e UMASK=0777 -d mysql:${ms_version} --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+        sleep 30
+        # dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
+        # node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
         for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
+          mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL userstat=1;"
+          mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL innodb_monitor_enable=all;"
+          mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'GRgrO9301RuF';"
           #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
           if [[ "${query_source}" == "slowlog" ]]; then
-            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
-            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL slow_query_log='ON';"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL long_query_time=0;"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL log_slow_rate_limit=1;"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL log_slow_admin_statements=ON;"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL log_slow_slave_statements=ON;"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_AUDIT SONAME 'query_response_time.so';"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME SONAME 'query_response_time.so';"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_READ SONAME 'query_response_time.so';"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "INSTALL PLUGIN QUERY_RESPONSE_TIME_WRITE SONAME 'query_response_time.so';"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL query_response_time_stats=ON;"
+            mysql -h 127.0.0.1 -u root -p${MS_PASSWORD} --port $MS_PORT -e "SET GLOBAL slow_query_log_file='/var/log/ms_${j}_slowlog.log';"
           fi
           if [[ -z $use_socket ]]; then
             if [ $(( ${j} % 2 )) -eq 0 ]; then
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+                pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --metrics-mode=$metrics_mode --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$MS_PORT
               else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+                pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$MS_PORT
               fi
             else
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+                pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --metrics-mode=$metrics_mode --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$MS_PORT
               else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
+                pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$MS_PORT
               fi
             fi
           else
             if [ $(( ${j} % 2 )) -eq 0 ]; then
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
+                pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$MS_PORT.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
               else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
+                pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --socket=/tmp/mysql_sandbox$MS_PORT.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
               fi
             else
               if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
+                pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$MS_PORT.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
               else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
+                pmm-admin add mysql --query-source=$query_source --username=root --password=GRgrO9301RuF --socket=/tmp/mysql_sandbox$MS_PORT.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
               fi
             fi
           fi
           #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
-          node_port=$(($node_port + 1))
-          sleep 20
+          # node_port=$(($node_port + 1))
+          # sleep 20
         done
       fi
 
