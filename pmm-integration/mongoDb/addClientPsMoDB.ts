@@ -2,17 +2,17 @@ import { executeCommand } from '../helpers/commandLine';
 import SetupParameters from '../helpers/setupParameters.interface';
 import { dockerNetworkName, pmmIntegrationClientName, pmmIntegrationDataMongoVolume } from '../integration-setup';
 
-const addClientMoDB = async (parameters: SetupParameters, numberOfClients: number) => {
-  console.log(`Installing ${numberOfClients} MongoDB's with version ${parameters.moVersion}`);
-  const port = 27017;
+const addClientPsMoDB = async (parameters: SetupParameters, numberOfClients: number) => {
+  console.log(`Installing ${numberOfClients} Percona Server MongoDB's with version ${parameters.versions.psMoVersion}`);
+  const port = 37017;
   const password = 'GRgrO9301RuF';
   const timeStamp = Date.now();
 
-  await executeCommand(`sudo docker pull mongo:${parameters.moVersion}`);
+  await executeCommand(`sudo docker pull percona/percona-server-mongodb:${parameters.versions.psMoVersion}`);
 
   for (let index = 0; index < numberOfClients; index++) {
     const clientPort = port + index;
-    const containerName = `mo-integration-${timeStamp}-${index}`;
+    const containerName = `mo-ps-integration-${index}-${timeStamp}`;
     let volumeLocation;
     let serviceAddress;
     let prefix;
@@ -27,8 +27,8 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       prefix = `sudo sudo docker exec -u 0 ${pmmIntegrationClientName} `;
     }
 
-    await executeCommand(`${prefix} mkdir -p /tmp/mo-integration-${clientPort}/`);
-    await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-integration-${clientPort}`);
+    await executeCommand(`${prefix} mkdir -p /tmp/mo-ps-integration-${clientPort}/`);
+    await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-ps-integration-${clientPort}`);
 
     await executeCommand(
       `sudo sudo docker run -d -p ${clientPort}:27017 \
@@ -37,13 +37,13 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
       -e MONGO_INITDB_ROOT_USERNAME=mongoadmin \
       -e MONGO_INITDB_ROOT_PASSWORD=${password} \
       -e UMASK=0777 \
-      --name ${containerName} mongo:${parameters.moVersion} \
-      --unixSocketPrefix /tmp/mo-integration-${clientPort}
+      --name ${containerName} percona/percona-server-mongodb:${parameters.versions.psMoVersion} \
+      --unixSocketPrefix /tmp/mo-ps-integration-${clientPort}
       --profile 2`,
     );
     await executeCommand('sleep 20');
 
-    if (parameters.moVersion && parseFloat(parameters.moVersion) >= 5) {
+    if (parameters.versions.psMoVersion && parseFloat(parameters.versions.psMoVersion) >= 5) {
       await executeCommand(`sudo docker cp ./mongoDb/mongodb_user_setup.js ${containerName}:/`);
       await executeCommand(`sudo docker exec -u 0  ${containerName} mongosh -u mongoadmin -p ${password} mongodb_user_setup.js`);
     } else {
@@ -52,15 +52,15 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
     }
 
     if (parameters.useSocket) {
-      await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-integration-${clientPort}/mongodb-27017.sock`);
+      await executeCommand(`${prefix} chmod -R 0777 /tmp/mo-ps-integration-${clientPort}/mongodb-27017.sock`);
       if (parameters.metricsMode) {
         await executeCommand(`${prefix} pmm-admin add mongodb --cluster=${containerName} \
         --username=mongoadmin --password=${password} --metrics-mode=${parameters.metricsMode} \
-        --environment=modb-prod ${containerName} --socket=/tmp/mo-integration-${clientPort}/mongodb-27017.sock --debug`);
+        --environment=modb-prod ${containerName} --socket=/tmp/mo-ps-integration-${clientPort}/mongodb-27017.sock --debug`);
       } else {
         await executeCommand(`${prefix} pmm-admin add mongodb --cluster=${containerName} \
         --username=mongoadmin --password=${password} --environment=modb-prod ${containerName} \
-        --socket=/tmp/mo-integration-${clientPort}/mongodb-27017.sock --debug`);
+        --socket=/tmp/mo-ps-integration-${clientPort}/mongodb-27017.sock --debug`);
       }
     } else if (parameters.metricsMode) {
       await executeCommand(`${prefix} pmm-admin add mongodb --cluster=${containerName} \
@@ -75,4 +75,4 @@ const addClientMoDB = async (parameters: SetupParameters, numberOfClients: numbe
   }
 };
 
-export default addClientMoDB;
+export default addClientPsMoDB;

@@ -2872,6 +2872,10 @@ setup_pxc_client_container () {
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/
+  if [ -z "$ADMIN_PASSWORD" ]
+  then
+    export ADMIN_PASSWORD="admin"
+  fi
   if [ -z "$PXC_VERSION" ]
   then
     export PXC_VERSION=${pxc_version}
@@ -2894,6 +2898,10 @@ setup_pxc_client_container () {
   if [ -z "${PXC_CONTAINER}" ]
   then
     export PXC_CONTAINER=pxc_container_${PXC_VERSION}
+  fi
+  if [ -z "$QUERY_SOURCE" ]
+  then
+    export QUERY_SOURCE=${query_source}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
