@@ -990,13 +990,13 @@ setup_db_tar(){
 
   #This is only needed due to a bug in get_download_links.sh file, once that is fixed, we don't need to hardcode Download URL's
   if [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "8.0" ]]; then
-    LINK="https://www.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.20-11/binary/tarball/Percona-Server-8.0.20-11-Linux.x86_64.glibc2.12-minimal.tar.gz"
+    LINK="https://downloads.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.32-24/binary/tarball/Percona-Server-8.0.32-24-Linux.x86_64.glibc2.17-minimal.tar.gz"
     FILE=`echo $LINK | awk -F"/" '{print $9}'`
     if [ ! -f $FILE ]; then
       wget $LINK 2>/dev/null
     fi
-    VERSION_ACCURATE="8.0.20"
-    PORT_NUMBER="80201"
+    VERSION_ACCURATE="8.0.32"
+    PORT_NUMBER="80321"
     BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
   elif [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "5.7" ]]; then
     LINK="https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-5.7.31-34/binary/tarball/Percona-Server-5.7.31-34-Linux.x86_64.glibc2.12-minimal.tar.gz"
@@ -2427,7 +2427,7 @@ run_workload() {
 }
 
 setup_replication_ps_pmm2 () {
- if [ -z "$CLIENT_VERSION" ]
+  if [ -z "$CLIENT_VERSION" ]
   then
     export CLIENT_VERSION=dev-latest
   fi
@@ -2442,10 +2442,14 @@ setup_replication_ps_pmm2 () {
   else
     export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
-  
-  echo "Wiating for PMM Server to start"
+  if [ -z "$ADMIN_PASSWORD" ]
+  then
+     export ADMIN_PASSWORD="admin"
+  fi
+  echo "Waiting for PMM Server to start..."
   sleep 20
-  bash ./pmm2-client-setup.sh --pmm_server_ip $PMM_SERVER_IP --client_version $CLIENT_VERSION --admin_password "admin" --use_metrics_mode no
+
+  sudo bash ./pmm2-client-setup.sh --pmm_server_ip $PMM_SERVER_IP --client_version $CLIENT_VERSION --admin_password $ADMIN_PASSWORD --use_metrics_mode no
 
   check_dbdeployer
   setup_db_tar ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
