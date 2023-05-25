@@ -990,13 +990,13 @@ setup_db_tar(){
 
   #This is only needed due to a bug in get_download_links.sh file, once that is fixed, we don't need to hardcode Download URL's
   if [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "8.0" ]]; then
-    LINK="https://www.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.20-11/binary/tarball/Percona-Server-8.0.20-11-Linux.x86_64.glibc2.12-minimal.tar.gz"
+    LINK="https://downloads.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.32-24/binary/tarball/Percona-Server-8.0.32-24-Linux.x86_64.glibc2.17-minimal.tar.gz"
     FILE=`echo $LINK | awk -F"/" '{print $9}'`
     if [ ! -f $FILE ]; then
       wget $LINK 2>/dev/null
     fi
-    VERSION_ACCURATE="8.0.20"
-    PORT_NUMBER="80201"
+    VERSION_ACCURATE="8.0.32"
+    PORT_NUMBER="80321"
     BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
   elif [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "5.7" ]]; then
     LINK="https://www.percona.com/downloads/Percona-Server-5.7/Percona-Server-5.7.31-34/binary/tarball/Percona-Server-5.7.31-34-Linux.x86_64.glibc2.12-minimal.tar.gz"
@@ -2216,6 +2216,12 @@ cleanup_services() {
 }
 
 sysbench_prepare(){
+  port=$1
+  DB_NAME=$2
+  user=$3
+  if [[ "$user" -eq "msandbox" ]]; then
+    pass=$user
+  fi
   if [[ ! -e $(which mysql 2> /dev/null) ]] ;then
     MYSQL_CLIENT=$(find . -type f -name mysql | head -n1)
   else
@@ -2225,7 +2231,8 @@ sysbench_prepare(){
    echo "ERROR! 'mysql' is currently not installed. Please install mysql. Terminating."
    exit 1
   fi
-  #Initiate sysbench data load on all mysql client instances
+  #Initiate sysbench data load on mysql client instances
+  if [ -z "$port" ]; then
   for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
     DB_NAME=$(echo ${i}  | awk -F[\/\.] '{print $3}')
 	DB_NAME="${DB_NAME}_${storage_engine}"
@@ -2233,6 +2240,10 @@ sysbench_prepare(){
     sysbench /usr/share/sysbench/oltp_insert.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=root --mysql-storage-engine=$storage_engine  --threads=16 --db-driver=mysql --mysql-socket=${i} prepare  > $WORKDIR/logs/sysbench_prepare_${DB_NAME}.txt 2>&1
     check_script $? "Failed to run sysbench dataload"
   done
+  elif [[ ! -z "$user" && ! -z "$DB_NAME" ]]; then
+    sysbench /usr/share/sysbench/oltp_insert.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=${user} --mysql-password=${pass} --mysql-storage-engine=$storage_engine --threads=16 --db-driver=mysql --mysql-host=127.0.0.1 --mysql-port=${port} prepare  > $WORKDIR/logs/sysbench_prepare_${DB_NAME}.txt 2>&1
+    check_script $? "Failed to run sysbench dataload"
+  fi
 }
 
 load_instances() {
@@ -2286,13 +2297,24 @@ load_instances() {
 }
 
 sysbench_run(){
+  port=$1
+  DB_NAME=$2
+  user=$3
+  if [[ "$user" -eq "msandbox" ]]; then
+    pass=$user
+  fi
   #Initiate sysbench oltp run on all mysql client instances
+  if [[ -z $port ]]; then
   for i in $(sudo pmm-admin list | grep "mysql:metrics[ \t].*_NODE-" | awk -F[\(\)] '{print $2}'  | sort -r) ; do
     DB_NAME=$(echo ${i}  | awk -F[\/\.] '{print $3}')
 	   DB_NAME="${DB_NAME}_${storage_engine}"
     sysbench /usr/share/sysbench/oltp_read_write.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=root  --mysql-storage-engine=$storage_engine --threads=16 --time=3600 --events=1870000000 --db-driver=mysql --db-ps-mode=disable --mysql-socket=${i} run  > $WORKDIR/logs/sysbench_run_${DB_NAME}.txt 2>&1 &
     check_script $? "Failed to run sysbench oltp"
   done
+  elif [[ ! -z "$user" && ! -z "$DB_NAME" ]]; then
+    sysbench /usr/share/sysbench/oltp_read_write.lua --table-size=10000 --tables=16 --mysql-db=${DB_NAME} --mysql-user=${user} --mysql-password=${pass} --mysql-storage-engine=$storage_engine --threads=16 --time=3600 --events=1870000000 --db-driver=mysql --db-ps-mode=disable --mysql-host=127.0.0.1 --mysql-port=${port} run  > $WORKDIR/logs/sysbench_run_${DB_NAME}.txt 2>&1 &
+    check_script $? "Failed to run sysbench oltp"
+  fi
 }
 
 check_dbdeployer(){
@@ -2405,6 +2427,30 @@ run_workload() {
 }
 
 setup_replication_ps_pmm2 () {
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
+  else
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+  fi
+  if [ -z "$ADMIN_PASSWORD" ]
+  then
+     export ADMIN_PASSWORD="admin"
+  fi
+  echo "Waiting for PMM Server to start..."
+  sleep 20
+
+  sudo bash ./pmm2-client-setup.sh --pmm_server_ip $PMM_SERVER_IP --client_version $CLIENT_VERSION --admin_password $ADMIN_PASSWORD --use_metrics_mode no
+
   check_dbdeployer
   setup_db_tar ps "Percona-Server-${ps_version}*" "Percona Server binary tar ball" ${ps_version}
   if [ -d "$WORKDIR/ps" ]; then
@@ -2420,22 +2466,32 @@ setup_replication_ps_pmm2 () {
     dbdeployer deploy $replication_param replication $VERSION_ACCURATE  --sandbox-binary $WORKDIR/ps --force
     node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
   fi
+  writer_port=$node_port
+
   for j in `seq 1  3`;do
-    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
-    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
-    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
-    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
-    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_admin_statements=ON;"
-    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
-    #run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node-$j
+   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
+   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
+   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
+   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_admin_statements=ON;"
+   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_slave_statements=ON;"
     if [[ -z $use_socket ]]; then
-      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps_group_replication_node_$j --debug 127.0.0.1:$node_port
+      sudo pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ps-prod --cluster=ps-prod-cluster --replication-set=ps-repl ps_group_replication_node_$j --debug 127.0.0.1:$node_port
     else
-      pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_group_replication_node_$j --debug
+      sudo pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ps-dev --cluster=ps-dev-cluster --replication-set=ps-repl1 ps_group_replication_node_$j --debug
     fi
     node_port=$(($node_port + 1))
     sleep 20
   done
+  #run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node
+
+  ## Start Running Load
+  mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $writer_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
+  mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $writer_port -e "drop database if exists sbtest;create database sbtest;"
+  sleep 10
+
+  sysbench_prepare "$writer_port" "sbtest" "msandbox"
+  sleep 20
+  sysbench_run "$writer_port" "sbtest" "msandbox"
 }
 
 add_annotation_pmm2 () {
