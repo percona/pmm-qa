@@ -100,6 +100,7 @@ service postgresql stop
 echo "shared_preload_libraries = 'pg_stat_monitor'" >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 echo "track_activity_query_size=2048"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 echo "track_io_timing=ON"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
+echo "max_connections=1000"  >> /etc/postgresql/${pgsql_version}/main/postgresql.conf
 
 # Create init.sql file required by PMM
 echo "CREATE DATABASE sbtest1;" >> /home/postgres/init.sql
