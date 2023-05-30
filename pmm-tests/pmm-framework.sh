@@ -1518,116 +1518,7 @@ add_clients(){
       ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 haproxy_setup.yml
       popd
     elif [[ "${CLIENT_NAME}" == "ms" && ! -z $PMM2 ]]; then
-      check_dbdeployer
-      echo "Checking if Percona-xtrabackup required"
-      if [[ ! -z $install_backup_toolkit ]]; then
-        sudo chmod +x $SCRIPT_PWD/install_backup_toolkit.sh
-        bash $SCRIPT_PWD/install_backup_toolkit.sh ${ms_version}
-      fi
-      setup_db_tar mysql "mysql-${ms_version}*" "MySQL Server binary tar ball" ${ms_version}
-      if [ -d "$WORKDIR/mysql" ]; then
-        rm -Rf $WORKDIR/mysql;
-      fi
-      mkdir $WORKDIR/mysql
-      dbdeployer unpack mysql-${ms_version}* --sandbox-binary $WORKDIR/mysql --overwrite
-      rm -Rf mysql-${ms_version}*
-      if [[ "${ADDCLIENTS_COUNT}" == "1" ]]; then
-        if [[ ! -z $setup_group_replication ]]; then
-          dbdeployer deploy --topology=group replication $VERSION_ACCURATE --single-primary --sandbox-binary $WORKDIR/mysql --force
-          node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        else
-          dbdeployer deploy single $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --force
-          node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
-        fi
-        if [[ ! -z $setup_group_replication ]]; then
-          for j in `seq 1  3`;do
-            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
-            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
-            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
-            #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-group-replication-node-$j
-            if [[ -z $use_socket ]]; then
-              if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --metrics-mode=$metrics_mode --replication-set=ms-repl ms-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
-              else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl ms-group-replication-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
-              fi
-            else
-              if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-group-replication-node-$j-$IP_ADDRESS --debug
-              else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-group-replication-node-$j-$IP_ADDRESS --debug
-              fi
-            fi
-            node_port=$(($node_port + 1))
-            sleep 20
-          done
-        else
-          #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-single-$IP_ADDRESS
-          if [[ -z $use_socket ]]; then
-            if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
-            else
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS 127.0.0.1:$node_port
-            fi
-          else
-            if [[ ! -z $metrics_mode ]]; then
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
-            else
-              pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=dev --cluster=dev-cluster --replication-set=repl1 ms-single-$IP_ADDRESS
-            fi
-          fi
-        fi
-      else
-        dbdeployer deploy multiple $VERSION_ACCURATE --sandbox-binary $WORKDIR/mysql --nodes $ADDCLIENTS_COUNT --force
-        node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
-        for j in `seq 1  ${ADDCLIENTS_COUNT}`;do
-          mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
-          #node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | grep 'multiple' | awk -F'[' '{print $2}' | awk -v var="$j" -F' ' '{print $var}'`
-          if [[ "${query_source}" == "slowlog" ]]; then
-            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
-            mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
-          fi
-          if [[ -z $use_socket ]]; then
-            if [ $(( ${j} % 2 )) -eq 0 ]; then
-              if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
-              else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
-              fi
-            else
-              if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
-              else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug 127.0.0.1:$node_port
-              fi
-            fi
-          else
-            if [ $(( ${j} % 2 )) -eq 0 ]; then
-              if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
-              else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-prod --cluster=ms-prod-cluster --replication-set=ms-repl2 ms-multiple-node-$j-$IP_ADDRESS --debug
-              fi
-            else
-              if [[ ! -z $metrics_mode ]]; then
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --metrics-mode=$metrics_mode --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
-              else
-                pmm-admin add mysql --query-source=$query_source --username=msandbox --password=msandbox --socket=/tmp/mysql_sandbox$node_port.sock --environment=ms-dev --cluster=ms-dev-cluster --replication-set=ms-repl1 ms-multiple-node-$j-$IP_ADDRESS --debug
-              fi
-            fi
-          fi
-          #run_workload 127.0.0.1 msandbox msandbox $node_port mysql mysql-multiple-node-$j-$IP_ADDRESS
-          node_port=$(($node_port + 1))
-          sleep 20
-        done
-      fi
-
-      ### Need this to handle crash for mysql server on aws instance, workaround fix
-      export sandboxes_name=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
-      sh /srv/pmm-qa/pmm-tests/dbdeployer_setup_status_check.sh ${sandboxes_name} > ${sandboxes_name}.log 2>&1 &
+    setup_pmm_ms_integration
     elif [[ "${CLIENT_NAME}" == "ps" && ! -z $PMM2 ]]; then
       echo "Checking if Percona-xtrabackup required"
       if [[ ! -z $install_backup_toolkit ]]; then
@@ -3024,6 +2915,58 @@ setup_pmm_ps_integration () {
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ps_pmm_setup.yml
+  popd
+}
+
+setup_pmm_ms_integration () {
+  echo "Setting up PMM and MySQL Server Integration"
+
+  ## only doing it for jenkins workers, need ansible installed on the host
+  sudo yum install -y ansible || true
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  docker network create pmm-qa || true
+  docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
+  pushd $SCRIPT_PWD/
+  if [ -z "$MS_VERSION" ]
+  then
+    export MS_VERSION=${ps_version}
+  fi
+  if [ -z "$CLIENT_VERSION" ]
+  then
+    export CLIENT_VERSION=dev-latest
+  fi
+  if [ -z "$QUERY_SOURCE" ]
+  then
+    export QUERY_SOURCE=${query_source}
+  fi
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
+  then
+    if [ ! -z "${PMM2_SERVER_IP}" ]
+    then
+      export PMM_SERVER_IP=${PMM2_SERVER_IP}
+    else
+      export PMM_SERVER_IP=127.0.0.1
+    fi
+  else
+    export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
+  fi
+  if [ -z "${MS_CONTAINER}" ]
+  then
+    export MS_CONTAINER=ms_pmm_${MS_VERSION}
+  fi
+    if [ ! -z "${ADDCLIENTS_COUNT}" ]; then
+     export MS_NODES=${ADDCLIENTS_COUNT}
+  fi
+  if [[ ! -z $setup_group_replication ]]; then
+     export GROUP_REPLICATION=$setup_group_replication
+  fi
+  if [ -z "$ADMIN_PASSWORD" ]
+  then
+     export ADMIN_PASSWORD="admin"
+  fi
+
+  export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
+  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ms_pmm_setup.yml
   popd
 }
 
