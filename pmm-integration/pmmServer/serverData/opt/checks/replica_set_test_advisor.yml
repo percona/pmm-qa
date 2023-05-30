@@ -1,0 +1,149 @@
+---
+checks:
+  - version: 2
+    name: MongoDbQanEnabled
+    summary: Sample Clickhouse advisor that checks if QAN is on a MongoDB instance
+    advisor: dev
+    description: Sample Clickhouse advisor that checks if QAN is on a MongoDB instance
+    interval: standard
+    family: MONGODB
+    category: configuration
+    queries:
+      - type: CLICKHOUSE_SELECT
+        query: service_id, service_name, COUNT(*) as count FROM metrics WHERE service_id='{{.ServiceID}}' GROUP BY (service_id,service_name);
+
+    script: |
+      def check_context(docs, context):
+          results = []
+
+          if len(docs[0]) < 1:
+              results.append({
+                  "summary": "PMM QAN not enabled on MongoDB instance",
+                  "description": "PMM QAN is not enabled for this service",
+                  "read_more_url": "https://docs.percona.com/percona-monitoring-and-management/setting-up/client/mongodb.html#set-profiling-in-the-configuration-file",
+                  "severity": "warning",
+                  "labels": {},
+              }) 
+
+          return results
+  - version: 2
+    name: test_check
+    summary: Check that advisor hits proper service
+    description: Checks to see if the currently installed version is outdated for it's release level
+    advisor: dev
+    category: test
+    interval: standard
+    family: MONGODB
+    queries:
+      - type: MONGODB_GETDIAGNOSTICDATA
+    script: |
+      def check_context(docs, context):
+          info = docs[0]
+          results = []
+          for row in info:
+              host = row["data"]["serverStatus"]["host"]
+              results.append({
+                  "summary": "Query was executed on {}".format(host),
+                  "description": "Test check",
+                  "read_more_url": "",
+                  "severity": "notice",
+              })
+          return results
+  - version: 2
+    name: exampleV2
+    summary: Check format V2
+    description: Checks something important
+    interval: standard
+    advisor: dev
+    family: MYSQL
+    queries:
+      - type: MYSQL_SHOW
+        query: VARIABLES
+      - type: METRICS_INSTANT
+        query: mysql_global_status_uptime{service_name=~"{{.ServiceName}}"}
+      - type: METRICS_INSTANT
+        query: mysql_global_status_uptime{service_name=~"{{.ServiceName}}"}
+        parameters:
+          lookback: 1m
+      - type: METRICS_RANGE
+        query: avg by (node_name) (avg_over_time(node_load1{node_name=~"{{.NodeName}}"}[1m]))
+        parameters:
+          range: 11m
+          step: 1m
+      - type: METRICS_RANGE
+        query: avg by (node_name) (avg_over_time(node_load1{node_name=~"{{.NodeName}}"}[1m]))
+        parameters:
+          lookback: 1m
+          range: 1m
+          step: 1m
+    script: |
+      def check_context(docs, context):
+          # `docs` is a frozen (deeply immutable) list where each item represents single query results. The order of results
+          # matches the order of queries in the check file. Each query result is list of dicts where where each dict represents
+          # a single document in the result set.
+          #
+          # `context` is a dict with additional functions.
+          #
+          # Global `print` and `fail` functions are available.
+          #
+          # `check_context` function is expected to return a list of dicts that are then converted to alerts;
+          # in particular, that list can be empty.
+          # Any other value (for example, string) is treated as script execution failure
+          # (Starlark does not support Python exceptions);
+          # it is recommended to use global function `fail` for that instead.
+           results = []
+
+           for row in docs[0]:
+               name, value = row["Variable_name"], row["Value"]
+               if name == "version":
+                   results.append({
+                       "summary": "MySQL has version {}".format(value),
+                       "description": "Current version is {}".format(value),
+                       "read_more_url": "",
+                       "severity": "warning",
+                       "labels": {},
+                   })
+
+           uptimeNow = int(int(docs[1][0]["value"][1])/60)
+           results.append({
+               "summary": "MySQL uptime {} min".format(uptimeNow),
+               "description": "Current uptime is {} min".format(uptimeNow),
+               "read_more_url": "",
+               "severity": "warning",
+               "labels": {},
+           })
+
+           uptimeFiveMinAgo = int(int(docs[2][0]["value"][1])/60)
+           results.append({
+               "summary": "MySQL uptime 1 min ago was {} min".format(uptimeFiveMinAgo),
+               "description": "1 min ago uptime was {} min".format(uptimeFiveMinAgo),
+               "read_more_url": "",
+               "severity": "warning",
+               "labels": {},
+           })
+
+           dataPoints = []
+           for row in docs[3][0]["values"]:
+               dataPoints.append(row[1])
+
+           results.append({
+               "summary": "Node has load average for last 1 minute {}".format(dataPoints),
+               "description": "Data points {}".format(dataPoints),
+               "read_more_url": "",
+               "severity": "warning",
+               "labels": {},
+           })
+
+           dataPoints = []
+           for row in docs[4][0]["values"]:
+               dataPoints.append(row[1])
+
+           results.append({
+               "summary": "One minute ago the node had load average for 1 minute {}".format(dataPoints),
+               "description": "Data points {}".format(dataPoints),
+               "read_more_url": "",
+               "severity": "warning",
+               "labels": {},
+           })
+
+           return results

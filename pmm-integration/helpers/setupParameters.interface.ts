@@ -17,6 +17,7 @@ export default interface SetupParameters {
   pmmServerDockerTag?: string;
   setupTarballDocker?: boolean;
   versions: Versions;
+  serverFlags?: string;
 }
 
 export interface PMMVersions {
