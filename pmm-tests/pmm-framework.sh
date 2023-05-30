@@ -2922,6 +2922,8 @@ setup_pmm_ms_integration () {
   echo "Setting up PMM and MySQL Server Integration"
 
   ## only doing it for jenkins workers, need ansible installed on the host
+  sudo yum -y install epel-release
+  sudo yum -y update
   sudo yum install -y ansible || true
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
