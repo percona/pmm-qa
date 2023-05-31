@@ -27,8 +27,7 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
 
   await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
 
-  await executeCommand('sudo $PWD');
-  await executeCommand('sudo $(pwd)');
+  await executeCommand('$(pwd)');
 
   await executeCommand(
     `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
