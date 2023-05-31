@@ -25,11 +25,13 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
     pmmServerDockerTag = `perconalab/pmm-server:${parameters.pmmServerVersion}`;
   }
 
+  console.log(`Workspace location is ${process.env.WORKSPACE}`);
+
   await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
   await executeCommand(
     `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
     -e PMM_DEBUG=1 -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTkF7Snv08FCboTne4djQfN5qbrLfAjb8SY3/wwEP+X5nUrkxCEvUDJ \
-    -v $(pwd)/pmmServer/serverData/opt/checks/:/opt/checks/ \
+    -v ${process.env.WORKSPACE}/pmmServer/serverData/opt/checks/:/opt/checks/ \
     --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} ${pmmServerDockerTag}`,
   );
 
