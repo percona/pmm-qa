@@ -68,7 +68,7 @@ checks:
       - type: METRICS_RANGE
         query: avg by (node_name) (avg_over_time(node_load1{node_name=~"{{.NodeName}}"}[1m]))
         parameters:
-          range: 11m
+          range: 1m
           step: 1m
       - type: METRICS_RANGE
         query: avg by (node_name) (avg_over_time(node_load1{node_name=~"{{.NodeName}}"}[1m]))
