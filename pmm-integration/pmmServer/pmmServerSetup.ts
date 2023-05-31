@@ -25,8 +25,6 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
     pmmServerDockerTag = `perconalab/pmm-server:${parameters.pmmServerVersion}`;
   }
 
-  console.log(`Workspace location is ${process.env.WORKSPACE}`);
-
   await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
   await executeCommand(
     `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
@@ -46,6 +44,8 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
 
     await new Promise((r) => setTimeout(r, 1000));
   }
+
+  await executeCommand('docker inspect pmm-integration-server');
 };
 
 export default pmmServerSetup;
