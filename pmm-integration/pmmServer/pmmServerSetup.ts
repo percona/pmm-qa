@@ -11,6 +11,7 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
     portalVariables = '-e PERCONA_TEST_SAAS_HOST=check-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443';
   }
 
+  console.log(`Server Flags are: ${parameters.serverFlags}`);
   if (parameters.serverFlags) portalVariables += ` ${parameters.serverFlags}`;
 
   if (parameters.rbac) {
@@ -26,8 +27,6 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
   }
 
   await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
-
-  console.log(process.env.PWD);
 
   await executeCommand(
     `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
