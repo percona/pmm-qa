@@ -27,7 +27,7 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
 
   await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
 
-  console.log(`PMM Address is: ${process.env.PMM_BASE_URL}, and github location is ${process.env.WORKSPACE}`);
+  console.log(`PMM Address is: ${process.env}`);
 
   await executeCommand(
     `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
