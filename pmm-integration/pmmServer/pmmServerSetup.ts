@@ -11,6 +11,7 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
     portalVariables = '-e PERCONA_TEST_SAAS_HOST=check-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443';
   }
 
+  console.log(`Server Flags are: ${parameters.serverFlags}`);
   if (parameters.serverFlags) portalVariables += ` ${parameters.serverFlags}`;
 
   if (parameters.rbac) {
@@ -26,10 +27,11 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
   }
 
   await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
+
   await executeCommand(
     `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
     -e PMM_DEBUG=1 -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTkF7Snv08FCboTne4djQfN5qbrLfAjb8SY3/wwEP+X5nUrkxCEvUDJ \
-    -v $(pwd)/pmmServer/serverData/opt/checks/:/opt/checks/ \
+    -v ${process.env.PWD}/pmmServer/serverData/opt/checks/:/opt/checks/ \
     --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} ${pmmServerDockerTag}`,
   );
 
@@ -44,6 +46,8 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
 
     await new Promise((r) => setTimeout(r, 1000));
   }
+
+  await executeCommand('docker inspect pmm-integration-server');
 };
 
 export default pmmServerSetup;
