@@ -27,7 +27,7 @@ fi
 
 if [ -z "$query_source" ]
 then
-      export query_source=slowlog
+      export query_source=perfschema
 fi
 
 touch sysbench_prepare.txt

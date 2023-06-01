@@ -2929,7 +2929,7 @@ setup_pmm_ms_integration () {
   pushd $SCRIPT_PWD/
   if [ -z "$MS_VERSION" ]
   then
-    export MS_VERSION=${ps_version}
+    export MS_VERSION=${ms_version}
   fi
   if [ -z "$CLIENT_VERSION" ]
   then
