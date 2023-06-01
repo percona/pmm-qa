@@ -1,0 +1,67 @@
+---
+# This playbook does following:
+#   enables Percona testing repository
+
+- hosts: all
+  become: true
+  become_method: sudo
+  vars:
+    ms_version: "{{ lookup('vars', 'extra_ms_version', default=lookup('env','MS_VERSION') | default('8.0', true) ) }}"
+    ms_tarball: "{{ lookup('vars', 'extra_ms_tarball', default=lookup('env','MS_TARBALL') | default('', true) ) }}"
+    ms_container: "{{ lookup('vars', 'extra_ms_container', default=lookup('env','MS_CONTAINER') | default('ms_container', true) ) }}"
+    query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('slowlog', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
+    number_of_nodes: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','MS_NODES') | default('1', true) ) }}"
+    group_replication: "{{ lookup('vars', 'extra_group_replication', default=lookup('env','GROUP_REPLICATION')) }}"
+
+  tasks:
+  - name: cleanup container for client and DB setup
+    shell: >
+      docker ps -a --filter "name={{ ms_container }}" | grep -q . && docker stop {{ ms_container }} && docker rm -fv {{ ms_container }}
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Create pmm-qa network if not exist
+    shell: docker network create pmm-qa
+    ignore_errors: true
+
+  - name: Prepare Container for MySQL
+    shell: >
+      docker run -d --name={{ ms_container }}
+      phusion/baseimage:focal-1.2.0
+  
+  - name: Copy all required Artifacts to the docker ms_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ ms_container }} mkdir -p artifacts
+      - docker cp ./client_container_ms_setup.sh {{ ms_container }}:/
+
+  - name: Get Product tarball URL based on the version
+    shell: cat product_version_download_helper | grep -v pxc | grep mysql | grep "\-{{ ms_version }}" | head -1 | awk -F'# ' '{print $3}'
+    register: ms_tarball
+    when: lookup('env', 'MS_TARBALL') == ''
+
+  - name: Setup libraries required inside the container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ ms_container }} apt-get update
+      - docker exec {{ ms_container }} apt-get -y install wget curl git gnupg2 lsb-release
+      - docker exec {{ ms_container }} apt-get -y install libaio1 libaio-dev libnuma-dev socat libtirpc-dev
+      - docker exec {{ ms_container }} apt install -y sysbench
+
+  - name: Install pmm2-client on the ms_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ ms_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
+      - docker network connect pmm-qa {{ ms_container }}
+      - docker exec {{ ms_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+
+  - name: Execute Setup script inside the MySQL ms_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ ms_container }} bash -xe ./client_container_ms_setup.sh --ms_version {{ ms_version }} --ms_tarball {{ ms_tarball.stdout }} --number_of_nodes {{ number_of_nodes }} --query_source {{ query_source }} --group_replication {{ group_replication }} > setup_ms_{{ ms_version }}.log
+

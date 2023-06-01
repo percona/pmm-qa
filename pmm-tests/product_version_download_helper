@@ -20,3 +20,5 @@ ps # 8.0.29 # https://downloads.percona.com/downloads/Percona-Server-LATEST/Perc
 ps # 8.0.28 # https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-8.0.28-20/binary/tarball/Percona-Server-8.0.28-20-Linux.x86_64.glibc2.17-minimal.tar.gz
 
 ps # 5.7.39 # https://downloads.percona.com/downloads/Percona-Server-5.7/Percona-Server-5.7.39-42/binary/tarball/Percona-Server-5.7.39-42-Linux.x86_64.glibc2.17-minimal.tar.gz
+
+ms # 8.0.33 # https://dev.mysql.com/get/Downloads/MySQL-8/mysql-8.0.33-linux-glibc2.28-x86_64.tar.gz
