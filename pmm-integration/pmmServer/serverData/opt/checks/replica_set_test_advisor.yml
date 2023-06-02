@@ -78,7 +78,7 @@ checks:
           step: 1m
     script: |
       def check_context(docs, context):
-          fail(docs)
+           fail(docs)
           # `docs` is a frozen (deeply immutable) list where each item represents single query results. The order of results
           # matches the order of queries in the check file. Each query result is list of dicts where where each dict represents
           # a single document in the result set.
