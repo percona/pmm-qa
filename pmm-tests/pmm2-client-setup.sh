@@ -64,8 +64,8 @@ fi
 
 ## only supported for debian based systems for now
 if [[ "$client_version" == 2* && $(dpkg --list vim) ]]; then
-    percona-release enable-only original release
-    apt-get -y install pmm2-client-${client_version}-6.el8
+    curl -O https://raw.githubusercontent.com/Percona-QA/package-testing/master/scripts/pmm2_client_install_tarball.sh
+    bash -x pmm2_client_install_tarball.sh -v ${client_version}
 fi
 
 if [[ "$client_version" == http* ]]; then
