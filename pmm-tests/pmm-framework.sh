@@ -1469,6 +1469,7 @@ add_clients(){
         -c pg_stat_monitor.pgsm_max=100 -c track_activity_query_size=2048 -c pg_stat_statements.max=10000 \
         -c pg_stat_monitor.pgsm_normalized_query=0 -c pg_stat_monitor.pgsm_query_max_len=10000 \
         -c pg_stat_monitor.pgsm_enable_query_plan=1 \
+        -c pg_stat_monitor.pgsm_extract_comments=yes \   
         -c pg_stat_statements.track=all -c pg_stat_statements.save=off -c track_io_timing=on
         sleep 20
         docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
