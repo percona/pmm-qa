@@ -82,7 +82,6 @@ const run = async () => {
         parameters.versions.pxcVersion = parseFloat(value.split('=')[1]);
         break;
       case value.includes('--pmm-server-flags'):
-        console.log(`Server Flags value is: ${value.split(/=(.*)/s)[1]}`);
         parameters.serverFlags = value.split(/=(.*)/s)[1];
         break;
       default:
