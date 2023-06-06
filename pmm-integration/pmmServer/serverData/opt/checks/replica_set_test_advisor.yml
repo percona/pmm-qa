@@ -78,7 +78,6 @@ checks:
           step: 1m
     script: |
       def check_context(docs, context):
-           fail(docs)
           # `docs` is a frozen (deeply immutable) list where each item represents single query results. The order of results
           # matches the order of queries in the check file. Each query result is list of dicts where where each dict represents
           # a single document in the result set.
@@ -118,30 +117,6 @@ checks:
            results.append({
                "summary": "MySQL uptime 1 min ago was {} min".format(uptimeFiveMinAgo),
                "description": "1 min ago uptime was {} min".format(uptimeFiveMinAgo),
-               "read_more_url": "",
-               "severity": "warning",
-               "labels": {},
-           })
-
-           dataPoints = []
-           for row in docs[3][0]["values"]:
-               dataPoints.append(row[1])
-
-           results.append({
-               "summary": "Node has load average for last 1 minute {}".format(dataPoints),
-               "description": "Data points {}".format(dataPoints),
-               "read_more_url": "",
-               "severity": "warning",
-               "labels": {},
-           })
-
-           dataPoints = []
-           for row in docs[4][0]["values"]:
-               dataPoints.append(row[1])
-
-           results.append({
-               "summary": "One minute ago the node had load average for 1 minute {}".format(dataPoints),
-               "description": "Data points {}".format(dataPoints),
                "read_more_url": "",
                "severity": "warning",
                "labels": {},
