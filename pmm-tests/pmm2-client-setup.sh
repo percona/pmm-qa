@@ -64,10 +64,8 @@ fi
 
 ## only supported for debian based systems for now
 if [[ "$client_version" == 2* && $(dpkg --list vim) ]]; then
-    export distro=$(cat /etc/*-release | grep DISTRIB_CODENAME | awk -F'=' '{print $2}')
-    wget -O pmm2-client.deb https://repo.percona.com/pmm2-client/apt/pool/main/p/pmm2-client/pmm2-client_${client_version}-6.${distro}_amd64.deb
-    dpkg -i pmm2-client.deb
-    percona-release enable-only original experimental
+    curl -O https://raw.githubusercontent.com/Percona-QA/package-testing/master/scripts/pmm2_client_install_tarball.sh
+    bash -x pmm2_client_install_tarball.sh -v ${client_version}
 fi
 
 if [[ "$client_version" == http* ]]; then
