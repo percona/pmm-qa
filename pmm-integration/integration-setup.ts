@@ -81,6 +81,9 @@ const run = async () => {
       case value.includes('--pxc-version'):
         parameters.versions.pxcVersion = parseFloat(value.split('=')[1]);
         break;
+      case value.includes('--pmm-server-flags'):
+        parameters.serverFlags = value.split(/=(.*)/s)[1];
+        break;
       default:
         break;
     }

@@ -114,16 +114,7 @@ export const availableSetups: SetupsInterface[] = [
   {
     arg: '--mongo-replica-for-backup',
     description: 'Use this option to setup MongoDB Replica Set and PBM for each replica member on client node',
-    function: async (parameters: SetupParameters) => {
-      if (parameters.ci) {
-        await installDockerCompose();
-      }
-
-      await executeCommand('chmod +x ./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
-      await executeCommand('./mongoDb/mongo_replica_for_backup/setup_mongo_replica_for_backup.sh');
-      await MongoReplicaForBackup(parameters);
-      core.exportVariable('INTEGRATION_FLAG', '@fb');
-    },
+    function: async (parameters: SetupParameters) => MongoReplicaForBackup(parameters),
   },
   {
     arg: '--setup-docker-pmm-server',
@@ -159,6 +150,7 @@ export const availableConstMap = new Map<string, string>([
   ['--pmm-server-docker-tag', 'Use this tag to select different docker tag, useful for RC and Release testing.'],
   ['--setup-tarball-docker', 'Use this flag in local setup when you do not want to use pmm client container.'],
   ['--upgrade-pmm-client-version', 'Use this tag to upgrade locally installed pmm client version.'],
+  ['--pmm-server-flags', 'Use this flag to pass docker flags to the pmm server container.'],
 ]);
 
 export const availableSetupMap = new Map(availableSetups.map((object) => [object.arg, object.description]));
