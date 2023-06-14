@@ -1,6 +1,11 @@
 import { executeCommand } from '../helpers/commandLine';
 import SetupParameters from '../helpers/setupParameters.interface';
-import { dockerNetworkName, pmmIntegrationServerName } from '../integration-setup';
+import {
+  dockerNetworkName,
+  pmmIntegrationDataName,
+  pmmIntegrationServerName,
+  pmmServerVolume
+} from '../integration-setup';
 
 const pmmServerSetup = async (parameters: SetupParameters) => {
   let portalVariables;
@@ -24,10 +29,11 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
   }
 
   await executeCommand(`sudo docker pull ${pmmServerDockerTag}`);
+  await executeCommand(`sudo docker create --volume /srv --name ${pmmServerVolume} ${pmmServerDockerTag} /bin/true`);
   await executeCommand(
     `sudo docker run -d --restart always ${portalVariables} --network="${dockerNetworkName}" \
     -e PMM_DEBUG=1 -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTkF7Snv08FCboTne4djQfN5qbrLfAjb8SY3/wwEP+X5nUrkxCEvUDJ \
-    --publish 80:80 --publish 443:443 --name ${pmmIntegrationServerName} ${pmmServerDockerTag}`,
+    --publish 80:80 --publish 443:443 --volumes-from ${pmmServerVolume} --name ${pmmIntegrationServerName} ${pmmServerDockerTag}`,
   );
 
   for (let i = 0; i <= 100; i++) {
