@@ -16,19 +16,7 @@ function pmm_framework_add_clients() {
   else
     ${DIRNAME}/../pmm-framework.sh --addclient=$1,$2 --${1}-version=$3 --pmm2 --dbdeployer --download --pmm2-server-ip=$4
   fi
-
-
-
-  runTAP(       "pxc",        "pxc",           "1",            "5.7")
-#              runTAP("modb", "modb",          "3",            "4.0")
-  runTAP(String TYPE, String PRODUCT, String COUNT, String VERSION) {
-                  export instance_t="${TYPE}"
-                  export instance_c="${COUNT}"
-                  export version="${VERSION}"
-  pmm_framework_add_clients $instance_t $instance_c $version $pmm_server_ip
-pmm-framework.sh --addclient=modb,3 --with-proxysql --modb-version=4.0 --pmm2 --download --pmm2-server-ip=127.0.0.1
 }
-pmm-framework.sh --addclient=modb,3 --with-proxysql --modb-version=4.0 --pmm2 --download --pmm2-server-ip=127.0.0.1
 
 function pmm_client_docker_test () {
   ${DIRNAME}/../pmm-framework.sh --setup-pmm-client-docker
