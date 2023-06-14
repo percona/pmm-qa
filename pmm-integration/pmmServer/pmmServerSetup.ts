@@ -1,6 +1,6 @@
 import { executeCommand } from '../helpers/commandLine';
 import SetupParameters from '../helpers/setupParameters.interface';
-import { dockerNetworkName, pmmIntegrationServerName,pmmServerVolume } from '../integration-setup';
+import { dockerNetworkName, pmmIntegrationServerName, pmmServerVolume } from '../integration-setup';
 
 const pmmServerSetup = async (parameters: SetupParameters) => {
   let portalVariables;
