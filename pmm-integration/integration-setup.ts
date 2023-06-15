@@ -10,6 +10,7 @@ import pmm2ClientLocalUpgrade from './pmmClient/pmm2LocalClientUpgrade';
 export const dockerNetworkName = 'pmm-integration-network';
 export const pmmIntegrationClientName = 'pmm-integration-client';
 export const pmmIntegrationServerName = 'pmm-integration-server';
+export const pmmServerVolume = 'pmm-integration-server-data';
 export const pmmIntegrationDataName = 'pmm-integration-data';
 export const pmmIntegrationDataMongoVolume = 'pmm-integration-mongo-data';
 
