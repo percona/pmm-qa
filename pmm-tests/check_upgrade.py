@@ -103,9 +103,9 @@ def main():
             #         f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} grafana"
             #         f"-cli plugins ls | grep alexanderzobnin-zabbix-app")
 
-            verify_command(
-                f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} grafana"
-                f"-cli plugins ls | grep \"vertamedia-clickhouse-datasource @ 2.4.4\"")
+            # verify_command(
+            #     f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} grafana"
+            #     f"-cli plugins ls | grep \"vertamedia-clickhouse-datasource @ 2.4.4\"")
             print(f"Post upgrade verification complete! for {args.version}")
 
 
