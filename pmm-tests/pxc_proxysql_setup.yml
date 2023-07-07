@@ -42,8 +42,12 @@
 
   - name: Get Product tarball URL based on the version
     shell: cat product_version_download_helper | grep pxc | grep "\-{{ pxc_version }}" | head -1 | awk -F'# ' '{print $3}'
-    register: pxc_tarball
+    register: tarball
     when: lookup('env', 'PXC_TARBALL') == ''
+
+  - name: Set Product URL if environment or paramater are not defined
+    set_fact:
+      pxc_tarball: "{{tarball.stdout | default(pxc_tarball,true)}}"
 
   - name: Execute User & Proxysql Setup inside the PXC pxc_container
     shell: "{{ item }}"
@@ -52,8 +56,8 @@
       - docker exec {{ pxc_container }} apt-get -y install wget curl git gnupg2 lsb-release debconf-utils
       - docker exec {{ pxc_container }} apt-get -y install libaio1 libaio-dev libnuma-dev socat
       - docker exec {{ pxc_container }} adduser --disabled-password --gecos "" pxc
-      - docker exec {{ pxc_container }} wget https://repo.percona.com/proxysql/apt/pool/main/p/proxysql2/proxysql2_2.4.8-1.1.focal_amd64.deb
-      - docker exec {{ pxc_container }} dpkg -i proxysql2_2.4.8-1.1.focal_amd64.deb
+      - docker exec {{ pxc_container }} wget https://downloads.percona.com/downloads/proxysql2/proxysql2-2.5.3/binary/debian/focal/x86_64/proxysql2_2.5.3-1.1.focal_amd64.deb
+      - docker exec {{ pxc_container }} dpkg -i proxysql2_2.5.3-1.1.focal_amd64.deb
       - docker exec {{ pxc_container }} apt install -y sysbench
 
   - name: Install pmm2-client on the pxc_container
@@ -75,9 +79,9 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pxc_container }} chmod 1777 /tmp
-      - docker exec --user pxc {{ pxc_container }} bash -xe ./client_container_pxc_setup.sh --pxc_version {{ pxc_version }} --pxc_tarball {{ pxc_tarball.stdout }} --number_of_nodes {{ number_of_nodes }} --pxc_dev_cluster {{ pxc_dev_cluster }} --query_source {{query_source}} > setup_pxc_{{ pxc_version }}.log
+      - docker exec --user pxc {{ pxc_container }} bash -xe ./client_container_pxc_setup.sh --pxc_version {{ pxc_version }} --pxc_tarball {{ pxc_tarball }} --number_of_nodes {{ number_of_nodes }} --pxc_dev_cluster {{ pxc_dev_cluster }} --query_source {{query_source}} > setup_pxc_{{ pxc_version }}.log
 
-  - name: Start ProxySQL inside the PXC 1 extra_pxc_container
+  - name: Start ProxySQL inside the PXC extra_pxc_container
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pxc_container }} bash -c 'sed -i s#3306#'"\$(grep 'port' /home/pxc/PXC/node1.cnf | cut -d= -f2)"'# /etc/proxysql.cnf'

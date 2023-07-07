@@ -118,12 +118,14 @@ usage () {
   echo " --setup-pgsql-vacuum           Use this do setup postgres for vacuum monitoring tests "
   echo " --setup-pmm-ps-integration     Use this do setup for percona-server and PMM using dbdeployer "
   echo " --setup-checks-basic           Use this to generate some basic checks failure for ps/pgsql/mongodb"
+  echo " --ms-tarball           	Use this to pass location to MS tar ball used for installation"
+  echo " --pxc-tarball           	Use this to pass location to PXC tar ball used for installation"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,setup-checks-basic,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,pgsql-pgss-port:,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,setup-checks-basic,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,pgsql-pgss-port,ms-tarball,pxc-tarball:,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -495,6 +497,14 @@ do
     pgsql_pgss_port="$2"
     shift 2
      ;;
+     --ms-tarball )
+    ms_tarball="$2"
+    shift 1
+    ;;
+     --pxc-tarball )
+    pxc_tarball="$2"
+    shift 1
+    ;;
     --pmm-server-username )
     pmm_server_username="$2"
     shift 2
@@ -2798,6 +2808,10 @@ setup_pxc_client_container () {
   then
     export QUERY_SOURCE=${query_source}
   fi
+  if [ -z "$PXC_TARBALL" ]
+  then
+    export PXC_TARBALL=$pxc_tarball
+  fi 
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
   popd
@@ -2964,7 +2978,10 @@ setup_pmm_ms_integration () {
   then
      export ADMIN_PASSWORD="admin"
   fi
-
+  if [ -z "$MS_TARBALL" ]
+  then
+    export MS_TARBALL=$ms_tarball
+  fi 
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ms_pmm_setup.yml
   popd
