@@ -2790,16 +2790,18 @@ setup_pxc_client_container () {
   else
     export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
   fi
-  if [ -z "${PXC_CONTAINER}" ]
-  then
-    export PXC_CONTAINER=pxc_container_${PXC_VERSION}
-  fi
   if [ -z "$QUERY_SOURCE" ]
   then
     export QUERY_SOURCE=${query_source}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
-  ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
+  if [ -z "${PXC_CONTAINER}" ]
+  then
+   for i in `seq 1  ${ADDCLIENTS_COUNT}`;do
+     export PXC_CONTAINER=pxc_container${i}_${PXC_VERSION}
+     ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pxc_proxysql_setup.yml
+   done
+  fi
   popd
 }
 

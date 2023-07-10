@@ -86,7 +86,7 @@
       - docker exec {{ pxc_container }} bash -c 'sed -i s#3306#'"\$(grep 'port' /home/pxc/PXC/node1.cnf | cut -d= -f2)"'# /etc/proxysql-admin.cnf'
       - docker exec {{ pxc_container }} proxysql-admin --config-file=/etc/proxysql-admin.cnf --enable
       - docker exec {{ pxc_container }} sleep 20
-      - docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql --host=127.0.0.1 --port=6032
+      - docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_{{ pxc_container }} --host=127.0.0.1 --port=6032
 
   - name: Execute Service, Sysbench Script inside the PXC pxc_container
     shell: "{{ item }}"
