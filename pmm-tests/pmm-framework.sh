@@ -2704,6 +2704,9 @@ setup_pmm_pgsm_integration () {
   then
     export PGSQL_PGSM_CONTAINER=pgsql_pgsm_${PGSQL_VERSION}
   fi
+  if [[ ! -z $use_socket ]]; then
+    export USE_SOCKET=$use_socket
+  fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 pgsql_pgsm_setup.yml
   popd

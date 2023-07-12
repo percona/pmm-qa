@@ -14,6 +14,7 @@
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
     pgstat_monitor_branch: "{{ lookup('vars', 'extra_pgstat_monitor_branch', default=lookup('env','PGSTAT_MONITOR_BRANCH') | default('1.1.1', true) ) }}"
     pgstat_monitor_repo: "{{ lookup('vars', 'extra_pgstat_monitor_repo', default=lookup('env','PGSTAT_MONITOR_REPO') | default('percona/pg_stat_monitor', true) ) }}"
+    use_socket: "{{ lookup('vars', 'extra_pgsql_version', default=lookup('env','USE_SOCKET') | default('', true) ) }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -63,6 +64,14 @@
     with_items:
       - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
       - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor {{ pgsql_pgsm_container }}_service'
+    when: use_socket == ''
+
+  - name: Add pgsql_pgsm for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
+      - docker exec {{ pgsql_pgsm_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor --socket=/var/run/postgresql {{ pgsql_pgsm_container }}_service'
+    when: use_socket != ''
 
   - name: cleanup pgadmin container if already running
     shell: >
