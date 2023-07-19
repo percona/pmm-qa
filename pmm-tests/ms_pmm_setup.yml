@@ -53,7 +53,7 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ ms_container }} apt-get update
-      - docker exec {{ ms_container }} apt-get -y install wget curl git gnupg2 lsb-release
+      - docker exec {{ ms_container }} apt-get -y install wget curl git gnupg2 lsb-release libncurses5
       - docker exec {{ ms_container }} apt-get -y install libaio1 libaio-dev libnuma-dev socat libtirpc-dev
       - docker exec {{ ms_container }} apt install -y sysbench
 
