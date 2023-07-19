@@ -499,11 +499,11 @@ do
      ;;
      --ms-tarball )
     ms_tarball="$2"
-    shift 1
+    shift 2
     ;;
      --pxc-tarball )
     pxc_tarball="$2"
-    shift 1
+    shift 2
     ;;
     --pmm-server-username )
     pmm_server_username="$2"
