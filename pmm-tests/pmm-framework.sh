@@ -2839,6 +2839,8 @@ setup_pmm_psmdb_integration () {
     export PSMDB_SETUP=sharded
   elif echo "$with_replica" | grep '1'; then
     export PSMDB_SETUP=replica
+  elif echo "$with_arbiter" | grep '1'; then
+    export PSMDB_SETUP=arbiter
   else
     export PSMDB_SETUP=regular
   fi
