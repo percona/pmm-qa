@@ -2489,7 +2489,9 @@ setup_grafana_plugin () {
   echo "Installing alexanderzobnin-zabbix-app Plugin for Grafana"
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   export pmm_minor_v=$(get_minor_version ${PMM_SERVER_DOCKER_CONTAINER})
-  if [ "${pmm_minor_v}" -gt "22" ]; then
+  if [[ $pmm_minor_v -ge 39 ]]; then
+    docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana cli plugins install alexanderzobnin-zabbix-app
+  elif [[ $pmm_minor_v -lt 39 && $pmm_minor_v -gt 22  ]]; then
     docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app
   else
    docker exec $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app
@@ -2500,7 +2502,13 @@ setup_custom_ami_instance() {
   echo "Setting up AMI instance with Custom Configuration"
   sudo cp /srv/pmm-qa/pmm-tests/prometheus.base.yml /srv/prometheus/prometheus.base.yml
   sudo supervisorctl restart pmm-managed
-  sudo grafana-cli plugins install alexanderzobnin-zabbix-app
+  export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
+  export pmm_minor_v=$(get_minor_version ${PMM_SERVER_DOCKER_CONTAINER})
+  if [[ $pmm_minor_v -ge 39 ]]; then
+    sudo grafana cli plugins install alexanderzobnin-zabbix-app
+  else
+   sudo grafana-cli plugins install alexanderzobnin-zabbix-app
+  fi
 }
 
 ## Method is called with Client Docker Setup to run on the PXC stage for testsuite, tests are part of docker bats tests
@@ -2810,7 +2818,7 @@ setup_pxc_client_container () {
   if [ -z "$PXC_TARBALL" ]
   then
     export PXC_TARBALL=$pxc_tarball
-  fi 
+  fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   if [ -z "${PXC_CONTAINER}" ]
   then
@@ -2986,7 +2994,7 @@ setup_pmm_ms_integration () {
   if [ -z "$MS_TARBALL" ]
   then
     export MS_TARBALL=$ms_tarball
-  fi 
+  fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ms_pmm_setup.yml
   popd
