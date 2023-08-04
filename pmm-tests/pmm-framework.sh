@@ -3033,7 +3033,7 @@ setup_mongo_replica_for_backup() {
   fi
   mkdir /tmp/backup_data && chmod 777 /tmp/backup_data
   pushd qa-integration/pmm_psmdb-pbm_setup
-  COMPOSE_PROFILES=extra ./start-rs-only.sh
+  PSMDB_VERSION=4.4.18-18 COMPOSE_PROFILES=extra ./start-rs-only.sh
   popd
   popd
 }
