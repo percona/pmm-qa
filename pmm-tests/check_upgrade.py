@@ -96,16 +96,23 @@ def main():
 
             docker_version = os.getenv("DOCKER_VERSION")
             do_docker_way = os.getenv("PERFORM_DOCKER_WAY_UPGRADE")
-            pmm_minor_v = docker_version.split('.')[1]
+            pmm_minor_v = int(docker_version.split('.')[1])
+            grafana_cli = "grafana cli" if pmm_minor_v >= 39 else "grafana-cli"
 
-            # if (do_docker_way == "yes" and int(pmm_minor_v) > 22) or (do_docker_way != "yes"):
+            ### PMM-T1758 - Verify vertamedia-clickhouse-datasource plugin is not installed after upgrade to 2.38.0
+            if pmm_minor_v >= 38:
+                verify_command(
+                    f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ "
+                    f"{pmm_server_docker_container} {grafana_cli} plugins ls | grep vertamedia && exit 1")
+
+            # if (do_docker_way == "yes" and pmm_minor_v > 22) or (do_docker_way != "yes"):
             #     verify_command(
-            #         f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} grafana"
-            #         f" cli plugins ls | grep alexanderzobnin-zabbix-app")
+            #         f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} "
+            #         f"{grafana_cli} plugins ls | grep alexanderzobnin-zabbix-app")
 
             # verify_command(
-            #     f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} grafana"
-            #     f" cli plugins ls | grep \"vertamedia-clickhouse-datasource @ 2.4.4\"")
+            #     f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ {pmm_server_docker_container} "
+            #     f"{grafana_cli} plugins ls | grep \"vertamedia-clickhouse-datasource @ 2.4.4\"")
             print(f"Post upgrade verification complete! for {args.version}")
 
 
