@@ -96,14 +96,14 @@ def main():
 
             docker_version = os.getenv("DOCKER_VERSION")
             do_docker_way = os.getenv("PERFORM_DOCKER_WAY_UPGRADE")
-            pmm_minor_v = int(docker_version.split('.')[1])
+            pmm_minor_v = int(args.version.split('.')[1])
             grafana_cli = "grafana cli" if pmm_minor_v >= 39 else "grafana-cli"
 
             ### PMM-T1758 - Verify vertamedia-clickhouse-datasource plugin is not installed after upgrade to 2.38.0
             if pmm_minor_v >= 38:
                 verify_command(
                     f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ "
-                    f"{pmm_server_docker_container} {grafana_cli} plugins ls | grep vertamedia && exit 1")
+                    f"{pmm_server_docker_container} {grafana_cli} plugins ls | exit $(grep -c vertamedia)")
 
             # if (do_docker_way == "yes" and pmm_minor_v > 22) or (do_docker_way != "yes"):
             #     verify_command(
