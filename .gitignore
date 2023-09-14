@@ -15,3 +15,4 @@ pmm-tests/setup_pgsql_pgsm_*.log
 pmm-tests/vendor/*
 
 ps_socket*
+.DS_Store
