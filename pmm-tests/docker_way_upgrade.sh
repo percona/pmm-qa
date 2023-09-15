@@ -14,9 +14,9 @@ wait-for-url() {
     done' ${1}
     echo "OK!"
     if curl -I $1; then
-        echo "Command succeeded"
+        echo "PMM is ready"
     else
-        echo "Command failed"
+        echo "PMM is not ready"
     fi
 }
 
