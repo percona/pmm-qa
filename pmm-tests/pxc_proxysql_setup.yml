@@ -31,7 +31,7 @@
   - name: Prepare Container for PXC and Proxysql
     shell: >
       docker run -d --name={{ pxc_container }}
-      phusion/baseimage:focal-1.2.0
+      phusion/baseimage:jammy-1.0.1
   
   - name: Copy all required Artifacts to the docker pxc_container
     shell: "{{ item }}"
