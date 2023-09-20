@@ -31,7 +31,7 @@
   - name: Prepare Container for ps and Proxysql
     shell: >
       docker run -d --name={{ ps_container }}
-      phusion/baseimage:focal-1.2.0
+      phusion/baseimage:jammy-1.0.1
   
   - name: Copy all required Artifacts to the docker ps_container
     shell: "{{ item }}"
