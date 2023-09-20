@@ -1,8 +1,8 @@
 ##ProductName  ##Version  ##Tarball Link
 
-pxc # 5.7.39 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.39-31.61/binary/tarball/Percona-XtraDB-Cluster-5.7.39-rel42-61.1.Linux.x86_64.glibc2.12-minimal.tar.gz
+pxc # 5.7.43 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.43/binary/tarball/Percona-XtraDB-Cluster-5.7.43-rel47-65.1.Linux.x86_64.glibc2.17-minimal.tar.gz
 
-pxc # 8.0.29 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-LATEST/Percona-XtraDB-Cluster-8.0.29/binary/tarball/Percona-XtraDB-Cluster_8.0.29-21.1_Linux.x86_64.glibc2.17-minimal.tar.gz
+pxc # 8.0.33 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-80/Percona-XtraDB-Cluster-8.0.33/binary/tarball/Percona-XtraDB-Cluster_8.0.33-25.1_Linux.x86_64.glibc2.17-minimal.tar.gz
 
 psmdb # 4.4.16 # https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz
 
@@ -14,11 +14,9 @@ psmdb # 5.0.11 # https://downloads.percona.com/downloads/percona-server-mongodb-
 
 psmdb # 6.0.2 # https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz
 
+ps # 8.0.33 # https://downloads.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.33-25/binary/tarball/Percona-Server-8.0.33-25-Linux.x86_64.glibc2.17-minimal.tar.gz
 
-ps # 8.0.29 # https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-8.0.29-21/binary/tarball/Percona-Server-8.0.29-21-Linux.x86_64.glibc2.17-minimal.tar.gz
-
-ps # 8.0.28 # https://downloads.percona.com/downloads/Percona-Server-LATEST/Percona-Server-8.0.28-20/binary/tarball/Percona-Server-8.0.28-20-Linux.x86_64.glibc2.17-minimal.tar.gz
-
-ps # 5.7.39 # https://downloads.percona.com/downloads/Percona-Server-5.7/Percona-Server-5.7.39-42/binary/tarball/Percona-Server-5.7.39-42-Linux.x86_64.glibc2.17-minimal.tar.gz
+ps # 5.7.43 # https://downloads.percona.com/downloads/Percona-Server-5.7/Percona-Server-5.7.43-47/binary/tarball/Percona-Server-5.7.43-47-Linux.x86_64.glibc2.17-minimal.tar.gz
 
 ms # 8.0.33 # https://dev.mysql.com/get/Downloads/MySQL-8/mysql-8.0.33-linux-glibc2.28-x86_64.tar.gz
+
