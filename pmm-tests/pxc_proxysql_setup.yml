@@ -66,6 +66,7 @@
       - docker exec {{ pxc_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
       - docker network connect pmm-qa {{ pxc_container }}
       - docker exec {{ pxc_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+      - docker exec {{ pxc_container }} usermod -aG pmm-agent pxc
 
   - name: Execute User & Proxysql Setup inside the PXC pxc_container
     shell: "{{ item }}"
