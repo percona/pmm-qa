@@ -2495,7 +2495,7 @@ setup_grafana_plugin () {
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   export pmm_minor_v=$(get_minor_version ${PMM_SERVER_DOCKER_CONTAINER})
   if [[ $pmm_minor_v -ge 39 ]]; then
-    docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana cli plugins install alexanderzobnin-zabbix-app
+    docker exec $PMM_SERVER_DOCKER_CONTAINER grafana cli plugins install alexanderzobnin-zabbix-app
   elif [[ $pmm_minor_v -lt 39 && $pmm_minor_v -gt 22  ]]; then
     docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ $PMM_SERVER_DOCKER_CONTAINER grafana-cli plugins install alexanderzobnin-zabbix-app
   else
