@@ -60,6 +60,11 @@ def main():
         verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep percona-qan-api2-{args.version}")
         verify_command(
             f"docker exec {pmm_server_docker_container} rpm -qa | grep percona-dashboards-{args.version}")
+
+        ### PMM-12223 - Verify Clickhouse  is v22.8 or later since 2.41.0
+        if pmm_minor_v >= 41:
+            verify_command(f"docker exec {pmm_server_docker_container} clickhouse local --version | grep 22.8")
+
         if args.version != "2.25.0":
             verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep pmm-update-{args.version}")
         verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep pmm-managed-{args.version}")
