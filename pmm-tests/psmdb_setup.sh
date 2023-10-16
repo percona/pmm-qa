@@ -52,6 +52,11 @@ if echo "$mongodb_version" | grep '6'; then
    tar -xvf mongosh.tar.gz
    rm mongosh.tar.gz
    mv percona-mongodb-mongosh* mongosh
+elif echo "$mongodb_version" | grep '7'; then
+   wget -O mongosh.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-7.0/percona-server-mongodb-7.0.2-1/binary/tarball/percona-mongodb-mongosh-2.0.0-x86_64.tar.gz
+   tar -xvf mongosh.tar.gz
+   rm mongosh.tar.gz
+   mv percona-mongodb-mongosh* mongosh
 fi
 
 tar -xvf percona_server_mongodb.tar.gz
@@ -60,7 +65,7 @@ export extracted_folder_name=$(ls | grep percona-server-mongodb)
 echo "Extracted folder name ${extracted_folder_name}"
 mv ${extracted_folder_name} psmdb_${mongodb_version}
 
-if [ "$mongodb_version" == "6.0" ]; then
+if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" ]]; then
    cp mongosh/bin/mongosh ./psmdb_${mongodb_version}/bin/mongo
 fi
 
