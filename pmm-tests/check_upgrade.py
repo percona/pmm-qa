@@ -45,8 +45,8 @@ class PmmServerComponents(unittest.TestCase):
         * upgraded from previous version (default one or use '-p post' commandline argument to switch explicitly)
 
     How to run:
-        python3 ./check_upgrade.py --env=ami --pre_post=pre --version=2.41.0
-        python3 ./check_upgrade.py -v 2.41.0 -p post
+        * python3 ./check_upgrade.py --env=ami --pre_post=pre --version=2.41.0
+        * python3 ./check_upgrade.py -v 2.41.0 -p post
     """
 
     def test_percona_qan_api2_version(self):
