@@ -21,16 +21,33 @@ def parse_args():
 
 
 def verify_command(command):
+    """
+    Executes shell specified command and return the console output.
+    If the exit code was non-zero it raises a CalledProcessError.
+
+    :param  command:    shell command string to execute
+    :type   command:    str
+    :return:            command console output
+    :rtype:             str
+    :raises:            a CalledProcessError if the exit code was non-zero.
+    """
     from tempfile import TemporaryFile
-    # with open("/tmp/output.log", "a") as output:
     with TemporaryFile() as output:
-        try:
-            return subprocess.check_output(command, shell=True, text=True, stderr=output).rstrip()
-        except subprocess.CalledProcessError as e:
-            assert e.returncode == 0, f"'{command}' exited with {e.returncode} {output.read()}"
+        return subprocess.check_output(command, shell=True, text=True, stderr=output).rstrip()
 
 
 class PmmServerComponents(unittest.TestCase):
+    """
+    Collection of tests for the PMM Server container. Supports both "Docker/Podman" and "AMI" instances.
+
+    Also includes 2 suits of tests to verify PMM Server instance:
+        * general test (use '-p pre' commandline argument)
+        * upgraded from previous version (default one or use '-p post' commandline argument to switch explicitly)
+
+    How to run:
+        python3 ./check_upgrade.py --env=ami --pre_post=pre --version=2.41.0
+        python3 ./check_upgrade.py -v 2.41.0 -p post
+    """
 
     def test_percona_qan_api2_version(self):
         self.assertIn(expected_pmm_version, grep_rpm('percona-qan-api2-'), WRONG_VERSION_MSG)
@@ -141,6 +158,7 @@ if __name__ == '__main__':
     if not is_ami:
         pmm_server_docker_container = verify_command(
             """docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}'""")
+        assert pmm_server_docker_container, "No docker container found!"
 
 
     def grep_rpm(query):
