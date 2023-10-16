@@ -26,6 +26,7 @@ def verify_command(command):
 
 def main():
     args = parse_args()
+    pmm_minor_v = int(args.version.split('.')[1])
 
     if args.env in "ami":
         verify_command('rpm -qa | grep percona-qan-api2-' + args.version)
@@ -60,6 +61,11 @@ def main():
         verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep percona-qan-api2-{args.version}")
         verify_command(
             f"docker exec {pmm_server_docker_container} rpm -qa | grep percona-dashboards-{args.version}")
+
+        ### PMM-12223 - Verify Clickhouse  is v22.8 or later since 2.41.0
+        if pmm_minor_v >= 41:
+            verify_command(f"docker exec {pmm_server_docker_container} clickhouse local --version | grep 23.8.2.7")
+
         if args.version != "2.25.0":
             verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep pmm-update-{args.version}")
         verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep pmm-managed-{args.version}")
@@ -96,7 +102,7 @@ def main():
 
             docker_version = os.getenv("DOCKER_VERSION")
             do_docker_way = os.getenv("PERFORM_DOCKER_WAY_UPGRADE")
-            pmm_minor_v = int(args.version.split('.')[1])
+
             grafana_cli = "grafana cli" if pmm_minor_v >= 39 else "grafana-cli"
 
             ### PMM-T1758 - Verify vertamedia-clickhouse-datasource plugin is not installed after upgrade to 2.38.0
