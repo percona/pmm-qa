@@ -117,9 +117,9 @@ class PmmServerComponents(unittest.TestCase):
     def test_victoria_metrics_version(self):
         if test_mode != "post": self.skipTest(POST_UPGRADE)
         if is_ami:
-            out = verify_command('sudo victoriametrics --version').strip()
+            out = verify_command('sudo victoriametrics --version')
         else:
-            out = verify_command(f"docker exec {pmm_server_docker_container} victoriametrics --version").strip()
+            out = verify_command(f"docker exec {pmm_server_docker_container} victoriametrics --version")
         self.assertIn('v1.93.4', out, WRONG_VERSION_MSG)
 
     def test_vertamedia_clickhouse_plugin_absent(self):
