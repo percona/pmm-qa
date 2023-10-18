@@ -65,7 +65,7 @@ class PmmServerComponents(unittest.TestCase):
         self.assertIn('23.8.2.7', out, WRONG_VERSION_MSG)
 
     def test_pmm_update_version(self):
-        if expected_pmm_version != "2.25.0": self.skipTest('for 2.25.0 only!')
+        if expected_pmm_version == "2.25.0": self.skipTest('not fo 2.25.0!')
         self.assertIn(expected_pmm_version, grep_rpm('pmm-update-'), WRONG_VERSION_MSG)
 
     def test_pmm_managed_version(self):
