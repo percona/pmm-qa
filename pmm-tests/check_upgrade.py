@@ -33,7 +33,7 @@ def verify_command(command):
     """
     from tempfile import TemporaryFile
     with TemporaryFile() as output:
-        return subprocess.check_output(command, shell=True, text=True, stderr=output).rstrip()
+        return subprocess.check_output(command, shell=True, universal_newlines=True, stderr=output).rstrip()
 
 
 class PmmServerComponents(unittest.TestCase):
