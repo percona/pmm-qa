@@ -53,6 +53,7 @@ usage () {
   echo " --pgsql-version                Pass Postgre SQL server version Info"
   echo " --md-version                   Pass MariaDB Server version info"
   echo " --pxc-version                  Pass Percona XtraDB Cluster version info"
+  echo " --proxysql-version             Pass Percona ProxySQL version info"
   echo " --pdpgsql-version              Pass Percona Distribution for PostgreSQL version Info"
   echo " --mysqld-startup-options       Pass MySQL startup options. eg : --mysqld-startup-options='--innodb_buffer_pool_size=1G --innodb_log_file_size=1G'"
   echo " --with-proxysql                This allow to install PXC with proxysql"
@@ -121,12 +122,13 @@ usage () {
   echo " --ps-tarball           	Use this to pass location to PS tar ball used for installation"
   echo " --ms-tarball           	Use this to pass location to MS tar ball used for installation"
   echo " --pxc-tarball           	Use this to pass location to PXC tar ball used for installation"
+  echo " --proxysql-package           	Use this to pass location to ProxySQL Debian package used for installation"
 }
 
 # Check if we have a functional getopt(1)
 if ! getopt --test
   then
-  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,setup-checks-basic,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,pgsql-pgss-port:,ps-tarball:,ms-tarball:,pxc-tarball:,help \
+  go_out="$(getopt --options=u: --longoptions=addclient:,replcount:,pmm-server:,ami-image:,key-name:,pmm2-server-ip:,ova-image:,ova-memory:,deploy-service-with-name:,cleanup-service:,pmm-server-version:,dev-fb:,mongo-replica-for-backup:,setup-bm-mysql:,link-client:,pmm-port:,metrics-mode:,package-name:,setup-pmm-pgsm-integration,setup-pmm-pgss-integration,pmm-server-memory:,pmm-docker-memory:,pmm-server-username:,pmm-server-password:,query-source:,setup,pmm2,mongomagic,setup-external-service,group-replication,group,install-backup-toolkit,setup-replication-ps-pmm2,setup-pmm-client-docker,setup-custom-ami,setup-remote-db,setup-postgres-ssl,setup-mongodb-ssl,setup-mysql-ssl,setup-with-custom-settings,setup-with-custom-queries,disable-tablestats,dbdeployer,install-client,skip-docker-setup,with-replica,with-arbiter,with-sharding,download,ps-version:,modb-version:,ms-version:,pgsql-version:,md-version:,pxc-version:,proxysql-version:,haproxy-version:,pdpgsql-version:,mysqld-startup-options:,mo-version:,add-docker-client,list,wipe-clients,wipe-pmm2-clients,add-annotation,use-socket,run-load-pmm2,disable-queryexample,delete-package,wipe-docker-clients,wipe-server,is-bats-run,disable-ssl,setup-ssl-services,create-pgsql-user,upgrade-server,upgrade-client,setup-pgsql-vacuum,setup-pmm-ps-integration,setup-checks-basic,wipe,setup-alertmanager,dev,with-proxysql,sysbench-data-load,sysbench-oltp-run,mongo-sysbench,storage-engine:,mongo-storage-engine:,compare-query-count,pgsql-pgss-port:,ps-tarball:,ms-tarball:,pxc-tarball:,proxysql-package:,help \
   --name="$(basename "$0")" -- "$@")"
   test $? -eq 0 || exit 1
   eval set -- $go_out
@@ -276,6 +278,10 @@ do
     ;;
     --pxc-version )
     pxc_version="$2"
+    shift 2
+    ;;
+    --proxysql-version )
+    proxysql_version="$2"
     shift 2
     ;;
     --haproxy-version )
@@ -508,6 +514,10 @@ do
     ;;
      --pxc-tarball )
     pxc_tarball="$2"
+    shift 2
+    ;;
+     --proxysql-package )
+    proxysql_package="$2"
     shift 2
     ;;
     --pmm-server-username )
@@ -2801,6 +2811,10 @@ setup_pxc_client_container () {
   then
     export PXC_VERSION=${pxc_version}
   fi
+  if [ -z "$PROXYSQL_VERSION" ]
+  then
+    export PROXYSQL_VERSION=${proxysql_version}
+  fi
   if [ -z "$CLIENT_VERSION" ]
   then
     export CLIENT_VERSION=dev-latest
@@ -2823,6 +2837,10 @@ setup_pxc_client_container () {
   if [ -z "$PXC_TARBALL" ]
   then
     export PXC_TARBALL=$pxc_tarball
+  fi
+  if [ -z "$PROXYSQL_PACKAGE" ]
+  then
+    export PROXYSQL_PACKAGE=${proxysql_package}
   fi
   export PMM_QA_GIT_BRANCH=${PMM_QA_GIT_BRANCH}
   if [ -z "${PXC_CONTAINER}" ]
