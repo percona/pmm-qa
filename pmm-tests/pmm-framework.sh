@@ -1498,6 +1498,12 @@ add_clients(){
         sleep 20
         docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
         docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test1;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test2;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test3;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test4;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test5;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test6;'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add postgresql --username=postgres --password=${PDPGSQL_PASSWORD} --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 $pdpgsql_service_name localhost:$PDPGSQL_PORT
@@ -3060,7 +3066,7 @@ setup_mongo_replica_for_backup() {
   fi
   mkdir /tmp/backup_data && chmod 777 /tmp/backup_data
   pushd qa-integration/pmm_psmdb-pbm_setup
-  PSMDB_VERSION=7.0.2-1 COMPOSE_PROFILES=extra ./start-rs-only.sh
+  PSMDB_VERSION=6.0.11-8 COMPOSE_PROFILES=extra ./start-rs-only.sh
   popd
   popd
 }
