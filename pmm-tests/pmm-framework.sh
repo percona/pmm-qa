@@ -1481,12 +1481,14 @@ add_clients(){
     elif [[ "${CLIENT_NAME}" == "pdpgsql" && ! -z $PMM2 ]]; then
       PDPGSQL_PORT=6432
       export PDPGSQL_PASSWORD=oFukiBRg7GujAJXq3tmd
+      pgsql_init_path=$(mktemp -d 2>/dev/null || mktemp -d -t 'mytmpdir')
+      cp -R $SCRIPT_PWD/postgres/. $pgsql_init_path && chmod 777 -R $pgsql_init_path
       docker pull perconalab/percona-distribution-postgresql:${pdpgsql_version}
       git clone https://github.com/percona/pg_stat_monitor
       for j in `seq 1 ${ADDCLIENTS_COUNT}`;do
         check_port $PDPGSQL_PORT PDPGSQL
         pdpgsql_service_name=$(prepare_service_name PDPGSQL_${pdpgsql_version}_${IP_ADDRESS}_$j)
-        docker run --name $pdpgsql_service_name -v $SCRIPT_PWD/postgres:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 \
+        docker run --name $pdpgsql_service_name -v $pgsql_init_path:/docker-entrypoint-initdb.d/:rw -p $PDPGSQL_PORT:5432 \
         -d -e POSTGRES_PASSWORD=${PDPGSQL_PASSWORD} perconalab/percona-distribution-postgresql:${pdpgsql_version} \
         -c shared_preload_libraries=pg_stat_statements,pg_stat_monitor \
         -c pg_stat_monitor.pgsm_bucket_time=60 \
