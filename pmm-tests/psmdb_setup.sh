@@ -1,72 +1,60 @@
 #!/bin/sh
 
-
 while [ $# -gt 0 ]; do
-
    if [[ $1 == *"--"* ]]; then
         param="${1/--/}"
         declare $param="$2"
    fi
-
   shift
 done
 
-if [ -z "$mongodb_version" ]
-then
-      export mongodb_version=4.4
+if [ -z "$mongodb_version" ]; then
+  export mongodb_version=4.4
 fi
 
-if [ -z "$psmdb_tarball" ]
-then
-      export psmdb_tarball=https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz
+if [ -z "$mongdb_setup" ]; then
+  export mongdb_setup=replica
 fi
 
-if [ -z "$mongdb_setup" ]
-then
-      export mongdb_setup=replica
-fi
-
-if [ -z "$metrics_mode" ]
-then
-      export metrics_mode=push
+if [ -z "$metrics_mode" ]; then
+  export metrics_mode=push
 fi
 
 # Install the dependencies
 source ~/.bash_profile || true;
 apt-get update
-apt-get -y install wget curl git gnupg2 lsb-release
-apt-get -y install libreadline6-dev systemtap-sdt-dev zlib1g-dev libssl-dev libpam0g-dev python-dev bison make flex libipc-run-perl wget
+apt-get -y install wget curl jq git gnupg2 lsb-release
+apt-get -y install libreadline6-dev systemtap-sdt-dev zlib1g-dev libssl-dev libpam0g-dev python-dev bison make flex libipc-run-perl
 sleep 10
 
-wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
-dpkg -i percona-release_latest.generic_all.deb
 wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startup.sh
 chmod +x mongo_startup.sh
 export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
 
-wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
-
-
-if echo "$mongodb_version" | grep '6'; then
-   wget -O mongosh.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-mongodb-mongosh-1.6.0-x86_64.tar.gz
-   tar -xvf mongosh.tar.gz
-   rm mongosh.tar.gz
-   mv percona-mongodb-mongosh* mongosh
-elif echo "$mongodb_version" | grep '7'; then
-   wget -O mongosh.tar.gz https://downloads.percona.com/downloads/percona-server-mongodb-7.0/percona-server-mongodb-7.0.2-1/binary/tarball/percona-mongodb-mongosh-2.0.0-x86_64.tar.gz
-   tar -xvf mongosh.tar.gz
-   rm mongosh.tar.gz
-   mv percona-mongodb-mongosh* mongosh
+if [ -z "$psmdb_tarball" ]; then
+    ### Detect latest tarball link for specified mongodb_version: 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
+    psmdb_latest=$(wget -q --post-data "version=percona-server-mongodb-${mongodb_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)
+    psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal)
 fi
 
+echo "Downloading ${psmdb_latest} ..."
+wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 tar -xvf percona_server_mongodb.tar.gz
-rm percona_server_mongodb.tar.gz*
+
 export extracted_folder_name=$(ls | grep percona-server-mongodb)
 echo "Extracted folder name ${extracted_folder_name}"
 mv ${extracted_folder_name} psmdb_${mongodb_version}
 
+# TODO: refactor if to match range of versions 6.0+
 if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" ]]; then
-   cp mongosh/bin/mongosh ./psmdb_${mongodb_version}/bin/mongo
+    ### PSMDB 6+ requires "percona-mongodb-mongosh" additionally
+    echo "Downloading mongosh ..."
+    mongosh_link=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep mongosh)
+    wget -O mongosh.tar.gz ${mongosh_link}
+    tar -xvf mongosh.tar.gz
+    mv percona-mongodb-mongosh* mongosh
+    cp mongosh/bin/mongosh ./psmdb_${mongodb_version}/bin/mongo
+    rm mongosh.tar.gz
 fi
 
 if [ "$mongodb_setup" == "sharded" ]; then
@@ -122,3 +110,4 @@ if [ "$mongodb_setup" == "regular" ]; then
     pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_single_node mongodb_rs_single_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
     sleep 20
 fi
+rm percona_server_mongodb.tar.gz*
