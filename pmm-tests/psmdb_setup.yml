@@ -29,13 +29,13 @@
     shell: >
       docker run -d --name={{ psmdb_container }}
       phusion/baseimage:focal-1.1.0
-  
+
   - name: Copy all required Artifacts to the docker psmdb_container
     shell: "{{ item }}"
     with_items:
       - docker cp ./psmdb_setup.sh {{ psmdb_container }}:/
       - docker exec {{ psmdb_container }} apt-get update
-      - docker exec {{ psmdb_container }} apt-get -y install wget curl git gnupg2 lsb-release
+      - docker exec {{ psmdb_container }} apt-get -y install wget curl git gnupg2 lsb-release jq
 
   - name: Install pmm2-client on the psmdb_container
     shell: "{{ item }}"
@@ -43,7 +43,7 @@
       - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
       - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/mongodb_user_setup.js
       - docker network connect pmm-qa {{ psmdb_container }}
-      - docker exec {{ psmdb_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no 
+      - docker exec {{ psmdb_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 
   - name: Get Product tarball URL based on the version
     shell: cat product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
