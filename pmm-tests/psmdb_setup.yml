@@ -1,6 +1,4 @@
 ---
-# This playbook does following:
-#   enables Percona testing repository
 
 - hosts: all
   vars:
@@ -45,15 +43,10 @@
       - docker network connect pmm-qa {{ psmdb_container }}
       - docker exec {{ psmdb_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
 
-  - name: Get Product tarball URL based on the version
-    shell: cat product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
-    register: psmdb_tarball
-    when: lookup('env', 'PSMDB_TARBALL') == ''
-
   - name: Setup psmdb for monitoring
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ psmdb_container }} bash -x ./psmdb_setup.sh --mongodb_version {{ psmdb_version }} --psmdb_tarball {{ psmdb_tarball.stdout }} --mongodb_setup {{ psmdb_setup }} > ~/setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+      - docker exec {{ psmdb_container }} bash -x ./psmdb_setup.sh --mongodb_version {{ psmdb_version }} --mongodb_setup {{ psmdb_setup }} > ~/setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
 
   - name: Setup Load Running Docker Container
     shell: "{{ item }}"
@@ -68,11 +61,6 @@
   - name: Run User setup script when Running Regular MongoDB setup
     shell: docker exec {{ psmdb_container }} ./nodes/cl.sh mongodb_user_setup.js
     when: psmdb_setup == "regular"
-
-  - name: Get Product tarball URL based on the version
-    shell: cat product_version_download_helper | grep psmdb | grep "\-{{ psmdb_version }}" | head -1 | awk -F'# ' '{print $3}'
-    register: psmdb_tarball
-    when: lookup('env', 'PSMDB_TARBALL') == ''
 
   - name: Run load on Replica Set Master
     shell: "{{ item }}"
