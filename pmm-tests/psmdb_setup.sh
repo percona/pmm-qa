@@ -48,7 +48,7 @@ wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 
 
 if echo "$mongodb_version" | grep '6'; then
-   wget -O mongosh.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-mongodb-mongosh-1.6.0-x86_64.tar.gz
+   wget -O mongosh.tar.gz mongosh.tar.gz https://downloads.percona.com/downloads/percona-distribution-mongodb-6.0/percona-distribution-mongodb-6.0.12/binary/tarball/percona-mongodb-mongosh-2.1.1-x86_64.tar.gz
    tar -xvf mongosh.tar.gz
    rm mongosh.tar.gz
    mv percona-mongodb-mongosh* mongosh
