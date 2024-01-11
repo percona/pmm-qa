@@ -48,7 +48,7 @@ wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 
 
 if echo "$mongodb_version" | grep '6'; then
-   wget -O mongosh.tar.gz https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-mongodb-mongosh-1.6.0-x86_64.tar.gz
+   wget -O mongosh.tar.gz mongosh.tar.gz https://downloads.percona.com/downloads/percona-distribution-mongodb-6.0/percona-distribution-mongodb-6.0.12/binary/tarball/percona-mongodb-mongosh-2.1.1-x86_64.tar.gz
    tar -xvf mongosh.tar.gz
    rm mongosh.tar.gz
    mv percona-mongodb-mongosh* mongosh
@@ -71,7 +71,7 @@ fi
 
 if [ "$mongodb_setup" == "sharded" ]; then
     bash ./mongo_startup.sh -s -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=./psmdb_${mongodb_version}/bin
-    pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
+    pmm-admin add mongodb --cluster mongodb_node_cluster --environment=mongodb_shraded_node mongodb_shraded_node_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017 --enable-all-collectors
     sleep 2
     pmm-admin add mongodb --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
     sleep 2
