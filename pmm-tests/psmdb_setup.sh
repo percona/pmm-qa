@@ -31,11 +31,9 @@ wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startu
 chmod +x mongo_startup.sh
 export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
 
-if [ -z "$psmdb_tarball" ]; then
-    ### Detect latest tarball link for specified mongodb_version: 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
-    psmdb_latest=$(wget -q --post-data "version=percona-server-mongodb-${mongodb_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)
-    psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal)
-fi
+### Detect latest tarball link for specified mongodb_version: 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
+psmdb_latest=$(wget -q --post-data "version=percona-server-mongodb-${mongodb_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)
+psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal)
 
 echo "Downloading ${psmdb_latest} ..."
 wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}

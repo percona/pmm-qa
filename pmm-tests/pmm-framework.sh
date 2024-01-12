@@ -869,7 +869,7 @@ setup(){
         install_client
       else
       if [ ! -z $dev ]; then
-        if [  -z $link_client]; then
+        if [ -z $link_client ]; then
          PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
         else
           PMM_CLIENT_TARBALL_URL=$link_client
@@ -2557,26 +2557,21 @@ setup_mongodb_ssl () {
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/tls-ssl-setup
   export MONGODB_VERSION=${mo_version}
-  if [ -z "$CLIENT_VERSION" ]
-  then
-    if [ -z "$PMM_CLIENT_VERSION" ]
-    then
+  if [ -z "$CLIENT_VERSION" ]; then
+    if [ -z "$PMM_CLIENT_VERSION" ]; then
       export CLIENT_VERSION=dev-latest
     else
       export CLIENT_VERSION=${PMM_CLIENT_VERSION}
     fi
   fi
-  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
-  then
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]; then
+    if [ ! -z "${PMM2_SERVER_IP}" ]; then
       export PMM_SERVER_IP=${PMM2_SERVER_IP}
     else
       export PMM_SERVER_IP=127.0.0.1
     fi
   else
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
+    if [ ! -z "${PMM2_SERVER_IP}" ]; then
       export PMM_SERVER_IP=${PMM2_SERVER_IP}
     else
       export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
