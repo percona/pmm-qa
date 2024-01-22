@@ -31,6 +31,7 @@ then
       export metrics_mode=push
 fi
 
+# Mongo user credtials for the replicat set cluster
 export user="dba"
 export pwd="test1234"
 
@@ -108,6 +109,7 @@ if [ "$mongodb_setup" == "replica" ]; then
     sleep 20
 fi
 
+#Arbiter setup with Auth enabled (keyfile)
 if [ "$mongodb_setup" == "arbiter" ]; then
     bash ./mongo_startup.sh -x -r -a -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=./psmdb_${mongodb_version}/bin
     sleep 20
