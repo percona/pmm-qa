@@ -43,6 +43,7 @@ on:
           - regular
           - replica
           - sharded
+          - arbiter 
         default: 'regular'
         required: true
 
