@@ -686,7 +686,7 @@ sudo_check(){
 if [[ -z "${ps_version}" ]]; then ps_version="8.0"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
-if [[ -z "${mo_version}" ]]; then mo_version="4.4"; fi
+if [[ -z "${mo_version}" ]]; then mo_version="6.0"; fi
 if [[ -z "${modb_version}" ]]; then modb_version="4.4"; fi
 if [[ -z "${pgsql_version}" ]]; then pgsql_version="14";fi
 if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="14"; fi
@@ -3047,7 +3047,7 @@ setup_mongo_replica_for_backup() {
   fi
   mkdir /tmp/backup_data && chmod 777 /tmp/backup_data
   pushd qa-integration/pmm_psmdb-pbm_setup
-  PSMDB_VERSION=6.0.11-8 COMPOSE_PROFILES=extra ./start-rs-only.sh
+  PSMDB_VERSION=${mo_version} COMPOSE_PROFILES=extra ./start-rs-only.sh
   popd
   popd
 }
