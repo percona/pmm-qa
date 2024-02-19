@@ -1,0 +1,33 @@
+name: "Portal Tests Matrix"
+
+on:
+  push:
+    branches:
+      - "PMM-7-fix-portal-pipeline"
+
+jobs:
+  get_versions:
+    name: Get versions
+    uses: ./.github/workflows/pmm-version-getter.yml
+    with:
+      repository: ${{ inputs.repository || 'dev-latest'}}
+      matrix_range: 5
+
+  portal:
+    name: 'Portal / Integration'
+    uses: ./.github/workflows/portal-ui-tests.yml
+    secrets: inherit
+    needs: get_versions
+    strategy:
+      fail-fast: false
+      matrix:
+        old_version: ${{ fromJSON(needs.get_versions.outputs.version_matrix) }}
+    with:
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      pmm_test_flag: '@portal'
+      pmm_server_version: ${{ matrix.old_version }}
+      pmm_client_version: ${{ matrix.old_version }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_clients: ''
+      version_string_from: ${{needs.get_versions.outputs.start_version}}
+

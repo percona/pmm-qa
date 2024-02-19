@@ -1,0 +1,140 @@
+---
+name: Package Test Matrix(full)
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_testing_branch:
+        description: 'Target branch for package-testing repository'
+        type: string
+        default: 'master'
+        required: true
+      repository:
+        description: 'Select Repo for Client:'
+        required: true
+        default: 'dev-latest'
+        type: choice
+        options:
+          - release
+          - release candidate
+          - dev-latest
+      metrics_mode:
+        description: 'Select the Metrics Mode for PMM Client:'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - push
+          - pull
+
+jobs:
+  c_test:
+    name: "Package Install (basic)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration"
+
+  i_test:
+    name: "Package Install"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration"
+
+  auth_config_test:
+    name: "Package Install (auth config)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_auth_config"
+
+  auth_register_test:
+    name: "Package Install (auth register)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_auth_register"
+
+  cu_test:
+    name: "Package Upgrade (basic)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_upgrade"
+
+  iu_test:
+    name: "Package Upgrade"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_upgrade"
+
+  port_u_test:
+    name: "Package Upgrade: custom port"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_upgrade_custom_port"
+
+  tb_test:
+    name: "Tarball Install (basic)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_custom_path"
+
+  tbi_test:
+    name: "Tarball Install (custom path)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_custom_path"
+
+  port_test:
+    name: "Tarball Install (custom port)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_custom_port"
+
+  tu_test:
+    name: "Tarball Upgrade (custom path)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_upgrade_custom_path"
