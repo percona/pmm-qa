@@ -1,0 +1,95 @@
+---
+name: Package Test FB
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_testing_branch:
+        description: 'Target branch for package-testing repository'
+        type: string
+        default: 'master'
+        required: true
+      pmm_server_image:
+        description: "pmm-server docker image"
+        required: true
+        type: string
+        default: "perconalab/pmm-server:dev-latest"
+      pmm_client_tarball:
+        description: "PMM Client tarball link or FB-code"
+        type: string
+        required: true
+      playbook:
+        description: 'Select test to run:'
+        default: 'pmm2-client_integration'
+        required: true
+        type: choice
+        options:
+          - pmm2-client_custom_path
+          - pmm2-client_integration_custom_path
+          - pmm2-client_integration_custom_port
+          - pmm2-client_integration_upgrade_custom_path
+      metrics_mode:
+        description: 'Select the Metrics Mode for PMM Client:'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - push
+          - pull
+
+  workflow_call:
+    inputs:
+      package_testing_branch:
+        description: 'Target branch for package-testing repository'
+        type: string
+        default: 'master'
+        required: false
+      pmm_server_image:
+        description: "pmm-server docker image"
+        required: true
+        type: string
+        default: "perconalab/pmm-server:dev-latest"
+      pmm_client_tarball:
+        description: "PMM Client tarball link or FB-code"
+        type: string
+        required: true
+      playbook:
+        description: 'Select test to run:'
+        default: 'pmm2-client_integration'
+        required: true
+        type: string
+      metrics_mode:
+        description: 'Select the Metrics Mode for PMM Client:'
+        default: 'auto'
+        type: string
+      test_name:
+        description: 'Name of the test to pretty display in checks list'
+        type: string
+
+jobs:
+  get_versions:
+    name: Get versions
+    uses: ./.github/workflows/pmm-version-getter.yml
+    with:
+      repository: 'dev-latest'
+
+  fb_test:
+    name: ${{ inputs.playbook }}
+    uses: ./.github/workflows/runner-package-test.yml
+    secrets: inherit
+    needs: get_versions
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.get_versions.outputs.pt_os) }}
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      pmm_server_image: ${{ inputs.pmm_server_image }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball == 'dev-latest' && needs.get_versions.outputs.finish_version || inputs.pmm_client_tarball }}
+      expected_version: ${{needs.get_versions.outputs.finish_version}}
+      repository: 'dev-latest'
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: ${{ inputs.playbook || 'pmm2-client_integration_custom_path' }}
+      test_name: ${{ inputs.test_name > '' && format('{0} {1}', inputs.test_name, matrix.os) || matrix.os }}
+      os: ${{ matrix.os }}

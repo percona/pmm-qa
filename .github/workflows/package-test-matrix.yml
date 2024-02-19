@@ -1,0 +1,63 @@
+---
+name: Package Test Matrix
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+  workflow_dispatch:
+    inputs:
+      package_testing_branch:
+        description: 'Target branch for package-testing repository'
+        type: string
+        default: 'master'
+        required: true
+      repository:
+        description: 'Select Repo for Client:'
+        required: true
+        default: 'dev-latest'
+        type: choice
+        options:
+          - release
+          - release candidate
+          - dev-latest
+      metrics_mode:
+        description: 'Select the Metrics Mode for PMM Client:'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - push
+          - pull
+
+jobs:
+  i_test:
+    name: "Package Install"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration"
+
+  u_test:
+    name: "Package Upgrade"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_upgrade"
+
+  t_test:
+    name: "Tarball Upgrade (custom path)"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm2-client_integration_upgrade_custom_path"

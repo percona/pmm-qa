@@ -1,0 +1,207 @@
+---
+name: runner-e2e-tests-playwright
+
+on:
+  workflow_call:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'Target branch for pmm-ui-tests repository'
+        type: string
+        default: 'main'
+        required: true
+      pmm_test_flag:
+        description: 'Flag to run only specific portion of the tests.'
+        type: string
+        required: false
+      pmm_server_version:
+        description: 'Version of the pmm server used for testing'
+        type: string
+        default: 'dev-latest'
+        required: true
+      pmm_client_version:
+        description: 'Version of the pmm client used for testing'
+        type: string
+        default: 'dev-latest'
+        required: true
+      pmm_clients:
+        description: 'Clients for pmm-server'
+        type: string
+        default: '--addclient=ps,1'
+        required: true
+      pmm_qa_branch:
+        description: 'Branch for the pmm-qa repository.'
+        type: string
+        default: 'main'
+        required: true
+
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'Target branch for pmm-ui-tests repository'
+        type: string
+        default: 'main'
+        required: true
+      pmm_test_flag:
+        description: 'Flag to run only specific portion of the tests.'
+        type: string
+        required: false
+      pmm_server_version:
+        description: 'Version of the pmm server used for testing'
+        type: string
+        default: 'dev-latest'
+        required: true
+      pmm_client_version:
+        description: 'Version of the pmm client used for testing'
+        type: string
+        default: 'dev-latest'
+        required: true
+      pmm_clients:
+        description: 'Clients for pmm-server'
+        type: string
+        default: '--addclient=ps,1'
+        required: true
+      pmm_qa_branch:
+        description: 'Branch for the pmm-qa repository.'
+        type: string
+        default: 'main'
+        required: true
+
+jobs:
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SHA: ${{ inputs.sha || 'null' }}
+      PMM_BASE_URL: https://127.0.0.1
+      ADMIN_PASSWORD: admin
+
+      UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch }}
+      PMM_CLIENTS: ${{ inputs.pmm_clients }}
+      PMM_TEST_FLAG: ${{ inputs.pmm_test_flag }}
+
+      PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch }}
+
+      OKTA_TOKEN: ${{ secrets.OKTA_TOKEN }}
+      OAUTH_ISSUER_URL: 'https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7'
+      OAUTH_CLIENT_ID: ${{ secrets.OKTA_OAUTH_CLIENT_ID }}
+      OAUTH_CLIENT_SECRET: ${{ secrets.OKTA_OAUTH_CLIENT_SECRET }}
+      OAUTH_PMM_CLIENT_ID: ${{ secrets.OKTA_OAUTH_PMM_CLIENT_ID }}
+      OAUTH_PMM_CLIENT_SECRET: ${{ secrets.OKTA_OAUTH_PMM_CLIENT_SECRET }}
+      OAUTH_DEV_HOST: ${{ secrets.OAUTH_DEV_HOST }}
+      OAUTH_SCOPES: percona
+
+      # Variables for E2E tests
+      MAILOSAUR_API_KEY: ${{ secrets.MAILOSAUR_API_KEY }}
+      MAILOSAUR_UI_TESTS_SERVER_ID: ${{ secrets.MAILOSAUR_UI_TESTS_SERVER_ID }}
+      MAILOSAUR_API_TESTS_SERVER_ID: ${{ secrets.MAILOSAUR_API_TESTS_SERVER_ID }}
+
+      SERVICENOW_LOGIN: percona_platform
+      SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
+      SERVICENOW_DEV_URL: 'https://perconadev.service-now.com/api/x_pellc_percona_pl/platform/settest'
+
+    steps:
+      - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_ui_tests_branch }}
+        if: ${{ env.SHA != 'null' }}
+        uses: percona/gh-action-github-status-action@v1
+        continue-on-error: true
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: "${{ env.PMM_TEST_FLAG }} UI tests"
+          description: "Test execution ${{ job.status }}"
+          state: "pending"
+          repository: ${{ github.repository }}
+          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          sha: ${{ env.SHA }}
+
+      - name: 'Checkout UI tests: "${{ inputs.pmm_ui_tests_branch }}"'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ inputs.pmm_ui_tests_branch }}
+          repository: percona/pmm-ui-tests
+          path: ./pmm-ui-tests
+
+      - name: 'Install playwright'
+        working-directory: ./pmm-ui-tests/playwright-tests
+        run: |
+          npm ci
+          npx playwright install
+
+      - name: 'Checkout pmm-qa: "${{ inputs.pmm_qa_branch }}"'
+        uses: actions/checkout@v3
+        with:
+          # token: ${{ secrets.ROBOT_TOKEN }}
+          repository: percona/pmm-qa
+          ref: ${{ inputs.pmm_qa_branch }}
+          path: ./pmm-qa
+
+      - name: 'Setup <PMM Sever>: "${{ inputs.pmm_server_version }}"'
+        working-directory: pmm-qa/pmm-integration
+        run: |
+          npm install
+          sudo npx ts-node ./integration-setup.ts --ci --setup-docker-pmm-server --rbac --pmm-server-docker-tag=${{ env.PMM_SERVER_VERSION }} --pmm-client-version=${{ env.PMM_CLIENT_VERSION }}
+          timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost/ping)" != "200" ]]; do sleep 5; done' || false
+
+      - name: 'Setup <PMM Client: ${{ inputs.pmm_client_version }}>'
+        run: |
+          sudo bash ./pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
+        shell: bash
+
+      - name: Setup Databases for the PMM-Server
+        working-directory: pmm-qa/pmm-integration
+        run: |
+          sudo npx ts-node ./integration-setup.ts --ci \
+          ${{ env.PMM_CLIENTS }}
+          sleep 30
+          sudo pmm-admin list
+        shell: bash
+
+      - name: Execute UI tests
+        if: ${{ inputs.pmm_test_flag == 'null' }}
+        id: ui-tests-all
+        working-directory: pmm-ui-tests/playwright-tests
+        run: |
+          npx playwright test --project="chromium" --quiet
+#        env:
+#          NODE_TLS_REJECT_UNAUTHORIZED: 0
+
+      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
+        if: ${{ inputs.pmm_test_flag != 'null' }}
+        id: ui-tests-flagged
+        working-directory: pmm-ui-tests/playwright-tests
+        run: |
+          project="${{ contains(env.PMM_TEST_FLAG, 'portal') && 'Portal' || 'Chromium' }}"
+          npx playwright test --project=$project --grep ${{ env.PMM_TEST_FLAG }} --pass-with-no-tests
+#        env:
+#          NODE_TLS_REJECT_UNAUTHORIZED: 0
+
+      - name: 'Create report name'
+        if: failure()
+        run: |
+          # TODO: add job id for matrix call
+          job_tag=$(echo "${{ inputs.pmm_test_flag }}" | sed -e "s/-pre-upgrade//" -e "s/@//")
+          report_name="$job_tag"-report
+          echo $report_name
+          echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
+
+      - name: Generate and Attach the report
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.REPORT_NAME }}
+          path: ./pmm-ui-tests/playwright-tests/playwright-report
+
+      - name: Create status check
+        uses: percona/gh-action-github-status-action@v1
+        if: ${{ env.SHA != 'null' && always() }}
+        continue-on-error: true
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: "${{ env.PMM_TEST_FLAG }} UI tests"
+          description: "Test execution ${{ job.status }}"
+          state: ${{ job.status }}
+          repository: ${{ github.repository }}
+          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          sha: ${{ env.SHA }}
