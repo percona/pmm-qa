@@ -70,7 +70,7 @@ on:
 jobs:
   get_versions:
     name: Get versions
-    uses: percona/pmm-ui-tests/.github/workflows/pmm-version-getter.yml@main
+    uses: ./.github/workflows/pmm-version-getter.yml
     with:
       repository: 'dev-latest'
 
