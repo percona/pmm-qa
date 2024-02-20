@@ -36,6 +36,10 @@ if [ -z "$use_metrics_mode" ]; then
     export use_metrics_mode=yes
 fi
 
+if [ ! -z "$upgrade" ]; then
+     upgrade="-u"
+fi     
+
 apt-get update
 apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client
 wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb
@@ -63,10 +67,14 @@ if [[ "$client_version" == "pmm2-latest" ]]; then
 fi
 
 ## only supported for debian based systems for now
-if [[ "$client_version" == 2* && $(dpkg --list vim) ]]; then
-    curl -O https://raw.githubusercontent.com/Percona-QA/package-testing/master/scripts/pmm2_client_install_tarball.sh
-    bash -x pmm2_client_install_tarball.sh -v ${client_version}
+if [[ "$client_version" == 2* ]]; then
+ wget -O pmm2-client.deb https://repo.percona.com/pmm2-client/apt/pool/main/p/pmm2-client/pmm2-client_${client_version}-6.$(lsb_release -sc)_amd64.deb
+ dpkg -i pmm2-client.deb
 fi
+
+export path="/usr/local/percona/pmm2";
+ln -sf ${path}/bin/pmm-admin /usr/local/bin/pmm-admin
+ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
 
 if [[ "$client_version" == http* ]]; then
 	if [[ "$install_client" == "yes" ]]; then
@@ -97,16 +105,23 @@ if [[ "$client_version" == http* ]]; then
     sleep 10
 	pmm-agent --config-file=/usr/local/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
 else
-    if [[ "$use_metrics_mode" == "yes" ]]; then
+    if [[ "$use_metrics_mode" == "yes" && -z "$upgrade" ]]; then
         echo "install pmm-agent 3"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
-	else
-	      echo "install pmm-agent 4"
+    elif [[ -z "$upgrade" ]]; then
+        echo "install pmm-agent 4"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
     fi    
     sleep 10
   echo "install config-file"
+ pid=`ps -ef | grep pmm-agent | grep -v grep | awk -F ' ' '{print $2}'`
+ if [[ ! -z "$pid"  && ! -z "$upgrade" ]]; then
+        kill -9 $pid
+        echo "killed old agent, restarting agent...."
+        pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+ else
 	pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+ fi
 fi
 sleep 10
 
