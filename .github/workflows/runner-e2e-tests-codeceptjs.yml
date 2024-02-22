@@ -2,7 +2,7 @@ name: _runner-e2e-tests
 on:
   workflow_call:
     inputs:
-      server_image:
+      pmm_server_image:
         description: "pmm-server docker image, default perconalab/pmm-server:dev-latest"
         required: false
         type: string
@@ -42,18 +42,15 @@ jobs:
     runs-on: ubuntu-20.04
     timeout-minutes: 60
     env:
-      SERVER_IMAGE: ${{ inputs.server_image || 'perconalab/pmm-server:dev-latest' }}
-      CLIENT_IMAGE: ${{ inputs.client_image || 'perconalab/pmm-client:dev-latest' }}
-      CLIENT_VERSION: ${{ inputs.client_version || 'dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.client_version || 'dev-latest' }}
+      SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_UI_BRANCH: ${{ inputs.pmm_ui_branch || 'main' }}
-      DOCKER_VERSION: ${{ inputs.server_image || 'perconalab/pmm-server:dev-latest' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.client_image || 'perconalab/pmm-client:dev-latest' }}
-      SHA: ${{ inputs.sha || 'null' }}
+      PMM_CLIENT_VERSION: ${{ inputs.client_version || 'dev-latest' }}
       CLIENT_FLAGS: ${{ inputs.client_flags || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
 
@@ -115,7 +112,7 @@ jobs:
 
       - name: Setup PMM2-Client
         working-directory: ./pmm-qa
-        run: sudo bash -x pmm-tests/pmm2-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+        run: sudo bash -x pmm-tests/pmm2-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Run Setup for E2E Tests
         working-directory: ./pmm-qa
