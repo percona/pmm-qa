@@ -211,7 +211,7 @@ jobs:
         run: |
           npx playwright test pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts --quiet
 
-# TODO: Add setup for the official MongoDB and run "npx playwright test pmm-ui-tests/cli/tests/mongoDb.spec.ts"
+      # TODO: Add setup for the official MongoDB and run "npx playwright test pmm-ui-tests/cli/tests/mongoDb.spec.ts"
 
       - name: Run Client Container Setup
         if: ${{ matrix.db-type == 'clientContainer' }}
