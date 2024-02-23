@@ -34,17 +34,10 @@ on:
         type: string
 
 jobs:
-  get_versions:
-    name: Get versions
-    uses: ./.github/workflows/pmm-version-getter.yml
-    with:
-      repository: ${{ inputs.pmm_server_case || 'release candidate'}}
-
   pmm-server-tests:
     name: 'PMM Server ${{needs.get_versions.outputs.finish_version}} containers tests'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets: inherit
-    needs: get_versions
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
@@ -60,7 +53,6 @@ jobs:
     name: 'PMM Client Docker Container tests'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets: inherit
-    needs: get_versions
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}

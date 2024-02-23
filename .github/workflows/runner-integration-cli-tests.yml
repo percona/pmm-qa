@@ -15,7 +15,7 @@ on:
         default: 'perconalab/pmm-server:dev-latest'
         required: true
         type: string
-      client_image:
+      pmm_client_image:
         description: "pmm2-client docker image, default perconalab/pmm-client:dev-latest"
         required: false
         type: string
@@ -47,10 +47,10 @@ jobs:
       PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
       ###  used in tests ###
-      PMM_SERVER_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
 
       ### used in pmm-framework.sh ###
-      DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
 
     steps:
