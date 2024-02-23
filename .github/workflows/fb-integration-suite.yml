@@ -3,24 +3,29 @@ name: _FB integration CLI tests
 on:
   workflow_dispatch:
     inputs:
-      pmm_server_image:
-        description: "pmm-server docker image, default perconalab/pmm-server:dev-latest"
-        required: false
-        type: string
-      pmm_client_version:
-        description: "pmm2-client version Tarball or Dev-latest, default is dev-latest"
-        required: false
-        type: string
-      pmm_client_image:
-        description: "pmm2-client docker image, default perconalab/pmm-client:dev-latest"
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch(CLI tests)'
+        default: 'main'
         required: false
         type: string
       pmm_qa_branch:
-        description: "Branch for PMM-QA to checkout"
+        description: 'pmm-qa repository branch(for setup)'
+        default: 'main'
         required: false
         type: string
-      pmm_ui_tests_branch:
-        description: "Branch for PMM-UI(CLI) tests to checkout"
+      pmm_server_image:
+        description: 'PMM Server docker image'
+        default: 'perconalab/pmm-server:dev-latest'
+        required: false
+        type: string
+      pmm_client_image:
+        description: 'pmm2-client docker image'
+        default: 'perconalab/pmm-client:dev-latest'
+        required: false
+        type: string
+      pmm_client_version:
+        description: "PMM Client Tarball link or Dev-latest"
+        default: 'dev-latest'
         required: false
         type: string
       sha:
