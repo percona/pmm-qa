@@ -105,11 +105,10 @@ jobs:
       - name: 'Setup <PMM Sever>: "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
-          docker run -d -p 80:80 -p 443:443 -p 9000:9000 --name pmm-server \
+          docker run -d -p 80:80 -p 443:443 -p 9000:9000 \
             -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
-            -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \ 
-          --volumes-from pmm-server-data \
-          --restart always ${{ env.PMM_SERVER_IMAGE }}
+            -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
+            --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
           timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
