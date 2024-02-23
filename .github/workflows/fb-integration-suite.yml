@@ -35,7 +35,7 @@ on:
 
 jobs:
   pmm-server-tests:
-    name: 'PMM Server ${{needs.get_versions.outputs.finish_version}} containers tests'
+    name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets: inherit
     with:
@@ -46,11 +46,12 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
       cli_test: 'pmm-server-only'
+      test_name: 'pmm-server container tests'
 
   # [ps5.7, ps8, ms8.0, pdpgsql13, pdpgsql14, pdpgsql15, modb4.4, modb5, modb6, help, generic, clientContainer, haproxy, proxysql, remove]
 
   pmm-client-container-tests:
-    name: 'PMM Client Docker Container tests'
+    name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets: inherit
     with:
@@ -62,3 +63,4 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
       cli_test: 'pmm-client-docker'
       services_list: '--setup-pmm-client-docker'
+      test_name: ${{ inputs.test_name > '' && format('{0} {1}', inputs.test_name, matrix.os) || matrix.os }}
