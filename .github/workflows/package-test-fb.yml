@@ -37,6 +37,10 @@ on:
           - auto
           - push
           - pull
+      sha:
+        description: "SHA (leave empty if running manually, default - 'null')"
+        required: false
+        type: string
 
   workflow_call:
     inputs:
@@ -66,6 +70,10 @@ on:
       test_name:
         description: 'Name of the test to pretty display in checks list'
         type: string
+      sha:
+        description: "SHA (leave empty if running manually, default - 'null')"
+        required: false
+        type: string
 
 jobs:
   get_versions:
@@ -93,3 +101,4 @@ jobs:
       playbook: ${{ inputs.playbook || 'pmm2-client_integration_custom_path' }}
       test_name: ${{ inputs.test_name > '' && format('{0} {1}', inputs.test_name, matrix.os) || matrix.os }}
       os: ${{ matrix.os }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
