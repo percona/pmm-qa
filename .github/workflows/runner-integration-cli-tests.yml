@@ -125,14 +125,14 @@ jobs:
 
       - name: Generate and Attach the report
         if: ${{ failure() && !!inputs.cli_test }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "report-${{ matrix.db-type }}"
           path: ./pmm-ui-tests/cli/test-report
 
       - name: Create status check
         if: ${{ always() }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
