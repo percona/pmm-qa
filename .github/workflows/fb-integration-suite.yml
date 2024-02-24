@@ -81,7 +81,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
       cli_test: 'pmm-server-only'
-      test_name: 'pmm-server container tests'
+      test_name: 'pmm-server container'
 
   pmm-client-container-tests:
     name: 'CLI / Integration'
