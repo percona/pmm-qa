@@ -50,11 +50,22 @@ jobs:
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+
       ###  used in tests ###
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
 
-      ### used in pmm-framework.sh ###
+      # TODO: rename and update tests to use PMM_CLIENT_IMAGE instead
+      CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+
+      # TODO: rename and update tests to use PMM_CLIENT_VERSION instead
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+
+      # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
+      # TODO: update tests to use PMM_SERVER_IMAGE instead
       DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
+
+      # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
+      # TODO: update tests to use PMM_SERVER_IMAGE instead
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
 
     steps:
