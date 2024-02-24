@@ -60,7 +60,7 @@ jobs:
     steps:
       - name: Create status check
         if: ${{ env.SHA != 'null' }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
