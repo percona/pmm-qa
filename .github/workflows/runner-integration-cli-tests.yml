@@ -32,6 +32,9 @@ on:
         description: "playwright test arguments to execute tests"
         required: false
         type: string
+      test_name:
+        type: string
+        required: false
       sha:
         description: "SHA (leave empty if running manually, default - 'null')"
         required: false
@@ -39,6 +42,7 @@ on:
 
 jobs:
   cli-tests:
+    name: ${{ inputs.test_name || inputs.cli_test}}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -46,17 +50,28 @@ jobs:
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+
       ###  used in tests ###
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
 
-      ### used in pmm-framework.sh ###
+      # TODO: rename and update tests to use PMM_CLIENT_IMAGE instead
+      CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+
+      # TODO: rename and update tests to use PMM_CLIENT_VERSION instead
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+
+      # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
+      # TODO: update tests to use PMM_SERVER_IMAGE instead
       DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
+
+      # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
+      # TODO: update tests to use PMM_SERVER_IMAGE instead
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
 
     steps:
       - name: Create status check
         if: ${{ env.SHA != 'null' }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
@@ -101,26 +116,19 @@ jobs:
       - name: 'Setup <PMM Sever>: "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
-          docker run -d -p 80:80 -p 443:443 -p 9000:9000 --name pmm-server \
-            -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443
-            -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX 
-          --volumes-from pmm-server-data  
-          --restart always ${{ env.PMM_SERVER_IMAGE }}
+          docker run -d -p 80:80 -p 443:443 -p 9000:9000 \
+            -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
+            -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
+            --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
           timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
         run: sudo -E bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
 
-      - name: 'Run env setup'
+      - name: 'Run env setup: ${{ inputs.services_list }}'
         if: ${{ !!inputs.services_list }}
         run: |
           sudo -E bash -x ./pmm-tests/pmm-framework.sh ${{ inputs.services_list }} --pmm2
-
-      - name: Run Client Container Setup
-        if: ${{ matrix.db-type == 'clientContainer' }}
-        run: |
-          sudo -E bash -x ./pmm-tests/pmm-framework.sh --setup-pmm-client-docker --pmm2
-
 
       - name: 'Run CLI tests: ${{ inputs.cli_test }}'
         working-directory: ./pmm-ui-tests/cli
@@ -128,14 +136,14 @@ jobs:
 
       - name: Generate and Attach the report
         if: ${{ failure() && !!inputs.cli_test }}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "report-${{ matrix.db-type }}"
           path: ./pmm-ui-tests/cli/test-report
 
       - name: Create status check
         if: ${{ always() }}
-        uses: percona/gh-action-github-status-action@v1
+        uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
