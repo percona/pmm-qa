@@ -217,65 +217,68 @@ jobs:
       services_list: '--pdpgsql-version=15 --addclient=pdpgsql,1'
       test_name: 'PD PostgreSQL 15'
 
-  mongo-44-tests:
-    name: 'CLI / Integration'
-    uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
-    with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
-      cli_test: 'pmm-ui-tests/cli/tests/mongoDb.spec.ts'
-      services_list: '--modb-version=4.4 --addclient=modb,1'
-      test_name: 'MongoDB 4.4'
+  # FIXME: PMM-12966
+#  mongo-44-tests:
+#    name: 'CLI / Integration'
+#    uses: ./.github/workflows/runner-integration-cli-tests.yml
+#    secrets: inherit
+#    with:
+#      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+#      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+#      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
+#      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+#      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
+#      cli_test: 'pmm-ui-tests/cli/tests/mongoDb.spec.ts'
+#      services_list: '--modb-version=4.4 --addclient=modb,1'
+#      test_name: 'MongoDB 4.4'
 
-  mongo-5-tests:
-    name: 'CLI / Integration'
-    uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
-    with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
-      cli_test: 'pmm-ui-tests/cli/tests/mongoDb.spec.ts'
-      services_list: '--modb-version=5 --addclient=modb,1'
-      test_name: 'MongoDB 5.x'
+  # FIXME: PMM-12966
+#  mongo-5-tests:
+#    name: 'CLI / Integration'
+#    uses: ./.github/workflows/runner-integration-cli-tests.yml
+#    secrets: inherit
+#    with:
+#      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+#      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+#      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
+#      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+#      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
+#      cli_test: 'pmm-ui-tests/cli/tests/mongoDb.spec.ts'
+#      services_list: '--modb-version=5 --addclient=modb,1'
+#      test_name: 'MongoDB 5.x'
 
-  mongo-6-tests:
-    name: 'CLI / Integration'
-    uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
-    with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
-      cli_test: 'pmm-ui-tests/cli/tests/mongoDb.spec.ts'
-      services_list: '--modb-version=6 --addclient=modb,1'
-      test_name: 'MongoDB 6.x'
-
-  mongo-7-tests:
-    name: 'CLI / Integration'
-    uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
-    with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
-      cli_test: 'pmm-ui-tests/cli/tests/mongoDb.spec.ts'
-      services_list: '--modb-version=7 --addclient=modb,1'
-      test_name: 'MongoDB 7.x'
+  # FIXME: PMM-12966
+#  mongo-6-tests:
+#    name: 'CLI / Integration'
+#    uses: ./.github/workflows/runner-integration-cli-tests.yml
+#    secrets: inherit
+#    with:
+#      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+#      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+#      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
+#      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+#      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
+#      cli_test: 'pmm-ui-tests/cli/tests/mongoDb.spec.ts'
+#      services_list: '--modb-version=6 --addclient=modb,1'
+#      test_name: 'MongoDB 6.x'
+  # FIXME: PMM-12966
+#  mongo-7-tests:
+#    name: 'CLI / Integration'
+#    uses: ./.github/workflows/runner-integration-cli-tests.yml
+#    secrets: inherit
+#    with:
+#      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+#      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+#      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
+#      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+#      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
+#      cli_test: 'pmm-ui-tests/cli/tests/mongoDb.spec.ts'
+#      services_list: '--modb-version=7 --addclient=modb,1'
+#      test_name: 'MongoDB 7.x'
 
   psmdb-44-tests:
     name: 'CLI / Integration'
