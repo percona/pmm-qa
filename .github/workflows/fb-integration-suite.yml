@@ -24,7 +24,7 @@ on:
         required: false
         type: string
       pmm_client_version:
-        description: "PMM Client Tarball link or Dev-latest"
+        description: 'PMM Client version (dev-latest|pmm2-latest|pmm2-rc|x.xx.x|https...)'
         default: 'dev-latest'
         required: false
         type: string
@@ -370,4 +370,3 @@ jobs:
       cli_test: 'proxySql'
       services_list: '--pxc-version=5.7 --addclient=pxc,1'
       test_name: 'PXC 5.7'
-
