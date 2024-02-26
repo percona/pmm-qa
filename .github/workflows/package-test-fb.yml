@@ -39,7 +39,8 @@ on:
           - push
           - pull
       sha:
-        description: "SHA (leave empty if running manually, default - 'null')"
+        description: "SHA (leave default if running manually)"
+        default: 'null'
         required: false
         type: string
 
@@ -58,7 +59,7 @@ on:
         required: true
         type: string
       metrics_mode:
-        default: 'auto'
+        required: false
         type: string
       test_name:
         type: string

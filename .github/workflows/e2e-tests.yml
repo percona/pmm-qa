@@ -18,7 +18,7 @@ on:
         default: 'perconalab/pmm-server:dev-latest'
         required: true
       pmm_client_version:
-        description: 'PMM Client version to test (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
+        description: 'PMM Client version (dev-latest|pmm2-latest|pmm2-rc|x.xx.x|https...)'
         default: 'dev-latest'
         required: true
 
@@ -32,7 +32,7 @@ jobs:
       pmm_test_flag: '@rbac'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
-      pmm_clients: '--addclient=ps,1 --addclient=pdpgsql,1'
+      setup_services: '--addclient=ps,1 --addclient=pdpgsql,1'
       pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
 
   portal:
@@ -44,7 +44,7 @@ jobs:
       pmm_test_flag: '@portal'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
-      pmm_clients: ''
+      setup_services: ''
       pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
 
   inventory:
@@ -56,5 +56,5 @@ jobs:
       pmm_test_flag: '@inventory'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
-      pmm_clients: '--addclient=modb,1 --addclient=ps,1 --addclient=pdpgsql,1'
+      setup_services: '--addclient=modb,1 --addclient=ps,1 --addclient=pdpgsql,1'
       pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
