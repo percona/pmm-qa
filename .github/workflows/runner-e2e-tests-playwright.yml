@@ -50,7 +50,7 @@ on:
         required: true
       setup_services:
         type: string
-        required: true
+        required: false
       pmm_qa_branch:
         type: string
         required: true
