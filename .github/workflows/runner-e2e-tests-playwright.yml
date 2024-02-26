@@ -2,38 +2,6 @@
 name: runner-e2e-tests-playwright
 
 on:
-  workflow_call:
-    inputs:
-      pmm_ui_tests_branch:
-        description: 'Target branch for pmm-ui-tests repository'
-        type: string
-        default: 'main'
-        required: true
-      pmm_test_flag:
-        description: 'Flag to run only specific portion of the tests.'
-        type: string
-        required: false
-      pmm_server_version:
-        description: 'Version of the pmm server used for testing'
-        type: string
-        default: 'dev-latest'
-        required: true
-      pmm_client_version:
-        description: 'Version of the pmm client used for testing'
-        type: string
-        default: 'dev-latest'
-        required: true
-      pmm_clients:
-        description: 'Clients for pmm-server'
-        type: string
-        default: '--addclient=ps,1'
-        required: true
-      pmm_qa_branch:
-        description: 'Branch for the pmm-qa repository.'
-        type: string
-        default: 'main'
-        required: true
-
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
@@ -55,7 +23,7 @@ on:
         type: string
         default: 'dev-latest'
         required: true
-      pmm_clients:
+      setup_services:
         description: 'Clients for pmm-server'
         type: string
         default: '--addclient=ps,1'
@@ -64,6 +32,27 @@ on:
         description: 'Branch for the pmm-qa repository.'
         type: string
         default: 'main'
+        required: true
+
+  workflow_call:
+    inputs:
+      pmm_ui_tests_branch:
+        type: string
+        required: true
+      pmm_test_flag:
+        type: string
+        required: false
+      pmm_server_version:
+        type: string
+        required: true
+      pmm_client_version:
+        type: string
+        required: true
+      setup_services:
+        type: string
+        required: true
+      pmm_qa_branch:
+        type: string
         required: true
 
 jobs:
@@ -77,7 +66,7 @@ jobs:
       ADMIN_PASSWORD: admin
 
       UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch }}
-      PMM_CLIENTS: ${{ inputs.pmm_clients }}
+      WIZARD_ARGS: ${{ inputs.setup_services }}
       PMM_TEST_FLAG: ${{ inputs.pmm_test_flag }}
 
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
@@ -153,7 +142,7 @@ jobs:
         working-directory: pmm-qa/pmm-integration
         run: |
           sudo npx ts-node ./integration-setup.ts --ci \
-          ${{ env.PMM_CLIENTS }}
+          ${{ env.WIZARD_ARGS }}
           sleep 30
           sudo pmm-admin list
         shell: bash
@@ -164,8 +153,6 @@ jobs:
         working-directory: pmm-ui-tests/playwright-tests
         run: |
           npx playwright test --project="chromium" --quiet
-#        env:
-#          NODE_TLS_REJECT_UNAUTHORIZED: 0
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
         if: ${{ inputs.pmm_test_flag != 'null' }}
@@ -174,8 +161,6 @@ jobs:
         run: |
           project="${{ contains(env.PMM_TEST_FLAG, 'portal') && 'Portal' || 'Chromium' }}"
           npx playwright test --project=$project --grep ${{ env.PMM_TEST_FLAG }} --pass-with-no-tests
-#        env:
-#          NODE_TLS_REJECT_UNAUTHORIZED: 0
 
       - name: 'Create report name'
         if: failure()

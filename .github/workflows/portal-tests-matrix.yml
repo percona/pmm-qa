@@ -28,6 +28,6 @@ jobs:
       pmm_server_version: ${{ matrix.old_version }}
       pmm_client_version: ${{ matrix.old_version }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_clients: ''
+      setup_services: ''
       version_string_from: ${{needs.get_versions.outputs.start_version}}
 

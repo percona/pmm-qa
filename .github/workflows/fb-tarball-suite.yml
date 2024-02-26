@@ -35,33 +35,20 @@ on:
   workflow_call:
     inputs:
       package_testing_branch:
-        description: 'Target branch for package-testing repository'
         type: string
-        default: 'master'
         required: false
       pmm_server_image:
-        description: "pmm-server docker image"
         required: true
         type: string
-        default: "perconalab/pmm-server:dev-latest"
       pmm_client_tarball:
-        description: "PMM Client tarball link or FB-code"
         type: string
         required: true
       metrics_mode:
-        description: 'Select the Metrics Mode for PMM Client:'
-        default: 'auto'
         type: string
+        required: false
       sha:
-        description: "SHA (leave empty if running manually, default - 'null')"
         required: false
         type: string
-
-    secrets:
-      BACKUP_LOCATION_ACCESS_KEY:
-        required: false
-      BACKUP_LOCATION_SECRET_KEY:
-        required: false
 
 jobs:
   tarball_install:

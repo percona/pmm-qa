@@ -29,7 +29,8 @@ on:
         required: false
         type: string
       sha:
-        description: "SHA (leave empty if running manually, default - 'null')"
+        description: "SHA (leave default if running manually)"
+        default: 'null'
         required: false
         type: string
 
