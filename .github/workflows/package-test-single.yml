@@ -48,24 +48,17 @@ on:
   workflow_call:
     inputs:
       package_testing_branch:
-        description: 'Target branch for package-testing repository'
         type: string
-        default: 'master'
         required: true
       playbook:
-        description: 'Select test to run:'
-        default: 'pmm2-client_integration'
         required: true
         type: string
       repository:
-        description: 'Select Repo for Client:'
         required: true
-        default: 'dev-latest'
         type: string
       metrics_mode:
-        description: 'Select the Metrics Mode for PMM Client:'
-        default: 'auto'
         type: string
+        required: false
 
 jobs:
   get_versions:
