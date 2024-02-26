@@ -66,11 +66,6 @@ on:
         required: false
         type: string
 
-
-
-      pmm_ui_tests_branch:
-
-
 jobs:
   ui-tests-e2e:
     name: "podman e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
