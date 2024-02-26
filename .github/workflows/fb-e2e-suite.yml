@@ -198,7 +198,7 @@ jobs:
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main '}}
       pmm_test_flag: '@rbac'
       pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
-      pmm_pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
       setup_services: '--addclient=ps,1'
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
 
