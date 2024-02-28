@@ -5,7 +5,7 @@ on:
 
 jobs:
   bats-testsuite:
-    uses: Percona-Lab/pmm-submodules/.github/workflows/pmm2-testsuite.yml@PMM-2.0
+    uses: Percona-Lab/pmm-submodules/.github/workflows/pmm2-testsuite.yml@PMM-10789-fb-tests
     with:
       server_image: ${{ github.event.inputs.server_image || 'perconalab/pmm-server:dev-latest' }}
       client_version: ${{ github.event.inputs.client_version || 'dev-latest' }}
