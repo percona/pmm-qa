@@ -1,0 +1,86 @@
+---
+name: Package Test(single)
+
+on:
+  workflow_dispatch:
+    inputs:
+      package_testing_branch:
+        description: 'Target branch for package-testing repository'
+        type: string
+        default: 'master'
+        required: true
+      playbook:
+        description: 'Select test to run:'
+        default: 'pmm2-client_integration'
+        required: true
+        type: choice
+        options:
+          - pmm2-client
+          - pmm2-client_upgrade
+          - pmm2-client_custom_path
+          - pmm2-client_integration
+          - pmm2-client_integration_upgrade
+          - pmm2-client_integration_auth_config
+          - pmm2-client_integration_auth_register
+          - pmm2-client_integration_custom_path
+          - pmm2-client_integration_custom_port
+          - pmm2-client_integration_upgrade_custom_port
+          - pmm2-client_integration_upgrade_custom_path
+      repository:
+        description: 'Select Repo for Client:'
+        required: true
+        default: 'dev-latest'
+        type: choice
+        options:
+          - release
+          - release candidate
+          - dev-latest
+      metrics_mode:
+        description: 'Select the Metrics Mode for PMM Client:'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - push
+          - pull
+
+  workflow_call:
+    inputs:
+      package_testing_branch:
+        type: string
+        required: true
+      playbook:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      metrics_mode:
+        type: string
+        required: false
+
+jobs:
+  get_versions:
+    name: Get versions
+    uses: ./.github/workflows/pmm-version-getter.yml
+    with:
+      repository: ${{ inputs.repository || 'release'}}
+
+  p_test:
+    name: ${{ inputs.playbook }}
+    uses: ./.github/workflows/runner-package-test.yml
+    secrets: inherit
+    needs: get_versions
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.get_versions.outputs.pt_os) }}
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      expected_version: ${{needs.get_versions.outputs.finish_version}}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: ${{ inputs.playbook || 'pmm2-client_integration' }}
+      test_name: ${{ matrix.os }}
+      os: ${{ matrix.os }}

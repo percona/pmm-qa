@@ -30,6 +30,12 @@ const addClientPdPgsql = async (parameters: SetupParameters, numberOfClients: nu
     await executeCommand(`sudo docker network connect ${dockerNetworkName} ${containerName}`);
     await executeCommand(`sudo docker exec ${containerName} psql -h localhost -U postgres -c 'create extension pg_stat_monitor'`);
     await executeCommand(`sudo docker exec ${containerName} psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'`);
+    await executeCommand(`sudo docker exec ${containerName} psql -h localhost -U postgres -c 'CREATE DATABASE test1;'`);
+    await executeCommand(`sudo docker exec ${containerName} psql -h localhost -U postgres -c 'CREATE DATABASE test2;'`);
+    await executeCommand(`sudo docker exec ${containerName} psql -h localhost -U postgres -c 'CREATE DATABASE test3;'`);
+    await executeCommand(`sudo docker exec ${containerName} psql -h localhost -U postgres -c 'CREATE DATABASE test4;'`);
+    await executeCommand(`sudo docker exec ${containerName} psql -h localhost -U postgres -c 'CREATE DATABASE test5;'`);
+    await executeCommand(`sudo docker exec ${containerName} psql -h localhost -U postgres -c 'CREATE DATABASE test6;'`);
     const prefix = parameters.ci ? 'sudo ' : `sudo docker exec ${pmmIntegrationClientName} `;
     const serviceAddress = parameters.ci ? `127.0.0.1:${pdpgsql_port + index}` : `${containerName}:5432`;
 

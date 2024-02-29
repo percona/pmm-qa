@@ -1,0 +1,153 @@
+name: "PMM Upgrade (e2e Tests)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch'
+        default: 'main'
+        required: true
+      pmm_qa_branch:
+        description: 'pmm-qa repository branch(for setup)'
+        default: 'main'
+        required: true
+      pmm_server_start_version:
+        description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
+        default: 'latest'
+        required: true
+      pmm_client_start_version:
+        description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
+        default: 'pmm2-latest'
+        required: true
+      upgrade_type:
+        description: 'Upgrade way:'
+        required: true
+        default: 'UI way'
+        type: choice
+        options:
+          - UI way
+          - Docker way
+          - Podman way
+      repository:
+        description: 'Upgrade to:'
+        required: true
+        default: 'dev-latest'
+        type: choice
+        options:
+          - release
+          - release candidate
+          - dev-latest
+
+  workflow_call:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch'
+        default: 'main'
+        type: string
+        required: true
+      pmm_qa_branch:
+        description: 'pmm-qa repository branch(for setup)'
+        default: 'main'
+        type: string
+        required: true
+      pmm_server_start_version:
+        description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
+        default: 'latest'
+        type: string
+        required: true
+      pmm_client_start_version:
+        description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
+        default: 'pmm2-latest'
+        type: string
+        required: true
+      upgrade_type:
+        description: 'Upgrade way:'
+        required: true
+        default: 'UI way'
+        type: string
+      repository:
+        description: 'Upgrade to:'
+        required: true
+        default: 'dev-latest'
+        type: string
+
+jobs:
+  get_versions:
+    name: Get versions
+    uses: ./.github/workflows/pmm-version-getter.yml
+    with:
+      pmm_server_start_version: ${{ inputs.pmm_server_start_version || 'latest'}}
+      repository: ${{ inputs.repository || 'dev-latest'}}
+      matrix_range: 10
+
+  configuration:
+    name: 'Configuration / Settings'
+    uses: ./.github/workflows/runner-e2e-upgrade-tests.yml
+    secrets: inherit
+    needs: get_versions
+    with:
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch }}
+      pre_upgrade_tests: '@config-pre-upgrade'
+      post_upgrade_tests: '@config-post-upgrade'
+      pmm_server_start_version: ${{ inputs.pmm_server_start_version }}
+      pmm_client_start_version: ${{ inputs.pmm_client_start_version }}
+      upgrade_type: ${{ inputs.upgrade_type }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+      services_list: ''
+      repository: ${{ inputs.repository }}
+      version_string_from: ${{needs.get_versions.outputs.start_version}}
+      version_string_to: ${{needs.get_versions.outputs.finish_version}}
+
+  rbac:
+    name: RBAC
+    uses: ./.github/workflows/runner-e2e-upgrade-tests.yml
+    secrets: inherit
+    needs: get_versions
+    with:
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch }}
+      pre_upgrade_tests: '@rbac-pre-upgrade'
+      post_upgrade_tests: '@rbac-post-upgrade'
+      pmm_server_start_version: ${{ inputs.pmm_server_start_version }}
+      pmm_client_start_version: ${{ inputs.pmm_client_start_version }}
+      upgrade_type: ${{ inputs.upgrade_type }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+      services_list: '--addclient=ps,1 --addclient=pdpgsql,1'
+      repository: ${{ inputs.repository }}
+      version_string_from: ${{needs.get_versions.outputs.start_version}}
+      version_string_to: ${{needs.get_versions.outputs.finish_version}}
+
+#  portal:
+#    name: Portal / Portal
+#    uses: ./.github/workflows/runner-e2e-upgrade-tests.yml
+#    secrets: inherit
+#    needs: get_versions
+#    with:
+#      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch }}
+#      pre_upgrade_tests: '@pre-pmm-portal-upgrade'
+#      post_upgrade_tests: '@post-pmm-portal-upgrade'
+#      pmm_server_start_version: ${{ inputs.pmm_server_start_version }}
+#      pmm_client_start_version: ${{ inputs.pmm_client_start_version }}
+#      upgrade_type: ${{ inputs.upgrade_type }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+#      services_list: ''
+#      repository: ${{ inputs.repository }}
+#      version_string_from: ${{needs.get_versions.outputs.start_version}}
+#      version_string_to: ${{needs.get_versions.outputs.finish_version}}
+#
+#  inventory:
+#    name: 'Inventory'
+#    uses: ./.github/workflows/runner-e2e-upgrade-tests.yml
+#    secrets: inherit
+#    needs: get_versions
+#    with:
+#      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch }}
+#      pre_upgrade_tests: '@inventory-pre-upgrade'
+#      post_upgrade_tests: '@inventory-post-upgrade'
+#      pmm_server_start_version: ${{ inputs.pmm_server_start_version }}
+#      pmm_client_start_version: ${{ inputs.pmm_client_start_version }}
+#      upgrade_type: ${{ inputs.upgrade_type }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+#      services_list: '--addclient=modb,1'
+#      repository: ${{ inputs.repository }}
+#      version_string_from: ${{needs.get_versions.outputs.start_version}}
+#      version_string_to: ${{needs.get_versions.outputs.finish_version}}

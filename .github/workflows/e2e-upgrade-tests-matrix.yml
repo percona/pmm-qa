@@ -1,0 +1,122 @@
+name: "PMM Upgrade Matrix (e2e tests)"
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch'
+        default: 'main'
+        required: true
+      pmm_qa_branch:
+        description: 'pmm-qa repository branch(for setup)'
+        default: 'main'
+        required: true
+      upgrade_type:
+        description: 'Upgrade way:'
+        required: true
+        default: 'Docker way'
+        type: choice
+        options:
+          - UI way
+          - Docker way
+          - Podman way
+      repository:
+        description: 'Upgrade to:'
+        required: true
+        default: 'dev-latest'
+        type: choice
+        options:
+          - release
+          - release candidate
+          - dev-latest
+
+jobs:
+  get_versions:
+    name: Get versions
+    uses: ./.github/workflows/pmm-version-getter.yml
+    with:
+      repository: ${{ inputs.repository || 'dev-latest'}}
+      matrix_range: 10
+
+  configuration:
+    name: 'Configuration / Settings'
+    uses: ./.github/workflows/runner-e2e-upgrade-tests.yml
+    secrets: inherit
+    needs: get_versions
+    strategy:
+      fail-fast: false
+      matrix:
+        old_version: ${{ fromJSON(needs.get_versions.outputs.version_matrix) }}
+    with:
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      pre_upgrade_tests: '@config-pre-upgrade'
+      post_upgrade_tests: '@config-post-upgrade'
+      pmm_server_start_version: ${{ matrix.old_version }}
+      pmm_client_start_version: ${{ matrix.old_version }}
+      upgrade_type: ${{ inputs.upgrade_type || 'Docker way' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      services_list: ''
+      repository: ${{ inputs.repository || 'dev-latest'}}
+      version_string_from: ${{needs.get_versions.outputs.start_version}}
+      version_string_to: ${{needs.get_versions.outputs.finish_version}}
+
+  rbac:
+    name: "RBAC / User Roles"
+    uses: ./.github/workflows/runner-e2e-upgrade-tests.yml
+    secrets: inherit
+    needs: get_versions
+    strategy:
+      fail-fast: false
+      matrix:
+        old_version: ${{ fromJSON(needs.get_versions.outputs.version_matrix) }}
+    with:
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      pre_upgrade_tests: '@rbac-pre-upgrade'
+      post_upgrade_tests: '@rbac-post-upgrade'
+      pmm_server_start_version: ${{ matrix.old_version }}
+      pmm_client_start_version: ${{ matrix.old_version }}
+      upgrade_type: ${{ inputs.upgrade_type || 'Docker way' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      services_list: '--addclient=ps,1 --addclient=pdpgsql,1'
+      repository: ${{ inputs.repository || 'dev-latest'}}
+      version_string_from: ${{needs.get_versions.outputs.start_version}}
+      version_string_to: ${{needs.get_versions.outputs.finish_version}}
+
+# TODO: add / in the job names for good sub-jobs grouping
+#  portal:
+#    name: Portal
+#    uses: ./.github/workflows/runner-e2e-upgrade-tests.yml
+#    secrets: inherit
+#    needs: get_versions
+#    with:
+#      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch }}
+#      pre_upgrade_tests: '@pre-pmm-portal-upgrade'
+#      post_upgrade_tests: '@post-pmm-portal-upgrade'
+#      pmm_server_start_version: ${{ inputs.pmm_server_start_version }}
+#      pmm_client_start_version: ${{ inputs.pmm_client_start_version }}
+#      upgrade_type: ${{ inputs.upgrade_type || 'Docker way' }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+#      services_list: ''
+#      repository: ${{ inputs.repository }}
+#      version_string_from: ${{needs.get_versions.outputs.start_version}}
+#      version_string_to: ${{needs.get_versions.outputs.finish_version}}
+#
+#  inventory:
+#    name: 'Inventory'
+#    uses: ./.github/workflows/runner-e2e-upgrade-tests.yml
+#    secrets: inherit
+#    needs: get_versions
+#    with:
+#      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch }}
+#      pre_upgrade_tests: '@inventory-pre-upgrade'
+#      post_upgrade_tests: '@inventory-post-upgrade'
+#      pmm_server_start_version: ${{ inputs.pmm_server_start_version }}
+#      pmm_client_start_version: ${{ inputs.pmm_client_start_version }}
+#      upgrade_type: ${{ inputs.upgrade_type || 'Docker way' }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+#      services_list: '--addclient=modb,1'
+#      repository: ${{ inputs.repository }}
+#      version_string_from: ${{needs.get_versions.outputs.start_version}}
+#      version_string_to: ${{needs.get_versions.outputs.finish_version}}
