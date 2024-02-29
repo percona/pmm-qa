@@ -142,7 +142,7 @@ jobs:
           path: ./pmm-ui-tests/cli/test-report
 
       - name: Create status check
-        if: ${{ always() }}
+        if: ${{ env.SHA != 'null' && always() }}
         uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:
