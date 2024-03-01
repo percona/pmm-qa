@@ -10,7 +10,7 @@ on:
         description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
         type: string
       repository:
-        description: 'Upgrade to:'
+        description: 'To detect "finish_version" string: X.XX.X'
         required: true
         default: 'dev-latest'
         type: string
