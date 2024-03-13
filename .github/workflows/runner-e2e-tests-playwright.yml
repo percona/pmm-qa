@@ -75,10 +75,10 @@ jobs:
 
       OKTA_TOKEN: ${{ secrets.OKTA_TOKEN }}
       OAUTH_ISSUER_URL: 'https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7'
-      OAUTH_CLIENT_ID: ${{ secrets.OKTA_OAUTH_CLIENT_ID }}
-      OAUTH_CLIENT_SECRET: ${{ secrets.OKTA_OAUTH_CLIENT_SECRET }}
-      OAUTH_PMM_CLIENT_ID: ${{ secrets.OKTA_OAUTH_PMM_CLIENT_ID }}
-      OAUTH_PMM_CLIENT_SECRET: ${{ secrets.OKTA_OAUTH_PMM_CLIENT_SECRET }}
+      OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+      OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
+      OAUTH_PMM_CLIENT_ID: ${{ secrets.OAUTH_PMM_CLIENT_ID }}
+      OAUTH_PMM_CLIENT_SECRET: ${{ secrets.OAUTH_PMM_CLIENT_SECRET }}
       OAUTH_DEV_HOST: ${{ secrets.OAUTH_DEV_HOST }}
       OAUTH_SCOPES: percona
 
