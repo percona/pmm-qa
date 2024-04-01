@@ -52,6 +52,7 @@ on:
         type: string
       pmm_ova_server_image:
         required: false
+        default: '2.41.2'
         type: string
       pmm_client_version:
         required: false
