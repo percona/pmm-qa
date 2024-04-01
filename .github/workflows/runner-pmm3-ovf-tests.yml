@@ -113,5 +113,6 @@ jobs:
 
       - name: Setup tools
         run: |
+          sudo apt update
           sudo apt install virtualbox
           VBoxManage --help
