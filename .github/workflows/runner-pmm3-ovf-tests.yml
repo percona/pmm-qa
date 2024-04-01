@@ -1,0 +1,114 @@
+name: _runner-pmm3-ovf-tests
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: "Branch for PMM-UI tests to checkout"
+        required: false
+        type: string
+      pmm_qa_branch:
+        description: "Branch for PMM-QA to checkout"
+        required: false
+        type: string
+      pmm_ova_server_image:
+        description: 'PMM Server docker image'
+        default: 'perconalab/pmm-server:dev-latest'
+        required: false
+        type: string
+      pmm_client_image:
+        description: 'pmm2-client docker image'
+        default: 'perconalab/pmm-client:dev-latest'
+        required: false
+        type: string
+      pmm_client_version:
+        description: 'PMM Client version (dev-latest|pmm2-latest|pmm2-rc|x.xx.x|https...)'
+        default: 'dev-latest'
+        required: false
+        type: string
+      setup_services:
+        description: "Setup arguments, ex.: --addclient=ps,1 --ps-version=5.7"
+        required: false
+        type: string
+      tags_for_tests:
+        description: "example: @settings-fb"
+        required: true
+        type: string
+      sha:
+        description: "SHA (leave default if running manually)"
+        default: 'null'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_ui_tests_branch:
+        required: false
+        type: string
+      pmm_qa_branch:
+        required: false
+        type: string
+      pmm_ova_server_image:
+        required: false
+        type: string
+      pmm_client_version:
+        required: false
+        type: string
+      pmm_client_image:
+        required: false
+        type: string
+      setup_services:
+        required: false
+        type: string
+      tags_for_tests:
+        required: true
+        type: string
+      sha:
+        required: false
+        type: string
+
+jobs:
+  ui-tests-e2e:
+    name: "PMM3 OVF tests with tags: ${{ inputs.tags_for_tests }}"
+    runs-on: ubuntu-22.04
+    env:
+      SHA: ${{ inputs.sha || 'null' }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ADMIN_PASSWORD: 'admin-password'
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      OVA_VERSION: ${{ inputs.pmm_ova_server_image }}
+      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+
+      #      Environment variables for tests
+      BACKUP_LOCATION_ACCESS_KEY: ${{ secrets.BACKUP_LOCATION_ACCESS_KEY }}
+      BACKUP_LOCATION_SECRET_KEY: ${{ secrets.BACKUP_LOCATION_SECRET_KEY }}
+
+    steps:
+      - name: Create status check
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: percona/gh-action-github-status-action@v1
+        continue-on-error: true
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: "${{ env.TAGS_FOR_TESTS }} UI tests"
+          description: "Test execution ${{ job.status }}"
+          state: "pending"
+          repository: ${{ github.repository }}
+          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          sha: ${{ env.SHA }}
+
+      - name: Checkout PMM UI tests
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PMM_UI_BRANCH }}
+          repository: percona/pmm-ui-tests
+          path: ./pmm-ui-tests
+
+      - name: Setup tools
+        run: |
+          sudo apt install virtualbox
+          VBoxManage --help
