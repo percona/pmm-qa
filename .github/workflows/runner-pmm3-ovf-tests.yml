@@ -15,7 +15,7 @@ on:
         type: string
       pmm_ova_server_image:
         description: 'PMM Server docker image'
-        default: 'perconalab/pmm-server:dev-latest'
+        default: '2.41.2'
         required: false
         type: string
       pmm_client_image:
@@ -116,3 +116,7 @@ jobs:
           sudo apt update
           sudo apt install virtualbox
           VBoxManage --help
+
+      - name: Get PMM Server OVF Image
+        run: |
+          wget https://downloads.percona.com/downloads/pmm/${{ env.OVA_VERSION }}/ova/pmm-server-${{ env.OVA_VERSION }}.ova
