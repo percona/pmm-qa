@@ -125,5 +125,5 @@ jobs:
       - name: Start PMM Server OVF Image
         run: |
           ls
-          vboxmanage import pmm-server-${{ env.OVA_VERSION }}.ova --vmname pmm-server
+          vboxmanage import pmm-server-${{ env.OVA_VERSION }}.ova --vsys 0 --vmname pmm-server
           vboxmanage startvm "pmm-server" --type headless
