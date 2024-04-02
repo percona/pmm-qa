@@ -130,6 +130,12 @@ jobs:
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,,443,,8443"
           vboxmanage startvm "pmm-server" --type headless
 
+      - name: Setup npm modules for e2e tests
+        working-directory: ./pmm-ui-tests
+        run: |
+          npm ci
+          envsubst < env.list > env.generated.list
+
       - name: Execute e2e tests for OVF image
         working-directory: ./pmm-ui-tests
         env:
@@ -137,6 +143,5 @@ jobs:
           PMM_UI_URL: "http://192.168.0.1/"
           PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
-          npm install
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep '(?=.*)^(?!.*@not-ui-pipeline)^(?!.*@ami-upgrade)^(?!.*@pmm-upgrade)^(?!.*@not-ovf)^(?!.*@qan)^(?!.*@dbaas)^(?!.*@dashboards)^(?!.*@menu)^(?!.*@pmm-portal-upgrade)^(?!.*@upgrade-dbaas)'
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "@dashboards"
