@@ -121,3 +121,5 @@ jobs:
       - name: Get PMM Server OVF Image
         run: |
           wget https://downloads.percona.com/downloads/pmm2/${{ env.OVA_VERSION }}/ova/pmm-server-${{ env.OVA_VERSION }}.ova
+          ls
+          vboxmanage import pmm-server-${{ env.OVA_VERSION }}.ova
