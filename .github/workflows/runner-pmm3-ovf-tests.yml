@@ -77,7 +77,7 @@ jobs:
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ADMIN_PASSWORD: 'admin-password'
+      ADMIN_PASSWORD: 'admin'
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
@@ -126,4 +126,19 @@ jobs:
         run: |
           ls
           vboxmanage import pmm-server-${{ env.OVA_VERSION }}.ova --vsys 0 --vmname pmm-server
+          vboxmanage modifyvm pmm-server \
+                        --audio none \
+                        --natpf1 "guestssh,tcp,,80,,8080" \
+                        --uart1 0x3F8 4 --uartmode1 file /tmp/${VM_NAME}-console.log \
+          vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,,443,,8443"
           vboxmanage startvm "pmm-server" --type headless
+
+      - name: Execute e2e tests for OVF image
+        working-directory: ./pmm-ui-tests
+        env:
+          SERVER_IP: "192.168.0.1"
+          PMM_UI_URL: "http://192.168.0.1/"
+          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
+        run: |
+          sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep '(?=.*)^(?!.*@not-ui-pipeline)^(?!.*@ami-upgrade)^(?!.*@pmm-upgrade)^(?!.*@not-ovf)^(?!.*@qan)^(?!.*@dbaas)^(?!.*@dashboards)^(?!.*@menu)^(?!.*@pmm-portal-upgrade)^(?!.*@upgrade-dbaas)'
