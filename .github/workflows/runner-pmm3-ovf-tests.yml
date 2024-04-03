@@ -129,6 +129,7 @@ jobs:
           vboxmanage modifyvm pmm-server --natpf1 "guestssh,tcp,,80,,8080"
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,,443,,8443"
           vboxmanage startvm "pmm-server" --type headless
+          sleep 120
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
@@ -151,4 +152,5 @@ jobs:
         with:
           name: ${{ steps.artifact_name.outputs.result }}
           path: |
+            ls pmm-ui-tests/tests/output/
             pmm-ui-tests/tests/output/*.png
