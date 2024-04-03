@@ -146,11 +146,12 @@ jobs:
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "@dashboards"
+          sleep 30
+          ls pmm-ui-tests/tests/output/
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
           name: ${{ steps.artifact_name.outputs.result }}
           path: |
-            ls pmm-ui-tests/tests/output/
             pmm-ui-tests/tests/output/*.png
