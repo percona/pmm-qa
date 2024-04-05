@@ -15,12 +15,12 @@ on:
         type: string
       pmm_server_image:
         description: 'PMM Server docker image'
-        default: 'perconalab/pmm-server:dev-latest'
+        default: 'perconalab/pmm-server:3-dev-latest'
         required: true
         type: string
       pmm_client_image:
         description: 'pmm2-client docker image'
-        default: 'perconalab/pmm-client:dev-latest'
+        default: 'perconalab/pmm-client:3-dev-latest'
         required: false
         type: string
       pmm_client_version:
