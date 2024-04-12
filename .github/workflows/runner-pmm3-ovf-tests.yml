@@ -73,7 +73,7 @@ on:
 jobs:
   ui-tests-e2e:
     name: "PMM3 OVF tests with tags: ${{ inputs.tags_for_tests }}"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
