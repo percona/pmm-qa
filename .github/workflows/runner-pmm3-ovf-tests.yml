@@ -134,7 +134,7 @@ jobs:
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
         run: |
-          echo "$PUBLIC_IP" | tee IP
+          curl https://api.ipify.org
           npm ci
           envsubst < env.list > env.generated.list
 
