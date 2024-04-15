@@ -128,12 +128,9 @@ jobs:
           export OVF_NAME=$(find -type f -name '*.ovf')
           echo $OVF_NAME
           vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
-          echo "BRIDGE_NAME=$(VBoxManage list bridgedifs | grep "Name" | awk -F " " '{print $2}' | head -n 1)" >> $GITHUB_ENV
-          echo "Bridge Name is: "
-          echo "${{ env.BRIDGE_NAME }}"
-
-          sleep 60
+          echo $(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
           export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
+          echo "Server IP: "
           echo $SERVER_IP
           vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,$SERVER_IP,80"
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,$SERVER_IP,443"
