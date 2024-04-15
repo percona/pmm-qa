@@ -128,14 +128,15 @@ jobs:
           export OVF_NAME=$(find -type f -name '*.ovf')
           echo $OVF_NAME
           vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
-          vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,,80,,8080"
-          vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,,443,,8443"
-          VBoxManage list bridgedifs
           export BRIDGE_NAME=$(VBoxManage list bridgedifs | grep "Name" | awk -F " " '{print $2}' | head -n 1)
           echo $BRIDGE_NAME
-          vboxmanage showvminfo pmm-server | grep "NIC"
           vboxmanage startvm "pmm-server" --type headless
           sleep 60
+          export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
+          echo $SERVER_IP
+          vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,$SERVER_IP,80"
+          vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,$SERVER_IP,443"
+          vboxmanage showvminfo pmm-server | grep "NIC"
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
@@ -147,12 +148,12 @@ jobs:
       - name: Execute e2e tests for OVF image
         working-directory: ./pmm-ui-tests
         env:
-          SERVER_IP: "10.1.0.12"
           PMM_UI_URL: "http://10.1.0.12/"
           PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
-          export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
           echo $SERVER_IP
+          export PMM_UI_URL="http://${SERVER_IP}/"
+          echo $PMM_UI_URL
           vboxmanage list runningvms
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "@dashboards"
