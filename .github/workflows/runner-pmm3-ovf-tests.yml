@@ -116,7 +116,6 @@ jobs:
         run: |
           sudo apt update
           sudo apt install virtualbox
-          VBoxManage --help
 
       - name: Get PMM Server OVF Image
         run: |
@@ -137,7 +136,7 @@ jobs:
           vboxmanage modifyvm pmm-server --nic1 bridged --bridgeadapter1 $BRIDGE_NAME
           vboxmanage showvminfo pmm-server | grep "NIC"
           vboxmanage startvm "pmm-server" --type headless
-          sleep 480
+          sleep 60
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
