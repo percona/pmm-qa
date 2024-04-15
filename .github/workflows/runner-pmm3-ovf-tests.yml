@@ -128,6 +128,7 @@ jobs:
           vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
           vboxmanage startvm pmm-server --type headless
           sleep 60
+          echo "SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')" >> $GITHUB_ENV
           export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
           echo "Server IP: "
           echo $SERVER_IP
