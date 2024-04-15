@@ -131,7 +131,7 @@ jobs:
           vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,$SERVER_IP,80"
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,$SERVER_IP,443"
           vboxmanage startvm "pmm-server" --type headless
-          
+          sleep 60
           export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
           echo "Server IP: "
           echo $SERVER_IP
