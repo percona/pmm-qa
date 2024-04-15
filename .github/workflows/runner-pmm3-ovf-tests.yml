@@ -132,6 +132,7 @@ jobs:
           vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,,80,,8080"
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,,443,,8443"
           vboxmanage modifyvm pmm-server --nic1 bridged
+          vboxmanage showvminfo pmm-server | grep "NIC"
           vboxmanage startvm "pmm-server" --type headless
           sleep 120
 
