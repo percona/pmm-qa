@@ -125,7 +125,10 @@ jobs:
       - name: Start PMM Server OVF Image
         run: |
           ls
-          vboxmanage import pmm-server-${{ env.OVA_VERSION }}.ova --vsys 0 --vmname pmm-server
+          tar xvf pmm-server-${{ env.OVA_VERSION }}.ova
+          export OVF_NAME=\$(find -type f -name '*.ovf');
+          echo $OVF_NAME
+          vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
           vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,,80,,8080"
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,,443,,8443"
           vboxmanage startvm "pmm-server" --type headless
