@@ -131,6 +131,7 @@ jobs:
           vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
           vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,,80,,8080"
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,,443,,8443"
+          VBoxManage list bridgedifs
           export BRIDGE_NAME=$(VBoxManage list bridgedifs | grep "Name" | awk -F " " '{print $2}' | head -n 1)
           echo $BRIDGE_NAME
           vboxmanage modifyvm pmm-server --nic1 bridged --bridgeadapter1 $BRIDGE_NAME
