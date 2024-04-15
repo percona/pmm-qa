@@ -132,9 +132,9 @@ jobs:
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,$SERVER_IP,443"
           vboxmanage startvm "pmm-server" --type headless
           sleep 60
-          export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
+          export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}') >> $GITHUB_ENV
           echo "Server IP: "
-          echo $SERVER_IP
+          echo ${{ env.SERVER_IP }}
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
