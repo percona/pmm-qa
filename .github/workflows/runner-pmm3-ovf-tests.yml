@@ -128,13 +128,16 @@ jobs:
           export OVF_NAME=$(find -type f -name '*.ovf')
           echo $OVF_NAME
           vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
-          vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,$SERVER_IP,80"
-          vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,$SERVER_IP,443"
-          vboxmanage startvm "pmm-server" --type headless
+          
+          vboxmanage startvm pmm-server --type headless
           sleep 60
-          export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}') >> $GITHUB_ENV
+          echo "SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')" >> $GITHUB_ENV
           echo "Server IP: "
           echo ${{ env.SERVER_IP }}
+          vboxmanage controlvm pmm-server acpipowerbutton
+          vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,${{ env.SERVER_IP }},80"
+          vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,${{ env.SERVER_IP }},443"
+          vboxmanage startvm pmm-server --type headless
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
