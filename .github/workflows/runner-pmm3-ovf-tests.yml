@@ -140,7 +140,7 @@ jobs:
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
         run: |
-          curl https://api.ipify.org
+          VBoxManage showvminfo pmm-server
           npm ci
           envsubst < env.list > env.generated.list
 
