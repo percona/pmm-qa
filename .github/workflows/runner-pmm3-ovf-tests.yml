@@ -126,7 +126,7 @@ jobs:
         run: |
           ls
           vboxmanage import pmm-server-${{ env.OVA_VERSION }}.ova --vsys 0 --vmname pmm-server
-          vboxmanage modifyvm pmm-server --natpf1 "guestssh,tcp,,80,,8080"
+          vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,,80,,8080"
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,,443,,8443"
           vboxmanage startvm "pmm-server" --type headless
           sleep 120
