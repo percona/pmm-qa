@@ -145,6 +145,7 @@ jobs:
           PMM_UI_URL: "http://127.0.0.1/"
           PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
+          vboxmanage list runningvms
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "@dashboards"
           sleep 30
