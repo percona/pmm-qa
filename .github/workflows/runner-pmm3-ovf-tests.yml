@@ -125,23 +125,23 @@ jobs:
         run: |
           tar xvf pmm-server-${{ env.OVA_VERSION }}.ova
           export OVF_NAME=$(find -type f -name '*.ovf')
-          vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
-          vboxmanage startvm pmm-server --type headless
+          sudo vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
+          sudo vboxmanage startvm pmm-server --type headless
           sleep 60
-          echo "SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')" >> $GITHUB_ENV
-          export SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
+          echo "SERVER_IP=$(sudo vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')" >> $GITHUB_ENV
+          export SERVER_IP=$(sudo vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')
           echo "Server IP: "
           echo $SERVER_IP
-          vboxmanage controlvm pmm-server acpipowerbutton
+          sudo vboxmanage controlvm pmm-server acpipowerbutton
           sleep 15
-          vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,$SERVER_IP,80"
-          vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,$SERVER_IP,443"
-          vboxmanage startvm pmm-server --type headless
+          sudo vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,$SERVER_IP,80"
+          sudo vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,$SERVER_IP,443"
+          sudo vboxmanage startvm pmm-server --type headless
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
         run: |
-          VBoxManage showvminfo pmm-server
+          sudo VBoxManage showvminfo pmm-server
           npm ci
           envsubst < env.list > env.generated.list
 
@@ -153,7 +153,7 @@ jobs:
         run: |
           echo ${{ env.PMM_UI_URL }}
           echo $PMM_UI_URL
-          vboxmanage list runningvms
+          sudo vboxmanage list runningvms
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "@dashboards"
           sleep 30
