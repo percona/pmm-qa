@@ -133,8 +133,8 @@ jobs:
           echo $SERVER_IP
           vboxmanage controlvm pmm-server acpipowerbutton
           sleep 15
-          vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,${{ env.SERVER_IP }},80"
-          vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,${{ env.SERVER_IP }},443"
+          vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,$SERVER_IP,80"
+          vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,$SERVER_IP,443"
           vboxmanage startvm pmm-server --type headless
 
       - name: Setup npm modules for e2e tests
