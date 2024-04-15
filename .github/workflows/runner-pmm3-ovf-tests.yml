@@ -126,7 +126,7 @@ jobs:
         run: |
           ls
           tar xvf pmm-server-${{ env.OVA_VERSION }}.ova
-          export OVF_NAME=\$(find -type f -name '*.ovf');
+          export OVF_NAME=$(find -type f -name '*.ovf')
           echo $OVF_NAME
           vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
           vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,,80,,8080"
