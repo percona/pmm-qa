@@ -123,18 +123,16 @@ jobs:
 
       - name: Start PMM Server OVF Image
         run: |
-          ls
           tar xvf pmm-server-${{ env.OVA_VERSION }}.ova
           export OVF_NAME=$(find -type f -name '*.ovf')
-          echo $OVF_NAME
           vboxmanage import $OVF_NAME --vsys 0 --vmname pmm-server
-          
           vboxmanage startvm pmm-server --type headless
           sleep 60
           echo "SERVER_IP=$(vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP | awk -F " " '{print $2}')" >> $GITHUB_ENV
           echo "Server IP: "
-          echo "${{ env.SERVER_IP }}"
+          echo $SERVER_IP
           vboxmanage controlvm pmm-server acpipowerbutton
+          sleep 15
           vboxmanage modifyvm pmm-server --natpf1 "guestweb,tcp,127.0.0.1,80,${{ env.SERVER_IP }},80"
           vboxmanage modifyvm pmm-server --natpf1 "guesthttps,tcp,127.0.01,443,${{ env.SERVER_IP }},443"
           vboxmanage startvm pmm-server --type headless
@@ -153,6 +151,7 @@ jobs:
           PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
           echo ${{ env.PMM_UI_URL }}
+          echo $PMM_UI_URL
           vboxmanage list runningvms
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "@dashboards"
