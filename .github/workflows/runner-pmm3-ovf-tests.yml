@@ -136,7 +136,7 @@ jobs:
           vboxmanage modifyvm pmm-server --nic1 bridged --bridgeadapter1 $BRIDGE_NAME
           vboxmanage showvminfo pmm-server | grep "NIC"
           vboxmanage startvm "pmm-server" --type headless
-          sleep 120
+          sleep 480
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
@@ -152,7 +152,6 @@ jobs:
           PMM_UI_URL: "http://127.0.0.1/"
           PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
-          sleep 120
           vboxmanage guestproperty get pmm-server /VirtualBox/GuestInfo/Net/0/V4/IP
           vboxmanage list runningvms
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
