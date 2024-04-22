@@ -75,7 +75,7 @@ jobs:
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ADMIN_PASSWORD: 'admin-password'
+      ADMIN_PASSWORD: 'admin'
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
