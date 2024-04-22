@@ -143,7 +143,7 @@ jobs:
               --hostname pmm-server \
               --network pmm-qa \
               --restart always \
-              ${{ env.DOCKER_VERSION }
+              ${{ env.DOCKER_VERSION }}
           sleep 30
           docker logs pmm-server
 
