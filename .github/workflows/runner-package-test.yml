@@ -13,7 +13,7 @@ on:
         description: "pmm-server docker image(auto detected if empty)"
         required: false
         type: string
-        default: "perconalab/pmm-server:dev-latest"
+        default: "perconalab/pmm-server:3-dev-latest"
       pmm_client_tarball:
         description: "PMM Client tarball link or FB-code"
         type: string
@@ -146,7 +146,7 @@ jobs:
           ### pmm-server docker image ###
           if [[ -z "${{ env.PMM_SERVER_IMAGE }}" ]]; then
             if [[ "${{ inputs.repository }}" = "dev-latest" ]]; then
-              echo "PMM_SERVER_IMAGE=perconalab/pmm-server:dev-latest" >> $GITHUB_ENV
+              echo "PMM_SERVER_IMAGE=perconalab/pmm-server:3-dev-latest" >> $GITHUB_ENV
             fi
             if [[ "${{ inputs.repository }}" =~ "candidate" ]]; then
               rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 2.*.*-rc$ | sort -V | tail -n1)
@@ -221,7 +221,7 @@ jobs:
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
-          docker run -d -p 80:80 -p 443:443 -p 9000:9000 \
+          docker run -d -p 80:8080 -p 443:8443 -p 9000:9000 \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
 
       - name: "Setup tools"
