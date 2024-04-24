@@ -7,7 +7,7 @@ on:
       package_testing_branch:
         description: "Target branch for package-testing repository"
         type: string
-        default: "master"
+        default: "v3"
         required: true
       pmm_server_image:
         description: "pmm-server docker image(auto detected if empty)"
@@ -149,7 +149,7 @@ jobs:
               echo "PMM_SERVER_IMAGE=perconalab/pmm-server:3-dev-latest" >> $GITHUB_ENV
             fi
             if [[ "${{ inputs.repository }}" =~ "candidate" ]]; then
-              rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 2.*.*-rc$ | sort -V | tail -n1)
+              rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
               echo "PMM_SERVER_IMAGE=perconalab/pmm-server:$rc_latest" >> $GITHUB_ENV
             fi
             if [[ "${{ inputs.repository }}" = "release" ]]; then
