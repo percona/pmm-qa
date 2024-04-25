@@ -21,14 +21,14 @@ on:
         required: true
       playbook:
         description: 'Select test to run:'
-        default: 'pmm2-client_integration'
+        default: 'pmm3-client_integration'
         required: true
         type: choice
         options:
-          - pmm2-client_custom_path
-          - pmm2-client_integration_custom_path
-          - pmm2-client_integration_custom_port
-          - pmm2-client_integration_upgrade_custom_path
+          - pmm3-client_custom_path
+          - pmm3-client_integration_custom_path
+          - pmm3-client_integration_custom_port
+          - pmm3-client_integration_upgrade_custom_path
       metrics_mode:
         description: 'Select the Metrics Mode for PMM Client:'
         required: true
@@ -90,7 +90,7 @@ jobs:
       expected_version: ${{needs.get_versions.outputs.finish_version}}
       repository: 'dev-latest'
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
-      playbook: ${{ inputs.playbook || 'pmm2-client_integration_custom_path' }}
+      playbook: ${{ inputs.playbook || 'pmm3-client_integration_custom_path' }}
       test_name: ${{ inputs.test_name > '' && format('{0} {1}', inputs.test_name, matrix.os) || matrix.os }}
       os: ${{ matrix.os }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}

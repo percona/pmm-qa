@@ -15,17 +15,17 @@ on:
         required: true
         type: choice
         options:
-          - pmm2-client
-          - pmm2-client_upgrade
-          - pmm2-client_custom_path
-          - pmm2-client_integration
-          - pmm2-client_integration_upgrade
-          - pmm2-client_integration_auth_config
-          - pmm2-client_integration_auth_register
-          - pmm2-client_integration_custom_path
-          - pmm2-client_integration_custom_port
-          - pmm2-client_integration_upgrade_custom_port
-          - pmm2-client_integration_upgrade_custom_path
+          - pmm3-client
+          - pmm3-client_upgrade
+          - pmm3-client_custom_path
+          - pmm3-client_integration
+          - pmm3-client_integration_upgrade
+          - pmm3-client_integration_auth_config
+          - pmm3-client_integration_auth_register
+          - pmm3-client_integration_custom_path
+          - pmm3-client_integration_custom_port
+          - pmm3-client_integration_upgrade_custom_port
+          - pmm3-client_integration_upgrade_custom_path
       repository:
         description: 'Select Repo for Client:'
         required: true
