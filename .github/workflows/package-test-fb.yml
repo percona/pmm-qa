@@ -13,7 +13,7 @@ on:
         description: "pmm-server docker image"
         required: true
         type: string
-        default: "perconalab/pmm-server:dev-latest"
+        default: "perconalab/pmm-server:3-dev-latest"
       pmm_client_tarball:
         description: "PMM Client tarball link or FB-code"
         default: 'dev-latest'
