@@ -1,0 +1,60 @@
+name: PMM e2e Tests(Playwright)
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch'
+        default: 'main'
+        required: true
+      pmm_qa_branch:
+        description: 'pmm-qa repository branch(for setup)'
+        default: 'main'
+        required: true
+      pmm_server_version:
+        description: 'PMM Server docker image'
+        default: 'perconalab/pmm-server:dev-latest'
+        required: true
+      pmm_client_version:
+        description: 'PMM Client version (dev-latest|pmm2-latest|pmm2-rc|x.xx.x|https...)'
+        default: 'dev-latest'
+        required: true
+
+jobs:
+  rbac:
+    name: RBAC
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets: inherit
+    with:
+      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'main '}}
+      pmm_test_flag: '@rbac'
+      pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
+      pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
+      setup_services: '--addclient=ps,1 --addclient=pdpgsql,1'
+      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
+
+  portal:
+    name: Portal
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets: inherit
+    with:
+      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'main '}}
+      pmm_test_flag: '@portal'
+      pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
+      pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
+      setup_services: ''
+      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
+
+  inventory:
+    name: Inventory
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets: inherit
+    with:
+      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'main '}}
+      pmm_test_flag: '@inventory'
+      pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
+      pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
+      setup_services: '--addclient=modb,1 --addclient=ps,1 --addclient=pdpgsql,1'
+      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}

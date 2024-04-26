@@ -117,6 +117,7 @@ jobs:
         run: |
           npm ci
           npx playwright install
+
       - name: 'Checkout pmm-qa: "${{ inputs.pmm_qa_branch }}"'
         uses: actions/checkout@v3
         with:
@@ -131,6 +132,7 @@ jobs:
           npm install
           sudo npx ts-node ./integration-setup.ts --ci --setup-docker-pmm-server --rbac --pmm-server-docker-tag=${{ env.PMM_SERVER_VERSION }} --pmm-client-version=${{ env.PMM_CLIENT_VERSION }}
           timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost/ping)" != "200" ]]; do sleep 5; done' || false
+
       - name: 'Setup <PMM Client: ${{ inputs.pmm_client_version }}>'
         run: |
           sudo bash ./pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
@@ -151,6 +153,7 @@ jobs:
         working-directory: pmm-ui-tests/playwright-tests
         run: |
           npx playwright test --project="chromium" --quiet
+
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
         if: ${{ inputs.pmm_test_flag != 'null' }}
         id: ui-tests-flagged
@@ -158,6 +161,7 @@ jobs:
         run: |
           project="${{ contains(env.PMM_TEST_FLAG, 'portal') && 'Portal' || 'Chromium' }}"
           npx playwright test --project=$project --grep ${{ env.PMM_TEST_FLAG }} --pass-with-no-tests
+
       - name: 'Create report name'
         if: failure()
         run: |
@@ -166,6 +170,7 @@ jobs:
           report_name="$job_tag"-report
           echo $report_name
           echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
+
       - name: Generate and Attach the report
         if: failure()
         uses: actions/upload-artifact@v3

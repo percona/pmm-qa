@@ -12,7 +12,7 @@ psmdb # 4.2.22 # https://downloads.percona.com/downloads/percona-server-mongodb-
 
 psmdb # 5.0.11 # https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.11-10/binary/tarball/percona-server-mongodb-5.0.11-10-x86_64.glibc2.17-minimal.tar.gz
 
-psmdb # 6.0.2 # https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz
+psmdb # 6.0.2 # https://downloads.percona.com/downloads/percona-distribution-mongodb-6.0/percona-distribution-mongodb-6.0.12/binary/tarball/percona-server-mongodb-6.0.12-9-x86_64.glibc2.17-minimal.tar.gz
 
 psmdb # 7.0.2 # https://downloads.percona.com/downloads/percona-server-mongodb-7.0/percona-server-mongodb-7.0.2-1/binary/tarball/percona-server-mongodb-7.0.2-1-x86_64.glibc2.17.tar.gz
 

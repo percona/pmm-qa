@@ -69,13 +69,13 @@ on:
 jobs:
   ui-tests-e2e:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
-    #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
+#    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
     runs-on: ubuntu-20.04
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ADMIN_PASSWORD: 'admin'
+      ADMIN_PASSWORD: 'admin-password'
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
@@ -85,7 +85,7 @@ jobs:
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
 
-      #      Environment variables for tests
+#      Environment variables for tests
       BACKUP_LOCATION_ACCESS_KEY: ${{ secrets.BACKUP_LOCATION_ACCESS_KEY }}
       BACKUP_LOCATION_SECRET_KEY: ${{ secrets.BACKUP_LOCATION_SECRET_KEY }}
 
@@ -113,7 +113,7 @@ jobs:
 
       - name: Setup tools
         run: |
-          sudo npm install -g bats
+          npm install -g bats
           sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
           echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
@@ -173,6 +173,7 @@ jobs:
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}"
+
       - uses: actions/github-script@v7
         if: ${{ always() }}
         id: artifact_name
@@ -187,6 +188,7 @@ jobs:
           name: ${{ steps.artifact_name.outputs.result }}
           path: |
             pmm-ui-tests/tests/output/*.png
+
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && always() }}
         uses: percona/gh-action-github-status-action@v1

@@ -39,7 +39,14 @@ usage () {
   echo " --skip-docker-setup            Pass this parameter if Docker Setup for PMM2-Server is not needed, Only Pmm2-client needs to be installed"
   echo " --is-bats-run                  Change Bats run option, set to 1 if not user interaction required"
   echo " --link-client                  Pass URL to download pmm-client"
-  echo " --addclient=ps,2               Add Percona (ps), MySQL (ms), MariaDB (md), Percona XtraDB Cluster (pxc), and/or mongodb (mo) pmm-clients to the currently live PMM server (as setup by --setup)"
+  echo " --addclient=ps,2               Setup and add specified number of Percona Server instances to the currently live PMM server (as setup by --setup)"
+  echo " --addclient=ms,2               Setup and add specified number of MySQL (Original) instances to the currently live PMM server (as setup by --setup)"
+  echo " --addclient=md,2               Setup and add specified number of MariaDB instances to the currently live PMM server (as setup by --setup)"
+  echo " --addclient=pxc,2              Setup and add specified number of Percona XtraDB Cluster  instances to the currently live PMM server (as setup by --setup)"
+  echo " --addclient=mo,2               Setup and add specified number of Percona Server for MongoDB instances to the currently live PMM server (as setup by --setup)"
+  echo " --addclient=modb,2             Setup and add specified number of MongoDB (Original) instances to the currently live PMM server (as setup by --setup)"
+  echo " --addclient=pdpgsql,2          Setup and add specified number of Percona Distribution for PostgreSQL instances to the currently live PMM server (as setup by --setup)"
+  echo " --addclient=pgsql,2            Setup and add specified number of PostgreSQL (Original) instances to the currently live PMM server (as setup by --setup)"
   echo "                                You can add multiple client instances simultaneously. eg : --addclient=ps,2  --addclient=ms,2 --addclient=md,2 --addclient=mo,2 --addclient=pxc,3"
   echo " --download                     This will help us to download pmm client binary tar balls"
   echo " --dbdeployer                   This option will use dbdeployer tool for deploying PS, MS Databases"
@@ -48,21 +55,22 @@ usage () {
   echo " --pmm2-server-ip               Pass Address for PMM2-Server"
   echo " --package-name                 Name of the Server package installed"
   echo " --ps-version                   Pass Percona Server version info"
-  echo " --modb-version                 Pass MongoDB version info, from MongoDB!!"
   echo " --ms-version                   Pass MySQL Server version info"
-  echo " --pgsql-version                Pass Postgre SQL server version Info"
+  echo " --pdpgsql-version              Pass Percona Distribution for PostgreSQL version Info"
+  echo " --pgsql-version                Pass PostgreSQL server version Info"
+  echo " --mo-version                   Pass Percona MongoDB Server version info, from MongoDB!!"
+  echo " --modb-version                 Pass MongoDB Server version info"
   echo " --md-version                   Pass MariaDB Server version info"
   echo " --pxc-version                  Pass Percona XtraDB Cluster version info"
   echo " --proxysql-version             Pass Percona ProxySQL version info"
-  echo " --pdpgsql-version              Pass Percona Distribution for PostgreSQL version Info"
   echo " --mysqld-startup-options       Pass MySQL startup options. eg : --mysqld-startup-options='--innodb_buffer_pool_size=1G --innodb_log_file_size=1G'"
   echo " --with-proxysql                This allow to install PXC with proxysql"
   echo " --sysbench-data-load           This will initiate sysbench data load on mysql instances"
   echo " --sysbench-oltp-run            This will initiate sysbench oltp run on mysql instances"
   echo " --storage-engine               This will create sysbench tables with specific storage engine"
   echo " --mongo-storage-engine         Pass storage engine for MongoDB"
-  echo " --mo-version                   Pass MongoDB Server version info"
-  echo " --replcount                    You can configure multiple mongodb replica sets with this oprion"
+
+  echo " --replcount                    You can configure multiple mongodb replica sets with this option"
   echo " --with-replica                 This will configure mongodb replica setup"
   echo " --with-sharding                This will configure mongodb sharding setup"
   echo " --mongo-sysbench               This option initiates sysbench oltp prepare and run for MongoDB instance"
@@ -676,22 +684,20 @@ sudo_check(){
 }
 
 if [[ -z "${ps_version}" ]]; then ps_version="8.0"; fi
-if [[ -z "${modb_version}" ]]; then modb_version="4.4"; fi
-if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
-if [[ -z "${mo_version}" ]]; then mo_version="4.4"; fi
-if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
-if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
+if [[ -z "${mo_version}" ]]; then mo_version="6.0"; fi
+if [[ -z "${modb_version}" ]]; then modb_version="4.4"; fi
 if [[ -z "${pgsql_version}" ]]; then pgsql_version="14";fi
 if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="14"; fi
+if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
+if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
+if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
 
-if [[ -z "$query_source" ]];then
-  query_source=perfschema
-fi
+if [[ -z "$query_source" ]]; then query_source=perfschema; fi
 
 setup(){
-  if [ $IS_BATS_RUN -eq 0 ];then
+  if [ $IS_BATS_RUN -eq 0 ]; then
     read -p "Would you like to enable SSL encryption to protect PMM from unauthorized access[y/n] ? " check_param
     case $check_param in
       y|Y)
@@ -863,7 +869,7 @@ setup(){
         install_client
       else
       if [ ! -z $dev ]; then
-        if [  -z $link_client]; then
+        if [ -z $link_client ]; then
          PMM_CLIENT_TARBALL_URL=$(lynx --listonly --dump https://www.percona.com/downloads/TESTING/pmm/ | grep  "pmm-client" |awk '{print $2}'| grep "tar.gz" | head -n1)
         else
           PMM_CLIENT_TARBALL_URL=$link_client
@@ -1058,16 +1064,10 @@ get_basedir(){
   fi
   if [ $download_link -eq 1 ]; then
     if [ -f $SCRIPT_PWD/../get_download_link.sh ]; then
-      if [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.4" ]]; then
-        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz"
-      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.2" ]]; then
-        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.2/percona-server-mongodb-4.2.22-22/binary/tarball/percona-server-mongodb-4.2.22-22-x86_64.glibc2.17-minimal.tar.gz"
-      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "5.0" ]]; then
-        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-LATEST/percona-server-mongodb-5.0.13-11/binary/tarball/percona-server-mongodb-5.0.13-11-x86_64.glibc2.17-minimal.tar.gz"
-      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "6.0" ]]; then
-        LINK="https://downloads.percona.com/downloads/TESTING/psmdb-6.0.2-1/percona-server-mongodb-6.0.2-1-x86_64.glibc2.17-minimal.tar.gz"
-      elif [[ "${PRODUCT_NAME}" == "psmdb" && "${VERSION}" == "4.0" ]]; then
-        LINK="https://downloads.percona.com/downloads/percona-server-mongodb-4.0/percona-server-mongodb-4.0.28-23/binary/tarball/percona-server-mongodb-4.0.28-23-x86_64.glibc2.17-minimal.tar.gz"
+      if [[ "${PRODUCT_NAME}" == "psmdb" ]]; then
+        ### Detect latest tarball link for specified mongodb_version: 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
+        psmdb_latest=$(wget -q --post-data "version=percona-server-mongodb-${VERSION}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)
+        LINK=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal)
       else
         LINK=`$SCRIPT_PWD/../get_download_link.sh --product=${PRODUCT_NAME} --distribution=$DISTRUBUTION --version=$VERSION`
       fi
@@ -1498,6 +1498,12 @@ add_clients(){
         sleep 20
         docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'create extension pg_stat_monitor'
         docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'SELECT pg_reload_conf();'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test1;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test2;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test3;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test4;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test5;'
+        docker exec $pdpgsql_service_name psql -h localhost -U postgres -c 'CREATE DATABASE test6;'
         if [ $(( ${j} % 2 )) -eq 0 ]; then
           if [[ ! -z $metrics_mode ]]; then
             pmm-admin add postgresql --username=postgres --password=${PDPGSQL_PASSWORD} --environment=pdpgsql-prod --cluster=pdpgsql-prod-cluster --metrics-mode=$metrics_mode --query-source=pgstatmonitor --replication-set=pdpgsql-repl2 $pdpgsql_service_name localhost:$PDPGSQL_PORT
@@ -2550,38 +2556,22 @@ setup_mongodb_ssl () {
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/tls-ssl-setup
-  if echo "$mo_version" | grep '4.4'; then
-    export MONGODB_VERSION=4.4
-  fi
-  if echo "$mo_version" | grep '4.2'; then
-    export MONGODB_VERSION=4.2
-  fi
-  if echo "$mo_version" | grep '4.0'; then
-    export MONGODB_VERSION=4.0
-  fi
-  if echo "$mo_version" | grep '5.0'; then
-    export MONGODB_VERSION=5.0
-  fi
-  if [ -z "$CLIENT_VERSION" ]
-  then
-    if [ -z "$PMM_CLIENT_VERSION" ]
-    then
+  export MONGODB_VERSION=${mo_version}
+  if [ -z "$CLIENT_VERSION" ]; then
+    if [ -z "$PMM_CLIENT_VERSION" ]; then
       export CLIENT_VERSION=dev-latest
     else
       export CLIENT_VERSION=${PMM_CLIENT_VERSION}
     fi
   fi
-  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]
-  then
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
+  if [ -z "${PMM_SERVER_DOCKER_CONTAINER}" ]; then
+    if [ ! -z "${PMM2_SERVER_IP}" ]; then
       export PMM_SERVER_IP=${PMM2_SERVER_IP}
     else
       export PMM_SERVER_IP=127.0.0.1
     fi
   else
-    if [ ! -z "${PMM2_SERVER_IP}" ]
-    then
+    if [ ! -z "${PMM2_SERVER_IP}" ]; then
       export PMM_SERVER_IP=${PMM2_SERVER_IP}
     else
       export PMM_SERVER_IP=${PMM_SERVER_DOCKER_CONTAINER}
@@ -2862,10 +2852,7 @@ setup_pmm_psmdb_integration () {
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
   pushd $SCRIPT_PWD/
-  if [ -z "$PSMDB_VERSION" ]
-  then
-    export PSMDB_VERSION=${mo_version}
-  fi
+  export PSMDB_VERSION=${mo_version}
   if echo "$with_sharding" | grep '1'; then
     export PSMDB_SETUP=sharded
   elif echo "$with_replica" | grep '1'; then
@@ -3060,7 +3047,7 @@ setup_mongo_replica_for_backup() {
   fi
   mkdir /tmp/backup_data && chmod 777 /tmp/backup_data
   pushd qa-integration/pmm_psmdb-pbm_setup
-  PSMDB_VERSION=7.0.2-1 COMPOSE_PROFILES=extra ./start-rs-only.sh
+  PSMDB_VERSION=$(wget -q --post-data "version=percona-server-mongodb-${mo_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1 | sed -n -e 's/^.*\(mongodb-\)//p') COMPOSE_PROFILES=extra ./start-rs-only.sh
   popd
   popd
 }

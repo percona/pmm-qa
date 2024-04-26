@@ -1,0 +1,106 @@
+name: "version detector for PMM jobs"
+
+on:
+  workflow_call:
+    inputs:
+      pmm_server_start_version:
+        description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
+        type: string
+      pmm_client_start_version:
+        description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
+        type: string
+      repository:
+        description: 'To detect "finish_version" string: X.XX.X'
+        required: true
+        default: 'dev-latest'
+        type: string
+      matrix_range:
+        default: '10'
+        type: string
+    outputs:
+      start_version:
+        description: "Version detected based on tag input"
+        value: ${{ jobs.push_versions.outputs.start_version }}
+      finish_version:
+        description: "Version detected based on repository input"
+        value: ${{ jobs.push_versions.outputs.finish_version }}
+      version_matrix:
+        description: "Json array with number of last versions"
+        value: ${{ jobs.push_versions.outputs.version_matrix }}
+      pt_os:
+        description: "Json array with Package Tests Operating Systems"
+        value: ${{ jobs.push_versions.outputs.pt_os_matrix }}
+
+
+jobs:
+  push_versions:
+    name: Get versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      start_version: ${{ steps.get-start.outputs.result }}
+      finish_version: ${{ steps.get-finish.outputs.result }}
+      version_matrix: ${{ steps.get-matrix.outputs.result }}
+      pt_os_matrix: "[\"buster\", \"bullseye\", \"bookworm\", \"focal\", \"jammy\", \"centos-7\", \"ol-8\", \"ol-9\"]"
+    steps:
+      - name: Prevent upgrade to the same version
+        shell: bash
+        run: |
+          if [[ "${{ inputs.pmm_server_start_version }}" == "latest" && "${{ inputs.repository }}" == "release" ]]; then
+            echo "Upgrade to the same version is forbidden!"
+            exit 1
+          fi
+          if [[ "${{ inputs.pmm_server_start_version }}" == "dev-latest" && "${{ inputs.repository }}" == "dev-latest" ]]; then
+            echo "Upgrade to the same version is forbidden!"
+            exit 1
+          fi
+
+      - name: Discover latest versions
+        shell: bash
+        run: |
+          r_latest=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name  | grep -v latest | sort -V | tail -n1)
+          rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 2.*.*-rc$ | sort -V | tail -n1)
+          d_latest=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/PMM-2.0/VERSION -O -)
+          
+          echo "release_latest=$r_latest" >> $GITHUB_ENV
+          echo "rc_latest=$rc_latest" >> $GITHUB_ENV
+          echo "dev_latest=$d_latest" >> $GITHUB_ENV
+
+      - name: Get start version string
+        id: get-start
+        shell: bash
+        run: |
+          if [[ "${{ inputs.pmm_server_start_version }}" == "latest" ]]; then
+            echo "result=$release_latest" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ inputs.pmm_server_start_version }}" == "dev-latest" ]]; then
+            echo "result=$dev_latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get finish version string
+        id: get-finish
+        shell: bash
+        run: |
+          if [[  "${{ inputs.repository }}" == "dev-latest" ]]; then
+            echo "result=$dev_latest" >> "$GITHUB_OUTPUT"
+          fi          
+          if [[ "${{ inputs.repository }}" == "release candidate" ]]; then
+            echo "result=$rc_latest" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ inputs.repository }}" == "release" ]]; then
+            echo "result=$release_latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Get versions matrix
+        id: get-matrix
+        shell: bash
+        run: |
+          range=${{ inputs.matrix_range }}
+          if [[ "${{ inputs.repository }}" == "release" ]]; then
+            array=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - | jq -r .results[].name | grep -v latest | sort -V | grep -E '[[:digit:]]\.[[:digit:]]+\.[[:digit:]]' | tail -$((++range)) | head -$((range)))
+          else
+            array=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - | jq -r .results[].name | grep -v latest | sort -V | grep -E '[[:digit:]]\.[[:digit:]]+\.[[:digit:]]' | tail -$((range)))
+          fi
+          jq -c -n '$ARGS.positional' --args ${array[@]}
+          echo "result=$(jq -c -n '$ARGS.positional' --args ${array[@]})" >> "$GITHUB_OUTPUT"
+          #echo "result=$(jq -c -n '$ARGS.positional' --args '2.11.0' ${array[@]})" >> "$GITHUB_OUTPUT"

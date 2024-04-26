@@ -1,0 +1,156 @@
+name: _runner-integration-cli-tests
+on:
+  workflow_call:
+    inputs:
+      pmm_qa_branch:
+        description: "Branch for PMM-QA to checkout"
+        required: false
+        type: string
+      pmm_ui_tests_branch:
+        description: "Branch for PMM-UI(CLI) tests to checkout"
+        required: false
+        type: string
+      pmm_server_image:
+        description: 'PMM Server docker image:'
+        default: 'perconalab/pmm-server:dev-latest'
+        required: true
+        type: string
+      pmm_client_image:
+        description: "pmm2-client docker image, default perconalab/pmm-client:dev-latest"
+        required: false
+        type: string
+      pmm_client_version:
+        description: 'PMM Client version (dev-latest|pmm2-latest|pmm2-rc|x.xx.x|https://tarball.tar.gz)'
+        default: 'dev-latest'
+        required: true
+        type: string
+      services_list:
+        description: "pmm-framework.sh flags to perform setup, '--pmm2' added implicitly"
+        required: false
+        type: string
+      cli_test:
+        description: "playwright test arguments to execute tests"
+        required: false
+        type: string
+      test_name:
+        type: string
+        required: false
+      sha:
+        description: "SHA (leave empty if running manually, default - 'null')"
+        required: false
+        type: string
+
+jobs:
+  cli-tests:
+    name: ${{ inputs.test_name || inputs.cli_test}}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+
+      ###  used in tests ###
+      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
+
+      # TODO: rename and update tests to use PMM_CLIENT_IMAGE instead
+      CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+
+      # TODO: rename and update tests to use PMM_CLIENT_VERSION instead
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+
+      # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
+      # TODO: update tests to use PMM_SERVER_IMAGE instead
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
+
+      # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
+      # TODO: update tests to use PMM_SERVER_IMAGE instead
+      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+
+    steps:
+      - name: Create status check
+        if: ${{ env.SHA != 'null' }}
+        uses: percona/gh-action-github-status-action@master
+        continue-on-error: true
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: "${{ matrix.db-type }} CLI tests"
+          description: "Test execution ${{ job.status }}"
+          state: "pending"
+          repository: ${{ github.repository }}
+          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          sha: ${{ env.SHA }}
+
+      - name: 'Checkout pmm-qa: <${{ env.PMM_QA_BRANCH }}>'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PMM_QA_BRANCH }}
+          repository: percona/pmm-qa
+          path: ./
+
+      - name: 'Checkout pmm-ui-tests: <${{ env.PMM_UI_TESTS_BRANCH }}>'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PMM_UI_TESTS_BRANCH }}
+          repository: percona/pmm-ui-tests
+          path: ./pmm-ui-tests
+
+      - name: Install playwright
+        working-directory: ./pmm-ui-tests/cli
+        run: |
+          npm ci
+
+      - name: Setup tools
+        run: |
+          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
+          echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
+              /etc/apt/sources.list.d/clickhouse.list
+          sudo apt-get update
+          sudo apt-get install -y clickhouse-client
+          sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
+          wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
+          chmod +x get_download_link.sh
+
+      - name: 'Setup <PMM Sever>: "${{ env.PMM_SERVER_IMAGE }}"'
+        run: |
+          docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
+          docker run -d -p 80:80 -p 443:443 -p 9000:9000 \
+            -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
+            -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
+            --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
+          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1/v1/readyz)" != "200" ]]; do sleep 2; done' || false
+
+      - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
+        run: sudo -E bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
+
+      - name: 'Run env setup: ${{ inputs.services_list }}'
+        if: ${{ !!inputs.services_list }}
+        run: |
+          sudo -E bash -x ./pmm-tests/pmm-framework.sh ${{ inputs.services_list }} --pmm2
+
+      - name: 'Run CLI tests: ${{ inputs.cli_test }}'
+        working-directory: ./pmm-ui-tests/cli
+        run: npx playwright test ${{ inputs.cli_test }} --quiet
+
+      - name: Generate and Attach the report
+        if: ${{ failure() && !!inputs.cli_test }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: "report-${{ matrix.db-type }}"
+          path: ./pmm-ui-tests/cli/test-report
+
+      - name: Create status check
+        if: ${{ env.SHA != 'null' && always() }}
+        uses: percona/gh-action-github-status-action@master
+        continue-on-error: true
+        with:
+          authToken: ${{ secrets.GITHUB_TOKEN }}
+          context: "${{ matrix.db-type }} CLI tests"
+          description: "Test execution ${{ job.status }}"
+          state: ${{ job.status }}
+          repository: ${{ github.repository }}
+          target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          sha: ${{ env.SHA }}
+

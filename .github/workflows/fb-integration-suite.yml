@@ -1,0 +1,69 @@
+name: _FB integration CLI tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch(CLI tests)'
+        default: 'main'
+        required: false
+        type: string
+      pmm_qa_branch:
+        description: 'pmm-qa repository branch(for setup)'
+        default: 'main'
+        required: false
+        type: string
+      pmm_server_image:
+        description: 'PMM Server docker image'
+        default: 'perconalab/pmm-server:dev-latest'
+        required: false
+        type: string
+      pmm_client_image:
+        description: 'pmm2-client docker image'
+        default: 'perconalab/pmm-client:dev-latest'
+        required: false
+        type: string
+      pmm_client_version:
+        description: 'PMM Client version (dev-latest|pmm2-latest|pmm2-rc|x.xx.x|https...)'
+        default: 'dev-latest'
+        required: false
+        type: string
+      sha:
+        description: "SHA (leave default if running manually)"
+        default: 'null'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_ui_tests_branch:
+        required: false
+        type: string
+      pmm_qa_branch:
+        required: false
+        type: string
+      pmm_server_image:
+        required: true
+        type: string
+      pmm_client_image:
+        required: true
+        type: string
+      pmm_client_version:
+        required: true
+        type: string
+      sha:
+        required: false
+        type: string
+
+jobs:
+  help-tests:
+    name: 'Integration tests'
+    uses: ./.github/workflows/integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
