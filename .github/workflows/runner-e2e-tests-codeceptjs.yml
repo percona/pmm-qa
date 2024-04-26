@@ -118,9 +118,9 @@ jobs:
           sudo apt-get install -y ansible
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
           ls -la
-          git clone -b ${{ env.PMM_QA_BRANCH }} https://github.com/percona/pmm-qa
+          git clone -b ${{ env.PMM_QA_BRANCH }} https://github.com/PerconaLab/qa-integration.git
           ls -la
-          pushd pmm-qa
+          pushd qa-integration
           wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
           chmod +x get_download_link.sh
           popd
@@ -134,11 +134,11 @@ jobs:
           bash -x testdata/db_setup.sh
 
       - name: Export path to qa-integration repo
-        working-directory: ./qa-integration
+        working-directory: qa-integration
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
 
       - name: Setup PMM2-Client
-        working-directory: ./qa-integration/pmm_qa
+        working-directory: qa-integration/pmm_qa
         run: sudo bash -x pmm2-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Run Setup for E2E Tests
