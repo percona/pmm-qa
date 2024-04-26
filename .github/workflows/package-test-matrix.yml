@@ -60,4 +60,4 @@ jobs:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
-      playbook: "pmm3-client_integration_upgrade_custom_port"
+      playbook: "pmm3-client_integration_custom_port"
