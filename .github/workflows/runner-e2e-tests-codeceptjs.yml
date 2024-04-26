@@ -28,11 +28,9 @@ on:
       setup_services:
         description: "Setup arguments, ex.: --database=ps --database=psmdb"
         required: false
-        default: "--database=ps"
         type: string
       tags_for_tests:
         description: "example: @settings-fb"
-        default: "@settings-fb"
         required: true
         type: string
       sha:
