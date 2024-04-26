@@ -151,7 +151,7 @@ jobs:
         working-directory: ./pmm-qa
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
 
-      - name: Setup PMM2-Client
+      - name: Setup PMM3-Client
         working-directory: ./pmm-qa
         run: sudo bash -x pmm-tests/v3/pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 

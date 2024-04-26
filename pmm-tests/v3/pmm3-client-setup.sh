@@ -47,17 +47,17 @@ mv -v /artifacts/* .
 if [[ "$client_version" == "dev-latest" ]]; then
     percona-release enable-only original experimental
     apt-get update
-    apt-get -y install pmm2-client
+    apt-get -y install pmm-client
 fi
 
-if [[ "$client_version" == "pmm2-rc" ]]; then
+if [[ "$client_version" == "pmm3-rc" ]]; then
     percona-release enable-only original testing
     apt-get update
-    apt-get -y install pmm2-client
+    apt-get -y install pmm-client
 fi
 
-if [[ "$client_version" == "pmm2-latest" ]]; then
-    apt-get -y install pmm2-client
+if [[ "$client_version" == "pmm3-latest" ]]; then
+    apt-get -y install pmm-client
     apt-get -y update
     percona-release enable-only original experimental
 fi
