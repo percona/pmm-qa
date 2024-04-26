@@ -73,7 +73,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      setup_services: '--database psmdb,SETUP_TYPE=pss'
+      setup_services: '--database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra'
       tags_for_tests: '@bm-mongo'
 
 #  -- include backup_management_ps once setup for mysql fixed for the worker
