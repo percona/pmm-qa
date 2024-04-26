@@ -107,6 +107,13 @@ jobs:
           repository: percona/pmm-ui-tests
           path: ./pmm-ui-tests
 
+      - name: Checkout qa-integration repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PMM_QA_BRANCH }}
+          repository: Percona-Lab/qa-integration
+          path: ./qa-integration
+
       - name: Setup tools
         run: |
           sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench
@@ -118,15 +125,13 @@ jobs:
           sudo apt-get install -y ansible
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
           ls -la
-          git clone -b ${{ env.PMM_QA_BRANCH }} https://github.com/PerconaLab/qa-integration.git
-          ls -la
           pushd qa-integration
           wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
           chmod +x get_download_link.sh
           popd
 
       - name: Setup PMM2-Server
-        working-directory: ./pmm-ui-tests
+        working-directory: pmm-ui-tests
         run: |
           PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker-compose up -d
           sleep 60
@@ -142,7 +147,7 @@ jobs:
         run: sudo bash -x pmm2-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Run Setup for E2E Tests
-        working-directory: ./qa-integration/pmm_qa
+        working-directory: qa-integration/pmm_qa
         run: |
           python3 -m venv virtenv
           . virtenv/bin/activate
@@ -151,13 +156,13 @@ jobs:
           sudo python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
-        working-directory: ./pmm-ui-tests
+        working-directory: pmm-ui-tests
         run: |
           npm ci
           envsubst < env.list > env.generated.list
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
-        working-directory: ./pmm-ui-tests
+        working-directory: pmm-ui-tests
         env:
           SERVER_IP : "192.168.0.1"
           PMM_UI_URL : "http://192.168.0.1/"
