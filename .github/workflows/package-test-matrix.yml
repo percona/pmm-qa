@@ -43,7 +43,7 @@ jobs:
       playbook: "pmm3-client_integration"
 
   u_test:
-    name: "Package Upgrade"
+    name: "Package Install with Custom Path"
     uses: ./.github/workflows/package-test-single.yml
     secrets: inherit
     with:
@@ -52,12 +52,12 @@ jobs:
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration_custom_path"
 
-  # t_test:
-  #   name: "Tarball Upgrade (custom path)"
-  #   uses: ./.github/workflows/package-test-single.yml
-  #   secrets: inherit
-  #   with:
-  #     package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
-  #     repository: ${{ inputs.repository || 'dev-latest' }}
-  #     metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
-  #     playbook: "pmm3-client_integration_upgrade_custom_path"
+  t_test:
+    name: "Package Install with Custom Port"
+    uses: ./.github/workflows/package-test-single.yml
+    secrets: inherit
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: "pmm3-client_integration_upgrade_custom_port"

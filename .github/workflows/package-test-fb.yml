@@ -28,7 +28,7 @@ on:
           - pmm3-client_custom_path
           - pmm3-client_integration_custom_path
           - pmm3-client_integration_custom_port
-          - pmm3-client_integration_upgrade_custom_path
+          # - pmm3-client_integration_upgrade_custom_path
       metrics_mode:
         description: 'Select the Metrics Mode for PMM Client:'
         required: true
