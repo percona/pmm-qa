@@ -125,10 +125,6 @@ jobs:
           sudo apt-get install -y ansible
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
           ls -la
-          pushd qa-integration
-          wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
-          chmod +x get_download_link.sh
-          popd
 
       - name: Setup PMM2-Server
         working-directory: pmm-ui-tests
