@@ -63,6 +63,7 @@ on:
           - centos-7
           - ol-8
           - ol-9
+          - noble
 
   workflow_call:
     inputs:
