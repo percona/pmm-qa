@@ -69,7 +69,7 @@ on:
 jobs:
   ui-tests-e2e:
     name: "podman e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
-#    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
+    #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
     runs-on: ubuntu-20.04
     timeout-minutes: 60
     env:
@@ -85,7 +85,7 @@ jobs:
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
       ADMIN_PASSWORD: 'admin-password'
 
-#      Environment variables for tests
+      #      Environment variables for tests
       BACKUP_LOCATION_ACCESS_KEY: ${{ secrets.BACKUP_LOCATION_ACCESS_KEY }}
       BACKUP_LOCATION_SECRET_KEY: ${{ secrets.BACKUP_LOCATION_SECRET_KEY }}
 
