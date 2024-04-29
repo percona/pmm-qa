@@ -117,7 +117,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database psmdb,SETUP_TYPE=pss'
+      setup_services: '--database psmdb,SETUP_TYPE=pss --database ps'
       tags_for_tests: '@mongodb-exporter|@exporters'
 
   instances:
