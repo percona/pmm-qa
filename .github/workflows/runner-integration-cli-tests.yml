@@ -121,7 +121,7 @@ jobs:
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
 
       - name: Wait for PMM Server to start
-        run: sleep 20
+        run: sleep 30
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
         working-directory: qa-integration/pmm_qa
