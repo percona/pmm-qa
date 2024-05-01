@@ -119,7 +119,7 @@ jobs:
             -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
             -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
-          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
+          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' https://127.0.0.1:443/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
         working-directory: qa-integration/pmm_qa
