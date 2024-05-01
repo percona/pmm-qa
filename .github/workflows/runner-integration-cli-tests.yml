@@ -120,9 +120,22 @@ jobs:
             -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
 
-      - name: Sleep for 30 seconds
-        run: sleep 30s
-        shell: bash
+      - name: Wait for PMM Server to start
+        run: |
+          wait-for-url() {
+                echo "Testing $1"
+                timeout -s TERM 240 bash -c \
+                'while [[ "$(curl -s -o /dev/null -L -w ''%{http_code}'' ${0})" != "200" ]];\
+                do echo "Waiting for ${0}" && sleep 2;\
+                done' ${1}
+                echo "OK!"
+                  if curl -I $1; then
+                    echo "PMM Server is ready"
+                  else
+                    echo "PMM Server is not ready"
+                  fi
+          }
+          wait-for-url https://127.0.0.1/v1/readyz
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
         working-directory: qa-integration/pmm_qa
