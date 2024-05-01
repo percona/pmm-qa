@@ -202,6 +202,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       setup_services: '--database ps'
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
 
 # Unskip once it will be possible to find ARBITER element on the replset summary dashboard
   # psmdb_arbiter:
