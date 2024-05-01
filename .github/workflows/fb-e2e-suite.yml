@@ -230,7 +230,7 @@ jobs:
       qa_integration_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database ps --database psmdb --database pdpgsql'
+      setup_services: '--addclient=ps,1'
       tags_for_tests: '@user-password'
 
   dump_tool:
