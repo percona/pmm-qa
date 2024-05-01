@@ -61,6 +61,13 @@ on:
       BACKUP_LOCATION_SECRET_KEY:
         required: false
 
+env:
+  PDPGSQL_VERSION: 16
+  PSMDB_VERSION: latest
+  PS_VERSION: 8.0
+  PGSQL_VERSION: 16
+  MYSQL_VERSION: 8.0
+  
 jobs:
   backup_management_mongo:
     name: Backup Management MongoDB UI tests
