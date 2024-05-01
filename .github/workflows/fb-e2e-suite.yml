@@ -188,7 +188,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database pgsql=14'
+      setup_services: '--database pgsql'
       tags_for_tests: '@pgss-pmm-integration'
 
   rbac:
