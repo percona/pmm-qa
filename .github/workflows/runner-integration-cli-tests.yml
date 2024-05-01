@@ -2,7 +2,7 @@ name: _runner-integration-cli-tests
 on:
   workflow_call:
     inputs:
-      pmm_qa_branch:
+      qa_integration_branch:
         description: "Branch for qa-integration to checkout"
         required: false
         type: string
@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 40
     env:
       SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
+      PMM_QA_BRANCH: ${{ inputs.qa_integration_branch || 'v3' }}
       PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
 
