@@ -173,7 +173,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database pdpgsql'
+      setup_services: '--database pdpgsql=14'
       tags_for_tests: '@pgsm-pmm-integration'
 
   pgss:
@@ -187,7 +187,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database pgsql'
+      setup_services: '--database pgsql=14'
       tags_for_tests: '@pgss-pmm-integration'
 
   rbac:
