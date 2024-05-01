@@ -169,7 +169,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      cli_test: 'pmm-ui-tests/cli/tests/mysql.spec.ts pmm-ui-tests/cli/tests/mysql-conf-file.spec.ts'
+      cli_test: 'pmm-ui-tests/cli/tests/mysql.spec.ts pmm-ui-tests/cli/tests/mysql-conf-file.spec.ts --workers=1'
       services_list: '--database mysql=8.0'
       test_name: 'MySQL 8.0'
 
@@ -184,7 +184,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      cli_test: 'postgreSql'
+      cli_test: 'postgreSql --workers=1'
       services_list: '--database pdpgsql=14'
       test_name: 'PD PostgreSQL 14'
 
@@ -199,7 +199,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      cli_test: 'postgreSql'
+      cli_test: 'postgreSql --workers=1'
       services_list: '--database pdpgsql=15'
       test_name: 'PD PostgreSQL 15'
 
@@ -214,7 +214,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      cli_test: 'postgreSql'
+      cli_test: 'postgreSql --workers=1'
       services_list: '--database pdpgsql=16'
       test_name: 'PD PostgreSQL 16'
 
