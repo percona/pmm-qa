@@ -292,7 +292,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
-      services_list: '--database psmdb=5,SETUP_TYPE=shards'
+      services_list: '--database psmdb=5,SETUP_TYPE=pss'
       test_name: 'PSMDB 5.x'
 
   psmdb-6-tests:
@@ -307,7 +307,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
-      services_list: '--database psmdb=6,SETUP_TYPE=shards'
+      services_list: '--database psmdb=6,SETUP_TYPE=pss'
       test_name: 'PSMDB 6.x'
 
   psmdb-7-tests:
@@ -322,7 +322,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
-      services_list: '--database psmdb=7,SETUP_TYPE=shards'
+      services_list: '--database psmdb=7,SETUP_TYPE=pss'
       test_name: 'PSMDB 7.x'
 
   haproxy-tests:
