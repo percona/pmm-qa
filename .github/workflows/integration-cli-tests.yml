@@ -125,7 +125,6 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/remove.spec.ts'
-      services_list: '--database pxc=5.7'
       test_name: 'Remove'
 
   ps-57-tests:
