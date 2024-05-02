@@ -110,7 +110,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      cli_test: 'generic unregister'
+      cli_test: 'generic unregister --workers=1'
       test_name: 'Generic'
 
   remove-tests:
