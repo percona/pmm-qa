@@ -124,7 +124,6 @@ jobs:
           sudo apt-get install -y clickhouse-client
           sudo apt-get install -y ansible
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
-          ls -la
 
       - name: Setup PMM2-Server
         working-directory: pmm-ui-tests
@@ -145,6 +144,7 @@ jobs:
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
+          mkdir -m 777 -p /tmp/backup_data
           python3 -m venv virtenv
           . virtenv/bin/activate
           pip install --upgrade pip
