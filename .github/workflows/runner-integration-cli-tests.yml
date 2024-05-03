@@ -135,7 +135,7 @@ jobs:
           . virtenv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
-          python -E pmm-framework.py ${{ inputs.services_list }}
+          python pmm-framework.py ${{ inputs.services_list }}
 
       - name: 'Run CLI tests: ${{ inputs.cli_test }}'
         working-directory: ./pmm-ui-tests/cli
