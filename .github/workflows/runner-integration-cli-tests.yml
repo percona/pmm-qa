@@ -2,8 +2,8 @@ name: _runner-integration-cli-tests
 on:
   workflow_call:
     inputs:
-      pmm_qa_branch:
-        description: "Branch for PMM-QA to checkout"
+      qa_integration_branch:
+        description: "Branch for qa-integration to checkout"
         required: false
         type: string
       pmm_ui_tests_branch:
@@ -12,20 +12,20 @@ on:
         type: string
       pmm_server_image:
         description: 'PMM Server docker image:'
-        default: 'perconalab/pmm-server:dev-latest'
+        default: 'perconalab/pmm-server:3-dev-latest'
         required: true
         type: string
       pmm_client_image:
-        description: "pmm2-client docker image, default perconalab/pmm-client:dev-latest"
+        description: "pmm2-client docker image, default perconalab/pmm-client:3-dev-latest"
         required: false
         type: string
       pmm_client_version:
-        description: 'PMM Client version (dev-latest|pmm2-latest|pmm2-rc|x.xx.x|https://tarball.tar.gz)'
-        default: 'dev-latest'
+        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
+        default: '3-dev-latest'
         required: true
         type: string
       services_list:
-        description: "pmm-framework.sh flags to perform setup, '--pmm2' added implicitly"
+        description: "pmm-framework.py flags to perform setup"
         required: false
         type: string
       cli_test:
@@ -47,26 +47,26 @@ jobs:
     timeout-minutes: 40
     env:
       SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+      PMM_QA_BRANCH: ${{ inputs.qa_integration_branch || 'v3' }}
+      PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
 
       ###  used in tests ###
-      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
+      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:3-dev-latest' }}
 
       # TODO: rename and update tests to use PMM_CLIENT_IMAGE instead
-      CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+      CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
 
       # TODO: rename and update tests to use PMM_CLIENT_VERSION instead
-      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'dev-latest' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
 
       # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
       # TODO: update tests to use PMM_SERVER_IMAGE instead
-      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:dev-latest' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:3-dev-latest' }}
 
       # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
       # TODO: update tests to use PMM_SERVER_IMAGE instead
-      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
 
     steps:
       - name: Create status check
@@ -82,12 +82,12 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: 'Checkout pmm-qa: <${{ env.PMM_QA_BRANCH }}>'
+      - name: Checkout qa-integration repo
         uses: actions/checkout@v4
         with:
           ref: ${{ env.PMM_QA_BRANCH }}
-          repository: percona/pmm-qa
-          path: ./
+          repository: Percona-Lab/qa-integration
+          path: ./qa-integration
 
       - name: 'Checkout pmm-ui-tests: <${{ env.PMM_UI_TESTS_BRANCH }}>'
         uses: actions/checkout@v4
@@ -109,26 +109,33 @@ jobs:
               /etc/apt/sources.list.d/clickhouse.list
           sudo apt-get update
           sudo apt-get install -y clickhouse-client
+          sudo apt-get install -y ansible
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
-          wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/get_download_link.sh
-          chmod +x get_download_link.sh
 
       - name: 'Setup <PMM Sever>: "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
-          docker run -d -p 80:80 -p 443:443 -p 9000:9000 \
+          docker run -d -p 80:80 -p 443:8443 -p 9000:9000 \
             -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
             -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
-          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1/v1/readyz)" != "200" ]]; do sleep 2; done' || false
+
+      - name: Wait for PMM Server to start
+        run: sleep 30
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
-        run: sudo -E bash -x ./pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
+        working-directory: qa-integration/pmm_qa
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
 
-      - name: 'Run env setup: ${{ inputs.services_list }}'
+      - name: 'Run qa-integration setup: ${{ inputs.services_list }}'
         if: ${{ !!inputs.services_list }}
+        working-directory: qa-integration/pmm_qa
         run: |
-          sudo -E bash -x ./pmm-tests/pmm-framework.sh ${{ inputs.services_list }} --pmm2
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          python pmm-framework.py ${{ inputs.services_list }}
 
       - name: 'Run CLI tests: ${{ inputs.cli_test }}'
         working-directory: ./pmm-ui-tests/cli

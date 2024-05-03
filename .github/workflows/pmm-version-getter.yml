@@ -59,8 +59,8 @@ jobs:
         shell: bash
         run: |
           r_latest=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name  | grep -v latest | sort -V | tail -n1)
-          rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 2.*.*-rc$ | sort -V | tail -n1)
-          d_latest=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/PMM-2.0/VERSION -O -)
+          rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
+          d_latest=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION -O -)
           
           echo "release_latest=$r_latest" >> $GITHUB_ENV
           echo "rc_latest=$rc_latest" >> $GITHUB_ENV
