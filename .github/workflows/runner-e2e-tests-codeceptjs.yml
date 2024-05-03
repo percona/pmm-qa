@@ -124,7 +124,6 @@ jobs:
           sudo apt-get install -y clickhouse-client
           sudo apt-get install -y ansible
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
-          ls -la
 
       - name: Setup PMM2-Server
         working-directory: pmm-ui-tests
