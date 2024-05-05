@@ -111,6 +111,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'generic unregister --workers=1'
+      services_list: '--database pdpgsql=16'
       test_name: 'Generic'
 
   remove-tests:
@@ -280,7 +281,7 @@ jobs:
   #      services_list: '--modb-version=7 --addclient=modb,1'
   #      test_name: 'MongoDB 7.x'
 
-  psmdb-5-tests:
+  psmdb-44-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets: inherit
@@ -292,7 +293,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
-      services_list: '--database psmdb=5.0,SETUP_TYPE=pss --verbose'
+      services_list: '--database psmdb=4.4,SETUP_TYPE=pss --verbose'
       test_name: 'PSMDB 5.x'
 
   psmdb-6-tests:
