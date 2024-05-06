@@ -63,7 +63,7 @@ on:
         required: false
         type: string
       direct_mongo_setup_script:
-        default: false
+        required: false
         type: string
       tags_for_tests:
         required: true
