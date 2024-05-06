@@ -29,6 +29,10 @@ on:
         description: "Setup arguments, ex.: --database=ps --database=psmdb"
         required: false
         type: string
+      direct_mongo_setup_script:
+        description: "setup psmdb without framework with command like: './start-rs-only.sh'"
+        default: false
+        type: string
       tags_for_tests:
         description: "example: @settings-fb"
         required: true
@@ -59,6 +63,9 @@ on:
       setup_services:
         required: false
         type: string
+      direct_mongo_setup_script:
+        default: false
+        type: string
       tags_for_tests:
         required: true
         type: string
@@ -83,6 +90,7 @@ jobs:
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
+      DIRECT_MONGO_SETUP_SCRIPT: ${{ inputs.direct_mongo_setup || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
 
 
@@ -141,11 +149,13 @@ jobs:
         working-directory: qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
-      - name: Setup tmate session  on failure
-        if: ${{ always() }}
-        uses: percona/gh-action-action-tmate@v2
-        
+      - name: Run PSMDB direct setup script
+        if: ${{ env.DIRECT_MONGO_SETUP_SCRIPT != '' }}
+        working-directory: qa-integration/pmm_psmdb-pbm_setup
+        run: ${{ env.DIRECT_MONGO_SETUP_SCRIPT }}
+      
       - name: Run Setup for E2E Tests
+        if: ${{ env.DIRECT_MONGO_SETUP = '' }}
         working-directory: qa-integration/pmm_qa
         run: |
           mkdir -m 777 -p /tmp/backup_data
@@ -199,6 +209,6 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-#      - name: Setup tmate session  on failure
-#        if: ${{ failure() }}
-#        uses: percona-platform/action-tmate@v2
+      # - name: Setup tmate session  on failure
+      #   if: ${{ always() }}
+      #   uses: percona/gh-action-action-tmate@v2
