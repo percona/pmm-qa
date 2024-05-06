@@ -31,7 +31,6 @@ on:
         type: string
       direct_mongo_setup_script:
         description: "setup psmdb without framework with command like: './start-rs-only.sh'"
-        default: false
         type: string
       tags_for_tests:
         description: "example: @settings-fb"
