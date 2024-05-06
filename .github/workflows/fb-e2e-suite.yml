@@ -74,6 +74,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss'
+      direct_mongo_setup_script: 'start-rs-only.sh'
       # setup_services: '--database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra'
       tags_for_tests: '@bm-mongo'
 
@@ -104,6 +105,7 @@ jobs:
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss'
+      direct_mongo_setup_script: 'start-rs-only.sh'
       #      tags_for_tests: '@bm-common|@bm-locations' -- include bm-common once setup for mysql fixed
       tags_for_tests: '@bm-locations'
 
@@ -118,7 +120,8 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database psmdb --database ps,QUERY_SOURCE=slowlog'
+      setup_services: '--database ps,QUERY_SOURCE=slowlog'
+      direct_mongo_setup_script: 'start-rs-only.sh'
       tags_for_tests: '@mongodb-exporter|@exporters'
 
   instances:
@@ -160,7 +163,8 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database ps --database psmdb --database pdpgsql'
+      setup_services: '--database ps --database pdpgsql'
+      direct_mongo_setup_script: 'start-rs-only.sh'
       tags_for_tests: '@user-password'
 
   pgsm:
@@ -200,7 +204,8 @@ jobs:
       pmm_test_flag: '@rbac'
       pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      setup_services: '--database ps --database psmdb'
+      setup_services: '--database ps'
+      direct_mongo_setup_script: 'start-rs-only.sh'
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
 
 # Unskip once it will be possible to find ARBITER element on the replset summary dashboard
