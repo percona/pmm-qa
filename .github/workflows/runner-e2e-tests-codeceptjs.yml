@@ -143,7 +143,7 @@ jobs:
 
       - name: Setup tmate session  on failure
         if: ${{ always() }}
-        uses: percona-platform/action-tmate@v2
+        uses: percona/gh-action-action-tmate@v2
         
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
