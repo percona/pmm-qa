@@ -89,7 +89,7 @@ jobs:
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
-      DIRECT_MONGO_SETUP_SCRIPT: ${{ inputs.direct_mongo_setup || '' }}
+      DIRECT_MONGO_SETUP_SCRIPT: ${{ inputs.direct_mongo_setup_script || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
 
 
@@ -151,7 +151,7 @@ jobs:
       - name: Run PSMDB direct setup script
         if: ${{ env.DIRECT_MONGO_SETUP_SCRIPT != '' }}
         working-directory: qa-integration/pmm_psmdb-pbm_setup
-        run: ${{ env.DIRECT_MONGO_SETUP_SCRIPT }}
+        run: bash ${{ env.DIRECT_MONGO_SETUP_SCRIPT }}
       
       - name: Run Setup for E2E Tests
         if: ${{ env.DIRECT_MONGO_SETUP == '' }}
