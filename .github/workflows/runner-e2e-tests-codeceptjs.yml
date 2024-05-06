@@ -154,7 +154,7 @@ jobs:
         run: bash ${{ env.DIRECT_MONGO_SETUP_SCRIPT }}
       
       - name: Run Setup for E2E Tests
-        if: ${{ env.DIRECT_MONGO_SETUP == '' }}
+        if: ${{ env.DIRECT_MONGO_SETUP_SCRIPT == '' }}
         working-directory: qa-integration/pmm_qa
         run: |
           mkdir -m 777 -p /tmp/backup_data
