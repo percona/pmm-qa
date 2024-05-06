@@ -281,21 +281,6 @@ jobs:
   #      services_list: '--modb-version=7 --addclient=modb,1'
   #      test_name: 'MongoDB 7.x'
 
-  psmdb-44-tests:
-    name: 'CLI / Integration'
-    uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
-    with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
-      services_list: '--database psmdb=4.4,SETUP_TYPE=pss --verbose'
-      test_name: 'PSMDB 5.x'
-
   psmdb-6-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
