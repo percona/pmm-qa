@@ -63,15 +63,9 @@ jobs:
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PMM_BASE_URL: https://127.0.0.1
-      ADMIN_PASSWORD: admin
 
       UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch }}
-      WIZARD_ARGS: ${{ inputs.setup_services }}
       PMM_TEST_FLAG: ${{ inputs.pmm_test_flag }}
-
-      PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version }}
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch }}
 
       OKTA_TOKEN: ${{ secrets.OKTA_TOKEN }}
       OAUTH_ISSUER_URL: 'https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7'
@@ -91,6 +85,18 @@ jobs:
       SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
       SERVICENOW_DEV_URL: 'https://perconadev.service-now.com/api/x_pellc_percona_pl/platform/settest'
 
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ADMIN_PASSWORD: 'admin'
+      PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
+      PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
+      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+
     steps:
       - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_ui_tests_branch }}
         if: ${{ env.SHA != 'null' }}
@@ -105,12 +111,19 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: 'Checkout UI tests: "${{ inputs.pmm_ui_tests_branch }}"'
-        uses: actions/checkout@v3
+      - name: Checkout PMM UI tests
+        uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.pmm_ui_tests_branch }}
+          ref: ${{ env.PMM_UI_BRANCH }}
           repository: percona/pmm-ui-tests
           path: ./pmm-ui-tests
+
+      - name: Checkout qa-integration repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PMM_QA_BRANCH }}
+          repository: Percona-Lab/qa-integration
+          path: ./qa-integration
 
       - name: 'Install playwright'
         working-directory: ./pmm-ui-tests/playwright-tests
@@ -118,34 +131,42 @@ jobs:
           npm ci
           npx playwright install
 
-      - name: 'Checkout pmm-qa: "${{ inputs.pmm_qa_branch }}"'
-        uses: actions/checkout@v3
-        with:
-          # token: ${{ secrets.ROBOT_TOKEN }}
-          repository: percona/pmm-qa
-          ref: ${{ inputs.pmm_qa_branch }}
-          path: ./pmm-qa
-
-      - name: 'Setup <PMM Sever>: "${{ inputs.pmm_server_version }}"'
-        working-directory: pmm-qa/pmm-integration
+      - name: Setup tools
         run: |
-          npm install
-          sudo npx ts-node ./integration-setup.ts --ci --setup-docker-pmm-server --rbac --pmm-server-docker-tag=${{ env.PMM_SERVER_VERSION }} --pmm-client-version=${{ env.PMM_CLIENT_VERSION }}
-          timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost/ping)" != "200" ]]; do sleep 5; done' || false
+          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench
+          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
+          echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
+              /etc/apt/sources.list.d/clickhouse.list
+          sudo apt-get update
+          sudo apt-get install -y clickhouse-client
+          sudo apt-get install -y ansible
+          sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
+          ls -la
 
-      - name: 'Setup <PMM Client: ${{ inputs.pmm_client_version }}>'
+      - name: Setup PMM2-Server
+        working-directory: pmm-ui-tests
         run: |
-          sudo bash ./pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
-        shell: bash
+          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker-compose up -d
+          sleep 60
+          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
+          bash -x testdata/db_setup.sh
 
-      - name: Setup Databases for the PMM-Server
-        working-directory: pmm-qa/pmm-integration
+      - name: Export path to qa-integration repo
+        working-directory: qa-integration
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+
+      - name: Setup PMM-Client
+        working-directory: qa-integration/pmm_qa
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+
+      - name: Run Setup for E2E Tests
+        working-directory: qa-integration/pmm_qa
         run: |
-          sudo npx ts-node ./integration-setup.ts --ci \
-          ${{ env.WIZARD_ARGS }}
-          sleep 30
-          sudo pmm-admin list
-        shell: bash
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Execute UI tests
         if: ${{ inputs.pmm_test_flag == 'null' }}
