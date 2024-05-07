@@ -118,10 +118,8 @@ jobs:
           docker run -d -p 80:80 -p 443:8443 -p 9000:9000 \
             -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
             -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
-            --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
-
-      - name: Wait for PMM Server to start
-        run: sleep 30
+            --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }} 
+          timeout 240 bash -c 'while [[ "$(curl -k -s -o /dev/null -w ''%{http_code}'' https://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
         working-directory: qa-integration/pmm_qa
