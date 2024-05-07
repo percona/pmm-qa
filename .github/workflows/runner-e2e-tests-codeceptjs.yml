@@ -148,13 +148,16 @@ jobs:
         working-directory: qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
-      - name: Run PSMDB direct setup script
-        if: ${{ env.DIRECT_MONGO_SETUP_SCRIPT != '' }}
-        working-directory: qa-integration/pmm_psmdb-pbm_setup
-        run: bash ${{ env.DIRECT_MONGO_SETUP_SCRIPT }}
+      # - name: Run PSMDB direct setup script
+      #   if: ${{ env.DIRECT_MONGO_SETUP_SCRIPT != '' }}
+      #   working-directory: qa-integration/pmm_psmdb-pbm_setup
+      #   run: bash ${{ env.DIRECT_MONGO_SETUP_SCRIPT }}
+      - name: Setup tmate session
+        if: ${{ always() }}
+        uses: percona/gh-action-action-tmate@v2
       
       - name: Run Setup for E2E Tests
-        if: ${{ !contains(env.WIZARD_ARGS, 'psmdb') }}
+        # if: ${{ !contains(env.WIZARD_ARGS, 'psmdb') }}
         working-directory: qa-integration/pmm_qa
         run: |
           mkdir -m 777 -p /tmp/backup_data
