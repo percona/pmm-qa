@@ -125,7 +125,7 @@ jobs:
           sudo apt-get install -y ansible
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
 
-      - name: Setup PMM2-Server
+      - name: Setup PMM Server
         working-directory: pmm-ui-tests
         run: |
           PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker-compose up -d
