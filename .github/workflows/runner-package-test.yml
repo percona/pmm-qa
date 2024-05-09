@@ -62,6 +62,7 @@ on:
           - jammy
           - centos-7
           - ol-8
+          - noble
           - ol-9
 
   workflow_call:
