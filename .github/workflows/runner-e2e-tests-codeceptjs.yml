@@ -82,6 +82,7 @@ jobs:
       DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
 
