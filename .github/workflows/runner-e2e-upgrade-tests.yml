@@ -382,7 +382,8 @@ jobs:
             --volumes-from pmm-integration-server-data \
             --name pmm-integration-server \
             ${{ steps.pmm_server_to_image.outputs.IMAGE }}
-          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' -u admin:${{ env.ADMIN_PASSWORD}} http://${{ env.PMM_SERVER_IP }}/v1/version)" != "200" ]]; do echo "waiting for ${{ env.PMM_SERVER_IP }}" && sleep 2; done' || false
+          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://${{ env.PMM_SERVER_IP }}/v1/readyz)" != "200" ]]; do echo "waiting for ${{ env.PMM_SERVER_IP }}" && sleep 2; done' || false
+          sleep 30
 
       - name: 'Upgrade pmm-server: <Podman way>'
         if: ${{ inputs.upgrade_type == 'Podman way' }}
@@ -395,7 +396,8 @@ jobs:
           podman pull docker.io/${{ steps.pmm_server_to_image.outputs.IMAGE }}
           systemctl --user restart pmm-server
 
-          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' -u admin:${{ env.ADMIN_PASSWORD}} http://${{ env.PMM_SERVER_IP }}/v1/version)" != "200" ]]; do echo "waiting for ${{ env.PMM_SERVER_IP }}" && sleep 2; done' || false
+          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://${{ env.PMM_SERVER_IP }}/v1/readyz)" != "200" ]]; do echo "waiting for ${{ env.PMM_SERVER_IP }}" && sleep 2; done' || false
+          sleep 30
 
       - name: 'Tests <before PMM Client> upgrade'
         working-directory: ./pmm-ui-tests/playwright-tests
