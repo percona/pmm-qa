@@ -46,7 +46,7 @@
   - name: Setup psmdb for monitoring
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ psmdb_container }} bash -x ./psmdb_setup.sh --mongodb_version {{ psmdb_version }} --mongodb_setup {{ psmdb_setup }} > ~/setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+      - docker exec {{ psmdb_container }} bash -x ./psmdb_setup.sh --mongodb_version {{ psmdb_version }} --mongodb_setup {{ psmdb_setup }} > setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
 
   - name: Setup Load Running Docker Container
     shell: "{{ item }}"
@@ -62,20 +62,26 @@
     shell: docker exec {{ psmdb_container }} ./nodes/cl.sh mongodb_user_setup.js
     when: psmdb_setup == "regular"
 
-  - name: Run load on Replica Set Master
+  - name: Run load on Replica Set Master (PSS)
     shell: "{{ item }}"
     with_items:
-      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27018 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
-    when: psmdb_setup == "replica" or psmdb_setup == "arbiter"
+      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27018 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+    when: psmdb_setup == "replica"
+
+  - name: Run load on Replica Set Master (PSA)
+    shell: "{{ item }}"
+    with_items:
+      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27018 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 -e MONGODB_USER="dba" -e MONGODB_PASSWORD="test1234" --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+    when: psmdb_setup == "arbiter"
 
   - name: Run load on Regular
     shell: "{{ item }}"
     with_items:
-      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
+      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
     when: psmdb_setup == "regular"
 
   - name: Run load on Sharded Clusters Master
     shell: "{{ item }}"
     with_items:
-      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27019 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php
+      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27019 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
     when: psmdb_setup == "sharded"
