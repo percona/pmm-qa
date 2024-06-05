@@ -89,4 +89,5 @@ fi
 service mysql restart
 mysql -e "create user pmm@'%' identified by \"pmm\""
 mysql -e "grant all on *.* to pmm@'%'"
+mysql -e "CREATE USER 'pmm_tls'@'%' REQUIRE X509"
 service mysql restart
