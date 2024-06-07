@@ -214,7 +214,7 @@ jobs:
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--mongomagic --with-arbiter'
-      tags_for_tests: '@pmm-psmdb-arbiter-integration'
+      tags_for_tests: '(?=.*@pmm-psmdb-replica-integration)^(?!.*@not-ui-pipeline)'
 
   psmdb_replica:
     name: PSMDB Replica UI tests
