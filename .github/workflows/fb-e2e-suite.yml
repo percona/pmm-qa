@@ -228,7 +228,7 @@ jobs:
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--mongo-replica-for-backup'
-      tags_for_tests: '(?=.*@pmm-psmdb-replica-integration)^(?!.*@not-ui-pipeline)'
+      tags_for_tests: '@pmm-psmdb-replica-integration'
 
   user_and_password_podman:
     name: User with changed password UI tests
