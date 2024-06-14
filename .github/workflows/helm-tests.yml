@@ -39,11 +39,14 @@ on:
 
 jobs:
   helm-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
     env:
+      SHA: ${{ inputs.sha || 'null' }}
       WORK_DIR: ./pmm-qa/pmm-tests/pmm-2-0-bats-tests
       GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
 
     steps:
       - name: Checkout code
