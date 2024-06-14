@@ -47,6 +47,27 @@ trim() {
     echo -n "$var"
 }
 
+
+# Function to update values.yaml based on the OS
+update_values_yaml() {
+    local tag=$1
+    local repo=$2
+    local file=$3
+
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        sed -i "s|tag: .*|tag: \"$tag\"|g" $file
+        sed -i "s|repository:.*|repository: $repo|g" $file
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        sed -i '' "s|tag: .*|tag: \"$tag\"|g" $file
+        sed -i '' "s|repository:.*|repository: $repo|g" $file
+    else
+        echo "Unsupported OS: $OSTYPE"
+        return 1
+    fi
+}
+
 @test "add helm repo" {
     helm repo add percona https://percona.github.io/percona-helm-charts/
 }
@@ -108,8 +129,7 @@ trim() {
     stop_port_forward
     helm show values percona/pmm > values.yaml
 
-    sed -i '' "s|tag: .*|tag: \"$IMAGE_TAG\"|g" values.yaml
-    sed -i '' "s|repository:.*|repository: $IMAGE_REPO|g" values.yaml
+    update_values_yaml "$IMAGE_TAG" "$IMAGE_REPO" "values.yaml"
 
     helm install pmm -f values.yaml --wait percona/pmm
     wait_for_pmm
@@ -126,8 +146,7 @@ trim() {
     stop_port_forward
     helm show values percona/pmm > values.yaml
 
-    sed -i '' "s|tag: .*|tag: \"$RELEASE_TAG\"|g" values.yaml
-    sed -i '' "s|repository:.*|repository: $RELEASE_REPO|g" values.yaml
+    update_values_yaml "$RELEASE_TAG" "$RELEASE_REPO" "values.yaml"
 
     helm install pmm3 -f values.yaml --wait percona/pmm
     wait_for_pmm
@@ -136,9 +155,8 @@ trim() {
     pmm_version=$(get_pmm_version)
     echo "pmm_version is ${pmm_version}"
 
-    sed -i '' "s|tag: .*|tag: \"$IMAGE_TAG\"|g" values.yaml
-    sed -i '' "s|repository:.*|repository: $IMAGE_REPO|g" values.yaml
-
+    update_values_yaml "$IMAGE_TAG" "$IMAGE_REPO" "values.yaml"
+    
     helm upgrade pmm3 -f values.yaml percona/pmm
     sleep 7 # give a chance to update manifest
     wait_for_pmm

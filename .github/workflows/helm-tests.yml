@@ -88,7 +88,7 @@ jobs:
           bats --tap helm-test.bats
 
       - name: Create status check
-        if: ${{ always() }}
+        if: ${{ always() && inputs.sha }}
         continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
