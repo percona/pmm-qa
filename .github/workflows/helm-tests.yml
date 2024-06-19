@@ -1,0 +1,112 @@
+on:
+  workflow_dispatch:
+    inputs:
+      server_image:
+        description: "server image: repo/name:tag"
+        required: true
+        type: string
+      client_image:
+        description: "client image: repo/name:tag"
+        required: true
+        type: string
+      pmm_qa_branch:
+        description: "Branch for pmm-qa repo to checkout"
+        required: false
+        type: string
+      sha:
+        description: "commit sha to report status"
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      server_image:
+        required: true
+        type: string
+      client_image:
+        required: true
+        type: string
+      pmm_qa_branch:
+        required: false
+        type: string
+      sha:
+        required: false
+        type: string
+
+
+jobs:
+  helm-tests:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    env:
+      SHA: ${{ inputs.sha || 'null' }}
+      WORK_DIR: ./pmm-qa/pmm-tests/pmm-2-0-bats-tests
+      GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PMM_QA_BRANCH }}
+          repository: percona/pmm-qa
+          path: ./pmm-qa
+
+      - name: Set up bats globally
+        run: |
+          git clone https://github.com/bats-core/bats-core.git /opt/bats
+          sudo /opt/bats/install.sh /usr/local
+
+      - name: Set up bats libraries
+        working-directory: ${{ env.WORK_DIR }}
+        run: |
+          ./setup_bats_libs.sh
+          echo "BATS_LIB_PATH=$(pwd)/lib" >> $GITHUB_ENV
+
+      - name: Start minikube
+        run: |
+          minikube start
+          minikube addons disable storage-provisioner
+
+          ### Install CSI drivers for snapshots
+          kubectl delete storageclass standard
+          minikube addons enable csi-hostpath-driver
+          minikube addons enable volumesnapshots
+          kubectl patch storageclass csi-hostpath-sc -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+          kubectl wait --for=condition=Ready node --timeout=90s minikube
+
+      - name: Run helm tests
+        working-directory: ${{ env.WORK_DIR }}/k8s
+        env:
+          SERVER_IMAGE: ${{ inputs.server_image }}
+        run: |
+          echo $(git submodule status)
+
+          export IMAGE_REPO=$(echo $SERVER_IMAGE | cut -d ':' -f 1)
+          export IMAGE_TAG=$(echo $SERVER_IMAGE | cut -d ':' -f 2)
+          bats --tap helm-test.bats
+
+      - name: Create status check
+        if: ${{ always() && inputs.sha }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SHA: ${{ inputs.sha }}
+          STATUS: ${{ job.status }}
+        run: |
+          if [ "${STATUS}" = "cancelled" ]; then
+            STATUS="error"
+          fi
+
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            /repos/$REPO/statuses/$SHA \
+            -f state="$STATUS" \
+            -f target_url="https://github.com/$REPO/actions/runs/$RUN_ID" \
+            -f description="Helm Tests status: $STATUS" \
+            -f context='actions/workflows/helm-tests'
+
