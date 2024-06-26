@@ -289,7 +289,7 @@ jobs:
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps=8.0,QUERY_SOURCE=slowlog'
-      tags_for_tests: '(?=.*@pmm-ps-integration)^(?!.*@not-ui-pipeline)'
+      tags_for_tests: '@fb-pmm-ps-integration'
 
   rbac:
     name: PS UI role based access control
