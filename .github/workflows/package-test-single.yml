@@ -26,6 +26,15 @@ on:
           - pmm2-client_integration_custom_port
           - pmm2-client_integration_upgrade_custom_port
           - pmm2-client_integration_upgrade_custom_path
+      package:
+        description: "Select source package for enabling repo"
+        required: true
+        default: "original"
+        type: choice
+        options:
+          - original
+          - pmm2-client
+          - tools
       repository:
         description: 'Select Repo for Client:'
         required: true
@@ -51,6 +60,9 @@ on:
         type: string
         required: true
       playbook:
+        required: true
+        type: string
+      package:
         required: true
         type: string
       repository:
@@ -79,6 +91,7 @@ jobs:
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       expected_version: ${{needs.get_versions.outputs.finish_version}}
+      package: ${{ inputs.package || 'original' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: ${{ inputs.playbook || 'pmm2-client_integration' }}
