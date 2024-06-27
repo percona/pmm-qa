@@ -292,7 +292,7 @@ jobs:
       tags_for_tests: '@fb-pmm-ps-integration'
 
   rbac:
-    name: PS UI role based access control
+    name: PS UI Role based access control
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     with:
