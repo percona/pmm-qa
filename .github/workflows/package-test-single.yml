@@ -29,7 +29,7 @@ on:
       package:
         description: "Select source package for enabling repo"
         required: true
-        default: "original"
+        default: "pmm2-client"
         type: choice
         options:
           - original
@@ -91,7 +91,7 @@ jobs:
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       expected_version: ${{needs.get_versions.outputs.finish_version}}
-      package: ${{ inputs.package || 'original' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: ${{ inputs.playbook || 'pmm2-client_integration' }}

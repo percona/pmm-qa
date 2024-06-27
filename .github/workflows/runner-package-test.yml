@@ -24,7 +24,7 @@ on:
       package:
         description: "package for enabling repo"
         required: true
-        default: "original"
+        default: "pmm2-client"
         type: choice
         options:
           - original
@@ -91,7 +91,7 @@ on:
         type: string
       package:
         required: true
-        default: "original"
+        default: "pmm2-client"
         type: string
       repository:
         required: true
@@ -131,7 +131,7 @@ jobs:
       EXPECTED_VERSION: ${{ inputs.expected_version }}
 
       REPO: ${{ inputs.repository || 'dev-latest' }}
-      INSTALL_PACKAGE: ${{ inputs.package || 'original' }}
+      INSTALL_PACKAGE: ${{ inputs.package || 'pmm2-client' }}
       METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
       PLAYBOOK: ${{ inputs.playbook }}
       VERBOSE: "no"
