@@ -191,7 +191,7 @@ jobs:
             echo "VM_BOX=ilker/ubuntu2004" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
-            echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
+            echo "VM_BOX=YMWR/ubuntu2204-arm64" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "jammy-arm" ]]; then
             echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
