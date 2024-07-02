@@ -196,7 +196,7 @@ jobs:
             echo "VM_BOX=ilker/ubuntu2004" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
-            echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
+            echo "VM_BOX=perk/ubuntu-2204-arm64" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "jammy-arm" ]]; then
             echo "VM_BOX=marcinbojko/ubuntu2204_arm64" >> $GITHUB_ENV
@@ -234,18 +234,14 @@ jobs:
 
       - name: "Setup tools"
         run: |
-          brew install colima docker
-          colima start
-          docker ps
-          brew install ansible
-          brew install --cask virtualbox@beta vagrant
+          sudo apt-get update
+          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
           fi
 
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
-
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
           docker run -d -p 80:80 -p 443:443 -p 9000:9000 \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
@@ -313,7 +309,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up
+        run: vagrant up --provider=kvm
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
