@@ -110,6 +110,9 @@ jobs:
     name: ${{ inputs.test_name || inputs.playbook}}
     runs-on: macos-latest
     timeout-minutes: 40
+    services:
+      pmm-server:
+        image: ${{ env.PMM_SERVER_IMAGE }}
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
