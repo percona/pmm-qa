@@ -229,11 +229,11 @@ jobs:
 
       - name: "Setup tools"
         run: |
+          brew install colima docker
+          colima start
+          docker ps
           brew install ansible
           brew install --cask virtualbox@beta vagrant
-          brew install orbstack
-          orb start
-          docker --version
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
           fi
