@@ -239,7 +239,7 @@ jobs:
         run: |
           brew install docker docker-machine
           brew services start docker-machine
-          docker-machine create default --driver generic
+          docker-machine create default --driver generic --generic-ip-address=127.0.0.1
           docker-machine env default
           eval "$(docker-machine env default)"
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
