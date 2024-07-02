@@ -231,8 +231,7 @@ jobs:
         run: |
           brew install ansible
           brew install --cask virtualbox@beta vagrant
-          brew install colima docker
-          colima start
+          brew install orbstack
           docker --version
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
