@@ -139,7 +139,7 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
-          platform: "linux/arm64"
+          platforms: "linux/arm64"
 
       - name: 'Checkout package-testing: "${{ inputs.package_testing_branch }}"'
         uses: actions/checkout@v4
