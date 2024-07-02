@@ -234,11 +234,8 @@ jobs:
 
       - name: "Setup tools"
         run: |
-          sudo apt-get install qemu-system 
-          docker ps -a
-          docker ps -a -f ancestor=tonistiigi/binfmt:latest --format "{{.Names}}"
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant
+          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm qemu-kvm libvirt-clients libvirt-daemon-system bridge-utils
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
           fi
