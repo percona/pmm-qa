@@ -226,7 +226,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm
           sudo vagrant plugin install vagrant-qemu
-          sudo vagrant plugin uninstall vagrant-libvirt
           sudo vagrant plugin list
 
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
