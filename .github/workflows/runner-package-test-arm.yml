@@ -230,7 +230,7 @@ jobs:
 
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
-          brew install docker docker-machine docker
+          brew install docker docker-machine
           brew services start docker-machine
           brew services start docker
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
