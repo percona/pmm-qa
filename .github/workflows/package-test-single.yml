@@ -85,7 +85,7 @@ jobs:
       test_name: ${{ matrix.os }}
       os: ${{ matrix.os }}
   p_test_arm:
-    name: ${{ inputs.playbook }}-arm
+    name: ${{ inputs.playbook }}_arm
     uses: ./.github/workflows/runner-package-test-arm.yml
     secrets: inherit
     needs: get_versions
