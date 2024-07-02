@@ -230,7 +230,10 @@ jobs:
       - name: "Setup tools"
         run: |
           brew install ansible docker
+          brew cask install docker
           brew install --cask virtualbox@beta vagrant
+          docker start
+          docker --version
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
           fi
