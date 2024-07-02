@@ -112,7 +112,7 @@ jobs:
     timeout-minutes: 40
     services:
       pmm-server:
-        image: ${{ env.PMM_SERVER_IMAGE }}
+        image: ${{ inputs.pmm_server_image }}
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
