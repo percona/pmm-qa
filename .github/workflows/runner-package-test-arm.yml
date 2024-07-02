@@ -108,15 +108,8 @@ on:
 jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 40
-    services:
-      pmm-server:
-        image: "perconalab/pmm-server:dev-latest"
-        ports:
-          - 80:80
-          - 443:443
-          - 9000:9000
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
@@ -142,6 +135,11 @@ jobs:
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platform: "linux/arm64"
 
       - name: 'Checkout package-testing: "${{ inputs.package_testing_branch }}"'
         uses: actions/checkout@v4
