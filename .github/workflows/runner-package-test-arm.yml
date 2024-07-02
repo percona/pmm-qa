@@ -224,7 +224,7 @@ jobs:
       - name: "Setup tools"
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm libvirt-clients libvirt-daemon-system bridge-utils
+          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm
           sudo vagrant plugin install vagrant-qemu
           sudo vagrant plugin list
 
