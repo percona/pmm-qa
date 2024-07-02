@@ -192,9 +192,6 @@ jobs:
           if [[ "${{ inputs.os }}" =~ "focal" ]]; then
             echo "VM_BOX=generic/ubuntu2004" >> $GITHUB_ENV
           fi
-          if [[ "${{ inputs.os }}" =~ "focal-arm" ]]; then
-            echo "VM_BOX=ilker/ubuntu2004" >> $GITHUB_ENV
-          fi
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
             echo "VM_BOX=perk/ubuntu-2204-arm64" >> $GITHUB_ENV
           fi
@@ -236,6 +233,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm qemu-kvm libvirt-clients libvirt-daemon-system bridge-utils
+          vagrant plugin install vagrant-qemu
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
           fi
