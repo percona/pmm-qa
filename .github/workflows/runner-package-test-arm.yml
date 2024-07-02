@@ -136,11 +136,6 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-        with:
-          platforms: "arm64"
-
       - name: 'Checkout package-testing: "${{ inputs.package_testing_branch }}"'
         uses: actions/checkout@v4
         with:
@@ -232,7 +227,7 @@ jobs:
       - name: "Setup tools"
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm qemu-kvm libvirt-clients libvirt-daemon-system bridge-utils
+          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm qemu-kvm libvirt-clients libvirt-daemon-system bridge-utils vagrant-qemu
           vagrant plugin install vagrant-qemu
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
