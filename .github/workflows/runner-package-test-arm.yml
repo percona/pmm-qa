@@ -230,9 +230,9 @@ jobs:
       - name: "Setup tools"
         run: |
           brew install ansible
-          brew install --cask docker 
           brew install --cask virtualbox@beta vagrant
-
+          brew install colima docker
+          colima start
           docker --version
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
