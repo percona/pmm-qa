@@ -190,9 +190,6 @@ jobs:
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
             echo "VM_BOX=perk/ubuntu-2204-arm64" >> $GITHUB_ENV
           fi
-          if [[ "${{ inputs.os }}" =~ "jammy-arm" ]]; then
-            echo "VM_BOX=marcinbojko/ubuntu2204_arm64" >> $GITHUB_ENV
-          fi
           if [[ "${{ inputs.os }}" =~ "centos-7" ]]; then
             echo "VM_BOX=generic/centos7" >> $GITHUB_ENV
           fi
@@ -227,7 +224,7 @@ jobs:
       - name: "Setup tools"
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm qemu-kvm libvirt-clients libvirt-daemon-system bridge-utils vagrant-qemu
+          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm qemu-kvm libvirt-clients libvirt-daemon-system bridge-utils
           vagrant plugin install vagrant-qemu
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
@@ -302,7 +299,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: sudo vagrant up --provider qemu
+        run: sudo vagrant up --provider libvirt
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
