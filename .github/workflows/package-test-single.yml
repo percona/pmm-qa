@@ -8,7 +8,7 @@ on:
         description: 'Target branch for package-testing repository'
         type: string
         default: 'master'
-        required: true
+        required: false
       playbook:
         description: 'Select test to run:'
         default: 'pmm2-client_integration'
@@ -46,7 +46,7 @@ on:
           - dev-latest
       metrics_mode:
         description: 'Select the Metrics Mode for PMM Client:'
-        required: true
+        required: false
         default: 'auto'
         type: choice
         options:
@@ -97,3 +97,19 @@ jobs:
       playbook: ${{ inputs.playbook || 'pmm2-client_integration' }}
       test_name: ${{ matrix.os }}
       os: ${{ matrix.os }}
+
+  slack_notify:
+    runs-on: ubuntu-latest
+    if: ${{ failure() && inputs.repository == 'release' }}
+    needs: fb_test
+    steps:
+      - name: Slack Notification
+        uses: percona/gh-action-action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_TOKEN }}
+          SLACK_USERNAME: "package tests runner"
+          SLACK_ICON_EMOJI: ":squirrel:"
+          SLACK_COLOR: "#FF0000"
+          SLACK_TITLE: "Package tests failure"
+          SLACK_MESSAGE: "Failed Package tests for release repository"
+          SLACK_FOOTER: "Please check the Actions URL ^"
