@@ -21,6 +21,15 @@ on:
         description: "expected version"
         required: false
         type: string
+      package:
+        description: "package for enabling repo"
+        required: true
+        default: "pmm2-client"
+        type: choice
+        options:
+          - original
+          - pmm2-client
+          - tools
       # TODO: investigate switch to actual repo name: experimental | testing | main | pmm2-client-main
       repository:
         description: "Select Repo to install PMM Client:"
@@ -80,6 +89,10 @@ on:
       expected_version:
         required: false
         type: string
+      package:
+        required: true
+        default: "pmm2-client"
+        type: string
       repository:
         required: true
         default: "dev-latest"
@@ -118,6 +131,7 @@ jobs:
       EXPECTED_VERSION: ${{ inputs.expected_version }}
 
       REPO: ${{ inputs.repository || 'dev-latest' }}
+      INSTALL_PACKAGE: ${{ inputs.package || 'pmm2-client' }}
       METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
       PLAYBOOK: ${{ inputs.playbook }}
       VERBOSE: "no"
@@ -262,6 +276,7 @@ jobs:
               export METRICS_MODE=${{ env.METRICS_MODE }}
               export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
               export install_repo=${{ env.REPO }}
+              export install_package=${{ env.INSTALL_PACKAGE }}
               if [[ "${{ env.TARBALL }}" != "null" ]]; then
                 export tarball_link=${{ env.TARBALL }}
               fi
