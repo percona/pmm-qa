@@ -234,6 +234,7 @@ jobs:
 
       - name: "Setup tools"
         run: |
+          qemu-system-aarch64 --machine help
           docker ps -a
           docker ps -a -f ancestor=tonistiigi/binfmt:latest --format "{{.Names}}"
           sudo apt-get update
