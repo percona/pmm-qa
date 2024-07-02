@@ -226,9 +226,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system-arm libvirt-clients libvirt-daemon-system bridge-utils
           vagrant plugin install vagrant-qemu
-          if [[ "${{ inputs.os }}" =~ "buster" ]]; then
-            vagrant plugin install vagrant-vbguest
-          fi
 
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
@@ -299,7 +296,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: sudo vagrant up --provider libvirt
+        run: sudo vagrant up --provider qemu
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
