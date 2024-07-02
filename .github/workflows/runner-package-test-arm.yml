@@ -232,6 +232,7 @@ jobs:
           brew install ansible
           brew install --cask virtualbox@beta vagrant
           brew install orbstack
+          orb start
           docker --version
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
