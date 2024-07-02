@@ -229,7 +229,7 @@ jobs:
 
       - name: "Setup tools"
         run: |
-          brew install ansible 
+          brew install ansible docker
           brew install --cask virtualbox@beta vagrant
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
@@ -237,11 +237,7 @@ jobs:
 
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
-          brew install docker docker-machine
-          brew services start docker-machine
-          docker-machine create default --driver generic --generic-ip-address=127.0.0.1
-          docker-machine env default
-          eval "$(docker-machine env default)"
+
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
           docker run -d -p 80:80 -p 443:443 -p 9000:9000 \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
