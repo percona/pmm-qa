@@ -307,7 +307,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: sudo vagrant up --provider=libvirt
+        run: sudo vagrant up --provider qemu
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
