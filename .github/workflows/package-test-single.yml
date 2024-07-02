@@ -84,3 +84,20 @@ jobs:
       playbook: ${{ inputs.playbook || 'pmm2-client_integration' }}
       test_name: ${{ matrix.os }}
       os: ${{ matrix.os }}
+  p_test_arm:
+    name: ${{ inputs.playbook }}
+    uses: ./.github/workflows/runner-package-test-arm.yml
+    secrets: inherit
+    needs: get_versions
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(needs.get_versions.outputs.pt_os) }}
+    with:
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      expected_version: ${{needs.get_versions.outputs.finish_version}}
+      repository: ${{ inputs.repository || 'dev-latest' }}
+      metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      playbook: ${{ inputs.playbook || 'pmm2-client_integration' }}
+      test_name: ${{ matrix.os }}
+      os: ${{ matrix.os }}

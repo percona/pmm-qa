@@ -108,7 +108,7 @@ on:
 jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     timeout-minutes: 40
     env:
       SHA: ${{ inputs.sha || 'null' }}
@@ -173,7 +173,7 @@ jobs:
           
           ### vagrant vm ###
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
-            echo "VM_BOX=generic/debian10" >> $GITHUB_ENV
+            echo "VM_BOX=d3r/bullseye" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
             echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
@@ -187,8 +187,14 @@ jobs:
           if [[ "${{ inputs.os }}" =~ "focal" ]]; then
             echo "VM_BOX=generic/ubuntu2004" >> $GITHUB_ENV
           fi
+          if [[ "${{ inputs.os }}" =~ "focal-arm" ]]; then
+            echo "VM_BOX=ilker/ubuntu2004" >> $GITHUB_ENV
+          fi
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
             echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
+          fi
+          if [[ "${{ inputs.os }}" =~ "jammy-arm" ]]; then
+            echo "VM_BOX=marcinbojko/ubuntu2204_arm64" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "centos-7" ]]; then
             echo "VM_BOX=generic/centos7" >> $GITHUB_ENV
