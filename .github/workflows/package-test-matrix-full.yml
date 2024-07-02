@@ -9,6 +9,15 @@ on:
         type: string
         default: 'master'
         required: true
+      package:
+        description: "Select source package for enabling repo"
+        required: true
+        default: "pmm2-client"
+        type: choice
+        options:
+          - original
+          - pmm2-client
+          - tools
       repository:
         description: 'Select Repo for Client:'
         required: true
@@ -35,6 +44,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration"
@@ -45,6 +55,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration"
@@ -55,6 +66,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration_auth_config"
@@ -65,6 +77,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration_auth_register"
@@ -75,6 +88,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_upgrade"
@@ -85,6 +99,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration_upgrade"
@@ -95,6 +110,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration_upgrade_custom_port"
@@ -105,6 +121,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_custom_path"
@@ -115,6 +132,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration_custom_path"
@@ -125,6 +143,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration_custom_port"
@@ -135,6 +154,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm2-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm2-client_integration_upgrade_custom_path"
