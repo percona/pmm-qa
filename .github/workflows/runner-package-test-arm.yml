@@ -231,7 +231,6 @@ jobs:
         run: |
           brew install ansible 
           brew install --cask virtualbox vagrant
-#          sudo apt-get install -y apt-transport-https ca-certificates ansible virtualbox vagrant
           if [[ "${{ inputs.os }}" =~ "buster" ]]; then
             vagrant plugin install vagrant-vbguest
           fi
