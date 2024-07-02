@@ -234,6 +234,7 @@ jobs:
 
       - name: "Setup tools"
         run: |
+          docker ps -a
           docker ps -a -f ancestor=tonistiigi/binfmt:latest --format "{{.Names}}"
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant
