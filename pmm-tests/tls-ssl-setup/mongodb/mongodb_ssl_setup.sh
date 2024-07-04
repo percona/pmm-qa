@@ -13,7 +13,7 @@ if [ -z "$mongodb_version" ]; then
 fi
 
 apt-get update
-apt-get -y install wget curl git jq
+apt-get -y install wget curl git jq gnupg2 lsb-release
 wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
 dpkg -i percona-release_latest.generic_all.deb
 wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startup.sh
