@@ -28,33 +28,33 @@ jobs:
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets: inherit
     with:
-      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'main '}}
+      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'v3 '}}
       pmm_test_flag: '@rbac'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
       setup_services: '--addclient=ps,1 --addclient=pdpgsql,1'
-      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
+      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'v3' }}
 
   portal:
     name: Portal
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets: inherit
     with:
-      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'main '}}
+      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'v3 '}}
       pmm_test_flag: '@portal'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
       setup_services: ''
-      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
+      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'v3' }}
 
   inventory:
     name: Inventory
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets: inherit
     with:
-      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'main '}}
+      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'v3 '}}
       pmm_test_flag: '@inventory'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || 'dev-latest' }}
       setup_services: '--addclient=modb,1 --addclient=ps,1 --addclient=pdpgsql,1'
-      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
+      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'v3' }}
