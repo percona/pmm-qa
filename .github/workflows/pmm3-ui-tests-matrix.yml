@@ -1,0 +1,48 @@
+name: PMM3 Ui-tests matrix
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch(CLI tests)'
+        default: 'v3'
+        required: false
+        type: string
+      pmm_qa_branch:
+        description: 'qa-integration repository branch(for setup)'
+        default: 'v3'
+        required: false
+        type: string
+      pmm_server_image:
+        description: 'PMM Server docker image'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        required: true
+        type: string
+      pmm_client_image:
+        description: 'pmm-client docker image'
+        default: 'perconalab/pmm-client:3-dev-latest'
+        required: false
+        type: string
+      pmm_client_version:
+        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
+        default: '3-dev-latest'
+        required: false
+        type: string
+      sha:
+        description: "SHA (leave default if running manually)"
+        default: 'null'
+        required: false
+        type: string
+
+jobs:
+  fb-e2-suite:
+    name: FB e2e tests
+    uses: ./.github/workflows/fb-e2e-suite.yml
+    secrets: inherit
+    with:
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
+      pmm_server_image: ${{ inputs.pmm_server_image }}
+      pmm_client_image: ${{ inputs.pmm_client_image }}
+      pmm_client_version: ${{ inputs.pmm_client_version }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
