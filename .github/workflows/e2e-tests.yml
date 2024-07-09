@@ -23,18 +23,6 @@ on:
         required: true
 
 jobs:
-  rbac:
-    name: RBAC
-    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
-    secrets: inherit
-    with:
-      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'v3 '}}
-      pmm_test_flag: '@rbac'
-      pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
-      pmm_client_version: ${{ github.event.inputs.pmm_client_version || '3-dev-latest' }}
-      setup_services: '--addclient=ps,1 --addclient=pdpgsql,1'
-      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'v3' }}
-
   portal:
     name: Portal
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
@@ -44,7 +32,7 @@ jobs:
       pmm_test_flag: '@portal'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || '3-dev-latest' }}
-      setup_services: ''
+      setup_services: '--database ps'
       pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'v3' }}
 
   inventory:
@@ -56,5 +44,5 @@ jobs:
       pmm_test_flag: '@inventory'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || '3-dev-latest' }}
-      setup_services: '--addclient=modb,1 --addclient=ps,1 --addclient=pdpgsql,1'
+      setup_services: '--database ps --database psmdb --database pdpgsql'
       pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'v3' }}
