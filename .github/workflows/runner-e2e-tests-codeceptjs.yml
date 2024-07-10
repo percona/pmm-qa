@@ -145,7 +145,7 @@ jobs:
         run: sudo bash -x pmm-tests/pmm2-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Compare FullCommit for pmm-server and pmm-client
-        if: contains(inputs.pmm_server_image, 'dev-latest') && contains(inputs.pmm_client_version, 'dev-latest')
+        if: ${{ contains(inputs.pmm_server_image, 'dev-latest') && contains(inputs.pmm_client_version, 'dev-latest') }}
         shell: bash
         run: |
           local_version=$(pmm-admin version --json)
