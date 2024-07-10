@@ -150,9 +150,11 @@ jobs:
         run: |
           local_version=$(pmm-admin version --json)
           local_full_commit=$(echo $local_version | jq -r '.fullCommit')
+          echo "local_full_commit=$local_full_commit"
         
           container_version=$(docker exec pmm-server pmm-admin version --json)
           container_full_commit=$(echo $container_version | jq -r '.fullCommit')
+          echo "container_full_commit=$container_full_commit"
         
           if [[ "$local_full_commit" != "$container_full_commit" ]]; then
             echo "Commits for pmm-server and pmm-client are different! Check the versions!"
