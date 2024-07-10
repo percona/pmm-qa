@@ -1,4 +1,4 @@
-name: PMM3 Ui-tests matrix
+name:  PMM3 Ui-tests matrix
 
 on:
   push:
