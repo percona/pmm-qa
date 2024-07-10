@@ -114,8 +114,8 @@ else
    pid=`ps -ef | grep pmm-agent | grep -v grep | awk -F ' ' '{print $2}'`
    if [[ ! -z "$pid" ]]; then
        kill -9 $pid
-       echo "killed old agent, restarting agent...."
-       pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+       echo "Killing and restarting pmm agent...."
+       pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml >> pmm-agent.log 2>&1 &
        sleep 10
    fi
 fi
