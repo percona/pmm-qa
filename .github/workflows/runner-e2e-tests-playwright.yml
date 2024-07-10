@@ -160,7 +160,7 @@ jobs:
         working-directory: pmm-ui-tests/playwright-tests
         run: |
           project="${{ contains(env.PMM_TEST_FLAG, 'portal') && 'Portal' || 'Chromium' }}"
-          npx playwright test --project=$project --grep ${{ env.PMM_TEST_FLAG }} --pass-with-no-tests
+          npx playwright test --project=$project --grep ${{ env.PMM_TEST_FLAG }} --pass-with-no-tests --quiet
 
       - name: 'Create report name'
         if: failure()
