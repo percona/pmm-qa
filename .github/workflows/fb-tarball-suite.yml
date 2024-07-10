@@ -1,6 +1,9 @@
 name: _FB tarball tests
 
 on:
+  schedule:
+    - cron: '0 3 * * *'  # Every night at 3 AM UTC
+
   workflow_dispatch:
     inputs:
       package_testing_branch:
