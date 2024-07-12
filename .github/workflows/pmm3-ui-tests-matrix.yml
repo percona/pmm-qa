@@ -111,7 +111,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database ps'
+      setup_services: '--database SSL_PSMDB=14'
       tags_for_tests: '@ssl-mongo'
 
   ssl-postgres:
