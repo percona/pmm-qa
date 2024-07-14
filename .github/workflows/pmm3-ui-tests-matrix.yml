@@ -110,7 +110,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database SSL_MYSQL=8'
+      setup_services: '--database SSL_MYSQL=8 --database SSL_MYSQL=5.7'
       tags_for_tests: '@ssl-mysql'
 
   ssl-mongo:
