@@ -94,7 +94,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
-      playbook: ${{ inputs.playbook || 'pmm2-client_integration' }}
+      playbook: ${{ inputs.playbook || 'pmm3-client_integration' }}
       test_name: ${{ matrix.os }}
       os: ${{ matrix.os }}
 
