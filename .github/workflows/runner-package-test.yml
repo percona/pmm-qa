@@ -283,11 +283,12 @@ jobs:
                 
               if [[ "${{ env.VM_BOX }}" =~ "centos7" ]]; then
                 sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/fastestmirror.conf
-                cat /etc/yum/pluginconf.d/fastestmirror.conf
+                sed -i -e 's/^\(mirrorlist\)/#\1/g' /etc/yum.repos.d/CentOS-Base.repo 
+                sed -i -e 's|^#baseurl.*|baseurl=http://vault.centos.org/centos/\$releasever/os/\$basearch/|g' /etc/yum.repos.d/CentOS-Base.repo
                 echo "Centos7 Repo details: "
-                rm /etc/yum.repos.d/CentOS-Base.repo
-                cat /etc/yum.repos.d/CentOS-Vault.repo
-                mv /etc/yum.repos.d/CentOS-Vault.repo /etc/yum.repos.d/CentOS-Base.repo
+#                rm /etc/yum.repos.d/CentOS-Base.repo
+#                cat /etc/yum.repos.d/CentOS-Vault.repo
+#                mv /etc/yum.repos.d/CentOS-Vault.repo /etc/yum.repos.d/CentOS-Base.repo
                 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
                 sudo yum -y update
                 sudo yum install -y ansible git wget
