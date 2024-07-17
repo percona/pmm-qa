@@ -7,11 +7,11 @@ on:
       package_testing_branch:
         description: 'Target branch for package-testing repository'
         type: string
-        default: 'master'
-        required: true
+        default: 'v3'
+        required: false
       playbook:
         description: 'Select test to run:'
-        default: 'pmm2-client_integration'
+        default: 'pmm3-client_integration'
         required: true
         type: choice
         options:
@@ -26,6 +26,15 @@ on:
           - pmm3-client_integration_custom_port
           - pmm3-client_integration_upgrade_custom_port
           - pmm3-client_integration_upgrade_custom_path
+      package:
+        description: "Select source package for enabling repo"
+        required: true
+        default: "pmm3-client"
+        type: choice
+        options:
+          - original
+          - pmm3-client
+          - tools
       repository:
         description: 'Select Repo for Client:'
         required: true
@@ -37,7 +46,7 @@ on:
           - dev-latest
       metrics_mode:
         description: 'Select the Metrics Mode for PMM Client:'
-        required: true
+        required: false
         default: 'auto'
         type: choice
         options:
@@ -51,6 +60,9 @@ on:
         type: string
         required: true
       playbook:
+        required: true
+        type: string
+      package:
         required: true
         type: string
       repository:
@@ -79,8 +91,25 @@ jobs:
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       expected_version: ${{needs.get_versions.outputs.finish_version}}
+      package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
-      playbook: ${{ inputs.playbook || 'pmm2-client_integration' }}
+      playbook: ${{ inputs.playbook || 'pmm3-client_integration' }}
       test_name: ${{ matrix.os }}
       os: ${{ matrix.os }}
+
+  slack_notify:
+    runs-on: ubuntu-latest
+    if: ${{ failure() && inputs.repository == 'release' }}
+    needs: fb_test
+    steps:
+      - name: Slack Notification
+        uses: percona/gh-action-action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_TOKEN }}
+          SLACK_USERNAME: "package tests runner"
+          SLACK_ICON_EMOJI: ":squirrel:"
+          SLACK_COLOR: "#FF0000"
+          SLACK_TITLE: "Package tests failure"
+          SLACK_MESSAGE: "Failed Package tests for release repository"
+          SLACK_FOOTER: "Please check the Actions URL ^"
