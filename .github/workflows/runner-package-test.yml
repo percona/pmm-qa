@@ -283,6 +283,7 @@ jobs:
                 
               if [[ "${{ env.VM_BOX }}" =~ "centos7" ]]; then
                 echo "Centos7 Repo details: "
+                yum repolist all
                 ls /etc/yum.repos.d/
                 cat /etc/yum.repos.d/CentOS-Base.repo
                 sudo yum install -y epel-release
