@@ -282,6 +282,7 @@ jobs:
               fi
                 
               if [[ "${{ env.VM_BOX }}" =~ "centos7" ]]; then
+                cat /etc/yum/pluginconf.d/fastestmirror.conf
                 echo "Centos7 Repo details: "
                 yum repolist all
                 yum-config-manager --disable CentOS-Base
