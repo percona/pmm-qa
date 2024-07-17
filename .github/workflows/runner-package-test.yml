@@ -21,7 +21,6 @@ on:
         description: "expected version"
         required: false
         type: string
-      # TODO: investigate switch to actual repo name: experimental | testing | main | pmm2-client-main
       package:
         description: "package for enabling repo"
         required: true
