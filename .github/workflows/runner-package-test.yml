@@ -292,7 +292,7 @@ jobs:
                 mv /etc/yum.repos.d/CentOS-Vault.repo /etc/yum.repos.d/CentOS-Base.repo
                 sudo yum install -y epel-release
                 sudo yum -y update
-                sudo yum install -y ansible git wget
+                sudo yum install -y python-cryptography python2-pyasn1 python-setuptools python-six python-jinja2 PyYAML ansible git wget
               fi
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
