@@ -11,7 +11,7 @@ on:
         required: false
       playbook:
         description: 'Select test to run:'
-        default: 'pmm2-client_integration'
+        default: 'pmm3-client_integration'
         required: true
         type: choice
         options:
