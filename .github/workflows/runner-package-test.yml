@@ -282,12 +282,9 @@ jobs:
               fi
                 
               if [[ "${{ env.VM_BOX }}" =~ "centos7" ]]; then
+                sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/fastestmirror.conf
                 cat /etc/yum/pluginconf.d/fastestmirror.conf
                 echo "Centos7 Repo details: "
-                yum repolist all
-                yum-config-manager --disable CentOS-Base
-                yum-config-manager --enable CentOS-Vault
-                ls /etc/yum.repos.d/
                 rm /etc/yum.repos.d/CentOS-Base.repo
                 cat /etc/yum.repos.d/CentOS-Vault.repo
                 mv /etc/yum.repos.d/CentOS-Vault.repo /etc/yum.repos.d/CentOS-Base.repo
