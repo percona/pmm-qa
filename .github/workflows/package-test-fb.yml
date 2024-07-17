@@ -88,7 +88,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image }}
       pmm_client_tarball: ${{ inputs.pmm_client_tarball == 'dev-latest' && needs.get_versions.outputs.finish_version || inputs.pmm_client_tarball }}
       expected_version: ${{needs.get_versions.outputs.finish_version}}
-      package: 'pmm2-client'
+      package: 'pmm3-client'
       repository: 'dev-latest'
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: ${{ inputs.playbook || 'pmm3-client_integration_custom_path' }}
