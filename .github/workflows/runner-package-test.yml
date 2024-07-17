@@ -282,6 +282,9 @@ jobs:
               fi
                 
               if [[ "${{ env.VM_BOX }}" =~ "centos7" ]]; then
+                echo "Centos7 Repo details: "
+                ls /etc/yum.repos.d/
+                cat /etc/yum.repos.d/CentOS-Base.repo
                 sudo yum install -y epel-release
                 sudo yum -y update
                 sudo yum install -y ansible git wget
