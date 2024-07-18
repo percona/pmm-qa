@@ -257,6 +257,7 @@ jobs:
       - name: "Create vagrantfile"
         working-directory: ./
         run: |
+          echo "VM BOX IS: ${{ env.VM_BOX }}"
           pwd
           # mkdir -p ~/test-vm/
           # cat > ~/test-vm/Vagrantfile <<EOF
