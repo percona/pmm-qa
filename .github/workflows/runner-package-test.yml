@@ -205,7 +205,7 @@ jobs:
             echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "centos-7" ]]; then
-            echo "VM_BOX=centos/7" >> $GITHUB_ENV
+            echo "VM_BOX=bento/centos-7.8" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-8" ]]; then
             echo "VM_BOX=generic/oracle8" >> $GITHUB_ENV
