@@ -290,8 +290,8 @@ jobs:
                 cat /etc/yum.repos.d/CentOS-Base.repo
                 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
                 sudo yum -y update
-                sudo yum install -y ansible git wget
-                sudo yum remove openssl-devel
+                sudo yum remove openssl-libs
+                sudo yum install openssl-libs-1.0.2k-19.el7.x86_64
               fi
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
