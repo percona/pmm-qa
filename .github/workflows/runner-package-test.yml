@@ -205,7 +205,7 @@ jobs:
             echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "centos-7" ]]; then
-            echo "VM_BOX=generic/centos7" >> $GITHUB_ENV
+            echo "VM_BOX=centos/7" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-8" ]]; then
             echo "VM_BOX=generic/oracle8" >> $GITHUB_ENV
@@ -291,7 +291,7 @@ jobs:
                 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
                 sudo yum -y update
                 sudo yum install -y ansible git wget
-                sudo yum downgrade openssl-1.0.2k-19.el7.x86_64
+                sudo yum remove openssl 
               fi
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
