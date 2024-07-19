@@ -17,7 +17,7 @@ then
 fi
 
 apt-get update
-apt-get -y install wget curl git
+apt-get -y install wget curl git gnupg2 lsb-release
 wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
 dpkg -i percona-release_latest.generic_all.deb
 percona-release setup ppg${pgsql_version}
