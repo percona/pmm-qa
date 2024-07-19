@@ -66,6 +66,16 @@ jobs:
           echo "rc_latest=$rc_latest" >> $GITHUB_ENV
           echo "dev_latest=$d_latest" >> $GITHUB_ENV
           
+          if [[ "${{ inputs.repository }}" == "release" ]]; then
+            if [[ "$r_latest" != "$rc_latest" ]]; then
+              echo "Released PMM version is not correct!"
+              echo "release_latest=$r_latest"
+              echo "rc_latest=$rc_latest"
+              echo "dev_latest=$d_latest"
+              exit 1
+            fi
+          fi
+
       - name: Get start version string
         id: get-start
         shell: bash
