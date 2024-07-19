@@ -204,7 +204,7 @@ jobs:
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
             echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
           fi
-          if [[ "${{ inputs.os }}" =~ "centos7" ]]; then
+          if [[ "${{ inputs.os }}" =~ "centos-7" ]]; then
             echo "VM_BOX=generic/centos7" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-8" ]]; then
@@ -282,7 +282,7 @@ jobs:
                 export tarball_link=${{ env.TARBALL }}
               fi
                 
-              if [[ "${{ env.VM_BOX }}" =~ "centos-7" ]]; then
+              if [[ "${{ env.VM_BOX }}" =~ "centos7" ]]; then
                 sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/fastestmirror.conf
                 sed -i -e 's/^\(mirrorlist\)/#\1/g' /etc/yum.repos.d/CentOS-Base.repo 
                 sed -i -e 's|^#baseurl.*|baseurl=http://vault.centos.org/centos/\$releasever/os/\$basearch/|g' /etc/yum.repos.d/CentOS-Base.repo
