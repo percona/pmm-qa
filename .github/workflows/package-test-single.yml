@@ -101,7 +101,7 @@ jobs:
   slack_notify:
     runs-on: ubuntu-latest
     if: ${{ failure() && inputs.repository == 'release' }}
-    needs: fb_test
+    needs: p_test
     steps:
       - name: Slack Notification
         uses: percona/gh-action-action-slack-notify@v2
