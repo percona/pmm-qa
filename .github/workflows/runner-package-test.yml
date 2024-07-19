@@ -292,7 +292,7 @@ jobs:
                 sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
                 sudo yum -y update
                 sudo yum install -y ansible git wget
-                rpm -e openssl-1.0.2k-26.el7_9.x86_64
+                yum -y downgrade openssl-1.0.2k-19.el7.x86_64
               fi
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
