@@ -282,9 +282,17 @@ jobs:
               fi
                 
               if [[ "${{ env.VM_BOX }}" =~ "centos7" ]]; then
-                sudo yum install -y epel-release
+                sed -i 's/enabled=1/enabled=0/g' /etc/yum/pluginconf.d/fastestmirror.conf
+                sed -i -e 's/^\(mirrorlist\)/#\1/g' /etc/yum.repos.d/CentOS-Base.repo 
+                sed -i -e 's|^#baseurl.*|baseurl=http://vault.centos.org/centos/\$releasever/os/\$basearch/|g' /etc/yum.repos.d/CentOS-Base.repo
+                sed -i '/mirrorlist/d' /etc/yum.repos.d/CentOS-Base.repo
+                sudo yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
                 sudo yum -y update
                 sudo yum install -y ansible git wget
+                yum -y downgrade openssl-1.0.2k-19.el7.x86_64 openssl-libs-1:1.0.2k-19.el7.x86_64
+                yum -y downgrade krb5-libs-1.15.1-50.el7.x86_64 glibc-2.17-317.el7.x86_64 glibc-common-2.17-317.el7.x86_64 glibc-devel-2.17-317.el7.x86_64 glibc-headers-2.17-317.el7.x86_64
+                yum -y downgrade zlib-1.2.7-18.el7.x86_64 cyrus-sasl-lib-2.1.26-23.el7.x86_64 
+                yum -y downgrade xz-libs-5.2.2-1.el7.x86_64 xz-5.2.2-1.el7.x86_64
               fi
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
