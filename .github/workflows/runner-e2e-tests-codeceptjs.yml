@@ -153,6 +153,7 @@ jobs:
         run: |
           npm ci
           npx playwright install
+          sudo npx playwright install-deps
           envsubst < env.list > env.generated.list
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
