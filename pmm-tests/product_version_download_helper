@@ -2,7 +2,7 @@
 
 pxc # 5.7.43 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.43/binary/tarball/Percona-XtraDB-Cluster-5.7.43-rel47-65.1.Linux.x86_64.glibc2.17-minimal.tar.gz
 
-pxc # 8.0.33 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-80/Percona-XtraDB-Cluster-8.0.33/binary/tarball/Percona-XtraDB-Cluster_8.0.33-25.1_Linux.x86_64.glibc2.17-minimal.tar.gz
+pxc # 8.0.36 # https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-80/Percona-XtraDB-Cluster-8.0.36/binary/tarball/Percona-XtraDB-Cluster_8.0.36-28.1_Linux.x86_64.glibc2.17-minimal.tar.gz
 
 psmdb # 4.4.16 # https://downloads.percona.com/downloads/percona-server-mongodb-4.4/percona-server-mongodb-4.4.16-16/binary/tarball/percona-server-mongodb-4.4.16-16-x86_64.glibc2.17-minimal.tar.gz
 
