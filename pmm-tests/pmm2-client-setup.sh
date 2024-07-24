@@ -36,6 +36,10 @@ if [ -z "$use_metrics_mode" ]; then
     export use_metrics_mode=yes
 fi
 
+if [ ! -z "$upgrade" ]; then
+     upgrade="-u"
+fi     
+
 apt-get update
 apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client
 wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb
@@ -63,52 +67,57 @@ if [[ "$client_version" == "pmm2-latest" ]]; then
 fi
 
 ## only supported for debian based systems for now
-if [[ "$client_version" == 2* && $(dpkg --list vim) ]]; then
-    curl -O https://raw.githubusercontent.com/Percona-QA/package-testing/master/scripts/pmm2_client_install_tarball.sh
-    bash -x pmm2_client_install_tarball.sh -v ${client_version}
+if [[ "$client_version" == 2* ]]; then
+ wget -O pmm2-client.deb https://repo.percona.com/pmm2-client/apt/pool/main/p/pmm2-client/pmm2-client_${client_version}-6.$(lsb_release -sc)_amd64.deb
+ dpkg -i pmm2-client.deb
 fi
 
+## Default Binary path
+path="/usr/local/percona/pmm2";
+## As export PATH is not working link the paths
+ln -sf ${path}/bin/pmm-admin /usr/local/bin/pmm-admin
+ln -sf ${path}/bin/pmm-agent /usr/local/bin/pmm-agent
+
 if [[ "$client_version" == http* ]]; then
-	if [[ "$install_client" == "yes" ]]; then
-		wget -O pmm2-client.tar.gz --progress=dot:giga "${client_version}"
-	fi
+    if [[ "$install_client" == "yes" ]]; then
+       wget -O pmm2-client.tar.gz --progress=dot:giga "${client_version}"
+    fi
     tar -zxpf pmm2-client.tar.gz
     rm -r pmm2-client.tar.gz
-    export PMM2_CLIENT=`ls -1td pmm2-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
+    PMM2_CLIENT=`ls -1td pmm2-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
     echo ${PMM2_CLIENT}
+    rm -rf pmm2-client
     mv ${PMM2_CLIENT} pmm2-client
-    mv pmm2-client /usr/local/bin
+    rm -rf /usr/local/bin/pmm2-client
+    mv -f pmm2-client /usr/local/bin
     pushd /usr/local/bin/pmm2-client
     ## only setting up all binaries in default path /usr/local/percona/pmm2
-    bash -x ./install_tarball
-    ## keep the pmm-admin & pmm-agent binaries in the /usr/local/bin path
-    export PMM_DIR=/usr/local
-    bash -x ./install_tarball
+    bash -x ./install_tarball ${upgrade}
     pwd
     popd
     pmm-admin --version
+fi    
+
+## Check if we are upgrading or attempting fresh install.
+if [[ -z "$upgrade" ]]; then
     if [[ "$use_metrics_mode" == "yes" ]]; then
-	      echo "install pmm-agent 1"
-        pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
-	else
-	      echo "install pmm-agent 2"
-        pmm-agent setup --config-file=/usr/local/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
-    fi
-    sleep 10
-	pmm-agent --config-file=/usr/local/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
-else
-    if [[ "$use_metrics_mode" == "yes" ]]; then
-        echo "install pmm-agent 3"
+        echo "setup pmm-agent"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
-	else
-	      echo "install pmm-agent 4"
+    else 
+        echo "setup pmm-agent"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
     fi    
     sleep 10
-  echo "install config-file"
-	pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+    pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
+    sleep 10
+else    
+   pid=`ps -ef | grep pmm-agent | grep -v grep | awk -F ' ' '{print $2}'`
+   if [[ ! -z "$pid" ]]; then
+       kill -9 $pid
+       echo "Killing and restarting pmm agent...."
+       pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml >> pmm-agent.log 2>&1 &
+       sleep 10
+   fi
 fi
-sleep 10
-
 echo "pmm-admin status"
 pmm-admin status
