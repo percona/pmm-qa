@@ -1,7 +1,7 @@
 #!/bin/bash
 
-ps_group_repl_path="/home/ec2-user/sandboxes/group_sp_msb_8_0_20"
-ms_single_path="/home/ec2-user/sandboxes/msb_8_0_33"
+ps_group_repl_path="/home/ec2-user/sandboxes/group_sp_msb_8_0_36"
+ms_single_path="/home/ec2-user/sandboxes/msb_8_0_36"
 addresses_and_ports=$(pmm-admin list | awk '/MySQL/ { print $3 }')
 failed_services=""
 
