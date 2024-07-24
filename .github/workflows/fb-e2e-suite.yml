@@ -1,6 +1,9 @@
 name: _FB e2e tests
 
 on:
+  schedule:
+    - cron: '0 3 * * *'  # Every night at 3 AM UTC
+
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:

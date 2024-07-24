@@ -144,6 +144,25 @@ jobs:
         working-directory: ./pmm-qa
         run: sudo bash -x pmm-tests/pmm2-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
+      - name: Compare FullCommit for pmm-server and pmm-client
+        if: ${{ contains(inputs.pmm_server_image, 'dev-latest') && contains(inputs.pmm_client_version, 'dev-latest') }}
+        shell: bash
+        run: |
+          local_version=$(pmm-admin version --json)
+          local_full_commit=$(echo $local_version | jq -r '.FullCommit')
+          echo "local_full_commit=$local_full_commit"
+        
+          container_version=$(docker exec pmm-server pmm-admin version --json)
+          container_full_commit=$(echo $container_version | jq -r '.FullCommit')
+          echo "container_full_commit=$container_full_commit"
+        
+          if [[ "$local_full_commit" != "$container_full_commit" ]]; then
+            echo "Commits for pmm-server and pmm-client are different! Check the versions!"
+            echo "container pmm-admin version output is : $container_version"
+            echo "local pmm-admin version output is : $local_version"
+            exit 1
+          fi
+
       - name: Run Setup for E2E Tests
         working-directory: ./pmm-qa
         run: sudo -E bash -x pmm-tests/pmm-framework.sh ${{ env.WIZARD_ARGS }} --pmm2
