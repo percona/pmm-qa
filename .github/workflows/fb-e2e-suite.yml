@@ -119,7 +119,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--addclient=ps,1'
+      setup_services: '--setup-pmm-ps-integration --query-source=slowlog --ps-version=8.0'
       tags_for_tests: '@exporters'
 
   mongo_exporter:
