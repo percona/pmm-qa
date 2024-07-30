@@ -2390,8 +2390,8 @@ setup_replication_ps_pmm2 () {
   fi
   writer_port=$node_port
 
+  echo "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox'" | dbdeployer use
   for j in `seq 1  3`;do
-   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
@@ -2408,6 +2408,7 @@ setup_replication_ps_pmm2 () {
   #run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node
 
   ## Start Running Load
+  mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $writer_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $writer_port -e "drop database if exists sbtest;create database sbtest;"
   sleep 10
 
