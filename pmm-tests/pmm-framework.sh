@@ -1021,12 +1021,12 @@ setup_db_tar(){
 
   #This is only needed due to a bug in get_download_links.sh file, once that is fixed, we don't need to hardcode Download URL's
   if [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "8.0" ]]; then
-    LINK="https://downloads.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-8.0.36/binary/tarball/Percona-Server-8.0.36-28-Linux.x86_64.glibc2.17-minimal.tar.gz"
+    LINK="https://downloads.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.32-24/binary/tarball/Percona-Server-8.0.32-24-Linux.x86_64.glibc2.17-minimal.tar.gz"
     FILE=`echo $LINK | awk -F"/" '{print $9}'`
     if [ ! -f $FILE ]; then
       wget $LINK 2>/dev/null
     fi
-    VERSION_ACCURATE="8.0.36"
+    VERSION_ACCURATE="8.0.32"
     PORT_NUMBER="80321"
     BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
   elif [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "5.7" ]]; then
@@ -2391,6 +2391,7 @@ setup_replication_ps_pmm2 () {
   writer_port=$node_port
 
   for j in `seq 1  3`;do
+   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL log_slow_rate_limit=1;"
@@ -2407,7 +2408,6 @@ setup_replication_ps_pmm2 () {
   #run_workload 127.0.0.1 msandbox msandbox $node_port mysql percona-server-group-replication-node
 
   ## Start Running Load
-  mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $writer_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
   mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $writer_port -e "drop database if exists sbtest;create database sbtest;"
   sleep 10
 
