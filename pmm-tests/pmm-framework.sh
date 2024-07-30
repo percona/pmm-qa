@@ -1021,12 +1021,12 @@ setup_db_tar(){
 
   #This is only needed due to a bug in get_download_links.sh file, once that is fixed, we don't need to hardcode Download URL's
   if [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "8.0" ]]; then
-    LINK="https://downloads.percona.com/downloads/percona-distribution-mysql-ps/percona-distribution-mysql-ps-8.0.36/binary/tarball/Percona-Server-8.0.36-28-Linux.x86_64.glibc2.17-minimal.tar.gz"
+    LINK="https://downloads.percona.com/downloads/Percona-Server-8.0/Percona-Server-8.0.32-24/binary/tarball/Percona-Server-8.0.32-24-Linux.x86_64.glibc2.17-minimal.tar.gz"
     FILE=`echo $LINK | awk -F"/" '{print $9}'`
     if [ ! -f $FILE ]; then
       wget $LINK 2>/dev/null
     fi
-    VERSION_ACCURATE="8.0.36"
+    VERSION_ACCURATE="8.0.32"
     PORT_NUMBER="80321"
     BASEDIR=$(ls -1td $SERVER_STRING 2>/dev/null | grep -v ".tar" | head -n1)
   elif [[ "${PRODUCT_NAME}" == "ps" && "${VERSION}" == "5.7" ]]; then
