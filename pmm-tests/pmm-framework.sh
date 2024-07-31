@@ -2389,7 +2389,8 @@ setup_replication_ps_pmm2 () {
     node_port=`dbdeployer sandboxes --header | grep $VERSION_ACCURATE | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
   fi
   writer_port=$node_port
-
+  # Ensure Auth type is Native
+  echo "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox'" | dbdeployer use
   for j in `seq 1  3`;do
    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL slow_query_log='ON';"
    mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "SET GLOBAL long_query_time=0;"
