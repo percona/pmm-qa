@@ -348,6 +348,7 @@ jobs:
         working-directory: ./pmm-ui-tests/playwright-tests
         run: |
           docker exec pmm-integration-server yum update -y percona-release || true
+          docker exec pmm-integration-server sed -i'' -e 's^/release/^/${{ steps.target_repo.outputs.result }}/^' /etc/yum.repos.d/pmm2-server.repo
           if [[ "${{ inputs.repository }}" != "release" ]]; then
             docker exec pmm-integration-server sed -i'' -e 's^/release/^/${{ steps.target_repo.outputs.result }}/^' /etc/yum.repos.d/pmm2-server.repo
           fi
