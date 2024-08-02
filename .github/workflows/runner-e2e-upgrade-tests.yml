@@ -349,7 +349,7 @@ jobs:
         run: |
           docker exec pmm-integration-server yum update -y percona-release || true
           if [[ "${{ inputs.repository }}" != "release" ]]; then
-            docker exec pmm-server percona-release enable pmm2-components ${{ steps.target_repo.outputs.result }}
+            docker exec pmm-integration-server percona-release enable pmm2-components ${{ steps.target_repo.outputs.result }}
           fi
           docker exec pmm-integration-server yum clean all
           
