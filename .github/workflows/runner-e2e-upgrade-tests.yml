@@ -316,7 +316,6 @@ jobs:
         if: ${{ inputs.upgrade_type != 'Podman way' }}
         working-directory: ./pmm-ui-tests
         run: |
-          npm install
           PWD=$(pwd) PMM_SERVER_IMAGE=${{ steps.pmm_server_start_image.outputs.result }} docker-compose up -d
           timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost/ping)" != "200" ]]; do sleep 5; done' || false
           docker exec pmm-integration-server change-admin-password ${{ env.ADMIN_PASSWORD }}
