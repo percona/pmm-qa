@@ -41,7 +41,7 @@ jobs:
       start_version: ${{ steps.get-start.outputs.result }}
       finish_version: ${{ steps.get-finish.outputs.result }}
       version_matrix: ${{ steps.get-matrix.outputs.result }}
-      pt_os_matrix: "[\"buster\", \"bullseye\", \"bookworm\", \"focal\", \"jammy\", \"centos-7\", \"ol-8\", \"ol-9\", \"noble\"]"
+      pt_os_matrix: "[\"buster\", \"bullseye\", \"bookworm\", \"focal\", \"jammy\", \"ol-8\", \"ol-9\", \"noble\"]"
     steps:
       - name: Prevent upgrade to the same version
         shell: bash

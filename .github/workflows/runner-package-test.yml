@@ -68,7 +68,6 @@ on:
           - bookworm
           - focal
           - jammy
-          - centos-7
           - ol-8
           - ol-9
           - noble
@@ -203,9 +202,6 @@ jobs:
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
             echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
           fi
-          if [[ "${{ inputs.os }}" =~ "centos-7" ]]; then
-            echo "VM_BOX=generic/centos7" >> $GITHUB_ENV
-          fi
           if [[ "${{ inputs.os }}" =~ "ol-8" ]]; then
             echo "VM_BOX=generic/oracle8" >> $GITHUB_ENV
           fi
@@ -281,11 +277,6 @@ jobs:
                 export tarball_link=${{ env.TARBALL }}
               fi
                 
-              if [[ "${{ env.VM_BOX }}" =~ "centos7" ]]; then
-                sudo yum install -y epel-release
-                sudo yum -y update
-                sudo yum install -y ansible git wget
-              fi
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
                 sudo yum -y update
