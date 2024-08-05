@@ -314,10 +314,10 @@ jobs:
 
       - name: 'Setup <PMM Sever>: "${{ steps.pmm_server_start_image.outputs.result }}"'
         if: ${{ inputs.upgrade_type != 'Podman way' }}
-        working-directory: pmm-qa/pmm-integration
+        working-directory: ./pmm-ui-tests
         run: |
           npm install
-          sudo npx ts-node ./integration-setup.ts --ci --setup-docker-pmm-server --rbac --pmm-server-docker-tag=${{ steps.pmm_server_start_image.outputs.result }} --pmm-client-version=${{ inputs.pmm_client_start_version }}          
+          PWD=$(pwd) PMM_SERVER_IMAGE=${{ steps.pmm_server_start_image.outputs.result }} docker-compose up -d
           timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost/ping)" != "200" ]]; do sleep 5; done' || false
           docker exec pmm-integration-server change-admin-password ${{ env.ADMIN_PASSWORD }}
 
@@ -350,8 +350,8 @@ jobs:
           docker exec pmm-integration-server yum update -y percona-release || true
           if [[ "${{ inputs.repository }}" != "release" ]]; then
             echo "CONDITION MET"
-            docker exec pmm-integration-server ls /etc/yum.repos.d/
             docker exec pmm-integration-server sed -i'' -e 's^/release/^/experimental/^' /etc/yum.repos.d/pmm2-server.repo
+            docker exec pmm-integration-server ls /etc/yum.repos.d/
           fi
           docker exec pmm-integration-server yum clean all
           
