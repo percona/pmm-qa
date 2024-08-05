@@ -374,6 +374,7 @@ jobs:
           docker stop pmm-server
           docker pull ${{ steps.pmm_server_to_image.outputs.IMAGE }}
           docker rename pmm-server pmm-server-old
+          docker network list
           docker run --detach --restart always \
             --network="pmm-network" \
             -e PMM_DEBUG=1 \
