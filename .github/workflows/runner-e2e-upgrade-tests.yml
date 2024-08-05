@@ -352,6 +352,7 @@ jobs:
             echo "CONDITION MET"
             docker exec pmm-server sed -i'' -e 's^/release/^/${{ steps.target_repo.outputs.result }}/^' /etc/yum.repos.d/pmm2-server.repo
             docker exec pmm-server ls /etc/yum.repos.d/
+            docker exec pmm-server cat /etc/yum.repos.d/pmm2-server.repo
           fi
           docker exec pmm-server yum clean all
           
