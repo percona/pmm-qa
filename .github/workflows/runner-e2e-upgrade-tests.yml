@@ -383,6 +383,7 @@ jobs:
             --name pmm-server \
             ${{ steps.pmm_server_to_image.outputs.IMAGE }}
           timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://${{ env.PMM_SERVER_IP }}/v1/readyz)" != "200" ]]; do echo "waiting for ${{ env.PMM_SERVER_IP }}" && sleep 2; done' || false
+          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
           sleep 30
 
       - name: 'Upgrade pmm-server: <Podman way>'
