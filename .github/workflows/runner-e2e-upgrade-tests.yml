@@ -346,13 +346,13 @@ jobs:
         if: ${{ inputs.upgrade_type == 'UI way' }}
         working-directory: ./pmm-ui-tests/playwright-tests
         run: |
-          docker exec pmm-integration-server yum update -y percona-release || true
+          docker exec pmm-server yum update -y percona-release || true
           if [[ "${{ inputs.repository }}" != "release" ]]; then
             echo "CONDITION MET"
-            docker exec pmm-integration-server sed -i'' -e 's^/release/^/experimental/^' /etc/yum.repos.d/pmm2-server.repo
-            docker exec pmm-integration-server ls /etc/yum.repos.d/
+            docker exec pmm-server sed -i'' -e 's^/release/^/experimental/^' /etc/yum.repos.d/pmm2-server.repo
+            docker exec pmm-server ls /etc/yum.repos.d/
           fi
-          docker exec pmm-integration-server yum clean all
+          docker exec pmm-server yum clean all
           
           # TODO: could be exchanged to the clicking "refresh" button in tests
           sleep 60
@@ -372,15 +372,15 @@ jobs:
         run: |
           # TODO: implement qa-integration docker upgrade
           echo "Upgrading to ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
-          docker stop pmm-integration-server
+          docker stop pmm-server
           docker pull ${{ steps.pmm_server_to_image.outputs.IMAGE }}
-          docker rename pmm-integration-server pmm-integration-server-old
+          docker rename pmm-server pmm-server-old
           docker run --detach --restart always \
             --network="pmm-integration-network" \
             -e PMM_DEBUG=1 \
             --publish 80:80 --publish 443:443 \
-            --volumes-from pmm-integration-server-data \
-            --name pmm-integration-server \
+            --volumes-from pmm-server-data \
+            --name pmm-server \
             ${{ steps.pmm_server_to_image.outputs.IMAGE }}
           timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://${{ env.PMM_SERVER_IP }}/v1/readyz)" != "200" ]]; do echo "waiting for ${{ env.PMM_SERVER_IP }}" && sleep 2; done' || false
           sleep 30
