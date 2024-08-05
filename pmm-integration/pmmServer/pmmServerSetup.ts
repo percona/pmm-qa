@@ -6,9 +6,9 @@ const pmmServerSetup = async (parameters: SetupParameters) => {
   let portalVariables;
 
   if (!parameters.pmmServerVersions?.versionMinor || parameters.pmmServerVersions?.versionMinor >= 30) {
-    portalVariables = '-e PERCONA_PORTAL_URL=https://portal-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443';
+    portalVariables = '-e PERCONA_PORTAL_URL=https://portal-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 -e PERCONA_TEST_VERSION_SERVICE_URL=https://check-dev.percona.com/versions/v1';
   } else {
-    portalVariables = '-e PERCONA_TEST_SAAS_HOST=check-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443';
+    portalVariables = '-e PERCONA_TEST_SAAS_HOST=check-dev.percona.com -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 -e PERCONA_TEST_VERSION_SERVICE_URL=https://check-dev.percona.com/versions/v1';
   }
 
   if (parameters.rbac) {
