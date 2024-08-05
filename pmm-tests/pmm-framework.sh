@@ -3051,6 +3051,7 @@ setup_mongo_replica_for_backup() {
   PSMDB_VERSION=$(wget -q --post-data "version=percona-server-mongodb-${mo_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1 | sed -n -e 's/^.*\(mongodb-\)//p') COMPOSE_PROFILES=extra ./start-rs-only.sh
   popd
   popd
+  pmm-admin add mongodb --port=27027 --service-name=bm_mongodb_replica_44 --replication-set=rs0
 }
 
 setup_bm_mysql() {
