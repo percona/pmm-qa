@@ -374,7 +374,7 @@ jobs:
           # TODO: implement qa-integration docker upgrade
           echo "Upgrading to ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
           sudo chmod 755 ./pmm-qa/pmm-tests/docker_way_upgrade.sh
-          bash -xe ./pmm-qa/pmm-tests/docker_way_upgrade.sh ${{ env.DOCKER_VERSION }}
+          bash -xe ./pmm-qa/pmm-tests/docker_way_upgrade.sh ${{ steps.pmm_server_to_image.outputs.IMAGE }}
           sleep 30
 
       - name: 'Upgrade pmm-server: <Podman way>'
