@@ -353,6 +353,7 @@ jobs:
             docker exec pmm-server cat /etc/yum.repos.d/pmm2-server.repo
           fi
           docker exec pmm-server yum clean all
+          docker exec pmm-server yum clean metadata
           
           # TODO: could be exchanged to the clicking "refresh" button in tests
           sleep 60
