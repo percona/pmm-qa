@@ -354,6 +354,7 @@ jobs:
           fi
           docker exec pmm-server yum clean all
           docker exec pmm-server yum clean metadata
+          docker exec pmm-server yum update -y
           
           # TODO: could be exchanged to the clicking "refresh" button in tests
           sleep 60
