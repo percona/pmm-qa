@@ -41,7 +41,7 @@
       - docker cp ./client_container_ms_setup.sh {{ ms_container }}:/
 
   - name: Get Product tarball URL based on the version
-    shell: cat product_version_download_helper | grep -v pxc | grep mysql | grep "\-{{ ms_version }}" | head -1 | awk -F'# ' '{print $3}'
+    shell: cat product_version_download_helper | grep -v pxc | grep ms | grep "\-{{ ms_version }}" | head -1 | awk -F'# ' '{print $3}'
     register: tarball
     when: lookup('env', 'MS_TARBALL') == ''
 
