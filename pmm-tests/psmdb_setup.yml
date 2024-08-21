@@ -70,13 +70,13 @@
     shell: "{{ item }}"
     with_items:
       - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
-    when: psmdb_setup == "pss"
+    when: psmdb_setup == "replica"
 
   - name: Run load on Replica Set Master(PSA)
     shell: "{{ item }}"
     with_items:
       - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
-    when: psmdb_setup == "psa"
+    when: psmdb_setup == "arbiter"
 
   - name: Run load on Sharded Clusters Master
     shell: "{{ item }}"
