@@ -44,13 +44,13 @@ export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999))
 mv -v /artifacts/* .
 
 if [[ "$client_version" == "dev-latest" ]]; then
-    percona-release enable-only original experimental
+    percona-release enable-only pmm2-client experimental
     yum update -y
     yum install -y pmm2-client
 fi
 
 if [[ "$client_version" == "pmm2-rc" ]]; then
-    percona-release enable-only original testing
+    percona-release enable-only pmm2-client testing
     yum update -y
     yum install -y pmm2-client
 fi
@@ -58,12 +58,12 @@ fi
 if [[ "$client_version" == "pmm2-latest" ]]; then
     yum install -y pmm2-client
     yum update -y
-    percona-release enable-only original experimental
+    percona-release enable-only pmm2-client experimental
 fi
 
 if [[ "$client_version" == 2* ]]; then
     yum install -y https://repo.percona.com/pmm2-client/yum/release/2/RPMS/x86_64/pmm2-client-${client_version}-6.el7.x86_64.rpm
-    percona-release enable-only original experimental
+    percona-release enable-only pmm2-client experimental
 fi
 
 if [[ "$client_version" == http* ]]; then
@@ -102,7 +102,7 @@ else
 	else
 	    echo "install pmm-agent 4"
         pmm-agent setup --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml --server-address=${pmm_server_ip}:443 --server-insecure-tls --server-username=admin --server-password=${admin_password}
-    fi    
+    fi
     sleep 10
   echo "install config-file"
 	pmm-agent --config-file=/usr/local/percona/pmm2/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
