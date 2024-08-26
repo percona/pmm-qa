@@ -65,7 +65,7 @@ wget http://http.us.debian.org/debian/pool/main/o/openldap/libldap-2.4-2_2.4.47+
 apt install -y ./libldap-2.4-2_2.4.47+dfsg-3+deb10u7_amd64.deb
 
 if [ "$mongodb_setup" == "replica" ]; then
-    mlaunch init --bind_ip 0.0.0.0 --binarypath "./psmdb_${mongodb_version}/bin" --replicaset --name rs1 --nodes 3
+    mlaunch init --bind_ip 0.0.0.0 --binarypath "./psmdb_${mongodb_version}/bin" --replicaset --name rs1 --nodes 3 --profile 2 --slowms 1 --rateLimit 1
     sleep 20
     pmm-admin remove mongodb mongodb_rs1_1_${SERVICE_RANDOM_NUMBER} || true; pmm-admin add mongodb --enable-all-collectors --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node --metrics-mode=$metrics_mode mongodb_rs1_1_${SERVICE_RANDOM_NUMBER} --debug 127.0.0.1:27017
     sleep 2
@@ -76,7 +76,7 @@ if [ "$mongodb_setup" == "replica" ]; then
 fi
 
 if [ "$mongodb_setup" == "arbiter" ]; then
-    mlaunch init --bind_ip 0.0.0.0 --binarypath "./psmdb_${mongodb_version}/bin" --replicaset --name rs1 --nodes 2 --arbiter
+    mlaunch init --bind_ip 0.0.0.0 --binarypath "./psmdb_${mongodb_version}/bin" --replicaset --name rs1 --nodes 2 --arbiter --profile 2 --slowms 1 --rateLimit 1
     sleep 20
     pmm-admin remove mongodb mongodb_rs1_1_${SERVICE_RANDOM_NUMBER} || true; pmm-admin add mongodb --enable-all-collectors --cluster mongodb_node_cluster --replication-set=rs1 --environment=mongodb_rs_node --metrics-mode=$metrics_mode mongodb_rs1_1_${SERVICE_RANDOM_NUMBER} --debug 127.0.0.1:27017
     sleep 2
@@ -87,7 +87,7 @@ if [ "$mongodb_setup" == "arbiter" ]; then
 fi
 
 if [ "$mongodb_setup" == "sharded" ]; then
-    mlaunch init --bind_ip 0.0.0.0 --binarypath "./psmdb_${mongodb_version}/bin" --replicaset --sharded rs1 rs2 --config 3
+    mlaunch init --bind_ip 0.0.0.0 --binarypath "./psmdb_${mongodb_version}/bin" --replicaset --sharded rs1 rs2 --config 3 --profile 2 --slowms 1 --rateLimit 1
     pmm-admin add mongodb --enable-all-collectors --cluster mongodb_node_cluster --environment=mongos_shraded_node mongos_shraded_node_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
     sleep 2
     pmm-admin add mongodb --enable-all-collectors --cluster mongodb_node_cluster --replication-set=config --environment=mongodb_config_node mongodb_config_1_${SERVICE_RANDOM_NUMBER} --metrics-mode=$metrics_mode --debug 127.0.0.1:27024
