@@ -59,7 +59,7 @@ jobs:
     uses: ./.github/workflows/package-test-fb.yml
     secrets: inherit
     with:
-      package_testing_branch: 'master'
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
       pmm_client_tarball: ${{ inputs.pmm_client_tarball || 'dev-latest' }}
       playbook: 'pmm2-client_integration_custom_port'
@@ -71,7 +71,7 @@ jobs:
     uses: ./.github/workflows/package-test-fb.yml
     secrets: inherit
     with:
-      package_testing_branch: 'master'
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
       pmm_client_tarball: ${{ inputs.pmm_client_tarball || 'dev-latest' }}
       playbook: 'pmm2-client_integration_upgrade_custom_path'
