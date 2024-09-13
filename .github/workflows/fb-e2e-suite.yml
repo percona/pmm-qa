@@ -2,7 +2,7 @@ name: _FB e2e tests
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
