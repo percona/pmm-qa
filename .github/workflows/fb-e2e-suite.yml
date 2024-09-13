@@ -3,6 +3,8 @@ name: _FB e2e tests
 on:
   schedule:
     - cron: '*/15 * * * *'
+    - branches:
+    - pmm3-gh-trigger
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
