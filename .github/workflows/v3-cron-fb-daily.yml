@@ -1,4 +1,4 @@
-name: V3_Cron FB e2e tests
+name: V3 Daily Cron
 
 on:
   schedule:
@@ -64,9 +64,33 @@ on:
         required: false
 
 jobs:
-  trigger_v3-fb:
-    name: Run V3-fb-e2e-suite Reusable Workflow
+  trigger_v3-fb-E2E:
+    name: V3-fb-E2E-suite Workflow
     uses: percona/pmm-qa/.github/workflows/fb-e2e-suite.yml@v3
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+
+  trigger_v3-fb-Integration:
+    name: V3-fb-Integration-suite Workflow
+    uses: percona/pmm-qa/.github/workflows/fb-integration-suite.yml@v3
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+
+  trigger_v3-fb-Package-test-matrix:
+    name: V3-fb-Package-test-matrix Workflow
+    uses: percona/pmm-qa/.github/workflows/package-test-matrix.yml@v3
     secrets: inherit
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
