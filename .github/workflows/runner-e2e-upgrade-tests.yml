@@ -404,7 +404,7 @@ jobs:
       - name: 'Upgrade <PMM Client> to the latest on "${{ steps.target_repo.outputs.result }}" repo'
         if: ${{ inputs.pmm_client_upgrade_version == '' }}
         run: |
-          sudo percona-release enable-only pmm3-client ${{ steps.target_repo.outputs.result }}
+          sudo percona-release enable-only pmm2-client ${{ steps.target_repo.outputs.result }}
           sudo apt-get update -y
           sudo apt -y install pmm2-client
           
