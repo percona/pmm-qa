@@ -350,7 +350,7 @@ jobs:
           docker exec pmm-integration-server yum update -y percona-release || true
           if [[ "${{ inputs.repository }}" != "release" ]]; then
             docker exec pmm-integration-server sed -i'' -e 's^/release/^/${{ steps.target_repo.outputs.result }}/^' /etc/yum.repos.d/pmm2-server.repo
-            docker exec pmm-integration-server percona-release enable-only original ${{ steps.target_repo.outputs.result }}
+            docker exec pmm-integration-server percona-release enable-only pmm3-client ${{ steps.target_repo.outputs.result }}
           fi
           docker exec pmm-integration-server yum clean all
           
@@ -405,7 +405,7 @@ jobs:
       - name: 'Upgrade <PMM Client> to the latest on "${{ steps.target_repo.outputs.result }}" repo'
         if: ${{ inputs.pmm_client_upgrade_version == '' }}
         run: |
-          sudo percona-release enable-only original ${{ steps.target_repo.outputs.result }}
+          sudo percona-release enable-only pmm3-client ${{ steps.target_repo.outputs.result }}
           sudo apt-get update -y
           sudo apt -y install pmm2-client
           

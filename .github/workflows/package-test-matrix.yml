@@ -10,8 +10,17 @@ on:
       package_testing_branch:
         description: 'Target branch for package-testing repository'
         type: string
-        default: 'master'
+        default: 'v3'
         required: true
+      package:
+        description: "Select source package for enabling repo"
+        required: true
+        default: "pmm3-client"
+        type: choice
+        options:
+          - original
+          - pmm3-client
+          - tools
       repository:
         description: 'Select Repo for Client:'
         required: true
@@ -38,6 +47,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration"
@@ -48,6 +58,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration_custom_path"
@@ -58,6 +69,7 @@ jobs:
     secrets: inherit
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration_custom_port"
