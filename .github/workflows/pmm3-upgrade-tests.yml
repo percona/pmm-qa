@@ -43,27 +43,32 @@ on:
         description: 'pmm-ui-tests repository branch'
         default: 'main'
         required: false
+        type: string        
       pmm_qa_branch:
         description: 'pmm-qa repository branch(for setup)'
         default: 'main'
         required: false
+        type: string
       pmm_server_start_version:
         description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
         default: 'latest'
         required: false
+        type: string
       pmm_client_start_version:
         description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
         default: 'pmm2-latest'
         required: false
+        type: string
       upgrade_type:
         description: 'Upgrade way:'
         required: false
         default: 'UI way'
+        type: string
       repository:
         description: 'Upgrade to:'
         required: false
         default: 'experimental'
-
+        type: string
 
 jobs:
   get_versions:
