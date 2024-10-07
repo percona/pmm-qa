@@ -42,37 +42,28 @@ on:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch'
         default: 'main'
-        required: true
+        required: false
       pmm_qa_branch:
         description: 'pmm-qa repository branch(for setup)'
         default: 'main'
-        required: true
+        required: false
       pmm_server_start_version:
         description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
         default: 'latest'
-        required: true
+        required: false
       pmm_client_start_version:
         description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
         default: 'pmm2-latest'
-        required: true
+        required: false
       upgrade_type:
         description: 'Upgrade way:'
-        required: true
+        required: false
         default: 'UI way'
-        type: choice
-        options:
-          - UI way
-          - Docker way
-          - Podman way
       repository:
         description: 'Upgrade to:'
-        required: true
+        required: false
         default: 'experimental'
-        type: choice
-        options:
-          - release
-          - testing
-          - experimental
+
 
 jobs:
   get_versions:
