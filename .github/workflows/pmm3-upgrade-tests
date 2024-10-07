@@ -1,0 +1,84 @@
+name:  PMM3 Upgrade tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch'
+        default: 'main'
+        required: true
+      pmm_qa_branch:
+        description: 'pmm-qa repository branch(for setup)'
+        default: 'main'
+        required: true
+      pmm_server_start_version:
+        description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
+        default: 'latest'
+        required: true
+      pmm_client_start_version:
+        description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
+        default: 'pmm2-latest'
+        required: true
+      upgrade_type:
+        description: 'Upgrade way:'
+        required: true
+        default: 'UI way'
+        type: choice
+        options:
+          - UI way
+          - Docker way
+          - Podman way
+      repository:
+        description: 'Upgrade to:'
+        required: true
+        default: 'experimental'
+        type: choice
+        options:
+          - release
+          - testing
+          - experimental
+  workflow_call:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch'
+        default: 'main'
+        required: true
+      pmm_qa_branch:
+        description: 'pmm-qa repository branch(for setup)'
+        default: 'main'
+        required: true
+      pmm_server_start_version:
+        description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
+        default: 'latest'
+        required: true
+      pmm_client_start_version:
+        description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
+        default: 'pmm2-latest'
+        required: true
+      upgrade_type:
+        description: 'Upgrade way:'
+        required: true
+        default: 'UI way'
+        type: choice
+        options:
+          - UI way
+          - Docker way
+          - Podman way
+      repository:
+        description: 'Upgrade to:'
+        required: true
+        default: 'experimental'
+        type: choice
+        options:
+          - release
+          - testing
+          - experimental
+
+jobs:
+  get_versions:
+    name: Get versions
+    uses: ./.github/workflows/pmm-version-getter.yml
+    with:
+      pmm_server_start_version: ${{ inputs.pmm_server_start_version || 'latest'}}
+      repository: ${{ inputs.repository || 'dev-latest'}}
+      matrix_range: 10
