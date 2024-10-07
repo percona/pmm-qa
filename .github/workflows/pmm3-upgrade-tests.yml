@@ -5,15 +5,15 @@ on:
     inputs:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch'
-        default: 'main'
+        default: 'v3'
         required: true
       pmm_qa_branch:
         description: 'pmm-qa repository branch(for setup)'
-        default: 'main'
+        default: 'v3'
         required: true
       pmm_server_start_version:
         description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
-        default: 'latest'
+        default: '3.0.0'
         required: true
       pmm_client_start_version:
         description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
@@ -71,10 +71,30 @@ on:
         type: string
 
 jobs:
-  get_versions:
-    name: Get versions
-    uses: ./.github/workflows/pmm-version-getter.yml
-    with:
-      pmm_server_start_version: ${{ inputs.pmm_server_start_version || 'latest'}}
-      repository: ${{ inputs.repository || 'dev-latest'}}
-      matrix_range: 10
+#  get_versions:
+#    name: Get versions
+#    uses: ./.github/workflows/pmm-version-getter.yml
+#    with:
+#      pmm_server_start_version: ${{ inputs.pmm_server_start_version || 'latest'}}
+#      repository: ${{ inputs.repository || 'dev-latest'}}
+#      matrix_range: 10
+  pmm_server_upgrade:
+    runs-on: ubuntu-22.04
+    name: "Upgrade Tests for pmm sever version: ${{ inputs.pmm_server_start_version }} and pmm client version: ${{ inputs.pmm_client_start_version }}"
+    timeout-minutes: 120
+
+    steps:
+      - name: 'Checkout UI tests: "${{ inputs.pmm_ui_tests_branch }}"'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.pmm_ui_tests_branch }}
+          repository: percona/pmm-ui-tests
+          path: ./pmm-ui-tests
+      - name: "Setup Pmm Server: ${{ inputs.pmm_server_start_version }}"
+        working-directory: ./pmm-ui-tests
+        run: |
+          PWD=$(pwd) PMM_SERVER_IMAGE=${{ inputs.pmm_server_start_version }} docker compose up -d
+          sleep 60
+          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
+          bash -x testdata/db_setup.sh        
+    
