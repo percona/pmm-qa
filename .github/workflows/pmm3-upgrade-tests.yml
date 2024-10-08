@@ -112,6 +112,7 @@ jobs:
           echo "Upgrading to: ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
           
           docker network create pmm-network
+          docker volume create pmm-volume
 
           docker run --detach --restart always \
             --network="pmm-network" \
@@ -131,7 +132,7 @@ jobs:
             -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
             -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
             --publish 80:8080 --publish 443:8443 \
-            --volumes-from pmm-integration-server-data \
+            --volume pmm-volume \
             --name pmm-server \
             perconalab/pmm-server:${{ inputs.pmm_server_start_version }}
 
