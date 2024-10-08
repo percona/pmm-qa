@@ -90,11 +90,27 @@ jobs:
           ref: ${{ inputs.pmm_ui_tests_branch }}
           repository: percona/pmm-ui-tests
           path: ./pmm-ui-tests
+      - name: 'Select docker tag for pmm server to upgrade to.'
+        id: pmm_server_to_image
+        shell: bash
+        run: |
+          if [[ "${{ inputs.repository }}" = "experimental" ]]; then
+          echo "IMAGE=perconalab/pmm-server:3-dev-latest" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ inputs.repository }}" = "testing" ]]; then
+            rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3[.][0-9][.][0-9]-rc$ | sort -V | tail -n1)
+            echo "IMAGE=perconalab/pmm-server:$rc_latest" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "${{ inputs.repository }}" = "release" ]]; then
+            release_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=25" -O - | jq -r .results[].name  | grep 3[.][0-9][.][0-9]$ | sort -V | tail -n1)
+            echo "IMAGE=perconalab/pmm-server:$release_latest" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: "Setup Pmm Server: ${{ inputs.pmm_server_start_version }}"
         working-directory: ./pmm-ui-tests
         run: |
+          echo "Upgrading to: ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
           PWD=$(pwd) PMM_SERVER_IMAGE=perconalab/pmm-server:${{ inputs.pmm_server_start_version }} docker compose up -d --quiet-pull
           docker logs watchtower
           sleep 60
-          bash -x testdata/db_setup.sh        
-    
+          bash -x testdata/db_setup.sh
