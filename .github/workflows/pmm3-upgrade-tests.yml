@@ -110,6 +110,9 @@ jobs:
         working-directory: ./pmm-ui-tests
         run: |
           echo "Upgrading to: ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
+          
+          docker network create pmm-network
+
           docker run --detach --restart always \
             --network="pmm-network" \
             -e WATCHTOWER_DEBUG=1 \
