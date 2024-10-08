@@ -130,6 +130,6 @@ jobs:
             --publish 80:8080 --publish 443:8443 \
             --volumes-from pmm-integration-server-data \
             --name pmm-server \
-            ${{ inputs.pmm_server_start_version }}
+            perconalab/pmm-server:${{ inputs.pmm_server_start_version }}
 
           # PWD=$(pwd) PMM_SERVER_UPGRADE_IMAGE=${{ steps.pmm_server_to_image.outputs.IMAGE }} PMM_SERVER_IMAGE=perconalab/pmm-server:${{ inputs.pmm_server_start_version }} docker compose -f docker-compose-upgrade.yml up -d --quiet-pull
