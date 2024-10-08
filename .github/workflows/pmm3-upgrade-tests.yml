@@ -111,6 +111,3 @@ jobs:
         run: |
           echo "Upgrading to: ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
           PWD=$(pwd) PMM_SERVER_UPGRADE_IMAGE=${{ steps.pmm_server_to_image.outputs.IMAGE }} PMM_SERVER_IMAGE=perconalab/pmm-server:${{ inputs.pmm_server_start_version }} docker compose -f docker-compose-upgrade.yml up -d --quiet-pull
-          docker logs watchtower
-          sleep 60
-          bash -x testdata/db_setup.sh
