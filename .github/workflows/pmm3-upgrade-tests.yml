@@ -110,4 +110,26 @@ jobs:
         working-directory: ./pmm-ui-tests
         run: |
           echo "Upgrading to: ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
-          PWD=$(pwd) PMM_SERVER_UPGRADE_IMAGE=${{ steps.pmm_server_to_image.outputs.IMAGE }} PMM_SERVER_IMAGE=perconalab/pmm-server:${{ inputs.pmm_server_start_version }} docker compose -f docker-compose-upgrade.yml up -d --quiet-pull
+          docker run --detach --restart always \
+            --network="pmm-network" \
+            -e WATCHTOWER_DEBUG=1 \
+            -e WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken \
+            -e WATCHTOWER_HTTP_API_UPDATE=1
+            --volumes /var/run/docker.sock:/var/run/docker.sock
+            --name watchtower \
+            perconalab/watchtower:PMM-13202-fix-double-unlock
+          
+          sleep 10
+
+          docker run --detach --restart always \
+            --network="pmm-network" \
+            -e PMM_DEBUG=1 \
+            -e PMM_DEV_UPDATE_DOCKER_IMAGE=${PMM_SERVER_UPGRADE_IMAGE:-perconalab/pmm-server:3-dev-latest} \
+            -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
+            -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
+            --publish 80:8080 --publish 443:8443 \
+            --volumes-from pmm-integration-server-data \
+            --name pmm-server \
+            ${{ inputs.pmm_server_start_version }}
+
+          # PWD=$(pwd) PMM_SERVER_UPGRADE_IMAGE=${{ steps.pmm_server_to_image.outputs.IMAGE }} PMM_SERVER_IMAGE=perconalab/pmm-server:${{ inputs.pmm_server_start_version }} docker compose -f docker-compose-upgrade.yml up -d --quiet-pull
