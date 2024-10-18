@@ -310,7 +310,7 @@ jobs:
         working-directory: ./
         run: |
           vagrant status
-          vagrant ssh default -c "ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml"
+          vagrant ssh CLIENT_TEST -c "ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml"
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
