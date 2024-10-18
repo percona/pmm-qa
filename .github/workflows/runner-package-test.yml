@@ -302,13 +302,15 @@ jobs:
           end
           EOF
 
-      - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
+      - name: "Start virtual machine for the pmm client"
         working-directory: ./
         run: vagrant up
 
-      - name: "Run package tests"
+      - name: "Run package tests: \"${{ inputs.playbook }}\" on pmm client version:${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }} on distribution: ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant ssh default -c "ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml"
+        run: |
+          vagrant status
+          vagrant ssh default -c "ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml"
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
