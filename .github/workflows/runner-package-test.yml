@@ -295,9 +295,7 @@ jobs:
                 sudo apt-add-repository --yes --update ppa:ansible/ansible
                 sudo apt-get install -y ansible git wget
               fi
-              cd /pmm/package-testing/playbooks
-              ###TODO: consider adding "-vv" flag based on input."
-              
+
               SHELL
           end
           EOF
@@ -309,8 +307,7 @@ jobs:
       - name: "Run package tests: \"${{ inputs.playbook }}\" on pmm client version:${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }} on distribution: ${{ inputs.os }}"
         working-directory: ./
         run: |
-          vagrant status
-          vagrant ssh CLIENT_TEST -c "ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml"
+          vagrant ssh CLIENT_TEST -c "ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 /pmm/package-testing/playbooks/${{ env.PLAYBOOK }}.yml"
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
