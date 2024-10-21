@@ -2715,7 +2715,7 @@ setup_pmm_pgsm_integration () {
     export PGSQL_VERSION=16
   fi
   if echo "$pdpgsql_version" | grep '17'; then
-    export PGSQL_VERSION=16
+    export PGSQL_VERSION=17
   fi
   if [ -z "$PGSTAT_MONITOR_BRANCH" ]
   then
