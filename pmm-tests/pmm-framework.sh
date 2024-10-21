@@ -688,8 +688,8 @@ if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
 if [[ -z "${mo_version}" ]]; then mo_version="6.0"; fi
 if [[ -z "${modb_version}" ]]; then modb_version="4.4"; fi
-if [[ -z "${pgsql_version}" ]]; then pgsql_version="14";fi
-if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="14"; fi
+if [[ -z "${pgsql_version}" ]]; then pgsql_version="16";fi
+if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="17"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="5.7"; fi
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
 if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
@@ -2652,6 +2652,12 @@ setup_postgres_ssl () {
   if echo "$pdpgsql_version" | grep '15'; then
     export PGSQL_VERSION=15
   fi
+  if echo "$pdpgsql_version" | grep '16'; then
+    export PGSQL_VERSION=16
+  fi
+  if echo "$pdpgsql_version" | grep '17'; then
+    export PGSQL_VERSION=17
+  fi
   if [ -z "$CLIENT_VERSION" ]
   then
     if [ -z "$PMM_CLIENT_VERSION" ]
@@ -2704,6 +2710,12 @@ setup_pmm_pgsm_integration () {
   fi
   if echo "$pdpgsql_version" | grep '15'; then
     export PGSQL_VERSION=15
+  fi
+  if echo "$pdpgsql_version" | grep '16'; then
+    export PGSQL_VERSION=16
+  fi
+  if echo "$pdpgsql_version" | grep '17'; then
+    export PGSQL_VERSION=17
   fi
   if [ -z "$PGSTAT_MONITOR_BRANCH" ]
   then
