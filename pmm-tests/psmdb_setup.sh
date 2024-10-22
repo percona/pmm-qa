@@ -45,7 +45,7 @@ else
    psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep focal-minimal)
 fi
 
-echo "Downloading ${psmdb_latest} ..."
+echo "Downloading ${psmdb_tarball} ..."
 wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 tar -xvf percona_server_mongodb.tar.gz
 
