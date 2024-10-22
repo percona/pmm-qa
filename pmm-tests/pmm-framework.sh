@@ -691,6 +691,7 @@ if [[ -z "${modb_version}" ]]; then modb_version="7.0"; fi
 if [[ -z "${pgsql_version}" ]]; then pgsql_version="16";fi
 if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="17"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="8.0"; fi
+
 if [[ -z "${REPLCOUNT}" ]]; then REPLCOUNT="1"; fi
 if [[ -z "${ova_memory}" ]]; then ova_memory="2048";fi
 
@@ -2715,7 +2716,7 @@ setup_pmm_pgsm_integration () {
     export PGSQL_VERSION=16
   fi
   if echo "$pdpgsql_version" | grep '17'; then
-    export PGSQL_VERSION=16
+    export PGSQL_VERSION=17
   fi
   if [ -z "$PGSTAT_MONITOR_BRANCH" ]
   then
