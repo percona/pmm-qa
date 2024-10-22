@@ -57,7 +57,7 @@ mv ${extracted_folder_name} psmdb_${mongodb_version}
 if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" || "$mongodb_version" == "8.0" ]]; then
     ### PSMDB 6+ requires "percona-mongodb-mongosh" additionally
     echo "Downloading mongosh ..."
-    cp psmdb_${mongodb_version}/bin/mongosh psmdb_${mongodb_version}/bin/mongo
+    cp psmdb_${mongodb_version}/bin/mongos psmdb_${mongodb_version}/bin/mongo
 fi
 
 if [ "$mongodb_setup" == "sharded" ]; then
