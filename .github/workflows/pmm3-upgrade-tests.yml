@@ -146,10 +146,10 @@ jobs:
 
       - name: Upgrade PMM Server and run E2E Tests
         working-directory: ./pmm-ui-tests
-#        env:
-#          SERVER_IP: "192.168.0.1"
-#          PMM_UI_URL: "http://192.168.0.1/"
-#          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
+        env:
+          SERVER_IP: "127.0.0.1"
+          PMM_UI_URL: "http://127.0.0.1/"
+          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           npx codeceptjs run -c pr.codecept.js --grep "@pmm-upgrade"
