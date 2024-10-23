@@ -142,7 +142,7 @@ jobs:
         working-directory: ./pmm-ui-tests/
         run: |
           npm ci
-          npx playwright install
+          npx playwright install --with-deps
 
       - name: Upgrade PMM Server and run E2E Tests
         working-directory: ./pmm-ui-tests
