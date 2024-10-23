@@ -55,9 +55,14 @@ mv ${extracted_folder_name} psmdb_${mongodb_version}
 
 # TODO: refactor if to match range of versions 6.0+
 if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" || "$mongodb_version" == "8.0" ]]; then
-    ### PSMDB 6+ requires "percona-mongodb-mongosh" additionally
+### PSMDB 6+ requires "percona-mongodb-mongosh" additionally
     echo "Downloading mongosh ..."
-    cp psmdb_${mongodb_version}/bin/mongos psmdb_${mongodb_version}/bin/mongo
+    mongosh_link=$(wget -q --post-data "version_files=7.0&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep mongosh)
+    wget -O mongosh.tar.gz ${mongosh_link}
+    tar -xvf mongosh.tar.gz
+    mv percona-mongodb-mongosh* mongosh
+    cp mongosh/bin/mongosh ./psmdb_${mongodb_version}/bin/mongo
+    rm mongosh.tar.gz
 fi
 
 if [ "$mongodb_setup" == "sharded" ]; then
