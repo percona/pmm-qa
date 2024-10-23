@@ -137,3 +137,19 @@ jobs:
             perconalab/pmm-server:${{ inputs.pmm_server_start_version }}
 
           # PWD=$(pwd) PMM_SERVER_UPGRADE_IMAGE=${{ steps.pmm_server_to_image.outputs.IMAGE }} PMM_SERVER_IMAGE=perconalab/pmm-server:${{ inputs.pmm_server_start_version }} docker compose -f docker-compose-upgrade.yml up -d --quiet-pull
+
+      - name: 'Install dependencies'
+        working-directory: ./pmm-ui-tests/
+        run: |
+          npm ci
+          npx playwright install
+
+      - name: Upgrade PMM Server and run E2E Tests
+        working-directory: ./pmm-ui-tests
+        env:
+          SERVER_IP: "192.168.0.1"
+          PMM_UI_URL: "http://192.168.0.1/"
+          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
+        run: |
+          sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
+          npx codeceptjs run -c pr.codecept.js --grep "@pmm-upgrade"
