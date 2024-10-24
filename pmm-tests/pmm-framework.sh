@@ -2771,6 +2771,12 @@ setup_pmm_pgss_integration () {
   if echo "$pgsql_version" | grep '15'; then
     export PGSQL_VERSION=15
   fi
+  if echo "$pgsql_version" | grep '16'; then
+    export PGSQL_VERSION=16
+  fi
+  if echo "$pgsql_version" | grep '17'; then
+    export PGSQL_VERSION=17
+  fi
   if [ -z "$CLIENT_VERSION" ]
   then
     export CLIENT_VERSION=dev-latest
