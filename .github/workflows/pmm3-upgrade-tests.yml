@@ -154,17 +154,9 @@ jobs:
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           npx codeceptjs run -c pr.codecept.js --grep "@pmm-upgrade"
 
-      - uses: actions/github-script@v7
-        if: ${{ always() }}
-        id: artifact_name
-        with:
-          script: |
-            return `artifacts_for_${process.env.TAGS_FOR_TESTS.replaceAll('|', '')}`
-          result-encoding: string
-
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
         with:
-          name: ${{ steps.artifact_name.outputs.result }}
+          name: "artifacts_pmm_upgrade"
           path: |
             pmm-ui-tests/tests/output/*.png
