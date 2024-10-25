@@ -13,7 +13,7 @@ on:
         required: true
       pmm_server_start_version:
         description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
-        default: '3.0.0'
+        default: '3-dev-latest'
         required: true
       pmm_client_start_version:
         description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
