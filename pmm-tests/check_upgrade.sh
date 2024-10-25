@@ -36,7 +36,7 @@ if [ "$DISTRIBUTION" == "ami" ]; then
     rpm -qa | grep pmm-update-$PMM_VERSION
   fi
   rpm -qa | grep pmm-managed-$PMM_VERSION
-  rpm -qa | grep pmm2-client-$PMM_VERSION
+  rpm -qa | grep pmm-client-$PMM_VERSION
   sudo supervisorctl status | grep qan-api2 | grep RUNNING
   sudo supervisorctl status | grep alertmanager | grep RUNNING
   sudo supervisorctl status | grep clickhouse | grep RUNNING
@@ -69,7 +69,7 @@ else
     docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-update-$PMM_VERSION
   fi
   docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-managed-$PMM_VERSION
-  docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm2-client-$PMM_VERSION
+  docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-client-$PMM_VERSION
   docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep qan-api2 | grep RUNNING
   docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep alertmanager | grep RUNNING
   docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep clickhouse | grep RUNNING
