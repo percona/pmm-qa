@@ -128,7 +128,7 @@ jobs:
           docker run --detach --restart always \
             --network="pmm-network" \
             -e PMM_DEBUG=1 \
-#            -e PMM_DEV_UPDATE_DOCKER_IMAGE=${PMM_SERVER_UPGRADE_IMAGE:-perconalab/pmm-server:3-dev-latest} \
+            #-e PMM_DEV_UPDATE_DOCKER_IMAGE=${PMM_SERVER_UPGRADE_IMAGE:-perconalab/pmm-server:3-dev-latest} \
             -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
             -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
             --publish 80:8080 --publish 443:8443 \
