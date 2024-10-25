@@ -688,7 +688,7 @@ if [[ -z "${ms_version}" ]]; then ms_version="8.0"; fi
 if [[ -z "${md_version}" ]]; then md_version="10.5"; fi
 if [[ -z "${mo_version}" ]]; then mo_version="7.0"; fi
 if [[ -z "${modb_version}" ]]; then modb_version="7.0"; fi
-if [[ -z "${pgsql_version}" ]]; then pgsql_version="16";fi
+if [[ -z "${pgsql_version}" ]]; then pgsql_version="17";fi
 if [[ -z "${pdpgsql_version}" ]]; then pdpgsql_version="17"; fi
 if [[ -z "${pxc_version}" ]]; then pxc_version="8.0"; fi
 
