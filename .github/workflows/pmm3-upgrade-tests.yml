@@ -13,7 +13,7 @@ on:
         required: true
       pmm_server_start_version:
         description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'
-        default: '3-dev-latest'
+        default: 'perconalab/pmm-server-fb:PR-3682-3337b4e'
         required: true
       pmm_client_start_version:
         description: 'PMM Client version to upgrade from (dev-latest|pmm2-latest|pmm2-rc|x.xx.x)'
@@ -133,7 +133,7 @@ jobs:
             --publish 80:8080 --publish 443:8443 \
             --volume pmm-volume \
             --name pmm-server \
-            perconalab/pmm-server:${{ inputs.pmm_server_start_version }}
+            ${{ inputs.pmm_server_start_version }}
 
           # PWD=$(pwd) PMM_SERVER_UPGRADE_IMAGE=${{ steps.pmm_server_to_image.outputs.IMAGE }} PMM_SERVER_IMAGE=perconalab/pmm-server:${{ inputs.pmm_server_start_version }} docker compose -f docker-compose-upgrade.yml up -d --quiet-pull
 
