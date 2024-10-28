@@ -192,7 +192,7 @@ jobs:
             echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "bookworm" ]]; then
-            echo "VM_BOX=debian/bookworm64" >> $GITHUB_ENV
+            echo "VM_BOX=generic/debian12" >> $GITHUB_ENV
           fi 
           if [[ "${{ inputs.os }}" =~ "bionic" ]]; then
             echo "VM_BOX=generic/ubuntu1804" >> $GITHUB_ENV
