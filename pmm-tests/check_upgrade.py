@@ -72,7 +72,7 @@ class PmmServerComponents(unittest.TestCase):
         self.assertIn(expected_pmm_version, grep_rpm('pmm-managed-'), WRONG_VERSION_MSG)
 
     def test_pmm2_client_version(self):
-        self.assertIn(expected_pmm_version, grep_rpm('pmm2-client-'), WRONG_VERSION_MSG)
+        self.assertIn(expected_pmm_version, grep_rpm('pmm-client-'), WRONG_VERSION_MSG)
 
     def test_dbaas_controller_version(self):
         if test_mode != "post": self.skipTest(POST_UPGRADE)
