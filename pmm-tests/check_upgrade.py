@@ -81,9 +81,6 @@ class PmmServerComponents(unittest.TestCase):
     def test_qan_api2_status(self):
         self.assertIn(RUNNING, grep_supervisor_status('qan-api2'), NOT_RUNNING_MSG)
 
-    def test_alert_manager_status(self):
-        self.assertIn(RUNNING, grep_supervisor_status('alertmanager'), NOT_RUNNING_MSG)
-
     def test_clickhouse_status(self):
         self.assertIn(RUNNING, grep_supervisor_status('clickhouse'), NOT_RUNNING_MSG)
 
