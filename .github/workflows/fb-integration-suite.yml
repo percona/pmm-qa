@@ -10,7 +10,7 @@ on:
         default: 'v3'
         required: false
         type: string
-      pmm_qa_branch:
+      qa_integration_branch:
         description: 'qa-integration repository branch(for setup)'
         default: 'v3'
         required: false
