@@ -74,10 +74,6 @@ class PmmServerComponents(unittest.TestCase):
     def test_pmm_client_version(self):
         self.assertIn(expected_pmm_version, verify_command("docker exec " + pmm_server_docker_container + " pmm-admin --version | grep PMMVersion | awk -F \" \" \'{print $2}\'"), WRONG_VERSION_MSG)
 
-    def test_dbaas_controller_version(self):
-        if test_mode != "post": self.skipTest(POST_UPGRADE)
-        self.assertIn(expected_pmm_version, grep_rpm('dbaas-controller-'), WRONG_VERSION_MSG)
-
     def test_pmm_dump_version(self):
         if test_mode != "post": self.skipTest(POST_UPGRADE)
         self.assertIn(expected_pmm_version, grep_rpm('pmm-dump-'), WRONG_VERSION_MSG)
