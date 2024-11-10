@@ -283,7 +283,7 @@ jobs:
   #      services_list: '--modb-version=7 --addclient=modb,1'
   #      test_name: 'MongoDB 7.x'
 
-  psmdb-6-tests:
+  psmdb-6-replica-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets: inherit
@@ -296,9 +296,9 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
       services_list: '--database psmdb=6.0,SETUP_TYPE=pss --verbose'
-      test_name: 'PSMDB 6.x'
+      test_name: 'PSMDB Replica 6.x'
 
-  psmdb-7-tests:
+  psmdb-7-replica-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets: inherit
@@ -311,7 +311,37 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
       services_list: '--database psmdb=7.0,SETUP_TYPE=pss --verbose'
-      test_name: 'PSMDB 7.x'
+      test_name: 'PSMDB Replica 7.x'
+
+  psmdb-7-shard-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb-shard.spec.ts'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=shards --verbose'
+      test_name: 'PSMDB Shard 7.x'
+
+  psmdb-8-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=pss --verbose'
+      test_name: 'PSMDB Replica 8.x'
 
   haproxy-tests:
     name: 'CLI / Integration'
