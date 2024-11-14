@@ -3067,7 +3067,7 @@ setup_mongo_replica_for_backup() {
   fi
   mkdir /tmp/backup_data && chmod 777 /tmp/backup_data
   pushd qa-integration/pmm_psmdb-pbm_setup
-  PSMDB_VERSION=$(wget -q --post-data "version=percona-server-mongodb-${mo_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1 | sed -n -e 's/^.*\(mongodb-\)//p') COMPOSE_PROFILES=extra ./start-rs-only.sh
+  PSMDB_VERSION1=$(wget -q --post-data "version=percona-server-mongodb-${mo_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1 | sed -n -e 's/^.*\(mongodb-\)//p') COMPOSE_PROFILES=extra ./start-rs-only.sh
   popd
   popd
 }
