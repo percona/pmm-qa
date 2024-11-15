@@ -193,7 +193,7 @@ jobs:
             echo "VM_BOX=generic/ubuntu1804" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "focal" ]]; then
-            echo "VM_BOX=generic/ubuntu2004" >> $GITHUB_ENV
+            echo "VM_BOX=ubuntu/focal64" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
             echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
