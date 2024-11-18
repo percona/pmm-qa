@@ -64,13 +64,12 @@ on:
         type: choice
         options:
           - bullseye
-          - buster
           - bookworm
-          - focal
+          - noble
           - jammy
+          - focal
           - ol-8
           - ol-9
-          - noble
 
   workflow_call:
     inputs:
@@ -120,7 +119,7 @@ jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 80
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
@@ -184,9 +183,6 @@ jobs:
           echo "repo=${{ env.REPO }}"
           
           ### vagrant vm ###
-          if [[ "${{ inputs.os }}" =~ "buster" ]]; then
-            echo "VM_BOX=generic/debian10" >> $GITHUB_ENV
-          fi
           if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
             echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
           fi
@@ -241,9 +237,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible virtualbox vagrant
-          if [[ "${{ inputs.os }}" =~ "buster" ]]; then
-            vagrant plugin install vagrant-vbguest
-          fi
 
       - name: "Wait for PMM Server to be healthy"
         run: |
