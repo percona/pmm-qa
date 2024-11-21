@@ -187,6 +187,7 @@ jobs:
             echo "expected version is ${{ env.EXPECTED_VERSION }}"
           fi
           echo "repo=${{ env.REPO }}"
+          echo "TARBALL=${{ env.TARBALL }}" >> $GITHUB_ENV
           
           ### vagrant vm ###
           if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
