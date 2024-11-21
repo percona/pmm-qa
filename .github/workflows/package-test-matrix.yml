@@ -30,6 +30,9 @@ on:
           - release
           - release candidate
           - dev-latest
+      pmm_client_tarball:
+        description: "PMM Client tarball link or FB-code"
+        type: string
       metrics_mode:
         description: 'Select the Metrics Mode for PMM Client:'
         required: true
@@ -51,6 +54,7 @@ jobs:
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration"
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball || 'null' }}
 
   u_test:
     name: "Package Install with Custom Path"
