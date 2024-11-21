@@ -296,7 +296,7 @@ jobs:
               fi
               cd /pmm/package-testing/playbooks
               ###TODO: consider adding "-vv" flag based on input."
-              ansible-playbook -vvv' --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
+              ansible-playbook -vvv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
               SHELL
           end
 
