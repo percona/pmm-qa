@@ -270,13 +270,13 @@ jobs:
               export PMM_SERVER_IP=10.0.2.2:443
               export METRICS_MODE=${{ env.METRICS_MODE }}
               export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
+              echo $PMM_VERSION
+              if [[ "${{ env.TARBALL }}" != "null" ]]; then
+                export TARBALL_LINK="${{ env.TARBALL }}"
+              fi
               export install_repo=${{ env.REPO }}
               export install_package=${{ env.INSTALL_PACKAGE }}
-          
-              if [[ "${{ env.TARBALL }}" != "null" ]]; then
-                export tarball_link=${{ env.TARBALL }}
-              fi
-                
+              
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
                 sudo yum -y update
@@ -296,8 +296,7 @@ jobs:
                 sudo apt-get install -y ansible git wget
               fi
               cd /pmm/package-testing/playbooks
-              ###TODO: consider adding "-vv" flag based on input."
-              ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
+              ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
               SHELL
           end
 
