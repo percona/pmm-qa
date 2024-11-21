@@ -273,7 +273,10 @@ jobs:
               export install_package=${{ env.INSTALL_PACKAGE }}
           
               if [[ "${{ env.TARBALL }}" != "null" ]]; then
+                echo "TARBALL is not null"          
                 export tarball_link=${{ env.TARBALL }}
+                echo $tarball_link
+                echo "$tarball_link"
               fi
                 
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
