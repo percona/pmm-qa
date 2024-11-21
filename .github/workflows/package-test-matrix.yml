@@ -42,10 +42,6 @@ on:
           - auto
           - push
           - pull
-      debug_mode:
-        description: 'Run verbose on Ansible Playbook'
-        required: false
-        default: 'false'
 
 jobs:
   i_test:
@@ -59,7 +55,6 @@ jobs:
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration"
       pmm_client_tarball: ${{ inputs.pmm_client_tarball || 'null' }}
-      debug_mode: ${{ inputs.debug_mode }}
 
   u_test:
     name: "Package Install with Custom Path"
@@ -71,7 +66,6 @@ jobs:
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration_custom_path"
-      debug_mode: ${{ inputs.debug_mode }}
 
   t_test:
     name: "Package Install with Custom Port"
@@ -83,4 +77,3 @@ jobs:
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration_custom_port"
-      debug_mode: ${{ inputs.debug_mode }}
