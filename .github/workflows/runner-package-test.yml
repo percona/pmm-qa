@@ -153,6 +153,13 @@ jobs:
           repository: Percona-QA/package-testing
           ref: ${{ inputs.package_testing_branch }}
 
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
       - name: 'Convert choices'
         run: |
           ### pmm-server docker image ###
