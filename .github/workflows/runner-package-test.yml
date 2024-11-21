@@ -273,7 +273,7 @@ jobs:
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
                 sudo yum -y update
-                sudo yum install -y ansible-core git wget
+                sudo yum install -y ansible-core git wget dpkg
               fi
               if [[ "${{ env.VM_BOX }}" =~ "debian" ]]; then
                 sudo apt-get install -y dirmngr gnupg2
