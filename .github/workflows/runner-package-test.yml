@@ -277,6 +277,7 @@ jobs:
                 echo "TARBALL is not null"
                 echo ${{ env.TARBALL }}
                 export tarball_link=${{ env.TARBALL }}
+                echo $TARBALL
                 echo $tarball_link
                 echo $install_repo
               fi
