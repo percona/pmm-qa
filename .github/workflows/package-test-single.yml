@@ -9,6 +9,11 @@ on:
         type: string
         default: 'v3'
         required: false
+      pmm_server_image:
+        description: "pmm-server docker image(auto detected if empty)"
+        required: false
+        type: string
+        default: "perconalab/pmm-server:3-dev-latest"
       playbook:
         description: 'Select test to run:'
         default: 'pmm3-client_integration'
@@ -44,6 +49,9 @@ on:
           - release
           - release candidate
           - dev-latest
+      pmm_client_tarball:
+        description: "PMM Client tarball link or FB-code"
+        type: string
       metrics_mode:
         description: 'Select the Metrics Mode for PMM Client:'
         required: false
@@ -59,6 +67,9 @@ on:
       package_testing_branch:
         type: string
         required: true
+      pmm_server_image:
+        required: false
+        type: string
       playbook:
         required: true
         type: string
@@ -67,6 +78,9 @@ on:
         type: string
       repository:
         required: true
+        type: string
+      pmm_client_tarball:
+        required: false
         type: string
       metrics_mode:
         type: string
