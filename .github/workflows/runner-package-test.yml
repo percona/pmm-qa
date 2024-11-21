@@ -131,6 +131,7 @@ jobs:
       INSTALL_PACKAGE: ${{ inputs.package || 'pmm3-client' }}
       METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
       PLAYBOOK: ${{ inputs.playbook }}
+      VERBOSE: "no"
 
     steps:
       - name: "Create status check"
@@ -293,7 +294,7 @@ jobs:
               cd /pmm/package-testing/playbooks
               ###TODO: consider adding "-vv" flag based on input."
               echo $tarball_link
-              ansible-playbook -vvv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
+              sudo ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
               SHELL
           end
 
