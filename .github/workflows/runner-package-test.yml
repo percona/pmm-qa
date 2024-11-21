@@ -274,7 +274,6 @@ jobs:
               if [[ "${{ env.TARBALL }}" != "null" ]]; then
                 export TARBALL_LINK="${{ env.TARBALL }}"
               fi
-              echo $TARBALL_LINK
               export install_repo=${{ env.REPO }}
               export install_package=${{ env.INSTALL_PACKAGE }}
               
