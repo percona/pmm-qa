@@ -273,7 +273,8 @@ jobs:
               export install_package=${{ env.INSTALL_PACKAGE }}
           
               if [[ "${{ env.TARBALL }}" != "null" ]]; then
-                echo "TARBALL is not null"          
+                echo "TARBALL is not null"
+                echo ${{ env.TARBALL }}
                 export tarball_link=${{ env.TARBALL }}
                 echo $tarball_link
                 echo "$tarball_link"
