@@ -276,9 +276,9 @@ jobs:
               if [[ "${{ env.TARBALL }}" != "null" ]]; then
                 echo "TARBALL is not null"
                 echo ${{ env.TARBALL }}
-                export TARBALL_LINK=$TARBALL
-                echo $TARBALL_LINK
-                echo "$TARBALL_LINK"
+                export tarball_link=${{ env.TARBALL }}
+                echo $tarball_link
+                echo $install_repo
               fi
                 
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
