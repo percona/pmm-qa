@@ -119,7 +119,7 @@ jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
     runs-on: ubuntu-latest
-    timeout-minutes: 80
+    timeout-minutes: 50
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
