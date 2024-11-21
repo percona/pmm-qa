@@ -12,6 +12,11 @@ on:
         type: string
         default: 'v3'
         required: true
+      pmm_server_image:
+        description: "pmm-server docker image(auto detected if empty)"
+        required: false
+        type: string
+        default: "perconalab/pmm-server:3-dev-latest"
       package:
         description: "Select source package for enabling repo"
         required: true
@@ -55,6 +60,7 @@ jobs:
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration"
       pmm_client_tarball: ${{ inputs.pmm_client_tarball || 'null' }}
+      pmm_server_image: ${{ inputs.pmm_server_image }}
 
   u_test:
     name: "Package Install with Custom Path"
@@ -66,6 +72,8 @@ jobs:
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration_custom_path"
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball || 'null' }}
+      pmm_server_image: ${{ inputs.pmm_server_image }}
 
   t_test:
     name: "Package Install with Custom Port"
@@ -77,3 +85,5 @@ jobs:
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
       playbook: "pmm3-client_integration_custom_port"
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball || 'null' }}
+      pmm_server_image: ${{ inputs.pmm_server_image }}
