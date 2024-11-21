@@ -70,6 +70,10 @@ on:
           - focal
           - ol-8
           - ol-9
+      debug_mode:
+        description: 'Run verbose on Ansible Playbook'
+        required: false
+        default: 'false'
 
   workflow_call:
     inputs:
@@ -131,7 +135,7 @@ jobs:
       INSTALL_PACKAGE: ${{ inputs.package || 'pmm3-client' }}
       METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
       PLAYBOOK: ${{ inputs.playbook }}
-      VERBOSE: "no"
+      VERBOSE: ${{ inputs.debug_mode }}
 
     steps:
       - name: "Create status check"
@@ -297,7 +301,7 @@ jobs:
               fi
               cd /pmm/package-testing/playbooks
               ###TODO: consider adding "-vv" flag based on input."
-              ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
+              ansible-playbook ${{env.VERBOSE == 'yes' && '-vvv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
               SHELL
           end
 
