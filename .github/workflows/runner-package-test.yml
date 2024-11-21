@@ -124,7 +124,7 @@ jobs:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}
-      tarball_link: ${{ inputs.pmm_client_tarball || 'null' }}
+      TARBALL: ${{ inputs.pmm_client_tarball || 'null' }}
       EXPECTED_VERSION: ${{ inputs.expected_version }}
 
       REPO: ${{ inputs.repository || 'dev-latest' }}
@@ -272,9 +272,9 @@ jobs:
               export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
               echo $PMM_VERSION
               if [[ "${{ env.TARBALL }}" != "null" ]]; then
-                export tarball_link="${{ env.TARBALL }}"
+                export TARBALL_LINK="${{ env.TARBALL }}"
               fi
-              echo $tarball_link
+              echo $TARBALL_LINK
               export install_repo=${{ env.REPO }}
               export install_package=${{ env.INSTALL_PACKAGE }}
               
@@ -298,7 +298,7 @@ jobs:
               fi
               cd /pmm/package-testing/playbooks
               ###TODO: consider adding "-vv" flag based on input."
-              echo $tarball_link
+              echo $TARBALL_LINK
               ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
               SHELL
           end
