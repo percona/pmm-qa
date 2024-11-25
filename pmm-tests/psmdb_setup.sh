@@ -36,7 +36,7 @@ chmod +x mongo_startup.sh
 export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
 
 ### Detect latest tarball link for specified mongodb_version: 8.0 | 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
-psmdb_latest=$(wget -q --post-data "version=percona-server-${mongodb_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)
+psmdb_latest=$(wget -q --post-data "version=percona-server-mongodb-${mongodb_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)
 if [[ "$mongodb_version" == "4.4" ]]; then
    psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal)
 elif [[ "$mongodb_version" == "8.0" ]]; then
