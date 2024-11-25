@@ -65,7 +65,6 @@ on:
         type: choice
         options:
           - bullseye
-          - buster
           - bookworm
           - focal
           - jammy
@@ -185,9 +184,6 @@ jobs:
           echo "repo=${{ env.REPO }}"
           
           ### vagrant vm ###
-          if [[ "${{ inputs.os }}" =~ "buster" ]]; then
-            echo "VM_BOX=generic/debian10" >> $GITHUB_ENV
-          fi
           if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
             echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
           fi
@@ -242,9 +238,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible virtualbox vagrant
-          if [[ "${{ inputs.os }}" =~ "buster" ]]; then
-            vagrant plugin install vagrant-vbguest
-          fi
 
       - name: "Wait for PMM Server to be healthy"
         run: |
