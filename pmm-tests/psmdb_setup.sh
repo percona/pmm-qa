@@ -40,12 +40,12 @@ psmdb_latest=$(wget -q --post-data "version=percona-server-mongodb-7.0" https://
 if [[ "$mongodb_version" == "4.4" ]]; then
    psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal)
 elif [[ "$mongodb_version" == "8.0" ]]; then
-   psmdb_tarball="https://downloads.percona.com/downloads/TESTING/psmdb-8.0.1/percona-server-mongodb-8.0.1-1-x86_64.focal-minimal.tar.gz?_gl=1*1jj4ykm*_gcl_au*MTcyMjk2MjY2Mi4xNzI1NDQ2MzY1"
+   psmdb_tarball="https://downloads.percona.com/downloads/TESTING/psmdb-8.0.1/percona-server-mongodb-8.0.1-1-x86_64.focal-minimal.tar.gz?"
 else
    psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep focal-minimal)
 fi
 
-echo "Downloading ${psmdb_tarball} ..."
+echo "Downloading ${mongodb_version} ..."
 wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 tar -xvf percona_server_mongodb.tar.gz
 
