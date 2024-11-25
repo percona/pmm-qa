@@ -3067,7 +3067,12 @@ setup_mongo_replica_for_backup() {
   fi
   mkdir /tmp/backup_data && chmod 777 /tmp/backup_data
   pushd qa-integration/pmm_psmdb-pbm_setup
-  PSMDB_VERSION=$(wget -q --post-data "version=percona-server-mongodb-${mo_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1 | sed -n -e 's/^.*\(mongodb-\)//p') COMPOSE_PROFILES=extra ./start-rs-only.sh
+  # Till official 8.0 is released.
+  if [[ "$mo_version" == "8.0" ]]; then
+    PSMDB_VERSION="8.0.1-1" COMPOSE_PROFILES=extra ./start-rs-only.sh
+  else
+    PSMDB_VERSION=$(wget -q --post-data "version=percona-server-mongodb-${mo_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1 | sed -n -e 's/^.*\(mongodb-\)//p') COMPOSE_PROFILES=extra ./start-rs-only.sh
+  fi
   popd
   popd
 }

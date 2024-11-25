@@ -35,15 +35,17 @@ wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startu
 chmod +x mongo_startup.sh
 export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
 
-### Detect latest tarball link for specified mongodb_version: 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
+### Detect latest tarball link for specified mongodb_version: 8.0 | 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
 psmdb_latest=$(wget -q --post-data "version=percona-server-mongodb-${mongodb_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)
 if [[ "$mongodb_version" == "4.4" ]]; then
    psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal)
+elif [[ "$mongodb_version" == "8.0" ]]; then
+   psmdb_tarball="https://downloads.percona.com/downloads/TESTING/psmdb-8.0.1/percona-server-mongodb-8.0.1-1-x86_64.focal-minimal.tar.gz"
 else
    psmdb_tarball=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep focal-minimal)
 fi
 
-echo "Downloading ${psmdb_latest} ..."
+echo "Downloading ${mongodb_version} ..."
 wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 tar -xvf percona_server_mongodb.tar.gz
 
@@ -52,8 +54,8 @@ echo "Extracted folder name ${extracted_folder_name}"
 mv ${extracted_folder_name} psmdb_${mongodb_version}
 
 # TODO: refactor if to match range of versions 6.0+
-if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" ]]; then
-    ### PSMDB 6+ requires "percona-mongodb-mongosh" additionally
+if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" || "$mongodb_version" == "8.0" ]]; then
+### PSMDB 6+ requires "percona-mongodb-mongosh" additionally
     echo "Downloading mongosh ..."
     mongosh_link=$(wget -q --post-data "version_files=${psmdb_latest}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep mongosh)
     wget -O mongosh.tar.gz ${mongosh_link}
