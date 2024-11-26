@@ -283,21 +283,6 @@ jobs:
   #      services_list: '--modb-version=7 --addclient=modb,1'
   #      test_name: 'MongoDB 7.x'
 
-  psmdb-44-tests:
-    name: 'CLI / Integration'
-    uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
-    with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
-      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
-      services_list: '--mo-version=4.4 --mongomagic --with-shard'
-      test_name: 'PSMDB 4.4'
-
   psmdb-5-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -342,6 +327,21 @@ jobs:
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
       services_list: '--mo-version=7 --mongomagic --with-shard'
       test_name: 'PSMDB 7.x'
+
+  psmdb-80-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--mo-version=8.0 --mongomagic --with-shard'
+      test_name: 'PSMDB 8.0'
 
   haproxy-tests:
     name: 'CLI / Integration'

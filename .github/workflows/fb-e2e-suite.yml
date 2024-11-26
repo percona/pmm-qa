@@ -75,7 +75,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
-      setup_services: '--mongo-replica-for-backup'
+      setup_services: '--mo-version "8.0" --mongo-replica-for-backup'
       tags_for_tests: '@bm-mongo'
 
 #  -- include backup_management_ps once setup for mysql fixed for the worker
@@ -104,7 +104,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--mongo-replica-for-backup --setup-bm-mysql'
+      setup_services: '--mo-version "8.0" --mongo-replica-for-backup --setup-bm-mysql'
       #      tags_for_tests: '@bm-common|@bm-locations' -- include bm-common once setup for mysql fixed
       tags_for_tests: '@bm-locations'
 
@@ -133,7 +133,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--mongo-replica-for-backup'
+      setup_services: '--mo-version "8.0" --mongo-replica-for-backup'
       tags_for_tests: '@mongodb-exporter'
 
   instances:
@@ -229,7 +229,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--mongomagic --with-arbiter'
+      setup_services: '--mo--version "8.0" --mongomagic --with-arbiter'
       tags_for_tests: '@pmm-psmdb-arbiter-integration'
 
   psmdb_replica:
@@ -243,7 +243,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--mongo-replica-for-backup'
+      setup_services: '--mo--version "8.0" --mongo-replica-for-backup'
       tags_for_tests: '@pmm-psmdb-replica-integration'
 
   user_and_password_podman:
