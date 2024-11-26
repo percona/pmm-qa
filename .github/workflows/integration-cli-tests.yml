@@ -340,7 +340,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
-      services_list: '--mo-version=8.0 --mongomagic --with-shard'
+      services_list: '--mo-version "8.0" --mongomagic --with-shard'
       test_name: 'PSMDB 8.x'
 
   haproxy-tests:
