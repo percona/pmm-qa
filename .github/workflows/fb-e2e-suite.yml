@@ -229,7 +229,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--mo--version "8.0" --mongomagic --with-arbiter'
+      setup_services: '--mo-version "8.0" --mongomagic --with-arbiter'
       tags_for_tests: '@pmm-psmdb-arbiter-integration'
 
   psmdb_replica:
@@ -243,7 +243,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--mo--version "8.0" --mongo-replica-for-backup'
+      setup_services: '--mo-version "8.0" --mongo-replica-for-backup'
       tags_for_tests: '@pmm-psmdb-replica-integration'
 
   user_and_password_podman:
