@@ -14,6 +14,7 @@ arr=("node_exporter"
 
 for agent in "${arr[@]}" ; do
         for i in $(pmm-admin status | grep ${agent} | awk -F' ' '{ print $3 }') ; do
+                echo $i
                 echo $i | grep -qv Waiting
                 echo $i | grep Running
         done
