@@ -149,7 +149,7 @@ jobs:
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database external --database haproxy'
-      tags_for_tests: '@instances-fb'
+      tags_for_tests: '@fb-instances'
 
   alerting_and_settings:
     name: Alerting and Settings UI tests
@@ -163,7 +163,7 @@ jobs:
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database mysql'
-      tags_for_tests: '@alerting-fb|@settings-fb'
+      tags_for_tests: '@fb-alerting|@fb-settings'
 
   user_and_password:
     name: User with changed password UI tests
