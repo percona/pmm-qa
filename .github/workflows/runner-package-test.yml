@@ -64,13 +64,12 @@ on:
         type: choice
         options:
           - bullseye
-          - buster
           - bookworm
-          - focal
+          - noble
           - jammy
+          - focal
           - ol-8
           - ol-9
-          - noble
 
   workflow_call:
     inputs:
@@ -120,7 +119,7 @@ jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 50
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
@@ -154,6 +153,13 @@ jobs:
           repository: Percona-QA/package-testing
           ref: ${{ inputs.package_testing_branch }}
 
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
       - name: 'Convert choices'
         run: |
           ### pmm-server docker image ###
@@ -184,14 +190,11 @@ jobs:
           echo "repo=${{ env.REPO }}"
           
           ### vagrant vm ###
-          if [[ "${{ inputs.os }}" =~ "buster" ]]; then
-            echo "VM_BOX=generic/debian10" >> $GITHUB_ENV
-          fi
           if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
             echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "bookworm" ]]; then
-            echo "VM_BOX=generic/debian12" >> $GITHUB_ENV
+            echo "VM_BOX=generic-x64/debian12" >> $GITHUB_ENV
           fi 
           if [[ "${{ inputs.os }}" =~ "bionic" ]]; then
             echo "VM_BOX=generic/ubuntu1804" >> $GITHUB_ENV
@@ -241,9 +244,6 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible virtualbox vagrant
-          if [[ "${{ inputs.os }}" =~ "buster" ]]; then
-            vagrant plugin install vagrant-vbguest
-          fi
 
       - name: "Wait for PMM Server to be healthy"
         run: |
@@ -270,17 +270,17 @@ jobs:
               export PMM_SERVER_IP=10.0.2.2:443
               export METRICS_MODE=${{ env.METRICS_MODE }}
               export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
+              echo $PMM_VERSION
+              if [[ "${{ env.TARBALL }}" != "null" ]]; then
+                export TARBALL_LINK="${{ env.TARBALL }}"
+              fi
               export install_repo=${{ env.REPO }}
               export install_package=${{ env.INSTALL_PACKAGE }}
-          
-              if [[ "${{ env.TARBALL }}" != "null" ]]; then
-                export tarball_link=${{ env.TARBALL }}
-              fi
-                
+              
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
                 sudo yum install -y epel-release
                 sudo yum -y update
-                sudo yum install -y ansible-core git wget
+                sudo yum install -y ansible-core git wget dpkg
               fi
               if [[ "${{ env.VM_BOX }}" =~ "debian" ]]; then
                 sudo apt-get install -y dirmngr gnupg2
@@ -296,8 +296,7 @@ jobs:
                 sudo apt-get install -y ansible git wget
               fi
               cd /pmm/package-testing/playbooks
-              ###TODO: consider adding "-vv" flag based on input."
-              ansible-playbook ${{env.VERBOSE == 'yes' && '-vv' || ''}} --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
+              ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
               SHELL
           end
 
