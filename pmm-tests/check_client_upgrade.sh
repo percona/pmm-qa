@@ -1,5 +1,8 @@
 #!/bin/sh
 
+docker ps
+docker ps -a
+
 pmm-admin status
 pmm-admin status | grep -q Running
 
