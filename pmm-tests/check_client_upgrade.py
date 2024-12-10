@@ -7,6 +7,7 @@ pgsqlContainerName = ""
 firstMongoReplica = ""
 secondMongoReplica = ""
 thirdMongoReplica = ""
+errors = []
 
 print(containers)
 
@@ -29,4 +30,24 @@ for i in range(len(containers)):
     print(thirdMongoReplica)
 
 psContainerStatus = subprocess.run(["docker", "exec", psContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-print(psContainerStatus)
+pgContainerStatus = subprocess.run(["docker", "exec", pgsqlContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+firstMongoReplicaStatus = subprocess.run(["docker", "exec", firstMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+secondMongoReplicaStatus = subprocess.run(["docker", "exec", secondMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+thirdMongoReplicaStatus = subprocess.run(["docker", "exec", thirdMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+
+print(pgContainerStatus)
+
+if "Waiting" in psContainerStatus or "Unknown" in psContainerStatus:
+    errors.append("Not correct agent status in ps container.")
+
+if "Waiting" in pgContainerStatus or "Unknown" in pgContainerStatus:
+    errors.append("Not correct agent status in ps container.")
+
+if "Waiting" in firstMongoReplicaStatus or "Unknown" in firstMongoReplicaStatus:
+    errors.append("Not correct agent status in first mongo container.")
+
+if "Waiting" in secondMongoReplicaStatus or "Unknown" in secondMongoReplicaStatus:
+    errors.append("Not correct agent status in first mongo container.")
+
+if "Waiting" in thirdMongoReplicaStatus or "Unknown" in thirdMongoReplicaStatus:
+    errors.append("Not correct agent status in first mongo container.")
