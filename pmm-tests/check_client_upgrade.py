@@ -1,6 +1,6 @@
 import subprocess
 
-containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True) .stdout.splitlines()
+containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True).stdout.splitlines()
 
 psContainerName = ""
 pgsqlContainerName = ""
@@ -27,3 +27,6 @@ for i in range(len(containers)):
   elif "rs103" in containers[i]:
     thirdMongoReplica = containers[i][containers[i].index("rs103"):]
     print(thirdMongoReplica)
+
+psContainerStatus = subprocess.run(["docker", "exec", psContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+print(psContainerStatus)
