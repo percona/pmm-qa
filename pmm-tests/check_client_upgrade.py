@@ -47,7 +47,10 @@ if "Waiting" in firstMongoReplicaStatus or "Unknown" in firstMongoReplicaStatus:
     errors.append("Not correct agent status in first mongo container.")
 
 if "Waiting" in secondMongoReplicaStatus or "Unknown" in secondMongoReplicaStatus:
-    errors.append("Not correct agent status in first mongo container.")
+    errors.append("Not correct agent status in second mongo container.")
 
 if "Waiting" in thirdMongoReplicaStatus or "Unknown" in thirdMongoReplicaStatus:
-    errors.append("Not correct agent status in first mongo container.")
+    errors.append("Not correct agent status in third mongo container.")
+
+if errors.len() > 0:
+  raise Exception("Some errors in pmm-admin status: " + errors)
