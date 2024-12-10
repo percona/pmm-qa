@@ -52,5 +52,5 @@ if "Waiting" in secondMongoReplicaStatus or "Unknown" in secondMongoReplicaStatu
 if "Waiting" in thirdMongoReplicaStatus or "Unknown" in thirdMongoReplicaStatus:
     errors.append("Not correct agent status in third mongo container.")
 
-if errors.len() > 0:
+if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: " + errors)
