@@ -1,4 +1,5 @@
-import os
+import subprocess
 
-containers = os.system('docker ps -a')
+containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True) .stdout.splitlines()
+
 print(containers)
