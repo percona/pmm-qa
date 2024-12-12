@@ -2,8 +2,8 @@
 require 'vendor/autoload.php'; // include Composer's autoloader
 /* This script is designed to generate test workload to hit certain amount of tables in certain amount of schemas
    having certain amount of unique queries */
-$db=5;
-$collection=50;
+$db=2;
+$collection=3;
 
 /* How many queries try to run per second */
 $target_qps=10;
