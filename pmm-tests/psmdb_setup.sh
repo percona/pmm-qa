@@ -75,25 +75,25 @@ fi
 
 if [ "$mongodb_setup" == "sharded" ]; then
     bash ./mongo_startup.sh -s -e wiredTiger --mongosExtra="--slowms 1" --mongodExtra="--profile 2 --slowms 1" --configExtra="--profile 2 --slowms 1" --b=./psmdb_${mongodb_version}/bin
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --environment=mongodb_sharded_${mongodb_version} mongodb_sharded_node_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
+    pmm-admin add mongodb --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --environment=mongodb_sharded_${mongodb_version} mongodb_sharded_node_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27017
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=config --environment=mongodb_config_node_${mongodb_version} mongodb_config_1_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
+    pmm-admin add mongodb  --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=config --environment=mongodb_config_node_${mongodb_version} mongodb_config_1_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27027
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=config --environment=mongodb_config_node_${mongodb_version} mongodb_config_2_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
+    pmm-admin add mongodb  --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=config --environment=mongodb_config_node_${mongodb_version} mongodb_config_2_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27028
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=config --environment=mongodb_config_node_${mongodb_version} mongodb_config_3_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
+    pmm-admin add mongodb  --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=config --environment=mongodb_config_node_${mongodb_version} mongodb_config_3_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27029
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs1 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs1_1_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
+    pmm-admin add mongodb  --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs1 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs1_1_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27018
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs1 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs1_2_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
+    pmm-admin add mongodb  --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs1 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs1_2_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27019
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs1 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs1_3_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
+    pmm-admin add mongodb  --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs1 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs1_3_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:27020
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs2 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs2_1_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
+    pmm-admin add mongodb  --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs2 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs2_1_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:28018
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs2 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs2_2_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
+    pmm-admin add mongodb  --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs2 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs2_2_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:28019
     sleep 2
-    pmm-admin add mongodb  --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs2 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs2_3_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
+    pmm-admin add mongodb --enable-all-collectors --cluster mongodb_node_cluster_${mongodb_version} --replication-set=rs2 --environment=mongodb_rs_node_${mongodb_version} mongodb_rs2_3_${SERVICE_RANDOM_NUMBER}_${mongodb_version} --metrics-mode=$metrics_mode --debug 127.0.0.1:28020
     sleep 20
     #./nodes/cl_mongos.sh mongodb_user_setup.js
 fi
