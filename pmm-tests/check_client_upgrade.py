@@ -2,7 +2,8 @@ import subprocess
 import sys
 
 arguments = sys.argv
-print(arguments)
+print(arguments[1])
+print(arguments[2])
 
 containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True).stdout.splitlines()
 
