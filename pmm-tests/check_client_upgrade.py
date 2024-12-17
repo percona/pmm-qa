@@ -63,3 +63,32 @@ if "Waiting" in localClientStatus or "Done" in localClientStatus or "Unknown" in
 
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: " + errors)
+
+psContainerList = subprocess.run(["docker", "exec", psContainerName, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
+pgContainerList = subprocess.run(["docker", "exec", pgsqlContainerName, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
+firstMongoReplicaList = subprocess.run(["docker", "exec", firstMongoReplica, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
+secondMongoReplicaList = subprocess.run(["docker", "exec", secondMongoReplica, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
+thirdMongoReplicaList = subprocess.run(["docker", "exec", thirdMongoReplica, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
+localClientList = subprocess.run(["pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
+
+
+if "Waiting" in psContainerList or "Done" in psContainerList or "Unknown" in psContainerList or "Initialization Error" in psContainerList or "Stopping" in psContainerList:
+    errors.append("Not correct agent status in ps container.")
+
+if "Waiting" in pgContainerList or "Done" in pgContainerList or "Unknown" in pgContainerList or "Initialization Error" in pgContainerList or "Stopping" in pgContainerList:
+    errors.append("Not correct agent status in ps container.")
+
+if "Waiting" in firstMongoReplicaList or "Done" in firstMongoReplicaList or "Unknown" in firstMongoReplicaList or "Initialization Error" in firstMongoReplicaList or "Stopping" in firstMongoReplicaList:
+    errors.append("Not correct agent status in first mongo container.")
+
+if "Waiting" in secondMongoReplicaList or "Done" in secondMongoReplicaList or"Unknown" in secondMongoReplicaList or "Initialization Error" in secondMongoReplicaList or "Stopping" in secondMongoReplicaList:
+    errors.append("Not correct agent status in second mongo container.")
+
+if "Waiting" in thirdMongoReplicaList or "Done" in thirdMongoReplicaList or "Unknown" in thirdMongoReplicaList or "Initialization Error" in thirdMongoReplicaList or "Stopping" in thirdMongoReplicaList:
+    errors.append("Not correct agent status in third mongo container.")
+
+if "Waiting" in localClientList or "Done" in localClientList or "Unknown" in localClientList or "Initialization Error" in localClientList or "Stopping" in localClientList:
+    errors.append("Not correct agent status in third mongo container.")
+
+if len(errors) > 0:
+  raise Exception("Some errors in pmm-admin list: " + errors)
