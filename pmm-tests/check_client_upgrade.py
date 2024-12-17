@@ -93,3 +93,7 @@ if "Waiting" in localClientList or "Done" in localClientList or "Unknown" in loc
 
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin list: " + errors)
+
+serverVersion = subprocess.run(["pmm-admin", "status", "|", "grep", "Version" "|", "awk", "-F' '", "'{print $2}'"], capture_output=True, text=True).stdout
+
+print(serverVersion)
