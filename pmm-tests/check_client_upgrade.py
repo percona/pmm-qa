@@ -14,25 +14,17 @@ secondMongoReplica = ""
 thirdMongoReplica = ""
 errors = []
 
-print(containers)
-
 for i in range(len(containers)):
-  print(containers[i])
   if "ps_pmm_" in containers[i]:
       psContainerName = containers[i][containers[i].index("ps_pmm"):]
-      print(psContainerName)
   elif "pgsql_pgss_pmm" in containers[i]:
       pgsqlContainerName = containers[i][containers[i].index("pgsql_pgss_pmm"):]
-      print(pgsqlContainerName)
   elif "rs101" in containers[i]:
     firstMongoReplica = containers[i][containers[i].index("rs101"):]
-    print(firstMongoReplica)
   elif "rs102" in containers[i]:
     secondMongoReplica = containers[i][containers[i].index("rs102"):]
-    print(secondMongoReplica)
   elif "rs103" in containers[i]:
     thirdMongoReplica = containers[i][containers[i].index("rs103"):]
-    print(thirdMongoReplica)
 
 psContainerStatus = subprocess.run(["docker", "exec", psContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 pgContainerStatus = subprocess.run(["docker", "exec", pgsqlContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
@@ -40,9 +32,6 @@ firstMongoReplicaStatus = subprocess.run(["docker", "exec", firstMongoReplica, "
 secondMongoReplicaStatus = subprocess.run(["docker", "exec", secondMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 thirdMongoReplicaStatus = subprocess.run(["docker", "exec", thirdMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 localClientStatus = subprocess.run(["pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-
-print(pgContainerStatus)
-
 
 if "Waiting" in psContainerStatus or "Done" in psContainerStatus or "Unknown" in psContainerStatus or "Initialization Error" in psContainerStatus or "Stopping" in psContainerStatus:
     errors.append("Not correct agent status in ps container.")
@@ -72,7 +61,6 @@ secondMongoReplicaList = subprocess.run(["docker", "exec", secondMongoReplica, "
 thirdMongoReplicaList = subprocess.run(["docker", "exec", thirdMongoReplica, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
 localClientList = subprocess.run(["pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
 
-
 if "Waiting" in psContainerList or "Done" in psContainerList or "Unknown" in psContainerList or "Initialization Error" in psContainerList or "Stopping" in psContainerList:
     errors.append("Not correct agent status in ps container.")
 
@@ -97,3 +85,30 @@ if len(errors) > 0:
 serverVersion = subprocess.run(["pmm-admin status | grep \"Version\" | awk  -F' ' '{print $2}'"], capture_output=True, text=True, shell=True).stdout
 
 print(serverVersion)
+
+if not arguments[2]:
+  admin_version = subprocess.run(["pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout
+  print(admin_version)
+  if admin_version != arguments[1]:
+    errors.append(f"Version of pmm admin is not correct expected: {arguments[1]} actual: {admin_version}")
+
+  agent_version = subprocess.run(["pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout
+  print(agent_version)
+  if agent_version != arguments[1]:
+    errors.append(f"Version of pmm agent is not correct expected: {arguments[1]} actual: {admin_version}")
+
+  if admin_version != agent_version:
+    errors.append(f"PMM admin version: {admin_version} does not equal PMM agent version {agent_version}")
+else:
+  admin_version = subprocess.run(["pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout
+  print(admin_version)
+  if admin_version != arguments[2]:
+    errors.append(f"Version of pmm admin is not correct expected: {arguments[2]} actual: {admin_version}")
+
+  agent_version = subprocess.run(["pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout
+  print(agent_version)
+  if agent_version != arguments[2]:
+    errors.append(f"Version of pmm agent is not correct expected: {arguments[2]} actual: {admin_version}")
+
+  if admin_version != agent_version:
+    errors.append(f"PMM admin version: {admin_version} does not equal PMM agent version {agent_version}")
