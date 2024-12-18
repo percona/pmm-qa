@@ -101,12 +101,12 @@ if not arguments[2]:
     errors.append(f"PMM admin version: {admin_version} does not equal PMM agent version {agent_version}")
 else:
   admin_version = subprocess.run(["pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout
-  print(admin_version)
+  print(f"admin version is: {admin_version} and expected version is: {arguments[2]}")
   if admin_version != arguments[2]:
     errors.append(f"Version of pmm admin is not correct expected: {arguments[2]} actual: {admin_version}")
 
   agent_version = subprocess.run(["pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout
-  print(agent_version)
+  print(f"agent version is: {agent_version} and expected version is: {arguments[2]}")
   if agent_version != arguments[2]:
     errors.append(f"Version of pmm agent is not correct expected: {arguments[2]} actual: {admin_version}")
 
