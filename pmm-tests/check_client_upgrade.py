@@ -53,7 +53,7 @@ if "Waiting" in localClientStatus or "Done" in localClientStatus or "Unknown" in
     errors.append("Not correct agent status in third mongo container.")
 
 if len(errors) > 0:
-  raise Exception("Some errors in pmm-admin status: " + errors)
+  raise Exception("Some errors in pmm-admin status: ".join(errors))
 
 psContainerList = subprocess.run(["docker", "exec", psContainerName, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
 pgContainerList = subprocess.run(["docker", "exec", pgsqlContainerName, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
@@ -81,7 +81,7 @@ if "Waiting" in localClientList or "Done" in localClientList or "Unknown" in loc
     errors.append("Not correct agent status in third mongo container.")
 
 if len(errors) > 0:
-  raise Exception("Some errors in pmm-admin list: " + errors)
+  raise Exception("Some errors in pmm-admin list: ".join(errors))
 
 serverVersion = subprocess.run(["pmm-admin status | grep \"Version\" | awk  -F' ' '{print $2}'"], capture_output=True, text=True, shell=True).stdout
 
@@ -115,4 +115,4 @@ else:
     errors.append(f"PMM admin version: {admin_version} does not equal PMM agent version {agent_version}")
 
 if len(errors) > 0:
-  raise Exception("Errors in pmm-admin and pmm-agent versions: " + errors)
+  raise Exception("Errors in pmm-admin and pmm-agent versions: ".join(errors))
