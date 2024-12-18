@@ -1,5 +1,6 @@
 import subprocess
 import sys
+from typing import List
 
 arguments = sys.argv
 print(arguments[1])
@@ -112,3 +113,6 @@ else:
 
   if admin_version != agent_version:
     errors.append(f"PMM admin version: {admin_version} does not equal PMM agent version {agent_version}")
+
+if len(errors) > 0:
+  raise Exception("Errors in pmm-admin and pmm-agent versions: " + errors)
