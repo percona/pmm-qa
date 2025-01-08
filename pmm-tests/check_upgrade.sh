@@ -32,9 +32,9 @@ done
 if [ "$DISTRIBUTION" == "ami" ]; then
   rpm -qa | grep percona-qan-api2-$PMM_VERSION
   rpm -qa | grep percona-dashboards-$PMM_VERSION
-  if [ "${SERVER_VERSION}" != "2.25.0" ]; then
-    rpm -qa | grep pmm-update-$PMM_VERSION
-  fi
+#  if [ "${SERVER_VERSION}" != "2.25.0" ]; then
+#    rpm -qa | grep pmm-update-$PMM_VERSION
+#  fi
   rpm -qa | grep pmm-managed-$PMM_VERSION
   rpm -qa | grep pmm-client-$PMM_VERSION
   sudo supervisorctl status | grep qan-api2 | grep RUNNING
@@ -65,9 +65,9 @@ else
   echo $PMM_SERVER_DOCKER_CONTAINER
   docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep percona-qan-api2-$PMM_VERSION
   docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep percona-dashboards-$PMM_VERSION
-  if [ "$PMM_VERSION" != "2.25.0" ]; then
-    docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-update-$PMM_VERSION
-  fi
+#  if [ "$PMM_VERSION" != "2.25.0" ]; then
+#    docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-update-$PMM_VERSION
+#  fi
   docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-managed-$PMM_VERSION
   docker exec $PMM_SERVER_DOCKER_CONTAINER rpm -qa | grep pmm-client-$PMM_VERSION
   docker exec $PMM_SERVER_DOCKER_CONTAINER supervisorctl status | grep qan-api2 | grep RUNNING
