@@ -9,6 +9,7 @@ NOT_RUNNING_MSG = 'Status is Not "running"!'
 WRONG_VERSION_MSG = 'Unexpected version!'
 POST_UPGRADE = 'Post-upgrade test'
 RUNNING = 'RUNNING'
+UPDATE_NOT_REMOVED = 'pmm-update pacakage was not removed!'
 
 
 def parse_args():
@@ -65,8 +66,11 @@ class PmmServerComponents(unittest.TestCase):
         self.assertIn('23.8.2.7', out, WRONG_VERSION_MSG)
 
     def test_pmm_update_version(self):
-        if expected_pmm_version == "2.25.0": self.skipTest('not fo 2.25.0!')
-        self.assertIn(expected_pmm_version, grep_rpm('pmm-update-'), WRONG_VERSION_MSG)
+        if test_mode != "post": self.skipTest(POST_UPGRADE)
+        out = verify_command('rpm -qa')
+        print("Available packages are:")
+        print(out)
+        self.assertNotIn("pmm-update", out, UPDATE_NOT_REMOVED)
 
     def test_pmm_managed_version(self):
         self.assertIn(expected_pmm_version, grep_rpm('pmm-managed-'), WRONG_VERSION_MSG)
