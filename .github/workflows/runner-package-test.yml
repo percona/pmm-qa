@@ -243,7 +243,9 @@ jobs:
       - name: "Setup tools"
         run: |
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible virtualbox vagrant
+          sudo apt-get install -y apt-transport-https ca-certificates ansible virtualbox
+          wget https://releases.hashicorp.com/vagrant/2.4.3/vagrant_2.4.3-1_amd64.deb
+          sudo dpkg -i vagrant_2.4.3-1_amd64.deb
 
       - name: "Wait for PMM Server to be healthy"
         run: |
