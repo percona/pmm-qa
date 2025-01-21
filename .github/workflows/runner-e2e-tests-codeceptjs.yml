@@ -187,8 +187,11 @@ jobs:
       - name: Download logs
         if: ${{ always() }}
         working-directory: pmm-ui-tests
+        env:
+          SERVER_IP: "192.168.0.1"
+          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
-          curl --insecure http://192.168.0.1/logs.zip --output logs.zip
+          curl --insecure ${{ env.PMM_URL }}/logs.zip --output logs.zip
           unzip logs.zip -d ${{ steps.artifact_name.outputs.result }}_logs
 
       - uses: actions/upload-artifact@v4
