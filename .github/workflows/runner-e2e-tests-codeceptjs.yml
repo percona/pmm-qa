@@ -188,7 +188,8 @@ jobs:
         if: ${{ always() }}
         working-directory: pmm-ui-tests
         run: |
-          curl --insecure http://192.168.0.1/logs.zip --output ${{ steps.artifact_name.outputs.result }}_logs.zip
+          curl --insecure http://192.168.0.1/logs.zip --output logs.zip
+          unzip logs.zip -d ${{ steps.artifact_name.outputs.result }}_logs
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
@@ -197,7 +198,7 @@ jobs:
           name: ${{ steps.artifact_name.outputs.result }}
           path: |
             pmm-ui-tests/tests/output/*.png
-            pmm-ui-tests/${{ steps.artifact_name.outputs.result }}_logs.zip
+            pmm-ui-tests/${{ steps.artifact_name.outputs.result }}_logs
 
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && always() }}
