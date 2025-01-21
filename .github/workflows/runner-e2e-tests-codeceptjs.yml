@@ -187,12 +187,9 @@ jobs:
       - name: Download logs
         if: ${{ always() }}
         working-directory: pmm-ui-tests
-        env:
-          SERVER_IP: "192.168.0.1"
-          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
-          curl --insecure ${{ env.PMM_URL }}/logs.zip --output logs.zip
-          unzip logs.zip -d ${{ steps.artifact_name.outputs.result }}_logs
+          curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
+          unzip logs.zip -d logs
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() }}
@@ -201,7 +198,7 @@ jobs:
           name: ${{ steps.artifact_name.outputs.result }}
           path: |
             pmm-ui-tests/tests/output/*.png
-            pmm-ui-tests/${{ steps.artifact_name.outputs.result }}_logs
+            pmm-ui-tests/logs
 
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && always() }}
