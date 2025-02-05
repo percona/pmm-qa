@@ -34,8 +34,8 @@
     shell: >
       docker run -d --name={{ pxc_container }}
       -p 6032:6032
-      amd64/alpine:3.18
-  
+      jrei/systemd-ubuntu:22.04
+
   - name: Copy all required Artifacts to the docker pxc_container
     shell: "{{ item }}"
     with_items:
