@@ -33,6 +33,7 @@
   - name: Prepare Container for PXC and Proxysql
     shell: >
       docker run -d --name={{ pxc_container }}
+      -p 6032:6032
       phusion/baseimage:jammy-1.0.1
   
   - name: Copy all required Artifacts to the docker pxc_container
