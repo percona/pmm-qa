@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - v3
+  schedule:
+    - cron: '0 0 * * *'
   workflow_dispatch:
       inputs:
         server_image:
@@ -26,6 +28,21 @@ on:
             required: false
             type: string
 
+  workflow_call:
+    inputs:
+      server_image:
+        required: true
+        type: string
+      client_image:
+        required: true
+        type: string
+      pmm_qa_branch:
+        required: false
+        type: string
+      sha:
+        required: false
+        type: string
+
 jobs:
     helm-tests:
       runs-on: ubuntu-latest
@@ -43,9 +60,16 @@ jobs:
             repository: percona/pmm-qa
             path: ./pmm-qa
 
-        - name: install tools
+        - name: Set up bats globally
           run: |
-            sudo npm install -g bats
+            git clone https://github.com/bats-core/bats-core.git /opt/bats
+            sudo /opt/bats/install.sh /usr/local
+
+        - name: Set up bats libraries
+          working-directory: ${{ env.WORK_DIR }}
+          run: |
+            ./setup_bats_libs.sh
+            echo "BATS_LIB_PATH=$(pwd)/lib" >> $GITHUB_ENV
 
         - name: Start minikube
           run: |
