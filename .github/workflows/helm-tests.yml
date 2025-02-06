@@ -93,7 +93,7 @@ jobs:
             bats --tap helm-test.bats
 
         - name: Create status check
-          if: ${{ always() }}
+          if: ${{ always() && inputs.sha }}
           continue-on-error: true
           env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -105,7 +105,7 @@ jobs:
             if [ "${STATUS}" = "cancelled" ]; then
               STATUS="error"
             fi
-  
+            
             gh api \
               --method POST \
               -H "Accept: application/vnd.github.v3+json" \
