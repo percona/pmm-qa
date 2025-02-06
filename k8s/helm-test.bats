@@ -38,13 +38,13 @@ setup() {
 teardown() {
     echo "Running teardown"
     echo "-------debug info-------"
-    # kubectl get pods
-    # kubectl describe pod --selector=app.kubernetes.io/name=pmm
-    # kubectl get events --sort-by=lastTimestamp
-    # kubectl logs --all-containers --timestamps --selector=app.kubernetes.io/name=pmm
+    kubectl get pods
+    kubectl describe pod --selector=app.kubernetes.io/name=pmm
+    kubectl get events --sort-by=lastTimestamp
+    kubectl logs --all-containers --timestamps --selector=app.kubernetes.io/name=pmm
     echo "------------------------"
 
-    # cleanup
+    cleanup
 }
 
 # Helper function to trim whitespace
