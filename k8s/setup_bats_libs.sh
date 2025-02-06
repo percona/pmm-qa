@@ -20,4 +20,4 @@ else
     echo "bats-assert is already present."
 fi
 
-echo "BATS libraries setup completed."
+echo "BATS libraries setup completed"
