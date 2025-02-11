@@ -46,10 +46,9 @@ on:
       pmm_server_image:
         required: false
         type: string
-      pmm_client_image:
+      os:
         required: false
         type: string
-
 jobs:
   pmm_easy_install:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
