@@ -51,7 +51,7 @@ on:
         type: string
 jobs:
   pmm_easy_install:
-    name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
+    name: "PMM Easy install script on ${{ inputs.os }} using runner ${{ inputs.runs_on }}"
     runs-on: ${{ inputs.runs_on }}
     timeout-minutes: 60
     env:
