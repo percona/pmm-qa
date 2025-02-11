@@ -129,4 +129,8 @@ jobs:
               SHELL
           end
 
-          EOF          
+          EOF  
+
+      - name: "Run Vagrant File on ${{ inputs.os }}"
+        working-directory: ./
+        run: vagrant up
