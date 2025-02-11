@@ -1,7 +1,6 @@
 name: PMM Easy Install pipeline
 
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
@@ -43,7 +42,7 @@ on:
 jobs:
   easy_install_ubuntu_amd64:
     name: Run Easy install on Ubuntu Noble AMD64
-    uses: ./.github/workflows/pmm-easy-install.yml
+    uses: ./.github/workflows/runner-easy-install.yml
     secrets: inherit
     with:
       runs_on: ${{ 'ubuntu-24.04' }}
@@ -54,7 +53,7 @@ jobs:
 
   easy_install_ol9_amd64:
     name: Run Easy install on Ubuntu Noble AMD64
-    uses: ./.github/workflows/pmm-easy-install.yml
+    uses: ./.github/workflows/runner-easy-install.yml
     secrets: inherit
     with:
       runs_on: ${{ 'ubuntu-24.04' }}
@@ -64,7 +63,7 @@ jobs:
       os: ${{ 'ol-9' }}
   easy_install_ubuntu_arm64:
     name: Run Easy install on Ubuntu Noble AMD64
-    uses: ./.github/workflows/pmm-easy-install.yml
+    uses: ./.github/workflows/runner-easy-install.yml
     secrets: inherit
     with:
       runs_on: ${{ 'ubuntu-24.04-arm' }}
@@ -75,7 +74,7 @@ jobs:
 
   easy_install_ol9_arm64:
     name: Run Easy install on Ubuntu Noble AMD64
-    uses: ./.github/workflows/pmm-easy-install.yml
+    uses: ./.github/workflows/runner-easy-install.yml
     secrets: inherit
     with:
       runs_on: ${{ 'ubuntu-24.04-arm' }}
