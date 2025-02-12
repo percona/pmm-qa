@@ -150,7 +150,7 @@ update_values_yaml() {
     delete_pvc
 }
 
-@test "install/uninstall chart with values from file and update pmm from last released version" {
+@test "install last released V3 version, upgrade to V3 and uninstall" {
     stop_port_forward
     helm show values percona/pmm > values.yaml
 
@@ -186,7 +186,7 @@ update_values_yaml() {
     delete_pvc
 }
 
-@test "install last released V2 version, upgrade to ${RELEASE_REPO}/${RELEASE_TAG} and uninstall" {
+@test "install last released V2 version, upgrade to V3 and uninstall" {
     stop_port_forward
     helm show values --version 1.3.0 percona/pmm > values.yaml
 
