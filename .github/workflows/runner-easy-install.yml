@@ -2,14 +2,6 @@ name: Runner Easy Install
 on:
   workflow_dispatch:
     inputs:
-      runs_on:
-        description: 'Select Architecture tu run test on'
-        default: 'ubuntu-24.04'
-        required: true
-        type: choice
-        options:
-          - ubuntu-24.04
-          - ubuntu-24.04-arm
       pmm_ui_tests_branch:
         description: "Branch for PMM-UI tests to checkout"
         required: false
@@ -34,9 +26,6 @@ on:
 
   workflow_call:
     inputs:
-      runs_on:
-        required: true
-        type: string
       pmm_ui_tests_branch:
         required: false
         type: string
@@ -51,8 +40,8 @@ on:
         type: string
 jobs:
   pmm_easy_install:
-    name: "PMM Easy install script on ${{ inputs.os }} using runner ${{ inputs.runs_on }}"
-    runs-on: ${{ inputs.runs_on }}
+    name: "PMM Easy install script on ${{ inputs.os }}"
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       SHA: ${{ 'null' }}
