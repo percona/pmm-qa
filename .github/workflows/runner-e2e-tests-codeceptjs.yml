@@ -141,7 +141,7 @@ jobs:
           sleep 60
           docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
           bash -x testdata/db_setup.sh
-          docker network connect pmm-qa pmm-server
+          docker network connect pmm-qa pmm-server || true
 
       - name: Export path to qa-integration repo
         working-directory: qa-integration
