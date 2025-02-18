@@ -150,7 +150,7 @@ jobs:
       - name: Setup PMM-Client
         working-directory: qa-integration/pmm_qa
         run: |
-          sudo iptables -A FORWARD -i docker0 -o eth0 -j ACCEPT
+          sudo sysctl -w net.ipv4.ip_forward=1 || true
           sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Run Setup for E2E Tests
