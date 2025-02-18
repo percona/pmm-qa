@@ -142,8 +142,10 @@ jobs:
           docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
           bash -x testdata/db_setup.sh
           docker network connect pmm-qa pmm-server || true
-          echo "net.ipv4.ip_forward = 1" | sudo tee -a /etc/sysctl.conf
-          sudo sysctl -p
+          # Allow traffic from Docker to external networks (replace eth0 with your interface)
+          sudo iptables -A FORWARD -i docker0 -o eth0 -j ACCEPT
+          # Block all other forwarded traffic by default
+          sudo iptables -P FORWARD DROP
 
       - name: Export path to qa-integration repo
         working-directory: qa-integration
