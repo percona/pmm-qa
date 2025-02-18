@@ -154,7 +154,6 @@ jobs:
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
-          docker network inspect pmm-qa || true
           mkdir -m 777 -p /tmp/backup_data
           python3 -m venv virtenv
           . virtenv/bin/activate
