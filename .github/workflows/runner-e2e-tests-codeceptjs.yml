@@ -138,8 +138,6 @@ jobs:
         run: |
           # Allow traffic from Docker to external networks (replace eth0 with your interface)
           sudo iptables -A FORWARD -i docker0 -o eth0 -j ACCEPT
-          # Block all other forwarded traffic by default
-          sudo iptables -P FORWARD DROP
           docker network create pmm-qa || true
           PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose up -d
           sleep 60
