@@ -82,6 +82,10 @@ jobs:
           if [[ "${{ inputs.os }}" =~ "ol-9" ]]; then
             echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
           fi
+          
+          if [[ "${{ inputs.os }}" =~ "rocky-9" ]]; then
+            echo "VM_BOX= generic/rocky9" >> $GITHUB_ENV
+          fi
           echo "${{ env.VM_BOX }}"
           
       - name: "Setup tools"

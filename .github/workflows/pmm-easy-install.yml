@@ -59,3 +59,13 @@ jobs:
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       os: ${{ 'ol-9' }}
+
+  easy_install_rocky_9:
+    name: Run Easy install on Ubuntu Noble
+    uses: ./.github/workflows/runner-easy-install.yml
+    secrets: inherit
+    with:
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      os: ${{ 'rocky-9' }}
