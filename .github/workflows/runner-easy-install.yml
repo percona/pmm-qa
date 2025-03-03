@@ -2,11 +2,7 @@ name: Runner Easy Install
 on:
   workflow_dispatch:
     inputs:
-      pmm_ui_tests_branch:
-        description: "Branch for PMM-UI tests to checkout"
-        required: false
-        type: string
-      qa_integration_branch:
+      easy_install_branch:
         description: "Branch for qa-integration to checkout"
         required: false
         type: string
@@ -26,9 +22,6 @@ on:
 
   workflow_call:
     inputs:
-      pmm_ui_tests_branch:
-        required: false
-        type: string
       qa_integration_branch:
         required: false
         type: string
@@ -46,10 +39,7 @@ jobs:
     env:
       SHA: ${{ 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      QA_INTEGRATION_BRANCH: ${{ inputs.qa-integration_branch || 'v3' }}
-      PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      EASY_INSTALL_BRANCH: ${{ inputs.easy_install_branch || 'v3' }}
 
     steps:
       - name: Checkout PMM UI tests
