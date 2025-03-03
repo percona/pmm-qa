@@ -101,8 +101,12 @@ jobs:
 
               cd /pmm/easy-install/
               curl -fsSL https://raw.githubusercontent.com/percona/pmm/refs/heads/v3/get-pmm.sh | /bin/bash
-              sleep 30
+              sleep 60
+              echo "Echo containers:"
+              docker ps -a
+              echo "Echo pmm server status: "
               docker ps -a | grep "pmm-server" | grep "healthy"
+              echo "Echo watchtower status: "
               docker ps -a | grep "watchtower" | grep "healthy"
               SHELL
           end
