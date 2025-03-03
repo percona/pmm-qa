@@ -3,39 +3,15 @@ name: PMM Easy Install pipeline
 on:
   workflow_dispatch:
     inputs:
-      pmm_ui_tests_branch:
-        description: 'pmm-ui-tests repository branch(CLI tests)'
+      easy_install_branch:
+        description: 'Repository branch for easy install script'
         default: 'v3'
-        required: false
-        type: string
-      qa_integration_branch:
-        description: 'qa-integration repository branch(for setup)'
-        default: 'v3'
-        required: false
-        type: string
-      pmm_server_image:
-        description: 'PMM Server docker image'
-        default: 'perconalab/pmm-server:3-dev-latest'
-        required: true
-        type: string
-      pmm_client_image:
-        description: 'pmm-client docker image'
-        default: 'perconalab/pmm-client:3-dev-latest'
         required: false
         type: string
 
   workflow_call:
     inputs:
-      pmm_ui_tests_branch:
-        required: false
-        type: string
       qa_integration_branch:
-        required: false
-        type: string
-      pmm_server_image:
-        required: true
-        type: string
-      pmm_client_image:
         required: false
         type: string
 
@@ -45,9 +21,7 @@ jobs:
     uses: ./.github/workflows/runner-easy-install.yml
     secrets: inherit
     with:
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      easy_install_branch: ${{ inputs.easy_install_branch || 'v3' }}
       os: ${{ 'ubuntu-noble' }}
 
   easy_install_ol9:
@@ -55,9 +29,7 @@ jobs:
     uses: ./.github/workflows/runner-easy-install.yml
     secrets: inherit
     with:
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      easy_install_branch: ${{ inputs.easy_install_branch || 'v3' }}
       os: ${{ 'ol-9' }}
 
   easy_install_rocky_9:
@@ -65,7 +37,5 @@ jobs:
     uses: ./.github/workflows/runner-easy-install.yml
     secrets: inherit
     with:
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      easy_install_branch: ${{ inputs.easy_install_branch || 'v3' }}
       os: ${{ 'rocky-9' }}
