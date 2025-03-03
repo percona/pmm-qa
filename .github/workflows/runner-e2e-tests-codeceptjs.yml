@@ -85,7 +85,7 @@ jobs:
       CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
-
+      ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
 
     steps:
       - name: Create status check
@@ -136,10 +136,12 @@ jobs:
       - name: Setup PMM Server
         working-directory: pmm-ui-tests
         run: |
+          docker network create pmm-qa || true
           PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose up -d
           sleep 60
           docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
           bash -x testdata/db_setup.sh
+          docker network connect pmm-qa pmm-server || true
 
       - name: Export path to qa-integration repo
         working-directory: qa-integration
