@@ -36,20 +36,6 @@ jobs:
       EASY_INSTALL_BRANCH: ${{ inputs.easy_install_branch || 'v3' }}
 
     steps:
-      - name: Checkout PMM UI tests
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.PMM_UI_BRANCH }}
-          repository: percona/pmm-ui-tests
-          path: ./pmm-ui-tests
-
-      - name: Checkout qa-integration repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.PMM_QA_BRANCH }}
-          repository: Percona-Lab/qa-integration
-          path: ./qa-integration
-
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -115,9 +101,9 @@ jobs:
 
               cd /pmm/easy-install/
               curl -fsSL https://raw.githubusercontent.com/percona/pmm/refs/heads/v3/get-pmm.sh | /bin/bash
-              sleep 10
+              sleep 20
               docker ps -a
-              docker ps -a | grep "pmm-server"
+              docker ps -a | grep "pmm-server" | grep "healthy"
               docker ps -a | grep "watchtower"
               SHELL
           end
