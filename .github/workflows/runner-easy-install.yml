@@ -131,6 +131,7 @@ jobs:
 
               cd /pmm/easy-install/
               curl -fsSL https://raw.githubusercontent.com/percona/pmm/refs/heads/v3/get-pmm.sh | /bin/bash
+              docker ps -a
               SHELL
           end
 
