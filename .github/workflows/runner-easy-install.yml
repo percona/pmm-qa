@@ -100,7 +100,7 @@ jobs:
               fi
 
               cd /pmm/easy-install/
-              curl -fsSL https://raw.githubusercontent.com/percona/pmm/refs/heads/v3/get-pmm.sh | /bin/bash
+              curl -fsSL https://raw.githubusercontent.com/percona/pmm/refs/heads/${{ env.EASY_INSTALL_BRANCH }}/get-pmm.sh | /bin/bash
               sleep 60
               echo "Echo containers:"
               docker ps -a
