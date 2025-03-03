@@ -101,13 +101,14 @@ jobs:
 
               cd /pmm/easy-install/
               curl -fsSL https://raw.githubusercontent.com/percona/pmm/refs/heads/${{ env.EASY_INSTALL_BRANCH }}/get-pmm.sh | /bin/bash
-              sleep 60
+              timeout 100 bash -c 'while [[ ! "$(curl -i -s --insecure -w "%{http_code}" https://127.0.0.1/ping)" =~ "200" ]]; do sleep 5; echo "$(curl -i -s --insecure -w "%{http_code}" https://127.0.0.1/ping)"; done' || false
               echo "Echo containers:"
               docker ps -a
               echo "Echo pmm server status: "
               docker ps -a | grep "pmm-server" | grep "healthy"
               echo "Echo watchtower status: "
               docker ps -a | grep "watchtower" | grep "healthy"
+              
               SHELL
           end
 
