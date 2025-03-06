@@ -1,0 +1,41 @@
+name: PMM Easy Install pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      easy_install_branch:
+        description: 'Repository branch for easy install script'
+        default: 'v3'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      qa_integration_branch:
+        required: false
+        type: string
+
+jobs:
+  easy_install_ubuntu:
+    name: Run Easy install on Ubuntu Noble
+    uses: ./.github/workflows/runner-easy-install.yml
+    secrets: inherit
+    with:
+      easy_install_branch: ${{ inputs.easy_install_branch || 'v3' }}
+      os: ${{ 'ubuntu-noble' }}
+
+  easy_install_ol9:
+    name: Run Easy install on Ubuntu Noble
+    uses: ./.github/workflows/runner-easy-install.yml
+    secrets: inherit
+    with:
+      easy_install_branch: ${{ inputs.easy_install_branch || 'v3' }}
+      os: ${{ 'ol-9' }}
+
+  easy_install_rocky_9:
+    name: Run Easy install on Ubuntu Noble
+    uses: ./.github/workflows/runner-easy-install.yml
+    secrets: inherit
+    with:
+      easy_install_branch: ${{ inputs.easy_install_branch || 'v3' }}
+      os: ${{ 'rocky-9' }}

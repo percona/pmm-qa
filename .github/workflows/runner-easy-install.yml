@@ -1,0 +1,119 @@
+name: Runner Easy Install
+on:
+  workflow_dispatch:
+    inputs:
+      easy_install_branch:
+        description: "Branch for qa-integration to checkout"
+        required: false
+        type: string
+      os:
+        description: "Select OS to run test in:"
+        required: true
+        default: "jammy"
+        type: choice
+        options:
+          - ubuntu-noble
+          - ol-9
+          - rocky-9
+
+  workflow_call:
+    inputs:
+      easy_install_branch:
+        required: false
+        type: string
+      os:
+        required: false
+        type: string
+
+jobs:
+  pmm_easy_install:
+    name: "PMM Easy install script on ${{ inputs.os }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SHA: ${{ 'null' }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      EASY_INSTALL_BRANCH: ${{ inputs.easy_install_branch || 'v3' }}
+
+    steps:
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: 'Convert choices'
+        run: |
+          ### vagrant vm ###
+          if [[ "${{ inputs.os }}" =~ "ubuntu-noble" ]]; then
+            echo "VM_BOX=bento/ubuntu-24.04" >> $GITHUB_ENV
+          fi
+          if [[ "${{ inputs.os }}" =~ "ol-9" ]]; then
+            echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
+          fi
+          
+          if [[ "${{ inputs.os }}" =~ "rocky-9" ]]; then
+            echo "VM_BOX=generic/rocky9" >> $GITHUB_ENV
+          fi
+          echo "${{ env.VM_BOX }}"
+          
+      - name: "Setup tools"
+        run: |
+          wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          sudo apt update && sudo apt install -y vagrant virtualbox
+
+      - name: "Create vagrantfile"
+        working-directory: ./
+        run: |
+          pwd
+          # mkdir -p ~/test-vm/
+          # cat > ~/test-vm/Vagrantfile <<EOF
+          cat > Vagrantfile <<EOF
+          Vagrant.require_version ">= 1.7.0"
+          Vagrant.configure(2) do |config|
+            config.vm.box = "${{ env.VM_BOX }}"
+            ${{ contains(env.VM_BOX, 'debian10') && 'config.vbguest.auto_update = true' }}
+            config.ssh.insert_key = false
+            config.vm.define :CLIENT_TEST do |t|
+            end
+
+            config.vm.synced_folder "${{ github.workspace }}/", "/pmm/easy-install/"
+            config.vm.provision "shell", privileged: true, inline: <<-SHELL
+              ## Set environment variables...
+              export PMM_SERVER_IP=10.0.2.2:443
+              export METRICS_MODE=${{ env.METRICS_MODE }}
+              export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
+              echo $PMM_VERSION
+            
+              if [[ "${{ env.VM_BOX }}" =~ "generic/rocky9" ]]; then
+                sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+                sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+                sudo systemctl --now enable docker
+              fi
+          
+              if [[ "${{ env.VM_BOX }}" =~ "generic/oracle9" ]]; then
+                sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+                sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin
+                sudo systemctl --now enable docker
+              fi
+
+              cd /pmm/easy-install/
+              curl -fsSL https://raw.githubusercontent.com/percona/pmm/refs/heads/${{ env.EASY_INSTALL_BRANCH }}/get-pmm.sh | /bin/bash
+              timeout 100 bash -c 'while [[ ! "$(curl -i -s --insecure -w "%{http_code}" https://127.0.0.1/ping)" =~ "200" ]]; do sleep 5; echo "$(curl -i -s --insecure -w "%{http_code}" https://127.0.0.1/ping)"; done' || false
+              echo "Echo containers:"
+              docker ps -a
+              echo "Echo pmm server status: "
+              docker ps -a | grep "pmm-server" | grep "healthy"
+              echo "Echo watchtower status: "
+              docker ps -a | grep "watchtower" | grep "healthy"
+              
+              SHELL
+          end
+
+          EOF
+
+      - name: "Run Vagrant File on ${{ inputs.os }}"
+        working-directory: ./
+        run: vagrant up
