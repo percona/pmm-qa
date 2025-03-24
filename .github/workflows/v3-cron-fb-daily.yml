@@ -122,10 +122,11 @@ jobs:
       
   trigger_v3-package-tests:
       name: V3 Package Tests
-      uses: percona/pmm-qa/.github/workflows/package-test-matrix-full.yml@v3
+      uses: percona/pmm-qa/.github/workflows/package-test-matrix-full.yml@PMM-13803-v3
       secrets: inherit
       with:
          sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
          package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
+         package: 'pmm3-client'
          repository: ${{ inputs.repository || 'dev-latest' }}
          metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
