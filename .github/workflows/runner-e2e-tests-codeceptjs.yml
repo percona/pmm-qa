@@ -159,6 +159,7 @@ jobs:
           . virtenv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
+          pip install setuptools
           python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
