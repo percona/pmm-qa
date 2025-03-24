@@ -39,16 +39,16 @@ on:
   workflow_call:
     inputs:
       package_testing_branch:
-        required: false
+        required: true
         type: string
       package:
-        required: false
+        required: true
         type: string
       repository:
-        required: false
+        required: true
         type: string
       metrics_mode:
-        required: false
+        required: true
         type: string
 
 jobs:
