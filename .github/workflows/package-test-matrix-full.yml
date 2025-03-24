@@ -36,6 +36,20 @@ on:
           - auto
           - push
           - pull
+  workflow_call:
+    inputs:
+      package_testing_branch:
+        required: true
+        type: string
+      package:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      metrics_mode:
+        required: true
+        type: string
 
 jobs:
   c_test:
