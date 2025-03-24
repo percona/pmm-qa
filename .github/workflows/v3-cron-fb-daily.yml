@@ -10,6 +10,11 @@ on:
         default: 'v3'
         required: false
         type: string
+      package_testing_branch:
+        description: 'package tests repository branch'
+        default: 'v3'
+        required: false
+        type: string
       pmm_qa_branch:
         description: 'qa-integration repository branch(for setup)'
         default: 'v3'
@@ -30,6 +35,24 @@ on:
         default: '3-dev-latest'
         required: false
         type: string
+      repository:
+        description: 'Select Repo for Client:'
+        required: true
+        default: 'dev-latest'
+        type: choice
+        options:
+          - release
+          - release candidate
+          - dev-latest
+      metrics_mode:
+        description: 'Select the Metrics Mode for PMM Client:'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - push
+          - pull
       sha:
         description: "SHA (leave default if running manually)"
         default: 'null'
@@ -39,6 +62,9 @@ on:
   workflow_call:
     inputs:
       pmm_ui_tests_branch:
+        required: false
+        type: string
+      package_testing_branch:
         required: false
         type: string
       pmm_qa_branch:
@@ -51,6 +77,12 @@ on:
         required: false
         type: string
       pmm_client_version:
+        required: false
+        type: string
+      repository:
+        required: false
+        type: string
+      metrics_mode:
         required: false
         type: string
       sha:
@@ -88,3 +120,12 @@ jobs:
       qa_integration_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       
+  trigger_v3-package-tests:
+      name: V3 Package Tests
+      uses: percona/pmm-qa/.github/workflows/package-test-matrix-full.yml@v3
+      secrets: inherit
+      with:
+         sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+         package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
+         repository: ${{ inputs.repository || 'dev-latest' }}
+         metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
