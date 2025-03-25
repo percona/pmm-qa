@@ -430,7 +430,7 @@ jobs:
 
       - name: Generate and Attach the report
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.REPORT_NAME }}
           path: ./pmm-ui-tests/playwright-tests/playwright-report
