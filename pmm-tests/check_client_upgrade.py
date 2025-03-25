@@ -7,9 +7,9 @@ print(arguments)
 containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True).stdout.splitlines()
 
 def verify_agent_status(list, service_name):
-    if "Waiting" in list or "Done" in list or "Unknown" in list or "Initialization Error" in list or "Stopping" in list:
+    if any('Waiting' in name or 'Done' in name or 'Unknown' in name or 'Initialization Error' in name or 'Stopping' in name for name in list):
         errors.append(f"Agent status contains wrong status in {service_name} container. Error in: {list}")
-    if "Running" not in list:
+    if all('Running' not in name for name in list_running):
         errors.append(f"Agent status does not contain running status in {service_name} container. Error in: {list}")
 
 def get_pmm_admin_status(service_type):
