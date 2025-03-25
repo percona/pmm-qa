@@ -70,7 +70,7 @@ for i in range(len(containers)):
     pdpgsqlSSLList = get_pmm_admin_list("pdpgsql_pgsm_ssl")
   elif "psmdb-server" in containers[i]:
     psmdbSSLStatus = get_pmm_admin_status("psmdb-server")
-    psSSLList = get_pmm_admin_list("psmdb-server")
+    psmdbSSLList = get_pmm_admin_list("psmdb-server")
 
 if len(psContainerStatus) > 0:
     verify_agent_status(psContainerStatus, "Percona Server")
