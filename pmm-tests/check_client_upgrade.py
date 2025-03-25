@@ -109,3 +109,6 @@ if admin_version != agent_version:
 
 if len(errors) > 0:
   raise Exception("Errors in pmm-admin and pmm-agent versions: ".join(errors))
+
+def test():
+    print("Inside of a method")
