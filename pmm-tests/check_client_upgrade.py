@@ -6,11 +6,20 @@ print(arguments)
 
 containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=True).stdout.splitlines()
 
+def verify_agent_status(list, service_name):
+    if "Waiting" in list or "Done" in list or "Unknown" in list or "Initialization Error" in list or "Stopping" in list:
+        errors.append(f"Not correct agent status in {service_name} container.")
+    if "Running" not in list:
+        errors.append(f"Not correct agent status in {service_name} container.")
+
 psContainerName = ""
 pgsqlContainerName = ""
 firstMongoReplica = ""
 secondMongoReplica = ""
 thirdMongoReplica = ""
+psSSLStatus = ""
+pdpgsqlSSLContainerName = ""
+psmdbSSLContainerName = ""
 errors = []
 
 for i in range(len(containers)):
@@ -24,38 +33,58 @@ for i in range(len(containers)):
     secondMongoReplica = containers[i][containers[i].index("rs102"):]
   elif "rs103" in containers[i]:
     thirdMongoReplica = containers[i][containers[i].index("rs103"):]
+  elif "mysql_ssl" in containers[i]:
+      mysqlSSLContainerName = containers[i][containers[i].index("mysql_ssl"):]
+  elif "pdpgsql_pgsm_ssl" in containers[i]:
+    pdpgsqlSSLContainerName = containers[i][containers[i].index("pdpgsql_pgsm_ssl"):]
+  elif "psmdb-server" in containers[i]:
+    psmdbSSLContainerName = containers[i][containers[i].index("psmdb-server"):]
 
 psContainerStatus = subprocess.run(["docker", "exec", psContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 pgContainerStatus = subprocess.run(["docker", "exec", pgsqlContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 firstMongoReplicaStatus = subprocess.run(["docker", "exec", firstMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 secondMongoReplicaStatus = subprocess.run(["docker", "exec", secondMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 thirdMongoReplicaStatus = subprocess.run(["docker", "exec", thirdMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+psSSLStatus = subprocess.run(["docker", "exec", mysqlSSLContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+pdpgsqlSSLStatus = subprocess.run(["docker", "exec", pdpgsqlSSLContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+psmdbSSLStatus = subprocess.run(["docker", "exec", psmdbSSLContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 localClientStatus = subprocess.run(["pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 
 print("Status is: ")
 print(psContainerStatus)
 print(pgContainerStatus)
 print(firstMongoReplicaStatus)
+print(psSSLStatus)
+print(pdpgsqlSSLStatus)
+print(psmdbSSLStatus)
 print(localClientStatus)
 
+if len(psContainerStatus) > 0:
+    verify_agent_status(psContainerStatus, "Percona Server")
 
-if "Waiting" in psContainerStatus or "Done" in psContainerStatus or "Unknown" in psContainerStatus or "Initialization Error" in psContainerStatus or "Stopping" in psContainerStatus:
-    errors.append("Not correct agent status in ps container.")
+if len(pgContainerStatus) > 0:
+    verify_agent_status(pgContainerStatus, "Percona Distribution for PostgreSQL")
 
-if "Waiting" in pgContainerStatus or "Done" in pgContainerStatus or "Unknown" in pgContainerStatus or "Initialization Error" in pgContainerStatus or "Stopping" in pgContainerStatus:
-    errors.append("Not correct agent status in ps container.")
+if len(psSSLStatus) > 0:
+    verify_agent_status(psSSLStatus, "Percona Server SSl")
 
-if "Waiting" in firstMongoReplicaStatus or "Done" in firstMongoReplicaStatus or "Unknown" in firstMongoReplicaStatus or "Initialization Error" in firstMongoReplicaStatus or "Stopping" in firstMongoReplicaStatus:
-    errors.append("Not correct agent status in first mongo container.")
+if len(pdpgsqlSSLStatus) > 0:
+    verify_agent_status(pdpgsqlSSLStatus, "Percona Distribution for PostgreSQL SSL")
 
-if "Waiting" in secondMongoReplicaStatus or "Done" in secondMongoReplicaStatus or"Unknown" in secondMongoReplicaStatus or "Initialization Error" in secondMongoReplicaStatus or "Stopping" in secondMongoReplicaStatus:
-    errors.append("Not correct agent status in second mongo container.")
+if len(psmdbSSLStatus) > 0:
+    verify_agent_status(psmdbSSLStatus, "Percona Server for MongoDB instance SSL")
 
-if "Waiting" in thirdMongoReplicaStatus or "Done" in thirdMongoReplicaStatus or "Unknown" in thirdMongoReplicaStatus or "Initialization Error" in thirdMongoReplicaStatus or "Stopping" in thirdMongoReplicaStatus:
-    errors.append("Not correct agent status in third mongo container.")
+if len(firstMongoReplicaStatus) > 0:
+    verify_agent_status(firstMongoReplicaStatus, "Percona Server for MongoDB instance 1")
 
-if "Waiting" in localClientStatus or "Done" in localClientStatus or "Unknown" in localClientStatus or "Initialization Error" in localClientStatus or "Stopping" in localClientStatus:
-    errors.append("Not correct agent status in third mongo container.")
+if len(secondMongoReplicaStatus) > 0:
+    verify_agent_status(secondMongoReplicaStatus, "Percona Server for MongoDB instance 2")
+
+if len(thirdMongoReplicaStatus) > 0:
+    verify_agent_status(thirdMongoReplicaStatus, "Percona Server for MongoDB instance 3")
+
+if len(localClientStatus) > 0:
+    verify_agent_status(localClientStatus, "Local Client")
 
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: ".join(errors))
@@ -110,5 +139,3 @@ if admin_version != agent_version:
 if len(errors) > 0:
   raise Exception("Errors in pmm-admin and pmm-agent versions: ".join(errors))
 
-def test():
-    print("Inside of a method")
