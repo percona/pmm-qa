@@ -15,9 +15,9 @@ get_pmm_pswd(){
 # Function to start port forwarding
 start_port_forward(){
     local inner_port=${1:-8443}  # Set to first argument or default to 8443
-    POD_NAME=$(kubectl get pods -n default -l app.kubernetes.io/name=pmm -o jsonpath='{.items[0].metadata.name}')
+    POD_NAME=$(kubectl get pods -l app.kubernetes.io/name=pmm -o jsonpath='{.items[0].metadata.name}')
     
-    kubectl port-forward "$POD_NAME" 8443:"${inner_port}" -n default &  
+    kubectl port-forward "$POD_NAME" 8443:"${inner_port}" &  
     PORT_FORWARD_PID=$!
     
     echo $PORT_FORWARD_PID > port_forward.pid
