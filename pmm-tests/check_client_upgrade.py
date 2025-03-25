@@ -8,13 +8,19 @@ containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=Tr
 
 def verify_agent_status(list, service_name):
     if "Waiting" in list or "Done" in list or "Unknown" in list or "Initialization Error" in list or "Stopping" in list:
-        errors.append(f"Not correct agent status in {service_name} container. Error in: {list}")
+        errors.append(f"Agent status contains wrong status in {service_name} container. Error in: {list}")
     if "Running" not in list:
-        errors.append(f"Not correct agent status in {service_name} container. Error in: {list}")
+        errors.append(f"Agent status does not contain running status in {service_name} container. Error in: {list}")
+
 def get_pmm_admin_status(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     print(f"Container name is: {container_name}")
     return subprocess.run(["docker", "exec", container_name, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+
+def get_pmm_admin_list(service_type):
+    container_name = containers[i][containers[i].index(service_type):]
+    print(f"Container name is: {container_name}")
+    return subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
 
 psContainerStatus = []
 pgContainerStatus = []
@@ -24,26 +30,45 @@ thirdMongoReplicaStatus = []
 psSSLStatus = []
 pdpgsqlSSLStatus = []
 psmdbSSLStatus = []
-localClientStatus = []
+localClientStatus = subprocess.run(["pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+
+psContainerList = []
+pgContainerList = []
+firstMongoReplicaList = []
+secondMongoReplicaList = []
+thirdMongoReplicaList = []
+psSSLList = []
+pdpgsqlSSLList = []
+psmdbSSLList = []
+localClientList = subprocess.run(["pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
+
 errors = []
 
 for i in range(len(containers)):
   if "ps_pmm_" in containers[i]:
-      psContainerStatus = get_pmm_admin_status("ps_pmm")
+    psContainerStatus = get_pmm_admin_status("ps_pmm")
+    psContainerList = get_pmm_admin_list("ps_pmm")
   elif "pgsql_pgss_pmm" in containers[i]:
-      pgContainerStatus = get_pmm_admin_status("pgsql_pgss_pmm")
+    pgContainerStatus = get_pmm_admin_status("pgsql_pgss_pmm")
+    pgContainerList = get_pmm_admin_list("pgsql_pgss_pmm")
   elif "rs101" in containers[i]:
     firstMongoReplicaStatus = get_pmm_admin_status("rs101")
+    firstMongoReplicaList = get_pmm_admin_list("rs101")
   elif "rs102" in containers[i]:
     secondMongoReplicaStatus = get_pmm_admin_status("rs102")
+    secondMongoReplicaList = get_pmm_admin_list("rs102")
   elif "rs103" in containers[i]:
     thirdMongoReplicaStatus = get_pmm_admin_status("rs103")
+    thirdMongoReplicaList = get_pmm_admin_list("rs103")
   elif "mysql_ssl" in containers[i]:
     psSSLStatus = get_pmm_admin_status("mysql_ssl")
+    psSSLList = get_pmm_admin_list("mysql_ssl")
   elif "pdpgsql_pgsm_ssl" in containers[i]:
     pdpgsqlSSLStatus = get_pmm_admin_status("pdpgsql_pgsm_ssl")
+    pdpgsqlSSLList = get_pmm_admin_list("pdpgsql_pgsm_ssl")
   elif "psmdb-server" in containers[i]:
     psmdbSSLStatus = get_pmm_admin_status("psmdb-server")
+    psSSLList = get_pmm_admin_list("psmdb-server")
 
 print("Status is: ")
 print(psContainerStatus)
@@ -56,63 +81,42 @@ print(localClientStatus)
 
 if len(psContainerStatus) > 0:
     verify_agent_status(psContainerStatus, "Percona Server")
+    verify_agent_status(psContainerList, "Percona Server")
 
 if len(pgContainerStatus) > 0:
     verify_agent_status(pgContainerStatus, "Percona Distribution for PostgreSQL")
+    verify_agent_status(pgContainerList, "Percona Distribution for PostgreSQL")
 
 if len(psSSLStatus) > 0:
     verify_agent_status(psSSLStatus, "Percona Server SSl")
+    verify_agent_status(psSSLList, "Percona Server SSl")
 
 if len(pdpgsqlSSLStatus) > 0:
     verify_agent_status(pdpgsqlSSLStatus, "Percona Distribution for PostgreSQL SSL")
+    verify_agent_status(pdpgsqlSSLList, "Percona Distribution for PostgreSQL SSL")
 
 if len(psmdbSSLStatus) > 0:
     verify_agent_status(psmdbSSLStatus, "Percona Server for MongoDB instance SSL")
+    verify_agent_status(psmdbSSLList, "Percona Server for MongoDB instance SSL")
 
 if len(firstMongoReplicaStatus) > 0:
     verify_agent_status(firstMongoReplicaStatus, "Percona Server for MongoDB instance 1")
+    verify_agent_status(firstMongoReplicaList, "Percona Server for MongoDB instance 1")
 
 if len(secondMongoReplicaStatus) > 0:
     verify_agent_status(secondMongoReplicaStatus, "Percona Server for MongoDB instance 2")
+    verify_agent_status(secondMongoReplicaList, "Percona Server for MongoDB instance 2")
 
 if len(thirdMongoReplicaStatus) > 0:
     verify_agent_status(thirdMongoReplicaStatus, "Percona Server for MongoDB instance 3")
+    verify_agent_status(thirdMongoReplicaList, "Percona Server for MongoDB instance 3")
 
 if len(localClientStatus) > 0:
     verify_agent_status(localClientStatus, "Local Client")
+    verify_agent_status(localClientList, "Local Client")
 
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: ".join(errors))
-
-psContainerList = subprocess.run(["docker", "exec", psContainerName, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
-pgContainerList = subprocess.run(["docker", "exec", pgsqlContainerName, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
-firstMongoReplicaList = subprocess.run(["docker", "exec", firstMongoReplica, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
-secondMongoReplicaList = subprocess.run(["docker", "exec", secondMongoReplica, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
-thirdMongoReplicaList = subprocess.run(["docker", "exec", thirdMongoReplica, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
-localClientList = subprocess.run(["pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
-
-if "Waiting" in psContainerList or "Done" in psContainerList or "Unknown" in psContainerList or "Initialization Error" in psContainerList or "Stopping" in psContainerList:
-    errors.append("Not correct agent status in ps container.")
-
-if "Waiting" in pgContainerList or "Done" in pgContainerList or "Unknown" in pgContainerList or "Initialization Error" in pgContainerList or "Stopping" in pgContainerList:
-    errors.append("Not correct agent status in ps container.")
-
-if "Waiting" in firstMongoReplicaList or "Done" in firstMongoReplicaList or "Unknown" in firstMongoReplicaList or "Initialization Error" in firstMongoReplicaList or "Stopping" in firstMongoReplicaList:
-    errors.append("Not correct agent status in first mongo container.")
-
-if "Waiting" in secondMongoReplicaList or "Done" in secondMongoReplicaList or"Unknown" in secondMongoReplicaList or "Initialization Error" in secondMongoReplicaList or "Stopping" in secondMongoReplicaList:
-    errors.append("Not correct agent status in second mongo container.")
-
-if "Waiting" in thirdMongoReplicaList or "Done" in thirdMongoReplicaList or "Unknown" in thirdMongoReplicaList or "Initialization Error" in thirdMongoReplicaList or "Stopping" in thirdMongoReplicaList:
-    errors.append("Not correct agent status in third mongo container.")
-
-if "Waiting" in localClientList or "Done" in localClientList or "Unknown" in localClientList or "Initialization Error" in localClientList or "Stopping" in localClientList:
-    errors.append("Not correct agent status in third mongo container.")
-
-if len(errors) > 0:
-  raise Exception("Some errors in pmm-admin list: ".join(errors))
-
-# serverVersion = subprocess.run(["pmm-admin status | grep \"Version\" | awk  -F' ' '{print $2}'"], capture_output=True, text=True, shell=True).stdout
 
 expected_version=arguments[1].replace("\\r\\n", "")
 admin_version = subprocess.run(["pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
@@ -122,7 +126,6 @@ if admin_version != expected_version:
   errors.append(f"Version of pmm admin is not correct expected: {expected_version} actual: {admin_version}")
 
 agent_version = subprocess.run(["pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
-
 
 if agent_version != expected_version:
   print(f"agent version is: {agent_version} and expected version is: {expected_version}")
