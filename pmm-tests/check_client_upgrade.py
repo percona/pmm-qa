@@ -32,6 +32,8 @@ secondMongoReplicaStatus = subprocess.run(["docker", "exec", secondMongoReplica,
 thirdMongoReplicaStatus = subprocess.run(["docker", "exec", thirdMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 localClientStatus = subprocess.run(["pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 
+print(psContainerStatus)
+
 if "Waiting" in psContainerStatus or "Done" in psContainerStatus or "Unknown" in psContainerStatus or "Initialization Error" in psContainerStatus or "Stopping" in psContainerStatus:
     errors.append("Not correct agent status in ps container.")
 
