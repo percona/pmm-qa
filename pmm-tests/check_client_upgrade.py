@@ -72,15 +72,6 @@ for i in range(len(containers)):
     psmdbSSLStatus = get_pmm_admin_status("psmdb-server")
     psSSLList = get_pmm_admin_list("psmdb-server")
 
-print("Status is: ")
-print(psContainerStatus)
-print(pgContainerStatus)
-print(firstMongoReplicaStatus)
-print(psSSLStatus)
-print(pdpgsqlSSLStatus)
-print(psmdbSSLStatus)
-print(localClientStatus)
-
 if len(psContainerStatus) > 0:
     verify_agent_status(psContainerStatus, "Percona Server")
     verify_agent_status(psContainerList, "Percona Server")
@@ -98,8 +89,8 @@ if len(pdpgsqlSSLStatus) > 0:
     verify_agent_status(pdpgsqlSSLList, "Percona Distribution for PostgreSQL SSL")
 
 if len(psmdbSSLStatus) > 0:
-    verify_agent_status(psmdbSSLStatus, "Percona Server for MongoDB instance SSL")
-    verify_agent_status(psmdbSSLList, "Percona Server for MongoDB instance SSL")
+    verify_agent_status(psmdbSSLStatus, "Percona Server for MongoDB instance SSL status")
+    verify_agent_status(psmdbSSLList, "Percona Server for MongoDB instance SSL list")
 
 if len(firstMongoReplicaStatus) > 0:
     verify_agent_status(firstMongoReplicaStatus, "Percona Server for MongoDB instance 1")
