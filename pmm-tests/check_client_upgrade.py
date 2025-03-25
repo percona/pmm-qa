@@ -8,47 +8,42 @@ containers = subprocess.run(["docker", "ps", "-a"], capture_output=True, text=Tr
 
 def verify_agent_status(list, service_name):
     if "Waiting" in list or "Done" in list or "Unknown" in list or "Initialization Error" in list or "Stopping" in list:
-        errors.append(f"Not correct agent status in {service_name} container.")
+        errors.append(f"Not correct agent status in {service_name} container. Error in: {list}")
     if "Running" not in list:
-        errors.append(f"Not correct agent status in {service_name} container.")
+        errors.append(f"Not correct agent status in {service_name} container. Error in: {list}")
+def get_pmm_admin_status(service_type):
+    container_name = containers[i][containers[i].index(service_type):]
+    print(f"Container name is: {container_name}")
+    return subprocess.run(["docker", "exec", container_name, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 
-psContainerName = ""
-pgsqlContainerName = ""
-firstMongoReplica = ""
-secondMongoReplica = ""
-thirdMongoReplica = ""
-psSSLStatus = ""
-pdpgsqlSSLContainerName = ""
-psmdbSSLContainerName = ""
+psContainerStatus = []
+pgContainerStatus = []
+firstMongoReplicaStatus = []
+secondMongoReplicaStatus = []
+thirdMongoReplicaStatus = []
+psSSLStatus = []
+pdpgsqlSSLStatus = []
+psmdbSSLStatus = []
+localClientStatus = []
 errors = []
 
 for i in range(len(containers)):
   if "ps_pmm_" in containers[i]:
-      psContainerName = containers[i][containers[i].index("ps_pmm"):]
+      psContainerStatus = get_pmm_admin_status("ps_pmm")
   elif "pgsql_pgss_pmm" in containers[i]:
-      pgsqlContainerName = containers[i][containers[i].index("pgsql_pgss_pmm"):]
+      pgContainerStatus = get_pmm_admin_status("pgsql_pgss_pmm")
   elif "rs101" in containers[i]:
-    firstMongoReplica = containers[i][containers[i].index("rs101"):]
+    firstMongoReplicaStatus = get_pmm_admin_status("rs101")
   elif "rs102" in containers[i]:
-    secondMongoReplica = containers[i][containers[i].index("rs102"):]
+    secondMongoReplicaStatus = get_pmm_admin_status("rs102")
   elif "rs103" in containers[i]:
-    thirdMongoReplica = containers[i][containers[i].index("rs103"):]
+    thirdMongoReplicaStatus = get_pmm_admin_status("rs103")
   elif "mysql_ssl" in containers[i]:
-      mysqlSSLContainerName = containers[i][containers[i].index("mysql_ssl"):]
+    psSSLStatus = get_pmm_admin_status("mysql_ssl")
   elif "pdpgsql_pgsm_ssl" in containers[i]:
-    pdpgsqlSSLContainerName = containers[i][containers[i].index("pdpgsql_pgsm_ssl"):]
+    pdpgsqlSSLStatus = get_pmm_admin_status("pdpgsql_pgsm_ssl")
   elif "psmdb-server" in containers[i]:
-    psmdbSSLContainerName = containers[i][containers[i].index("psmdb-server"):]
-
-psContainerStatus = subprocess.run(["docker", "exec", psContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-pgContainerStatus = subprocess.run(["docker", "exec", pgsqlContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-firstMongoReplicaStatus = subprocess.run(["docker", "exec", firstMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-secondMongoReplicaStatus = subprocess.run(["docker", "exec", secondMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-thirdMongoReplicaStatus = subprocess.run(["docker", "exec", thirdMongoReplica, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-psSSLStatus = subprocess.run(["docker", "exec", mysqlSSLContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-pdpgsqlSSLStatus = subprocess.run(["docker", "exec", pdpgsqlSSLContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-psmdbSSLStatus = subprocess.run(["docker", "exec", psmdbSSLContainerName, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
-localClientStatus = subprocess.run(["pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
+    psmdbSSLStatus = get_pmm_admin_status("psmdb-server")
 
 print("Status is: ")
 print(psContainerStatus)
