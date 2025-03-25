@@ -130,7 +130,7 @@ jobs:
 
       - name: Setup tools
         run: |
-          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1t64 libaio-dev libnuma-dev libncurses6 socat sysbench
+          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
           echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
               /etc/apt/sources.list.d/clickhouse.list
