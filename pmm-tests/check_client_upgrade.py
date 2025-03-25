@@ -15,11 +15,13 @@ def verify_agent_status(list, service_name):
 def get_pmm_admin_status(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     print(f"Container name is: {container_name}")
+    print(subprocess.run(["docker", "exec", container_name, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines())
     return subprocess.run(["docker", "exec", container_name, "pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 
 def get_pmm_admin_list(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     print(f"Container name is: {container_name}")
+    print(subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines())
     return subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
 
 psContainerStatus = []
