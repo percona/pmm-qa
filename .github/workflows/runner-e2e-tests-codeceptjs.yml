@@ -70,7 +70,7 @@ jobs:
   ui-tests-e2e:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
 #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
@@ -159,6 +159,7 @@ jobs:
           . virtenv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
+          pip install setuptools
           python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
