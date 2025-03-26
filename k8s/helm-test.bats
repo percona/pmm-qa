@@ -31,6 +31,7 @@ setup() {
     IMAGE_TAG=${IMAGE_TAG:-"3-dev-latest"}
     RELEASE_REPO="percona/pmm-server"
     RELEASE_TAG="3"
+    kubectl config set-context --current --namespace=default
 
     cleanup
 }
@@ -249,3 +250,34 @@ update_values_yaml() {
     delete_pvc
 }
 
+@test "install/uninstall chart with namespaceOverride parameter and check connectivity" {
+    local namespace="monitoring-pmm5"
+
+    stop_port_forward
+    kubectl create namespace $namespace || true
+    kubectl config set-context --current --namespace=${namespace}
+
+    helm install pmm5 \
+        --set image.repository=$IMAGE_REPO \
+        --set image.tag=$IMAGE_TAG \
+        --set namespaceOverride=$namespace \
+        --wait \
+        percona/pmm
+
+    wait_for_pmm
+    start_port_forward
+
+    pmm_version=$(get_pmm_version)
+    echo "pmm_version is ${pmm_version}"
+
+    run bash -c "kubectl get pods --namespace=${namespace} | grep pmm5-0"
+    assert_success
+    assert_output --partial "pmm5-0"
+    assert_output --partial "Running"
+
+    stop_port_forward
+    helm uninstall --wait --timeout 60s pmm5
+    # maybe pmm uninstall has ability to kill pvcs
+    # add validation that there is no load balancer, stateful set and containers/pods left
+    delete_pvc
+}
