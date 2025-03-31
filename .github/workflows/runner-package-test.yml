@@ -289,9 +289,8 @@ jobs:
                 sudo yum install -y ansible-core git wget dpkg
               fi
               if [[ "${{ env.VM_BOX }}" =~ "al2023" ]]; then
-                sudo dnf install -y epel-release
                 sudo dnf -y update
-                sudo dnf install -y ansible-core git wget dpkg
+                sudo dnf install -y ansible git wget dpkg
               fi
               if [[ "${{ env.VM_BOX }}" =~ "debian" ]]; then
                 sudo apt-get install -y dirmngr gnupg2
