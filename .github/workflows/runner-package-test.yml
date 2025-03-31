@@ -290,7 +290,7 @@ jobs:
               fi
               if [[ "${{ env.VM_BOX }}" =~ "al2023" ]]; then
                 sudo dnf -y update
-                sudo dnf install -y ansible git wget dpkg
+                sudo dnf install -y ansible git wget
               fi
               if [[ "${{ env.VM_BOX }}" =~ "debian" ]]; then
                 sudo apt-get install -y dirmngr gnupg2
