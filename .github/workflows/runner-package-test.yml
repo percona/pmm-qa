@@ -216,7 +216,7 @@ jobs:
             echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
-            echo "VM_BOX=hbsmith/al2023" >> $GITHUB_ENV
+            echo "VM_BOX=gbailey/al2023" >> $GITHUB_ENV
           fi
           echo "${{ env.VM_BOX }}"
           
