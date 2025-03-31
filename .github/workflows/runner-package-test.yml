@@ -288,6 +288,11 @@ jobs:
                 sudo yum -y update
                 sudo yum install -y ansible-core git wget dpkg
               fi
+              if [[ "${{ env.VM_BOX }}" =~ "al2023" ]]; then
+                sudo dnf install -y epel-release
+                sudo dnf -y update
+                sudo dnf install -y ansible-core git wget dpkg
+              fi
               if [[ "${{ env.VM_BOX }}" =~ "debian" ]]; then
                 sudo apt-get install -y dirmngr gnupg2
                 echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list > /dev/null
