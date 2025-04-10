@@ -107,9 +107,9 @@ jobs:
         run: |
           range=${{ inputs.matrix_range }}
           if [[ "${{ inputs.repository }}" == "release" ]]; then
-            array=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - | jq -r .results[].name | grep -v latest | sort -V | grep -E '[[:digit:]]\.[[:digit:]]+\.[[:digit:]]' | tail -$((++range)) | head -$((range)))
+            array=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - | jq -r .results[].name | grep -v latest | sort -V | grep -E '2\.[[:digit:]]+\.[[:digit:]]' | tail -$((++range)) | head -$((range)))
           else
-            array=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - | jq -r .results[].name | grep -v latest | sort -V | grep -E '[[:digit:]]\.[[:digit:]]+\.[[:digit:]]' | tail -$((range)))
+            array=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - | jq -r .results[].name | grep -v latest | sort -V | grep -E '2\.[[:digit:]]+\.[[:digit:]]' | tail -$((range)))
           fi
           jq -c -n '$ARGS.positional' --args ${array[@]}
           echo "result=$(jq -c -n '$ARGS.positional' --args ${array[@]})" >> "$GITHUB_OUTPUT"
