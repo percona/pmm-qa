@@ -51,7 +51,7 @@ on:
       playbook:
         description: "Playbook file to run(without extension)"
         type: string
-        default: "pmm2-client_integration"
+        default: "pmm3-client_integration"
         required: true
       test_name:
         description: "Optional pretty test name"
@@ -101,7 +101,7 @@ on:
         type: string
       playbook:
         type: string
-        default: "pmm2-client_integration"
+        default: "pmm3-client_integration"
         required: true
       test_name:
         type: string
@@ -328,3 +328,7 @@ jobs:
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
+
+      - name: Setup tmate session  on failure
+        if: ${{ failure() }}
+        uses: percona/gh-action-action-tmate@v2
