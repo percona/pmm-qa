@@ -16,7 +16,7 @@ on:
         default: "perconalab/pmm-server:3-dev-latest"
       pmm_client_tarball:
         description: "PMM Client tarball link or FB-code"
-        default: 'dev-latest'
+        default: '3-dev-latest'
         type: string
         required: true
       playbook:
