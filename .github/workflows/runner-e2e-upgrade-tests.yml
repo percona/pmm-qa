@@ -231,10 +231,6 @@ jobs:
         if: ${{ inputs.upgrade_type == 'Podman way' }}
         working-directory: ./pmm-ui-tests
         run: |
-          . /etc/os-release
-          echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee \
-              /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
-          curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
           sudo apt-get update
           sudo apt-get -y upgrade
           sudo apt-get install -y podman
@@ -273,7 +269,6 @@ jobs:
           RestartSec=20
           
           [Install]
-          Alias=%N
           WantedBy=default.target
           
           EOF
@@ -299,7 +294,7 @@ jobs:
           export CONTAINER_NAME="pmm-server"
           export LOGS="pmm-managed entered RUNNING state"
           attempt=0
-          while [ $attempt -le 3 ]; do
+          while [ $attempt -le 6 ]; do
             attempt=$(( $attempt + 1 ))
             echo "Waiting for ${CONTAINER_NAME} to be up (attempt: $attempt)..."
             result=$(systemctl --user status ${CONTAINER_NAME})
