@@ -258,7 +258,3 @@ jobs:
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
-
-      - name: Setup tmate session  on failure
-        if: ${{ failure() }}
-        uses: percona/gh-action-action-tmate@v2

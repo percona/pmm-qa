@@ -289,6 +289,21 @@ jobs:
           ### run service
           systemctl --user enable --now pmm-server
           
+          ### wait for service to be ready
+          export CONTAINER_NAME="pmm-server"
+          export LOGS="pmm-managed entered RUNNING state"
+          attempt=0
+          while [ $attempt -le 10 ]; do
+            attempt=$(( $attempt + 1 ))
+            echo "Waiting for ${CONTAINER_NAME} to be up (attempt: $attempt)..."
+            result=$(systemctl --user status ${CONTAINER_NAME})
+            echo "$result"
+            if grep "${LOGS}" <<< $result ; then
+              echo "${CONTAINER_NAME} is ready!"
+              break
+            fi
+            sleep 10
+          done;
           timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://admin:admin@${{ env.PMM_SERVER_IP }}/ping)" != "200" ]]; do sleep 5; done' || false
           podman exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
 
@@ -414,3 +429,7 @@ jobs:
         with:
           name: ${{ env.REPORT_NAME }}
           path: ./pmm-ui-tests/playwright-tests/playwright-report
+
+      - name: Setup tmate session  on failure
+        if: ${{ failure() }}
+        uses: percona/gh-action-action-tmate@v2
