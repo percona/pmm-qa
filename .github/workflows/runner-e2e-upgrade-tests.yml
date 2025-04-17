@@ -269,7 +269,6 @@ jobs:
           RestartSec=20
           
           [Install]
-          Alias=%N
           WantedBy=default.target
           
           EOF
