@@ -239,6 +239,11 @@ jobs:
         if: ${{ inputs.upgrade_type == 'Podman way' }}
         working-directory: ./pmm-ui-tests
         run: |
+          echo 'net.ipv4.ip_unprivileged_port_start=80' | sudo tee -a /etc/sysctl.conf
+          sudo sysctl -p
+          systemctl --user daemon-reexec
+          systemctl --user daemon-reload
+
           ### create service files
           mkdir -p ~/.config/systemd/user/
           cat > ~/.config/systemd/user/pmm-server.service <<EOF
