@@ -293,7 +293,7 @@ jobs:
           export CONTAINER_NAME="pmm-server"
           export LOGS="pmm-managed entered RUNNING state"
           attempt=0
-          while [ $attempt -le 10]; do
+          while [ $attempt -le 10 ]; do
             attempt=$(( $attempt + 1 ))
             echo "Waiting for ${CONTAINER_NAME} to be up (attempt: $attempt)..."
             result=$(systemctl --user status ${CONTAINER_NAME})
