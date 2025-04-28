@@ -51,7 +51,7 @@ on:
       playbook:
         description: "Playbook file to run(without extension)"
         type: string
-        default: "pmm2-client_integration"
+        default: "pmm3-client_integration"
         required: true
       test_name:
         description: "Optional pretty test name"
@@ -70,6 +70,7 @@ on:
           - focal
           - ol-8
           - ol-9
+          - al2023
 
   workflow_call:
     inputs:
@@ -100,7 +101,7 @@ on:
         type: string
       playbook:
         type: string
-        default: "pmm2-client_integration"
+        default: "pmm3-client_integration"
         required: true
       test_name:
         type: string
@@ -214,6 +215,9 @@ jobs:
           if [[ "${{ inputs.os }}" =~ "ol-9" ]]; then
             echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
           fi
+          if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
+            echo "VM_BOX=gbailey/al2023" >> $GITHUB_ENV
+          fi
           echo "${{ env.VM_BOX }}"
           
           ### test name -> playbook map ###
@@ -284,6 +288,10 @@ jobs:
                 sudo yum -y update
                 sudo yum install -y ansible-core git wget dpkg
               fi
+              if [[ "${{ env.VM_BOX }}" =~ "al2023" ]]; then
+                sudo dnf -y update
+                sudo dnf install -y ansible git wget tar
+              fi
               if [[ "${{ env.VM_BOX }}" =~ "debian" ]]; then
                 sudo apt-get install -y dirmngr gnupg2
                 echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main" | sudo tee -a /etc/apt/sources.list > /dev/null
@@ -320,3 +328,7 @@ jobs:
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
+
+#      - name: Setup tmate session  on failure
+#        if: ${{ failure() }}
+#        uses: percona/gh-action-action-tmate@v2
