@@ -1,8 +1,6 @@
 name: PMM e2e Tests(Playwright)
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
