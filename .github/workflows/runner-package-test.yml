@@ -241,8 +241,13 @@ jobs:
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
-          docker run -d -p 80:8080 -p 443:8443 -p 9000:9000 \
+          docker run -d -e PMM_ENABLE_NOMAD=1 -p 80:8080 -p 443:8443 -p 9000:9000 -p 4647:4647 \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
+          sleep 10
+          curl --location --request PUT 'http://10.0.2.2/v1/server/settings' \
+            --header 'Content-Type: application/json' \
+            --user admin:admin \
+            --data '{"pmm_public_address":  "10.0.2.2"}'
 
       - name: "Setup tools"
         run: |
