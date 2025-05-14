@@ -240,10 +240,6 @@ jobs:
 
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
-          echo "Fetching IP..."
-          IP=$(curl -s ifconfig.me)
-          echo "Public IP is: $IP"
-
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
           docker run -d -e PMM_ENABLE_NOMAD=1 -p 80:8080 -p 443:8443 -p 9000:9000 -p 4647:4647 \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
