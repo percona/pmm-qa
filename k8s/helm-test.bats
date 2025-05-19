@@ -231,7 +231,7 @@ update_values_yaml() {
     kubectl exec pmm4-0 -- supervisorctl stop all
     kubectl exec pmm4-0 -- chown -R pmm:pmm /srv
 
-    helm upgrade pmm4 --version 1.4.1 -f values.yaml --set podSecurityContext.runAsGroup=null --set podSecurityContext.fsGroup=null percona/pmm
+    helm upgrade pmm4 --version 1.4.0 -f values.yaml --set podSecurityContext.runAsGroup=null --set podSecurityContext.fsGroup=null percona/pmm
     sleep 7 # give a chance to update manifest
     wait_for_pmm
 
