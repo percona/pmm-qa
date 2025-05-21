@@ -113,13 +113,13 @@ if len(errors) > 0:
 
 expected_version=arguments[1].replace("\\r\\n", "")
 admin_version = subprocess.run(["pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").replace("-rc", "").strip()
-
+print(subprocess.run(["pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"]))
 if admin_version != expected_version:
   print(f"admin version is: {admin_version} and expected version is: {expected_version}")
   errors.append(f"Version of pmm admin is not correct expected: {expected_version} actual: {admin_version}")
 
 agent_version = subprocess.run(["pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").replace("-rc", "").strip()
-
+print(subprocess.run(["pmm-admin status | grep pmm-agent | awk -F' ' '{print $3}'"]))
 if agent_version != expected_version:
   print(f"agent version is: {agent_version} and expected version is: {expected_version}")
   errors.append(f"Version of pmm agent is not correct expected: {expected_version} actual: {agent_version}")
