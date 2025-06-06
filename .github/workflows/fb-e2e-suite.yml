@@ -361,5 +361,5 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '-h'
+      setup_services: '--database ps=8.4 --database pdpgsql --database psmdb'
       tags_for_tests: '@nomad'
