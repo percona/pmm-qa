@@ -314,7 +314,14 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up
+        run: vagrant up || vagrant ssh -c "pmm-admin summary --output-file /pmm/package-testing/pmm-summary.zip"
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: pmm-summary
+          path: |
+            ${{ github.workspace }}/pmm-summary.zip
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
