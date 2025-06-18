@@ -314,8 +314,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up || vagrant ssh -c "pmm-admin summary --filename pmm-summary.zip" && \
-          vagrant ssh -c "cp pmm-summary.zip /pmm/package-testing/pmm-summary.zip"
+        run: vagrant up || vagrant ssh -c "pmm-admin summary --filename pmm-summary.zip" && vagrant ssh -c "cp pmm-summary.zip /pmm/package-testing/pmm-summary.zip"
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
