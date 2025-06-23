@@ -272,6 +272,8 @@ jobs:
 
             config.vm.synced_folder "${{ github.workspace }}/", "/pmm/package-testing/"
             config.vm.provision "shell", privileged: true, inline: <<-SHELL
+              mkdir -p /sys/fs/cgroup/systemd
+              mount -t cgroup -o none,name=systemd cgroup /sys/fs/cgroup/systemd || true
               ## Set environment variables...
               export PMM_SERVER_IP=10.0.2.2:443
               export METRICS_MODE=${{ env.METRICS_MODE }}
