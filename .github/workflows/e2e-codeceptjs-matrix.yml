@@ -3,7 +3,6 @@ name: "E2E tests Matrix (CodeceptJS)"
 on:
   schedule:
     - cron: '0 2 * * *'
-  pull_request:
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
