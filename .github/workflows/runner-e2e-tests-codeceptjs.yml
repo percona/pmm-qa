@@ -187,12 +187,21 @@ jobs:
             return `artifacts_for_${process.env.TAGS_FOR_TESTS.replaceAll('|', '')}`
           result-encoding: string
 
+      - name: Download logs
+        if: ${{ failure() }}
+        working-directory: pmm-ui-tests
+        run: |
+            curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
+            unzip logs.zip -d logs
+
       - uses: actions/upload-artifact@v4
-        if: ${{ always() }}
+        if: ${{ failure() }}
+        continue-on-error: true
         with:
           name: ${{ steps.artifact_name.outputs.result }}
           path: |
             pmm-ui-tests/tests/output/*.png
+            pmm-ui-tests/logs
 
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && always() }}
