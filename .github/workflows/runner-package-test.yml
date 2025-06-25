@@ -67,7 +67,6 @@ on:
           - bookworm
           - noble
           - jammy
-          - focal
           - ol-8
           - ol-9
           - al2023
@@ -120,7 +119,7 @@ jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 240
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
@@ -336,6 +335,6 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      #- name: Setup tmate session  on failure
-      #  if: ${{ failure() }}
-      #  uses: percona/gh-action-action-tmate@v2
+      - name: Setup tmate session  on failure
+        if: ${{ failure() }}
+        uses: percona/gh-action-action-tmate@v2
