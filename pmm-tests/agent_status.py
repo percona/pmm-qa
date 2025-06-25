@@ -27,6 +27,7 @@ if __name__ == '__main__':
     for container in containerNames.splitlines():
         if any(service in container for service in services):
             listResponse = verify_command(f"docker exec {container} pmm-admin list")
+            print(listResponse)
             for line in listResponse.split("Port")[1].strip().splitlines():
                 if "pmm_agent" in line:
                     if "connected" not in line.lower():
