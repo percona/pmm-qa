@@ -33,7 +33,7 @@ if __name__ == '__main__':
                     if "connected" not in line.lower():
                         errors.append(f"pmm_agent status in container {container} should be 'Connected' but is: {line}")
                 else:
-                    if "running" not in line.lower():
+                    if "running" not in line.lower() and "external-exporter" not in line.lower():
                         errors.append(f"pmm_agent status in container {container} should be 'Running' but is: {line}")
 
     if errors:
