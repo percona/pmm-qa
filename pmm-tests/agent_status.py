@@ -20,7 +20,6 @@ def verify_command(command):
 
 if __name__ == '__main__':
     containerNames = verify_command("docker ps -a --format '{{.Names}}'")
-    print(containerNames)
     errors = []
     services = ['ps_', 'mysql_', 'pxc_', 'pgsql_', 'rs10']
 
