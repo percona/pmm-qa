@@ -71,7 +71,7 @@ jobs:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
 #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 240
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -216,6 +216,6 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-#      - name: Setup tmate session  on failure
-#        if: ${{ failure() }}
-#        uses: percona-platform/action-tmate@v2
+      - name: Setup tmate session  on failure
+        if: ${{ failure() }}
+        uses: percona-platform/action-tmate@v2
