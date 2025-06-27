@@ -1,0 +1,161 @@
+name: "E2E tests Matrix (CodeceptJS)"
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch(CLI tests)'
+        default: 'v3'
+        required: false
+        type: string
+      pmm_qa_branch:
+        description: 'qa-integration repository branch(for setup)'
+        default: 'v3'
+        required: false
+        type: string
+      pmm_server_image:
+        description: 'PMM Server docker image'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        required: true
+        type: string
+      pmm_client_image:
+        description: 'pmm-client docker image'
+        default: 'perconalab/pmm-client:3-dev-latest'
+        required: false
+        type: string
+      pmm_client_version:
+        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
+        default: '3-dev-latest'
+        required: false
+        type: string
+      sha:
+        description: "SHA (leave default if running manually)"
+        default: 'null'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_ui_tests_branch:
+        required: false
+        type: string
+      pmm_qa_branch:
+        required: false
+        type: string
+      pmm_server_image:
+        required: true
+        type: string
+      pmm_client_image:
+        required: false
+        type: string
+      pmm_client_version:
+        required: false
+        type: string
+      sha:
+        required: false
+        type: string
+
+    secrets:
+      BACKUP_LOCATION_ACCESS_KEY:
+        required: false
+      BACKUP_LOCATION_SECRET_KEY:
+        required: false
+
+jobs:
+  settings_and_cli:
+    name: Settings and cli UI tests
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      setup_services: '--database pgsql'
+      tags_for_tests: '@settings|@cli'
+
+  ssl_mysql:
+    name: MySQL SSL tests
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      setup_services: '--database ssl_mysql'
+      tags_for_tests: '@ssl-mysql'
+
+  ssl_mongo:
+    name: MongoDB SSL tests
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      setup_services: '--database ssl_psmdb'
+      tags_for_tests: '@ssl-mongo'
+
+  ssl_postgres:
+    name: PDPGSQL SSL tests
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      setup_services: '--database ssl_pdpgsql=16'
+      tags_for_tests: '@ssl-postgres'
+
+  experimental:
+    name: Experimental UI tests
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      setup_services: '--database pdpgsql'
+      tags_for_tests: '@experimental'
+
+  disconnect:
+    name: Disconnect from PMM Server
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      setup_services: '--help'
+      tags_for_tests: '@disconnect'
+
+  fb_tests:
+    name: FB E2E tests
+    uses: ./.github/workflows/fb-e2e-suite.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
