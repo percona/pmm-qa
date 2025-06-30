@@ -6,7 +6,7 @@ on:
     inputs:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch'
-        default: 'main'
+        default: 'v3'
         type: string
         required: true
       pre_upgrade_tests:
@@ -34,7 +34,7 @@ on:
         type: string
       pmm_qa_branch:
         description: 'pmm-qa repository branch(for setup)'
-        default: 'main'
+        default: 'v3'
         type: string
         required: true
       services_list:

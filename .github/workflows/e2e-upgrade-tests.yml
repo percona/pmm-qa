@@ -5,11 +5,11 @@ on:
     inputs:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch'
-        default: 'main'
+        default: 'v3'
         required: true
       pmm_qa_branch:
         description: 'pmm-qa repository branch(for setup)'
-        default: 'main'
+        default: 'v3'
         required: true
       pmm_server_start_version:
         description: 'PMM Server version to upgrade (latest|dev-latest|x.xx.x|x.xx.x-rc)'

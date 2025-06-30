@@ -1,45 +1,100 @@
 # PMM-QA
 Automated tests for Percona Monitoring and Management
-GUI tests are created for testing frontend of PMM. They include tests for Query Analytics and for Grafana dashboards
 
-## Using Selenoid for running tests in Local
-1. Install Node.js and atleast npm 8.x on your system
-2. Selenoid and Selenoid UI use port 4444 and 8080 respectively,
-make sure they are not being used, otherwise update docker-compose.yml file
-3. run npm install in project root.
-4. run prepare_ui_test.sh script in the root directory.
-`bash -x ./prepare_ui_test.sh`
-5. This should start running UI tests in 4 parallel browser sessions inside chrome containers with help of selenoid
-6. Check live execution by launching http://localhost:8080 in your browser.
+## Test Architecture Overview
 
-## If you'd like to have more control over the UI test framework parameters, please check out next sections
+This project employs a comprehensive testing strategy, utilizing various frameworks and methodologies to ensure the quality and stability of Percona Monitoring and Management (PMM). The tests are broadly categorized by their focus and the tools they use:
 
-### Installation (UI tests version 2.0)
-1. Install Node.js and atleast npm 8.x on your system
-2. Checkout `main` branch for pmm-qa Repo
-3. To run tests on your local systems, delete `codecept.json` and rename `local.codecept.json` to `codecept.json`
-4. Make sure to update URL of the application in the `webdriver` helper in the configuration file (codecept.json)
-5. Install latest version of JDK on your system
+- **End-to-End (E2E) UI Tests**: These tests validate the PMM user interface and user workflows. They are primarily written using Playwright and CodeceptJS.
+- **CLI/Integration Tests**: These tests focus on the functionality of the `pmm-admin` command-line interface and the integration between PMM components and monitored services. They are typically written using Playwright for CLI interactions and Python for service setup.
+- **Package Tests**: These tests verify the installation and functionality of PMM client packages across various operating systems. They leverage Vagrant for virtualized environments and Ansible for automation.
+- **Infrastructure Tests**: These tests validate PMM deployments in different environments, including Kubernetes/Helm and using the Easy Install script. They utilize Bats for testing Helm deployments.
 
-> Follow any one of these:
+Each test type has its own dedicated documentation, detailing how to run and write tests, along with their specific directory structures and conventions.
 
-6. Install Selenium Standalone server via npm globally using `npm install selenium-standalone -g`
-7. Run the following `selenium-standalone start`
-> OR
-6. Install Selenium Standalone server locally via npm `npm install selenium-standalone --save-dev`
-7. Run the following `./node_modules/.bin/selenium-standalone install && ./node_modules/.bin/selenium-standalone start`
 
-8. Inside the root folder for `pmm-qa` run `npm install` this will install all required packages
 
-### How to use
-Run all Tests:
+### Repository Directory Structures
+
+Understanding the layout of the key repositories involved in PMM QA is essential for navigating the codebase and contributing to tests.
+
+#### `pmm-qa` (This Repository)
+
 ```
-./node_modules/.bin/codeceptjs run --steps
-```
-Run individual Tests:
-```
-./node_modules/.bin/codeceptjs run --steps tests/verifyMysqlDashboards_test.js
+.
+├── .github/             # GitHub Actions workflows
+├── docs/                # Project documentation
+├── k8s/                 # Kubernetes/Helm test scripts (Bats)
+├── pmm-integration/     # PMM integration setup scripts (TypeScript)
+├── pmm-tests/           # PMM test scripts (Python, Bash)
+├── tests/               # General test utilities
+├── .gitignore
+├── docker-compose.yml
+├── LICENSE
+├── package-lock.json
+├── README.md            # This file
+└── TEST_EXECUTION_GUIDE.md
 ```
 
-We have implemented the tests to run in parallel chunks of 3, which will basically launch 3 browsers and execute different tests,
-to make any change to that, modify the configuration file `codecept.json`
+#### `pmm-ui-tests`
+
+This repository contains the UI End-to-End tests for PMM.
+
+```
+pmm-ui-tests/
+├── playwright-tests/    # Playwright E2E tests
+│   ├── pages/           # Page Object Model definitions
+│   │   ├── LoginPage.ts
+│   │   └── DashboardPage.ts
+│   ├── tests/           # Actual Playwright test files (.spec.ts)
+│   └── playwright.config.ts # Playwright configuration
+├── tests/               # CodeceptJS E2E tests
+│   ├── pages/           # Page Object Model definitions
+│   │   ├── LoginPage.js
+│   │   └── DashboardPage.js
+│   ├── login_test.js
+│   └── ...
+├── cli/                 # Playwright tests for CLI interactions
+│   ├── tests/           # CLI test files (.spec.ts)
+│   └── ...
+├── helpers/             # CodeceptJS custom helpers
+├── config/              # CodeceptJS configuration files
+├── pr.codecept.js       # Main CodeceptJS configuration
+├── docker-compose.yml   # Docker Compose for PMM server setup
+└── ...
+```
+
+#### `qa-integration`
+
+This repository provides Python-based scripts for setting up and managing PMM test environments and services.
+
+```
+qa-integration/
+├── pmm_qa/              # Core Python setup scripts
+│   ├── pmm-framework.py # Main script for setting up services
+│   ├── helpers/         # Helper modules for pmm-framework.py
+│   ├── mysql/
+│   ├── mongoDb/
+│   ├── postgres/
+│   └── ...
+├── pmm-tests/           # Additional Python/Bash test scripts
+├── requirements.txt     # Python dependencies
+└── ...
+```
+
+#### `package-testing`
+
+This repository contains Ansible playbooks for testing PMM client package installations across various operating systems.
+
+```
+package-testing/
+├── playbooks/           # Ansible playbooks for different test scenarios
+│   ├── pmm3-client_integration.yml
+│   └── ...
+├── roles/               # Reusable Ansible roles (e.g., pmm-client)
+├── inventory.ini        # Ansible inventory file
+├── Vagrantfile          # Vagrant configuration for test VMs
+└── ...
+```
+
+
