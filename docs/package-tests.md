@@ -38,7 +38,7 @@ Before running the client installation tests, you need a running PMM server for 
 ```bash
 docker create -v /srv --name pmm-server-data perconalab/pmm-server:3-dev-latest
 docker run -d -p 80:80 -p 443:8443 --volumes-from pmm-server-data --name pmm-server --restart always perconalab/pmm-server:3-dev-latest
-timeout 240 bash -c 'while [[ "$(curl -k -s -o /dev/null -w ''%{http_code}'' https://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
+timeout 240 bash -c 'while [[ "$(curl -k -s -o /dev/null -w '%{http_code}' https://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 ```
 
 ### **Step 3: Configure and Run Vagrant**

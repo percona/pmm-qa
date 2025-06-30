@@ -314,7 +314,7 @@ os: "rocky-9"                    # Rocky Linux 9
 ### Version Matrix
 ```yaml
 matrix_range: "10"               # Number of versions to test
-version_matrix: "["3.0.0", "3.1.0", "3.2.0"]"
+version_matrix: ["3.0.0", "3.1.0", "3.2.0"]
 pt_os_matrix: "[\"bullseye\", \"bookworm\", \"noble\"]"
 ```
 

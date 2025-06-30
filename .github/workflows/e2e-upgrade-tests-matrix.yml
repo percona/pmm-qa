@@ -50,13 +50,13 @@ jobs:
       matrix:
         old_version: ${{ fromJSON(needs.get_versions.outputs.version_matrix) }}
     with:
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       pre_upgrade_tests: '@config-pre-upgrade'
       post_upgrade_tests: '@config-post-upgrade'
       pmm_server_start_version: ${{ matrix.old_version }}
       pmm_client_start_version: ${{ matrix.old_version }}
       upgrade_type: ${{ inputs.upgrade_type || 'Docker way' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       services_list: ''
       repository: ${{ inputs.repository || 'dev-latest'}}
       version_string_from: ${{needs.get_versions.outputs.start_version}}
@@ -72,13 +72,13 @@ jobs:
       matrix:
         old_version: ${{ fromJSON(needs.get_versions.outputs.version_matrix) }}
     with:
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       pre_upgrade_tests: '@rbac-pre-upgrade'
       post_upgrade_tests: '@rbac-post-upgrade'
       pmm_server_start_version: ${{ matrix.old_version }}
       pmm_client_start_version: ${{ matrix.old_version }}
       upgrade_type: ${{ inputs.upgrade_type || 'Docker way' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       services_list: '--addclient=ps,1 --addclient=pdpgsql,1'
       repository: ${{ inputs.repository || 'dev-latest'}}
       version_string_from: ${{needs.get_versions.outputs.start_version}}

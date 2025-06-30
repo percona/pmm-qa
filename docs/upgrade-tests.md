@@ -28,18 +28,18 @@ First, set up the environment with the *starting* version of PMM Server and Clie
 1.  **Clone the repositories**:
 
     ```bash
-    git clone --branch main https://github.com/percona/pmm-ui-tests.git
-    git clone --branch main https://github.com/percona/pmm-qa.git
+    git clone --branch v3 https://github.com/percona/pmm-ui-tests.git
+    git clone --branch v3 https://github.com/percona/pmm-qa.git
     ```
 
 2.  **Set up the PMM Server**:
 
-    Start a PMM server container with a specific older version tag (e.g., `2.41.0`).
+    Start a PMM server container with a specific older version tag (e.g., `2.44.1`).
 
     ```bash
     cd pmm-qa/pmm-integration
     npm install
-    sudo npx ts-node ./integration-setup.ts --ci --setup-docker-pmm-server --rbac --pmm-server-docker-tag=percona/pmm-server:2.41.0
+    sudo npx ts-node ./integration-setup.ts --ci --setup-docker-pmm-server --rbac --pmm-server-docker-tag=percona/pmm-server:2.44.1
     cd ../..
     ```
 
@@ -48,7 +48,7 @@ First, set up the environment with the *starting* version of PMM Server and Clie
     Install the corresponding older version of the PMM client and add some services to be monitored.
 
     ```bash
-    sudo ./pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version 3.1.0 --admin_password admin
+    sudo ./pmm-qa/pmm-tests/pmm2-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version 2.44.1 --admin_password admin
     sudo ./pmm-qa/pmm-tests/pmm-framework.sh --addclient=ps,1 --pmm2 --pmm2-server-ip=127.0.0.1
     ```
 

@@ -63,10 +63,11 @@ You can reproduce the CI runner workflow for Feature Build E2E tests on your loc
 
 5. **Set Up PMM Client**
    
-   This step configures the PMM Client to connect to your local PMM Server:
+   This step configures the PMM Client to connect to your local PMM Server. First, dynamically retrieve the PMM Server container's IP address and export it as an environment variable:
    ```bash
+   export PMM_SERVER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pmm-server)
    cd qa-integration/pmm_qa
-   sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version 3-dev-latest --admin_password admin-password --use_metrics_mode no
+   sudo bash -x pmm3-client-setup.sh --pmm_server_ip $PMM_SERVER_IP --client_version 3-dev-latest --admin_password admin-password --use_metrics_mode no
    cd ../..
    ```
 
