@@ -93,7 +93,7 @@ npm ci
 npx playwright install --with-deps
 ```
 
-### **Step 2: Run the Tests**
+### **Step 6: Run the Tests**
 
 Run the CodeceptJS tests using the appropriate tags. The setup for the services will vary depending on the test.
 

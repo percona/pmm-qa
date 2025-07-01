@@ -96,7 +96,7 @@ You can reproduce the CI runner workflow for Feature Build E2E tests on your loc
    envsubst < env.list > env.generated.list
    ```
 
-### **Step 6: Run the Tests**
+### **Step 8: Run the Tests**
 
 Finally, run the E2E tests for the specific feature. Use the appropriate tag for the test suite you want to run.
 
