@@ -111,7 +111,7 @@ if len(localClientStatus) > 0:
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: ".join(errors))
 
-expected_version=arguments[1].replace("\\r\\n", "")
+expected_version=arguments[1].replace("\\r\\n", "").replace("-rc", "")
 admin_version = subprocess.run(["pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
 if admin_version != expected_version:
