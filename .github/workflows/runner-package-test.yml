@@ -63,7 +63,6 @@ on:
         default: "jammy"
         type: choice
         options:
-          - bullseye
           - bookworm
           - noble
           - jammy
@@ -191,17 +190,11 @@ jobs:
           echo "repo=${{ env.REPO }}"
           
           ### vagrant vm ###
-          if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
-            echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
-          fi
           if [[ "${{ inputs.os }}" =~ "bookworm" ]]; then
             echo "VM_BOX=generic-x64/debian12" >> $GITHUB_ENV
           fi 
           if [[ "${{ inputs.os }}" =~ "bionic" ]]; then
             echo "VM_BOX=generic/ubuntu1804" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.os }}" =~ "focal" ]]; then
-            echo "VM_BOX=generic/ubuntu2004" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
             echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
