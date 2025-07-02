@@ -235,7 +235,6 @@ jobs:
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
           docker run --detach --restart always \
-            --network="pmm-network" \
             -e PMM_DEBUG=1 \
             -e PMM_ENABLE_NOMAD=1 \
             -e PMM_PUBLIC_ADDRESS=127.0.0.1 \
