@@ -242,7 +242,7 @@ jobs:
             --publish 80:8080 --publish 443:8443 -p 4647:4647 \
             --volume pmm-volume:/srv \
             --name pmm-server \
-	        ${{ env.PMM_SERVER_IMAGE }}
+            ${{ env.PMM_SERVER_IMAGE }}
 
       - name: "Setup tools"
         run: |
