@@ -2,6 +2,8 @@
 
 This guide provides instructions for running the PMM Integration and Command-Line Interface (CLI) tests locally. These tests validate the interaction between the PMM server and client, as well as the functionality of the `pmm-admin` CLI tool.
 
+> **⚠️ Note**: This document covers the **current TypeScript/Playwright-based CLI testing framework**. The legacy BATS tests in `pmm-tests/` directory are deprecated and should not be used for new test development. See [main documentation](README.md#important-notice-legacy-tests-deprecation) for details.
+
 ## 💡 **What are Integration & CLI Tests?**
 
 These tests are designed to:

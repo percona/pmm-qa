@@ -93,7 +93,7 @@ You should see the `pmm-server` and `watchtower` containers running.
 
 All paths mentioned in this section are relative to the root of the `pmm-qa` repository, which can be found [here](https://github.com/percona/pmm-qa/tree/v3).
 
-Helm tests in this project are written using Bats (Bash Automated Testing System). Bats provides a simple way to test shell scripts and command-line tools. Helm tests typically involve deploying a Helm chart and then asserting on the state of the Kubernetes resources or the behavior of the deployed application.
+Helm tests in this project are written using Bats (Bash Automated Testing System). **Note**: This is different from the deprecated BATS tests in `pmm-tests/` - Helm-specific BATS tests in `k8s/` directory are still actively maintained for Kubernetes testing. Bats provides a simple way to test shell scripts and command-line tools. Helm tests typically involve deploying a Helm chart and then asserting on the state of the Kubernetes resources or the behavior of the deployed application.
 
 ### **Test Structure and Directory Layout**
 

@@ -1,6 +1,8 @@
 # PMM-QA
 Automated tests for Percona Monitoring and Management
 
+> **⚠️ IMPORTANT**: The `pmm-tests/` directory containing BATS tests is **deprecated**. See [documentation](docs/README.md#important-notice-legacy-tests-deprecation) and [pmm-tests/DEPRECATED.md](pmm-tests/DEPRECATED.md) for migration guidance.
+
 ## Test Architecture Overview
 
 This project employs a comprehensive testing strategy, utilizing various frameworks and methodologies to ensure the quality and stability of Percona Monitoring and Management (PMM). The tests are broadly categorized by their focus and the tools they use:
@@ -9,6 +11,8 @@ This project employs a comprehensive testing strategy, utilizing various framewo
 - **CLI/Integration Tests**: These tests focus on the functionality of the `pmm-admin` command-line interface and the integration between PMM components and monitored services. They are typically written using Playwright for CLI interactions and Python for service setup.
 - **Package Tests**: These tests verify the installation and functionality of PMM client packages across various operating systems. They leverage Vagrant for virtualized environments and Ansible for automation.
 - **Infrastructure Tests**: These tests validate PMM deployments in different environments, including Kubernetes/Helm and using the Easy Install script. They utilize Bats for testing Helm deployments.
+
+**Note**: The legacy BATS tests in `pmm-tests/` are deprecated. Current testing uses TypeScript/Playwright frameworks described in the [documentation](docs/).
 
 Each test type has its own dedicated documentation, detailing how to run and write tests, along with their specific directory structures and conventions.
 
@@ -26,7 +30,7 @@ Understanding the layout of the key repositories involved in PMM QA is essential
 ├── docs/                # Project documentation
 ├── k8s/                 # Kubernetes/Helm test scripts (Bats)
 ├── pmm-integration/     # PMM integration setup scripts (TypeScript)
-├── pmm-tests/           # PMM test scripts (Python, Bash)
+├── pmm-tests/           # ⚠️ DEPRECATED PMM test scripts (BATS/Bash)
 ├── tests/               # General test utilities
 ├── .gitignore
 ├── docker-compose.yml

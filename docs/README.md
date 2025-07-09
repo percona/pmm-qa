@@ -2,6 +2,23 @@
 
 Welcome to the PMM-QA comprehensive testing documentation. This directory contains detailed guides for running various types of tests in the PMM (Percona Monitoring and Management) QA repository.
 
+## ⚠️ **Important Notice: Legacy Tests Deprecation**
+
+> **DEPRECATION NOTICE**: The `pmm-tests/` directory containing BATS (Bash Automated Testing System) tests is **deprecated** and should not be used for new test development.
+> 
+> **Use instead**: 
+> - **CLI Testing**: TypeScript/Playwright tests in `cli-tests/` (see [Integration & CLI Tests](integration-cli-tests.md))
+> - **UI Testing**: Playwright tests in `playwright-tests/` (see [End-to-End Tests](e2e-tests.md))
+> - **Infrastructure Setup**: Python framework in `qa-integration/pmm_qa/` (see [Adding New Environments](adding-new-environments.md))
+>
+> **Migration Timeline**: Existing BATS tests will be gradually migrated to the new framework. No new BATS tests should be created.
+> 
+> **Status**: 
+> - ❌ **pmm-tests/*.bats** - Deprecated, maintenance mode only
+> - ✅ **cli-tests/** - Current CLI testing framework  
+> - ✅ **playwright-tests/** - Current UI testing framework
+> - ✅ **qa-integration/pmm_qa/** - Current infrastructure framework
+
 ## 📚 **Documentation Overview**
 
 This documentation is organized by test type to provide focused guidance for different testing scenarios:
@@ -21,6 +38,7 @@ This documentation is organized by test type to provide focused guidance for dif
 
 | Document | Description |
 |----------|-------------|
+| [Adding New Environments](adding-new-environments.md) | Guide for extending the PMM framework |
 | [Test Parameters Reference](test-parameters.md) | Complete parameter documentation |
 | [Troubleshooting Guide](troubleshooting.md) | Common issues and solutions |
 
@@ -88,10 +106,11 @@ Frequency: Per package release
 - **Proxy/Load Balancers**: ProxySQL, HAProxy
 
 ### **Testing Frameworks**
-- **CLI Testing**: Playwright (TypeScript)
-- **UI Testing**: Playwright, CodeceptJS
-- **Infrastructure Testing**: BATS (Bash Automated Testing System)
-- **Package Testing**: Ansible playbooks
+- **CLI Testing**: Playwright (TypeScript) - Current framework
+- **UI Testing**: Playwright - Current framework
+- **Infrastructure Setup**: Python/Ansible - Current framework
+- **Package Testing**: Ansible playbooks - Current framework
+- **Legacy Testing**: ⚠️ BATS (Bash) - Deprecated, maintenance mode only
 
 ---
 

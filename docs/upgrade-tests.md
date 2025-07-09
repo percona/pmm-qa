@@ -2,6 +2,8 @@
 
 This guide provides instructions for running the PMM upgrade tests locally. These tests validate the PMM upgrade process, ensuring data integrity and functionality are maintained across versions.
 
+> **⚠️ Note**: Some examples in this document reference legacy scripts in `pmm-tests/` which are deprecated. While these specific scripts (`pmm2-client-setup.sh`, `pmm-framework.sh`) may still be used for upgrade testing scenarios, **no new BATS tests should be created**. For new test development, use the TypeScript/Playwright framework. See [main documentation](README.md#important-notice-legacy-tests-deprecation) for details.
+
 ## 💡 **What are Upgrade Tests?**
 
 Upgrade tests are critical for ensuring a smooth user experience when new versions of PMM are released. They verify that:
