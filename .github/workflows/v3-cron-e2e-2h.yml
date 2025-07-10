@@ -17,17 +17,17 @@ on:
         type: string
       pmm_server_image:
         description: 'PMM Server docker image'
-        default: 'perconalab/pmm-server:3-dev-latest'
+        default: 'perconalab/pmm-server-fb:PR-3982-1aa6576'
         required: true
         type: string
       pmm_client_image:
         description: 'pmm-client docker image'
-        default: 'perconalab/pmm-client:3-dev-latest'
+        default: 'perconalab/pmm-client-fb:PR-3982-1aa6576'
         required: false
         type: string
       pmm_client_version:
         description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-PR-3982-1aa6576.tar.gz'
         required: false
         type: string
       sha:
@@ -74,4 +74,4 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-PR-3982-1aa6576.tar.gz' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client-fb:PR-3982-1aa6576' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }} 
