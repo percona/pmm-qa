@@ -68,7 +68,7 @@ Upgrade tests are complex and typically involve a sequence of steps across diffe
 
 -   **Orchestration**: Playwright tests act as the orchestrator, calling external scripts (e.g., Python `pmm-framework.py` via `cli.exec` or similar helper) to set up the initial PMM environment with a specific older version.
 -   **Pre-Upgrade Validation**: 
--   **Upgrade Execution**: T
+-   **Upgrade Execution**: Execute the upgrade process by replacing the PMM server container with the new version, ensuring all services are restarted and functional.
 -   **Post-Upgrade Validation**: 
 -   **Version Management**:
 -   **Tags**: 
