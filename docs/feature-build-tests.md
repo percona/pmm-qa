@@ -40,14 +40,7 @@ You can reproduce the CI runner workflow for Feature Build E2E tests on your loc
    curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | sudo bash -s -- -b /usr/local/bin
    ```
 
-3. **Clean Up Disk Space (Optional, but recommended)**
-   
-   Free up space on your system to avoid issues with large Docker images:
-   ```bash
-   sudo rm -rf /usr/share/dotnet /opt/ghc "/usr/local/share/boost"
-   ```
-
-4. **Start PMM Server with Docker Compose**
+3. **Start PMM Server with Docker Compose**
    
    This step sets up the PMM Server container, changes the admin password, and runs initial DB setup scripts:
    ```bash
@@ -61,17 +54,7 @@ You can reproduce the CI runner workflow for Feature Build E2E tests on your loc
    cd ..
    ```
 
-5. **Set Up PMM Client**
-   
-   This step configures the PMM Client to connect to your local PMM Server. First, dynamically retrieve the PMM Server container's IP address and export it as an environment variable:
-   ```bash
-   export PMM_SERVER_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' pmm-server)
-   cd qa-integration/pmm_qa
-   sudo bash -x pmm3-client-setup.sh --pmm_server_ip $PMM_SERVER_IP --client_version 3-dev-latest --admin_password admin-password --use_metrics_mode no
-   cd ../..
-   ```
-
-6. **Prepare Python Environment and Run Setup**
+4. **Prepare Python Environment and Run Setup**
    
    This step prepares the test environment and configures databases/services as needed for the test suite. Replace `[SETUP_ARGS]` with the appropriate setup string, e.g. `--database psmdb,SETUP_TYPE=pss`:
    ```bash
@@ -86,14 +69,13 @@ You can reproduce the CI runner workflow for Feature Build E2E tests on your loc
    cd ../..
    ```
 
-7. **Install Node.js Dependencies for UI Tests**
+5. **Install Node.js Dependencies for UI Tests**
    
    Installs all required Node.js modules and Playwright browser dependencies for UI testing:
    ```bash
    cd pmm-ui-tests
    npm ci
    npx playwright install --with-deps
-   envsubst < env.list > env.generated.list
    ```
 
 ### **Step 8: Run the Tests**
@@ -108,21 +90,13 @@ Finally, run the E2E tests for the specific feature. Use the appropriate tag for
 ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "@exporters"
 ```
 
-## 📋 **Available Test Suites**
+## 📋 **[Available Test Suites](e2e-tests.md#-available-test-suites)**
 
-| Test Suite | Test Tag(s) | Description |
-|---|---|---|
-| Backup Management | `@bm-mongo`, `@bm-locations` | Tests for backup and restore functionality. |
-| Exporters | `@exporters`, `@mongodb-exporter` | Tests for various exporters. |
-| UI Components | `@fb-instances`, `@fb-alerting` | Tests for different UI components. |
-| PostgreSQL Monitoring | `@pgsm-pmm-integration` | Tests for pg_stat_monitor integration. |
-
-## 📝 **How to Write Feature Build Tests**
+## 📝 **How to Write E2E Tests**
 
 Feature Build tests are essentially End-to-End (E2E) UI tests that focus on validating new features. Therefore, the principles and practices for writing these tests are the same as for general E2E UI tests.
 
--   For writing **Playwright** tests, refer to the [How to Write Playwright Tests](e2e-tests.md#how-to-write-playwright-tests) section in the E2E Tests documentation.
--   For writing **CodeceptJS** tests, refer to the [How to Write CodeceptJS Tests](e2e-codeceptjs-tests.md#how-to-write-codeceptjs-tests) section in the E2E CodeceptJS Tests documentation.
+-   For writing **CodeceptJS** tests, refer to the [How to Write CodeceptJS Tests](e2e-tests.md#how-to-write-codeceptjs-tests) section in the E2E CodeceptJS Tests documentation.
 
 When writing Feature Build tests, pay special attention to:
 

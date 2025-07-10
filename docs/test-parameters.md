@@ -20,7 +20,6 @@ pmm_ui_tests_branch: "v3"           # PMM UI tests repository branch
 pmm_qa_branch: "v3"                 # PMM QA repository branch
 qa_integration_branch: "v3"         # QA integration repository branch
 package_testing_branch: "v3"        # Package testing branch
-easy_install_branch: "v3"           # Easy install script branch
 ```
 
 ### Version and Image Parameters

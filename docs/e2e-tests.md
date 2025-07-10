@@ -1,26 +1,27 @@
-# End-to-End (E2E) Tests
+# E2E CodeceptJS Tests
 
-This guide provides instructions for running the PMM End-to-End (E2E) tests locally. These tests validate the PMM UI functionality and user workflows using Playwright and CodeceptJS.
+This guide provides instructions for running the PMM E2E tests that use the CodeceptJS framework. These tests cover a wide range of scenarios, including SSL, experimental features, and more.
 
-## 💡 **What are E2E Tests?**
+## 💡 **What are E2E CodeceptJS Tests?**
 
-E2E tests simulate real user scenarios from start to finish, ensuring all components of the PMM UI work together correctly. They are crucial for:
+These tests are designed to validate specific and advanced PMM functionalities. They ensure that:
 
-- **Validating new features**: Ensuring new UI functionality works as expected.
-- **Preventing regressions**: Making sure existing features are not broken by new changes.
-- **Ensuring stability**: Testing the integration between the PMM server and the UI.
+- **SSL connections are secure**: Verifying that PMM can connect to databases over SSL.
+- **Experimental features are stable**: Testing features that are not yet released to the general public.
+- **Core functionality is robust**: Covering scenarios like disconnecting and reconnecting services.
+- **Etc..**
 
-## 🤖 **How to Run E2E Tests Locally**
+## 🤖 **How to Run E2E CodeceptJS Tests Locally**
 
-The following steps will guide you through setting up the necessary environment and running the E2E tests on your local machine. These instructions are based on the steps performed by the CI runners (`runner-e2e-tests-playwright.yml` and `runner-e2e-tests-codeceptjs.yml`).
+The following steps will guide you through setting up the environment and running the CodeceptJS tests locally, based on the `e2e-codeceptjs-matrix.yml` CI workflow.
 
 ### **Prerequisites**
 
--   **Git**: To clone the required repositories.
--   **Docker** and **Docker Compose**: To run the PMM server and other services.
--   **Node.js (v18+)** and **npm**: For running the test frameworks.
--   **Python 3** and **pip**: For running setup scripts.
--   **System Dependencies**: `ansible`, `clickhouse-client`, `dbdeployer`, and others.
+- **Git**: To clone the required repositories.
+- **Docker** and **Docker Compose**: To run the PMM server and other services.
+- **Node.js (v20+)** and **npm**: For running the test frameworks.
+- **Python 3** and **pip**: For running setup scripts.
+- **System Dependencies**: `ansible`, `clickhouse-client`, `dbdeployer`, and others.
 
 ### **Step 1: Clone Repositories**
 
@@ -31,17 +32,7 @@ git clone --branch v3 https://github.com/percona/pmm-ui-tests.git
 git clone --branch v3 https://github.com/Percona-Lab/qa-integration.git
 ```
 
-### **Step 2: Install System Dependencies**
-
-Install the required system packages. The command below is for Debian/Ubuntu-based systems.
-
-```bash
-sudo apt-get update
-sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench clickhouse-client
-curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | sudo bash -s -- -b /usr/local/bin
-```
-
-### **Step 3: Set Up PMM Server**
+### **Step 2: Set Up PMM Server**
 
 Next, set up and start the PMM server using Docker Compose.
 
@@ -62,15 +53,12 @@ docker network connect pmm-qa pmm-server || true
 cd ..
 ```
 
-### **Step 4: Set Up PMM Client and Services**
+### **Step 3: Set Up Required Services**
 
 Now, set up the PMM client and the database services you want to monitor.
 
 ```bash
 cd qa-integration/pmm_qa
-
-# Install the PMM client
-sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version 3-dev-latest --admin_password admin-password --use_metrics_mode no
 
 # Set up the test environment and services (e.g., a single Percona Server instance)
 python3 -m venv virtenv
@@ -83,7 +71,7 @@ cd ../..
 ```
 **Note:** You can customize the services by changing the arguments passed to `pmm-framework.py`. For example, to set up multiple databases for inventory tests, use `--database ps --database psmdb --database pdpgsql`.
 
-### **Step 5: Install Test Dependencies**
+### **Step 4: Install Test Dependencies**
 
 Install the Node.js dependencies required for the UI tests.
 
@@ -93,137 +81,149 @@ npm ci
 npx playwright install --with-deps
 ```
 
-### **Step 6: Run the Tests**
+### **Step 5: Run the Tests**
 
-Finally, run the E2E tests. You can run specific test suites by using tags.
+Run the CodeceptJS tests using the appropriate tags. The setup for the services will vary depending on the test.
 
-#### **Running Playwright Tests**
+#### **SSL Tests**
 
 ```bash
-# Run the Portal test suite
-npx playwright test --project="Portal" --grep="@portal"
+# Set up the environment for MySQL SSL tests
+python qa-integration/pmm_qa/pmm-framework.py --pmm-server-password=admin-password --database ssl_mysql
 
-# Run the Inventory test suite
-npx playwright test --project="Chromium" --grep="@inventory"
+# Run the MySQL SSL tests
+./node_modules/.bin/codeceptjs run -c pmm-ui-tests/pr.codecept.js --grep "@ssl-mysql"
 ```
 
-#### **Running CodeceptJS Tests**
+#### **Experimental Tests**
 
 ```bash
-# First, generate the environment file
-envsubst < env.list > env.generated.list
+# Set up the environment for experimental tests
+python qa-integration/pmm_qa/pmm-framework.py --pmm-server-password=admin-password --database pdpgsql
 
-# Run the Backup Management test suite for MongoDB
-./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep="@bm-mongo"
+# Run the experimental tests
+./node_modules/.bin/codeceptjs run -c pmm-ui-tests/pr.codecept.js --grep "@experimental"
 ```
 
 ## 📋 **Available Test Suites**
 
-Here are some of the main test suites you can run:
+### **Core E2E CodeceptJS Matrix Test Suites**
 
-| Test Suite | Tag | Framework | Description |
-|---|---|---|---|
-| Portal | `@portal` | Playwright | Tests the main PMM Portal functionality. |
-| Inventory | `@inventory` | Playwright | Tests the service inventory management pages. |
-| Backup Management (Mongo) | `@bm-mongo` | CodeceptJS | Tests backup and restore for MongoDB. |
-| Exporters | `@exporters` | CodeceptJS | Validates various exporters. |
-| Settings | `@settings` | CodeceptJS | Tests the PMM settings and configuration pages. |
+| Test Suite | Test Tag(s) | Description |
+|---|---|---|
+| Settings and CLI | `@settings\|@cli` | General settings and CLI tests. |
+| SSL Tests | `@ssl-mysql`, `@ssl-mongo`, `@ssl-postgres` | Tests for SSL connections to different databases. |
+| Experimental | `@experimental` | Tests for experimental features. |
+| Disconnect | `@disconnect` | Tests for disconnecting and reconnecting services. |
+| Backup Management MongoDB | `@bm-mongo` | MongoDB backup and restore functionality. |
+| Backup Management Common | `@bm-locations` | Backup location management and common features. |
+| Exporters | `@exporters` | Various exporter functionality tests. |
+| MongoDB Exporter | `@mongodb-exporter` | MongoDB-specific exporter tests. |
+| Instances | `@fb-instances` | Instance management UI tests. |
+| Alerting and Settings | `@fb-alerting\|@fb-settings` | Alerting and settings UI components. |
+| User and Password | `@user-password` | User authentication with changed password. |
+| PGSM Integration | `@pgsm-pmm-integration` | PostgreSQL pg_stat_monitor integration. |
+| PGSS Integration | `@pgss-pmm-integration` | PostgreSQL pg_stat_statements integration. |
+| PSMDB Replica | `@pmm-psmdb-replica-integration` | MongoDB replica set integration. |
+| PSMDB Arbiter | `@pmm-psmdb-arbiter-integration` | MongoDB arbiter replica integration. |
+| Dump Tool | `@dump` | Database dump tool functionality. |
+| Service Account | `@service-account` | Service account management tests. |
+| PS Integration | `@fb-pmm-ps-integration` | Percona Server integration tests. |
+| RBAC | `@rbac` | Role-based access control tests. |
+| Encryption | `@fb-encryption` | Encryption functionality tests. |
+| Docker Configuration | `@docker-configuration` | Docker configuration tests. |
+| Nomad | `@nomad` | Nomad orchestration tests. |
 
-## 📝 **How to Write Playwright Tests**
+### **Jenkins E2E CodeceptJS Test Suites**
+| Test Suite | Test Tag(s) | Description |
+|---|---|---|
+| Query Analytics | `@qan` | Tests for QAN features. |
+| Dashboards | `@nightly`, `@dashboards` | Tests that make sure Dashboards have data. |
+| Alerting | `@ia` | Alerting tests. |
+| Remote instances | `@instances` | Tests for AWS and Azure integration. |
+| GCP Remote instances | `@gcp` | Tests for GCP integration. |
+
+## 📝 **How to Write CodeceptJS Tests**
 
 All paths mentioned in this section are relative to the root of the `pmm-ui-tests` repository, which can be found [here](https://github.com/percona/pmm-ui-tests/tree/v3).
 
-Playwright tests are written in TypeScript and use a clear, readable syntax. Tests are typically organized into `describe` blocks for test suites and `test` blocks for individual test cases.
+CodeceptJS tests are written in JavaScript and provide a high-level, readable syntax for UI interactions. They are built on top of WebDriver or Playwright and use a BDD-style syntax.
 
 ### **Test Structure and Directory Layout**
 
-Playwright tests for PMM UI are located in the `pmm-ui-tests/playwright-tests` directory. Within this directory, tests are organized by feature or functional area. For example:
+CodeceptJS tests for PMM UI are primarily located in the `pmm-ui-tests/tests` directory. Tests are organized by feature or functional area.
 
 ```
 pmm-ui-tests/
-├── playwright-tests/
+├── tests/                 # Actual test files
 │   ├── pages/             # Page Object Model definitions
-│   │   ├── LoginPage.ts
-│   │   └── DashboardPage.ts
-│   │   └── ServicesPage.ts
-│   ├── tests/             # Actual test files
-│   │   ├── login.spec.ts
-│   │   └── inventory.spec.ts
-│   ├── fixtures/          # Test data or reusable components
-│   └── playwright.config.ts # Playwright configuration
+│   │   ├── LoginPage.js
+│   │   └── DashboardPage.js
+│   ├── login_test.js
+│   ├── inventory_test.js
+├── helpers/               # Custom helpers for common actions
+├── config/                # Configuration files
+└── pr.codecept.js         # Main CodeceptJS configuration
 ```
 
--   **`pages/`**: This directory typically contains Page Object Model (POM) files. POM is a design pattern that helps create an object repository for UI elements within the application. Each page in the web application has a corresponding Page Object class, which contains methods that perform interactions on that web page.
--   **`tests/`**: This is where the actual test files (`.spec.ts`) reside. Each file usually contains tests for a specific feature or a logical group of functionalities.
--   **`fixtures/`**: This directory can be used for test data, custom fixtures, or reusable test components.
--   **`playwright.config.ts`**: This file configures Playwright, including projects, reporters, and global setup/teardown.
+-   **`tests/`**: This directory contains the main test files (`_test.js`). Each file typically covers a specific feature or a logical group of functionalities.
+-   **`pages/`**: Similar to Playwright, CodeceptJS also supports the Page Object Model. This directory holds page object definitions, abstracting UI interactions.
+-   **`helpers/`**: Custom helpers can be created to encapsulate common actions or assertions, promoting reusability.
+-   **`pr.codecept.js`**: This is the primary configuration file for CodeceptJS, defining helpers, plugins, and test paths.
 
 ### **Writing Conventions**
 
--   **Descriptive Naming**: Test files and test blocks should have clear, descriptive names that indicate their purpose (e.g., `login.spec.ts`, `test.describe('Login Page')`).
--   **Page Object Model (POM)**: Utilize the Page Object Model for interacting with UI elements. This improves test readability, maintainability, and reduces code duplication.
--   **Assertions**: Use `expect` assertions to verify the state of the UI. Be specific with your assertions.
--   **Tags**: Use `@` tags in `test.describe` or `test` blocks to categorize tests (e.g., `@portal`, `@inventory`). These tags are used to run specific subsets of tests.
--   **Comments**: Add comments to explain complex logic or the *why* behind certain actions, rather than just *what* is being done.
+-   **BDD Style**: Tests are written using `Scenario` and `I` (the actor) to describe user interactions in a readable way.
+-   **Page Objects**: Utilize Page Objects for interacting with UI elements to improve maintainability.
+-   **Tags**: Use `@` tags in `Scenario` or `Feature` blocks to categorize tests (e.g., `@bm-mongo`, `@exporters`). These tags are used for selective test execution.
+-   **Comments**: Add comments for complex logic or to explain the *why* behind certain steps.
 
 ### **Basic Test Example**
 
-Here's an example demonstrating how to navigate to the Inventory page and verify a service:
+A typical CodeceptJS test file (`_test.js`) will look like this:
 
-```typescript
-import { test, expect } from '@playwright/test';
-import { ServicesPage } from './pages/ServicesPage'; // Assuming ServicesPage is defined
+```javascript
+Feature('Login');
 
-test.describe('PMM Inventory', () => {
-  let servicesPage: ServicesPage;
+Scenario('should display login form', ({ I }) => {
+  I.amOnPage('http://localhost/');
+  I.seeElement('input[name="username"]');
+  I.seeElement('input[name="password"]');
+  I.seeElement('button[type="submit"]');
+});
 
-  test.beforeEach(async ({ page }) => {
-    servicesPage = new ServicesPage(page);
-    await page.goto(servicesPage.url); // Navigate to the Inventory page URL
-    await servicesPage.verifyPageLoaded(); // Custom method to wait for page to load
-  });
-
-  test('should verify local MongoDB service presence', async () => {
-    const serviceName = 'mo-integration-'; // Example service name
-    await servicesPage.servicesTable.verifyService({ serviceName }); // Custom method to verify service in a table
-  });
-
-  test('should verify kebab menu options for MongoDB service', async () => {
-    const serviceName = 'mo-integration-';
-    await servicesPage.servicesTable.buttons.options(serviceName).click();
-    await expect(servicesPage.servicesTable.buttons.deleteService).toBeVisible();
-    await expect(servicesPage.servicesTable.buttons.serviceDashboard).toBeVisible();
-    await expect(servicesPage.servicesTable.buttons.qan).toBeVisible();
-  });
+Scenario('should allow user to login', ({ I }) => {
+  I.amOnPage('http://localhost/');
+  I.fillField('input[name="username"]', 'admin');
+  I.fillField('input[name="password"]', 'admin');
+  I.click('button[type="submit"]');
+  I.see('Dashboard');
 });
 ```
 
 ### **Key Concepts**
 
--   **`test` object**: Used for defining tests, test suites, and hooks.
--   **`page` object**: Represents a browser tab, used for navigation and interaction.
--   **Locators**: Methods to find elements on the page (e.g., `page.locator('input[name="username"]')`).
--   **`expect` object**: Used for making assertions about the UI state.
--   **`await` keyword**: Essential for asynchronous Playwright operations.
--   **Page Object Model (POM)**: A design pattern where web pages are represented as classes, abstracting UI elements and interactions. This improves test readability and maintainability.
+-   **`Feature`**: Defines a test suite.
+-   **`Scenario`**: Represents an individual test case.
+-   **`I` (the actor)**: The global object for performing UI actions (e.g., `I.amOnPage()`, `I.click()`).
+-   **Helpers**: Provide methods for `I` to interact with the browser.
+-   **Tags**: Used for categorizing and selectively running tests.
 
 ### **Running New Tests**
 
-After creating a new test file, you can run it using the `npx playwright test` command, specifying the path to your test file or using a `grep` pattern for its title or tags.
+After creating a new test file, you can run it using the `codeceptjs run` command, specifying the path to your test file or using a `grep` pattern for its title or tags.
 
 ```bash
 cd pmm-ui-tests
-npx playwright test playwright-tests/my-new-test.spec.ts
+./node_modules/.bin/codeceptjs run -c pr.codecept.js tests/my_new_feature_test.js
 # Or with a grep pattern
-npx playwright test --grep="@my-new-feature"
+./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep="@my-new-feature"
 ```
 
 ---
 
 **Related Documentation**:
+- [Feature Build Tests](feature-build-tests.md)
 - [Integration & CLI Tests](integration-cli-tests.md)
-- [Infrastructure Tests](infrastructure-tests.md)
-- [Package Tests](package-tests.md)
-- [Upgrade Tests](upgrade-tests.md)
 - [Test Parameters Reference](test-parameters.md)
 - [Troubleshooting Guide](troubleshooting.md)

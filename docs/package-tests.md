@@ -215,7 +215,6 @@ After creating a new playbook or modifying an existing one, you can run it by up
 
 **Related Documentation**:
 - [E2E Tests](e2e-tests.md)
-- [E2E CodeceptJS Tests](e2e-codeceptjs-tests.md)
 - [Infrastructure Tests](infrastructure-tests.md)
 - [Integration & CLI Tests](integration-cli-tests.md)
 - [Upgrade Tests](upgrade-tests.md)

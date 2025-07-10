@@ -60,7 +60,7 @@ Set up the PMM client and the database services you want to monitor.
 ```bash
 cd qa-integration/pmm_qa
 
-# Install the PMM client
+# Install the PMM client (used only for help, unregister, generic test suites. These suites need to be moved to some db container)
 sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version 3-dev-latest --admin_password admin --use_metrics_mode no
 
 # Set up the test environment and services (e.g., a single Percona Server instance)
@@ -143,7 +143,7 @@ qa-integration/
 
 ### **Writing Conventions**
 
--   **Playwright for CLI Interaction**: Use Playwright's `page.evaluate()` or `page.keyboard` to simulate CLI commands and `page.locator()` to capture and assert on terminal output (if applicable in a web-based terminal scenario, or by interacting with the underlying shell directly if the test runner allows).
+-   **CLI Interaction**: Use  `cliHelper` to execute CLI commands.
 -   **Python for Environment Setup**: Leverage `pmm-framework.py` to programmatically set up databases, PMM clients, and other services. This ensures a consistent and reproducible test environment.
 -   **Clear Assertions**: Assertions should clearly define the expected CLI output, service status, or data collected by PMM.
 -   **Test Isolation**: Each test should aim to be as isolated as possible, setting up and tearing down its own resources to prevent interference.
@@ -204,7 +204,6 @@ This example demonstrates how to execute a `pmm-admin` command, check its succes
 
 **Related Documentation**:
 - [E2E Tests](e2e-tests.md)
-- [E2E CodeceptJS Tests](e2e-codeceptjs-tests.md)
 - [Infrastructure Tests](infrastructure-tests.md)
 - [Package Tests](package-tests.md)
 - [Upgrade Tests](upgrade-tests.md)
