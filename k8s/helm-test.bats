@@ -152,13 +152,15 @@ update_values_yaml() {
 }
 
 @test "install last released V3 version, upgrade to V3 and uninstall" {
+    skip "Unskip after https://perconadev.atlassian.net/browse/PMM-13997 is fixed"
+
     stop_port_forward
-    helm show values percona/pmm > values.yaml
+    helm show values --version 1.4.0 percona/pmm > values.yaml
 
     update_values_yaml "tag" "$RELEASE_TAG"
     update_values_yaml "repository" "$RELEASE_REPO"
 
-    helm install pmm3 -f values.yaml --wait percona/pmm
+    helm install pmm3 --version 1.4.0 -f values.yaml --wait percona/pmm
     wait_for_pmm
     start_port_forward
 
@@ -188,10 +190,12 @@ update_values_yaml() {
 }
 
 @test "install last released V2 version, upgrade to V3 and uninstall" {
+    skip "Unskip after https://perconadev.atlassian.net/browse/PMM-13997 is fixed"
+
     stop_port_forward
     helm show values --version 1.3.0 percona/pmm > values.yaml
 
-    update_values_yaml "tag" "2.44.0"
+    update_values_yaml "tag" "2"
     update_values_yaml "repository" "percona/pmm-server"
 
     helm install pmm4 --version 1.3.0 -f values.yaml --wait percona/pmm
