@@ -149,6 +149,11 @@ if __name__ == '__main__':
     expected_pmm_minor_version = int(args.version.split('.')[1])
     test_mode = args.pre_post
     is_ami = args.env in "ami"
+    server_type = os.getenv("SERVER_TYPE")
+
+    print(f'is this ami? {is_ami}')
+    print(f'Server type is: {server_type}')
+
 
     do_docker_way = os.getenv("PERFORM_DOCKER_WAY_UPGRADE")
     grafana_cli = "grafana cli" if expected_pmm_minor_version >= 39 else "grafana-cli"
