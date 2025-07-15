@@ -59,9 +59,7 @@ class PmmServerComponents(unittest.TestCase):
     def test_clickhouse_version(self):
         """PMM-12223 - Verify Clickhouse is v23.8 or later since 2.41.0"""
         if expected_pmm_minor_version < 41: self.skipTest('Since version 2.41.0')
-        if is_ami:
-            out = verify_command('sudo clickhouse local --version')
-        else:
+        if server_type != "ami":
             out = verify_command(f"docker exec {pmm_server_docker_container} clickhouse local --version")
         self.assertIn('23.8.2.7', out, WRONG_VERSION_MSG)
 
@@ -113,22 +111,18 @@ class PmmServerComponents(unittest.TestCase):
 
     def test_victoria_metrics_version(self):
         if test_mode != "post": self.skipTest(POST_UPGRADE)
-        if is_ami:
-            out = verify_command('sudo victoriametrics --version')
-        else:
+        if server_type != "ami":
             out = verify_command(f"docker exec {pmm_server_docker_container} victoriametrics --version")
-        self.assertIn('v1.114.0', out, WRONG_VERSION_MSG)
+            self.assertIn('v1.114.0', out, WRONG_VERSION_MSG)
 
     def test_vertamedia_clickhouse_plugin_absent(self):
         # """PMM-T1758 - Verify vertamedia-clickhouse-datasource plugin is not installed after upgrade to 2.38.0"""
         if expected_pmm_minor_version < 38: self.skipTest('Since version 2.41.0')
-        if is_ami:
-            out = verify_command(f"{grafana_cli} plugins ls")
-        else:
+        if server_type != "ami":
             out = verify_command(
                 f"docker exec -e GF_PLUGIN_DIR=/srv/grafana/plugins/ "
                 f"{pmm_server_docker_container} {grafana_cli} plugins ls")
-        self.assertNotIn('vertamedia', out, 'Must be absent!')
+            self.assertNotIn('vertamedia', out, 'Must be absent!')
 
         # Disabled tests AMI+Docker:
         # verify_command('grafana cli plugins ls | grep alexanderzobnin-zabbix-app')
@@ -164,17 +158,13 @@ if __name__ == '__main__':
 
     def grep_rpm(query):
         """Polymorphic shortcut to use in test"""
-        if is_ami:
-            return verify_command(f"rpm -qa | grep {query}")
-        else:
+        if server_type != "ami":
             return verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep {query}")
 
 
     def grep_supervisor_status(name):
         """Polymorphic shortcut to use in test"""
-        if is_ami:
-            return verify_command(f"sudo supervisorctl status | grep {name}")
-        else:
+        if server_type != "ami":
             return verify_command(f"docker exec {pmm_server_docker_container} supervisorctl status | grep {name}")
 
 
