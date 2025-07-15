@@ -154,10 +154,9 @@ if __name__ == '__main__':
     print(f'is this ami? {is_ami}')
     print(f'Server type is: {server_type}')
 
-
     do_docker_way = os.getenv("PERFORM_DOCKER_WAY_UPGRADE")
     grafana_cli = "grafana cli" if expected_pmm_minor_version >= 39 else "grafana-cli"
-    if not is_ami:
+    if server_type != "ami":
         pmm_server_docker_container = verify_command(
             """docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}'""")
         assert pmm_server_docker_container, "No docker container found!"
