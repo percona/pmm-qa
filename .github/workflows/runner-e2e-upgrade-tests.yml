@@ -347,7 +347,7 @@ jobs:
         if: ${{ inputs.upgrade_type == 'UI way' }}
         working-directory: ./pmm-ui-tests/playwright-tests
         run: |
-          docker exec pmm-integration-server yum update -y percona-release || true
+          docker exec pmm-integration-server dnf update -y percona-release || true
           if [[ "${{ inputs.repository }}" != "release" ]]; then
             docker exec pmm-integration-server sed -i'' -e 's^/release/^/${{ steps.target_repo.outputs.result }}/^' /etc/yum.repos.d/pmm2-server.repo
             docker exec pmm-integration-server percona-release enable-only pmm3-client ${{ steps.target_repo.outputs.result }}

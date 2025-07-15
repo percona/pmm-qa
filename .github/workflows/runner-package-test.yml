@@ -277,9 +277,9 @@ jobs:
               export install_package=${{ env.INSTALL_PACKAGE }}
               
               if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
-                sudo yum install -y epel-release
-                sudo yum -y update
-                sudo yum install -y ansible-core git wget dpkg
+                sudo dnf install -y epel-release
+                sudo dnf -y update
+                sudo dnf install -y ansible-core git wget dpkg
               fi
               if [[ "${{ env.VM_BOX }}" =~ "al2023" ]]; then
                 sudo dnf -y update
