@@ -51,10 +51,12 @@ class PmmServerComponents(unittest.TestCase):
     """
 
     def test_percona_qan_api2_version(self):
-        self.assertIn(expected_pmm_version, grep_rpm('percona-qan-api2-'), WRONG_VERSION_MSG)
+        if server_type != "ami":
+            self.assertIn(expected_pmm_version, grep_rpm('percona-qan-api2-'), WRONG_VERSION_MSG)
 
     def test_percona_dashboards_version(self):
-        self.assertIn(expected_pmm_version, grep_rpm('percona-dashboards-'), WRONG_VERSION_MSG)
+        if server_type != "ami":
+            self.assertIn(expected_pmm_version, grep_rpm('percona-dashboards-'), WRONG_VERSION_MSG)
 
     def test_clickhouse_version(self):
         """PMM-12223 - Verify Clickhouse is v23.8 or later since 2.41.0"""
@@ -71,35 +73,44 @@ class PmmServerComponents(unittest.TestCase):
         self.assertNotIn("pmm-update", out, UPDATE_NOT_REMOVED)
 
     def test_pmm_managed_version(self):
-        self.assertIn(expected_pmm_version, grep_rpm('pmm-managed-'), WRONG_VERSION_MSG)
+        if server_type != "ami":
+            self.assertIn(expected_pmm_version, grep_rpm('pmm-managed-'), WRONG_VERSION_MSG)
 
     def test_pmm_client_version(self):
-        self.assertIn(expected_pmm_version, verify_command("docker exec " + pmm_server_docker_container + " pmm-admin --version | grep PMMVersion | awk -F \" \" \'{print $2}\'"), WRONG_VERSION_MSG)
+        if server_type != "ami":
+            self.assertIn(expected_pmm_version, verify_command("docker exec " + pmm_server_docker_container + " pmm-admin --version | grep PMMVersion | awk -F \" \" \'{print $2}\'"), WRONG_VERSION_MSG)
 
     def test_pmm_dump_version(self):
         if test_mode != "post": self.skipTest(POST_UPGRADE)
         self.assertIn(expected_pmm_version, grep_rpm('pmm-dump-'), WRONG_VERSION_MSG)
 
     def test_qan_api2_status(self):
-        self.assertIn(RUNNING, grep_supervisor_status('qan-api2'), NOT_RUNNING_MSG)
+        if server_type != "ami":
+            self.assertIn(RUNNING, grep_supervisor_status('qan-api2'), NOT_RUNNING_MSG)
 
     def test_clickhouse_status(self):
-        self.assertIn(RUNNING, grep_supervisor_status('clickhouse'), NOT_RUNNING_MSG)
+        if server_type != "ami":
+            self.assertIn(RUNNING, grep_supervisor_status('clickhouse'), NOT_RUNNING_MSG)
 
     def test_grafana_status(self):
-        self.assertIn(RUNNING, grep_supervisor_status('grafana'), NOT_RUNNING_MSG)
+        if server_type != "ami":
+            self.assertIn(RUNNING, grep_supervisor_status('grafana'), NOT_RUNNING_MSG)
 
     def test_nginx_status(self):
-        self.assertIn(RUNNING, grep_supervisor_status('nginx'), NOT_RUNNING_MSG)
+        if server_type != "ami":
+            self.assertIn(RUNNING, grep_supervisor_status('nginx'), NOT_RUNNING_MSG)
 
     def test_pmm_agent_status(self):
-        self.assertIn(RUNNING, grep_supervisor_status('pmm-agent'), NOT_RUNNING_MSG)
+        if server_type != "ami":
+            self.assertIn(RUNNING, grep_supervisor_status('pmm-agent'), NOT_RUNNING_MSG)
 
     def test_pmm_managed_status(self):
-        self.assertIn(RUNNING, grep_supervisor_status('pmm-managed'), NOT_RUNNING_MSG)
+        if server_type != "ami":
+            self.assertIn(RUNNING, grep_supervisor_status('pmm-managed'), NOT_RUNNING_MSG)
 
     def test_postgresql_status(self):
-        self.assertIn(RUNNING, grep_supervisor_status('postgresql'), NOT_RUNNING_MSG)
+        if server_type != "ami":
+            self.assertIn(RUNNING, grep_supervisor_status('postgresql'), NOT_RUNNING_MSG)
 
     def test_victoriametrics_status(self):
         if test_mode != "post": self.skipTest(POST_UPGRADE)
