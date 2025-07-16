@@ -4,7 +4,7 @@ import SetupParameters from '../../helpers/setupParameters.interface';
 
 const setup_pmm_pgsm_integration = async (parameters: SetupParameters) => {
   console.log('Install Ansible');
-  await executeCommand('sudo yum install -y ansible');
+  await executeCommand('sudo dnf install -y ansible');
   const pmmServerContainer = await executeCommand(
     'echo $(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep \'pmm-server\' | awk \'{print $3}\')',
   );

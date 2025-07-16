@@ -677,7 +677,7 @@ sudo_check(){
     echo "Error: sudo is not available or requires a password. This script needs to be able to use sudo, without password, from the userID that invokes it ($(whoami))"
     echo "To get your setup correct, you may like to use a tool like visudo (use 'sudo visudo' or 'su' and then 'visudo') and consider adding the following line to the file:"
     echo "$(whoami)   ALL=(ALL)      NOPASSWD:ALL"
-    echo "If you do not have sudo installed yet, try 'su' and then 'yum install sudo' or the apt-get equivalent"
+    echo "If you do not have sudo installed yet, try 'su' and then 'dnf install sudo' or the apt-get equivalent"
     echo "Terminating now."
     exit 1
   fi
@@ -1525,7 +1525,7 @@ add_clients(){
       echo "Setting up PMM and HAPROXY Integration"
 
       ## only doing it for jenkins workers, need ansible installed on the host
-      sudo yum install -y ansible || true
+      sudo dnf install -y ansible || true
       export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
       docker network create pmm-qa || true
       docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
@@ -1883,10 +1883,10 @@ add_clients(){
               sudo apt install -y proxysql
             fi
             if grep -iq "centos"  /etc/os-release ; then
-              sudo yum install -y proxysql
+              sudo dnf install -y proxysql
             fi
             if grep -iq "rhel"  /etc/os-release ; then
-              sudo yum install -y proxysql
+              sudo dnf install -y proxysql
             fi
             if [[ ! -e $(which proxysql 2> /dev/null) ]] ;then
               echo "ERROR! Could not install proxysql on CentOS/Ubuntu machine. Terminating"
@@ -2535,9 +2535,9 @@ setup_custom_ami_instance() {
 ## Method is called with Client Docker Setup to run on the PXC stage for testsuite, tests are part of docker bats tests
 setup_clickhouse_client () {
   echo "Setting up ClickHouse Client to Connect to Clickhouse server on PMM-Server"
-  sudo yum install -y yum-utils
-  sudo yum-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo
-  sudo yum install -y clickhouse-client
+  sudo dnf install -y dnf-utils
+  sudo dnf-config-manager --add-repo https://packages.clickhouse.com/rpm/clickhouse.repo
+  sudo dnf install -y clickhouse-client
 }
 
 setup_docker_compose() {
@@ -2550,7 +2550,7 @@ setup_docker_compose() {
 
 setup_mongodb_ssl () {
   echo "Setting up mongodb ssl"
-  sudo yum install -y ansible
+  sudo dnf install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   export PMM_CLIENT_VERSION=$(pmm-admin --version | grep -m1 'Version:' | awk -F' ' '{print $2}')
   docker network create pmm-qa || true
@@ -2585,7 +2585,7 @@ setup_mongodb_ssl () {
 
 setup_mysql_ssl () {
   echo "Setting up mysql ssl"
-  sudo yum install -y ansible
+  sudo dnf install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   export PMM_CLIENT_VERSION=$(pmm-admin --version | grep -m1 'Version:' | awk -F' ' '{print $2}')
   docker network create pmm-qa || true
@@ -2630,7 +2630,7 @@ setup_mysql_ssl () {
 
 setup_postgres_ssl () {
   echo "Setting up postgres ssl"
-  sudo yum install -y ansible
+  sudo dnf install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   export PMM_CLIENT_VERSION=$(pmm-admin --version | grep -m1 'Version:' | awk -F' ' '{print $2}')
   docker network create pmm-qa || true
@@ -2684,7 +2684,7 @@ setup_postgres_ssl () {
 
 setup_pmm_pgsm_integration () {
   echo "Setting up PMM and PGSM Integration"
-  sudo yum install -y ansible
+  sudo dnf install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
@@ -2737,7 +2737,7 @@ setup_pmm_pgsm_integration () {
 
 setup_pmm_pgss_integration () {
   echo "Setting up PMM and PGStatements Integration"
-  sudo yum install -y ansible
+  sudo dnf install -y ansible
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
@@ -2788,7 +2788,7 @@ setup_pxc_client_container () {
   echo "Setting up PMM and PXC Integration"
 
   ## only doing it for jenkins workers, need ansible installed on the host
-  sudo yum install -y ansible || true
+  sudo dnf install -y ansible || true
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
@@ -2847,7 +2847,7 @@ setup_pmm_psmdb_integration () {
   echo "Setting up PMM and PSMDB Integration"
 
   ## only doing it for jenkins workers, need ansible installed on the host
-  sudo yum install -y ansible || true
+  sudo dnf install -y ansible || true
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
@@ -2920,7 +2920,7 @@ setup_pmm_ps_integration () {
   echo "Setting up PMM and Percona Server Integration"
 
   ## only doing it for jenkins workers, need ansible installed on the host
-  sudo yum install -y ansible || true
+  sudo dnf install -y ansible || true
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
@@ -2965,7 +2965,7 @@ setup_pmm_ms_integration () {
   echo "Setting up PMM and MySQL Server Integration"
 
   ## only doing it for jenkins workers, need ansible installed on the host
-  sudo yum install -y ansible || true
+  sudo dnf install -y ansible || true
   export PMM_SERVER_DOCKER_CONTAINER=$(docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}" | grep 'pmm-server' | awk '{print $3}')
   docker network create pmm-qa || true
   docker network connect pmm-qa ${PMM_SERVER_DOCKER_CONTAINER} || true
@@ -3054,7 +3054,7 @@ setup_mongo_replica_for_backup() {
 
 setup_bm_mysql() {
   echo "Setting up mysql for Backup"
-  sudo yum install -y ansible
+  sudo dnf install -y ansible
   export pmm_client_minor_v=$(get_client_minor_version)
   if [ "${pmm_client_minor_v}" -gt "23" ]; then
     if [ "$ps_version" == "5.7" ]; then
