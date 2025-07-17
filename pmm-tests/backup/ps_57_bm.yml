@@ -12,7 +12,7 @@
 
   pre_tasks:
   - name: Remove old MySQL Installation
-    yum:
+    dnf:
       name: "{{ item }}"
       state: absent
     loop:
@@ -51,7 +51,7 @@
 
   tasks:
   - name: disable MySQL 5.7 repository
-    shell: yum-config-manager --disable mysql57-community
+    shell: dnf-config-manager --disable mysql57-community
     when: ansible_os_family == "RedHat"
 
   - name: Stop mysql service on CentOS
@@ -62,7 +62,7 @@
     ignore_errors: true
   
   - name: Install Percona Release RedHat
-    yum:
+    dnf:
       name: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
       state: present
     when: ansible_os_family == "RedHat"
@@ -181,7 +181,7 @@
     when: ansible_os_family == "Debian"
 
   - name: install Percona XtraBackup new rpm packages
-    yum:
+    dnf:
       name: "{{ packages }}"
       state: latest
       update_cache: yes
