@@ -27,7 +27,7 @@ echo "gpgkey=https://dl-ssl.google.com/linux/linux_signing_key.pub" >> $repo_fil
 
 
 # Install the Google Chrome signing key.
-yum install -y wget
+dnf install -y wget
 wget https://dl.google.com/linux/linux_signing_key.pub
 rpm --import linux_signing_key.pub
 
@@ -40,8 +40,8 @@ function installation_status() {
 
 
 # Try it the old fashioned way, should work on RHEL 7.X.
-echo "Attempting a direction installation with yum."
-yum install -y google-chrome-stable
+echo "Attempting a direction installation with dnf."
+dnf install -y google-chrome-stable
 if [ $? -eq 0 ]
 then
     if installation_status; then
@@ -55,16 +55,15 @@ fi
 
 
 # Uninstall any existing/partially installed versions.
-yum --setopt=tsflags=noscripts -y remove google-chrome-stable
+dnf --setopt=tsflags=noscripts -y remove google-chrome-stable
 
 
 # Install yumdownloader/repoquery and download the latest RPM.
 echo "Downloading the Google Chrome RPM file."
-yum install -y yum-utils
 # There have been issues in the past with the Chrome repository, so we fall back to downloading
 # the latest RPM directly if the package isn't available there. For further details:
 # https://productforums.google.com/forum/#!topic/chrome/xNtfk_wAUC4;context-place=forum/chrome
-yumdownloader google-chrome-stable || \
+dnf download google-chrome-stable || \
     wget https://dl.google.com/linux/direct/google-chrome-stable_current_x86_64.rpm
 rpm_file=$(echo *.rpm)
 echo "Downloaded ${rpm_file}"
@@ -77,7 +76,7 @@ rm ${rpm_file}
 
 # Install font dependencies, see: https://bugs.chromium.org/p/chromium/issues/detail?id=782161
 echo "Installing the required font dependencies."
-yum install -y \
+dnf install -y \
     fontconfig \
     fontpackages-filesystem \
     ipa-gothic-fonts \
@@ -199,7 +198,7 @@ install_missing_dependencies /opt/google/chrome/chrome
 
 if ! installation_status; then
     # Time for the big guns, we'll try to patch the executables to use our lib directory.
-    yum install -y gcc gcc-c++ make autoconf automake
+    dnf install -y gcc gcc-c++ make autoconf automake
     echo "Linking issues were encountered, attempting to patch the `chrome` executable."
     wget https://github.com/NixOS/patchelf/archive/0.9.tar.gz -O 0.9.tar.gz
     tar zxf 0.9.tar.gz

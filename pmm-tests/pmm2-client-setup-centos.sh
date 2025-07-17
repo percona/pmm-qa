@@ -36,39 +36,39 @@ if [ -z "$use_metrics_mode" ]; then
     export use_metrics_mode=yes
 fi
 
-yum update -y
-yum install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client
-yum install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
-yum update -y
+dnf update -y
+dnf install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client
+dnf install -y https://repo.percona.com/yum/percona-release-latest.noarch.rpm
+dnf update -y
 export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
 mv -v /artifacts/* .
 
 if [[ "$client_version" == "dev-latest" ]]; then
     percona-release enable-only original experimental
-    yum update -y
-    yum install -y pmm2-client
+    dnf update -y
+    dnf install -y pmm2-client
 fi
 
 if [[ "$client_version" == "pmm2-rc" ]]; then
     percona-release enable-only original testing
-    yum update -y
-    yum install -y pmm2-client
+    dnf update -y
+    dnf install -y pmm2-client
 fi
 
 if [[ "$client_version" == "pmm2-latest" ]]; then
-    yum install -y pmm2-client
-    yum update -y
+    dnf install -y pmm2-client
+    dnf update -y
     percona-release enable-only original experimental
 fi
 
 if [[ "$client_version" == 2* ]]; then
-    yum install -y https://repo.percona.com/pmm2-client/yum/release/2/RPMS/x86_64/pmm2-client-${client_version}-6.el7.x86_64.rpm
+    dnf install -y https://repo.percona.com/pmm2-client/yum/release/2/RPMS/x86_64/pmm2-client-${client_version}-6.el7.x86_64.rpm
     percona-release enable-only original experimental
 fi
 
 if [[ "$client_version" == http* ]]; then
 	if [[ "$install_client" == "yes" ]]; then
-        yum install wget -y
+        dnf install wget -y
 		wget -O pmm2-client.tar.gz --progress=dot:giga "${client_version}"
 	fi
     tar -zxpf pmm2-client.tar.gz

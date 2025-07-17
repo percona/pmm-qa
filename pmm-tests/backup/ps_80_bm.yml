@@ -12,7 +12,7 @@
 
   pre_tasks:
   - name: Remove old MySQL Installation
-    yum:
+    dnf:
       name: "{{ item }}"
       state: absent
     loop:
@@ -49,7 +49,7 @@
 
   tasks:
   - name: disable MySQL 5.7 repository
-    shell: yum-config-manager --disable mysql57-community
+    shell: dnf-config-manager --disable mysql57-community
     when: ansible_os_family == "RedHat"
 
   - name: Stop mysql service on CentOS
@@ -60,7 +60,7 @@
     ignore_errors: true
 
   - name: Install Percona Release RedHat
-    yum:
+    dnf:
       name: "https://repo.percona.com/yum/percona-release-latest.noarch.rpm"
       state: present
     when: ansible_os_family == "RedHat"
@@ -76,7 +76,7 @@
     command: percona-release setup ps80
 
   - name: Install Percona packages RedHat
-    yum:
+    dnf:
       name: "{{ packages }}"
       state: present
       update_cache: true
@@ -161,13 +161,13 @@
     when: ansible_os_family == "Debian"
 
   - name: Install XtraBackup
-    yum:
+    dnf:
       name: "https://downloads.percona.com/downloads/Percona-XtraBackup-LATEST/Percona-XtraBackup-8.0.25-17/binary/redhat/7/x86_64/percona-xtrabackup-test-80-8.0.25-17.1.el7.x86_64.rpm"
       state: present
     when: ansible_os_family == "RedHat"
 
   - name: Install qpress
-    yum:
+    dnf:
       name: qpress
       state: present
     when: ansible_os_family == "RedHat"

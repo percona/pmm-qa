@@ -3,7 +3,7 @@ export number_of_nodes=$1
 export pxc_version=$2
 export query_source=$3
 
-sudo yum install -y socat
+sudo dnf install -y socat
 wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/pxc-tests/pxc-startup.sh
 sed -i 's/log-output=none/log-output=file/g' pxc-startup.sh
 ## bug https://bugs.mysql.com/bug.php?id=90553 workaround
@@ -12,7 +12,7 @@ sed -i 's+${MID} --datadir+${MID} --socket=\\${node}/socket.sock --port=\\${RBAS
 ## Download right PXC version
 if [ "$pxc_version" == "5.7" ]; then
 	wget https://downloads.percona.com/downloads/Percona-XtraDB-Cluster-57/Percona-XtraDB-Cluster-5.7.34-31.51/binary/tarball/Percona-XtraDB-Cluster-5.7.34-rel37-51.1.Linux.x86_64.glibc2.12-minimal.tar.gz
-	sudo yum install -y percona-xtrabackup-24
+	sudo dnf install -y percona-xtrabackup-24
 fi
 if [ "$pxc_version" == "8.0" ]; then
 	sed -i 's+wsrep_node_incoming_address=$ADDR+wsrep_node_incoming_address=$ADDR:$RBASE1+g' pxc-startup.sh
@@ -31,7 +31,7 @@ touch sysbench_run_node1_read_write.txt
 touch sysbench_run_node1_read_only.txt
 
 ## Install proxysql2
-sudo yum install -y proxysql2
+sudo dnf install -y proxysql2
 
 ### enable slow log
 if [ "$query_source" == "slowlog" ]; then
