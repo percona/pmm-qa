@@ -64,33 +64,74 @@ jobs:
     secrets: inherit
     strategy:
       matrix:
-        ol_version: [8, 9]
         include:
           - test_name: 'PSMDB SSL tests'
+            ol_version: 8
+            setup_services: '--database ssl_psmdb'
+            tags_for_tests: '@ssl-mongo'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB SSL tests'
+            ol_version: 9
             setup_services: '--database ssl_psmdb'
             tags_for_tests: '@ssl-mongo'
             pmm_server_compose_file: 'docker-compose.yml'
           - test_name: 'PSMDB Backup Management tests'
+            ol_version: 8
+            setup_services: '--database psmdb,SETUP_TYPE=pss'
+            tags_for_tests: '@bm-mongo'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Backup Management tests'
+            ol_version: 9
             setup_services: '--database psmdb,SETUP_TYPE=pss'
             tags_for_tests: '@bm-mongo'
             pmm_server_compose_file: 'docker-compose.yml'
           - test_name: 'PSMDB Exporter tests'
+            ol_version: 8
+            setup_services: '--database psmdb'
+            tags_for_tests: '@PSMDB-exporter'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Exporter tests'
+            ol_version: 9
             setup_services: '--database psmdb'
             tags_for_tests: '@PSMDB-exporter'
             pmm_server_compose_file: 'docker-compose.yml'
           - test_name: 'PSMDB Replica tests'
+            ol_version: 8
+            setup_services: '--database psmdb,SETUP_TYPE=pss'
+            tags_for_tests: '@pmm-psmdb-replica-integration'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Replica tests'
+            ol_version: 9
             setup_services: '--database psmdb,SETUP_TYPE=pss'
             tags_for_tests: '@pmm-psmdb-replica-integration'
             pmm_server_compose_file: 'docker-compose.yml'
           - test_name: 'PSMDB Arbiter tests'
+            ol_version: 8
+            setup_services: '--database psmdb,SETUP_TYPE=psa'
+            tags_for_tests: '@pmm-psmdb-arbiter-integration'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Arbiter tests'
+            ol_version: 9
             setup_services: '--database psmdb,SETUP_TYPE=psa'
             tags_for_tests: '@pmm-psmdb-arbiter-integration'
             pmm_server_compose_file: 'docker-compose.yml'
           - test_name: 'PSMDB Instances tests'
+            ol_version: 8
+            setup_services: '--database psmdb'
+            tags_for_tests: '@fb-instances'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Instances tests'
+            ol_version: 9
             setup_services: '--database psmdb'
             tags_for_tests: '@fb-instances'
             pmm_server_compose_file: 'docker-compose.yml'
           - test_name: 'PSMDB Nomad tests'
+            ol_version: 8
+            setup_services: '--database psmdb'
+            tags_for_tests: '@nomad'
+            pmm_server_compose_file: 'docker-compose-nomad.yml'
+          - test_name: 'PSMDB Nomad tests'
+            ol_version: 9
             setup_services: '--database psmdb'
             tags_for_tests: '@nomad'
             pmm_server_compose_file: 'docker-compose-nomad.yml'
@@ -111,18 +152,37 @@ jobs:
     secrets: inherit
     strategy:
       matrix:
-        ol_version: [8, 9]
         include:
           - test_name: 'PSMDB 6.0 Replica CLI tests'
+            ol_version: 8
+            setup_services: '--database psmdb=6.0,SETUP_TYPE=pss'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
+          - test_name: 'PSMDB 6.0 Replica CLI tests'
+            ol_version: 9
             setup_services: '--database psmdb=6.0,SETUP_TYPE=pss'
             cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
           - test_name: 'PSMDB 7.0 Replica CLI tests'
+            ol_version: 8
+            setup_services: '--database psmdb=7.0,SETUP_TYPE=pss'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
+          - test_name: 'PSMDB 7.0 Replica CLI tests'
+            ol_version: 9
             setup_services: '--database psmdb=7.0,SETUP_TYPE=pss'
             cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
           - test_name: 'PSMDB 7.0 Shard CLI tests'
+            ol_version: 8
+            setup_services: '--database psmdb=7.0,SETUP_TYPE=shards'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb-shard.spec.ts'
+          - test_name: 'PSMDB 7.0 Shard CLI tests'
+            ol_version: 9
             setup_services: '--database psmdb=7.0,SETUP_TYPE=shards'
             cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb-shard.spec.ts'
           - test_name: 'PSMDB 8.0 CLI tests'
+            ol_version: 8
+            setup_services: '--database psmdb=8.0,SETUP_TYPE=pss'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
+          - test_name: 'PSMDB 8.0 CLI tests'
+            ol_version: 9
             setup_services: '--database psmdb=8.0,SETUP_TYPE=pss'
             cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
     with:
