@@ -58,6 +58,26 @@ on:
         type: string
 
 jobs:
+  test_matrix:
+    name: Test Matrix - ${{ matrix.test_name }} - OL ${{ matrix.ol_version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - test_name: 'Test 1'
+            ol_version: 8
+          - test_name: 'Test 1'
+            ol_version: 9
+          - test_name: 'Test 2'
+            ol_version: 8
+          - test_name: 'Test 2'
+            ol_version: 9
+    steps:
+      - name: Echo matrix values
+        run: |
+          echo "Test Name: ${{ matrix.test_name }}"
+          echo "OL Version: ${{ matrix.ol_version }}"
+
   mongo_e2e_tests:
     name: ${{ matrix.test_name }} - OL ${{ matrix.ol_version }}
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
