@@ -352,7 +352,7 @@ jobs:
             docker exec pmm-integration-server sed -i'' -e 's^/release/^/${{ steps.target_repo.outputs.result }}/^' /etc/yum.repos.d/pmm2-server.repo
             docker exec pmm-integration-server percona-release enable-only pmm3-client ${{ steps.target_repo.outputs.result }}
           fi
-          docker exec pmm-integration-server yum clean all
+          docker exec pmm-integration-server dnf clean all
           
           # TODO: could be exchanged to the clicking "refresh" button in tests
           sleep 60
