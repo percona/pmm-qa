@@ -1,4 +1,4 @@
-name: "GSSAPI E2E Tests Matrix"
+name: "PSMDB GSSAPI E2E Tests Matrix"
 
 on:
   schedule:
@@ -57,12 +57,6 @@ on:
         required: false
         type: string
 
-    secrets:
-      BACKUP_LOCATION_ACCESS_KEY:
-        required: false
-      BACKUP_LOCATION_SECRET_KEY:
-        required: false
-
 jobs:
   mongo_e2e_tests:
     name: ${{ matrix.test_name }} - OL ${{ matrix.ol_version }}
@@ -72,31 +66,31 @@ jobs:
       matrix:
         ol_version: [8, 9]
         include:
-          - test_name: 'MongoDB SSL tests'
+          - test_name: 'PSMDB SSL tests'
             setup_services: '--database ssl_psmdb'
             tags_for_tests: '@ssl-mongo'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Backup Management tests'
+          - test_name: 'PSMDB Backup Management tests'
             setup_services: '--database psmdb,SETUP_TYPE=pss'
             tags_for_tests: '@bm-mongo'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Exporter tests'
+          - test_name: 'PSMDB Exporter tests'
             setup_services: '--database psmdb'
-            tags_for_tests: '@mongodb-exporter'
+            tags_for_tests: '@PSMDB-exporter'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Replica tests'
+          - test_name: 'PSMDB Replica tests'
             setup_services: '--database psmdb,SETUP_TYPE=pss'
             tags_for_tests: '@pmm-psmdb-replica-integration'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Arbiter tests'
+          - test_name: 'PSMDB Arbiter tests'
             setup_services: '--database psmdb,SETUP_TYPE=psa'
             tags_for_tests: '@pmm-psmdb-arbiter-integration'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Instances tests'
+          - test_name: 'PSMDB Instances tests'
             setup_services: '--database psmdb'
             tags_for_tests: '@fb-instances'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Nomad tests'
+          - test_name: 'PSMDB Nomad tests'
             setup_services: '--database psmdb'
             tags_for_tests: '@nomad'
             pmm_server_compose_file: 'docker-compose-nomad.yml'
@@ -121,16 +115,16 @@ jobs:
         include:
           - test_name: 'PSMDB 6.0 Replica CLI tests'
             setup_services: '--database psmdb=6.0,SETUP_TYPE=pss'
-            cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
           - test_name: 'PSMDB 7.0 Replica CLI tests'
             setup_services: '--database psmdb=7.0,SETUP_TYPE=pss'
-            cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
           - test_name: 'PSMDB 7.0 Shard CLI tests'
             setup_services: '--database psmdb=7.0,SETUP_TYPE=shards'
-            cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb-shard.spec.ts'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb-shard.spec.ts'
           - test_name: 'PSMDB 8.0 CLI tests'
             setup_services: '--database psmdb=8.0,SETUP_TYPE=pss'
-            cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
