@@ -1,4 +1,4 @@
-name: "GSSAPI E2E Tests Matrix"
+name: "PSMDB GSSAPI E2E Tests Matrix"
 
 on:
   schedule:
@@ -58,46 +58,101 @@ on:
         required: false
         type: string
 
-    secrets:
-      BACKUP_LOCATION_ACCESS_KEY:
-        required: false
-      BACKUP_LOCATION_SECRET_KEY:
-        required: false
-
 jobs:
+  test_matrix:
+    name: Test Matrix - ${{ matrix.test_name }} - OL ${{ matrix.ol_version }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - test_name: 'Test 1'
+            ol_version: 8
+          - test_name: 'Test 1'
+            ol_version: 9
+          - test_name: 'Test 2'
+            ol_version: 8
+          - test_name: 'Test 2'
+            ol_version: 9
+    steps:
+      - name: Echo matrix values
+        run: |
+          echo "Test Name: ${{ matrix.test_name }}"
+          echo "OL Version: ${{ matrix.ol_version }}"
+
   mongo_e2e_tests:
     name: ${{ matrix.test_name }} - OL ${{ matrix.ol_version }}
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
     secrets: inherit
     strategy:
       matrix:
-        ol_version: [8, 9]
         include:
-          - test_name: 'MongoDB SSL tests'
+          - test_name: 'PSMDB SSL tests'
+            ol_version: 8
             setup_services: '--database ssl_psmdb'
             tags_for_tests: '@ssl-mongo'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Backup Management tests'
+          - test_name: 'PSMDB SSL tests'
+            ol_version: 9
+            setup_services: '--database ssl_psmdb'
+            tags_for_tests: '@ssl-mongo'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Backup Management tests'
+            ol_version: 8
             setup_services: '--database psmdb,SETUP_TYPE=pss'
             tags_for_tests: '@bm-mongo'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Exporter tests'
-            setup_services: '--database psmdb'
-            tags_for_tests: '@mongodb-exporter'
+          - test_name: 'PSMDB Backup Management tests'
+            ol_version: 9
+            setup_services: '--database psmdb,SETUP_TYPE=pss'
+            tags_for_tests: '@bm-mongo'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Replica tests'
+          - test_name: 'PSMDB Exporter tests'
+            ol_version: 8
+            setup_services: '--database psmdb'
+            tags_for_tests: '@PSMDB-exporter'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Exporter tests'
+            ol_version: 9
+            setup_services: '--database psmdb'
+            tags_for_tests: '@PSMDB-exporter'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Replica tests'
+            ol_version: 8
             setup_services: '--database psmdb,SETUP_TYPE=pss'
             tags_for_tests: '@pmm-psmdb-replica-integration'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Arbiter tests'
+          - test_name: 'PSMDB Replica tests'
+            ol_version: 9
+            setup_services: '--database psmdb,SETUP_TYPE=pss'
+            tags_for_tests: '@pmm-psmdb-replica-integration'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Arbiter tests'
+            ol_version: 8
             setup_services: '--database psmdb,SETUP_TYPE=psa'
             tags_for_tests: '@pmm-psmdb-arbiter-integration'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Instances tests'
+          - test_name: 'PSMDB Arbiter tests'
+            ol_version: 9
+            setup_services: '--database psmdb,SETUP_TYPE=psa'
+            tags_for_tests: '@pmm-psmdb-arbiter-integration'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Instances tests'
+            ol_version: 8
             setup_services: '--database psmdb'
             tags_for_tests: '@fb-instances'
             pmm_server_compose_file: 'docker-compose.yml'
-          - test_name: 'MongoDB Nomad tests'
+          - test_name: 'PSMDB Instances tests'
+            ol_version: 9
+            setup_services: '--database psmdb'
+            tags_for_tests: '@fb-instances'
+            pmm_server_compose_file: 'docker-compose.yml'
+          - test_name: 'PSMDB Nomad tests'
+            ol_version: 8
+            setup_services: '--database psmdb'
+            tags_for_tests: '@nomad'
+            pmm_server_compose_file: 'docker-compose-nomad.yml'
+          - test_name: 'PSMDB Nomad tests'
+            ol_version: 9
             setup_services: '--database psmdb'
             tags_for_tests: '@nomad'
             pmm_server_compose_file: 'docker-compose-nomad.yml'
@@ -108,7 +163,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha || 'null' }}
       setup_services: '${{ matrix.setup_services }},OL_VERSION=${{ matrix.ol_version }}'
       tags_for_tests: ${{ matrix.tags_for_tests }}
 
@@ -118,22 +173,41 @@ jobs:
     secrets: inherit
     strategy:
       matrix:
-        ol_version: [8, 9]
         include:
           - test_name: 'PSMDB 6.0 Replica CLI tests'
+            ol_version: 8
             setup_services: '--database psmdb=6.0,SETUP_TYPE=pss'
-            cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
+          - test_name: 'PSMDB 6.0 Replica CLI tests'
+            ol_version: 9
+            setup_services: '--database psmdb=6.0,SETUP_TYPE=pss'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
           - test_name: 'PSMDB 7.0 Replica CLI tests'
+            ol_version: 8
             setup_services: '--database psmdb=7.0,SETUP_TYPE=pss'
-            cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
+          - test_name: 'PSMDB 7.0 Replica CLI tests'
+            ol_version: 9
+            setup_services: '--database psmdb=7.0,SETUP_TYPE=pss'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
           - test_name: 'PSMDB 7.0 Shard CLI tests'
+            ol_version: 8
             setup_services: '--database psmdb=7.0,SETUP_TYPE=shards'
-            cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb-shard.spec.ts'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb-shard.spec.ts'
+          - test_name: 'PSMDB 7.0 Shard CLI tests'
+            ol_version: 9
+            setup_services: '--database psmdb=7.0,SETUP_TYPE=shards'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb-shard.spec.ts'
           - test_name: 'PSMDB 8.0 CLI tests'
+            ol_version: 8
             setup_services: '--database psmdb=8.0,SETUP_TYPE=pss'
-            cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
+          - test_name: 'PSMDB 8.0 CLI tests'
+            ol_version: 9
+            setup_services: '--database psmdb=8.0,SETUP_TYPE=pss'
+            cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
     with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha || 'null' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       qa_integration_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
@@ -141,4 +215,4 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: ${{ matrix.cli_test }}
       services_list: '${{ matrix.setup_services }},OL_VERSION=${{ matrix.ol_version }} --verbose'
-      test_name: ${{ matrix.test_name }} 
+      test_name: ${{ matrix.test_name }}
