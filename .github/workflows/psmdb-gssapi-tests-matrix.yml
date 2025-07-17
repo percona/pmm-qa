@@ -101,7 +101,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha || 'null' }}
       setup_services: '${{ matrix.setup_services }},OL_VERSION=${{ matrix.ol_version }}'
       tags_for_tests: ${{ matrix.tags_for_tests }}
 
@@ -126,7 +126,7 @@ jobs:
             setup_services: '--database psmdb=8.0,SETUP_TYPE=pss'
             cli_test: 'pmm-ui-tests/cli/tests/PSMDB-psmdb.spec.ts'
     with:
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha || 'null' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       qa_integration_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
