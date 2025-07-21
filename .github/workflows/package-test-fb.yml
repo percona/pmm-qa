@@ -81,11 +81,11 @@ jobs:
     outputs:
       filtered_os: ${{ steps.filter.outputs.filtered_os }}
     steps:
-      - name: Filter out ol-8
+      - name: Filter out ol-8 and ol-9
         id: filter
         run: |
           pt_os='${{ needs.get_versions.outputs.pt_os }}'
-          filtered_os=$(echo "$pt_os" | jq -c 'map(select(. != "ol-8"))')
+          filtered_os=$(echo "$pt_os" | jq -c 'map(select(. != "ol-8" and . != "ol-9"))')
           echo "filtered_os=$filtered_os" >> $GITHUB_OUTPUT
 
   fb_test:
