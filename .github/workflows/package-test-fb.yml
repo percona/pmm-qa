@@ -74,15 +74,29 @@ jobs:
     with:
       repository: 'dev-latest'
 
+  filter_os:
+    name: Filter OS array
+    runs-on: ubuntu-latest
+    needs: get_versions
+    outputs:
+      filtered_os: ${{ steps.filter.outputs.filtered_os }}
+    steps:
+      - name: Filter out ol-8
+        id: filter
+        run: |
+          pt_os='${{ needs.get_versions.outputs.pt_os }}'
+          filtered_os=$(echo "$pt_os" | jq 'map(select(. != "ol-8"))')
+          echo "filtered_os=$filtered_os" >> $GITHUB_OUTPUT
+
   fb_test:
     name: ${{ inputs.playbook }}
     uses: ./.github/workflows/runner-package-test.yml
     secrets: inherit
-    needs: get_versions
+    needs: [get_versions, filter_os]
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(needs.get_versions.outputs.pt_os) }}
+        os: ${{ fromJSON(needs.filter_os.outputs.filtered_os) }}
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
       pmm_server_image: ${{ inputs.pmm_server_image }}
