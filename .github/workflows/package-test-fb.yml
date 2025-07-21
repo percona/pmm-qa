@@ -85,7 +85,7 @@ jobs:
         id: filter
         run: |
           pt_os='${{ needs.get_versions.outputs.pt_os }}'
-          filtered_os=$(echo "$pt_os" | jq 'map(select(. != "ol-8"))')
+          filtered_os=$(echo "$pt_os" | jq -c 'map(select(. != "ol-8"))')
           echo "filtered_os=$filtered_os" >> $GITHUB_OUTPUT
 
   fb_test:
