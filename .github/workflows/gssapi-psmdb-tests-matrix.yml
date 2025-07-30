@@ -207,3 +207,4 @@ jobs:
       package_testing_branch: 'PMM-14128'
       expected_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      repository: "dev-latest"
