@@ -124,7 +124,7 @@ jobs:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}
-      TARBALL: ${{ inputs.pmm_client_tarball || 'null' }}
+      TARBALL_LINK: ${{ inputs.pmm_client_tarball || 'null' }}
       EXPECTED_VERSION: ${{ inputs.expected_version }}
 
       REPO: ${{ inputs.repository || 'dev-latest' }}
