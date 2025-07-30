@@ -208,5 +208,6 @@ jobs:
       expected_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       repository: "dev-latest"
-      metrics_mode: 'auto'
+      metrics_mode: "auto"
       package: "pmm3-client"
+      os: "ol-8"
