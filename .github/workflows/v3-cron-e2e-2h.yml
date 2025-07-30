@@ -2,7 +2,7 @@ name: V3 E2E Tests - Every 2 Hours
 
 on:
   schedule:
-    - cron: '0 */2 * * *'
+#    - cron: '0 */2 * * *'
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
@@ -74,4 +74,4 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-PR-3982-1aa6576.tar.gz' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client-fb:PR-3982-1aa6576' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }} 
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
