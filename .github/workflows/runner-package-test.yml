@@ -187,6 +187,10 @@ jobs:
             echo "EXPECTED_VERSION=$(echo ${{ inputs.expected_version }} | awk -F'-' '{print $1}')" >> $GITHUB_ENV
             echo "expected version is ${{ env.EXPECTED_VERSION }}"
           fi
+          if [[ "${{ inputs.expected_version}} = "3-dev-latest" ]]; then
+            DEV_VERSION=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION -O -)
+            echo "EXPECTED_VERSION=$DEV_VERSION" >> $GITHUB_ENV
+          fi
           echo "repo=${{ env.REPO }}"
           
           ### vagrant vm ###
