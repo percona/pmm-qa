@@ -270,8 +270,8 @@ jobs:
               export METRICS_MODE=${{ env.METRICS_MODE }}
               export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
               echo $PMM_VERSION
-              if [[ "${{ env.TARBALL }}" != "null" ]]; then
-                export TARBALL_LINK="${{ env.TARBALL }}"
+              if [[ "${{ env.TARBALL_LINK }}" != "null" ]]; then
+                export TARBALL_LINK="${{ env.TARBALL_LINK }}"
               fi
               export install_repo=${{ env.REPO }}
               export install_package=${{ env.INSTALL_PACKAGE }}
