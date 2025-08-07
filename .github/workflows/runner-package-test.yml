@@ -63,6 +63,7 @@ on:
         default: "jammy"
         type: choice
         options:
+          - bullseye
           - bookworm
           - noble
           - jammy
