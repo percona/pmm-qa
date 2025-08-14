@@ -203,7 +203,7 @@ jobs:
           GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}"
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --steps
 
       - uses: actions/github-script@v7
         if: ${{ always() }}
