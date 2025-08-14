@@ -119,7 +119,7 @@ jobs:
         id: gssapi_detected
         with:
           script: |
-            if (process.env.TAGS_FOR_TESTS.includes('GSSAPI')) {
+            if (process.env.WIZARD_ARGS.includes('GSSAPI')) {
                 return 'true';
             } else {
                 return 'false';
