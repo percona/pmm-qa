@@ -113,6 +113,19 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
+      - name: Detect GSSAPI execution
+        uses: actions/github-script@v7
+        if: ${{ always() }}
+        id: gssapi_detected
+        with:
+          script: |
+            if (process.env.TAGS_FOR_TESTS.includes('GSSAPI')) {
+                return 'true';
+            } else {
+                return 'false';
+            }
+          result-encoding: string
+
       - name: Checkout PMM UI tests
         uses: actions/checkout@v4
         with:
@@ -187,6 +200,7 @@ jobs:
           SERVER_IP : "192.168.0.1"
           PMM_UI_URL : "http://192.168.0.1/"
           PMM_URL : "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
+          GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}"
