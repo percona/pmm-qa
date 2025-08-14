@@ -74,7 +74,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'PMM-14129-gssapi-adoption' }}
-      setup_services: '--database psmdb,OL_VERSION=8,GSSAPI=true'
+      setup_services: '--database psmdb,COMPOSE_PROFILES=extra,OL_VERSION=8,GSSAPI=true'
       tags_for_tests: '@bm-mongo'
 
   mongo_bm_ol9:
@@ -87,7 +87,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'PMM-14129-gssapi-adoption' }}
-      setup_services: '--database psmdb,OL_VERSION=9,GSSAPI=true'
+      setup_services: '--database psmdb,COMPOSE_PROFILES=extra,OL_VERSION=9,GSSAPI=true'
       tags_for_tests: '@bm-mongo'
 
   mongo_exporter_ol8:
