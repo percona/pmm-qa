@@ -8,7 +8,7 @@ on:
     inputs:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch(CLI tests)'
-        default: 'v3'
+        default: 'PMM-14129-gssapi-adoption'
         required: false
         type: string
       pmm_qa_branch:
