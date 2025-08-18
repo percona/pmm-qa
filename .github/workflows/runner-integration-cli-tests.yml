@@ -67,7 +67,7 @@ jobs:
       # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
       # TODO: update tests to use PMM_SERVER_IMAGE instead
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      WIZARD_ARGS: ${{ inputs.setup_services || '--help' }}
+      WIZARD_ARGS: ${{ inputs.services_list || '--help' }}
 
     steps:
       - name: Create status check
