@@ -151,8 +151,7 @@ jobs:
 
       - name: 'Run CLI tests: ${{ inputs.cli_test }}'
         working-directory: ./pmm-ui-tests/cli
-#        run: npx playwright test ${{ inputs.cli_test }} --quiet
-        run: npx playwright test ${{ inputs.cli_test }}
+        run: npx playwright test ${{ inputs.cli_test }} --quiet
 
       - name: Generate and Attach the report
         if: ${{ failure() && !!inputs.cli_test }}
