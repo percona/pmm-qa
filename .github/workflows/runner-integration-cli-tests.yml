@@ -67,7 +67,7 @@ jobs:
       # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
       # TODO: update tests to use PMM_SERVER_IMAGE instead
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || '--help' }}
 
     steps:
       - name: Create status check
@@ -140,7 +140,6 @@ jobs:
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
 
       - name: 'Run qa-integration setup: ${{ env.WIZARD_ARGS }}'
-        if: ${{ !!env.WIZARD_ARGS }}
         working-directory: qa-integration/pmm_qa
         run: |
           python3 -m venv virtenv
