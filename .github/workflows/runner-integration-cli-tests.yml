@@ -67,6 +67,7 @@ jobs:
       # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
       # TODO: update tests to use PMM_SERVER_IMAGE instead
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
 
     steps:
       - name: Create status check
@@ -81,6 +82,19 @@ jobs:
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
+
+      - name: Detect GSSAPI execution
+        uses: actions/github-script@v7
+        if: ${{ always() }}
+        id: gssapi_detected
+        with:
+          script: |
+            if (process.env.WIZARD_ARGS.includes('GSSAPI')) {
+                return 'true';
+            } else {
+                return 'false';
+            }
+          result-encoding: string
 
       - name: Checkout qa-integration repo
         uses: actions/checkout@v4
@@ -125,8 +139,8 @@ jobs:
         working-directory: qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
 
-      - name: 'Run qa-integration setup: ${{ inputs.services_list }}'
-        if: ${{ !!inputs.services_list }}
+      - name: 'Run qa-integration setup: ${{ env.WIZARD_ARGS }}'
+        if: ${{ !!env.WIZARD_ARGS }}
         working-directory: qa-integration/pmm_qa
         run: |
           python3 -m venv virtenv
@@ -134,7 +148,7 @@ jobs:
           pip install --upgrade pip
           pip install setuptools
           pip install -r requirements.txt
-          python pmm-framework.py ${{ inputs.services_list }}
+          python pmm-framework.py ${{ env.WIZARD_ARGS }}
 
       - name: 'Run CLI tests: ${{ inputs.cli_test }}'
         working-directory: ./pmm-ui-tests/cli
