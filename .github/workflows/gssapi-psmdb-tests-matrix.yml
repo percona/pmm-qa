@@ -1,0 +1,233 @@
+name: "PSMDB GSSAPI E2E Tests Matrix"
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      pmm_ui_tests_branch:
+        description: 'pmm-ui-tests repository branch(CLI tests)'
+        default: 'v3'
+        required: false
+        type: string
+      pmm_qa_branch:
+        description: 'qa-integration repository branch(for setup)'
+        default: 'v3'
+        required: false
+        type: string
+      pmm_server_image:
+        description: 'PMM Server docker image'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        required: true
+        type: string
+      pmm_client_image:
+        description: 'pmm-client docker image'
+        default: 'perconalab/pmm-client:3-dev-latest'
+        required: false
+        type: string
+      pmm_client_version_ol8:
+        description: 'ol8 pmm-client tarball URL'
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz'
+        required: false
+        type: string
+      pmm_client_version_ol9:
+        description: 'ol9 pmm-client tarball URL'
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz'
+        required: false
+        type: string
+      sha:
+        description: "SHA (leave default if running manually)"
+        default: 'null'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_ui_tests_branch:
+        required: false
+        type: string
+      pmm_qa_branch:
+        required: false
+        type: string
+      pmm_server_image:
+        required: true
+        type: string
+      pmm_client_image:
+        required: false
+        type: string
+      pmm_client_version:
+        required: false
+        type: string
+      sha:
+        required: false
+        type: string
+
+jobs:
+  mongo_bm_ol8:
+    name: 'OL8 PSMDB E2E tests'
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      setup_services: '--database psmdb,COMPOSE_PROFILES=extra,OL_VERSION=8,GSSAPI=true'
+      tags_for_tests: '@bm-mongo'
+
+  mongo_bm_ol9:
+    name: 'OL9 PSMDB E2E tests'
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      setup_services: '--database psmdb,COMPOSE_PROFILES=extra,OL_VERSION=9,GSSAPI=true'
+      tags_for_tests: '@bm-mongo'
+
+  mongo_exporter_ol8:
+    name: 'OL8 PSMDB E2E tests'
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      setup_services: '--database psmdb,OL_VERSION=8,GSSAPI=true'
+      tags_for_tests: '@mongodb-exporter'
+
+  mongo_exporter_ol9:
+    name: 'OL9 PSMDB E2E tests'
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      setup_services: '--database psmdb,OL_VERSION=9,GSSAPI=true'
+      tags_for_tests: '@mongodb-exporter'
+
+  psmdb_replica_ol8:
+    name: 'OL8 PSMDB E2E tests'
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      setup_services: '--database psmdb,OL_VERSION=8,GSSAPI=true'
+      tags_for_tests: '@pmm-psmdb-replica-integration'
+
+  psmdb_replica_ol9:
+    name: 'OL9 PSMDB E2E tests'
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      setup_services: '--database psmdb,OL_VERSION=9,GSSAPI=true'
+      tags_for_tests: '@pmm-psmdb-replica-integration'
+
+### CLI Integration tests
+  psmdb_6_replica-tests_ol8:
+    name: 'OL8 CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--database psmdb=6.0,SETUP_TYPE=pss,OL_VERSION=8 --verbose'
+      test_name: 'PSMDB Replica 6.x'
+
+  psmdb_7_replica-tests_ol8:
+    name: 'OL8 CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=pss,OL_VERSION=8 --verbose'
+      test_name: 'PSMDB Replica 7.x'
+
+  psmdb_8_replica-tests_ol8:
+    name: 'OL8 CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=pss,OL_VERSION=8 --verbose'
+      test_name: 'PSMDB Replica 8.x'
+
+  psmdb_6_replica-tests_ol9:
+    name: 'OL9 CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--database psmdb=6.0,SETUP_TYPE=pss,OL_VERSION=9 --verbose'
+      test_name: 'PSMDB Replica 6.x'
+
+  psmdb_7_replica-tests_ol9:
+    name: 'OL9 CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=pss,OL_VERSION=9 --verbose'
+      test_name: 'PSMDB Replica 7.x'
+
+  psmdb_8_replica-tests_ol9:
+    name: 'OL9 CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=pss,OL_VERSION=9 --verbose'
+      test_name: 'PSMDB Replica 8.x'
