@@ -191,7 +191,11 @@ jobs:
           if [[ "${{ inputs.expected_version}}" = "3-dev-latest" ]]; then
             DEV_VERSION=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION -O -)
             echo "EXPECTED_VERSION=$DEV_VERSION" >> $GITHUB_ENV
+          elif [[ "${{ inputs.expected_version}}" = "pmm3-rc" ]]; then
+            RC_VERSION=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
+            echo "EXPECTED_VERSION=$RC_VERSION" >> $GITHUB_ENV
           fi
+                    
           echo "repo=${{ env.REPO }}"
           
           ### vagrant vm ###
@@ -305,6 +309,12 @@ jobs:
                 sudo apt install -y software-properties-common
                 sudo apt-add-repository --yes --update ppa:ansible/ansible
                 sudo apt-get install -y ansible git wget
+              fi
+              if [[ "${{ env.VM_BOX }}" =~ "ol-" ]]; then
+                sudo dnf -y install dnf-plugins-core
+                sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+                sudo dnf install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+                sudo systemctl enable --now docker
               fi
               cd /pmm/package-testing/playbooks
               ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
