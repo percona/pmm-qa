@@ -238,7 +238,7 @@ jobs:
       test_name: 'PSMDB Replica 8.x'
 
   mongo_package_tests_integration_ol8:
-    name: Package Test Integration Tarball - OL 8
+    name: Package Test - OL 8
     uses: ./.github/workflows/runner-package-test.yml
     secrets: inherit
     with:
@@ -253,7 +253,7 @@ jobs:
       os: "ol-8"
 
   mongo_package_tests_integration_ol9:
-    name: Package Test Integration Tarball - OL 9
+    name: Package Test - OL 9
     uses: ./.github/workflows/runner-package-test.yml
     secrets: inherit
     with:
