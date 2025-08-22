@@ -250,7 +250,6 @@ jobs:
     name: Package Test - OL 8
     uses: ./.github/workflows/runner-package-test.yml
     secrets: inherit
-    needs: get_versions
     with:
       pmm_client_tarball: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
       playbook: 'pmm3-client_integration_tarball_gssapi'
