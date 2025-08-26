@@ -24,7 +24,7 @@ runAsRoot() {
 usage()
 {
   echo "Script installs k8s tools
-        
+
         Usage: install_k8s_tools.sh [ --kubectl ]
                         [ --minikube ]
                         [ --kind ]
@@ -84,12 +84,12 @@ while true; do
         shift
         continue
     ;;
-    --sudo) 
+    --sudo)
         USE_SUDO="true"
         shift
         continue
     ;;
-    --) 
+    --)
         shift
         break
     ;;
@@ -119,24 +119,32 @@ install_bin()
         mv ./$1 $INSTALL_DIR/$1
     else
         runAsRoot install -o root -g root -m 0755 $1 $INSTALL_DIR
-    fi    
+    fi
 }
 
-install_kubectl()
-{
+install_kubectl() {
+  set -euo pipefail
+  local tmp ver
+  tmp="$(mktemp -d)"
+  trap 'rm -rf "$tmp"' EXIT
 
-    curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    curl -sLO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
-    echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check --status || exit 1
+  ver="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
 
-    chmod +x kubectl
+  curl -fLo "$tmp/kubectl" "https://dl.k8s.io/release/${ver}/bin/linux/amd64/kubectl"
+  curl -fLo "$tmp/kubectl.sha256" "https://dl.k8s.io/${ver}/bin/linux/amd64/kubectl.sha256"
 
-    install_bin kubectl
+  (cd "$tmp" && sha256sum -c kubectl.sha256)
 
-    rm kubectl.sha256 kubectl 2>&1 1>/dev/null || true
+  chmod +x "$tmp/kubectl"
 
-    echo "kubectl version --client --output=yaml"
-    kubectl version --client --output=yaml
+  if [ "${USER_MODE}" = "true" ]; then
+    install -m 0755 "$tmp/kubectl" "$INSTALL_DIR/kubectl"
+  else
+    runAsRoot install -o root -g root -m 0755 "$tmp/kubectl" "$INSTALL_DIR/kubectl"
+  fi
+
+  echo "kubectl version --client --output=yaml"
+  "$INSTALL_DIR/kubectl" version --client --output=yaml
 }
 
 install_minikube()
@@ -175,9 +183,9 @@ install_helm()
     chmod +x get_helm.sh
 
     HELM_INSTALL_DIR=$INSTALL_DIR USE_SUDO=$USE_SUDO ./get_helm.sh 2>&1 1>/dev/null
-    
+
     rm get_helm.sh 2>&1 1>/dev/null || true
-    
+
     echo "helm version"
     helm version
 }
