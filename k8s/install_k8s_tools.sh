@@ -124,28 +124,29 @@ install_bin()
 
 install_kubectl() {
   set -euo pipefail
-  local tmp ver
-  tmp="$(mktemp -d)"
-  trap 'rm -rf "$tmp"' EXIT
+  # use a global var name for trap safety (see #2)
+  _tmp="$(mktemp -d)"
+  trap 'set +u; [ -n "${_tmp:-}" ] && rm -rf "$_tmp"' EXIT
 
   ver="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
 
-  curl -fLo "$tmp/kubectl" "https://dl.k8s.io/release/${ver}/bin/linux/amd64/kubectl"
-  curl -fLo "$tmp/kubectl.sha256" "https://dl.k8s.io/${ver}/bin/linux/amd64/kubectl.sha256"
+  curl -fLo "$_tmp/kubectl" "https://dl.k8s.io/release/${ver}/bin/linux/amd64/kubectl"
+  curl -fLo "$_tmp/kubectl.sha256" "https://dl.k8s.io/release/${ver}/bin/linux/amd64/kubectl.sha256"
 
-  (cd "$tmp" && sha256sum -c kubectl.sha256)
+  ( cd "$_tmp" && echo "$(<kubectl.sha256)  kubectl" | sha256sum -c - )
 
-  chmod +x "$tmp/kubectl"
+  chmod +x "$_tmp/kubectl"
 
   if [ "${USER_MODE}" = "true" ]; then
-    install -m 0755 "$tmp/kubectl" "$INSTALL_DIR/kubectl"
+    install -m 0755 "$_tmp/kubectl" "$INSTALL_DIR/kubectl"
   else
-    runAsRoot install -o root -g root -m 0755 "$tmp/kubectl" "$INSTALL_DIR/kubectl"
+    runAsRoot install -o root -g root -m 0755 "$_tmp/kubectl" "$INSTALL_DIR/kubectl"
   fi
 
   echo "kubectl version --client --output=yaml"
   "$INSTALL_DIR/kubectl" version --client --output=yaml
 }
+
 
 install_minikube()
 {
