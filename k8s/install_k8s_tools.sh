@@ -178,17 +178,25 @@ install_kind()
     kind version
 }
 
-install_helm()
-{
-    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-    chmod +x get_helm.sh
+install_helm() {
+    set -euo pipefail
 
-    HELM_INSTALL_DIR=$INSTALL_DIR USE_SUDO=$USE_SUDO ./get_helm.sh 2>&1 1>/dev/null
+    # use a temp dir so we don't depend on Jenkins workspace writability
+    local tmpdir script
+    tmpdir="$(mktemp -d)"
+    script="${tmpdir}/get_helm.sh"
+    trap 'rm -rf "$tmpdir"' EXIT
 
-    rm get_helm.sh 2>&1 1>/dev/null || true
+    # download installer
+    curl -fsSL -o "$script" https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    chmod +x "$script"
 
+    # run installer with your chosen install dir/sudo mode
+    HELM_INSTALL_DIR="$INSTALL_DIR" USE_SUDO="$USE_SUDO" "$script" >/dev/null 2>&1
+
+    # show version (use absolute path to avoid PATH issues)
     echo "helm version"
-    helm version
+    "$INSTALL_DIR/helm" version
 }
 
 ## --kubectl
