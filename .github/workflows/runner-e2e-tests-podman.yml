@@ -230,12 +230,14 @@ jobs:
         working-directory: qa-integration/pmm_qa
         run: |
           podman ps -a
+          export HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
+          echo "Host ip is: $HOST_IP"
           python3 -m venv virtenv
           . virtenv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install setuptools
-          python pmm-framework.py --pmm-server-ip=192.168.0.1 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          python pmm-framework.py --pmm-server-ip=$HOST_IP --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
