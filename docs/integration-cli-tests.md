@@ -67,8 +67,9 @@ sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version 3-d
 python3 -m venv virtenv
 source virtenv/bin/activate
 pip install --upgrade pip
+pip install setuptools
 pip install -r requirements.txt
-python pmm-framework.py --database ps
+python3 pmm-framework.py --database ps
 
 cd ../..
 ```
@@ -198,7 +199,6 @@ test.describe('pmm-admin help output', () => {
 -   **`await addMongoHelp.outContainsMany([...])`**: An assertion method to check if the standard output of the command contains all the specified strings. This is a common way to verify help messages or command outputs.
 
 This example demonstrates how to execute a `pmm-admin` command, check its success, and assert on its output using the project's established helper functions, providing a more accurate representation of how CLI tests are written here.
-
 
 ---
 

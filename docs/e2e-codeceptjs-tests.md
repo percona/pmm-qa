@@ -77,7 +77,8 @@ python3 -m venv virtenv
 source virtenv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-python pmm-framework.py --pmm-server-password=admin-password --database ps
+pip install setuptools
+python3 pmm-framework.py --pmm-server-password=admin-password --database ps
 
 cd ../..
 ```
@@ -101,7 +102,7 @@ Run the CodeceptJS tests using the appropriate tags. The setup for the services 
 
 ```bash
 # Set up the environment for MySQL SSL tests
-python qa-integration/pmm_qa/pmm-framework.py --pmm-server-password=admin-password --database ssl_mysql
+python3 qa-integration/pmm_qa/pmm-framework.py --pmm-server-password=admin-password --database ssl_mysql
 
 # Run the MySQL SSL tests
 ./node_modules/.bin/codeceptjs run -c pmm-ui-tests/pr.codecept.js --grep "@ssl-mysql"
@@ -111,7 +112,7 @@ python qa-integration/pmm_qa/pmm-framework.py --pmm-server-password=admin-passwo
 
 ```bash
 # Set up the environment for experimental tests
-python qa-integration/pmm_qa/pmm-framework.py --pmm-server-password=admin-password --database pdpgsql
+python3 qa-integration/pmm_qa/pmm-framework.py --pmm-server-password=admin-password --database pdpgsql
 
 # Run the experimental tests
 ./node_modules/.bin/codeceptjs run -c pmm-ui-tests/pr.codecept.js --grep "@experimental"

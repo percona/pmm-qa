@@ -82,7 +82,7 @@ You can reproduce the CI runner workflow for Feature Build E2E tests on your loc
    pip install --upgrade pip
    pip install -r requirements.txt
    pip install setuptools
-   python pmm-framework.py --pmm-server-password=admin-password --verbose [SETUP_ARGS]
+   python3 pmm-framework.py --pmm-server-password=admin-password --verbose [SETUP_ARGS]
    cd ../..
    ```
 

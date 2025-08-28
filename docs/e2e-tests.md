@@ -76,8 +76,9 @@ sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version 3
 python3 -m venv virtenv
 source virtenv/bin/activate
 pip install --upgrade pip
+pip install setuptools
 pip install -r requirements.txt
-python pmm-framework.py --pmm-server-password=admin-password --database ps
+python3 pmm-framework.py --pmm-server-password=admin-password --database ps
 
 cd ../..
 ```

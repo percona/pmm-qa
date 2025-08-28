@@ -16,3 +16,7 @@ pmm-tests/vendor/*
 
 ps_socket*
 .DS_Store
+
+pmm-ui-tests/*
+qa-integration/*
+package-testing/*
