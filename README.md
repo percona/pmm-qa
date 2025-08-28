@@ -46,21 +46,11 @@ This repository contains the UI End-to-End tests for PMM.
 
 ```
 pmm-ui-tests/
-├── playwright-tests/    # Playwright E2E tests
-│   ├── pages/           # Page Object Model definitions
-│   │   ├── LoginPage.ts
-│   │   └── DashboardPage.ts
-│   ├── tests/           # Actual Playwright test files (.spec.ts)
-│   └── playwright.config.ts # Playwright configuration
-├── tests/               # CodeceptJS E2E tests
-│   ├── pages/           # Page Object Model definitions
-│   │   ├── LoginPage.js
-│   │   └── DashboardPage.js
-│   ├── login_test.js
-│   └── ...
+├── playwright-tests/    # ⚠️ DEPRECATED
 ├── cli/                 # Playwright tests for CLI interactions
 │   ├── tests/           # CLI test files (.spec.ts)
 │   └── ...
+├── tests/               # CodeceptJS tests and related code
 ├── helpers/             # CodeceptJS custom helpers
 ├── config/              # CodeceptJS configuration files
 ├── pr.codecept.js       # Main CodeceptJS configuration
@@ -74,15 +64,16 @@ This repository provides Python-based scripts for setting up and managing PMM te
 
 ```
 qa-integration/
-├── pmm_qa/              # Core Python setup scripts
-│   ├── pmm-framework.py # Main script for setting up services
-│   ├── helpers/         # Helper modules for pmm-framework.py
+├── pmm_psmdb-pbm_setup/        # PSMDB replica setup from PSMDB QA team
+├── pmm_psmdb_diffauth_setup/   # PSMDB replica setup from PSMDB QA team
+├── pmm_qa/                     # Core Python setup scripts
+│   ├── pmm-framework.py        # Main script for setting up services
+│   ├── helpers/                # Helper modules for pmm-framework.py
 │   ├── mysql/
 │   ├── mongoDb/
 │   ├── postgres/
 │   └── ...
-├── pmm-tests/           # Additional Python/Bash test scripts
-├── requirements.txt     # Python dependencies
+├── requirements.txt            # Python dependencies
 └── ...
 ```
 
@@ -92,12 +83,13 @@ This repository contains Ansible playbooks for testing PMM client package instal
 
 ```
 package-testing/
-├── playbooks/           # Ansible playbooks for different test scenarios
+├── playbooks/              # Ansible playbooks for different test scenarios
 │   ├── pmm3-client_integration.yml
 │   └── ...
-├── roles/               # Reusable Ansible roles (e.g., pmm-client)
-├── inventory.ini        # Ansible inventory file
-├── Vagrantfile          # Vagrant configuration for test VMs
+├── tasks/                  # Reusable Ansible tasks (e.g., verify_pmm3_metric.yml)
+├── scripts/                # Reusable scripts (e.g., pmm3_client_install_tarball.sh)
+├── inventory.ini           # Ansible inventory file
+├── Vagrantfile             # Vagrant configuration for test VMs
 └── ...
 ```
 

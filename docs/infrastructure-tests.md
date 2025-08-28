@@ -7,7 +7,7 @@ This guide provides instructions for running the PMM infrastructure tests locall
 Infrastructure tests are designed to ensure that PMM can be deployed and configured correctly in different environments. They cover:
 
 - **Kubernetes/Helm**: Validating PMM deployment using Helm charts on a Kubernetes cluster.
-- **Easy Install**: Testing the simplified installation script on various supported operating systems.
+- **Easy Install - not automated**: Testing the simplified installation script on various supported operating systems.
 
 ## 🤖 **How to Run Infrastructure Tests Locally**
 
@@ -23,23 +23,20 @@ These steps will guide you through setting up a local Kubernetes cluster using M
 
 #### **Step 1: Start Minikube**
 
-Start a Minikube cluster. This will create a local single-node Kubernetes cluster.
+Start a Minikube cluster. This will create a local single-node Kubernetes cluster. Disable the default storage provisioner and enable the CSI hostpath driver for persistent storage.
 
 ```bash
-minikube start
+minikube delete && \
+  minikube start && \
+  minikube addons disable storage-provisioner && \
+  kubectl delete storageclass standard && \
+  minikube addons enable csi-hostpath-driver && \
+  minikube addons enable volumesnapshots && \
+  kubectl patch storageclass csi-hostpath-sc -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}' &&\
+  kubectl wait --for=condition=Ready node --timeout=90s minikube
 ```
 
-#### **Step 2: Set Up Storage**
-
-Disable the default storage provisioner and enable the CSI hostpath driver for persistent storage.
-
-```bash
-minikube addons disable storage-provisioner
-minikube addons enable csi-hostpath-driver
-kubectl patch storageclass csi-hostpath-sc -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
-```
-
-#### **Step 3: Run Helm Tests**
+#### **Step 2: Run Helm Tests**
 
 Clone the `pmm-qa` repository and run the Helm tests using `bats`.
 
@@ -54,7 +51,7 @@ sudo ./setup_bats_libs.sh
 SERVER_IMAGE=perconalab/pmm-server:3-dev-latest bats --tap helm-test.bats
 ```
 
-### **Easy Install Tests**
+### **Easy Install Tests - not automated**
 
 These steps will show you how to test the Easy Install script on a supported operating system.
 
@@ -151,13 +148,28 @@ load 'test_helper/bats-assert/load'
 }
 ```
 
+During the development you may want to run only test you're working on. To achieve this you need to add comment `#bats test_tags=bats:focus` above the test annotation
+
+
+```bash
+#bats test_tags=bats:focus
+@test "PMM server is reachable after deployment" {
+  run kubectl get service my-pmm-server -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+  assert_success
+  PMM_IP="$output"
+
+  run curl -s "http://$PMM_IP/ping"
+  assert_success
+  assert_output "PMM Server is running"
+}
+```
+
 **Note**: The actual `helm-test.bats` file in the project will be more complex, involving detailed setup, deployment, and validation steps specific to PMM. The example above is simplified to illustrate the basic structure.
 
 ---
 
 **Related Documentation**:
 - [E2E Tests](e2e-tests.md)
-- [E2E CodeceptJS Tests](e2e-codeceptjs-tests.md)
 - [Integration & CLI Tests](integration-cli-tests.md)
 - [Package Tests](package-tests.md)
 - [Upgrade Tests](upgrade-tests.md)

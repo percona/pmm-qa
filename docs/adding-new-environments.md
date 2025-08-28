@@ -4,7 +4,7 @@ This guide explains how to add new database types and environments to the PMM qa
 
 ## Overview
 
-The PMM framework uses a Python-based system (`pmm-framework.py`) with Ansible playbooks to set up various database and service environments for testing. Adding a new environment involves several coordinated changes.
+The PMM framework uses a Python-based system (`pmm-framework.py`) with Ansible playbooks and Docker to set up various database and service environments for testing. Adding a new environment involves several coordinated changes.
 
 ## Architecture
 
@@ -14,6 +14,14 @@ The framework consists of:
 - **`database_options.py`** - Configuration definitions for all database types
 - **Ansible playbooks** (`.yml` files) - Infrastructure automation scripts
 - **Helper scripts** - Supporting bash/shell scripts
+
+### Leveraging Other Percona QA Team Setups
+
+In addition to the core PMM framework, we also leverage setups from other Percona QA teams that are available in the `qa-integration` repository. These setups provide specialized configurations and testing environments:
+
+- **`qa-integration/pmm_psmdb_diffauth_setup/`** - MongoDB authentication setups from the PSMDB QA team
+
+These external setups can be integrated into the PMM framework by referencing their setups and configurations in your custom setup functions.
 
 ## Step-by-Step Guide
 
@@ -334,9 +342,9 @@ custom_option = get_value('CUSTOM_OPTION', db_type, args, db_config)
 When contributing new environments:
 
 1. Follow the established patterns
-2. Include comprehensive tests
-3. Add documentation
-4. Ensure cleanup works properly
-5. Test with different PMM server configurations
+2. Add documentation
+3. Ensure cleanup works properly
+4. Test with different PMM server configurations
+5. Execute e2e-codeceptjs-matrix workflow with contributor branch to ensure all setups are working correctly and nothing is broken/impacted
 
 This approach ensures consistency and maintainability across all PMM framework environments. 
