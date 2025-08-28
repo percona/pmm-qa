@@ -123,7 +123,7 @@ jobs:
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
-      PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
+      PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'v3' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}
       TARBALL_LINK: ${{ inputs.pmm_client_tarball || 'null' }}
       EXPECTED_VERSION: ${{ inputs.expected_version }}

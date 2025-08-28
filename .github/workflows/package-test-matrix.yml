@@ -54,7 +54,7 @@ jobs:
     uses: ./.github/workflows/package-test-single.yml
     secrets: inherit
     with:
-      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
@@ -67,7 +67,7 @@ jobs:
     uses: ./.github/workflows/package-test-single.yml
     secrets: inherit
     with:
-      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
@@ -80,7 +80,7 @@ jobs:
     uses: ./.github/workflows/package-test-single.yml
     secrets: inherit
     with:
-      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
+      package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}

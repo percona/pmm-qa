@@ -387,3 +387,18 @@ jobs:
       cli_test: 'proxySql'
       services_list: '--database pxc=8.0'
       test_name: 'PXC 8.0'
+
+  external-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'external'
+      services_list: '--database=external'
+      test_name: 'External'
