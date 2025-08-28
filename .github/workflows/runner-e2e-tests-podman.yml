@@ -229,12 +229,13 @@ jobs:
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
+          podman ps -a
           python3 -m venv virtenv
           . virtenv/bin/activate
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install setuptools
-          python pmm-framework.py --pmm-server-ip=127.0.0.1 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          python pmm-framework.py --pmm_server_ip 192.168.0.1 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
