@@ -125,7 +125,7 @@ jobs:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}
-      TARBALL: ${{ inputs.pmm_client_tarball || 'null' }}
+      TARBALL_LINK: ${{ inputs.pmm_client_tarball || 'null' }}
       EXPECTED_VERSION: ${{ inputs.expected_version }}
 
       REPO: ${{ inputs.repository || 'dev-latest' }}
@@ -188,6 +188,14 @@ jobs:
             echo "EXPECTED_VERSION=$(echo ${{ inputs.expected_version }} | awk -F'-' '{print $1}')" >> $GITHUB_ENV
             echo "expected version is ${{ env.EXPECTED_VERSION }}"
           fi
+          if [[ "${{ inputs.expected_version}}" = "3-dev-latest" ]]; then
+            DEV_VERSION=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION -O -)
+            echo "EXPECTED_VERSION=$DEV_VERSION" >> $GITHUB_ENV
+          elif [[ "${{ inputs.expected_version}}" = "pmm3-rc" ]]; then
+            RC_VERSION=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
+            echo "EXPECTED_VERSION=$RC_VERSION" >> $GITHUB_ENV
+          fi
+                    
           echo "repo=${{ env.REPO }}"
           
           ### vagrant vm ###
@@ -274,8 +282,8 @@ jobs:
               export METRICS_MODE=${{ env.METRICS_MODE }}
               export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
               echo $PMM_VERSION
-              if [[ "${{ env.TARBALL }}" != "null" ]]; then
-                export TARBALL_LINK="${{ env.TARBALL }}"
+              if [[ "${{ env.TARBALL_LINK }}" != "null" ]]; then
+                export TARBALL_LINK="${{ env.TARBALL_LINK }}"
               fi
               export install_repo=${{ env.REPO }}
               export install_package=${{ env.INSTALL_PACKAGE }}
@@ -301,6 +309,12 @@ jobs:
                 sudo apt install -y software-properties-common
                 sudo apt-add-repository --yes --update ppa:ansible/ansible
                 sudo apt-get install -y ansible git wget
+              fi
+              if [[ "${{ env.VM_BOX }}" =~ "oracle" ]]; then
+                sudo dnf -y install dnf-plugins-core
+                sudo dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+                sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+                sudo systemctl enable --now docker
               fi
               cd /pmm/package-testing/playbooks
               ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml

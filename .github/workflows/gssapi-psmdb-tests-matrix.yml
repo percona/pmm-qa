@@ -15,6 +15,11 @@ on:
         default: 'v3'
         required: false
         type: string
+      package_testing_branch:
+        description: 'package-testing repository branch(for setup)'
+        default: 'v3'
+        required: false
+        type: string
       pmm_server_image:
         description: 'PMM Server docker image'
         default: 'perconalab/pmm-server:3-dev-latest'
@@ -35,6 +40,15 @@ on:
         default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz'
         required: false
         type: string
+      repository:
+        description: "Select Repo for package testing to install PMM Server and client"
+        required: true
+        default: "release"
+        type: choice
+        options:
+          - release
+          - release candidate
+          - dev-latest
       sha:
         description: "SHA (leave default if running manually)"
         default: 'null'
@@ -231,3 +245,33 @@ jobs:
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
       services_list: '--database psmdb=8.0,SETUP_TYPE=pss,OL_VERSION=9 --verbose'
       test_name: 'PSMDB Replica 8.x'
+
+  mongo_package_tests_integration_ol8:
+    name: Package Test - OL 8
+    uses: ./.github/workflows/runner-package-test.yml
+    secrets: inherit
+    with:
+      pmm_client_tarball: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
+      playbook: 'pmm3-client_integration_tarball_gssapi'
+      package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
+      expected_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      repository: ${{ inputs.repository || 'release'}}
+      metrics_mode: "auto"
+      package: "pmm3-client"
+      os: "ol-8"
+
+  mongo_package_tests_integration_ol9:
+    name: Package Test - OL 9
+    uses: ./.github/workflows/runner-package-test.yml
+    secrets: inherit
+    with:
+      pmm_client_tarball: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
+      playbook: 'pmm3-client_integration_tarball_gssapi'
+      package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
+      expected_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      repository: ${{ inputs.repository || 'release'}}
+      metrics_mode: "auto"
+      package: "pmm3-client"
+      os: "ol-9"
