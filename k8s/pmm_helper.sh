@@ -5,8 +5,8 @@ load "./lib/bats-assert/load"   # Load BATS assertions
 # Set default chart branch - can be overridden by environment variable
 PMM_CHART_BRANCH=${PMM_CHART_BRANCH:-"latest"}
 PMM_HELM_CHARTS_REPO="https://github.com/percona/percona-helm-charts.git"
-PMM_HELM_CHARTS_DIR="/tmp/percona-helm-charts"
-
+# Default to a unique temp directory; allow override via env.
+PMM_HELM_CHARTS_DIR="${PMM_HELM_CHARTS_DIR:-$(mktemp -d -t percona-helm-charts.XXXXXX)}"
 get_pmm_addr(){
     local node_port=8443
     local node_ip=127.0.0.1

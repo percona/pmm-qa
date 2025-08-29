@@ -165,6 +165,8 @@ update_values_yaml() {
     pmm_version=$(get_pmm_version)
     echo "pmm_version is ${pmm_version}"
 
+    show_pmm_chart_values > values.yaml
+
     update_values_yaml "tag" "$IMAGE_TAG"
     update_values_yaml "repository" "$IMAGE_REPO"
 
