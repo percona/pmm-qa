@@ -20,7 +20,7 @@ on:
         required: false
         type: string
       pmm_client_image:
-        description: 'pmm2-client docker image'
+        description: 'pmm-client docker image'
         default: 'perconalab/pmm-client:3-dev-latest'
         required: false
         type: string
@@ -150,7 +150,7 @@ jobs:
           popd
           sudo sysctl net.ipv4.ip_unprivileged_port_start=80
 
-      - name: Setup PMM2-Server
+      - name: Setup PMM3-Server
         working-directory: ./pmm-ui-tests
         run: |
           mkdir -p ~/.config/systemd/user/
@@ -227,8 +227,15 @@ jobs:
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Run Setup for E2E Tests
-        working-directory: ./pmm-qa
-        run: sudo -E bash -x pmm-tests/pmm-framework.sh ${{ env.WIZARD_ARGS }} --pmm2
+        working-directory: qa-integration/pmm_qa
+        run: |
+          export HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install setuptools
+          python pmm-framework.py --pmm-server-ip=$HOST_IP --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-ui-tests
