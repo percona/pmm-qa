@@ -229,9 +229,7 @@ jobs:
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
-          podman ps -a
           export HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
-          echo "Host ip is: $HOST_IP"
           python3 -m venv virtenv
           . virtenv/bin/activate
           pip install --upgrade pip
