@@ -222,7 +222,7 @@ jobs:
             echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-10" ]]; then
-            echo "VM_BOX=oraclebase/oracle-10" >> $GITHUB_ENV
+            echo "VM_BOX=bento/almalinux-10" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
             echo "VM_BOX=gbailey/al2023" >> $GITHUB_ENV
@@ -261,7 +261,7 @@ jobs:
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant
-          sudo apt-get install -y virtualbox-7.1
+          sudo apt-get install -y virtualbox-7.2
 
       - name: "Wait for PMM Server to be healthy"
         run: |
