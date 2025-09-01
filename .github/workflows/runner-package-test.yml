@@ -324,9 +324,11 @@ jobs:
                 sudo systemctl enable --now docker
               fi
               if [[ "${{ env.VM_BOX }}" =~ "almalinux" ]]; then
-                sudo dnf install -y epel-release
+                subscription-manager repos --enable codeready-builder-for-rhel-10-$(arch)-rpms
+                sudo dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
                 sudo dnf update -y
-                sudo dnf install -y ansible git wget
+                sudo dnf install -y ansible
+                sudo dnf install -y git wget
               fi
               cd /pmm/package-testing/playbooks
               ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
@@ -337,7 +339,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up
+        run: vagrant up --debug
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
