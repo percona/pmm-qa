@@ -279,6 +279,7 @@ jobs:
             config.vm.box = "${{ env.VM_BOX }}"
             ${{ contains(env.VM_BOX, 'debian10') && 'config.vbguest.auto_update = true' }}
             config.ssh.insert_key = false
+            config.vm.boot_timeout = 600
             config.vm.define :CLIENT_TEST do |t|
             end
 
@@ -338,7 +339,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up --debug
+        run: vagrant up
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
