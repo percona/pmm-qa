@@ -274,7 +274,6 @@ jobs:
           Vagrant.require_version ">= 1.7.0"
           Vagrant.configure(2) do |config|
             config.vm.box = "${{ env.VM_BOX }}"
-            config.vm.boot_timeout = 600
             ${{ contains(env.VM_BOX, 'debian10') && 'config.vbguest.auto_update = true' }}
             config.ssh.insert_key = false
             config.vm.define :CLIENT_TEST do |t|
@@ -330,7 +329,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up
+        run: vagrant up --debug
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
