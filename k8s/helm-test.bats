@@ -18,6 +18,7 @@ cleanup () {
     kubectl delete pod,service,statefulset,configmap,secret,serviceaccount,volumesnapshot --selector=app.kubernetes.io/name=pmm --force || true
     delete_pvc || true
     rm values.yaml || true
+    cleanup_pmm_chart_source || true
     echo "------------------------"
 }
 
@@ -81,16 +82,15 @@ update_values_yaml() {
 }
 
 @test "generate values.yaml" {
-    helm show values percona/pmm > values.yaml
+    show_pmm_chart_values > values.yaml
 }
 
 @test "install/uninstall default chart and check connectivity" {
     stop_port_forward
-    helm install pmm \
+    install_pmm_chart pmm \
         --set image.repository=$IMAGE_REPO \
         --set image.tag=$IMAGE_TAG \
-        --wait \
-        percona/pmm
+        --wait
 
     wait_for_pmm
     start_port_forward
@@ -108,13 +108,12 @@ update_values_yaml() {
 @test "install/uninstall with parameter set in cli" {
     stop_port_forward
     local instance_name="pmm1"
-    helm install $instance_name \
+    install_pmm_chart $instance_name \
         --set image.repository=$IMAGE_REPO \
         --set image.tag=$IMAGE_TAG \
         --set-string pmmEnv.PMM_ENABLE_ACCESS_CONTROL="1" \
         --set service.type="NodePort" \
-        --wait \
-        percona/pmm
+        --wait
     wait_for_pmm
 
     start_port_forward
@@ -135,12 +134,12 @@ update_values_yaml() {
 
 @test "install/uninstall chart with file" {
     stop_port_forward
-    helm show values percona/pmm > values.yaml
+    show_pmm_chart_values > values.yaml
 
     update_values_yaml "tag" "$IMAGE_TAG"
     update_values_yaml "repository" "$IMAGE_REPO"
 
-    helm install pmm2 -f values.yaml --wait percona/pmm
+    install_pmm_chart pmm2 -f values.yaml --wait
     wait_for_pmm
     start_port_forward
 
@@ -152,7 +151,6 @@ update_values_yaml() {
 }
 
 @test "install last released V3 version, upgrade to V3 and uninstall" {
-    skip "Unskip after https://perconadev.atlassian.net/browse/PMM-13997 is fixed"
 
     stop_port_forward
     helm show values --version 1.4.0 percona/pmm > values.yaml
@@ -167,10 +165,12 @@ update_values_yaml() {
     pmm_version=$(get_pmm_version)
     echo "pmm_version is ${pmm_version}"
 
+    show_pmm_chart_values > values.yaml
+
     update_values_yaml "tag" "$IMAGE_TAG"
     update_values_yaml "repository" "$IMAGE_REPO"
 
-    helm upgrade pmm3 -f values.yaml --set podSecurityContext.runAsGroup=null --set podSecurityContext.fsGroup=null percona/pmm
+    upgrade_pmm_chart pmm3 -f values.yaml --set podSecurityContext.runAsGroup=null --set podSecurityContext.fsGroup=null
     sleep 7 # give a chance to update manifest
     wait_for_pmm
 
@@ -190,7 +190,6 @@ update_values_yaml() {
 }
 
 @test "install last released V2 version, upgrade to V3 and uninstall" {
-    skip "Unskip after https://perconadev.atlassian.net/browse/PMM-13997 is fixed"
 
     stop_port_forward
     helm show values --version 1.3.0 percona/pmm > values.yaml
@@ -227,7 +226,7 @@ update_values_yaml() {
     stop_port_forward
     start_port_forward
 
-    helm show values percona/pmm > values.yaml
+    show_pmm_chart_values > values.yaml
 
     update_values_yaml "tag" "$IMAGE_TAG"
     update_values_yaml "repository" "$IMAGE_REPO"
@@ -235,7 +234,7 @@ update_values_yaml() {
     kubectl exec pmm4-0 -- supervisorctl stop all
     kubectl exec pmm4-0 -- chown -R pmm:pmm /srv
 
-    helm upgrade pmm4 -f values.yaml --set podSecurityContext.runAsGroup=null --set podSecurityContext.fsGroup=null percona/pmm
+    upgrade_pmm_chart pmm4 -f values.yaml --set podSecurityContext.runAsGroup=null --set podSecurityContext.fsGroup=null
     sleep 7 # give a chance to update manifest
     wait_for_pmm
 
@@ -261,12 +260,11 @@ update_values_yaml() {
     kubectl create namespace $namespace || true
     kubectl config set-context --current --namespace=${namespace}
 
-    helm install pmm5 \
+    install_pmm_chart pmm5 \
         --set image.repository=$IMAGE_REPO \
         --set image.tag=$IMAGE_TAG \
         --set namespaceOverride=$namespace \
-        --wait \
-        percona/pmm
+        --wait
 
     wait_for_pmm
     start_port_forward
