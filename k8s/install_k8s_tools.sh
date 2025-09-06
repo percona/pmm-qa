@@ -24,7 +24,7 @@ runAsRoot() {
 usage()
 {
   echo "Script installs k8s tools
-        
+
         Usage: install_k8s_tools.sh [ --kubectl ]
                         [ --minikube ]
                         [ --kind ]
@@ -84,12 +84,12 @@ while true; do
         shift
         continue
     ;;
-    --sudo) 
+    --sudo)
         USE_SUDO="true"
         shift
         continue
     ;;
-    --) 
+    --)
         shift
         break
     ;;
@@ -119,25 +119,34 @@ install_bin()
         mv ./$1 $INSTALL_DIR/$1
     else
         runAsRoot install -o root -g root -m 0755 $1 $INSTALL_DIR
-    fi    
+    fi
 }
 
-install_kubectl()
-{
+install_kubectl() {
+  set -euo pipefail
+  # use a global var name for trap safety (see #2)
+  _tmp="$(mktemp -d)"
+  trap 'set +u; [ -n "${_tmp:-}" ] && rm -rf "$_tmp"' EXIT
 
-    curl -sLO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-    curl -sLO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
-    echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check --status || exit 1
+  ver="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
 
-    chmod +x kubectl
+  curl -fLo "$_tmp/kubectl" "https://dl.k8s.io/release/${ver}/bin/linux/amd64/kubectl"
+  curl -fLo "$_tmp/kubectl.sha256" "https://dl.k8s.io/release/${ver}/bin/linux/amd64/kubectl.sha256"
 
-    install_bin kubectl
+  ( cd "$_tmp" && echo "$(<kubectl.sha256)  kubectl" | sha256sum -c - )
 
-    rm kubectl.sha256 kubectl 2>&1 1>/dev/null || true
+  chmod +x "$_tmp/kubectl"
 
-    echo "kubectl version --client --output=yaml"
-    kubectl version --client --output=yaml
+  if [ "${USER_MODE}" = "true" ]; then
+    install -m 0755 "$_tmp/kubectl" "$INSTALL_DIR/kubectl"
+  else
+    runAsRoot install -o root -g root -m 0755 "$_tmp/kubectl" "$INSTALL_DIR/kubectl"
+  fi
+
+  echo "kubectl version --client --output=yaml"
+  "$INSTALL_DIR/kubectl" version --client --output=yaml
 }
+
 
 install_minikube()
 {
@@ -169,17 +178,22 @@ install_kind()
     kind version
 }
 
-install_helm()
-{
-    curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
-    chmod +x get_helm.sh
+install_helm() {
+  set -euo pipefail
+  _tmp_helm="$(mktemp -d)"
+  trap 'set +u; [ -n "${_tmp_helm:-}" ] && rm -rf "${_tmp_helm}"' EXIT
 
-    HELM_INSTALL_DIR=$INSTALL_DIR USE_SUDO=$USE_SUDO ./get_helm.sh 2>&1 1>/dev/null
-    
-    rm get_helm.sh 2>&1 1>/dev/null || true
-    
-    echo "helm version"
-    helm version
+  script="${_tmp_helm}/get_helm.sh"
+  curl -fsSL -o "${script}" https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+  chmod +x "${script}"
+
+  HELM_INSTALL_DIR="${INSTALL_DIR}" USE_SUDO="${USE_SUDO}" "${script}"
+
+  trap - EXIT
+  rm -rf "${_tmp_helm}"
+
+  echo "helm version"
+  "${INSTALL_DIR}/helm" version
 }
 
 ## --kubectl
