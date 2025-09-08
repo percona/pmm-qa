@@ -223,6 +223,7 @@ jobs:
           fi
           if [[ "${{ inputs.os }}" =~ "ol-10" ]]; then
             echo "VM_BOX=almalinux/10" >> $GITHUB_ENV
+            echo "PS_REPOSITORY=testing" >> $GITHUB_ENV # TODO: remove when ol-10 will be in package-testing
           fi
           if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
             echo "VM_BOX=gbailey/al2023" >> $GITHUB_ENV
@@ -324,7 +325,8 @@ jobs:
                 sudo systemctl enable --now docker
               fi
               if [[ "${{ env.VM_BOX }}" =~ "almalinux" ]]; then
-                sudo crb enable
+                sudo dnf install 'dnf-command(config-manager)'
+                sudo dnf config-manager --set-enabled crb
                 sudo dnf install -y epel-release
                 sudo dnf update -y
                 sudo dnf install -y ansible-core git wget
