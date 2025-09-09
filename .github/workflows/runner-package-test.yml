@@ -222,7 +222,7 @@ jobs:
             echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-10" ]]; then
-            echo "VM_BOX=bento/almalinux-10" >> $GITHUB_ENV
+            echo "VM_BOX=rockylinux/10" >> $GITHUB_ENV
             echo "PS_REPOSITORY=testing" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
@@ -324,7 +324,7 @@ jobs:
                 sudo dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
                 sudo systemctl enable --now docker
               fi
-              if [[ "${{ env.VM_BOX }}" =~ "almalinux" ]]; then
+              if [[ "${{ env.VM_BOX }}" =~ "rockylinux" ]]; then
                 sudo dnf install 'dnf-command(config-manager)'
                 sudo dnf config-manager --set-enabled crb
                 sudo dnf install -y epel-release
