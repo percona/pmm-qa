@@ -223,7 +223,7 @@ jobs:
           fi
           if [[ "${{ inputs.os }}" =~ "ol-10" ]]; then
             echo "VM_BOX=almalinux/10" >> $GITHUB_ENV
-            echo "PS_REPOSITORY=testing" >> $GITHUB_ENV # TODO: remove when ol-10 will be in package-testing
+            echo "PS_REPOSITORY=testing" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
             echo "VM_BOX=gbailey/al2023" >> $GITHUB_ENV
