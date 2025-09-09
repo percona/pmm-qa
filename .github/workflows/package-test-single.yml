@@ -94,7 +94,7 @@ jobs:
       repository: ${{ inputs.repository || 'release'}}
 
   p_test:
-    if: ${{ ! ( contains(toLower(inputs.playbook), 'upgrade') && contains(toLower(matrix.os), 'ol-10') ) }}
+    if: ${{ ! ( contains(inputs.playbook, 'upgrade') && contains(matrix.os, 'ol-10') ) }}
     name: ${{ inputs.playbook }}
     uses: ./.github/workflows/runner-package-test.yml
     secrets: inherit
