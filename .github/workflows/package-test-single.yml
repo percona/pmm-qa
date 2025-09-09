@@ -94,7 +94,6 @@ jobs:
       repository: ${{ inputs.repository || 'release'}}
 
   p_test:
-    if: ${{ ! ( contains(inputs.playbook, 'upgrade') && contains(matrix.os, 'ol-10') ) }}
     name: ${{ inputs.playbook }}
     uses: ./.github/workflows/runner-package-test.yml
     secrets: inherit
@@ -103,6 +102,9 @@ jobs:
       fail-fast: false
       matrix:
         os: ${{ fromJSON(needs.get_versions.outputs.pt_os) }}
+        exclude:
+          - os: ol-10
+            playbook: ${{ contains(inputs.playbook, 'upgrade') && inputs.playbook || '' }}
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       expected_version: ${{needs.get_versions.outputs.finish_version}}
