@@ -102,9 +102,6 @@ jobs:
       fail-fast: false
       matrix:
         os: ${{ fromJSON(needs.get_versions.outputs.pt_os) }}
-        exclude:
-          - os: ol-10
-            playbook: ${{ contains(inputs.playbook, 'upgrade') && inputs.playbook || '' }}
     with:
       package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       expected_version: ${{needs.get_versions.outputs.finish_version}}
