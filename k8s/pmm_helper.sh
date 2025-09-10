@@ -16,7 +16,7 @@ get_pmm_addr(){
 # Function to setup helm chart source based on branch
 setup_pmm_chart_source() {
     echo "Setting up PMM chart source for branch: $PMM_CHART_BRANCH"
-    
+
     if [[ "$PMM_CHART_BRANCH" == "latest" ]]; then
         echo "Using released PMM chart from Percona helm repository"
         helm repo add percona https://percona.github.io/percona-helm-charts/ || true
@@ -25,10 +25,10 @@ setup_pmm_chart_source() {
         echo "Using PMM chart from git branch: $PMM_CHART_BRANCH"
         # Clean up any existing clone
         rm -rf "$PMM_HELM_CHARTS_DIR" || true
-        
+
         # Clone the repository with the specified branch
         git clone -b "$PMM_CHART_BRANCH" --depth 1 "$PMM_HELM_CHARTS_REPO" "$PMM_HELM_CHARTS_DIR"
-        
+
         if [[ ! -d "$PMM_HELM_CHARTS_DIR/charts/pmm" ]]; then
             echo "ERROR: PMM chart not found in branch $PMM_CHART_BRANCH at $PMM_HELM_CHARTS_DIR/charts/pmm"
             return 1
@@ -50,13 +50,13 @@ install_pmm_chart() {
     local instance_name="$1"
     shift  # Remove first argument, keep the rest
     local additional_args="$@"
-    
+
     setup_pmm_chart_source
     local chart_path=$(get_pmm_chart_path)
-    
+
     echo "Installing PMM chart from: $chart_path"
     echo "Additional args: $additional_args"
-    
+
     helm install "$instance_name" $additional_args "$chart_path"
 }
 
@@ -65,26 +65,26 @@ upgrade_pmm_chart() {
     local instance_name="$1"
     shift  # Remove first argument, keep the rest
     local additional_args="$@"
-    
+
     setup_pmm_chart_source
     local chart_path=$(get_pmm_chart_path)
-    
+
     echo "Upgrading PMM chart from: $chart_path"
     echo "Additional args: $additional_args"
-    
+
     helm upgrade "$instance_name" $additional_args "$chart_path"
 }
 
 # Function to show PMM chart values with branch support
 show_pmm_chart_values() {
-    local additional_args="$@"
-    
-    setup_pmm_chart_source
+    local additional_args=("$@")
+
+    >&2 setup_pmm_chart_source
     local chart_path=$(get_pmm_chart_path)
-    
-    echo "Showing values for PMM chart from: $chart_path"
-    
-    helm show values $additional_args "$chart_path"
+
+    >&2 echo "Showing values for PMM chart from: $chart_path"
+
+    helm show values "${additional_args[@]}" "$chart_path"
 }
 
 # Cleanup function for git-based charts
