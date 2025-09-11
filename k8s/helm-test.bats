@@ -170,7 +170,7 @@ update_values_yaml() {
     update_values_yaml "tag" "$IMAGE_TAG"
     update_values_yaml "repository" "$IMAGE_REPO"
 
-    upgrade_pmm_chart pmm3 -f values.yaml --set podSecurityContext.runAsGroup=null --set podSecurityContext.fsGroup=null
+    upgrade_pmm_chart pmm3 -f values.yaml
     sleep 7 # give a chance to update manifest
     wait_for_pmm
 
@@ -234,7 +234,7 @@ update_values_yaml() {
     kubectl exec pmm4-0 -- supervisorctl stop all
     kubectl exec pmm4-0 -- chown -R pmm:pmm /srv
 
-    upgrade_pmm_chart pmm4 -f values.yaml --set podSecurityContext.runAsGroup=null --set podSecurityContext.fsGroup=null
+    upgrade_pmm_chart pmm4 -f values.yaml
     sleep 7 # give a chance to update manifest
     wait_for_pmm
 
