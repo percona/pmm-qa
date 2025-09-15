@@ -61,7 +61,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
-      playbook: "pmm3-client_integration"
+      playbook: "pmm3-client"
 
   i_test:
     name: "Package Install"
