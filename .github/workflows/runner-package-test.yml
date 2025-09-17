@@ -345,6 +345,7 @@ jobs:
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         uses: nick-fields/retry@v3
         with:
+          timeout_minutes: 40
           max_attempts: 2
           command: vagrant up
           on_retry_command: vagrant destroy -f || true && vagrant global-status --prune || true
