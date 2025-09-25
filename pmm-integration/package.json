@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@actions/core": "^1.10.0",
-    "@typescript-eslint/parser": "^5.51.0",
+    "@typescript-eslint/parser": "^5.62.0",
     "decompress": "^4.2.1",
     "prettier": "^2.5.1",
     "shelljs": "^0.8.5"
