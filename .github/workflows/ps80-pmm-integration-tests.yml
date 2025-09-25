@@ -1,0 +1,41 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI-PS80-PMM
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "pmm-ps8.0-github-actions" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+      
+      - name: Install ansible
+        run: sudo apt-get update -y && sudo apt-get install ansible -y
+      # Runs a single command using the runners shell
+      - name: Give write perimssion to the bash script
+        run: chmod +x ./pmm-tests/pmm-framework.sh
+        
+      - name: Run the pmm container in background
+        run: docker run --detach --restart always --publish 443:443 --name pmm-server perconalab/pmm-server:dev-latest
+        
+      - name: Run for ms version 8.0 and ps client 1
+        run: cd pmm-tests && ./pmm-framework.sh --ms-version 8.0 --addclient=ms,1 --pmm2 
+
+      - name: Run for ps version 8.0 and ps client 1
+        run: cd pmm-tests && ./pmm-framework.sh --ps-version 8.0 --addclient=ps,1 --pmm2
