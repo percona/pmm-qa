@@ -185,7 +185,7 @@ jobs:
           
           ### vagrant vm ###
           if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
-            echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
+            echo "VM_BOX=bento/debian-11" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "bookworm" ]]; then
             echo "VM_BOX=generic-x64/debian12" >> $GITHUB_ENV
