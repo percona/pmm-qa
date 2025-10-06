@@ -123,6 +123,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 150
     env:
+      ANSIBLE_CALLBACK_RESULT_FORMAT: yaml
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}
