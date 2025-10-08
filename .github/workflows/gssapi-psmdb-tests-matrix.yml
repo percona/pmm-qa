@@ -40,6 +40,10 @@ on:
         default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz'
         required: false
         type: string
+      expected_version:
+        description: 'expected pmm-client version'
+        required: true
+        type: string
       repository:
         description: "Select Repo for package testing to install PMM Server and client"
         required: true
@@ -69,7 +73,7 @@ on:
       pmm_client_image:
         required: false
         type: string
-      pmm_client_version:
+      expected_version:
         required: false
         type: string
       sha:
@@ -254,7 +258,7 @@ jobs:
       pmm_client_tarball: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
       playbook: 'pmm3-client_integration_tarball_gssapi'
       package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
-      expected_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      expected_version: ${{ inputs.expected_version || '3-dev-latest' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       repository: ${{ inputs.repository || 'release'}}
       metrics_mode: "auto"
@@ -269,7 +273,7 @@ jobs:
       pmm_client_tarball: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
       playbook: 'pmm3-client_integration_tarball_gssapi'
       package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
-      expected_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      expected_version: ${{ inputs.expected_version || '3-dev-latest' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       repository: ${{ inputs.repository || 'release'}}
       metrics_mode: "auto"
