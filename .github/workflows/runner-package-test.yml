@@ -336,7 +336,7 @@ jobs:
                 sudo dnf install -y ansible-core git wget
               fi
               cd /pmm/package-testing/playbooks
-              ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
+              ANSIBLE_CALLBACK_RESULT_FORMAT=yaml ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
               SHELL
           end
 
