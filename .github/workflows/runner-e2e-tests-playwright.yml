@@ -127,13 +127,6 @@ jobs:
           repository: percona/pmm-qa
           path: ./pmm-qa
 
-      - name: 'Install playwright'
-        working-directory: ./pmm-qa/e2e_tests/
-        run: |
-          npm ci
-          npx playwright install-deps
-          npx playwright install
-
       - name: Setup PMM Server
         run: |
           docker network create pmm-qa
@@ -164,10 +157,6 @@ jobs:
             --name pmm-server \
               ${{ env.DOCKER_VERSION }}
 
-      - name: Setup PMM-Client
-        working-directory: qa-integration/pmm_qa
-        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
-
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
@@ -177,6 +166,17 @@ jobs:
           pip install -r requirements.txt
           pip install setuptools
           python pmm-framework.py --verbosity-level=5 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: Setup PMM-Client
+        working-directory: qa-integration/pmm_qa
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+
+      - name: Install playwright
+        working-directory: ./pmm-qa/e2e_tests/
+        run: |
+          npm ci
+          npx playwright install-deps
+          npx playwright install
 
       - name: Execute UI tests
         if: ${{ inputs.pmm_test_flag == 'null' }}
