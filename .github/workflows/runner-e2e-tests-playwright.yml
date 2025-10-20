@@ -4,6 +4,11 @@ name: runner-e2e-tests-playwright
 on:
   workflow_dispatch:
     inputs:
+      pmm_qa_branch:
+        description: 'Branch for the pmm-qa repository.'
+        type: string
+        default: 'main'
+        required: true
       pmm_test_flag:
         description: 'Flag to run only specific portion of the tests.'
         type: string
@@ -23,7 +28,7 @@ on:
         type: string
         default: '--addclient=ps,1'
         required: true
-      pmm_qa_branch:
+      qa_integration_branch:
         description: 'Branch for the pmm-qa repository.'
         type: string
         default: 'main'
@@ -31,6 +36,9 @@ on:
 
   workflow_call:
     inputs:
+      pmm_qa_branch:
+        type: string
+        required: true
       pmm_test_flag:
         type: string
         required: false
@@ -43,7 +51,7 @@ on:
       setup_services:
         type: string
         required: false
-      pmm_qa_branch:
+      qa_integration_branch:
         type: string
         required: true
 
@@ -80,6 +88,7 @@ jobs:
       ADMIN_PASSWORD: 'admin'
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
+      QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'v3' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
       DOCKER_VERSION: ${{ inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
@@ -106,9 +115,16 @@ jobs:
       - name: Checkout qa-integration repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.PMM_QA_BRANCH }}
+          ref: ${{ env.QA_INTEGRATION_BRANCH }}
           repository: Percona-Lab/qa-integration
           path: ./qa-integration
+
+      - name: Checkout qa-integration repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.QA_INTEGRATION_BRANCH }}
+          repository: percona/pmm-qa
+          path: ./pmm-qa
 
       - name: 'Install playwright'
         working-directory: ./
