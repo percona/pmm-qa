@@ -26,7 +26,7 @@ on:
       setup_services:
         description: 'Clients for pmm-server'
         type: string
-        default: '--addclient=ps,1'
+        default: '--database ps'
         required: true
       qa_integration_branch:
         description: 'Branch for the qa-integration repository.'
@@ -127,7 +127,7 @@ jobs:
           path: ./pmm-qa
 
       - name: 'Install playwright'
-        working-directory: ./pmm-qa/
+        working-directory: ./pmm-qa/e2e_tests/
         run: |
           ls
           npm ci
