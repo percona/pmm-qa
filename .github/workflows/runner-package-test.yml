@@ -269,7 +269,7 @@ jobs:
           else
             sudo apt-get install -y virtualbox
           fi
-          vagrant plugin install vagrant-libvirt
+          sudo vagrant plugin install vagrant-libvirt
 
       - name: "Wait for PMM Server to be healthy"
         run: |
