@@ -122,7 +122,7 @@ jobs:
       - name: Checkout pmm-qa repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.QA_INTEGRATION_BRANCH }}
+          ref: ${{ env.PMM_QA_BRANCH }}
           repository: percona/pmm-qa
           path: ./pmm-qa
 
