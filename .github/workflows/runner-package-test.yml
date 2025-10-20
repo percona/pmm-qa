@@ -263,7 +263,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant
           sudo apt update
-          sudo apt install qemu-system qemu-utils qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils
+          sudo apt install qemu-system qemu-utils qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils libvirt-dev
           if [[ "$VM_BOX" =~ "almalinux" ]]; then
             sudo apt-get install -y virtualbox-7.1
           else
