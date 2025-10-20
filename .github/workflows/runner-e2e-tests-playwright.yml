@@ -4,11 +4,6 @@ name: runner-e2e-tests-playwright
 on:
   workflow_dispatch:
     inputs:
-      pmm_ui_tests_branch:
-        description: 'Target branch for pmm-ui-tests repository'
-        type: string
-        default: 'main'
-        required: true
       pmm_test_flag:
         description: 'Flag to run only specific portion of the tests.'
         type: string
@@ -36,9 +31,6 @@ on:
 
   workflow_call:
     inputs:
-      pmm_ui_tests_branch:
-        type: string
-        required: true
       pmm_test_flag:
         type: string
         required: false
@@ -64,7 +56,6 @@ jobs:
       SHA: ${{ inputs.sha || 'null' }}
       PMM_BASE_URL: https://127.0.0.1
 
-      UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch }}
       PMM_TEST_FLAG: ${{ inputs.pmm_test_flag }}
 
       OKTA_TOKEN: ${{ secrets.OKTA_TOKEN }}
@@ -90,7 +81,6 @@ jobs:
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
-      PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       DOCKER_VERSION: ${{ inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -100,7 +90,7 @@ jobs:
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
 
     steps:
-      - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_ui_tests_branch }}
+      - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
         if: ${{ env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
@@ -113,13 +103,6 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: Checkout PMM UI tests
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.PMM_UI_BRANCH }}
-          repository: percona/pmm-ui-tests
-          path: ./pmm-ui-tests
-
       - name: Checkout qa-integration repo
         uses: actions/checkout@v4
         with:
@@ -128,8 +111,9 @@ jobs:
           path: ./qa-integration
 
       - name: 'Install playwright'
-        working-directory: ./pmm-ui-tests/playwright-tests
+        working-directory: ./
         run: |
+          ls
           npm ci
           npx playwright install
 
