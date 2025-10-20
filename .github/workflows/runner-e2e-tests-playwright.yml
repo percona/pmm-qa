@@ -32,7 +32,7 @@ on:
       qa_integration_branch:
         description: 'Branch for the qa-integration repository.'
         type: string
-        default: 'v3'
+        default: 'PMM-14417'
         required: true
 
   workflow_call:
