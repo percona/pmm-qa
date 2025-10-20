@@ -127,7 +127,7 @@ jobs:
           path: ./pmm-qa
 
       - name: 'Install playwright'
-        working-directory: ./pmm-qa/e2e_tests/
+        working-directory: ./pmm-qa/
         run: |
           ls
           npm ci
