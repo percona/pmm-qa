@@ -1,0 +1,30 @@
+{
+  "name": "e2e_tests",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^24.8.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.1",
+    "@typescript-eslint/parser": "^8.46.1",
+    "build-url-ts": "^6.2.0",
+    "dotenv": "^17.2.3",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-playwright": "^2.2.2",
+    "eslint-plugin-prettier": "^5.5.4",
+    "globals": "^16.4.0",
+    "jiti": "^2.6.1",
+    "playwright": "^1.56.0",
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.1"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "root": true,
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "@typescript-eslint",
+    "playwright",
+    "prettier"
+  ],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:playwright/recommended",
+    "plugin:prettier/recommended"
+  ],
+  "rules": {
+    "prettier/prettier": ["error"],
+    "eol-last": ["error", "always"],
+    "playwright/no-wait-for-timeout": "off",
+    "playwright/no-standalone-expect": "off"
+  }
+}
