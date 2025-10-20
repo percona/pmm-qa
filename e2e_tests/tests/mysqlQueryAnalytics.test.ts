@@ -20,7 +20,7 @@ pmmTest(
 
 pmmTest(
   'PMM-T1897 - Verify Query Count metric on QAN page for MySQL @pmm-ps-integration',
-  async ({ cliHelper, credentials }) => {
+  async ({ page, cliHelper, credentials, queryAnalytics, urlHelper }) => {
     const containerName = await cliHelper.sendCommand(
       'docker ps -f name=ps --format "{{.Names }}"',
     );
@@ -31,5 +31,14 @@ pmmTest(
                                   -u ${credentials.perconaServer.ps_84.username} \
                                   -p${credentials.perconaServer.ps_84.password} \
                                   < ./testdata/PMM-T1897.sql`);
+
+    const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
+      from: 'now-15m',
+      database: 'sbtest3',
+    });
+
+    await page.goto(url);
+    await queryAnalytics.verifyQueryAnalyticsHaveData();
+    await queryAnalytics.verifyTotalQueryCount(17);
   },
 );

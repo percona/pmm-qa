@@ -1,6 +1,7 @@
 import { buildUrl, IQueryParams } from 'build-url-ts';
 
 interface BuildUrlParameters {
+  database?: string;
   environment?: string;
   serviceName?: string;
   from?: string;
@@ -14,6 +15,9 @@ export default class UrlHelper {
     const queryParams: IQueryParams = {};
     for (const key of Object.keys(parameters) as (keyof BuildUrlParameters)[]) {
       switch (key) {
+        case 'database':
+          queryParams['var-database'] = parameters[key];
+          break;
         case 'environment':
           queryParams['var-environment'] = parameters[key];
           break;

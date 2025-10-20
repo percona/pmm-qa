@@ -6,6 +6,7 @@ export default class QueryAnalytics {
   private elements = {
     noData: '//*[@data-testid="table-no-data"]',
     spinner: '//*[@data-testid="Spinner"]',
+    totalCount: '//*[@data-testid="qan-total-items"]',
   };
 
   url = 'graph/d/pmm-qan/pmm-query-analytics';
@@ -35,5 +36,21 @@ export default class QueryAnalytics {
     await expect(locator).not.toBeVisible({
       timeout: 30000,
     });
+  };
+
+  verifyTotalQueryCount = async (expectedQueryCount: number) => {
+    const countString = await this.page
+      .locator(this.elements.totalCount)
+      .first()
+      .textContent();
+
+    if (!countString) {
+      throw new Error('Count of queries is not displayed!');
+    }
+
+    const match = countString.match(/of (\d+) items/);
+    const queryCount = match ? parseInt(match[1], 10) : null;
+
+    expect(queryCount).toEqual(expectedQueryCount);
   };
 }
