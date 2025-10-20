@@ -1,7 +1,7 @@
 import { PlaywrightTestConfig } from '@playwright/test';
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 const pmmUrl = process.env.PMM_UI_URL
   ? process.env.PMM_UI_URL
   : 'http://localhost/';

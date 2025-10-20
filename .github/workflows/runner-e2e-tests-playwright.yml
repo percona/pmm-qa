@@ -178,6 +178,9 @@ jobs:
           pip install setuptools
           python pmm-framework.py --verbosity-level=5 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
+      - name: Sleep for 5 minutes for metrics to populate
+        run: sleep 300
+
       - name: Execute UI tests
         if: ${{ inputs.pmm_test_flag == 'null' }}
         id: ui-tests-all
