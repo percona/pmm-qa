@@ -5,6 +5,8 @@ import MysqlInstanceSummaryDashboard from '../pages/dashboards/mysql/mysqlInstan
 import GrafanaHelper from '../helpers/grafana.helper';
 import QueryAnalytics from '../pages/qan/queryAnalytics.page';
 import InventoryApi from '../api/inventory.api';
+import CliHelper from '../helpers/cli.helper';
+import Credentials from '../helpers/credentials.helper';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -34,6 +36,8 @@ base.beforeEach(async ({ page }) => {
 });
 
 const pmmTest = base.extend<{
+  cliHelper: CliHelper;
+  credentials: Credentials;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   inventoryApi: InventoryApi;
@@ -41,6 +45,16 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
 }>({
+  cliHelper: async ({}, use) => {
+    const cliHelper = new CliHelper();
+    await use(cliHelper);
+  },
+
+  credentials: async ({}, use) => {
+    const credentials = new Credentials();
+    await use(credentials);
+  },
+
   dashboard: async ({ page }, use) => {
     const dashboardPage = new Dashboard(page);
     await use(dashboardPage);

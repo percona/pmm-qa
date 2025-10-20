@@ -17,3 +17,19 @@ pmmTest(
     await queryAnalytics.verifyQueryAnalyticsHaveData();
   },
 );
+
+pmmTest(
+  'PMM-T1897 - Verify Query Count metric on QAN page for MySQL @pmm-ps-integration',
+  async ({ cliHelper, credentials }) => {
+    const containerName = await cliHelper.sendCommand(
+      'docker ps -f name=ps --format "{{.Names }}"',
+    );
+    console.log(`Container name is: ${containerName}`);
+
+    // Prepare data for the test
+    await cliHelper.sendCommand(`docker exec ${containerName} mysql -h 127.0.0.1 --port 3306 \
+                                  -u ${credentials.perconaServer.ps_84.username} \
+                                  -p${credentials.perconaServer.ps_84.password} \
+                                  < ./testdata/PMM-T1897.sql`);
+  },
+);
