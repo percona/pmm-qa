@@ -222,7 +222,7 @@ jobs:
             echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-10" ]]; then
-            echo "VM_BOX=bento/almalinux-10" >> $GITHUB_ENV
+            echo "VM_BOX=almalinux/10" >> $GITHUB_ENV
             echo "PS_REPOSITORY=testing" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
