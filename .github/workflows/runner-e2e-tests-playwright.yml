@@ -16,12 +16,12 @@ on:
       pmm_server_version:
         description: 'Version of the pmm server used for testing'
         type: string
-        default: 'dev-latest'
+        default: 'perconalab/pmm-server:3-dev-latest'
         required: true
       pmm_client_version:
         description: 'Version of the pmm client used for testing'
         type: string
-        default: 'dev-latest'
+        default: '3-dev-latest'
         required: true
       setup_services:
         description: 'Clients for pmm-server'
@@ -133,19 +133,7 @@ jobs:
           npx playwright install-deps
           npx playwright install
 
-#      - name: Setup tools
-#        run: |
-#          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio-dev libnuma-dev socat sysbench
-#          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
-#          echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
-#              /etc/apt/sources.list.d/clickhouse.list
-#          sudo apt-get update
-#          sudo apt-get install -y clickhouse-client
-#          sudo apt-get install -y ansible
-#          sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
-
       - name: Setup PMM Server
-        working-directory: pmm-ui-tests
         run: |
           docker network create pmm-qa
           docker volume create pmm-volume
