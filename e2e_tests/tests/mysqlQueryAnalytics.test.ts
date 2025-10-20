@@ -38,6 +38,7 @@ pmmTest(
     });
 
     await page.goto(url);
+    console.log(`Url is: ${url}`);
     await queryAnalytics.verifyQueryAnalyticsHaveData();
     await queryAnalytics.verifyTotalQueryCount(17);
   },
