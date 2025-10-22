@@ -36,6 +36,9 @@ on:
           - auto
           - push
           - pull
+      pmm_client_tarball:
+        description: "PMM Client tarball link or FB-code"
+        type: string
   workflow_call:
     inputs:
       package_testing_branch:
@@ -49,6 +52,9 @@ on:
         type: string
       metrics_mode:
         required: true
+        type: string
+      pmm_client_tarball:
+        required: false
         type: string
 
 jobs:

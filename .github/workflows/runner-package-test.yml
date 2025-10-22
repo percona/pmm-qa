@@ -121,7 +121,7 @@ jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
@@ -341,8 +341,8 @@ jobs:
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 60
-          retry_wait_seconds: '120'
+          timeout_minutes: 30
+          retry_wait_seconds: '60'
           max_attempts: 2
           command: sudo vagrant up --provider=libvirt
           on_retry_command: sudo vagrant destroy -f && sudo vagrant global-status --prune
