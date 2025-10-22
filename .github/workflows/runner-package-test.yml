@@ -344,7 +344,7 @@ jobs:
           retry_wait_seconds: '120'
           max_attempts: 2
           command: sudo vagrant up --provider=libvirt
-          on_retry_command: vagrant destroy -f || true && vagrant global-status --prune || true
+          on_retry_command: sudo vagrant destroy -f && sudo vagrant global-status --prune
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
