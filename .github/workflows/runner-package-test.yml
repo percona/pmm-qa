@@ -280,12 +280,13 @@ jobs:
             ${{ contains(env.VM_BOX, 'debian10') && 'config.vbguest.auto_update = true' }}
             config.ssh.insert_key = false
             config.vm.define :CLIENT_TEST do |t|
+            config.vm.network "forwarded_port", guest: 443, host: 443
             end
 
             config.vm.synced_folder "${{ github.workspace }}/", "/pmm/package-testing/"
             config.vm.provision "shell", privileged: true, inline: <<-SHELL
               ## Set environment variables...
-              export PMM_SERVER_IP=10.0.2.2:443
+              export PMM_SERVER_IP=localhost:443
               export METRICS_MODE=${{ env.METRICS_MODE }}
               export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
               echo $PMM_VERSION
