@@ -121,7 +121,7 @@ jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
@@ -259,10 +259,10 @@ jobs:
           wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant
+          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system qemu-utils qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils libvirt-dev
           sudo apt update
-          sudo apt install qemu-system qemu-utils qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils libvirt-dev
           sudo vagrant plugin install vagrant-libvirt
+          ip addr show virbr0
 
       - name: "Wait for PMM Server to be healthy"
         run: |
@@ -286,7 +286,7 @@ jobs:
             config.vm.synced_folder "${{ github.workspace }}/", "/pmm/package-testing/"
             config.vm.provision "shell", privileged: true, inline: <<-SHELL
               ## Set environment variables...
-              export PMM_SERVER_IP=10.0.2.2:443
+              export PMM_SERVER_IP=192.168.122.1:443
               export METRICS_MODE=${{ env.METRICS_MODE }}
               export PMM_VERSION="${{ env.EXPECTED_VERSION }}"
               echo $PMM_VERSION
@@ -341,11 +341,11 @@ jobs:
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 60
-          retry_wait_seconds: '120'
+          timeout_minutes: 30
+          retry_wait_seconds: '60'
           max_attempts: 2
           command: sudo vagrant up --provider=libvirt
-          on_retry_command: vagrant destroy -f || true && vagrant global-status --prune || true
+          on_retry_command: sudo vagrant destroy -f && sudo vagrant global-status --prune
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
