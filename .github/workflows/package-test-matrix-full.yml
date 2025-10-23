@@ -67,6 +67,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client"
 
   i_test:
@@ -78,6 +79,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_integration"
 
   auth_config_test:
@@ -89,6 +91,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_integration_auth_config"
 
   auth_register_test:
@@ -100,6 +103,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_integration_auth_register"
 
   cu_test:
@@ -111,6 +115,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_upgrade"
 
   iu_test:
@@ -122,6 +127,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_integration_upgrade"
 
   port_u_test:
@@ -133,6 +139,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_integration_upgrade_custom_port"
 
   tb_test:
@@ -144,6 +151,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_custom_path"
 
   tbi_test:
@@ -155,6 +163,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_integration_custom_path"
 
   port_test:
@@ -166,6 +175,7 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_integration_custom_port"
 
   tu_test:
@@ -177,4 +187,5 @@ jobs:
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball }}
       playbook: "pmm3-client_integration_upgrade_custom_path"
