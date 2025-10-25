@@ -1,4 +1,4 @@
-import pmmTest from '../fixtures/pmmTest';
+import pmmTest from '../../../fixtures/pmmTest';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -21,9 +21,7 @@ pmmTest(
 pmmTest(
   'PMM-T1897 - Verify Query Count metric on QAN page for MySQL @pmm-ps-integration',
   async ({ page, cliHelper, credentials, queryAnalytics, urlHelper }) => {
-    const containerName = await cliHelper.sendCommand(
-      'docker ps -f name=ps --format "{{.Names }}"',
-    );
+    const containerName = await cliHelper.sendCommand('docker ps -f name=ps --format "{{.Names }}"');
     console.log(`Container name is: ${containerName}`);
 
     // Prepare data for the test
@@ -38,7 +36,6 @@ pmmTest(
     });
 
     await page.goto(url);
-    console.log(`Url is: ${url}`);
     await queryAnalytics.verifyQueryAnalyticsHaveData();
     await queryAnalytics.verifyTotalQueryCount(17);
   },

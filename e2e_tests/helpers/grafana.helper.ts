@@ -3,10 +3,7 @@ import { Page } from '@playwright/test';
 export default class GrafanaHelper {
   constructor(private page: Page) {}
 
-  async authorize(
-    username = 'admin',
-    password = process.env.ADMIN_PASSWORD || 'admin',
-  ) {
+  async authorize(username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') {
     const authToken = GrafanaHelper.getToken(username, password);
     await this.page.setExtraHTTPHeaders({
       Authorization: `Basic ${authToken}`,
@@ -20,10 +17,7 @@ export default class GrafanaHelper {
     await this.page.reload();
   }
 
-  static getToken(
-    username = 'admin',
-    password = process.env.ADMIN_PASSWORD || 'admin',
-  ) {
+  static getToken(username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') {
     return Buffer.from(`${username}:${password}`).toString('base64');
   }
 }

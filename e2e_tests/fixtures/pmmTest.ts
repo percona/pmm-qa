@@ -7,6 +7,7 @@ import QueryAnalytics from '../pages/qan/queryAnalytics.page';
 import InventoryApi from '../api/inventory.api';
 import CliHelper from '../helpers/cli.helper';
 import Credentials from '../helpers/credentials.helper';
+import PostgresqlInstancesOverviewDashboard from '../pages/dashboards/pgsql/postgresqlInstancesOverview.dashboard';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -42,6 +43,7 @@ const pmmTest = base.extend<{
   grafanaHelper: GrafanaHelper;
   inventoryApi: InventoryApi;
   mysqlInstanceSummaryDashboard: MysqlInstanceSummaryDashboard;
+  postgresqlInstancesOverviewDashboard: PostgresqlInstancesOverviewDashboard;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
 }>({
@@ -73,6 +75,11 @@ const pmmTest = base.extend<{
   mysqlInstanceSummaryDashboard: async ({}, use) => {
     const mysqlInstanceSummaryDashboard = new MysqlInstanceSummaryDashboard();
     await use(mysqlInstanceSummaryDashboard);
+  },
+
+  postgresqlInstancesOverviewDashboard: async ({}, use) => {
+    const postgresqlInstancesOverviewDashboard = new PostgresqlInstancesOverviewDashboard();
+    await use(postgresqlInstancesOverviewDashboard);
   },
 
   queryAnalytics: async ({ page }, use) => {

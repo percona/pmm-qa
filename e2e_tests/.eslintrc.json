@@ -20,6 +20,15 @@
     "prettier/prettier": ["error"],
     "eol-last": ["error", "always"],
     "playwright/no-wait-for-timeout": "off",
-    "playwright/no-standalone-expect": "off"
+    "playwright/no-standalone-expect": "off",
+    "no-case-declarations": "off",
+    "max-len": ["error", {
+      "code": 110,
+      "ignoreUrls": true,
+      "ignoreStrings": true,
+      "ignoreTemplateLiterals": true,
+      "ignoreRegExpLiterals": true
+    }]
+
   }
 }
