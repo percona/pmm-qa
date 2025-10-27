@@ -204,7 +204,7 @@ jobs:
           launchable record session --build ${{ env.SHA }} --observation --test-suite ui-tests > launchable-session.txt
           node launchable-prepare.js ${{ env.TAGS_FOR_TESTS }}
           launchable verify
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) codeceptjs > launchable-subset.json
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) file > launchable-subset.txt
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
         working-directory: pmm-ui-tests
@@ -215,7 +215,7 @@ jobs:
           GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o $(cat launchable-subset.json)
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o $(tr '\n' ' ' < launchable-subset.txt)
 
       - name: Record launchable test results
         working-directory: pmm-ui-tests
