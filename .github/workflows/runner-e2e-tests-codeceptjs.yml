@@ -199,6 +199,8 @@ jobs:
         working-directory: pmm-ui-tests
         if: ${{ env.SHA != 'null' }}
         run: |
+          pip3 install --user --upgrade launchable~=1.0
+          launchable verify || true
           launchable record session --build ${{ env.SHA }} --test-suite ui-tests > launchable-session.txt
           node launchable-prepare.js ${{ env.TAGS_FOR_TESTS }}
           launchable verify
