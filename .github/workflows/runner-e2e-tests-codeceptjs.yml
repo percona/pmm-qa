@@ -76,6 +76,9 @@ on:
       sha:
         required: false
         type: string
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
 
 jobs:
   ui-tests-e2e:
