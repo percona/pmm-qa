@@ -198,13 +198,21 @@ jobs:
           npx playwright install --with-deps
           envsubst < env.list > env.generated.list
 
+      - uses: actions/github-script@v7
+        if: ${{ always() }}
+        id: tags_processed
+        with:
+          script: |
+            return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
+          result-encoding: string
+
       - name: Prepare launchable
         working-directory: pmm-ui-tests
         if: ${{ env.SHA != 'null' }}
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
-          launchable record session --build ${{ env.SHA }} --observation --test-suite "ui-tests-${{ env.TAGS_FOR_TESTS }}" > launchable-session.txt
+          launchable record session --build ${{ env.SHA }} --observation --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt
           node launchable-prepare.js ${{ env.TAGS_FOR_TESTS }}
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) codeceptjs > launchable-subset.json
 
@@ -258,7 +266,7 @@ jobs:
         if: ${{ failure() }}
         continue-on-error: true
         with:
-          name: ${{ steps.artifact_name.outputs.result }}
+          name: "artifacts_for_$${{ steps.tags_processed.outputs.result }}"
           path: |
             pmm-ui-tests/tests/output/*.png
             pmm-ui-tests/logs
