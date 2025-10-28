@@ -207,6 +207,19 @@ jobs:
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
         working-directory: pmm-ui-tests
+        if: ${{ env.SHA == 'null' }}
+        env:
+          SERVER_IP : "192.168.0.1"
+          PMM_UI_URL : "http://192.168.0.1/"
+          PMM_URL : "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
+          GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
+        run: |
+          sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi
+
+      - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
+        working-directory: pmm-ui-tests
+        if: ${{ env.SHA != 'null' }}
         env:
           SERVER_IP : "192.168.0.1"
           PMM_UI_URL : "http://192.168.0.1/"
@@ -217,7 +230,7 @@ jobs:
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat launchable-subset.json)"
 
       - name: Record launchable test results
-        if: ${{ always() }}
+        if: ${{ env.SHA != 'null' && always() }}
         working-directory: pmm-ui-tests
         run: |
           sed -i "s|$(pwd)/||g" tests/output/result.xml
