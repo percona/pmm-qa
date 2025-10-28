@@ -219,10 +219,7 @@ jobs:
       - name: Record launchable test results
         working-directory: pmm-ui-tests
         run: |
-          ls -la
-          
-          ls -la tests/output
-          
+          sed -i "s|$(pwd)/||g" tests/output/result.xml
           launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
 
       - uses: actions/github-script@v7
