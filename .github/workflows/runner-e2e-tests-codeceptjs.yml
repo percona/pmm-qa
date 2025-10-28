@@ -217,6 +217,7 @@ jobs:
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat launchable-subset.json)"
 
       - name: Record launchable test results
+        if: ${{ always() }}
         working-directory: pmm-ui-tests
         run: |
           sed -i "s|$(pwd)/||g" tests/output/result.xml
