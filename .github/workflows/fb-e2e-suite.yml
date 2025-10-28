@@ -58,11 +58,8 @@ on:
         type: string
 
     secrets:
-      BACKUP_LOCATION_ACCESS_KEY:
+      LAUNCHABLE_TOKEN:
         required: false
-      BACKUP_LOCATION_SECRET_KEY:
-        required: false
-
 jobs:
   backup_management_mongo:
     name: Backup Management MongoDB UI tests
