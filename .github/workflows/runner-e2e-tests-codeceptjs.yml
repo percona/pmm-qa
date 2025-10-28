@@ -203,7 +203,7 @@ jobs:
         id: tags_processed
         with:
           script: |
-            return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
+            return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-').replaceAll('@', '')}`
           result-encoding: string
 
       - name: Prepare launchable
