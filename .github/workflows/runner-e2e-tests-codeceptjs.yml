@@ -204,7 +204,7 @@ jobs:
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
-          launchable record session --build ${{ env.SHA }} --observation --test-suite ui-tests > launchable-session.txt
+          launchable record session --build ${{ env.SHA }} --observation --test-suite "ui-tests-${{ env.TAGS_FOR_TESTS }}" > launchable-session.txt
           node launchable-prepare.js ${{ env.TAGS_FOR_TESTS }}
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) codeceptjs > launchable-subset.json
 
