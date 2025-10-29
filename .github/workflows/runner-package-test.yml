@@ -263,6 +263,9 @@ jobs:
           sudo apt update
           sudo vagrant plugin install vagrant-libvirt
           ip addr show virbr0
+          docker stop pmm-server
+          docker start pmm-server
+          docker -v
 
       - name: "Wait for PMM Server to be healthy"
         run: |
