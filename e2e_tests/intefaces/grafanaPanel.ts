@@ -3,6 +3,7 @@ export type GrafanaPanelType =
   | 'table'
   | 'stat'
   | 'gauge'
+  | 'polyStat'
   | 'barGauge'
   | 'pie'
   | 'custom'

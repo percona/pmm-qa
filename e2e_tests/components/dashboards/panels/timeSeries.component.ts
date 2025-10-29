@@ -6,7 +6,7 @@ export default class TimeSeriesPanel {
   private elements = {
     timeSeriesPanelValues: (panelName: string) =>
       this.page.locator(
-        `//section[contains(@data-testid, "${panelName}")]//button[contains(@class, "LegendLabel")]//ancestor::tr/td[position() >= 2 and position() <= last()]`,
+        `//section[@data-testid="data-testid Panel header ${panelName}"]//button[contains(@class, "LegendLabel")]//ancestor::tr/td[position() >= 2 and position() <= last()]`,
       ),
   };
 

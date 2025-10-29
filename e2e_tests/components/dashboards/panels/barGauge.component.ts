@@ -6,7 +6,7 @@ export default class BarGaugePanel {
   private elements = {
     barGaugeValues: (panelName: string) =>
       this.page.locator(
-        `//section[contains(@data-testid, "${panelName}")]//div[contains(@data-testid, "Bar gauge value")]`,
+        `//section[@data-testid="data-testid Panel header ${panelName}"]//div[contains(@data-testid, "Bar gauge value")]`,
       ),
   };
 

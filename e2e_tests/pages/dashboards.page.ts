@@ -3,18 +3,24 @@ import { GrafanaPanel } from '../intefaces/grafanaPanel';
 import TimeSeriesPanel from '../components/dashboards/panels/timeSeries.component';
 import StatPanel from '../components/dashboards/panels/stat.component';
 import BarGaugePanel from '../components/dashboards/panels/barGauge.component';
+import PolyStatPanel from '../components/dashboards/panels/polyStat.component';
+import TablePanel from '../components/dashboards/panels/table.component';
 
 export default class Dashboards {
   private readonly page: Page;
   private readonly timeSeriesPanel: TimeSeriesPanel;
   private readonly statPanel: StatPanel;
   private readonly barGaugePanel: BarGaugePanel;
+  private readonly polyStatPanel: PolyStatPanel;
+  private readonly tablePanel: TablePanel;
 
   constructor(page: Page) {
     this.page = page;
     this.timeSeriesPanel = new TimeSeriesPanel(this.page);
     this.statPanel = new StatPanel(this.page);
     this.barGaugePanel = new BarGaugePanel(this.page);
+    this.polyStatPanel = new PolyStatPanel(this.page);
+    this.tablePanel = new TablePanel(this.page);
   }
 
   private elements = {
@@ -26,11 +32,11 @@ export default class Dashboards {
     panelName: () => this.page.locator('//section[contains(@data-testid, "Panel header")]//h2'),
     noDataPanel: () =>
       this.page.locator(
-        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
+        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
       ),
     noDataPanelName: () =>
       this.page.locator(
-        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]//ancestor::section//h2',
+        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
       ),
   };
 
@@ -133,6 +139,12 @@ export default class Dashboards {
           break;
         case 'barGauge':
           await this.barGaugePanel.verifyPanelData(panel.name);
+          break;
+        case 'polyStat':
+          await this.polyStatPanel.verifyPanelData(panel.name);
+          break;
+        case 'table':
+          await this.tablePanel.verifyPanelData(panel.name);
           break;
         case 'unknown':
           break;
