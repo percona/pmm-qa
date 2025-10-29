@@ -247,14 +247,6 @@ jobs:
           sed -i "s|$(pwd)/||g" tests/output/result.xml
           launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
 
-      - uses: actions/github-script@v7
-        if: ${{ always() }}
-        id: artifact_name
-        with:
-          script: |
-            return `artifacts_for_${process.env.TAGS_FOR_TESTS.replaceAll('|', '')}`
-          result-encoding: string
-
       - name: Download logs
         if: ${{ failure() }}
         working-directory: pmm-ui-tests
@@ -266,7 +258,7 @@ jobs:
         if: ${{ failure() }}
         continue-on-error: true
         with:
-          name: "artifacts_for_$${{ steps.tags_processed.outputs.result }}"
+          name: "artifacts_for_${{ steps.tags_processed.outputs.result }}"
           path: |
             pmm-ui-tests/tests/output/*.png
             pmm-ui-tests/logs
