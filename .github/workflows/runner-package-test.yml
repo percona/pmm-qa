@@ -347,7 +347,7 @@ jobs:
           timeout_minutes: 30
           retry_wait_seconds: '60'
           max_attempts: 2
-          command: sudo vagrant up --provider=libvirt
+          command: sudo vagrant up --provider=libvirt | grep -v $'\033[KProgress:'
           on_retry_command: sudo vagrant destroy -f && sudo vagrant global-status --prune
 
       - uses: actions/upload-artifact@v4
