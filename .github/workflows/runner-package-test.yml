@@ -283,7 +283,7 @@ jobs:
           Vagrant.configure(2) do |config|
             config.vm.box = "${{ env.VM_BOX }}"
             config.vm.provider "virtualbox" do |vb|
-              vb.memory = "4096"
+              vb.memory = "16384"
               vb.cpus = 4
             end
             ${{ contains(env.VM_BOX, 'debian10') && 'config.vbguest.auto_update = true' }}
