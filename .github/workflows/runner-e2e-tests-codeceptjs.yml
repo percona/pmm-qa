@@ -214,7 +214,7 @@ jobs:
           launchable verify || true
           launchable record session --build ${{ env.SHA }} --observation --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) codeceptjs > launchable-subset.json
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --use-case feature-branch codeceptjs > launchable-subset.json
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
         working-directory: pmm-ui-tests
