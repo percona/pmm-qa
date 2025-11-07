@@ -1,5 +1,6 @@
 import { PlaywrightTestConfig } from '@playwright/test';
 import dotenv from 'dotenv';
+import { Timeouts } from './helpers/timeouts';
 
 dotenv.config({ quiet: true });
 const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localhost/';
@@ -7,7 +8,7 @@ const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localho
 const config: PlaywrightTestConfig = {
   testDir: './tests',
   fullyParallel: true,
-  timeout: 60000,
+  timeout: Timeouts.TWO_MINUTES,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,

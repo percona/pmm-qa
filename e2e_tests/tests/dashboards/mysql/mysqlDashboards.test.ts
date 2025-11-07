@@ -11,7 +11,7 @@ pmmTest(
     const serviceList = await inventoryApi.getServicesByType(ServiceType.mysql);
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysqlInstanceOverview.url, {
-        from: 'now-15m',
+        from: 'now-3h',
         serviceName: serviceList[0].service_name,
       }),
     );

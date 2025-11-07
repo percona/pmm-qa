@@ -6,6 +6,7 @@ import BarGaugePanel from '../components/dashboards/panels/barGauge.component';
 import PolyStatPanel from '../components/dashboards/panels/polyStat.component';
 import TablePanel from '../components/dashboards/panels/table.component';
 import MysqlInstanceOverview from './dashboards/mysql/mysqlInstanceOverview';
+import { Timeouts } from '../helpers/timeouts';
 
 export default class Dashboards {
   private readonly page: Page;
@@ -57,15 +58,19 @@ export default class Dashboards {
       }
 
       await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(500);
+      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
     }
 
     await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
 
     const missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
+    const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.has(e));
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
+    expect
+      .soft(extraMetrics, `Metrics with data that are expected to be empty are: ${extraMetrics}`)
+      .toHaveLength(0);
   }
 
   public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[]) {
@@ -92,7 +97,7 @@ export default class Dashboards {
     }
 
     await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(500);
+    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
   }
 
   public expandAllRows = async () => {
@@ -106,12 +111,12 @@ export default class Dashboards {
       for (let j = 0; j <= expandRows; j++) {
         if (await this.elements.expandRow().nth(j).isVisible()) {
           await this.elements.expandRow().nth(j).click();
-          await this.page.waitForTimeout(500);
+          await this.page.waitForTimeout(Timeouts.HALF_SECOND);
         }
       }
 
       await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(500);
+      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
     }
   };
 
@@ -127,7 +132,7 @@ export default class Dashboards {
         }
       }
       await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(500);
+      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
     }
 
     return Array.from(availableMetrics);
