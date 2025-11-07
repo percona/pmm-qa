@@ -11,7 +11,7 @@ export default class StatPanel {
   };
 
   public verifyPanelData = async (panelName: string) => {
-    await this.elements.statsPanelValue(panelName).waitFor({ state: 'visible' });
+    await expect(this.elements.statsPanelValue(panelName).first()).toBeVisible({ timeout: 10000 });
 
     const countOfStatElements = await this.elements.statsPanelValue(panelName).count();
     expect.soft(countOfStatElements, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);

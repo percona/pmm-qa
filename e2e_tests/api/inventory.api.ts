@@ -1,6 +1,6 @@
-import { Page, APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, expect, Page } from '@playwright/test';
 import GrafanaHelper from '../helpers/grafana.helper';
-import { GetServices, GetService } from '../intefaces/getServices';
+import { AgentStatus, GetService, GetServices, ServiceType } from '../intefaces/inventory';
 
 export default class InventoryApi {
   constructor(
@@ -17,9 +17,25 @@ export default class InventoryApi {
       service.service_name.includes(partialServiceName),
     );
 
-    if (!service) {
-      throw new Error(`Service with name ${partialServiceName} is not present`);
+    expect(service, `Service with name ${partialServiceName} is not present`).toBeDefined();
+
+    return service!;
+  };
+
+  getServicesByType = async (serviceType: ServiceType) => {
+    const serviceList = await this.getServices();
+
+    if (serviceType === ServiceType.postgresql) {
+      serviceList.services = serviceList.services.filter(
+        (service: GetService) => service.service_name !== 'pmm-server-postgresql',
+      );
     }
+
+    const service = serviceList.services.filter(
+      (service: GetService) => service.service_type === serviceType,
+    );
+
+    expect(service.length, `Service type ${serviceType} is not present`).toBeGreaterThan(0);
 
     return service;
   };
@@ -38,5 +54,13 @@ export default class InventoryApi {
     ).toEqual(200);
 
     return <GetServices>await services.json();
+  };
+
+  verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
+    const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
+
+    for (const agent of agents) {
+      expect.soft(agent.status, `Wrong status for agent: ${agent.agent_type}`).toEqual(expectedStatus);
+    }
   };
 }

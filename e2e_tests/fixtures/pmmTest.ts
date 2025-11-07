@@ -1,7 +1,6 @@
 import { test as base } from '@playwright/test';
 import Dashboard from '../pages/dashboards.page';
 import UrlHelper from '../helpers/url.helper';
-import MysqlInstanceSummaryDashboard from '../pages/dashboards/mysql/mysqlInstanceSummary.dashboard';
 import GrafanaHelper from '../helpers/grafana.helper';
 import QueryAnalytics from '../pages/qan/queryAnalytics.page';
 import InventoryApi from '../api/inventory.api';
@@ -42,7 +41,6 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   inventoryApi: InventoryApi;
-  mysqlInstanceSummaryDashboard: MysqlInstanceSummaryDashboard;
   postgresqlInstancesOverviewDashboard: PostgresqlInstancesOverviewDashboard;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
@@ -70,11 +68,6 @@ const pmmTest = base.extend<{
   inventoryApi: async ({ page, request }, use) => {
     const inventoryApi = new InventoryApi(page, request);
     await use(inventoryApi);
-  },
-
-  mysqlInstanceSummaryDashboard: async ({}, use) => {
-    const mysqlInstanceSummaryDashboard = new MysqlInstanceSummaryDashboard();
-    await use(mysqlInstanceSummaryDashboard);
   },
 
   postgresqlInstancesOverviewDashboard: async ({}, use) => {

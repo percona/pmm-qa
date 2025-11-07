@@ -2,6 +2,15 @@ export interface GetServices {
   services: GetService[];
 }
 
+export enum ServiceType {
+  mysql = 'mysql',
+  postgresql = 'postgresql',
+}
+
+export enum AgentStatus {
+  running = 'AGENT_STATUS_RUNNING',
+}
+
 export interface GetService {
   service_id: string;
   service_type: string;

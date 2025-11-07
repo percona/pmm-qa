@@ -5,6 +5,7 @@ import StatPanel from '../components/dashboards/panels/stat.component';
 import BarGaugePanel from '../components/dashboards/panels/barGauge.component';
 import PolyStatPanel from '../components/dashboards/panels/polyStat.component';
 import TablePanel from '../components/dashboards/panels/table.component';
+import MysqlInstanceOverview from './dashboards/mysql/mysqlInstanceOverview';
 
 export default class Dashboards {
   private readonly page: Page;
@@ -13,6 +14,8 @@ export default class Dashboards {
   private readonly barGaugePanel: BarGaugePanel;
   private readonly polyStatPanel: PolyStatPanel;
   private readonly tablePanel: TablePanel;
+  // MySQL dashboards
+  readonly mysqlInstanceOverview: MysqlInstanceOverview;
 
   constructor(page: Page) {
     this.page = page;
@@ -21,6 +24,7 @@ export default class Dashboards {
     this.barGaugePanel = new BarGaugePanel(this.page);
     this.polyStatPanel = new PolyStatPanel(this.page);
     this.tablePanel = new TablePanel(this.page);
+    this.mysqlInstanceOverview = new MysqlInstanceOverview();
   }
 
   private elements = {
@@ -65,6 +69,8 @@ export default class Dashboards {
   }
 
   public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[]) {
+    await this.page.keyboard.press('Home');
+
     const availableMetrics = await this.getAllAvailablePanels();
 
     const missingMetrics = expectedMetrics.filter((e) => !availableMetrics.includes(e.name));
@@ -73,10 +79,10 @@ export default class Dashboards {
     );
 
     if (missingMetrics.length > 0 || unexpectedMetrics.length > 0) {
-      const wrongMetrics = [...missingMetrics, ...unexpectedMetrics];
+      const wrongMetrics = [...missingMetrics.map((metric) => metric.name), ...unexpectedMetrics];
       let message = '';
       if (missingMetrics.length > 0) {
-        message += `Missing metrics are: [${missingMetrics.join(', ')}]\n`;
+        message += `Missing metrics are: [${missingMetrics.map((metric) => metric.name).join(', ')}]\n`;
       }
       if (unexpectedMetrics.length > 0) {
         message += `Unexpected metrics are: [${unexpectedMetrics.join(', ')}]\n`;
@@ -93,21 +99,20 @@ export default class Dashboards {
     await this.elements.row().first().waitFor({ state: 'visible' });
 
     for (let i = 0; i < 20; i++) {
-      console.log(`Getting expand rows ${i} times.`);
       const expandRows = await this.elements.expandRow().count();
 
       if (expandRows === 0) return;
 
-      for (let j = 0; j < expandRows; j++) {
-        await this.elements.expandRow().nth(j).click();
+      for (let j = 0; j <= expandRows; j++) {
+        if (await this.elements.expandRow().nth(j).isVisible()) {
+          await this.elements.expandRow().nth(j).click();
+          await this.page.waitForTimeout(500);
+        }
       }
 
       await this.page.keyboard.press('PageDown');
       await this.page.waitForTimeout(500);
     }
-
-    await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(500);
   };
 
   private async getAllAvailablePanels(): Promise<string[]> {
@@ -148,6 +153,8 @@ export default class Dashboards {
           break;
         case 'unknown':
           break;
+        default:
+          throw new Error(`Unsupported panel: ${panel.name}`);
       }
     }
   };
