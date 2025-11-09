@@ -287,8 +287,6 @@ jobs:
             config.vm.define :CLIENT_TEST do |t|
             config.ssh.username = ENV.fetch("VM_SSH_USER", "vagrant")
             config.ssh.insert_key = true
-            config.ssh.max_tries = 120
-            config.ssh.timeout = 30
             config.ssh.keep_alive = true
             end
 
