@@ -347,7 +347,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up --debug
+        run: vagrant up
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
