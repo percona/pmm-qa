@@ -216,7 +216,7 @@ jobs:
             echo "VM_BOX=generic/oracle8" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "noble" ]]; then
-            echo "VM_BOX=alvistack/ubuntu-24.04" >> $GITHUB_ENV
+            echo "VM_BOX=bento/ubuntu-24.04" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-9" ]]; then
             echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
@@ -261,12 +261,8 @@ jobs:
           wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
           echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
           sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant
-          if [[ "$VM_BOX" =~ "almalinux" ]]; then
-            sudo apt-get install -y virtualbox-7.1
-          else
-            sudo apt-get install -y virtualbox
-          fi
+          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant virtualbox
+          vagrant -v
 
       - name: "Wait for PMM Server to be healthy"
         run: |
@@ -279,7 +275,7 @@ jobs:
           # mkdir -p ~/test-vm/
           # cat > ~/test-vm/Vagrantfile <<EOF
           cat > Vagrantfile <<EOF
-          Vagrant.require_version ">= 1.7.0"
+          Vagrant.require_version ">= 2.3.7"
           Vagrant.configure(2) do |config|
             config.vm.box = "${{ env.VM_BOX }}"
             config.vm.boot_timeout = 600  
@@ -288,8 +284,12 @@ jobs:
               vb.cpus = 4
             end
             ${{ contains(env.VM_BOX, 'debian10') && 'config.vbguest.auto_update = true' }}
-            config.ssh.insert_key = false
             config.vm.define :CLIENT_TEST do |t|
+            config.ssh.username = ENV.fetch("VM_SSH_USER", "vagrant")
+            config.ssh.insert_key = true
+            config.ssh.max_tries = 120
+            config.ssh.timeout = 30
+            config.ssh.keep_alive = true
             end
 
             config.vm.synced_folder "${{ github.workspace }}/", "/pmm/package-testing/"
@@ -349,7 +349,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up
+        run: vagrant up --debug
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
