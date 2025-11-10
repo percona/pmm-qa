@@ -35,7 +35,6 @@ pmmTest(
 pmmTest(
   'PMM-T1897 - Verify Query Count metric on QAN page for MySQL @pmm-ps-integration',
   async ({ page, queryAnalytics, urlHelper }) => {
-    await page.waitForTimeout(Timeouts.ONE_MINUTE);
     const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
       schema: 'sbtest3',
       refresh: '5s',
@@ -43,6 +42,6 @@ pmmTest(
 
     await page.goto(url);
     await queryAnalytics.waitForQueryAnalyticsToHaveData(Timeouts.TWO_MINUTES);
-    await queryAnalytics.verifyTotalQueryCount(17);
+    await queryAnalytics.verifyTotalQueryCount(20);
   },
 );
