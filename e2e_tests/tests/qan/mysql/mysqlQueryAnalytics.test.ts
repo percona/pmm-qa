@@ -1,5 +1,17 @@
 import pmmTest from '../../../fixtures/pmmTest';
 import { ServiceType } from '../../../intefaces/inventory';
+import { Timeouts } from '../../../helpers/timeouts';
+
+pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
+  const containerName = await cliHelper.sendCommand(
+    'docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}"',
+  );
+
+  await cliHelper.sendCommand(`docker exec -i ${containerName} mysql -h 127.0.0.1 --port 3306 \
+                                      -u ${credentials.perconaServer.ps_84.username} \
+                                      -p${credentials.perconaServer.ps_84.password} \
+                                      < \${PWD}/testdata/PMM-T1897.sql`);
+});
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -22,22 +34,8 @@ pmmTest(
 
 pmmTest(
   'PMM-T1897 - Verify Query Count metric on QAN page for MySQL @pmm-ps-integration',
-  async ({ page, cliHelper, credentials, queryAnalytics, urlHelper }) => {
-    const containerName = await cliHelper.sendCommand(
-      'docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}"',
-    );
-
-    console.log(`Container name is: ${containerName}`);
-
-    // Prepare data for the test
-    const response =
-      await cliHelper.sendCommand(`docker exec -i ${containerName} mysql -h 127.0.0.1 --port 3306 \
-                                      -u ${credentials.perconaServer.ps_84.username} \
-                                      -p${credentials.perconaServer.ps_84.password} \
-                                      < \${PWD}/testdata/PMM-T1897.sql`);
-
-    console.log(response);
-
+  async ({ page, queryAnalytics, urlHelper }) => {
+    await page.waitForTimeout(Timeouts.ONE_MINUTE);
     const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
       from: 'now-15m',
       database: 'sbtest3',
