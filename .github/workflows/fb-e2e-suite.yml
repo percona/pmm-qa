@@ -294,7 +294,7 @@ jobs:
       tags_for_tests: '@pmm-psmdb-arbiter-integration'
 
   ps_integration:
-    name: PS UI integration tests
+    name: Percona Server for MySQL UI integration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets: inherit
     with:
