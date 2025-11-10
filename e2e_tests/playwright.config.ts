@@ -20,6 +20,7 @@ const config: PlaywrightTestConfig = {
     headless: (process.env.HEADLESS ?? 'true') === 'true',
     ignoreHTTPSErrors: true,
     viewport: { width: 1920, height: 1080 },
+    screenshot: 'only-on-failure',
   },
   projects: [
     {
