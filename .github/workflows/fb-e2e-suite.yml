@@ -302,6 +302,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       qa_integration_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_qa_branch: ${{ github.ref_name || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps=8.0,QUERY_SOURCE=slowlog'
