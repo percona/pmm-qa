@@ -58,7 +58,7 @@ on:
 
 jobs:
   tests:
-    name: "e2e tests: ${{ inputs.pmm_test_flag || '@settings-fb' }}"
+    name: "e2e tests: ${{ inputs.pmm_test_flag || '' }}"
     runs-on: ubuntu-22.04
     timeout-minutes: 60
     env:
