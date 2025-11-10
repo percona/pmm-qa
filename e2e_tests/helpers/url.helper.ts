@@ -4,6 +4,7 @@ interface BuildUrlParameters {
   database?: string;
   environment?: string;
   serviceName?: string;
+  refresh?: string;
   from?: string;
   to?: string;
 }
@@ -23,6 +24,9 @@ export default class UrlHelper {
           break;
         case 'serviceName':
           queryParams['var-service_name'] = parameters[key];
+          break;
+        case 'refresh':
+          queryParams['refresh'] = parameters[key];
           break;
         case 'from':
           queryParams.from = parameters[key];

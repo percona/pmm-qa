@@ -39,6 +39,7 @@ pmmTest(
     const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
       from: 'now-15m',
       database: 'sbtest3',
+      refresh: '5s',
     });
 
     await page.goto(url);
