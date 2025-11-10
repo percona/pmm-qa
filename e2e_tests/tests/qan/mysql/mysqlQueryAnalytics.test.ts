@@ -37,8 +37,7 @@ pmmTest(
   async ({ page, queryAnalytics, urlHelper }) => {
     await page.waitForTimeout(Timeouts.ONE_MINUTE);
     const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
-      from: 'now-15m',
-      database: 'sbtest3',
+      schema: 'sbtest3',
       refresh: '5s',
     });
 

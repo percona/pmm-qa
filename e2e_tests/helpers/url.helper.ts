@@ -2,6 +2,7 @@ import { buildUrl, IQueryParams } from 'build-url-ts';
 
 interface BuildUrlParameters {
   database?: string;
+  schema?: string;
   environment?: string;
   serviceName?: string;
   refresh?: string;
@@ -18,6 +19,9 @@ export default class UrlHelper {
       switch (key) {
         case 'database':
           queryParams['var-database'] = parameters[key];
+          break;
+        case 'schema':
+          queryParams['var-schema'] = parameters[key];
           break;
         case 'environment':
           queryParams['var-environment'] = parameters[key];
