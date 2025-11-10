@@ -9,6 +9,7 @@ const config: PlaywrightTestConfig = {
   testDir: './tests',
   fullyParallel: true,
   timeout: Timeouts.TWO_MINUTES,
+  globalTimeout: Timeouts.THIRTY_MINUTES,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
