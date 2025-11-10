@@ -30,10 +30,13 @@ pmmTest(
     console.log(`Container name is: ${containerName}`);
 
     // Prepare data for the test
-    await cliHelper.sendCommand(`docker exec -i ${containerName} mysql -h 127.0.0.1 --port 3306 \
-                                  -u ${credentials.perconaServer.ps_84.username} \
-                                  -p${credentials.perconaServer.ps_84.password} \
-                                  < \${PWD}/testdata/PMM-T1897.sql`);
+    const response =
+      await cliHelper.sendCommand(`docker exec -i ${containerName} mysql -h 127.0.0.1 --port 3306 \
+                                      -u ${credentials.perconaServer.ps_84.username} \
+                                      -p${credentials.perconaServer.ps_84.password} \
+                                      < \${PWD}/testdata/PMM-T1897.sql`);
+
+    console.log(response);
 
     const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
       from: 'now-15m',
