@@ -58,16 +58,14 @@ on:
         type: string
 
     secrets:
-      BACKUP_LOCATION_ACCESS_KEY:
+      LAUNCHABLE_TOKEN:
         required: false
-      BACKUP_LOCATION_SECRET_KEY:
-        required: false
-
 jobs:
   backup_management_mongo:
     name: Backup Management MongoDB UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
@@ -83,7 +81,8 @@ jobs:
 #  backup_management_ps:
 #    name: Backup Management PS UI tests
 #    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-#    secrets: inherit
+#    secrets:
+#      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
 #    with:
 #      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
 #      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
@@ -97,7 +96,8 @@ jobs:
   backup_management_common:
     name: Backup Management Common and Locations UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -112,7 +112,8 @@ jobs:
   exporters:
     name: Exporters tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
@@ -126,7 +127,8 @@ jobs:
   mongo_exporter:
     name: MongoDB Exporter tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
@@ -140,7 +142,8 @@ jobs:
   instances:
     name: Instances UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -154,7 +157,8 @@ jobs:
   alerting_and_settings:
     name: Alerting and Settings UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -168,7 +172,8 @@ jobs:
   user_and_password:
     name: User with changed password UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -182,7 +187,8 @@ jobs:
   pgsm:
     name: PGSM UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -196,7 +202,8 @@ jobs:
   pgss:
     name: PGSS UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -211,7 +218,8 @@ jobs:
   # psmdb_arbiter:
   #   name: PSMDB Arbiter Replica UI tests
   #   uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-  #   secrets: inherit
+  #   secrets:
+  #    LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
   #   with:
   #     pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
   #     pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -225,7 +233,8 @@ jobs:
   psmdb_replica:
     name: PSMDB Replica UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -254,7 +263,8 @@ jobs:
   dump_tool:
     name: Dump Tool UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -268,7 +278,8 @@ jobs:
   service_account:
     name: Service Accounts tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -282,7 +293,8 @@ jobs:
   psmdb_arbiter:
     name: PSMDB Arbiter Replica UI tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -296,7 +308,8 @@ jobs:
   ps_integration:
     name: Percona Server for MySQL UI integration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -308,7 +321,8 @@ jobs:
   rbac:
     name: PS UI Role based access control
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -322,7 +336,8 @@ jobs:
   encryption:
     name: Encryption tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -336,7 +351,8 @@ jobs:
   docker_configuration:
     name: Docker configuration tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -350,7 +366,8 @@ jobs:
   nomad:
     name: Nomad tests
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_server_compose_file: 'docker-compose-nomad.yml'
