@@ -1,5 +1,5 @@
 import { test as base } from '@playwright/test';
-import Dashboard from '../pages/dashboards.page';
+import Dashboard from '../pages/dashboards/dashboards.page';
 import UrlHelper from '../helpers/url.helper';
 import GrafanaHelper from '../helpers/grafana.helper';
 import QueryAnalytics from '../pages/qan/queryAnalytics.page';

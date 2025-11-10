@@ -1,12 +1,12 @@
 import { Page, expect } from '@playwright/test';
-import { GrafanaPanel } from '../intefaces/grafanaPanel';
-import TimeSeriesPanel from '../components/dashboards/panels/timeSeries.component';
-import StatPanel from '../components/dashboards/panels/stat.component';
-import BarGaugePanel from '../components/dashboards/panels/barGauge.component';
-import PolyStatPanel from '../components/dashboards/panels/polyStat.component';
-import TablePanel from '../components/dashboards/panels/table.component';
-import MysqlInstanceOverview from './dashboards/mysql/mysqlInstanceOverview';
-import { Timeouts } from '../helpers/timeouts';
+import { GrafanaPanel } from '../../intefaces/grafanaPanel';
+import TimeSeriesPanel from '../../components/dashboards/panels/timeSeries.component';
+import StatPanel from '../../components/dashboards/panels/stat.component';
+import BarGaugePanel from '../../components/dashboards/panels/barGauge.component';
+import PolyStatPanel from '../../components/dashboards/panels/polyStat.component';
+import TablePanel from '../../components/dashboards/panels/table.component';
+import MysqlInstanceOverview from './mysql/mysqlInstanceOverview';
+import { Timeouts } from '../../helpers/timeouts';
 
 export default class Dashboards {
   private readonly page: Page;
