@@ -58,7 +58,7 @@ on:
 
 jobs:
   tests:
-    name: Tests
+    name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
