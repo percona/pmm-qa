@@ -43,7 +43,7 @@ pmmTest(
     });
 
     await page.goto(url);
-    await queryAnalytics.verifyQueryAnalyticsHaveData();
+    await queryAnalytics.waitForQueryAnalyticsToHaveData(Timeouts.TWO_MINUTES);
     await queryAnalytics.verifyTotalQueryCount(17);
   },
 );

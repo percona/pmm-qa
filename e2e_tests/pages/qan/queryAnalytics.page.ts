@@ -1,4 +1,5 @@
-import { Page, expect } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
+import { Timeouts } from '../../helpers/timeouts';
 
 export default class QueryAnalytics {
   constructor(private page: Page) {}
@@ -13,17 +14,30 @@ export default class QueryAnalytics {
 
   waitUntilQueryAnalyticsLoaded = async () => {
     try {
-      await expect(
-        this.page.locator(this.elements.spinner).first(),
-      ).toBeVisible();
+      await expect(this.page.locator(this.elements.spinner).first()).toBeVisible();
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       return;
     }
 
-    await expect(
-      this.page.locator(this.elements.spinner).first(),
-    ).not.toBeVisible({ timeout: 30000 });
+    await expect(this.page.locator(this.elements.spinner).first()).not.toBeVisible({ timeout: 30000 });
+  };
+
+  waitForQueryAnalyticsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+    await this.waitUntilQueryAnalyticsLoaded();
+    const noDataLocator = this.page.locator(this.elements.noData);
+    const timeoutInSeconds = timeout / 1000;
+
+    for (let i = 0; i < timeoutInSeconds; i++) {
+      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
+      if (!(await noDataLocator.isVisible())) {
+        return;
+      }
+    }
+
+    await expect(noDataLocator).not.toBeVisible({
+      timeout: Timeouts.ONE_SECOND,
+    });
   };
 
   verifyQueryAnalyticsHaveData = async () => {
@@ -39,10 +53,7 @@ export default class QueryAnalytics {
   };
 
   verifyTotalQueryCount = async (expectedQueryCount: number) => {
-    const countString = await this.page
-      .locator(this.elements.totalCount)
-      .first()
-      .textContent();
+    const countString = await this.page.locator(this.elements.totalCount).first().textContent();
 
     if (!countString) {
       throw new Error('Count of queries is not displayed!');
