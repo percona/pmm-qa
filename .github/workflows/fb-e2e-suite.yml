@@ -305,8 +305,8 @@ jobs:
       pmm_qa_branch: ${{ github.ref_name || 'v3' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database ps=8.0,QUERY_SOURCE=slowlog'
-      tags_for_tests: '@fb-pmm-ps-integration'
+      setup_services: '--database ps=8.4,QUERY_SOURCE=slowlog'
+      tags_for_tests: '@pmm-ps-integration'
 
   rbac:
     name: PS UI Role based access control
