@@ -10,7 +10,7 @@ export default class CliHelper {
     });
 
     if (code !== 0) {
-      throw new Error('');
+      throw new Error(`Command "${command}" failed with code: ${code}`);
     }
 
     return stdout.trim();
