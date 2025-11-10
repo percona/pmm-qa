@@ -1,7 +1,3 @@
--- Create user if not exists and grant privileges
-CREATE USER IF NOT EXISTS 'sysbench'@'%' IDENTIFIED BY 'test';
-GRANT ALL ON *.* TO 'sysbench'@'%';
-
 -- Drop and create the database
 DROP DATABASE IF EXISTS sbtest3;
 CREATE DATABASE sbtest3;
