@@ -2,7 +2,7 @@ node_modules/*
 e2e_tests/node_modules/*
 e2e_tests/.idea/*
 e2e_tests/test-results/*
-e2e_tests//playwright-report/
+e2e_tests/playwright-report/*
 e2e_tests/blob-report/
 e2e_tests/playwright/.cache/
 e2e_tests/playwright/.auth/
