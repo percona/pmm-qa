@@ -3,5 +3,6 @@ export enum Timeouts {
   ONE_SECOND = 1_000,
   ONE_MINUTE = 60_000,
   TWO_MINUTES = 120_000,
+  FIVE_MINUTES = 300_000,
   THIRTY_MINUTES = 1_800_000,
 }

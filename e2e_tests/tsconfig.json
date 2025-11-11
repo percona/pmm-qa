@@ -11,7 +11,27 @@
     "forceConsistentCasingInFileNames": true,
     "types": ["node", "playwright"],
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "paths": {
+      "@fixtures/*": [
+        "fixtures/*"
+      ],
+      "@interfaces/*": [
+        "interfaces/*"
+      ],
+      "@helpers/*": [
+        "helpers/*"
+      ],
+      "@components/*": [
+        "components/*"
+      ],
+      "@pages/*": [
+        "pages/*"
+      ],
+      "@api/*": [
+        "api/*"
+      ],
+    }
   },
   "include": [
     "tests/**/*.ts",

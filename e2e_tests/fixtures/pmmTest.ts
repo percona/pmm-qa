@@ -1,12 +1,11 @@
 import { test as base } from '@playwright/test';
-import Dashboard from '../pages/dashboards/dashboards.page';
-import UrlHelper from '../helpers/url.helper';
-import GrafanaHelper from '../helpers/grafana.helper';
-import QueryAnalytics from '../pages/qan/queryAnalytics.page';
-import InventoryApi from '../api/inventory.api';
-import CliHelper from '../helpers/cli.helper';
-import Credentials from '../helpers/credentials.helper';
-import PostgresqlInstancesOverviewDashboard from '../pages/dashboards/pgsql/postgresqlInstancesOverview.dashboard';
+import Dashboard from '@pages/dashboards/dashboards.page';
+import UrlHelper from '@helpers/url.helper';
+import GrafanaHelper from '@helpers/grafana.helper';
+import QueryAnalytics from '@pages/qan/queryAnalytics.page';
+import InventoryApi from '@api/inventory.api';
+import CliHelper from '@helpers/cli.helper';
+import Credentials from '@helpers/credentials.helper';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -41,7 +40,6 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   inventoryApi: InventoryApi;
-  postgresqlInstancesOverviewDashboard: PostgresqlInstancesOverviewDashboard;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
 }>({
@@ -68,11 +66,6 @@ const pmmTest = base.extend<{
   inventoryApi: async ({ page, request }, use) => {
     const inventoryApi = new InventoryApi(page, request);
     await use(inventoryApi);
-  },
-
-  postgresqlInstancesOverviewDashboard: async ({}, use) => {
-    const postgresqlInstancesOverviewDashboard = new PostgresqlInstancesOverviewDashboard();
-    await use(postgresqlInstancesOverviewDashboard);
   },
 
   queryAnalytics: async ({ page }, use) => {

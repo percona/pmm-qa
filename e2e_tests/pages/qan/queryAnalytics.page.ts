@@ -1,5 +1,5 @@
 import { expect, Page } from '@playwright/test';
-import { Timeouts } from '../../helpers/timeouts';
+import { Timeouts } from '@helpers/timeouts';
 
 export default class QueryAnalytics {
   constructor(private page: Page) {}
@@ -8,19 +8,13 @@ export default class QueryAnalytics {
     noData: '//*[@data-testid="table-no-data"]',
     spinner: '//*[@data-testid="Spinner"]',
     totalCount: '//*[@data-testid="qan-total-items"]',
+    firstRow: '//*[@role="row" and @class="tr tr-1"]',
   };
 
   url = 'graph/d/pmm-qan/pmm-query-analytics';
 
   waitUntilQueryAnalyticsLoaded = async () => {
-    try {
-      await expect(this.page.locator(this.elements.spinner).first()).toBeVisible();
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
-      return;
-    }
-
-    await expect(this.page.locator(this.elements.spinner).first()).not.toBeVisible({ timeout: 30000 });
+    await expect(this.page.locator(this.elements.spinner).first()).toBeHidden({ timeout: 30000 });
   };
 
   waitForQueryAnalyticsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
@@ -42,14 +36,8 @@ export default class QueryAnalytics {
 
   verifyQueryAnalyticsHaveData = async () => {
     await this.waitUntilQueryAnalyticsLoaded();
-
-    // Wait for two seconds to make sure no false positives happen.
-    await this.page.waitForTimeout(2000);
-
-    const locator = this.page.locator(this.elements.noData);
-    await expect(locator).not.toBeVisible({
-      timeout: 30000,
-    });
+    await expect(this.page.locator(this.elements.noData)).toBeHidden({ timeout: 30000 });
+    await expect(this.page.locator(this.elements.firstRow)).toBeVisible({ timeout: 30000 });
   };
 
   verifyTotalQueryCount = async (expectedQueryCount: number) => {

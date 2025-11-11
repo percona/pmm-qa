@@ -1,6 +1,6 @@
-import pmmTest from '../../../fixtures/pmmTest';
-import { ServiceType } from '../../../intefaces/inventory';
-import { Timeouts } from '../../../helpers/timeouts';
+import pmmTest from '@fixtures/pmmTest';
+import { ServiceType } from '@interfaces/inventory';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
   const containerName = await cliHelper.sendCommand(

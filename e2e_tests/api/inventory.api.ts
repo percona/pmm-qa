@@ -1,6 +1,6 @@
 import { APIRequestContext, expect, Page } from '@playwright/test';
-import GrafanaHelper from '../helpers/grafana.helper';
-import { AgentStatus, GetService, GetServices, ServiceType } from '../intefaces/inventory';
+import GrafanaHelper from '@helpers/grafana.helper';
+import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 
 export default class InventoryApi {
   constructor(
@@ -8,9 +8,7 @@ export default class InventoryApi {
     private request: APIRequestContext,
   ) {}
 
-  getServiceDetailsByPartialName = async (
-    partialServiceName: string,
-  ): Promise<GetService> => {
+  getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
 
     const service = services.services.find((service: GetService) =>

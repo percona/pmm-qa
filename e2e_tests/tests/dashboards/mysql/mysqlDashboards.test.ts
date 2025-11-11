@@ -1,5 +1,5 @@
-import pmmTest from '../../../fixtures/pmmTest';
-import { ServiceType } from '../../../intefaces/inventory';
+import pmmTest from '@fixtures/pmmTest';
+import { ServiceType } from '@interfaces/inventory';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();

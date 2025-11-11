@@ -1,4 +1,4 @@
-import { GrafanaPanel } from '../../../intefaces/grafanaPanel';
+import { GrafanaPanel } from '@interfaces/grafanaPanel';
 
 export default class MysqlInstanceOverview {
   constructor() {}
