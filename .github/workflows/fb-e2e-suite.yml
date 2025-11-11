@@ -3,6 +3,10 @@ name: _FB e2e tests
 on:
   schedule:
     - cron: '0 0 * * *'
+  pull_request:
+    branches:
+      - main
+      - v3
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
