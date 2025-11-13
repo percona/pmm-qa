@@ -143,7 +143,9 @@ jobs:
             --volume /var/run/docker.sock:/var/run/docker.sock \
             --name watchtower \
               perconalab/watchtower:dev-latest
+
           sleep 10
+
           docker run --detach --restart always \
             --network="pmm-qa" \
             -e PMM_DEBUG=1 \
