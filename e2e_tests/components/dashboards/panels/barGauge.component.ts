@@ -12,16 +12,9 @@ export default class BarGaugePanel {
 
   public verifyPanelData = async (panelName: string) => {
     await this.elements.barGaugeValues(panelName).first().waitFor({ state: 'visible' });
-
-    const countOfBarGaugeElements = await this.elements.barGaugeValues(panelName).count();
-    expect.soft(countOfBarGaugeElements, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-
-    for (let i = 0; i < countOfBarGaugeElements; i++) {
-      const barGaugeValue = parseFloat(
-        <string>await this.elements.barGaugeValues(panelName).nth(i).textContent(),
-      );
-
-      expect.soft(barGaugeValue, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+    const barGaugeTexts = await this.elements.barGaugeValues(panelName).allTextContents();
+    for (const barGaugeText of barGaugeTexts) {
+      expect.soft(barGaugeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }

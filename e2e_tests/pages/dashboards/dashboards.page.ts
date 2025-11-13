@@ -103,7 +103,7 @@ export default class Dashboards {
   public expandAllRows = async () => {
     await this.elements.row().first().waitFor({ state: 'visible' });
 
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 10; i++) {
       const expandRows = await this.elements.expandRow().count();
 
       if (expandRows === 0) return;

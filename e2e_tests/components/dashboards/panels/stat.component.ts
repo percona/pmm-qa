@@ -12,13 +12,10 @@ export default class StatPanel {
 
   public verifyPanelData = async (panelName: string) => {
     await expect(this.elements.statsPanelValue(panelName).first()).toBeVisible({ timeout: 10000 });
-
-    const countOfStatElements = await this.elements.statsPanelValue(panelName).count();
-    expect.soft(countOfStatElements, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-
-    for (let i = 0; i < countOfStatElements; i++) {
-      const text = await this.elements.statsPanelValue(panelName).nth(i).textContent();
-      expect.soft(text?.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+    const statTexts = await this.elements.statsPanelValue(panelName).allTextContents();
+    console.log(`statTexts are: ${statTexts}`);
+    for (const statText of statTexts) {
+      expect.soft(statText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }
