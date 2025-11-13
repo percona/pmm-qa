@@ -52,14 +52,9 @@ export default class Dashboards {
   public async verifyAllPanelsHaveData(noDataMetrics: string[]) {
     const noDataPanels = new Set<string>();
 
-    for (let i = 0; i < 20; i++) {
-      const noDataPanelComponents = await this.elements.noDataPanel().count();
-      for (let j = 0; j < noDataPanelComponents; j++) {
-        const noDataPanelName = await this.elements.noDataPanelName().nth(j).textContent();
-        if (noDataPanelName) {
-          noDataPanels.add(noDataPanelName);
-        }
-      }
+    for (let i = 0; i < 10; i++) {
+      const noDataPanelNames = await this.elements.noDataPanelName().allTextContents();
+      noDataPanelNames.forEach((panelName: string) => noDataPanels.add(panelName));
 
       await this.page.keyboard.press('PageDown');
       await this.page.waitForTimeout(Timeouts.HALF_SECOND);
@@ -78,27 +73,11 @@ export default class Dashboards {
   }
 
   public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[]) {
+    const expectedMetricsNames = expectedMetrics.map((e) => e.name);
     await this.page.keyboard.press('Home');
-
     const availableMetrics = await this.getAllAvailablePanels();
 
-    const missingMetrics = expectedMetrics.filter((e) => !availableMetrics.includes(e.name));
-    const unexpectedMetrics = availableMetrics.filter(
-      (e) => !expectedMetrics.map((metrics) => metrics.name).includes(e),
-    );
-
-    if (missingMetrics.length > 0 || unexpectedMetrics.length > 0) {
-      const wrongMetrics = [...missingMetrics.map((metric) => metric.name), ...unexpectedMetrics];
-      let message = '';
-      if (missingMetrics.length > 0) {
-        message += `Missing metrics are: [${missingMetrics.map((metric) => metric.name).join(', ')}]\n`;
-      }
-      if (unexpectedMetrics.length > 0) {
-        message += `Unexpected metrics are: [${unexpectedMetrics.join(', ')}]\n`;
-      }
-
-      expect.soft(wrongMetrics, message.trim()).toHaveLength(0);
-    }
+    expect(expectedMetricsNames).toEqual(availableMetrics);
 
     await this.page.keyboard.press('Home');
     await this.page.waitForTimeout(Timeouts.HALF_SECOND);
@@ -122,19 +101,15 @@ export default class Dashboards {
   private async getAllAvailablePanels(): Promise<string[]> {
     const availableMetrics = new Set<string>();
 
-    for (let i = 0; i < 20; i++) {
-      const numberOfPanels = await this.elements.panelName().count();
-      for (let j = 0; j < numberOfPanels; j++) {
-        const panelName = await this.elements.panelName().nth(j).textContent();
-        if (panelName) {
-          availableMetrics.add(panelName);
-        }
-      }
+    for (let i = 0; i < 10; i++) {
       await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
+      (await this.elements.panelName().allTextContents()).forEach((availableMetric) =>
+        availableMetrics.add(availableMetric),
+      );
     }
 
-    return Array.from(availableMetrics);
+    return Array.from(availableMetrics.values());
   }
 
   public verifyPanelValues = async (panels: GrafanaPanel[]) => {

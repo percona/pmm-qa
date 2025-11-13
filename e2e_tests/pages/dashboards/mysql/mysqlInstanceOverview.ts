@@ -39,12 +39,14 @@ export default class MysqlInstanceOverview {
     { name: 'Percentage of Data Writes', type: 'polyStat' },
     { name: 'Top 5 Data Fsyncs', type: 'timeSeries' },
     { name: 'Percentage of Data Fsyncs', type: 'polyStat' },
-    { name: 'Top MySQL Questions', type: 'stat' },
+    // TODO: Uncoment after https://perconadev.atlassian.net/browse/PMM-14534 is fixed
+    // { name: 'Top MySQL Questions', type: 'stat' },
     { name: 'Top MySQL Selects', type: 'stat' },
     { name: 'Top MySQL Sorts', type: 'stat' },
     { name: 'Top MySQL Aborted Connections', type: 'stat' },
     { name: 'Top MySQL Table Locks', type: 'stat' },
-    { name: 'MySQL Temporary Objects', type: 'timeSeries' },
+    // TODO: Uncoment after https://perconadev.atlassian.net/browse/PMM-14534 is fixed
+    // { name: 'MySQL Temporary Objects', type: 'timeSeries' },
     { name: 'MySQL Temporary Objects', type: 'polyStat' },
     { name: 'Top 5 MySQL Selects', type: 'timeSeries' },
     { name: 'MySQL Selects', type: 'polyStat' },

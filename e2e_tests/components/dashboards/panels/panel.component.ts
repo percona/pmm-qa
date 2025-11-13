@@ -1,11 +1,12 @@
 import { expect } from '@playwright/test';
 import { Locator } from 'playwright';
+import { Timeouts } from '@helpers/timeouts';
 
 export default class PanelComponent {
   constructor() {}
 
   protected verifyData = async (locator: Locator, panelName: string) => {
-    await locator.first().waitFor({ state: 'visible' });
+    await locator.first().scrollIntoViewIfNeeded({ timeout: Timeouts.ONE_SECOND });
     const barGaugeTexts = await locator.allTextContents();
     for (const barGaugeText of barGaugeTexts) {
       expect.soft(barGaugeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
