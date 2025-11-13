@@ -12,13 +12,9 @@ export default class TimeSeriesPanel {
 
   public verifyPanelData = async (panelName: string) => {
     await this.elements.timeSeriesPanelValues(panelName).first().waitFor({ state: 'visible' });
-    const countOfValues = await this.elements.timeSeriesPanelValues(panelName).count();
-
-    expect.soft(countOfValues, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-
-    for (let i = 0; i < countOfValues; i++) {
-      const text = await this.elements.timeSeriesPanelValues(panelName).nth(i).textContent();
-      expect.soft(text?.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+    const timeSeriesTexts = await this.elements.timeSeriesPanelValues(panelName).allTextContents();
+    for (const timeSeriesText of timeSeriesTexts) {
+      expect.soft(parseFloat(timeSeriesText), `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }

@@ -3,7 +3,7 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 export default class MysqlInstanceOverview {
   constructor() {}
 
-  url = 'graph/d/mysql-instance-overview/mysql-instances-overview';
+  url = 'graph/d/mysql-instance-summary/mysql-instance-summary';
   metrics: GrafanaPanel[] = [
     { name: 'Services', type: 'stat' },
     { name: 'Min MySQL Uptime', type: 'stat' },

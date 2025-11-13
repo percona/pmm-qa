@@ -11,13 +11,9 @@ export default class StateTimePanel {
 
   public verifyPanelData = async (panelName: string) => {
     await this.elements.stateTimeValues(panelName).first().waitFor({ state: 'visible' });
-    const countOfValues = await this.elements.stateTimeValues(panelName).count();
-
-    expect.soft(countOfValues, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-
-    for (let i = 0; i < countOfValues; i++) {
-      const text = await this.elements.stateTimeValues(panelName).nth(i).textContent();
-      expect.soft(text?.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+    const stateTimeTexts = await this.elements.stateTimeValues(panelName).allTextContents();
+    for (const stateTimeText of stateTimeTexts) {
+      expect.soft(parseFloat(stateTimeText), `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }

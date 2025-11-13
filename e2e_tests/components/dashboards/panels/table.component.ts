@@ -12,13 +12,9 @@ export default class TablePanel {
 
   public verifyPanelData = async (panelName: string) => {
     await this.elements.tablePanelValue(panelName).first().waitFor({ state: 'visible' });
-
-    const countOfValues = await this.elements.tablePanelValue(panelName).count();
-    expect.soft(countOfValues, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-
-    for (let i = 0; i < countOfValues; i++) {
-      const text = await this.elements.tablePanelValue(panelName).nth(i).textContent();
-      expect.soft(text?.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+    const tableTexts = await this.elements.tablePanelValue(panelName).allTextContents();
+    for (const tableText of tableTexts) {
+      expect.soft(parseFloat(tableText), `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }

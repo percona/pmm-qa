@@ -88,7 +88,6 @@ jobs:
       SERVICENOW_DEV_URL: 'https://perconadev.service-now.com/api/x_pellc_percona_pl/platform/settest'
 
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ADMIN_PASSWORD: 'admin'
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
       QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'v3' }}
@@ -101,6 +100,7 @@ jobs:
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      ADMIN_PASSWORD: 'admin-password'
 
     steps:
       - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
@@ -142,8 +142,7 @@ jobs:
             -e WATCHTOWER_HTTP_API_UPDATE=1 \
             --volume /var/run/docker.sock:/var/run/docker.sock \
             --name watchtower \
-              perconalab/watchtower:latest
-
+              perconalab/watchtower:dev-latest
           sleep 10
           docker run --detach --restart always \
             --network="pmm-qa" \
@@ -159,6 +158,8 @@ jobs:
             --volume pmm-volume:/srv \
             --name pmm-server \
               ${{ env.DOCKER_VERSION }}
+          
+          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
 
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa

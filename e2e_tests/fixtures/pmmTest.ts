@@ -3,9 +3,9 @@ import Dashboard from '@pages/dashboards/dashboards.page';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
-import InventoryApi from '@api/inventory.api';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
+import Api from '@api/api';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -39,7 +39,7 @@ const pmmTest = base.extend<{
   credentials: Credentials;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
-  inventoryApi: InventoryApi;
+  api: Api;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
 }>({
@@ -63,8 +63,8 @@ const pmmTest = base.extend<{
     await use(grafanaHelper);
   },
 
-  inventoryApi: async ({ page, request }, use) => {
-    const inventoryApi = new InventoryApi(page, request);
+  api: async ({ page, request }, use) => {
+    const inventoryApi = new Api(page, request);
     await use(inventoryApi);
   },
 
