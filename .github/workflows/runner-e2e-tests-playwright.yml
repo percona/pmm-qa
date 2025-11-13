@@ -55,7 +55,9 @@ on:
       qa_integration_branch:
         type: string
         required: true
-
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
 jobs:
   tests:
     name: "e2e tests: ${{ inputs.pmm_test_flag || '' }}"
