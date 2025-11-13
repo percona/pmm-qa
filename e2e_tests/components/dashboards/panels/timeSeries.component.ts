@@ -1,7 +1,10 @@
-import { expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
+import PanelComponent from './panel.component';
 
-export default class TimeSeriesPanel {
-  constructor(private page: Page) {}
+export default class TimeSeriesPanel extends PanelComponent {
+  constructor(private page: Page) {
+    super();
+  }
 
   private elements = {
     timeSeriesPanelValues: (panelName: string) =>
@@ -11,10 +14,6 @@ export default class TimeSeriesPanel {
   };
 
   public verifyPanelData = async (panelName: string) => {
-    await this.elements.timeSeriesPanelValues(panelName).first().waitFor({ state: 'visible' });
-    const timeSeriesTexts = await this.elements.timeSeriesPanelValues(panelName).allTextContents();
-    for (const timeSeriesText of timeSeriesTexts) {
-      expect.soft(timeSeriesText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-    }
+    await this.verifyData(this.elements.timeSeriesPanelValues(panelName), panelName);
   };
 }

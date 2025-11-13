@@ -1,7 +1,11 @@
-import { expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
+import PanelComponent from './panel.component';
 
-export default class StateTimePanel {
-  constructor(private page: Page) {}
+export default class StateTimePanel extends PanelComponent {
+  constructor(private page: Page) {
+    super();
+  }
+
   private elements = {
     stateTimeValues: (panelName: string) =>
       this.page.locator(
@@ -10,10 +14,6 @@ export default class StateTimePanel {
   };
 
   public verifyPanelData = async (panelName: string) => {
-    await this.elements.stateTimeValues(panelName).first().waitFor({ state: 'visible' });
-    const stateTimeTexts = await this.elements.stateTimeValues(panelName).allTextContents();
-    for (const stateTimeText of stateTimeTexts) {
-      expect.soft(stateTimeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-    }
+    await this.verifyData(this.elements.stateTimeValues(panelName), panelName);
   };
 }

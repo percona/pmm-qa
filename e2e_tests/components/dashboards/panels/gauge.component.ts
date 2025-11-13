@@ -1,7 +1,10 @@
-import { expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
+import PanelComponent from './panel.component';
 
-export default class GaugePanel {
-  constructor(private page: Page) {}
+export default class GaugePanel extends PanelComponent {
+  constructor(private page: Page) {
+    super();
+  }
 
   private elements = {
     gaugePanelValue: (panelName: string) =>
@@ -11,10 +14,6 @@ export default class GaugePanel {
   };
 
   public verifyPanelData = async (panelName: string) => {
-    await this.elements.gaugePanelValue(panelName).first().waitFor({ state: 'visible' });
-    const gaugeTexts = await this.elements.gaugePanelValue(panelName).allTextContents();
-    for (const gaugeText of gaugeTexts) {
-      expect.soft(gaugeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-    }
+    await this.verifyData(this.elements.gaugePanelValue(panelName), panelName);
   };
 }

@@ -1,7 +1,10 @@
-import { expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
+import PanelComponent from '@components/dashboards/panels/panel.component';
 
-export default class BarGaugePanel {
-  constructor(private page: Page) {}
+export default class BarGaugePanel extends PanelComponent {
+  constructor(private page: Page) {
+    super();
+  }
 
   private elements = {
     barGaugeValues: (panelName: string) =>
@@ -11,10 +14,6 @@ export default class BarGaugePanel {
   };
 
   public verifyPanelData = async (panelName: string) => {
-    await this.elements.barGaugeValues(panelName).first().waitFor({ state: 'visible' });
-    const barGaugeTexts = await this.elements.barGaugeValues(panelName).allTextContents();
-    for (const barGaugeText of barGaugeTexts) {
-      expect.soft(barGaugeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-    }
+    await this.verifyData(this.elements.barGaugeValues(panelName), panelName);
   };
 }

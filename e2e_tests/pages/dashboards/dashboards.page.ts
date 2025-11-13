@@ -43,6 +43,10 @@ export default class Dashboards {
       this.page.locator(
         '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
       ),
+    rowByName: (rowName: string) =>
+      this.page.locator(
+        `//button[contains(@data-testid, "dashboard-row-title") and contains(@data-testid, "${rowName}")]`,
+      ),
   };
 
   public async verifyAllPanelsHaveData(noDataMetrics: string[]) {
@@ -100,24 +104,19 @@ export default class Dashboards {
     await this.page.waitForTimeout(Timeouts.HALF_SECOND);
   }
 
-  public expandAllRows = async () => {
+  expandAllRows = async () => {
     await this.elements.row().first().waitFor({ state: 'visible' });
+    await this.page.keyboard.press('End');
+    await this.page.waitForTimeout(Timeouts.ONE_SECOND);
+    const rowsName = await this.elements.expandRow().allTextContents();
 
-    for (let i = 0; i < 10; i++) {
-      const expandRows = await this.elements.expandRow().count();
-
-      if (expandRows === 0) return;
-
-      for (let j = 0; j <= expandRows; j++) {
-        if (await this.elements.expandRow().nth(j).isVisible()) {
-          await this.elements.expandRow().nth(j).click();
-          await this.page.waitForTimeout(Timeouts.HALF_SECOND);
-        }
-      }
-
-      await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+    for (const rowName of rowsName) {
+      await this.elements.rowByName(rowName).click();
+      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
     }
+
+    await this.page.keyboard.press('Home');
+    await this.page.waitForTimeout(Timeouts.ONE_SECOND);
   };
 
   private async getAllAvailablePanels(): Promise<string[]> {

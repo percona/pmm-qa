@@ -1,7 +1,10 @@
-import { expect, Page } from '@playwright/test';
+import { Page } from '@playwright/test';
+import PanelComponent from './panel.component';
 
-export default class TablePanel {
-  constructor(private page: Page) {}
+export default class TablePanel extends PanelComponent {
+  constructor(private page: Page) {
+    super();
+  }
 
   private elements = {
     tablePanelValue: (panelName: string) =>
@@ -11,10 +14,6 @@ export default class TablePanel {
   };
 
   public verifyPanelData = async (panelName: string) => {
-    await this.elements.tablePanelValue(panelName).first().waitFor({ state: 'visible' });
-    const tableTexts = await this.elements.tablePanelValue(panelName).allTextContents();
-    for (const tableText of tableTexts) {
-      expect.soft(tableText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
-    }
+    await this.verifyData(this.elements.tablePanelValue(panelName), panelName);
   };
 }
