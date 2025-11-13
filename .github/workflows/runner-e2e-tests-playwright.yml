@@ -144,8 +144,6 @@ jobs:
             --name watchtower \
               perconalab/watchtower:dev-latest
 
-          sleep 10
-
           docker run --detach --restart always \
             --network="pmm-qa" \
             -e PMM_DEBUG=1 \
@@ -161,6 +159,7 @@ jobs:
             --name pmm-server \
               ${{ env.DOCKER_VERSION }}
           
+          sleep 15
           docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
 
       - name: Run Setup for E2E Tests
