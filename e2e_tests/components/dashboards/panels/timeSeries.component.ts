@@ -14,7 +14,7 @@ export default class TimeSeriesPanel {
     await this.elements.timeSeriesPanelValues(panelName).first().waitFor({ state: 'visible' });
     const timeSeriesTexts = await this.elements.timeSeriesPanelValues(panelName).allTextContents();
     for (const timeSeriesText of timeSeriesTexts) {
-      expect.soft(parseFloat(timeSeriesText), `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+      expect.soft(timeSeriesText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }

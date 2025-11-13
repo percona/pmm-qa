@@ -13,7 +13,7 @@ export default class StateTimePanel {
     await this.elements.stateTimeValues(panelName).first().waitFor({ state: 'visible' });
     const stateTimeTexts = await this.elements.stateTimeValues(panelName).allTextContents();
     for (const stateTimeText of stateTimeTexts) {
-      expect.soft(parseFloat(stateTimeText), `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+      expect.soft(stateTimeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }

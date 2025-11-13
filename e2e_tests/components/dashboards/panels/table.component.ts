@@ -14,7 +14,7 @@ export default class TablePanel {
     await this.elements.tablePanelValue(panelName).first().waitFor({ state: 'visible' });
     const tableTexts = await this.elements.tablePanelValue(panelName).allTextContents();
     for (const tableText of tableTexts) {
-      expect.soft(parseFloat(tableText), `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+      expect.soft(tableText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }

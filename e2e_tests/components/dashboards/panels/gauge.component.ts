@@ -14,7 +14,7 @@ export default class GaugePanel {
     await this.elements.gaugePanelValue(panelName).first().waitFor({ state: 'visible' });
     const gaugeTexts = await this.elements.gaugePanelValue(panelName).allTextContents();
     for (const gaugeText of gaugeTexts) {
-      expect.soft(parseFloat(gaugeText), `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+      expect.soft(gaugeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }

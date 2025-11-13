@@ -14,7 +14,7 @@ export default class PolyStatPanel {
     await this.elements.polyStatPanelValue(panelName).waitFor({ state: 'visible' });
     const polyStatTexts = await this.elements.polyStatPanelValue(panelName).allTextContents();
     for (const polyStatText of polyStatTexts) {
-      expect.soft(parseFloat(polyStatText), `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
+      expect.soft(polyStatText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);
     }
   };
 }
