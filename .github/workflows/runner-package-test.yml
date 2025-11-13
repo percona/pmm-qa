@@ -339,13 +339,8 @@ jobs:
           EOF
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 30
-          retry_wait_seconds: '60'
-          max_attempts: 2
-          command: sudo vagrant up --provider=libvirt
-          on_retry_command: sudo vagrant destroy -f && sudo vagrant global-status --prune
+        working-directory: ./
+        run: vagrant up
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
