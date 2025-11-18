@@ -1,4 +1,4 @@
-import { test as base, TestInfo } from '@playwright/test';
+import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
@@ -82,25 +82,3 @@ const pmmTest = base.extend<pmmTestType>({
 });
 
 export default pmmTest;
-
-export function data<T>(rows: T[]) {
-  return {
-    pmmTest(title: string, fn: (data: T, fixtures: pmmTestType, testInfo: TestInfo) => Promise<void> | void) {
-      for (const row of rows) {
-        pmmTest(
-          `${title} | Data: ${JSON.stringify(row)}`,
-          async (
-            { cliHelper, credentials, dashboard, grafanaHelper, api, queryAnalytics, urlHelper },
-            testInfo,
-          ) => {
-            await fn(
-              row,
-              { cliHelper, credentials, dashboard, grafanaHelper, api, queryAnalytics, urlHelper },
-              testInfo,
-            );
-          },
-        );
-      }
-    },
-  };
-}
