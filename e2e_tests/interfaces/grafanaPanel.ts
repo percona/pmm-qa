@@ -6,6 +6,7 @@ export type GrafanaPanelType =
   | 'gauge'
   | 'polyStat'
   | 'barGauge'
+  | 'summary'
   | 'unknown';
 
 export interface GrafanaPanel {

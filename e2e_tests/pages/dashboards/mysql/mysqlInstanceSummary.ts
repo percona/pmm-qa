@@ -11,7 +11,7 @@ export default class MysqlInstanceSummary {
     { name: 'Current QPS', type: 'stat' },
     { name: 'InnoDB Buffer Pool Size', type: 'stat' },
     { name: 'Buffer Pool Size of Total RAM', type: 'stat' },
-    { name: 'Service Summary', type: 'unknown' },
+    { name: 'Service Summary', type: 'summary' },
     { name: 'MySQL Connections', type: 'timeSeries' },
     { name: 'MySQL Aborted Connections', type: 'timeSeries' },
     { name: 'MySQL Client Thread Activity', type: 'timeSeries' },
@@ -51,6 +51,9 @@ export default class MysqlInstanceSummary {
     { name: 'Network Traffic', type: 'timeSeries' },
   ];
   noDataMetrics: string[] = [
+    'Top Process States Hourly',
+    'Top Command Counters Hourly',
+    'MySQL Network Usage Hourly',
     'Buffer Pool Size of Total RAM',
     'MySQL Query Cache Memory',
     'MySQL Query Cache Activity',

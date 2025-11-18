@@ -39,6 +39,9 @@ export default class MySQLInstancesCompare {
     { name: `${serviceName} - MySQL Table Definition Cache`, type: 'timeSeries' },
   ];
   noDataMetrics: (serviceName: string) => string[] = (serviceName: string) => [
+    `T${serviceName} - Top 5 Process States Hourly`,
+    `${serviceName} - Top Command Counters Hourly`,
+    `${serviceName} - MySQL Network Usage Hourly`,
     `${serviceName} - Buffer Pool Size of Total RAM`,
     `${serviceName} - MySQL Query Cache Memory`,
     `${serviceName} - MySQL Query Cache Activity`,

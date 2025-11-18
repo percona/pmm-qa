@@ -50,6 +50,10 @@ export default class Dashboards {
       this.page.locator(
         `//button[contains(@data-testid, "dashboard-row-title") and contains(@data-testid, "${rowName}")]`,
       ),
+    summaryPanelText: () =>
+      this.page.locator(
+        '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
+      ),
   };
 
   public async verifyAllPanelsHaveData(noDataMetrics: string[]) {
@@ -78,9 +82,9 @@ export default class Dashboards {
   public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[]) {
     const expectedMetricsNames = expectedMetrics.map((e) => e.name);
     await this.page.keyboard.press('Home');
-    const availableMetrics = await this.getAllAvailablePanels();
+    const availableMetrics = (await this.getAllAvailablePanels()).filter((name) => name.trim().length != 0);
 
-    expect(expectedMetricsNames.sort()).toEqual(availableMetrics.sort());
+    expect(availableMetrics.sort()).toEqual(expectedMetricsNames.sort());
 
     await this.page.keyboard.press('Home');
     await this.page.waitForTimeout(Timeouts.HALF_SECOND);
@@ -135,6 +139,9 @@ export default class Dashboards {
           break;
         case 'text':
           await this.textPanel.verifyPanelData(panel.name);
+          break;
+        case 'summary':
+          await this.elements.summaryPanelText().waitFor({ state: 'visible' });
           break;
         case 'unknown':
           break;
