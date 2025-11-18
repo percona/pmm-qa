@@ -7,6 +7,8 @@ import PolyStatPanel from '@components/dashboards/panels/polyStat.component';
 import TablePanel from '@components/dashboards/panels/table.component';
 import MysqlInstanceOverview from '@pages/dashboards/mysql/mysqlInstanceOverview';
 import { Timeouts } from '@helpers/timeouts';
+import MysqlInstanceSummary from '@pages/dashboards/mysql/mysqlInstanceSummary';
+import TextPanel from '@components/dashboards/panels/text.component';
 
 export default class Dashboards {
   private readonly page: Page;
@@ -15,8 +17,10 @@ export default class Dashboards {
   private readonly barGaugePanel: BarGaugePanel;
   private readonly polyStatPanel: PolyStatPanel;
   private readonly tablePanel: TablePanel;
+  private readonly textPanel: TextPanel;
   // MySQL dashboards
   readonly mysqlInstanceOverview: MysqlInstanceOverview;
+  readonly mysqlInstanceSummary: MysqlInstanceSummary;
 
   constructor(page: Page) {
     this.page = page;
@@ -25,7 +29,9 @@ export default class Dashboards {
     this.barGaugePanel = new BarGaugePanel(this.page);
     this.polyStatPanel = new PolyStatPanel(this.page);
     this.tablePanel = new TablePanel(this.page);
+    this.textPanel = new TextPanel(this.page);
     this.mysqlInstanceOverview = new MysqlInstanceOverview();
+    this.mysqlInstanceSummary = new MysqlInstanceSummary();
   }
 
   private elements = {
@@ -77,7 +83,7 @@ export default class Dashboards {
     await this.page.keyboard.press('Home');
     const availableMetrics = await this.getAllAvailablePanels();
 
-    expect(expectedMetricsNames).toEqual(availableMetrics);
+    expect(expectedMetricsNames.sort()).toEqual(availableMetrics.sort());
 
     await this.page.keyboard.press('Home');
     await this.page.waitForTimeout(Timeouts.HALF_SECOND);
@@ -129,6 +135,9 @@ export default class Dashboards {
           break;
         case 'table':
           await this.tablePanel.verifyPanelData(panel.name);
+          break;
+        case 'text':
+          await this.textPanel.verifyPanelData(panel.name);
           break;
         case 'unknown':
           break;

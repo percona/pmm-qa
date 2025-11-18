@@ -84,4 +84,5 @@ export default class MysqlInstanceOverview {
     'MySQL Used Query Cache',
     'Top MySQL Used Query Cache',
   ];
+  metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
