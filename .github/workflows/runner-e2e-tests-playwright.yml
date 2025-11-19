@@ -4,39 +4,40 @@ name: runner-e2e-tests-playwright
 on:
   workflow_dispatch:
     inputs:
-      pmm_ui_tests_branch:
-        description: 'Target branch for pmm-ui-tests repository'
+      pmm_qa_branch:
+        description: 'Branch for the pmm-qa repository.'
         type: string
-        default: 'main'
+        default: 'v3'
         required: true
       pmm_test_flag:
         description: 'Flag to run only specific portion of the tests.'
         type: string
         required: false
+        default: '@pmm-ps-integration'
       pmm_server_version:
         description: 'Version of the pmm server used for testing'
         type: string
-        default: 'dev-latest'
+        default: 'perconalab/pmm-server:3-dev-latest'
         required: true
       pmm_client_version:
         description: 'Version of the pmm client used for testing'
         type: string
-        default: 'dev-latest'
+        default: '3-dev-latest'
         required: true
       setup_services:
         description: 'Clients for pmm-server'
         type: string
-        default: '--addclient=ps,1'
+        default: '--database ps=8.4,QUERY_SOURCE=slowlog'
         required: true
-      pmm_qa_branch:
-        description: 'Branch for the pmm-qa repository.'
+      qa_integration_branch:
+        description: 'Branch for the qa-integration repository.'
         type: string
-        default: 'main'
+        default: 'v3'
         required: true
 
   workflow_call:
     inputs:
-      pmm_ui_tests_branch:
+      pmm_qa_branch:
         type: string
         required: true
       pmm_test_flag:
@@ -51,20 +52,21 @@ on:
       setup_services:
         type: string
         required: false
-      pmm_qa_branch:
+      qa_integration_branch:
         type: string
         required: true
-
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
 jobs:
   tests:
-    name: Tests
-    runs-on: ubuntu-latest
+    name: "e2e tests: ${{ inputs.pmm_test_flag || '' }}"
+    runs-on: ubuntu-22.04
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PMM_BASE_URL: https://127.0.0.1
 
-      UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch }}
       PMM_TEST_FLAG: ${{ inputs.pmm_test_flag }}
 
       OKTA_TOKEN: ${{ secrets.OKTA_TOKEN }}
@@ -86,11 +88,10 @@ jobs:
       SERVICENOW_DEV_URL: 'https://perconadev.service-now.com/api/x_pellc_percona_pl/platform/settest'
 
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      ADMIN_PASSWORD: 'admin'
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
+      QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'v3' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
-      PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
       DOCKER_VERSION: ${{ inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
@@ -98,9 +99,11 @@ jobs:
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      ADMIN_PASSWORD: 'admin-password'
 
     steps:
-      - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_ui_tests_branch }}
+      - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
         if: ${{ env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
@@ -113,53 +116,51 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: Checkout PMM UI tests
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.PMM_UI_BRANCH }}
-          repository: percona/pmm-ui-tests
-          path: ./pmm-ui-tests
-
       - name: Checkout qa-integration repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.PMM_QA_BRANCH }}
+          ref: ${{ env.QA_INTEGRATION_BRANCH }}
           repository: Percona-Lab/qa-integration
           path: ./qa-integration
 
-      - name: 'Install playwright'
-        working-directory: ./pmm-ui-tests/playwright-tests
-        run: |
-          npm ci
-          npx playwright install
+      - name: Checkout pmm-qa repo
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.PMM_QA_BRANCH }}
+          repository: percona/pmm-qa
+          path: ./pmm-qa
 
-      - name: Setup tools
+      - name: Setup PMM Server
         run: |
-          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
-          echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
-              /etc/apt/sources.list.d/clickhouse.list
-          sudo apt-get update
-          sudo apt-get install -y clickhouse-client
-          sudo apt-get install -y ansible
-          sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
-          ls -la
+          docker network create pmm-qa
+          docker volume create pmm-volume
 
-      - name: Setup PMM2-Server
-        working-directory: pmm-ui-tests
-        run: |
-          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose up -d
-          sleep 60
+          docker run --detach --restart always \
+            --network="pmm-qa" \
+            -e WATCHTOWER_DEBUG=1 \
+            -e WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken \
+            -e WATCHTOWER_HTTP_API_UPDATE=1 \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --name watchtower \
+              perconalab/watchtower:dev-latest
+
+          docker run --detach --restart always \
+            --network="pmm-qa" \
+            -e PMM_DEBUG=1 \
+            -e PMM_WATCHTOWER_HOST=http://watchtower:8080 \
+            -e PMM_WATCHTOWER_TOKEN=testUpgradeToken \
+            -e PMM_DEV_PERCONA_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
+            -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
+            -e PMM_DEV_PORTAL_URL=https://portal-dev.percona.com \
+            -e PMM_DEV_PERCONA_PLATFORM_PUBLIC_KEY=RWTkF7Snv08FCboTne4djQfN5qbrLfAjb8SY3/wwEP+X5nUrkxCEvUDJ \
+            -e PMM_ENABLE_UPDATES=1 \
+            --publish 80:8080 --publish 443:8443 \
+            --volume pmm-volume:/srv \
+            --name pmm-server \
+              ${{ env.DOCKER_VERSION }}
+          
+          sleep 15
           docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
-          bash -x testdata/db_setup.sh
-
-      - name: Export path to qa-integration repo
-        working-directory: qa-integration
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
-
-      - name: Setup PMM-Client
-        working-directory: qa-integration/pmm_qa
-        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
@@ -169,7 +170,18 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install setuptools
-          python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          python pmm-framework.py --verbosity-level=5 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: Setup PMM-Client
+        working-directory: qa-integration/pmm_qa
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+
+      - name: Install playwright
+        working-directory: ./pmm-qa/e2e_tests/
+        run: |
+          npm ci
+          npx playwright install-deps
+          npx playwright install
 
       - name: Execute UI tests
         if: ${{ inputs.pmm_test_flag == 'null' }}
@@ -181,10 +193,9 @@ jobs:
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
         if: ${{ inputs.pmm_test_flag != 'null' }}
         id: ui-tests-flagged
-        working-directory: pmm-ui-tests/playwright-tests
+        working-directory: pmm-qa/e2e_tests/
         run: |
-          project="${{ contains(env.PMM_TEST_FLAG, 'portal') && 'Portal' || 'Chromium' }}"
-          npx playwright test --project=$project --grep ${{ env.PMM_TEST_FLAG }} --pass-with-no-tests --quiet
+          npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
 
       - name: 'Create report name'
         if: failure()
@@ -197,10 +208,10 @@ jobs:
 
       - name: Generate and Attach the report
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.REPORT_NAME }}
-          path: ./pmm-ui-tests/playwright-tests/playwright-report
+          path: ./pmm-qa/e2e_tests/playwright-report
 
       - name: Create status check
         uses: percona/gh-action-github-status-action@v1
