@@ -3,6 +3,10 @@ name: _FB e2e tests
 on:
   schedule:
     - cron: '0 0 * * *'
+  pull_request:
+    branches:
+      - main
+      - v3
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
@@ -306,19 +310,17 @@ jobs:
       tags_for_tests: '@pmm-psmdb-arbiter-integration'
 
   ps_integration:
-    name: PS UI integration tests
-    uses: ./.github/workflows/runner-e2e-tests-codeceptjs.yml
+    name: Percona Server for MySQL UI integration tests
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
-      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database ps=8.0,QUERY_SOURCE=slowlog'
-      tags_for_tests: '@fb-pmm-ps-integration'
+      qa_integration_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
+      pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name || 'v3' }}
+      setup_services: '--database ps=8.4,QUERY_SOURCE=slowlog'
+      pmm_test_flag: '@pmm-ps-integration'
 
   rbac:
     name: PS UI Role based access control
