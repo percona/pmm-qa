@@ -112,3 +112,19 @@ pmmTest(
     await dashboard.verifyPanelValues(dashboard.mysql.pxcGaleraNodesCompare.metricsWithData(service_name));
   },
 );
+
+pmmTest(
+  'PMM-T430 - Verify metrics on MySQL Group Replication Summary Dashboard @pmm-ps-integration',
+  async ({ page, urlHelper, dashboard }) => {
+    await page.goto(
+      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlGroupReplicationSummary.url, {
+        from: 'now-3h',
+      }),
+    );
+
+    await dashboard.expandAllRows();
+    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlGroupReplicationSummary.metrics);
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlGroupReplicationSummary.noDataMetrics);
+    await dashboard.verifyPanelValues(dashboard.mysql.mysqlGroupReplicationSummary.metricsWithData);
+  },
+);

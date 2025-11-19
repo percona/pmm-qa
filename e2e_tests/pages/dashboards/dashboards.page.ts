@@ -8,6 +8,7 @@ import TablePanel from '@components/dashboards/panels/table.component';
 import { Timeouts } from '@helpers/timeouts';
 import TextPanel from '@components/dashboards/panels/text.component';
 import MysqlDashboards from '@pages/dashboards/mysql/mysql.dashboards';
+import StateTimePanel from '@components/dashboards/panels/stateTime.component';
 
 export default class Dashboards {
   private readonly page: Page;
@@ -17,6 +18,7 @@ export default class Dashboards {
   private readonly polyStatPanel: PolyStatPanel;
   private readonly tablePanel: TablePanel;
   private readonly textPanel: TextPanel;
+  private readonly stateTime: StateTimePanel;
   // MySQL dashboards
   readonly mysql: MysqlDashboards;
 
@@ -28,6 +30,7 @@ export default class Dashboards {
     this.polyStatPanel = new PolyStatPanel(this.page);
     this.tablePanel = new TablePanel(this.page);
     this.textPanel = new TextPanel(this.page);
+    this.stateTime = new StateTimePanel(this.page);
     this.mysql = new MysqlDashboards();
   }
 
@@ -139,6 +142,9 @@ export default class Dashboards {
           break;
         case 'text':
           await this.textPanel.verifyPanelData(panel.name);
+          break;
+        case 'stateTime':
+          await this.stateTime.verifyPanelData(panel.name);
           break;
         case 'summary':
           await this.elements.summaryPanelText().waitFor({ state: 'visible' });
