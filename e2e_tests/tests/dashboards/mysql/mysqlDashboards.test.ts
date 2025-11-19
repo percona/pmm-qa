@@ -128,3 +128,19 @@ pmmTest(
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlGroupReplicationSummary.metricsWithData);
   },
 );
+
+pmmTest(
+  'PMM-T2079 - Verify metrics on MySQL MyRocks Details Dashboard @pmm-ps-integration',
+  async ({ page, urlHelper, dashboard }) => {
+    await page.goto(
+      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlMyRocksDetails.url, {
+        from: 'now-3h',
+      }),
+    );
+
+    await dashboard.expandAllRows();
+    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlMyRocksDetails.metrics);
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlMyRocksDetails.noDataMetrics);
+    await dashboard.verifyPanelValues(dashboard.mysql.mysqlMyRocksDetails.metricsWithData);
+  },
+);

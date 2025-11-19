@@ -94,7 +94,11 @@ export default class Dashboards {
   }
 
   expandAllRows = async () => {
-    await this.elements.row().first().waitFor({ state: 'visible' });
+    await this.elements
+      .row()
+      .first()
+      .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS })
+      .catch(() => {});
     await this.page.keyboard.press('End');
     await this.page.waitForTimeout(Timeouts.ONE_SECOND);
     const rowsName = await this.elements.expandRow().allTextContents();
