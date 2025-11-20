@@ -130,6 +130,24 @@ pmmTest(
 );
 
 pmmTest(
+  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-integration',
+  async ({ page, urlHelper, dashboard, api }) => {
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
+    await page.goto(
+      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlReplicationSummary.url, {
+        from: 'now-3h',
+        serviceName: service_name,
+      }),
+    );
+
+    await dashboard.expandAllRows();
+    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlReplicationSummary.metrics);
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlReplicationSummary.noDataMetrics);
+    await dashboard.verifyPanelValues(dashboard.mysql.mysqlReplicationSummary.metricsWithData);
+  },
+);
+
+pmmTest(
   'PMM-T2079 - Verify metrics on MySQL MyRocks Details Dashboard @pmm-ps-integration',
   async ({ page, urlHelper, dashboard }) => {
     await page.goto(
@@ -144,3 +162,5 @@ pmmTest(
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlMyRocksDetails.metricsWithData);
   },
 );
+
+
