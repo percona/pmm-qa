@@ -1,5 +1,4 @@
 import pmmTest from '@fixtures/pmmTest';
-import { ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
@@ -17,12 +16,12 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest(
   'PMM-T2030 - Verify QAN for Percona Server Instance @nightly @pmm-ps-integration',
   async ({ page, queryAnalytics, urlHelper, api }) => {
-    const serviceList = await api.inventoryApi.getServicesByType(ServiceType.mysql);
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
 
     await page.goto(
       urlHelper.buildUrlWithParameters(queryAnalytics.url, {
         from: 'now-15m',
-        serviceName: serviceList[0].service_name,
+        serviceName: service_name,
       }),
     );
     await queryAnalytics.verifyQueryAnalyticsHaveData();
