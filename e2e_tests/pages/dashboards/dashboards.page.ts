@@ -9,12 +9,14 @@ import { Timeouts } from '@helpers/timeouts';
 import TextPanel from '@components/dashboards/panels/text.component';
 import MysqlDashboards from '@pages/dashboards/mysql/mysql.dashboards';
 import StateTimePanel from '@components/dashboards/panels/stateTime.component';
+import BarTimePanel from '@components/dashboards/panels/barTime.component';
 
 export default class Dashboards {
   private readonly page: Page;
   private readonly timeSeriesPanel: TimeSeriesPanel;
   private readonly statPanel: StatPanel;
   private readonly barGaugePanel: BarGaugePanel;
+  private readonly barTimePanel: BarTimePanel;
   private readonly polyStatPanel: PolyStatPanel;
   private readonly tablePanel: TablePanel;
   private readonly textPanel: TextPanel;
@@ -27,6 +29,7 @@ export default class Dashboards {
     this.timeSeriesPanel = new TimeSeriesPanel(this.page);
     this.statPanel = new StatPanel(this.page);
     this.barGaugePanel = new BarGaugePanel(this.page);
+    this.barTimePanel = new BarTimePanel(this.page);
     this.polyStatPanel = new PolyStatPanel(this.page);
     this.tablePanel = new TablePanel(this.page);
     this.textPanel = new TextPanel(this.page);
@@ -113,17 +116,20 @@ export default class Dashboards {
   };
 
   private async getAllAvailablePanels(): Promise<string[]> {
-    const availableMetrics = new Set<string>();
+    const availableMetrics: { name: string | null; id: string | null }[] = [];
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       await this.page.keyboard.press('PageDown');
       await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-      (await this.elements.panelName().allTextContents()).forEach((availableMetric) =>
-        availableMetrics.add(availableMetric),
-      );
+      for (const panel of await this.elements.panelName().all()) {
+        const metric = { name: await panel.textContent(), id: await panel.getAttribute('id') };
+        if (!availableMetrics.some((m) => m.name === metric.name && m.id === metric.id)) {
+          availableMetrics.push(metric);
+        }
+      }
     }
 
-    return Array.from(availableMetrics.values());
+    return Array.from(availableMetrics.values().map((panel) => panel.name!));
   }
 
   public verifyPanelValues = async (panels: GrafanaPanel[]) => {
@@ -137,6 +143,9 @@ export default class Dashboards {
           break;
         case 'barGauge':
           await this.barGaugePanel.verifyPanelData(panel.name);
+          break;
+        case 'barTime':
+          await this.barTimePanel.verifyPanelData(panel.name);
           break;
         case 'polyStat':
           await this.polyStatPanel.verifyPanelData(panel.name);
@@ -154,6 +163,7 @@ export default class Dashboards {
           await this.elements.summaryPanelText().waitFor({ state: 'visible' });
           break;
         case 'unknown':
+        case 'empty':
           break;
         default:
           throw new Error(`Unsupported panel: ${panel.name}`);

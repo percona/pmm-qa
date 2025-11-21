@@ -9,7 +9,7 @@ export default class PanelComponent {
     try {
       await locator.first().scrollIntoViewIfNeeded({ timeout: Timeouts.ONE_SECOND });
     } catch {
-      await expect.soft(locator, `Panel: ${panelName} not visible!`).toBeVisible();
+      await expect.soft(locator.first(), `Panel: ${panelName} not visible!`).toBeVisible();
     }
 
     const barGaugeTexts = await locator.allTextContents();

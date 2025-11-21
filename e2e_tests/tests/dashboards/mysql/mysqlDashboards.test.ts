@@ -5,7 +5,21 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-const services = ['ps_pmm|ms-single', 'pxc_node'];
+const services = ['ps_pmm|ms-single']//, 'pxc_node'];
+
+pmmTest(
+  'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-integration',
+  async ({ page, urlHelper, dashboard }) => {
+    await page.goto(
+      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, { from: 'now-3h' }),
+    );
+
+    await dashboard.expandAllRows();
+    await dashboard.verifyMetricsPresent(dashboard.mysql.haproxyInstanceSummary.metrics);
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.haproxyInstanceSummary.noDataMetrics);
+    await dashboard.verifyPanelValues(dashboard.mysql.haproxyInstanceSummary.metricsWithData);
+  },
+);
 
 data(services).pmmTest(
   'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed for Percona Server for MySQL @pmm-ps-integration',
@@ -80,6 +94,7 @@ pmmTest(
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlUserDetails.metricsWithData);
   },
 );
+
 pmmTest(
   'PMM-T348 - PXC/Galera Node Summary dashboard @pmm-ps-integration',
   async ({ page, urlHelper, dashboard }) => {

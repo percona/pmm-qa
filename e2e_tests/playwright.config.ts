@@ -12,7 +12,7 @@ const config: PlaywrightTestConfig = {
   globalTimeout: Timeouts.THIRTY_MINUTES,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 4 : 1,
   reporter: [['list'], ['html', { open: 'never', outputFolder: './playwright-report' }]],
   use: {
     baseURL: pmmUrl,

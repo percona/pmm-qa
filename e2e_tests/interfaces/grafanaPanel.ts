@@ -3,12 +3,13 @@ export type GrafanaPanelType =
   | 'table'
   | 'text'
   | 'stat'
-  | 'gauge'
   | 'polyStat'
   | 'barGauge'
+  | 'barTime'
   | 'stateTime'
   | 'summary'
-  | 'unknown';
+  | 'unknown'
+  | 'empty';
 
 export interface GrafanaPanel {
   name: string;

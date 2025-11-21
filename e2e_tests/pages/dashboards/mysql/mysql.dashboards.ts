@@ -7,8 +7,10 @@ import MySQLUserDetails from './mysqlUserDetails';
 import MysqlGroupReplicationSummary from './mysqlGroupReplicationSummary';
 import MysqlMyRocksDetails from './mysqlMyRocksDetails';
 import MysqlReplicationSummary from './mysqlReplicationSummary';
+import HaproxyInstanceSummary from './haproxyInstanceSummary';
 
 export default class MysqlDashboards {
+  readonly haproxyInstanceSummary: HaproxyInstanceSummary;
   readonly mysqlGroupReplicationSummary: MysqlGroupReplicationSummary;
   readonly mysqlInstanceOverview: MysqlInstanceOverview;
   readonly mysqlInstanceSummary: MysqlInstanceSummary;
@@ -20,6 +22,7 @@ export default class MysqlDashboards {
   readonly pxcGaleraNodesCompare: PXCGaleraNodesCompare;
 
   constructor() {
+    this.haproxyInstanceSummary = new HaproxyInstanceSummary();
     this.mysqlGroupReplicationSummary = new MysqlGroupReplicationSummary();
     this.mysqlInstanceOverview = new MysqlInstanceOverview();
     this.mysqlInstanceSummary = new MysqlInstanceSummary();
