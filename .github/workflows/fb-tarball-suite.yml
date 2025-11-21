@@ -8,7 +8,7 @@ on:
       package_testing_branch:
         description: 'Target branch for package-testing repository'
         type: string
-        default: 'v3'
+        default: 'main'
         required: true
       pmm_server_image:
         description: "pmm-server docker image"
@@ -59,7 +59,7 @@ jobs:
     uses: ./.github/workflows/package-test-fb.yml
     secrets: inherit
     with:
-      package_testing_branch: 'v3'
+      package_testing_branch: 'main'
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_tarball: ${{ inputs.pmm_client_tarball || '3-dev-latest' }}
       playbook: 'pmm3-client_integration_custom_port'
@@ -71,7 +71,7 @@ jobs:
     uses: ./.github/workflows/package-test-fb.yml
     secrets: inherit
     with:
-      package_testing_branch: 'v3'
+      package_testing_branch: 'main'
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_tarball: ${{ inputs.pmm_client_tarball || '3-dev-latest' }}
       playbook: 'pmm3-client_integration_upgrade_custom_path'

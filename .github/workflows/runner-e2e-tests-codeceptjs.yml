@@ -90,9 +90,9 @@ jobs:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
-      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
-      PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       DOCKER_COMPOSE_FILE: ${{ inputs.pmm_server_compose_file || 'docker-compose.yml' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
