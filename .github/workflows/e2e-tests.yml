@@ -5,11 +5,11 @@ on:
     inputs:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch'
-        default: 'v3'
+        default: 'main'
         required: true
       pmm_qa_branch:
         description: 'pmm-qa repository branch(for setup)'
-        default: 'v3'
+        default: 'main'
         required: true
       pmm_server_version:
         description: 'PMM Server docker image'
@@ -26,21 +26,21 @@ jobs:
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets: inherit
     with:
-      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'v3 '}}
+      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'main '}}
       pmm_test_flag: '@portal'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || '3-dev-latest' }}
       setup_services: '--database ps'
-      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'v3' }}
+      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}
 
   inventory:
     name: Inventory
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets: inherit
     with:
-      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'v3 '}}
+      pmm_ui_tests_branch: ${{ github.event.inputs.pmm_ui_tests_branch || github.head_ref || 'main '}}
       pmm_test_flag: '@inventory'
       pmm_server_version: ${{ github.event.inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ github.event.inputs.pmm_client_version || '3-dev-latest' }}
       setup_services: '--database ps --database psmdb --database pdpgsql'
-      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'v3' }}
+      pmm_qa_branch: ${{ github.event.inputs.pmm_qa_branch || 'main' }}

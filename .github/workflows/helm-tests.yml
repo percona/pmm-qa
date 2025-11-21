@@ -22,7 +22,7 @@ on:
             type: string
         pmm_qa_branch:
             description: "Branch for pmm-qa to checkout"
-            default: "v3"
+            default: "main"
             required: false
             type: string
         sha:
@@ -55,7 +55,7 @@ jobs:
         WORK_DIR: pmm-qa/k8s
         GH_API_TOKEN: ${{ secrets.GH_API_TOKEN }}
         PMM_CHART_BRANCH: ${{ inputs.pmm_chart_branch || 'latest' }}
-        PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
+        PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
         SERVER_IMAGE: ${{ inputs.server_image || 'perconalab/pmm-server:3-dev-latest' }}
 
       steps:
@@ -81,7 +81,7 @@ jobs:
           run: |
             sudo apt-get update
             sudo apt-get install -y git
-            
+
         - name: Start minikube
           run: |
             minikube start

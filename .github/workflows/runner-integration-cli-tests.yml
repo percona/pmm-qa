@@ -47,8 +47,8 @@ jobs:
     timeout-minutes: 40
     env:
       SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
-      PMM_QA_BRANCH: ${{ inputs.qa_integration_branch || 'v3' }}
-      PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      PMM_QA_BRANCH: ${{ inputs.qa_integration_branch || 'main' }}
+      PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
 
       ###  used in tests ###

@@ -7,12 +7,12 @@ on:
     inputs:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch(CLI tests)'
-        default: 'v3'
+        default: 'main'
         required: false
         type: string
       pmm_qa_branch:
         description: 'qa-integration repository branch(for setup)'
-        default: 'v3'
+        default: 'main'
         required: false
         type: string
       pmm_server_image:
@@ -72,8 +72,8 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database pgsql'
       tags_for_tests: '@settings|@cli'
@@ -86,8 +86,8 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ssl_mysql'
       tags_for_tests: '@ssl-mysql'
@@ -100,8 +100,8 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ssl_psmdb'
       tags_for_tests: '@ssl-mongo'
@@ -114,8 +114,8 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ssl_pdpgsql=16'
       tags_for_tests: '@ssl-postgres'
@@ -128,8 +128,8 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database pdpgsql'
       tags_for_tests: '@experimental'
@@ -142,8 +142,8 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--help'
       tags_for_tests: '@disconnect'
@@ -156,6 +156,6 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}

@@ -7,7 +7,7 @@ on:
       pmm_qa_branch:
         description: 'Branch for the pmm-qa repository.'
         type: string
-        default: 'v3'
+        default: 'main'
         required: true
       pmm_test_flag:
         description: 'Flag to run only specific portion of the tests.'
@@ -32,7 +32,7 @@ on:
       qa_integration_branch:
         description: 'Branch for the qa-integration repository.'
         type: string
-        default: 'v3'
+        default: 'main'
         required: true
 
   workflow_call:
@@ -89,9 +89,9 @@ jobs:
 
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
-      QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'v3' }}
-      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'v3' }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       DOCKER_VERSION: ${{ inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
