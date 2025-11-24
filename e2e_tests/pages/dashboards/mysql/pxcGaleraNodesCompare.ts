@@ -12,6 +12,15 @@ export default class PXCGaleraNodesCompare {
     { name: `${serviceName} - gcache Size`, type: 'stat' },
     { name: `${serviceName} - FC (normal traffic)`, type: 'stat' },
     { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
+    { name: serviceName, type: 'timeSeries' },
     { name: `my_wsrep_cluster - Galera Cluster Size`, type: 'timeSeries' },
   ];
 

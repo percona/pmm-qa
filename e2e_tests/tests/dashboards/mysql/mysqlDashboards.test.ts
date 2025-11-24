@@ -11,7 +11,7 @@ pmmTest(
   'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-integration',
   async ({ page, urlHelper, dashboard }) => {
     await page.goto(
-      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, { from: 'now-3h' }),
+      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, { from: 'now-1h' }),
     );
 
     await dashboard.expandAllRows();
@@ -27,7 +27,7 @@ data(services).pmmTest(
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(data);
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceSummary.url, {
-        from: 'now-3h',
+        from: 'now-1h',
         serviceName: service_name,
       }),
     );
@@ -45,7 +45,7 @@ data(services).pmmTest(
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(data);
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstancesCompare.url, {
-        from: 'now-3h',
+        from: 'now-1h',
         serviceName: service_name,
       }),
     );
@@ -65,7 +65,7 @@ data(services).pmmTest(
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(data);
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceOverview.url, {
-        from: 'now-3h',
+        from: 'now-1h',
         serviceName: service_name,
       }),
     );
@@ -83,7 +83,7 @@ pmmTest(
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm');
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlUserDetails.url, {
-        from: 'now-3h',
+        from: 'now-1h',
         serviceName: service_name,
       }),
     );
@@ -100,7 +100,7 @@ pmmTest(
   async ({ page, urlHelper, dashboard }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.pxcGaleraClusterSummary.url, {
-        from: 'now-3h',
+        from: 'now-1h',
       }),
     );
 
@@ -116,7 +116,7 @@ pmmTest(
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('pxc_node');
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.pxcGaleraNodesCompare.url, {
-        from: 'now-3h',
+        from: 'now-1h',
         serviceName: service_name,
       }),
     );
@@ -133,7 +133,7 @@ pmmTest(
   async ({ page, urlHelper, dashboard }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlGroupReplicationSummary.url, {
-        from: 'now-3h',
+        from: 'now-1h',
       }),
     );
 
@@ -150,7 +150,7 @@ pmmTest(
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlReplicationSummary.url, {
-        from: 'now-3h',
+        from: 'now-1h',
         serviceName: service_name,
       }),
     );
@@ -167,7 +167,7 @@ pmmTest(
   async ({ page, urlHelper, dashboard }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlMyRocksDetails.url, {
-        from: 'now-3h',
+        from: 'now-1h',
       }),
     );
 

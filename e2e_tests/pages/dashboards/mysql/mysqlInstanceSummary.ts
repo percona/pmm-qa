@@ -45,6 +45,7 @@ export default class MysqlInstanceSummary {
     { name: 'Virtual Memory', type: 'stat' },
     { name: 'Disk Space', type: 'stat' },
     { name: 'Min Space Available', type: 'stat' },
+    { name: 'Node', type: 'text' },
     { name: 'CPU Usage', type: 'timeSeries' },
     { name: 'CPU Saturation and Max Core Usage', type: 'timeSeries' },
     { name: 'Disk I/O and Swap Activity', type: 'timeSeries' },
