@@ -130,6 +130,7 @@ jobs:
       - name: 'Install playwright'
         working-directory: ./pmm-ui-tests/playwright-tests
         run: |
+          ls
           npm ci
           npx playwright install
 
