@@ -179,6 +179,7 @@ jobs:
       - name: Install playwright
         working-directory: ./pmm-qa/e2e_tests/
         run: |
+          ls
           npm ci
           npx playwright install-deps
           npx playwright install
