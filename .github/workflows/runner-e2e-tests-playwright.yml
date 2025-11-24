@@ -132,6 +132,7 @@ jobs:
 
       - name: Setup PMM Server
         run: |
+          ls
           docker network create pmm-qa
           docker volume create pmm-volume
 
