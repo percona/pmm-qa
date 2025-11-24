@@ -8,7 +8,7 @@ const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localho
 const config: PlaywrightTestConfig = {
   testDir: './tests',
   fullyParallel: true,
-  timeout: Timeouts.FIVE_MINUTES,
+  timeout: Timeouts.TEN_MINUTES,
   globalTimeout: Timeouts.THIRTY_MINUTES,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

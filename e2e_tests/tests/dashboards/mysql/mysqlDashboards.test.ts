@@ -177,5 +177,3 @@ pmmTest(
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlMyRocksDetails.metricsWithData);
   },
 );
-
-
