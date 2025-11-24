@@ -340,7 +340,7 @@ jobs:
 
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
-        run: vagrant up
+        run: sudo vagrant up --provider=libvirt
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
