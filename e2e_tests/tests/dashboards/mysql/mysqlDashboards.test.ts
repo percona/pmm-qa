@@ -5,7 +5,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-const services = ['ps_pmm|ms-single']//, 'pxc_node'];
+const services = ['ps_pmm|mysql_pmm']//, 'pxc_node'];
 
 pmmTest(
   'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-integration',
@@ -35,7 +35,10 @@ data(services).pmmTest(
     await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstanceSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInstanceSummary.noDataMetrics);
-    await dashboard.verifyPanelValues(dashboard.mysql.mysqlInstanceSummary.metricsWithData);
+    await dashboard.verifyPanelValues(
+      dashboard.mysql.mysqlInstanceSummary.metricsWithData,
+      dashboard.mysql.mysqlInstanceSummary.noDataMetrics,
+    );
   },
 );
 

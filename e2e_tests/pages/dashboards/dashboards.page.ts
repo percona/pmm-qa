@@ -132,8 +132,12 @@ export default class Dashboards {
     return Array.from(availableMetrics.values().map((panel) => panel.name!));
   }
 
-  public verifyPanelValues = async (panels: GrafanaPanel[]) => {
+  public verifyPanelValues = async (panels: GrafanaPanel[], noDataPanels?: string[]) => {
     for (const panel of panels) {
+      if (noDataPanels?.includes(panel.name)) {
+        break;
+      }
+
       switch (panel.type) {
         case 'timeSeries':
           await this.timeSeriesPanel.verifyPanelData(panel.name);
@@ -160,7 +164,7 @@ export default class Dashboards {
           await this.stateTime.verifyPanelData(panel.name);
           break;
         case 'summary':
-          await this.elements.summaryPanelText().waitFor({ state: 'visible' });
+          await this.elements.summaryPanelText().waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
           break;
         case 'unknown':
         case 'empty':

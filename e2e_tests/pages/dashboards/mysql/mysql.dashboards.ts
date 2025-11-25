@@ -8,6 +8,7 @@ import MysqlGroupReplicationSummary from './mysqlGroupReplicationSummary';
 import MysqlMyRocksDetails from './mysqlMyRocksDetails';
 import MysqlReplicationSummary from './mysqlReplicationSummary';
 import HaproxyInstanceSummary from './haproxyInstanceSummary';
+import MysqlWaitEventAnalysesDetails from './mysqlWaitEventAnalysesDetails';
 
 export default class MysqlDashboards {
   readonly haproxyInstanceSummary: HaproxyInstanceSummary;
@@ -18,6 +19,7 @@ export default class MysqlDashboards {
   readonly mysqlMyRocksDetails: MysqlMyRocksDetails;
   readonly mysqlReplicationSummary: MysqlReplicationSummary;
   readonly mysqlUserDetails: MySQLUserDetails;
+  readonly mysqlWaitEventAnalysesDetails: MysqlWaitEventAnalysesDetails;
   readonly pxcGaleraClusterSummary: PXCGaleraClusterSummary;
   readonly pxcGaleraNodesCompare: PXCGaleraNodesCompare;
 
@@ -30,6 +32,7 @@ export default class MysqlDashboards {
     this.mysqlMyRocksDetails = new MysqlMyRocksDetails();
     this.mysqlReplicationSummary = new MysqlReplicationSummary();
     this.mysqlUserDetails = new MySQLUserDetails();
+    this.mysqlWaitEventAnalysesDetails = new MysqlWaitEventAnalysesDetails();
     this.pxcGaleraClusterSummary = new PXCGaleraClusterSummary();
     this.pxcGaleraNodesCompare = new PXCGaleraNodesCompare();
   }
