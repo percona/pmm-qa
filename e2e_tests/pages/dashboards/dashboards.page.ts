@@ -77,10 +77,10 @@ export default class Dashboards {
 
   private async loadAllPanels() {
     // Wait for the dashboard to be visible before proceeding.
-    await test.step('Wait for dashboard grid to be visible', async () => {
-      await expect(this.elements.loadingIndicator()).toBeHidden({ timeout: Timeouts.ONE_MINUTE });
-      await expect(this.elements.loadingText()).toBeHidden({ timeout: Timeouts.ONE_MINUTE });
+    await test.step('Wait for initial loading to finish', async () => {
       await expect(this.elements.refreshButton()).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
+      await expect(this.elements.loadingIndicator()).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+      await expect(this.elements.loadingText()).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
     });
 
     // Expand rows if present and wait for content in each item.
