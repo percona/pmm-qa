@@ -7,7 +7,7 @@ on:
       package_testing_branch:
         description: "Target branch for package-testing repository"
         type: string
-        default: "v3"
+        default: "master"
         required: true
       pmm_server_image:
         description: "pmm-server docker image(auto detected if empty)"
