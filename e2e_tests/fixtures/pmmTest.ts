@@ -27,6 +27,7 @@ base.beforeEach(async ({ page }) => {
       status: 200,
       body: JSON.stringify({
         installed: {},
+        last_check: new Date().toISOString(),
         latest: {},
         update_available: false,
       }),
@@ -43,12 +44,12 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
 }>({
-  cliHelper: async ({}, use) => {
+  cliHelper: async ({ }, use) => {
     const cliHelper = new CliHelper();
     await use(cliHelper);
   },
 
-  credentials: async ({}, use) => {
+  credentials: async ({ }, use) => {
     const credentials = new Credentials();
     await use(credentials);
   },
@@ -73,7 +74,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
 
-  urlHelper: async ({}, use) => {
+  urlHelper: async ({ }, use) => {
     const urlHelper = new UrlHelper();
     await use(urlHelper);
   },
