@@ -319,7 +319,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       qa_integration_branch: ${{ inputs.pmm_qa_branch || 'v3' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name || 'v3' }}
-      setup_services: '--database ps=8.4,QUERY_SOURCE=slowlog'
+      setup_services: '--database ps=8.4,QUERY_SOURCE=slowlog --database pxc'
       pmm_test_flag: '@pmm-ps-integration'
 
   rbac:

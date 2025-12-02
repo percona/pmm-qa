@@ -9,10 +9,14 @@ import MysqlMyRocksDetails from './mysqlMyRocksDetails';
 import MysqlReplicationSummary from './mysqlReplicationSummary';
 import HaproxyInstanceSummary from './haproxyInstanceSummary';
 import MysqlWaitEventAnalysesDetails from './mysqlWaitEventAnalysesDetails';
+import MysqlCommandHandlerCountersCompare from './mysqlCommandHandlerCountersCompare';
+import MysqlInnoDBCompressionDetails from './mysqlInnodbCompressionDetails';
 
 export default class MysqlDashboards {
   readonly haproxyInstanceSummary: HaproxyInstanceSummary;
+  readonly mysqlCommandHandlerCountersCompare: MysqlCommandHandlerCountersCompare;
   readonly mysqlGroupReplicationSummary: MysqlGroupReplicationSummary;
+  readonly mysqlInnodbCompressionDetails: MysqlInnoDBCompressionDetails;
   readonly mysqlInstanceOverview: MysqlInstanceOverview;
   readonly mysqlInstanceSummary: MysqlInstanceSummary;
   readonly mysqlInstancesCompare: MySQLInstancesCompare;
@@ -25,7 +29,9 @@ export default class MysqlDashboards {
 
   constructor() {
     this.haproxyInstanceSummary = new HaproxyInstanceSummary();
+    this.mysqlCommandHandlerCountersCompare = new MysqlCommandHandlerCountersCompare();
     this.mysqlGroupReplicationSummary = new MysqlGroupReplicationSummary();
+    this.mysqlInnodbCompressionDetails = new MysqlInnoDBCompressionDetails();
     this.mysqlInstanceOverview = new MysqlInstanceOverview();
     this.mysqlInstanceSummary = new MysqlInstanceSummary();
     this.mysqlInstancesCompare = new MySQLInstancesCompare();

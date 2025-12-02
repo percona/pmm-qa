@@ -5,7 +5,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-const services = ['ps_pmm|mysql_pmm']//, 'pxc_node'];
+const services = ['ps_pmm|mysql_pmm', 'pxc_node'];
 
 pmmTest(
   'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-integration',
@@ -178,5 +178,43 @@ pmmTest(
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlMyRocksDetails.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlMyRocksDetails.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlMyRocksDetails.metricsWithData);
+  },
+);
+
+pmmTest(
+  'PMM-T9999 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
+  async ({ page, urlHelper, dashboard, api }) => {
+    const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
+    await page.goto(
+      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlCommandHandlerCountersCompare.url, {
+        from: 'now-1h',
+        serviceName: service_name,
+      }),
+    );
+
+    await dashboard.verifyMetricsPresent(
+      dashboard.mysql.mysqlCommandHandlerCountersCompare.metrics(service_name),
+    );
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlCommandHandlerCountersCompare.noDataMetrics);
+    await dashboard.verifyPanelValues(
+      dashboard.mysql.mysqlCommandHandlerCountersCompare.metricsWithData(service_name),
+    );
+  },
+);
+
+pmmTest(
+  'PMM-T9998 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
+  async ({ page, urlHelper, dashboard, api }) => {
+    const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
+    await page.goto(
+      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInnodbCompressionDetails.url, {
+        from: 'now-1h',
+        serviceName: service_name,
+      }),
+    );
+
+    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInnodbCompressionDetails.metrics);
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInnodbCompressionDetails.noDataMetrics);
+    await dashboard.verifyPanelValues(dashboard.mysql.mysqlInnodbCompressionDetails.metricsWithData);
   },
 );
