@@ -9,7 +9,6 @@ export default class GrafanaHelper {
     await this.page.request.post(`${baseUrl}graph/login`, {
       data: { user: username, password },
     });
-    console.log(await this.page.context().cookies());
     await this.page.reload();
     return this.page;
   }
