@@ -208,7 +208,7 @@ jobs:
 
       - name: Prepare launchable
         working-directory: pmm-ui-tests
-        if: ${{ env.SHA != 'null' }}
+        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
@@ -218,7 +218,7 @@ jobs:
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
         working-directory: pmm-ui-tests
-        if: ${{ env.SHA == 'null' }}
+        if: ${{ env.SHA == 'null' || github.event_name == 'pull_request' }}
         env:
           SERVER_IP : "192.168.0.1"
           PMM_UI_URL : "http://192.168.0.1/"
@@ -230,7 +230,7 @@ jobs:
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
         working-directory: pmm-ui-tests
-        if: ${{ env.SHA != 'null' }}
+        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
         env:
           SERVER_IP : "192.168.0.1"
           PMM_UI_URL : "http://192.168.0.1/"
