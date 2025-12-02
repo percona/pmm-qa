@@ -6,6 +6,7 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
+import HelpPage from '@pages/helpCenter.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -43,6 +44,7 @@ const pmmTest = base.extend<{
   api: Api;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
+  helpPage: HelpPage;
 }>({
   cliHelper: async ({ }, use) => {
     const cliHelper = new CliHelper();
@@ -77,6 +79,11 @@ const pmmTest = base.extend<{
   urlHelper: async ({ }, use) => {
     const urlHelper = new UrlHelper();
     await use(urlHelper);
+  },
+
+  helpPage: async ({ page }, use) => {
+    const helpPage = new HelpPage(page);
+    await use(helpPage);
   },
 });
 
