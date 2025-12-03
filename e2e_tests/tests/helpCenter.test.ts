@@ -6,7 +6,7 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
     await grafanaHelper.authorize();
 });
 
-pmmTest('PMM-T2096 - Verify view docs button', async ({ helpPage }) => {
+pmmTest('PMM-T2098 - Verify view docs button', async ({ helpPage }) => {
     await helpPage.verifyButtonVisible(helpPage.viewDocsButton);
     const href = await helpPage.getButtonHref(helpPage.viewDocsButton);
     expect(href).toBeTruthy();
