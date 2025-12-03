@@ -7,9 +7,6 @@ export default class ThemePage {
     readonly accountNavItem: Locator;
     readonly changeThemeButton: Locator
     readonly helpNavItem: Locator
-    // readonly combobox: Locator
-    // readonly comboboxLight: Locator
-    // readonly comboboxDark: Locator
 
     constructor(page: Page) {
         this.page = page;
@@ -17,9 +14,6 @@ export default class ThemePage {
         this.accountNavItem = page.getByTestId('navitem-account');
         this.changeThemeButton = page.getByTestId('navitem-theme-toggle');
         this.helpNavItem = page.getByTestId('navitem-help');
-        // this.combobox = page.getByRole('combobox', { name: 'Interface theme' });
-        // this.comboboxLight = page.getByRole('option', { name: 'Light' });
-        // this.comboboxDark = page.getByRole('option', { name: 'Dark' });
     }
 
     async getBackgroundColor() {
