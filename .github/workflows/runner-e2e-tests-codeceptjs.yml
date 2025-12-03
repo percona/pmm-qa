@@ -183,13 +183,9 @@ jobs:
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
-          mkdir -m 777 -p /tmp/backup_data
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose --verbosity-level=5 ${{ env.WIZARD_ARGS }}
+          sudo mkdir -m 777 -p /tmp/backup_data
+          sudo python3 -m venv virtenv
+          sudo bash -c ". virtenv/bin/activate; pip install --upgrade pip; pip install -r requirements.txt; pip install setuptools; python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose --verbosity-level=5 ${{ env.WIZARD_ARGS }}"
 
       - name: Setup npm modules for e2e tests
         working-directory: pmm-ui-tests
