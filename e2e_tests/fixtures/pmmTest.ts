@@ -27,6 +27,7 @@ base.beforeEach(async ({ page }) => {
       status: 200,
       body: JSON.stringify({
         installed: {},
+        last_check: new Date().toISOString(),
         latest: {},
         update_available: false,
       }),
