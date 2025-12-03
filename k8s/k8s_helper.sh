@@ -42,3 +42,10 @@ get_env_variable(){
     kubectl exec -it $pod_name -- printenv $env_var
 }
 
+# Detect if the target cluster exposes OpenShift-specific APIs (best-effort check).
+is_openshift_cluster(){
+    local api_versions
+    api_versions=$(kubectl api-versions 2>/dev/null || true)
+    [[ "$api_versions" == *"route.openshift.io/v1"* ]]
+}
+

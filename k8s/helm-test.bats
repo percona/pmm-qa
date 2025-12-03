@@ -255,16 +255,35 @@ update_values_yaml() {
 
 @test "install/uninstall chart with namespaceOverride parameter and check connectivity" {
     local namespace="monitoring-pmm5"
+    local openshift_cluster=false
+
+    if is_openshift_cluster; then
+        openshift_cluster=true
+    fi
 
     stop_port_forward
-    kubectl create namespace $namespace || true
+    kubectl create namespace "$namespace" || true
     kubectl config set-context --current --namespace=${namespace}
 
-    install_pmm_chart pmm5 \
-        --set image.repository=$IMAGE_REPO \
-        --set image.tag=$IMAGE_TAG \
-        --set namespaceOverride=$namespace \
-        --wait
+    if [[ "$openshift_cluster" == true ]]; then
+        install_pmm_chart pmm5 \
+            --set image.repository=$IMAGE_REPO \
+            --set image.tag=$IMAGE_TAG \
+            --set podSecurityContext.runAsGroup=null \
+            --set podSecurityContext.runAsUser=null \
+            --set podSecurityContext.fsGroupChangePolicy=null \
+            --set podSecurityContext.fsGroup=null \
+            --set podSecurityContext.runAsNonRoot=true \
+            --set podSecurityContext.seccompProfile.type=RuntimeDefault \
+            --set namespaceOverride=$namespace \
+            --wait
+    else
+        install_pmm_chart pmm5 \
+            --set image.repository=$IMAGE_REPO \
+            --set image.tag=$IMAGE_TAG \
+            --set namespaceOverride=$namespace \
+            --wait
+    fi
 
     wait_for_pmm
     start_port_forward
