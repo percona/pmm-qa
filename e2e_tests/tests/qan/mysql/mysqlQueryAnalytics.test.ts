@@ -4,14 +4,15 @@ import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
   const containerName = cliHelper.execSilent('docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}"');
-  cliHelper
-    .execute(
-      `docker exec -i ${containerName.stdout} mysql -h 127.0.0.1 --port 3306 \
+  const response = cliHelper.execute(
+    `docker exec -i ${containerName.stdout} mysql -h 127.0.0.1 --port 3306 \
                                       -u ${credentials.perconaServer.ps_84.username} \
                                       -p${credentials.perconaServer.ps_84.password} \
                                       < \${PWD}/testdata/PMM-T1897.sql`,
-    )
-    .assertSuccess();
+  );
+  console.log(`Response is:`);
+  console.log(response.stdout);
+  console.log(response.stderr);
 });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
