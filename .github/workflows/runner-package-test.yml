@@ -213,19 +213,19 @@ jobs:
             echo "DOCKER_IMAGE=antmelekhin/docker-systemd:ubuntu-24.04" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-8" ]]; then
+            echo "DOCKER_IMAGE=antmelekhin/docker-systemd:rockylinux-8" >> $GITHUB_ENV
             echo "VM_BOX=generic/oracle8" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-9" ]]; then
-            echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
+            echo "DOCKER_IMAGE=antmelekhin/docker-systemd:rockylinux-9" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "ol-10" ]]; then
-            echo "VM_BOX=almalinux/10" >> $GITHUB_ENV
-            echo "PS_REPOSITORY=testing" >> $GITHUB_ENV
+            echo "DOCKER_IMAGE=antmelekhin/docker-systemd:rockylinux-10" >> $GITHUB_ENV
           fi
           if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
-            echo "VM_BOX=gbailey/al2023" >> $GITHUB_ENV
+          echo "DOCKER_IMAGE=antmelekhin/docker-systemd:amazonlinux-2023" >> $GITHUB_ENV
           fi
-          echo "${{ env.VM_BOX }}"
+          echo "${{ env.DOCKER_IMAGE }}"
           
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
@@ -253,10 +253,11 @@ jobs:
             --privileged --cgroupns=host \
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
             -v /var/lib/containerd \
-          antmelekhin/docker-systemd:ubuntu-24.04
+              ${{ env.DOCKER_IMAGE }}
           
+          ls
           sudo docker cp ./pmm/package-testing/playbooks/${{ env.PLAYBOOK }}.yml package-tests-runner:/${{ env.PLAYBOOK }}.yml 
-          sudo docker exec package-tests-runner ANSIBLE_CALLBACK_RESULT_FORMAT=yaml ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
+          sudo docker exec package-tests-runner ANSIBLE_CALLBACK_RESULT_FORMAT=yaml sudo ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
