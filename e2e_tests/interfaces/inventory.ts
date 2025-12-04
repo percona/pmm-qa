@@ -5,6 +5,7 @@ export interface GetServices {
 export enum ServiceType {
   mysql = 'mysql',
   postgresql = 'postgresql',
+  valkey = 'valkey',
 }
 
 export enum AgentStatus {
