@@ -234,17 +234,7 @@ jobs:
           docker run -d -e PMM_ENABLE_NOMAD=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_PUBLIC_ADDRESS=127.0.0.1  -p 80:8080 -p 443:8443 -p 9000:9000 -p 4647:4647 \
             --network pmm-qa --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
 
-      - name: "Setup tools"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible
-
-      - name: "Wait for PMM Server to be healthy"
-        run: |
-          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1/v1/readyz)" != "200" ]]; do sleep 2; done' || false
-
-      - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
-        working-directory: ./
+      - name: "Start Containers for package tests"
         run: |
           sudo docker run -d \
             --name=package-tests-runner \
@@ -254,8 +244,19 @@ jobs:
             -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
             -v /var/lib/containerd \
               ${{ env.DOCKER_IMAGE }}
-          
-          ls
+
+      - name: "Setup tools"
+        run: |
+          sudo docker exec -u root package-tests-runner apt-get update
+          sudo docker exec -u root package-tests-runner apt-get install -y apt-transport-https ca-certificates ansible
+
+      - name: "Wait for PMM Server to be healthy"
+        run: |
+          timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1/v1/readyz)" != "200" ]]; do sleep 2; done' || false
+
+      - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
+        working-directory: ./
+        run: |
           sudo docker cp ./playbooks/${{ env.PLAYBOOK }}.yml package-tests-runner:/${{ env.PLAYBOOK }}.yml 
           sudo docker exec -u root package-tests-runner ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
 
