@@ -9,7 +9,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["node", "playwright"],
+    "types": [
+      "node",
+      "playwright"
+    ],
     "resolveJsonModule": true,
     "isolatedModules": true,
     "paths": {
@@ -31,6 +34,9 @@
       "@api/*": [
         "api/*"
       ],
+      "@valkey": [
+        "./pages/dashboards/valkey/index.ts"
+      ]
     }
   },
   "include": [
