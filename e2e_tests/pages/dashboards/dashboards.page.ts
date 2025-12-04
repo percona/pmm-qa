@@ -1,12 +1,39 @@
 import { Page, expect } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import { GetService } from '@interfaces/inventory';
+import { replaceWildcards } from '@helpers/metrics.helper';
 import TimeSeriesPanel from '@components/dashboards/panels/timeSeries.component';
 import StatPanel from '@components/dashboards/panels/stat.component';
 import BarGaugePanel from '@components/dashboards/panels/barGauge.component';
 import PolyStatPanel from '@components/dashboards/panels/polyStat.component';
 import TablePanel from '@components/dashboards/panels/table.component';
 import MysqlInstanceOverview from '@pages/dashboards/mysql/mysqlInstanceOverview';
+import {
+  ValkeyClientsDashboard,
+  ValkeyClusterDetailsDashboard,
+  ValkeyCommandDetailDashboard,
+  ValkeyLoadDashboard,
+  ValkeyMemoryDashboard,
+  ValkeyNetworkDashboard,
+  ValkeyOverviewDashboard,
+  ValkeyPersistenceDetailsDashboard,
+  ValkeyReplicationDashboard,
+  ValkeySlowlogDashboard,
+} from '@valkey';
 import { Timeouts } from '@helpers/timeouts';
+
+export const valkeyDashboards = {
+  'Valkey Overview': new ValkeyOverviewDashboard(),
+  'Valkey Clients': new ValkeyClientsDashboard(),
+  'Valkey Cluster Details': new ValkeyClusterDetailsDashboard(),
+  'Valkey Command Detail': new ValkeyCommandDetailDashboard(),
+  'Valkey Load': new ValkeyLoadDashboard(),
+  'Valkey Memory': new ValkeyMemoryDashboard(),
+  'Valkey Network': new ValkeyNetworkDashboard(),
+  'Valkey Persistence Details': new ValkeyPersistenceDetailsDashboard(),
+  'Valkey Replication': new ValkeyReplicationDashboard(),
+  'Valkey Slowlog': new ValkeySlowlogDashboard(),
+} as const;
 
 export default class Dashboards {
   private readonly page: Page;
@@ -17,6 +44,8 @@ export default class Dashboards {
   private readonly tablePanel: TablePanel;
   // MySQL dashboards
   readonly mysqlInstanceOverview: MysqlInstanceOverview;
+  // Valkey dashboards
+  readonly valkeyDashboards: Record<string, any> = valkeyDashboards;
 
   constructor(page: Page) {
     this.page = page;
@@ -47,7 +76,32 @@ export default class Dashboards {
       this.page.locator(
         `//button[contains(@data-testid, "dashboard-row-title") and contains(@data-testid, "${rowName}")]`,
       ),
+    loadingBar: () => this.page.getByLabel('Panel loading bar'),
+    gridItems: () => this.page.locator('.react-grid-item'),
   };
+
+  public async loadAllPanels() {
+    await this.expandAllRows();
+
+    const items = this.elements.gridItems();
+    const totalItems = await items.count();
+
+    // Open every item and wait until the item has at least one child, indicating content started to load.
+    for (let i = 0; i < totalItems; i++) {
+      const item = items.nth(i);
+      await item.scrollIntoViewIfNeeded();
+      await expect
+        .poll(async () => await item.locator(':scope > *').count(), { timeout: Timeouts.ONE_MINUTE })
+        .toBeGreaterThan(0);
+    }
+
+    // Confirm no loading bars remain.
+    await expect
+      .poll(async () => await this.elements.loadingBar().count(), {
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toBe(0);
+  }
 
   public async verifyAllPanelsHaveData(noDataMetrics: string[]) {
     const noDataPanels = new Set<string>();
@@ -72,12 +126,13 @@ export default class Dashboards {
       .toHaveLength(0);
   }
 
-  public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[]) {
+  public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) {
+    expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
     const expectedMetricsNames = expectedMetrics.map((e) => e.name);
     await this.page.keyboard.press('Home');
     const availableMetrics = await this.getAllAvailablePanels();
 
-    expect(expectedMetricsNames).toEqual(availableMetrics);
+    expect(availableMetrics.sort()).toEqual(expectedMetricsNames.sort());
 
     await this.page.keyboard.press('Home');
     await this.page.waitForTimeout(Timeouts.HALF_SECOND);
@@ -112,8 +167,9 @@ export default class Dashboards {
     return Array.from(availableMetrics.values());
   }
 
-  public verifyPanelValues = async (panels: GrafanaPanel[]) => {
-    for (const panel of panels) {
+  public verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
+    const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
+    for (const panel of panelList) {
       switch (panel.type) {
         case 'timeSeries':
           await this.timeSeriesPanel.verifyPanelData(panel.name);
