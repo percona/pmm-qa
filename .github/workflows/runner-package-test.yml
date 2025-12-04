@@ -256,8 +256,13 @@ jobs:
             sudo docker exec -u root package-tests-runner apt-get update
             sudo docker exec -u root package-tests-runner apt-get install -y apt-transport-https ca-certificates ansible
           elif [[ "$DISTRIBUTION" == *"Red Hat"* ]]; then
+            sudo docker exec -u root package-tests-runner dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+            sudo docker exec -u root package-tests-runner dnf -y install docker-ce docker-ce-cli containerd.io docker-compose-plugin > /dev/null
+            sudo docker exec -u root package-tests-runner systemctl --now enable docker
+            sudo docker exec -u root package-tests-runner dnf install -y epel-release > /dev/null
+            sudo docker exec -u root package-tests-runner dnf update -y > /dev/null
+            sudo docker exec -u root package-tests-runner dnf install -y ansible-core
           fi
-          
 
       - name: "Wait for PMM Server to be healthy"
         run: |
