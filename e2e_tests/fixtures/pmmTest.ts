@@ -7,7 +7,7 @@ import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 
-base.beforeEach(async ({ page }) => {
+base.beforeAll(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
   await page.route('**/v1/users/me', (route) =>
     route.fulfill({
