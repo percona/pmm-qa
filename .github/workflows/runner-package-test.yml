@@ -247,8 +247,17 @@ jobs:
 
       - name: "Setup tools"
         run: |
-          sudo docker exec -u root package-tests-runner apt-get update
-          sudo docker exec -u root package-tests-runner apt-get install -y apt-transport-https ca-certificates ansible
+          DISTRIBUTION=$(sudo docker exec -u root package-tests-runner cat /proc/version)
+          echo "$DISTRIBUTION"
+          if [[ "${DISTRIBUTION}" =~ "Debian" ]]; then
+            sudo docker exec -u root package-tests-runner apt-get update
+            sudo docker exec -u root package-tests-runner apt-get install -y apt-transport-https ca-certificates ansible
+          elif [[ "${DISTRIBUTION}" =~ "Ubuntu" ]]; then
+            sudo docker exec -u root package-tests-runner apt-get update
+            sudo docker exec -u root package-tests-runner apt-get install -y apt-transport-https ca-certificates ansible
+          elif [[ "$DISTRIBUTION" == *"Red Hat"* ]]; then
+          fi
+          
 
       - name: "Wait for PMM Server to be healthy"
         run: |
@@ -257,7 +266,8 @@ jobs:
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
         run: |
-          sudo docker cp ./playbooks/${{ env.PLAYBOOK }}.yml package-tests-runner:/${{ env.PLAYBOOK }}.yml 
+          sudo docker cp ./ package-tests-runner:/
+          sudo docker exec -u root package-tests-runner ls
           sudo docker exec -u root package-tests-runner ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
 
       - uses: actions/upload-artifact@v4
