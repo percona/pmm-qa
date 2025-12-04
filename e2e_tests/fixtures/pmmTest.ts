@@ -7,7 +7,7 @@ import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 
-base.beforeAll(async ({ page }) => {
+base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
   await page.route('**/v1/users/me', (route) =>
     route.fulfill({
@@ -33,6 +33,8 @@ base.beforeAll(async ({ page }) => {
       }),
     }),
   );
+
+  await page.waitForTimeout(5000);
 });
 
 const pmmTest = base.extend<{
