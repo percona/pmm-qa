@@ -273,7 +273,7 @@ jobs:
         run: |
           sudo docker cp ./ package-tests-runner:/
           sudo docker exec -u root package-tests-runner ls
-          sudo docker exec -u root package-tests-runner ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
+          sudo docker exec -u root package-tests-runner ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 playbooks/${{ env.PLAYBOOK }}.yml
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
