@@ -2,7 +2,7 @@ import pmmTest from "@fixtures/pmmTest";
 import { expect } from "@playwright/test";
 
 pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
-    await page.goto('');
+    await page.goto('')
     await grafanaHelper.authorize();
 });
 
