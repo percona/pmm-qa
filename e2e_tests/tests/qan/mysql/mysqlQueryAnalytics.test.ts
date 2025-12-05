@@ -12,7 +12,10 @@ pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
                                       < \${PWD}/testdata/PMM-T1897.sql`,
   );
 
-  expect(response.stderr, `Creating test data failed! Error message: ${response.stderr}`).toHaveLength(0);
+  expect(
+    response.stderr,
+    `Creating test data failed! Error message: ${response.stderr}. Test command is: ${response.command}`,
+  ).toHaveLength(0);
 });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
