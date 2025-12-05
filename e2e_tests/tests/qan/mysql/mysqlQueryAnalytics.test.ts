@@ -13,9 +13,9 @@ pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
   );
 
   expect(
-    response.stderr,
+    response.code,
     `Creating test data failed! Error message: ${response.stderr}. Test command is: ${response.command}`,
-  ).toHaveLength(0);
+  ).toEqual(0);
 });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
