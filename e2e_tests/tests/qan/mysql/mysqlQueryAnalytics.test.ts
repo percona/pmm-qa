@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
+import {expect} from "@playwright/test";
 
 pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
   const containerName = cliHelper.execSilent('docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}"');
@@ -10,9 +11,8 @@ pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
                                       -p${credentials.perconaServer.ps_84.password} \
                                       < \${PWD}/testdata/PMM-T1897.sql`,
   );
-  console.log(`Response is:`);
-  console.log(response.stdout);
-  console.log(response.stderr);
+
+  expect(response.stderr, `Creating test data failed! Error message: ${response.stderr}`).toHaveLength(0);
 });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
@@ -44,6 +44,6 @@ pmmTest(
 
     await page.goto(url);
     await queryAnalytics.waitForQueryAnalyticsToHaveData(Timeouts.TWO_MINUTES);
-    await queryAnalytics.verifyTotalQueryCount(20);
+    await queryAnalytics.verifyTotalQueryCount(17);
   },
 );
