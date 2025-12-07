@@ -30,4 +30,31 @@ export default class HelpPage {
         await expect(this.page.locator(this.elements.nextTipButton)).toBeVisible();
         return this.page.locator(this.elements.nextTipButton);
     };
+
+    ValidateExternalUrl = async (link: string, button: any, url: string) => {
+        await expect(button).toBeVisible();
+        const href = await button.getAttribute('href');
+        expect(href).toContain(link);
+        if (href) {
+            const response = await this.page.request.get(href);
+            expect(response.status()).toBe(200);
+        }
+        const popup = this.page.waitForEvent('popup');
+        await button.click();
+        const newTab = await popup;
+        expect(newTab.url()).toContain(url);
+    }
+
+    ValidateInternalUrl = async (link: string, button: any, url: string) => {
+        await expect(button).toBeVisible();
+        const href = await button.getAttribute('href');
+        expect(href).toContain(link);
+        if (href) {
+            const response = await this.page.request.get(href);
+            expect(response.status()).toBe(200);
+        }
+        await button.click();
+        expect(this.page.url()).toContain(url);
+    }
+
 }
