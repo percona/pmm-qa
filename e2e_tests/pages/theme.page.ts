@@ -15,6 +15,10 @@ export default class ThemePage {
         });
     };
 
+    getThemeCombobox() {
+        return this.page.locator('#grafana-iframe').contentFrame().getByRole('combobox', { name: 'Interface theme' });
+    }
+
     getLocator(locator: keyof ThemePage['elements']) {
         return this.page.locator(this.elements[locator]);
     }

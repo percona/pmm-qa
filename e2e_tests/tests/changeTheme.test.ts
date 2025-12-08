@@ -36,3 +36,17 @@ pmmTest('PMM-T2096 - Verify theme change functionality via change to dark/light 
             expect(helpBgColor).toBe(newBgColor);
         }
     })
+
+pmmTest('PMM- T2127 Verify interface theme combobox value in sync with background color',
+    async ({ page, themePage }) => {
+
+        await themePage.getLocator('accountNavItem').click();
+        await page.waitForLoadState('domcontentloaded');
+
+        await themePage.getLocator('changeThemeButton').click();
+        const buttonText = await themePage.getLocator('changeThemeButton').innerText();
+
+        const expected = buttonText === 'Change to Light Theme' ? 'Dark' : 'Light';
+        await expect(themePage.getThemeCombobox()).toHaveValue(expected);
+
+    })
