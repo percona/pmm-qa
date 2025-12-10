@@ -3,9 +3,9 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 export default class ValkeySlowlogDashboard {
   url = 'graph/d/valkey-slowlog/valkey-redis-slowlog';
   metrics: GrafanaPanel[] = [
-    { name: 'Slowlog length', type: 'unknown' },
+    { name: 'Slowlog Length', type: 'unknown' },
     { name: 'Slowlog', type: 'unknown' },
-    { name: 'Slowlog maxlength', type: 'unknown' },
-    { name: 'Slowlog slower than (ms)', type: 'unknown' },
+    { name: 'Slowlog Maxlength', type: 'unknown' },
+    { name: 'Slowlog Slower Than (ms)', type: 'unknown' },
   ];
 }
