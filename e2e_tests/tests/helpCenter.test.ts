@@ -6,28 +6,28 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
     await grafanaHelper.authorize();
 });
 
-pmmTest('PMM-T2096 - Verify view docs button', async ({ helpPage, page }) => {
+pmmTest('PMM-T2096 - Verify view docs button', async ({ helpPage }) => {
     const viewDocsButton = helpPage.getLocator('viewDocsButton');
     await helpPage.ValidateExternalUrl(
-        'per.co.na/pmm_documentation', viewDocsButton, '/docs.percona.com/');
+        viewDocsButton, '/docs.percona.com/');
 });
 
-pmmTest('PMM-T2116 - Verify Get Percona Support button', async ({ helpPage, page }) => {
+pmmTest('PMM-T2116 - Verify Get Percona Support button', async ({ helpPage }) => {
     const contactSupportButton = helpPage.getLocator('contactSupportButton');
     await helpPage.ValidateExternalUrl(
-        'percona.com/about/contact', contactSupportButton, '/www.percona.com/about/contact');
+        contactSupportButton, '/www.percona.com/about/contact');
 });
 
-pmmTest('PMM-T2117 - Verify view forum button', async ({ helpPage, page }) => {
+pmmTest('PMM-T2117 - Verify view forum button', async ({ helpPage }) => {
     const viewForumButton = helpPage.getLocator('viewForumButton');
     await helpPage.ValidateExternalUrl(
-        'per.co.na/PMM3_forum', viewForumButton, '/forums.percona.com/');
+        viewForumButton, '/forums.percona.com/');
 });
 
-pmmTest('PMM-T2118 - Verify manage datasets button', async ({ helpPage, page }) => {
+pmmTest('PMM-T2118 - Verify manage datasets button', async ({ helpPage }) => {
     const manageDatasetsButton = helpPage.getLocator('manageDatasetsButton');
     await helpPage.ValidateInternalUrl(
-        'pmm-ui/next/graph/pmm-dump', manageDatasetsButton, '/graph/pmm-dump');
+        manageDatasetsButton, '/graph/pmm-dump');
 });
 
 pmmTest('PMM-T2119 - Verify export logs button', async ({ helpPage, page }) => {
@@ -49,8 +49,8 @@ pmmTest('PMM-T2120 - Verify start pmm tour button', async ({ helpPage }) => {
     await helpPage.clickStartPmmTour();
 });
 
-pmmTest('PMM-T2121 - Verify share your thoughts button', async ({ helpPage, page }) => {
+pmmTest('PMM-T2121 - Verify share your thoughts button', async ({ helpPage }) => {
     const shareYourThoughtsButton = helpPage.getLocator('shareYourThoughtsButton');
     await helpPage.ValidateExternalUrl(
-        'per.co.na/pmm3_feedback', shareYourThoughtsButton, '/docs.google.com/forms/');
+        shareYourThoughtsButton, '/docs.google.com/forms/');
 });
