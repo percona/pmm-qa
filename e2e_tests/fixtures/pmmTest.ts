@@ -9,6 +9,7 @@ import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
+import WelcomePage from '@pages/welcome.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -49,13 +50,14 @@ const pmmTest = base.extend<{
   helpPage: HelpPage;
   themePage: ThemePage;
   tour: TourPage;
+  welcomePage: WelcomePage;
 }>({
-  cliHelper: async ({}, use) => {
+  cliHelper: async ({ }, use) => {
     const cliHelper = new CliHelper();
     await use(cliHelper);
   },
 
-  credentials: async ({}, use) => {
+  credentials: async ({ }, use) => {
     const credentials = new Credentials();
     await use(credentials);
   },
@@ -80,7 +82,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
 
-  urlHelper: async ({}, use) => {
+  urlHelper: async ({ }, use) => {
     const urlHelper = new UrlHelper();
     await use(urlHelper);
   },
@@ -98,6 +100,11 @@ const pmmTest = base.extend<{
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
     await use(tour);
+  },
+
+  welcomePage: async ({ page }, use) => {
+    const welcomePage = new WelcomePage(page);
+    await use(welcomePage);
   },
 });
 
