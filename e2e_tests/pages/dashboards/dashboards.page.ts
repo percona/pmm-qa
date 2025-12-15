@@ -76,11 +76,12 @@ export default class Dashboards {
   };
 
   private async loadAllPanels() {
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
     // Wait for the dashboard to be visible before proceeding.
     await test.step('Wait for initial loading to finish', async () => {
-      await expect(this.elements.refreshButton()).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
-      await expect(this.elements.loadingIndicator()).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
-      await expect(this.elements.loadingText()).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+      await expectPanel(this.elements.refreshButton()).toBeVisible();
+      await expectPanel(this.elements.loadingIndicator()).toHaveCount(0);
+      await expectPanel(this.elements.loadingText()).toHaveCount(0);
     });
 
     // Expand rows if present and wait for content in each item.
@@ -94,22 +95,21 @@ export default class Dashboards {
           await expandButton.click();
         }
 
-        await expect(item.locator(':scope > *')).not.toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
       }
     });
 
     // Confirms that there are no remaining loading bars.
     await test.step('Wait for loading to finish', async () => {
-      await expect(this.elements.loadingBar()).toHaveCount(0, { timeout: Timeouts.ONE_MINUTE });
+      await expectPanel(this.elements.loadingBar()).toHaveCount(0);
     });
   }
 
   public async verifyAllPanelsHaveData(noDataMetrics: string[]) {
     await this.loadAllPanels();
-    const noDataPanels = new Set<string>(await this.elements.noDataPanelName().allTextContents());
-
+    const noDataPanels = await this.elements.noDataPanelName().allTextContents();
     const missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
-    const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.has(e));
+    const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.includes(e));
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
     expect
