@@ -6,7 +6,9 @@ export default class PanelComponent {
   constructor() {}
 
   protected verifyData = async (locator: Locator, panelName: string) => {
-    await locator.first().scrollIntoViewIfNeeded({ timeout: Timeouts.ONE_SECOND });
+    const target = locator.first();
+    await target.waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
+    await target.scrollIntoViewIfNeeded();
     const barGaugeTexts = await locator.allTextContents();
     for (const barGaugeText of barGaugeTexts) {
       expect.soft(barGaugeText.length, `Panel: ${panelName} has empty values!`).toBeGreaterThan(0);

@@ -28,6 +28,12 @@ export default class ValkeyCommandDetailDashboard {
     { name: 'valkey-replica-4-svc-* - Total Time Spent by Command/Sec', type: 'unknown' },
     { name: 'valkey-replica-5-svc-* - Total Time Spent by Command/Sec', type: 'unknown' },
     { name: 'valkey-replica-6-svc-* - Total Time Spent by Command/Sec', type: 'unknown' },
+    // For some reason these panels have identical names even though they are different
+    { name: 'Commands Totals', type: 'unknown' },
+    { name: 'Commands Totals', type: 'unknown' },
+    { name: 'Commands Totals', type: 'unknown' },
+    { name: 'Commands Totals', type: 'unknown' },
+    { name: 'Commands Totals', type: 'unknown' },
     { name: 'Commands Totals', type: 'unknown' },
     { name: 'valkey-primary-1-svc-* - Command Percentiles', type: 'unknown' },
     { name: 'valkey-primary-2-svc-* - Command Percentiles', type: 'unknown' },
