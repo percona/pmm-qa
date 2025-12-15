@@ -105,7 +105,7 @@ export default class Dashboards {
     });
   }
 
-  public async verifyAllPanelsHaveData(noDataMetrics: string[]) {
+  async verifyAllPanelsHaveData(noDataMetrics: string[]) {
     await this.loadAllPanels();
     const noDataPanels = await this.elements.noDataPanelName().allTextContents();
     const missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
@@ -117,21 +117,16 @@ export default class Dashboards {
       .toHaveLength(0);
   }
 
-  public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) {
+  async verifyMetricsPresent(expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
     const expectedMetricsNames = expectedMetrics.map((e) => e.name);
     await this.loadAllPanels();
-    const availableMetrics = await this.getAllAvailablePanels();
+    const availableMetrics = await this.elements.panelName().allTextContents();
 
     expect(availableMetrics.sort()).toEqual(expectedMetricsNames.sort());
   }
 
-  private async getAllAvailablePanels(): Promise<string[]> {
-    const availableMetrics = await this.elements.panelName().allTextContents();
-    return Array.from(new Set(availableMetrics).values());
-  }
-
-  public verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
+  async verifyPanelValues(panels: GrafanaPanel[], serviceList?: GetService[]) {
     await this.loadAllPanels();
     const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
     for (const panel of panelList) {
