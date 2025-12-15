@@ -1,4 +1,4 @@
-import { Page, expect } from '@playwright/test';
+import { Page, expect, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
@@ -58,11 +58,7 @@ export default class Dashboards {
   }
 
   private elements = {
-    expandRow: () => this.page.locator('//*[@aria-label="Expand row"]'),
-    row: () =>
-      this.page.locator(
-        '//button[contains(@data-testid, "dashboard-row-title")]//ancestor::div[contains(@class, "react-grid-item")]',
-      ),
+    expandRow: () => this.page.getByLabel('Expand row'),
     panelName: () => this.page.locator('//section[contains(@data-testid, "Panel header")]//h2'),
     noDataPanel: () =>
       this.page.locator(
@@ -72,53 +68,48 @@ export default class Dashboards {
       this.page.locator(
         '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
       ),
-    rowByName: (rowName: string) =>
-      this.page.locator(
-        `//button[contains(@data-testid, "dashboard-row-title") and contains(@data-testid, "${rowName}")]`,
-      ),
+    refreshButton: () => this.page.getByLabel('Refresh', { exact: true }),
+    loadingIndicator: () => this.page.getByLabel('data-testid Loading indicator', { exact: true }),
+    loadingText: () => this.page.getByText('Loading plugin panel...', { exact: true }),
     loadingBar: () => this.page.getByLabel('Panel loading bar'),
     gridItems: () => this.page.locator('.react-grid-item'),
   };
 
-  public async loadAllPanels() {
-    await this.expandAllRows();
+  private async loadAllPanels() {
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+    // Wait for the dashboard to be visible before proceeding.
+    await test.step('Wait for initial loading to finish', async () => {
+      await expectPanel(this.elements.refreshButton()).toBeVisible();
+      await expectPanel(this.elements.loadingIndicator()).toHaveCount(0);
+      await expectPanel(this.elements.loadingText()).toHaveCount(0);
+    });
 
-    const items = this.elements.gridItems();
-    const totalItems = await items.count();
+    // Expand rows if present and wait for content in each item.
+    await test.step('Expand rows and load panel content', async () => {
+      for (let i = 0; i < (await this.elements.gridItems().count()); i++) {
+        const item = this.elements.gridItems().nth(i);
+        await item.scrollIntoViewIfNeeded();
 
-    // Open every item and wait until the item has at least one child, indicating content started to load.
-    for (let i = 0; i < totalItems; i++) {
-      const item = items.nth(i);
-      await item.scrollIntoViewIfNeeded();
-      await expect
-        .poll(async () => await item.locator(':scope > *').count(), { timeout: Timeouts.ONE_MINUTE })
-        .toBeGreaterThan(0);
-    }
+        const expandButton = item.getByLabel('Expand row');
+        if (await expandButton.isVisible()) {
+          await expandButton.click();
+        }
 
-    // Confirm no loading bars remain.
-    await expect
-      .poll(async () => await this.elements.loadingBar().count(), {
-        timeout: Timeouts.ONE_MINUTE,
-      })
-      .toBe(0);
+        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
+      }
+    });
+
+    // Confirms that there are no remaining loading bars.
+    await test.step('Wait for loading to finish', async () => {
+      await expectPanel(this.elements.loadingBar()).toHaveCount(0);
+    });
   }
 
-  public async verifyAllPanelsHaveData(noDataMetrics: string[]) {
-    const noDataPanels = new Set<string>();
-
-    for (let i = 0; i < 10; i++) {
-      const noDataPanelNames = await this.elements.noDataPanelName().allTextContents();
-      noDataPanelNames.forEach((panelName: string) => noDataPanels.add(panelName));
-
-      await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
-    }
-
-    await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
-
+  async verifyAllPanelsHaveData(noDataMetrics: string[]) {
+    await this.loadAllPanels();
+    const noDataPanels = await this.elements.noDataPanelName().allTextContents();
     const missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
-    const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.has(e));
+    const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.includes(e));
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
     expect
@@ -126,48 +117,17 @@ export default class Dashboards {
       .toHaveLength(0);
   }
 
-  public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) {
+  async verifyMetricsPresent(expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
     const expectedMetricsNames = expectedMetrics.map((e) => e.name);
-    await this.page.keyboard.press('Home');
-    const availableMetrics = await this.getAllAvailablePanels();
+    await this.loadAllPanels();
+    const availableMetrics = await this.elements.panelName().allTextContents();
 
     expect(availableMetrics.sort()).toEqual(expectedMetricsNames.sort());
-
-    await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
   }
 
-  expandAllRows = async () => {
-    await this.elements.row().first().waitFor({ state: 'visible' });
-    await this.page.keyboard.press('End');
-    await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-    const rowsName = await this.elements.expandRow().allTextContents();
-
-    for (const rowName of rowsName) {
-      await this.elements.rowByName(rowName).click();
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-    }
-
-    await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-  };
-
-  private async getAllAvailablePanels(): Promise<string[]> {
-    const availableMetrics = new Set<string>();
-
-    for (let i = 0; i < 10; i++) {
-      await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-      (await this.elements.panelName().allTextContents()).forEach((availableMetric) =>
-        availableMetrics.add(availableMetric),
-      );
-    }
-
-    return Array.from(availableMetrics.values());
-  }
-
-  public verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
+  async verifyPanelValues(panels: GrafanaPanel[], serviceList?: GetService[]) {
+    await this.loadAllPanels();
     const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
     for (const panel of panelList) {
       switch (panel.type) {

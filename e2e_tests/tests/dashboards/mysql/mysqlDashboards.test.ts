@@ -16,7 +16,6 @@ pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysqlInstanceOverview.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysqlInstanceOverview.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysqlInstanceOverview.metrics);

@@ -21,7 +21,6 @@ for (const dashboardName of Object.keys(valkeyDashboards)) {
         }),
       );
 
-      await dashboard.loadAllPanels();
       await dashboard.verifyMetricsPresent(dashboardPage.metrics, serviceList);
       await dashboard.verifyAllPanelsHaveData([]);
       await dashboard.verifyPanelValues(dashboardPage.metrics, serviceList);
