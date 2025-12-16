@@ -12,6 +12,7 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   api: Api;
   queryAnalytics: QueryAnalytics;
+  loginUI: void;
 }>({
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
@@ -23,11 +24,15 @@ const pmmTest = base.extend<{
     await use(credentials);
   },
 
-  dashboard: async ({ page }, use) => {
-    const dashboardPage = new Dashboard(page);
+  loginUI: async ({ page }, use) => {
     await suppressTour(page);
     await suppressUpgradeNotification(page);
     await authorize(page);
+    await use();
+  },
+
+  dashboard: async ({ page, loginUI }, use) => {
+    const dashboardPage = new Dashboard(page);
     await use(dashboardPage);
   },
 
@@ -37,11 +42,8 @@ const pmmTest = base.extend<{
     await use(inventoryApi);
   },
 
-  queryAnalytics: async ({ page }, use) => {
+  queryAnalytics: async ({ page, loginUI }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
-    await suppressTour(page);
-    await suppressUpgradeNotification(page);
-    await authorize(page);
     await use(queryAnalytics);
   },
 });
