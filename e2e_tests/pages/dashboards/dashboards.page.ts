@@ -2,6 +2,7 @@ import { Page, expect, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
+import { BuildUrlParameters } from '@helpers/url.helper';
 import TimeSeriesPanel from '@components/dashboards/panels/timeSeries.component';
 import StatPanel from '@components/dashboards/panels/stat.component';
 import BarGaugePanel from '@components/dashboards/panels/barGauge.component';
@@ -21,6 +22,7 @@ import {
   ValkeySlowlogDashboard,
 } from '@valkey';
 import { Timeouts } from '@helpers/timeouts';
+import BasePage from '@pages/base.page';
 
 export const valkeyDashboards = {
   'Valkey Overview': new ValkeyOverviewDashboard(),
@@ -35,8 +37,7 @@ export const valkeyDashboards = {
   'Valkey Slowlog': new ValkeySlowlogDashboard(),
 } as const;
 
-export default class Dashboards {
-  private readonly page: Page;
+export default class Dashboards extends BasePage {
   private readonly timeSeriesPanel: TimeSeriesPanel;
   private readonly statPanel: StatPanel;
   private readonly barGaugePanel: BarGaugePanel;
@@ -48,7 +49,7 @@ export default class Dashboards {
   readonly valkeyDashboards: Record<string, any> = valkeyDashboards;
 
   constructor(page: Page) {
-    this.page = page;
+    super(page);
     this.timeSeriesPanel = new TimeSeriesPanel(this.page);
     this.statPanel = new StatPanel(this.page);
     this.barGaugePanel = new BarGaugePanel(this.page);
@@ -74,6 +75,11 @@ export default class Dashboards {
     loadingBar: () => this.page.getByLabel('Panel loading bar'),
     gridItems: () => this.page.locator('.react-grid-item'),
   };
+
+  async open(dashboardUrl: string, params: BuildUrlParameters) {
+    await super.open(dashboardUrl, params);
+    await this.loadAllPanels();
+  }
 
   private async loadAllPanels() {
     const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
@@ -106,7 +112,6 @@ export default class Dashboards {
   }
 
   async verifyAllPanelsHaveData(noDataMetrics: string[]) {
-    await this.loadAllPanels();
     const noDataPanels = await this.elements.noDataPanelName().allTextContents();
     const missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
     const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.includes(e));
@@ -120,14 +125,12 @@ export default class Dashboards {
   async verifyMetricsPresent(expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
     const expectedMetricsNames = expectedMetrics.map((e) => e.name);
-    await this.loadAllPanels();
     const availableMetrics = await this.elements.panelName().allTextContents();
 
     expect(availableMetrics.sort()).toEqual(expectedMetricsNames.sort());
   }
 
   async verifyPanelValues(panels: GrafanaPanel[], serviceList?: GetService[]) {
-    await this.loadAllPanels();
     const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
     for (const panel of panelList) {
       switch (panel.type) {
@@ -152,5 +155,5 @@ export default class Dashboards {
           throw new Error(`Unsupported panel: ${panel.name}`);
       }
     }
-  };
+  }
 }

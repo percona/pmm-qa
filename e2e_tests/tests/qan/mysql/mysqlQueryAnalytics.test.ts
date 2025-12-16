@@ -10,34 +10,20 @@ pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
                                       < \${PWD}/testdata/PMM-T1897.sql`);
 });
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
-  await grafanaHelper.authorize();
-});
-
 pmmTest(
   'PMM-T2030 - Verify QAN for Percona Server Instance @nightly @pmm-ps-integration',
-  async ({ page, queryAnalytics, urlHelper, api }) => {
+  async ({ queryAnalytics, api }) => {
     const serviceList = await api.inventoryApi.getServicesByType(ServiceType.mysql);
-
-    await page.goto(
-      urlHelper.buildUrlWithParameters(queryAnalytics.url, {
-        from: 'now-15m',
-        serviceName: serviceList[0].service_name,
-      }),
-    );
+    const serviceName = serviceList[0].service_name;
+    await queryAnalytics.open(queryAnalytics.url, { from: 'now-15m', serviceName });
     await queryAnalytics.verifyQueryAnalyticsHaveData();
   },
 );
 
 pmmTest(
   'PMM-T1897 - Verify Query Count metric on QAN page for MySQL @pmm-ps-integration',
-  async ({ page, queryAnalytics, urlHelper }) => {
-    const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
-      schema: 'sbtest3',
-      refresh: '5s',
-    });
-
-    await page.goto(url);
+  async ({ queryAnalytics }) => {
+    await queryAnalytics.open(queryAnalytics.url, { schema: 'sbtest3', refresh: '5s' });
     await queryAnalytics.waitForQueryAnalyticsToHaveData(Timeouts.TWO_MINUTES);
     await queryAnalytics.verifyTotalQueryCount(20);
   },
