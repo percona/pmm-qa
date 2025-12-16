@@ -1,38 +1,10 @@
 import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
-import { authorize } from '@helpers/grafana.helper';
+import { authorize, suppressTour, suppressUpgradeNotification } from '@helpers/grafana.helper';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
-
-base.beforeEach(async ({ page }) => {
-  // Mock user details call to prevent the tours from showing
-  await page.route('**/v1/users/me', (route) =>
-    route.fulfill({
-      status: 200,
-      body: JSON.stringify({
-        user_id: 1,
-        product_tour_completed: true,
-        alerting_tour_completed: true,
-        snoozed_pmm_version: '',
-      }),
-    }),
-  );
-
-  // Mock upgrade call to prevent upgrade modal from showing.
-  await page.route('**/v1/server/updates?force=**', (route) =>
-    route.fulfill({
-      status: 200,
-      body: JSON.stringify({
-        installed: {},
-        last_check: new Date().toISOString(),
-        latest: {},
-        update_available: false,
-      }),
-    }),
-  );
-});
 
 const pmmTest = base.extend<{
   cliHelper: CliHelper;
@@ -53,6 +25,8 @@ const pmmTest = base.extend<{
 
   dashboard: async ({ page }, use) => {
     const dashboardPage = new Dashboard(page);
+    await suppressTour(page);
+    await suppressUpgradeNotification(page);
     await authorize(page);
     await use(dashboardPage);
   },
@@ -65,6 +39,8 @@ const pmmTest = base.extend<{
 
   queryAnalytics: async ({ page }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
+    await suppressTour(page);
+    await suppressUpgradeNotification(page);
     await authorize(page);
     await use(queryAnalytics);
   },
