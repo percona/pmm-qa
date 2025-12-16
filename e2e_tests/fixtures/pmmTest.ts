@@ -1,6 +1,6 @@
 import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
-import GrafanaHelper from '@helpers/grafana.helper';
+import { authorize } from '@helpers/grafana.helper';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
@@ -38,7 +38,6 @@ const pmmTest = base.extend<{
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
-  grafanaHelper: GrafanaHelper;
   api: Api;
   queryAnalytics: QueryAnalytics;
 }>({
@@ -52,24 +51,21 @@ const pmmTest = base.extend<{
     await use(credentials);
   },
 
-  dashboard: async ({ page, grafanaHelper }, use) => {
+  dashboard: async ({ page }, use) => {
     const dashboardPage = new Dashboard(page);
-    await grafanaHelper.authorize();
+    await authorize(page);
     await use(dashboardPage);
-  },
-
-  grafanaHelper: async ({ page }, use) => {
-    const grafanaHelper = new GrafanaHelper(page);
-    await use(grafanaHelper);
   },
 
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
+    await authorize(page);
     await use(inventoryApi);
   },
 
   queryAnalytics: async ({ page }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
+    await authorize(page);
     await use(queryAnalytics);
   },
 });
