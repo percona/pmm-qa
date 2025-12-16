@@ -182,7 +182,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database ps --database psmdb --database pdpgsql'
+      setup_services: '--database ps --database psmdb --database pdpgsql=16'
       tags_for_tests: '@user-password'
 
   pgsm:
@@ -197,7 +197,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database pdpgsql'
+      setup_services: '--database pdpgsql=16'
       tags_for_tests: '@pgsm-pmm-integration'
 
   pgss:
@@ -212,7 +212,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database pgsql'
+      setup_services: '--database pgsql=16'
       tags_for_tests: '@pgss-pmm-integration'
 
 # Unskip once it will be possible to find ARBITER element on the replset summary dashboard
@@ -331,7 +331,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database ps --database pdpgsql'
+      setup_services: '--database ps --database pdpgsql=16'
       tags_for_tests: '@rbac'
 
   encryption:
@@ -377,5 +377,5 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database ps=8.4 --database pdpgsql --database psmdb'
+      setup_services: '--database ps=8.4 --database pdpgsql=16 --database psmdb'
       tags_for_tests: '@nomad'
