@@ -239,6 +239,7 @@ jobs:
         run: |
           export PGSQL_VERSION="16"
           export PDPGSQL_VERSION="16"
+          export PGSQL_PGSS_CONTAINER="pgsql_pgss_pmm_16"
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat launchable-subset.json)"
 
