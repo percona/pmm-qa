@@ -19,40 +19,26 @@ const titles = [
 ]
 
 pmmTest('PMM-T2100 verify onboarding tour functionality (PMM start tour)',
-    async ({ page, tour }) => {
-        await tour.getLocator('startTourButton').click();
-
-        for (let i = 0; i < titles.length - 1; i++) {
-            const cardTitle = await tour.getLocator('stepTitle').innerText();
-            expect(cardTitle).toBe(titles[i]);
-            if (i < titles.length - 1) {
-                await tour.getLocator('nextTip').click();
-            }
-        }
-
-        await tour.getLocator('endTourButton').click();
-        await expect(tour.getLocator('stepTitle')).toBeHidden();
+    async ({ tour }) => {
+        await tour.elements.startTourButton.click();
+        await tour.tourSteps(titles);
+        await tour.elements.endTourButton.click();
+        await expect(tour.elements.stepTitle).toBeHidden();
     });
 
 pmmTest('verify previous button from card 8 -> 2',
     async ({ tour }) => {
-        await tour.getLocator('startTourButton').click();
+        await tour.elements.startTourButton.click();
         await tour.forwardTour(titles.length);
-        for (let i = titles.length - 1; i > 0; i--) {
-            const cardTitle = await tour.getLocator('stepTitle').innerText();
-            expect(cardTitle).toBe(titles[i]);
-            if (i > 0) {
-                await tour.getLocator('previousTip').click();
-            }
-        }
+        await tour.tourBackward(titles);
     }
 )
 
 pmmTest('PMM-2125 verify close tour on random card',
     async ({ tour }) => {
-        await tour.getLocator('startTourButton').click();
+        await tour.elements.startTourButton.click();
         const randomCard = Math.floor(Math.random() * titles.length);
         await tour.forwardTour(randomCard);
-        await tour.getLocator('closeButton').click();
-        await expect(tour.getLocator('stepTitle')).not.toBeVisible();
+        await tour.elements.closeButton.click();
+        await expect(tour.elements.stepTitle).not.toBeVisible();
     })
