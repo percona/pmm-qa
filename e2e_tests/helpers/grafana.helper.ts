@@ -33,7 +33,7 @@ export async function suppressTour(page: Page): Promise<void> {
         user_id: 1,
         product_tour_completed: true,
         alerting_tour_completed: true,
-        snoozed_pmm_version: '3.2.0',
+        snoozed_pmm_version: '',
       }),
     });
   });
