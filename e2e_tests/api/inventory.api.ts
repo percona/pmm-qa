@@ -1,5 +1,5 @@
 import { APIRequestContext, expect, Page } from '@playwright/test';
-import GrafanaHelper from '@helpers/grafana.helper';
+import { getToken } from '@helpers/grafana.helper';
 import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 
 export default class InventoryApi {
@@ -39,7 +39,7 @@ export default class InventoryApi {
   };
 
   getServices = async (): Promise<GetServices> => {
-    const authToken = GrafanaHelper.getToken();
+    const authToken = getToken();
     const services = await this.request.get('/v1/management/services', {
       headers: {
         Authorization: `Basic ${authToken}`,

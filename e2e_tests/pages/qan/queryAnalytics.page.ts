@@ -1,8 +1,11 @@
 import { expect, Page } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import BasePage from '@pages/base.page';
 
-export default class QueryAnalytics {
-  constructor(private page: Page) {}
+export default class QueryAnalytics extends BasePage {
+  constructor(page: Page) {
+    super(page);
+  }
 
   private elements = {
     noData: '//*[@data-testid="table-no-data"]',
