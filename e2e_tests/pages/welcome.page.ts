@@ -1,23 +1,25 @@
 import { Page } from "@playwright/test";
 
 export default class WelcomePage {
-    constructor(private page: Page) { }
+    constructor(public page: Page) { }
 
-    private elements = {
-        welcomeCard: '//*[@data-testid="welcome-card"]',
-        addServiceButton: '//*[@data-testid="welcome-card-add-service"]',
-        dismissButton: '//*[@data-testid="welcome-card-dismiss"]',
-        startTourButton: '//*[@data-testid="welcome-card-start-tour"]',
-        tourPopover: '//*[@class="reactour__popover"]',
-        updates: '//*[@data-testid="update-modal-go-to-updates-button"]',
-    };
+    public get elements() {
+        return {
+            welcomeCard: this.page.locator('//*[@data-testid="welcome-card"]'),
+            addServiceButton: this.page.locator('//*[@data-testid="welcome-card-add-service"]'),
+            dismissButton: this.page.locator('//*[@data-testid="welcome-card-dismiss"]'),
+            startTourButton: this.page.locator('//*[@data-testid="welcome-card-start-tour"]'),
+            tourPopover: this.page.locator('//*[@class="reactour__popover"]'),
+            updates: this.page.locator('//*[@data-testid="update-modal-go-to-updates-button"]'),
+            tourCloseButton: this.page.locator('//*[@data-testid="tour-close-button"]'),
+        };
+    }
 
-    getLocator = (elementKey: keyof typeof this.elements) => {
-        return this.page.locator(this.elements[elementKey]);
-    };
 
     // mock api for fresh install
-    async mockFreshInstall(data: Record<string, any>) {
+    async mockFreshInstall() {
+        let productTourCompleted = false;
+
         await this.page.route('**/v1/users/me', route => {
             const method = route.request().method();
 
@@ -25,16 +27,22 @@ export default class WelcomePage {
                 return route.fulfill({
                     status: 200,
                     contentType: 'application/json',
-                    body: JSON.stringify(data),
+                    body: JSON.stringify({
+                        user_id: 1,
+                        product_tour_completed: productTourCompleted,
+                        alerting_tour_completed: false,
+                    }),
                 });
             }
 
-            if (method === 'PUT') {
-                const payload = route.request().postDataJSON();
+            if (method === 'PATCH' || method === 'PUT') {
+                productTourCompleted = true;
                 return route.fulfill({
                     status: 200,
                     contentType: 'application/json',
-                    body: JSON.stringify(payload),
+                    body: JSON.stringify({
+                        product_tour_completed: true,
+                    }),
                 });
             }
 
@@ -62,25 +70,25 @@ export default class WelcomePage {
     }
 
     // mock api for update available
-    async mockUpdateAvailable() {
+    async mockUpdateAvailable(updateAvailable: boolean) {
         await this.page.route('**/v1/server/updates?force=true', async (route) => {
             await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
                     installed: {
-                        version: '3.6.0',
-                        full_version: '3.6.0',
+                        version: '',
+                        full_version: '',
                         timestamp: "2025-12-10T00:00:00Z"
                     },
                     latest: {
-                        version: '3.7.0',
-                        tag: '3.7.0',
+                        version: '',
+                        tag: '',
                         timestamp: "2025-12-12T00:00:00Z",
                         release_notes_url: 'https://example.com',
                         release_notes_text: 'New features'
                     },
-                    update_available: true,
+                    update_available: updateAvailable,
                     latest_news_url: "https://example.com",
                     last_check: "2025-12-12T14:18:01.063631023Z"
                 })
