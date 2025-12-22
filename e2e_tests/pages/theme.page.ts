@@ -1,13 +1,15 @@
-import { Page, Locator } from '@playwright/test';
+import { Page } from '@playwright/test';
 
 export default class ThemePage {
-    constructor(private page: Page) { }
+    constructor(public page: Page) { }
 
-    private elements = {
-        accountNavItem: '//*[@data-testid="navitem-account"]',
-        changeThemeButton: '//*[@data-testid="navitem-theme-toggle"]',
-        helpNavItem: '//*[@data-testid="navitem-help"]',
-    };
+    public get elements() {
+        return {
+            accountNavItem: this.page.locator('//*[@data-testid="navitem-account"]'),
+            changeThemeButton: this.page.locator('//*[@data-testid="navitem-theme-toggle"]'),
+            helpNavItem: this.page.locator('//*[@data-testid="navitem-help"]'),
+        };
+    }
 
     getBackgroundColor = async () => {
         return this.page.locator('body').evaluate((el) => {
@@ -17,9 +19,5 @@ export default class ThemePage {
 
     getThemeCombobox() {
         return this.page.locator('#grafana-iframe').contentFrame().getByRole('combobox', { name: 'Interface theme' });
-    }
-
-    getLocator(locator: keyof ThemePage['elements']) {
-        return this.page.locator(this.elements[locator]);
     }
 }
