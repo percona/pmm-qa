@@ -167,7 +167,7 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ matrix.db-type }} CLI tests"
+          context: "${{ inputs.test_name }} CLI tests"
           description: "Test execution ${{ job.status }}"
           state: ${{ job.status }}
           repository: ${{ github.repository }}
