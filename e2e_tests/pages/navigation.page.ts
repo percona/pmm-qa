@@ -163,22 +163,16 @@ export default class LeftNavigation {
             openLeftNavigationButton: this.page.locator('//*[@data-testid="sidebar-open-button"]'),
             sidebar: this.page.locator('//*[@data-testid="pmm-sidebar"]'),
 
-            // non admin user creation
-            newUserButton: this.page.locator('//span[normalize-space()="New user"]'),
-            nameInput: this.page.locator('//input[@id="name-input"]'),
-            usernameInput: this.page.locator('//input[@id="username-input"]'),
-            passwordInput: this.page.locator('//input[@id="password-input"]'),
-            createUserButton: this.page.locator('//span[normalize-space()="Create user"]'),
-
-            // login
-            userNameField: this.page.locator('//*[@data-testid="data-testid Username input field"]'),
-            passwordField: this.page.locator('//*[@data-testid="data-testid Password input field"]'),
+            // help card dump logs
             dumpLogs: this.page.locator('//*[@data-testid="help-card-pmm-dump-logs"]'),
-            loginButton: this.page.locator('//*[@data-testid="data-testid Login button"]'),
-            skipButton: this.page.locator('//*[@data-testid="data-testid Skip change password button"]'),
 
             // time picker (within iframe)
+            iframe: this.page.locator('#grafana-iframe'),
             timePickerOpenButton: this.page.frameLocator('#grafana-iframe').locator('//*[@data-testid="data-testid TimePicker Open Button"]'),
+            refreshButton: this.page.frameLocator('#grafana-iframe').locator('//*[@data-testid="data-testid RefreshPicker run button"]'),
+
+            // old navigation 
+            oldLeftMenu: this.page.locator('//*[@data-testid="data-testid navigation mega-menu"]'),
         };
     }
 
@@ -212,9 +206,7 @@ export default class LeftNavigation {
 
         for (const [key, value] of items) {
             if (key === 'signOut') {
-                if (typeof (value as any).click === 'function') {
-                    await this.responseAfterClick(value, `${parent}.${key}`);
-                }
+                await this.responseAfterClick(value, `${parent}.${key}`);
                 return;
             }
 
@@ -232,28 +224,13 @@ export default class LeftNavigation {
         }
     };
 
-    createNonAdminUser = async () => {
-        const user = this.page.frameLocator('#grafana-iframe    ');
-        await user.locator(this.elements.newUserButton).click();
-        await user.locator(this.elements.nameInput).fill('nonadmin');
-        await user.locator(this.elements.usernameInput).fill('nonadmin');
-        await user.locator(this.elements.passwordInput).fill('nonadmin');
-        await user.locator(this.elements.createUserButton).click();
-    };
-
-    loginUser = async (username: string, password: string) => {
-        await this.elements.userNameField.fill(username);
-        await this.elements.passwordField.fill(password);
-        await this.elements.loginButton.click();
-    };
-
     traverseAllMenuItems = async () => {
         const simpleMenuItems = ['home', 'qan', 'help'];
 
         const menuWithChildren = [
             'mysql',
             'postgresql',
-            // 'mongodb',
+            'mongodb',
             'operatingsystem',
             'alldashboards',
             'explore',
@@ -280,9 +257,7 @@ export default class LeftNavigation {
         }
     };
 
-    verifyTimeRangePersistence = async (expectedTimeRange: string) => {
-        const { expect } = await import('@playwright/test');
-        const iframe = this.page.frameLocator('#grafana-iframe');
+    verifyTimeRangePersistence = async (selectedTimeRange: string) => {
 
         const dashboards = [
             { parent: this.elements.mysql, child: null },
@@ -303,7 +278,20 @@ export default class LeftNavigation {
                 await dashboard.child.click();
             }
 
-            await expect(this.elements.timePickerOpenButton).toContainText(expectedTimeRange);
+            await expect(this.elements.timePickerOpenButton).toContainText(selectedTimeRange);
+        };
+
+    };
+
+    mouseHoverOnPmmLogo = async () => {
+        const pmmLogo = this.elements.sidebar.locator('rect');
+
+        const rectBox = await pmmLogo.boundingBox();
+        if (rectBox) {
+            await this.page.mouse.move(
+                rectBox.x + rectBox.width / 2,
+                rectBox.y + rectBox.height / 2
+            );
         }
     };
 }
