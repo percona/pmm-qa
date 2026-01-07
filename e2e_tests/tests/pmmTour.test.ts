@@ -1,44 +1,63 @@
 import pmmTest from "@fixtures/pmmTest";
 import { expect } from "@playwright/test";
+import TourPage from "@pages/tour.page";
 
 pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
-    await page.goto('')
+    await page.goto('');
     await grafanaHelper.authorize();
-    await page.waitForLoadState('domcontentloaded');
 });
 
-const titles = [
-    'Percona Dashboards',
-    'Query Analytics (QAN) dashboard',
-    'Explore',
-    'Alerts & Percona Templates',
-    'Percona Advisors',
-    'Management: Inventory & Backups',
-    'Configurations',
-    'Help Center'
-]
+const titles = TourPage.titles;
 
-pmmTest('PMM-T2100 verify onboarding tour functionality (PMM start tour)',
-    async ({ tour }) => {
-        await tour.elements.startTourButton.click();
-        await tour.tourSteps(titles);
-        await tour.elements.endTourButton.click();
-        await expect(tour.elements.stepTitle).toBeHidden();
+pmmTest('PMM-T2100 verify onboarding tour functionality (PMM start tour)', async ({ tour }) => {
+    await pmmTest.step('Start tour', async () => {
+        await tour.startTour();
     });
 
-pmmTest('verify previous button from card 8 -> 2',
-    async ({ tour }) => {
-        await tour.elements.startTourButton.click();
-        await tour.forwardTour(titles.length);
-        await tour.tourBackward(titles);
-    }
-)
+    await pmmTest.step('Verify tour steps', async () => {
+        for (let i = 0; i < titles.length; i++) {
+            await expect(tour.elements.stepTitle).toHaveText(titles[i]);
+            if (i < titles.length - 1) {
+                await tour.nextStep();
+            }
+        }
+    });
 
-pmmTest('PMM-2125 verify close tour on random card',
-    async ({ tour }) => {
-        await tour.elements.startTourButton.click();
-        const randomCard = Math.floor(Math.random() * titles.length);
-        await tour.forwardTour(randomCard);
-        await tour.elements.closeButton.click();
+    await pmmTest.step('End tour', async () => {
+        await tour.endTour();
+        await expect(tour.elements.stepTitle).toBeHidden();
+    });
+});
+
+pmmTest('verify previous button from card 8 -> 2', async ({ tour }) => {
+    await pmmTest.step('Start tour and go to the last step', async () => {
+        await tour.startTour();
+        // Go forward 7 times to reach the 8th card
+        await tour.navigateForward(titles.length - 1);
+    });
+
+    await pmmTest.step('Verify tour backward from last step', async () => {
+        for (let i = titles.length - 1; i >= 0; i--) {
+            await expect(tour.elements.stepTitle).toHaveText(titles[i]);
+            if (i > 0) {
+                await tour.previousStep();
+            }
+        }
+    });
+});
+
+pmmTest('PMM-2125 verify close tour on random card', async ({ tour }) => {
+    await pmmTest.step('Start tour', async () => {
+        await tour.startTour();
+    });
+
+    const stepsToMove = Math.floor(Math.random() * titles.length);
+    await pmmTest.step('Go to a random card', async () => {
+        await tour.navigateForward(stepsToMove);
+    });
+
+    await pmmTest.step('Close tour', async () => {
+        await tour.closeTour();
         await expect(tour.elements.stepTitle).not.toBeVisible();
-    })
+    });
+});
