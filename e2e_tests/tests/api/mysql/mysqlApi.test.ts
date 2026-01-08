@@ -1,10 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { AgentStatus, ServiceType } from '@interfaces/inventory';
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
-  await grafanaHelper.authorize();
-});
-
 pmmTest(
   'PMM-T2095 - Verify all agents for Mysql have status Running @nightly @pmm-ps-integration',
   async ({ api }) => {
