@@ -11,7 +11,7 @@ export default class LeftNavigation {
     public static readonly menuWithChildren = [
             'mysql',
             'postgresql',
-            // 'mongodb',
+            'mongodb',
             'operatingsystem',
             'alldashboards',
             'explore',
