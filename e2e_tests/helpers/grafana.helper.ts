@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 
 export default class GrafanaHelper {
-  constructor(private page: Page) { }
+  constructor(private page: Page) {}
 
   async authorize(username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin', baseUrl = '') {
     const authToken = GrafanaHelper.getToken(username, password);
