@@ -8,56 +8,73 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 
 
 pmmTest('PMM-T2132 Verify welcome Card appears on fresh install', async ({ welcomePage }) => {
+    await pmmTest.step('Mock fresh install and no services', async () => {
+        await welcomePage.mockFreshInstall();
+        await welcomePage.mockNoServices();
+    });
 
-    await welcomePage.mockFreshInstall();
-    await welcomePage.mockNoServices();
-
-    await expect(welcomePage.elements.welcomeCard).toBeVisible();
-    await expect(welcomePage.elements.addServiceButton).toBeVisible();
-    await expect(welcomePage.elements.dismissButton).toBeVisible();
-    await expect(welcomePage.elements.startTourButton).toBeVisible();
+    await pmmTest.step('Verify welcome card and its buttons are visible', async () => {
+        await expect(welcomePage.elements().welcomeCard()).toBeVisible();
+        await expect(welcomePage.elements().addServiceButton()).toBeVisible();
+        await expect(welcomePage.elements().dismissButton()).toBeVisible();
+        await expect(welcomePage.elements().startTourButton()).toBeVisible();
+    });
 });
 
 pmmTest('PMM-T2101 verify dismiss button on welcome card', async ({ page, welcomePage }) => {
+    await pmmTest.step('Mock fresh install', async () => {
+        await welcomePage.mockFreshInstall();
+    });
 
-    await welcomePage.mockFreshInstall();
+    await pmmTest.step('Verify welcome card visibility and click dismiss', async () => {
+        await expect(welcomePage.elements().welcomeCard()).toBeVisible();
+        await welcomePage.clickDismiss();
+    });
 
-    await expect(welcomePage.elements.welcomeCard).toBeVisible();
-    await welcomePage.elements.dismissButton.click();
-    await page.reload();
-    await expect(welcomePage.elements.welcomeCard).not.toBeVisible();
+    await pmmTest.step('Reload page and verify welcome card is not visible', async () => {
+        await page.reload();
+        await expect(welcomePage.elements().welcomeCard()).toBeHidden();
+    });
 });
 
 pmmTest('PMM-T2133 Verify Welcome Card start tour', async ({ page, welcomePage }) => {
+    await pmmTest.step('Mock fresh install', async () => {
+        await welcomePage.mockFreshInstall();
+    });
 
-    await welcomePage.mockFreshInstall();
+    await pmmTest.step('Verify welcome card and start tour', async () => {
+        await expect(welcomePage.elements().welcomeCard()).toBeVisible();
+        await welcomePage.clickStartTour();
+    });
 
-    await expect(welcomePage.elements.welcomeCard).toBeVisible();
-    await welcomePage.elements.startTourButton.click();
-    await expect(welcomePage.elements.tourPopover).toBeVisible();
-    await welcomePage.elements.tourCloseButton.click();
-    await page.reload();
-    await expect(welcomePage.elements.welcomeCard).not.toBeVisible();
+    await pmmTest.step('Verify tour popover and close tour', async () => {
+        await expect(welcomePage.elements().tourPopover()).toBeVisible();
+        await welcomePage.clickCloseTour();
+    });
+
+    await pmmTest.step('Reload page and verify welcome card is not visible', async () => {
+        await page.reload();
+        await expect(welcomePage.elements().welcomeCard()).toBeHidden();
+    });
 });
 
 pmmTest('PMM-T2134 Verify Update check', async ({ page, welcomePage }) => {
 
-    const cases = [
-        { updateAvailable: true },
-        { updateAvailable: false },
-    ];
+    const cases = welcomePage.cases;
 
     for (const c of cases) {
-        await welcomePage.mockUpdateAvailable(
-            c.updateAvailable
-        );
+        await pmmTest.step('Verify update check', async () => {
+            await welcomePage.mockUpdateAvailable(
+                c.updateAvailable
+            );
 
-        await page.reload();
+            await page.reload();
 
-        if (c.updateAvailable) {
-            await expect(welcomePage.elements.updates).toBeVisible({ timeout: 10000 });
-        } else {
-            await expect(welcomePage.elements.updates).not.toBeVisible({ timeout: 10000 });
-        }
+            if (c.updateAvailable) {
+                await expect(welcomePage.elements().updates()).toBeVisible({ timeout: 10000 });
+            } else {
+                await expect(welcomePage.elements().updates()).toBeHidden({ timeout: 10000 });
+            }
+        });
     }
 });
