@@ -53,9 +53,6 @@ on:
       pmm_qa_integration_branch:
         required: false
         type: string
-      branch:
-        required: false
-        type: string
       pmm_server_image:
         required: true
         type: string
