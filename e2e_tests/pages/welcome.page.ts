@@ -67,25 +67,6 @@ export default class WelcomePage {
         });
     };
 
-    // mock no services
-    mockNoServices = async (): Promise<void> => {
-        await this.page.route('**/v1/inventory/services', async (route) => {
-            await route.fulfill({
-                status: 200,
-                contentType: 'application/json',
-                body: JSON.stringify({
-                    "mysql": [],
-                    "mongodb": [],
-                    "postgresql": [],
-                    "proxysql": [],
-                    "haproxy": [],
-                    "external": [],
-                    "valkey": []
-                })
-            })
-        })
-    };
-
     // mock api for update available
     public mockUpdateAvailable = async (updateAvailable: boolean): Promise<void> => {
         await this.page.route('**/v1/server/updates?force=true', async (route) => {
