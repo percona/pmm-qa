@@ -7,7 +7,7 @@ on:
       pmm_qa_branch:
         description: 'Branch for the pmm-qa repository.'
         type: string
-        default: 'main'
+        default: 'PMM-7-fix-new-navigation-playwright'
         required: true
       pmm_test_flag:
         description: 'Flag to run only specific portion of the tests.'
