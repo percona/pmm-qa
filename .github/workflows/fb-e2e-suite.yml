@@ -315,7 +315,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       qa_integration_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || (github.event_name == 'pull_request' && github.head_ref) || github.ref_name || 'main' }}
+      pmm_qa_branch: 'PMM-7-fix-new-navigation-playwright'
       setup_services: '--database ps=8.4,QUERY_SOURCE=slowlog'
       pmm_test_flag: '@pmm-ps-integration'
 
