@@ -1,5 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
-import { expect, Page } from '@playwright/test';
+import { expect } from '@playwright/test';
 
 pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
     await page.goto('');
@@ -7,10 +7,10 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 });
 
 
-pmmTest('PMM-T2132 Verify welcome Card appears on fresh install', async ({ welcomePage }) => {
+pmmTest('PMM-T2132 Verify welcome Card appears on fresh install', async ({ welcomePage, mockNoServiceHelper }) => {
     await pmmTest.step('Mock fresh install and no services', async () => {
         await welcomePage.mockFreshInstall();
-        await welcomePage.mockNoServices();
+        await mockNoServiceHelper.mockNoServices();
     });
 
     await pmmTest.step('Verify welcome card and its buttons are visible', async () => {
