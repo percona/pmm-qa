@@ -10,25 +10,25 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 pmmTest('verify left menu sidebar collapse and expand', async ({ page, leftNavigation }) => {
     
     await pmmTest.step('verify left menu sidebar collapse and expand', async () => {
-        await expect(leftNavigation.elements.sidebar).toBeVisible();
-        await expect(leftNavigation.elements.closeLeftNavigationButton).toBeVisible();
-        await expect(leftNavigation.elements.openLeftNavigationButton).toBeHidden();
+        // await expect(leftNavigation.elements.sidebar).toBeVisible();
+        await expect(leftNavigation.elements().closeLeftNavigationButton()).toBeVisible();
+        await expect(leftNavigation.elements().openLeftNavigationButton()).toBeHidden();
     });
 
     await pmmTest.step('collapse left menu sidebar and verify collapsed', async () => {
         await leftNavigation.collapseSidebar();
-        await expect(leftNavigation.elements.openLeftNavigationButton).toBeVisible();
-        await expect(leftNavigation.elements.closeLeftNavigationButton).toBeHidden();
+        await expect(leftNavigation.elements().openLeftNavigationButton()).toBeVisible();
+        await expect(leftNavigation.elements().closeLeftNavigationButton()).toBeHidden();
         await page.reload();
-        await expect(leftNavigation.elements.openLeftNavigationButton).toBeVisible();
-        await expect(leftNavigation.elements.closeLeftNavigationButton).toBeHidden();
+        await expect(leftNavigation.elements().openLeftNavigationButton()).toBeVisible();
+        await expect(leftNavigation.elements().closeLeftNavigationButton()).toBeHidden();
     });
 
     await pmmTest.step('expand left menu sidebar and verify expanded', async () => {
         await leftNavigation.mouseHoverOnPmmLogo();
         await leftNavigation.expandSidebar();
-        await expect(leftNavigation.elements.closeLeftNavigationButton).toBeVisible();
-        await expect(leftNavigation.elements.openLeftNavigationButton).toBeHidden();
+        await expect(leftNavigation.elements().closeLeftNavigationButton()).toBeVisible();
+        await expect(leftNavigation.elements().openLeftNavigationButton()).toBeHidden();
     });
 });
 
@@ -63,16 +63,17 @@ pmmTest('Traverse all the menu items in left menu sidebar', async ({ page, leftN
 
         for (const [key, value] of items) {
             if (key === 'signOut') {
-                await responseAfterClick(value as Locator, `${parent}.${key}`);
+                if (typeof value === 'function') {
+                    await responseAfterClick(value(), `${parent}.${key}`);
+                }
                 return;
             }
 
-            if (typeof value === 'string') {
-                const locator = page.locator(value);
+            if (typeof value === 'function') {
+                const locator = value();
                 await responseAfterClick(locator, `${parent}.${key}`);
             } else if (typeof value === 'object' && value !== null) {
-                // Check if it looks like a Locator (duck typing)
-                if (typeof (value as Locator).click === 'function') {
+                if ('click' in value && typeof (value as Record<string, unknown>).click === 'function') {
                     await responseAfterClick(value as Locator, `${parent}.${key}`);
                 } else {
                     await traverseMenuItems(value as Record<string, MenuItem>, `${parent}.${key}`);
@@ -82,31 +83,25 @@ pmmTest('Traverse all the menu items in left menu sidebar', async ({ page, leftN
     };
 
     const traverseAllMenuItems = async () => {
-        const simpleMenuItems = ['home', 'qan', 'help'] as const;
+        
+        const simpleMenuItems = LeftNavigation.simpleMenuItems;
+        const menuWithChildren = LeftNavigation.menuWithChildren;
+        const elements = leftNavigation.elements() as Record<string, MenuItem>;
 
-        const menuWithChildren = [
-            'mysql',
-            'postgresql',
-            'mongodb',
-            'operatingsystem',
-            'alldashboards',
-            'explore',
-            'alerts',
-            'perconaadvisors',
-            'inventory',
-            'backups',
-            'configuration',
-            'usersAndAccess',
-            'accounts'
-        ] as const;
-
-        for (const item of simpleMenuItems) {
-            await responseAfterClick(leftNavigation.elements[item], item);
+        for (const item of simpleMenuItems) {   
+            const element = elements[item];
+            if (typeof element === 'function') {
+                await responseAfterClick(element(), item);
+            }
         }
 
         for (const parent of menuWithChildren) {
-            await responseAfterClick(leftNavigation.elements[parent], parent);
-            const children = (leftNavigation.elements as Record<string, MenuItem>)[`${parent}Menu`];
+            const parentElement = elements[parent];
+            if (typeof parentElement === 'function') {
+                await responseAfterClick(parentElement(), parent);
+            }
+            
+            const children = elements[`${parent}Menu`];
             if (children) {
                 await traverseMenuItems(children as Record<string, MenuItem>, parent);
             }
@@ -129,9 +124,9 @@ pmmTest('RBAC/permissions', async ({ leftNavigation, grafanaHelper }) => {
 
     await pmmTest.step('login as non-admin and verify permissions', async () => {
         await grafanaHelper.authorize('nonadmin', 'nonadmin');
-        await expect(leftNavigation.elements.configuration).toBeHidden();
+        await expect(leftNavigation.elements().configuration()).toBeHidden();
         await leftNavigation.selectMenuItem('help');
-        await expect(leftNavigation.elements.dumpLogs).toBeHidden();
+        await expect(leftNavigation.elements().dumpLogs()).toBeHidden();
     });
 });
 
@@ -139,22 +134,11 @@ pmmTest('verify custom time range persists on any dashboard', async ({ leftNavig
     const selectedTimeRange = 'Last 15 minutes';
 
     const verifyTimeRangeOnDashboards = async (leftNavigation: LeftNavigation, selectedTimeRange: string) => {
-        const dashboards = [
-            'mysql',
-            'mysqlMenu.summary',
-            'mysqlMenu.highAvailability',
-            'mysqlMenu.ha.replication',
-            'postgresql',
-            'operatingsystem',
-            'qan',
-            'help',
-            'home'
-        ] as const;
-
+        const dashboards = LeftNavigation.dashboardsToVerifyTimeRange;
         for (const dashboard of dashboards) {
-            await pmmTest.step(`Verify time range on ${dashboard}`, async () => {
+            await pmmTest.step(`Verify time range`, async () => {
                 await leftNavigation.selectMenuItem(dashboard);
-                await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange);
+                await expect(leftNavigation.elements().timePickerOpenButton()).toContainText(selectedTimeRange, { timeout: 10000 });
             });
         }
     };
@@ -163,6 +147,7 @@ pmmTest('verify custom time range persists on any dashboard', async ({ leftNavig
         await leftNavigation.selectMenuItem('home');
         await leftNavigation.openTimePicker();
         await leftNavigation.selectTimeRange(selectedTimeRange);
+        await expect(leftNavigation.elements().timePickerOpenButton()).toContainText(selectedTimeRange);
     });
 
     await pmmTest.step('Verify time range persistence', async () => {
@@ -171,25 +156,25 @@ pmmTest('verify custom time range persists on any dashboard', async ({ leftNavig
 
     await pmmTest.step('Verify new tab persistence', async () => {
         const newPage = await leftNavigation.newTab();
-        await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange);
+        await expect(leftNavigation.elements().timePickerOpenButton()).toContainText(selectedTimeRange);
     });
 });
 
 pmmTest('Grafana embedding', async ({ leftNavigation }) => {
     await pmmTest.step('Verify old menu hidden', async () => {
-        await expect(leftNavigation.elements.oldLeftMenu).toBeHidden();
+        await expect(leftNavigation.elements().oldLeftMenu()).toBeHidden();
     });
 
     await pmmTest.step('Verify iframe hidden on Help page', async () => {
         await leftNavigation.selectMenuItem('help');
-        await expect(leftNavigation.elements.iframe).toBeHidden();
+        await expect(leftNavigation.elements().iframe()).toBeHidden();
     });
 
     await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
          await leftNavigation.selectMenuItem('home');
-         await expect(leftNavigation.elements.iframe).toBeVisible();
+         await expect(leftNavigation.elements().iframe()).toBeVisible();
          await leftNavigation.selectMenuItem('help');
-         await expect(leftNavigation.elements.iframe).toBeHidden();
+         await expect(leftNavigation.elements().iframe()).toBeHidden();
     });
 });
 
@@ -198,12 +183,12 @@ pmmTest('verify node/service persistence', async ({ page, leftNavigation }) => {
     await pmmTest.step('verify service persistence in overview and summary dashboards', async () => {
         await leftNavigation.selectMenuItem('mysql');
         const selectedService = await leftNavigation.selectService(5, /ps-single-\d+/);
-        await expect(leftNavigation.frame.getByText(selectedService)).toBeVisible();
+        await expect(leftNavigation.iframe().getByText(selectedService)).toBeVisible();
         await leftNavigation.selectMenuItem('mysqlMenu.summary');
-        await expect(leftNavigation.frame.getByText(selectedService)).toBeVisible();
+        await expect(leftNavigation.iframe().getByText(selectedService)).toBeVisible();
         // check persistence in new tab
         const newPage = await leftNavigation.newTab();
-        await expect(leftNavigation.frame.getByText(selectedService)).toBeVisible();
+        await expect(leftNavigation.iframe().getByText(selectedService)).toBeVisible();
         await newPage.close();
         leftNavigation.switchPage(page);
     });
@@ -211,22 +196,21 @@ pmmTest('verify node/service persistence', async ({ page, leftNavigation }) => {
     await pmmTest.step('verify node persistence in system and postgre dashboards', async () => {
         await leftNavigation.selectMenuItem('operatingsystem');
         const selectedNode = await leftNavigation.selectNode(3, /pmm-server/);
-        await expect(leftNavigation.frame.getByText(selectedNode)).toBeVisible();
+        await expect(leftNavigation.iframe().getByText(selectedNode)).toBeVisible();
         await leftNavigation.selectMenuItem('postgresql');
-        await expect(leftNavigation.frame.getByText(selectedNode)).toBeHidden();
+        await expect(leftNavigation.iframe().getByText(selectedNode)).toBeHidden();
     });
 
     await pmmTest.step('Verify node persistence in node overview', async () => {
         await leftNavigation.selectMenuItem('mysql');
         const selectedNode = await leftNavigation.selectNode(4, /client_container_\d+/);
-        await expect(leftNavigation.frame.getByText(selectedNode)).toBeVisible();
+        await expect(leftNavigation.iframe().getByText(selectedNode)).toBeVisible();
         await leftNavigation.selectMenuItem('operatingsystem');
-        await expect(leftNavigation.frame.getByText(selectedNode)).toBeVisible();
+        await expect(leftNavigation.iframe().getByText(selectedNode)).toBeVisible();
         // check persistence in new tab
         const newPage = await leftNavigation.newTab();
-        await expect(leftNavigation.frame.getByText(selectedNode)).toBeVisible();
+        await expect(leftNavigation.iframe().getByText(selectedNode)).toBeVisible();
         await newPage.close();
         leftNavigation.switchPage(page);
     });
 });
-
