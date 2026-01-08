@@ -10,14 +10,14 @@ pmmTest(
   async ({ page, urlHelper, api, dashboard }) => {
     const serviceList = await api.inventoryApi.getServicesByType(ServiceType.mysql);
     await page.goto(
-      urlHelper.buildUrlWithParameters(dashboard.mysqlInstanceOverview.url, {
+      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceOverview.url, {
         from: 'now-3h',
         serviceName: serviceList[0].service_name,
       }),
     );
 
-    await dashboard.verifyMetricsPresent(dashboard.mysqlInstanceOverview.metrics);
-    await dashboard.verifyAllPanelsHaveData(dashboard.mysqlInstanceOverview.noDataMetrics);
-    await dashboard.verifyPanelValues(dashboard.mysqlInstanceOverview.metrics);
+    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstanceOverview.metrics);
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInstanceOverview.noDataMetrics);
+    await dashboard.verifyPanelValues(dashboard.mysql.mysqlInstanceOverview.metrics);
   },
 );

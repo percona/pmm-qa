@@ -1,18 +1,18 @@
 import pmmTest from '@fixtures/pmmTest';
 import { ServiceType } from '@interfaces/inventory';
-import { valkeyDashboards } from '@pages/dashboards/dashboards.page';
+import ValkeyDashboards from '@valkey';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-for (const dashboardName of Object.keys(valkeyDashboards)) {
+for (const dashboardName in ValkeyDashboards) {
   pmmTest(
     `PMM-T2087 - ${dashboardName} dashboard metrics @nightly @dashboards`,
     async ({ page, urlHelper, api, dashboard }) => {
       const serviceList = await api.inventoryApi.getServicesByType(ServiceType.valkey);
       const cluster = serviceList[0].cluster;
-      const dashboardPage = dashboard.valkeyDashboards[dashboardName];
+      const dashboardPage = dashboard.valkey[dashboardName];
 
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboardPage.url, {
