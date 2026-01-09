@@ -4,14 +4,13 @@ import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
-import ValkeyDashboards from '@valkey';
-import MysqlDashboards from '@pages/dashboards/mysql';
+import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
+import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
 import Panels from '@components/dashboards/panels';
-import DashboardInterface from '@interfaces/dashboard';
 
 export default class Dashboards extends BasePage {
-  readonly mysql: Record<string, DashboardInterface>;
-  readonly valkey: Record<string, DashboardInterface>;
+  readonly mysql: MysqlDashboardsType;
+  readonly valkey: ValkeyDashboardsType;
   readonly panels;
 
   constructor(page: Page) {
@@ -38,7 +37,7 @@ export default class Dashboards extends BasePage {
     loadingBar: () => this.grafanaIframe().getByLabel('Panel loading bar'),
     gridItems: () => this.grafanaIframe().locator('.react-grid-item'),
     summaryPanelText: () =>
-      this.page.locator(
+      this.grafanaIframe().locator(
         '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
       ),
   };

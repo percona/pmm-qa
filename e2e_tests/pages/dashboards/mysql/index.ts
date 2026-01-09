@@ -12,7 +12,7 @@ import MysqlWaitEventAnalysesDetails from './mysqlWaitEventAnalysesDetails';
 import MysqlCommandHandlerCountersCompare from './mysqlCommandHandlerCountersCompare';
 import MysqlInnoDBCompressionDetails from './mysqlInnodbCompressionDetails';
 
-const MysqlDashboards = {
+export const MysqlDashboards = {
   haproxyInstanceSummary: new HaproxyInstanceSummary(),
   mysqlCommandHandlerCountersCompare: new MysqlCommandHandlerCountersCompare(),
   mysqlGroupReplicationSummary: new MysqlGroupReplicationSummary(),
@@ -28,4 +28,4 @@ const MysqlDashboards = {
   pxcGaleraNodesCompare: new PXCGaleraNodesCompare(),
 };
 
-export default MysqlDashboards;
+export type MysqlDashboardsType = typeof MysqlDashboards;

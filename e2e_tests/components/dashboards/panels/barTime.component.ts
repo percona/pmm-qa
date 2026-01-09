@@ -2,13 +2,13 @@ import { Page } from '@playwright/test';
 import PanelComponent from '@components/dashboards/panels/panel.component';
 
 export default class BarTimePanel extends PanelComponent {
-  constructor(private page: Page) {
-    super();
+  constructor(page: Page) {
+    super(page);
   }
 
   private elements = {
     barTimeValues: (panelName: string) =>
-      this.page.locator(
+      this.grafanaIframe().locator(
         `//section[@data-testid="data-testid Panel header ${panelName}"]//button[contains(@class, "LegendLabel")]`,
       ),
   };

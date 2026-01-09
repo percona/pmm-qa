@@ -9,7 +9,7 @@ import ValkeyPersistenceDetailsDashboard from '@pages/dashboards/valkey/valkeyPe
 import ValkeyReplicationDashboard from '@pages/dashboards/valkey/valkeyReplicationDashboard';
 import ValkeySlowlogDashboard from '@pages/dashboards/valkey/valkeySlowlogDashboard';
 
-const ValkeyDashboards = {
+export const ValkeyDashboards = {
   valkeyClientsDashboard: new ValkeyClientsDashboard(),
   valkeyClusterDetailsDashboard: new ValkeyClusterDetailsDashboard(),
   valkeyCommandDetailDashboard: new ValkeyCommandDetailDashboard(),
@@ -22,4 +22,4 @@ const ValkeyDashboards = {
   valkeySlowlogDashboard: new ValkeySlowlogDashboard(),
 };
 
-export default ValkeyDashboards;
+export type ValkeyDashboardsType = typeof ValkeyDashboards;
