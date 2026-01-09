@@ -2,7 +2,6 @@ import { Page, expect, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
-import MysqlInstanceOverview from '@pages/dashboards/mysql/mysqlInstanceOverview';
 import {
   ValkeyClientsDashboard,
   ValkeyClusterDetailsDashboard,
@@ -16,8 +15,8 @@ import {
   ValkeySlowlogDashboard,
 } from '@valkey';
 import { Timeouts } from '@helpers/timeouts';
-import MysqlDashboards from '@pages/dashboards/mysql/mysql.dashboards';
 import Panels from '@components/dashboards/panels';
+import MysqlDashboards from '@pages/dashboards/mysql';
 
 export const valkeyDashboards = {
   'Valkey Overview': new ValkeyOverviewDashboard(),
@@ -34,17 +33,13 @@ export const valkeyDashboards = {
 
 export default class Dashboards {
   private readonly page: Page;
-  // MySQL dashboards
-  readonly mysql: MysqlDashboards;
-  readonly mysqlInstanceOverview: MysqlInstanceOverview;
-  // Valkey dashboards
+  readonly mysql: Record<string, any>;
   readonly valkeyDashboards: Record<string, any> = valkeyDashboards;
   readonly panels;
 
   constructor(page: Page) {
     this.page = page;
-    this.mysqlInstanceOverview = new MysqlInstanceOverview();
-    this.mysql = new MysqlDashboards();
+    this.mysql = MysqlDashboards;
     this.panels = () => Panels(this.page);
   }
 
