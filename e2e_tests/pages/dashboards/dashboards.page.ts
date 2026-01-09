@@ -2,63 +2,58 @@ import { Page, expect, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
-import {
-  ValkeyClientsDashboard,
-  ValkeyClusterDetailsDashboard,
-  ValkeyCommandDetailDashboard,
-  ValkeyLoadDashboard,
-  ValkeyMemoryDashboard,
-  ValkeyNetworkDashboard,
-  ValkeyOverviewDashboard,
-  ValkeyPersistenceDetailsDashboard,
-  ValkeyReplicationDashboard,
-  ValkeySlowlogDashboard,
-} from '@valkey';
+import TimeSeriesPanel from '@components/dashboards/panels/timeSeries.component';
+import StatPanel from '@components/dashboards/panels/stat.component';
+import BarGaugePanel from '@components/dashboards/panels/barGauge.component';
+import PolyStatPanel from '@components/dashboards/panels/polyStat.component';
+import TablePanel from '@components/dashboards/panels/table.component';
 import { Timeouts } from '@helpers/timeouts';
-import Panels from '@components/dashboards/panels';
+import BasePage from '@pages/base.page';
+import ValkeyDashboards from '@valkey';
 import MysqlDashboards from '@pages/dashboards/mysql';
+import Panels from '@components/dashboards/panels';
+import DashboardInterface from '@interfaces/dashboard';
 
-export const valkeyDashboards = {
-  'Valkey Overview': new ValkeyOverviewDashboard(),
-  'Valkey Clients': new ValkeyClientsDashboard(),
-  'Valkey Cluster Details': new ValkeyClusterDetailsDashboard(),
-  'Valkey Command Detail': new ValkeyCommandDetailDashboard(),
-  'Valkey Load': new ValkeyLoadDashboard(),
-  'Valkey Memory': new ValkeyMemoryDashboard(),
-  'Valkey Network': new ValkeyNetworkDashboard(),
-  'Valkey Persistence Details': new ValkeyPersistenceDetailsDashboard(),
-  'Valkey Replication': new ValkeyReplicationDashboard(),
-  'Valkey Slowlog': new ValkeySlowlogDashboard(),
-} as const;
-
-export default class Dashboards {
-  private readonly page: Page;
-  readonly mysql: Record<string, any>;
-  readonly valkeyDashboards: Record<string, any> = valkeyDashboards;
-  readonly panels;
+export default class Dashboards extends BasePage {
+  private readonly timeSeriesPanel: TimeSeriesPanel;
+  private readonly statPanel: StatPanel;
+  private readonly barGaugePanel: BarGaugePanel;
+  private readonly polyStatPanel: PolyStatPanel;
+  private readonly tablePanel: TablePanel;
+  // MySQL dashboards
+  readonly mysql: Record<string, DashboardInterface>;
+  readonly valkey: Record<string, DashboardInterface>;
 
   constructor(page: Page) {
+    super(page);
     this.page = page;
     this.mysql = MysqlDashboards;
     this.panels = () => Panels(this.page);
+    this.timeSeriesPanel = new TimeSeriesPanel(this.page);
+    this.statPanel = new StatPanel(this.page);
+    this.barGaugePanel = new BarGaugePanel(this.page);
+    this.polyStatPanel = new PolyStatPanel(this.page);
+    this.tablePanel = new TablePanel(this.page);
+    this.mysql = MysqlDashboards;
+    this.valkey = ValkeyDashboards;
   }
 
   private elements = {
-    expandRow: () => this.page.getByLabel('Expand row'),
-    panelName: () => this.page.locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    expandRow: () => this.grafanaIframe().getByLabel('Expand row'),
+    panelName: () => this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     noDataPanel: () =>
       this.page.locator(
         '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
       ),
     noDataPanelName: () =>
-      this.page.locator(
+      this.grafanaIframe().locator(
         '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
       ),
-    refreshButton: () => this.page.getByLabel('Refresh', { exact: true }),
-    loadingIndicator: () => this.page.getByLabel('data-testid Loading indicator', { exact: true }),
-    loadingText: () => this.page.getByText('Loading plugin panel...', { exact: true }),
-    loadingBar: () => this.page.getByLabel('Panel loading bar'),
-    gridItems: () => this.page.locator('.react-grid-item'),
+    refreshButton: () => this.grafanaIframe().getByLabel('Refresh', { exact: true }),
+    loadingIndicator: () => this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
+    loadingText: () => this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
+    loadingBar: () => this.grafanaIframe().getByLabel('Panel loading bar'),
+    gridItems: () => this.grafanaIframe().locator('.react-grid-item'),
     summaryPanelText: () =>
       this.page.locator(
         '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',

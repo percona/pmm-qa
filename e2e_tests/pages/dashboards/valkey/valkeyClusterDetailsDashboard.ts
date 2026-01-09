@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class ValkeyClusterDetailsDashboard {
+export default class ValkeyClusterDetailsDashboard implements DashboardInterface {
   url = 'graph/d/valkey-cluster-details/valkey-redis-cluster-details';
   metrics: GrafanaPanel[] = [
     { name: 'Slots Status', type: 'unknown' },
@@ -24,4 +25,5 @@ export default class ValkeyClusterDetailsDashboard {
     { name: 'Backlog History Bytes', type: 'unknown' },
     { name: 'Replica Resync Info', type: 'unknown' },
   ];
+  noDataMetrics = [];
 }

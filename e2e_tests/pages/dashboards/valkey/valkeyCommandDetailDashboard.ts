@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class ValkeyCommandDetailDashboard {
+export default class ValkeyCommandDetailDashboard implements DashboardInterface {
   url = 'graph/d/valkey-command-details/valkey-redis-command-detail';
   metrics: GrafanaPanel[] = [
     { name: 'All - Total Commands/Sec', type: 'unknown' },
@@ -96,4 +97,5 @@ export default class ValkeyCommandDetailDashboard {
     { name: 'valkey-replica-5-svc-* - LPUSH Latency', type: 'unknown' },
     { name: 'valkey-replica-6-svc-* - LPUSH Latency', type: 'unknown' },
   ];
+  noDataMetrics = [];
 }
