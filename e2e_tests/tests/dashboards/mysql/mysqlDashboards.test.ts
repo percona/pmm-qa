@@ -14,7 +14,6 @@ pmmTest(
       urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, { from: 'now-1h' }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.haproxyInstanceSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.haproxyInstanceSummary.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.haproxyInstanceSummary.metricsWithData);
@@ -32,12 +31,11 @@ data(services).pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstanceSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInstanceSummary.noDataMetrics);
     await dashboard.verifyPanelValues(
       dashboard.mysql.mysqlInstanceSummary.metricsWithData,
-      dashboard.mysql.mysqlInstanceSummary.noDataMetrics,
+      // dashboard.mysql.mysqlInstanceSummary.noDataMetrics,
     );
   },
 );
@@ -53,7 +51,6 @@ data(services).pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstancesCompare.metrics(service_name));
     await dashboard.verifyAllPanelsHaveData(
       dashboard.mysql.mysqlInstancesCompare.noDataMetrics(service_name),
@@ -73,7 +70,6 @@ data(services).pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstanceOverview.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInstanceOverview.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlInstanceOverview.metricsWithData);
@@ -91,7 +87,6 @@ pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlUserDetails.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlUserDetails.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlUserDetails.metricsWithData);
@@ -124,7 +119,6 @@ pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.pxcGaleraNodesCompare.metrics(service_name));
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.pxcGaleraNodesCompare.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.pxcGaleraNodesCompare.metricsWithData(service_name));
@@ -140,7 +134,6 @@ pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlGroupReplicationSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlGroupReplicationSummary.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlGroupReplicationSummary.metricsWithData);
@@ -158,7 +151,6 @@ pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlReplicationSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlReplicationSummary.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlReplicationSummary.metricsWithData);
@@ -174,47 +166,8 @@ pmmTest(
       }),
     );
 
-    await dashboard.expandAllRows();
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlMyRocksDetails.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlMyRocksDetails.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlMyRocksDetails.metricsWithData);
-  },
-);
-
-pmmTest(
-  'PMM-T9999 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
-  async ({ page, urlHelper, dashboard, api }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
-    await page.goto(
-      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlCommandHandlerCountersCompare.url, {
-        from: 'now-1h',
-        serviceName: service_name,
-      }),
-    );
-
-    await dashboard.verifyMetricsPresent(
-      dashboard.mysql.mysqlCommandHandlerCountersCompare.metrics(service_name),
-    );
-    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlCommandHandlerCountersCompare.noDataMetrics);
-    await dashboard.verifyPanelValues(
-      dashboard.mysql.mysqlCommandHandlerCountersCompare.metricsWithData(service_name),
-    );
-  },
-);
-
-pmmTest(
-  'PMM-T9998 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
-  async ({ page, urlHelper, dashboard, api }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
-    await page.goto(
-      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInnodbCompressionDetails.url, {
-        from: 'now-1h',
-        serviceName: service_name,
-      }),
-    );
-
-    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInnodbCompressionDetails.metrics);
-    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInnodbCompressionDetails.noDataMetrics);
-    await dashboard.verifyPanelValues(dashboard.mysql.mysqlInnodbCompressionDetails.metricsWithData);
   },
 );

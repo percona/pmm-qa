@@ -1,5 +1,4 @@
 import { Page, expect, test } from '@playwright/test';
-import { Page, expect } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
@@ -86,6 +85,10 @@ export default class Dashboards {
     loadingText: () => this.page.getByText('Loading plugin panel...', { exact: true }),
     loadingBar: () => this.page.getByLabel('Panel loading bar'),
     gridItems: () => this.page.locator('.react-grid-item'),
+    summaryPanelText: () =>
+      this.page.locator(
+        '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
+      ),
   };
 
   private async loadAllPanels() {
@@ -178,5 +181,5 @@ export default class Dashboards {
           throw new Error(`Unsupported panel: ${panel.name}`);
       }
     }
-  };
+  }
 }
