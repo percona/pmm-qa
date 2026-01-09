@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class ValkeyLoadDashboard {
+export default class ValkeyLoadDashboard implements DashboardInterface {
   url = 'graph/d/valkey-load/valkey-redis-load';
   metrics: GrafanaPanel[] = [
     { name: 'All - Total Commands/Sec', type: 'unknown' },
@@ -21,4 +22,5 @@ export default class ValkeyLoadDashboard {
     { name: 'IO Threads Configured', type: 'unknown' },
     { name: 'IO Threads Active', type: 'unknown' },
   ];
+  noDataMetrics = [];
 }

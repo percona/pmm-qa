@@ -2,13 +2,13 @@ import { Page } from '@playwright/test';
 import PanelComponent from './panel.component';
 
 export default class PolyStatPanel extends PanelComponent {
-  constructor(private page: Page) {
-    super();
+  constructor(page: Page) {
+    super(page);
   }
 
   private elements = {
     polyStatPanelValue: (panelName: string) =>
-      this.page.locator(
+      this.grafanaIframe().locator(
         `//section[@data-testid="data-testid Panel header ${panelName}"]//*[contains(@class, "valueLabel")]`,
       ),
   };

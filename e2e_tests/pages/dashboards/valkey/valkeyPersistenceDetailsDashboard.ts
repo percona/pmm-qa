@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class ValkeyPersistenceDetailsDashboard {
+export default class ValkeyPersistenceDetailsDashboard implements DashboardInterface {
   url = 'graph/d/valkey-persistence-details/valkey-redis-persistence-details';
   metrics: GrafanaPanel[] = [
     { name: 'Enabled', type: 'unknown' },
@@ -18,4 +19,5 @@ export default class ValkeyPersistenceDetailsDashboard {
     { name: 'Save Config', type: 'unknown' },
     { name: 'RDB Saves', type: 'unknown' },
   ];
+  noDataMetrics = [];
 }

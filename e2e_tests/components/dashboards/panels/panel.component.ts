@@ -1,9 +1,11 @@
-import { expect } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
 import { Locator } from 'playwright';
 import { Timeouts } from '@helpers/timeouts';
 
 export default class PanelComponent {
-  constructor() {}
+  constructor(protected page: Page) {}
+
+  protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
 
   protected verifyData = async (locator: Locator, panelName: string) => {
     const target = locator.first();

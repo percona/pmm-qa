@@ -2,13 +2,13 @@ import { Page } from '@playwright/test';
 import PanelComponent from './panel.component';
 
 export default class GaugePanel extends PanelComponent {
-  constructor(private page: Page) {
-    super();
+  constructor(page: Page) {
+    super(page);
   }
 
   private elements = {
     gaugePanelValue: (panelName: string) =>
-      this.page.locator(
+      this.grafanaIframe().locator(
         `//section[@data-testid="data-testid Panel header ${panelName}"]//span[contains(@id, "flotGaugeValue")]`,
       ),
   };
