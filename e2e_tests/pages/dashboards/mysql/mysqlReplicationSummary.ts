@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MysqlReplicationSummary {
+export default class MysqlReplicationSummary implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/mysql-replicaset-summary/mysql-replication-summary';

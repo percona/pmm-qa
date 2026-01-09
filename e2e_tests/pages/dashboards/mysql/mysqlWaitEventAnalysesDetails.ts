@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MysqlWaitEventAnalysesDetails {
+export default class MysqlWaitEventAnalysesDetails implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/mysql-waitevents-analysis/mysql-wait-event-analyses-details';
@@ -22,4 +23,6 @@ export default class MysqlWaitEventAnalysesDetails {
     { name: 'Count - Performance Schema Waits', type: 'timeSeries' },
     { name: 'Count - Performance Schema Waits', type: 'timeSeries' },
   ];
+
+  noDataMetrics = [];
 }

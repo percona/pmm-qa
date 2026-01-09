@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MysqlCommandHandlerCountersCompare {
+export default class MysqlCommandHandlerCountersCompare implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/mysql-commandhandler-compare/mysql-command-handler-counters-compare';

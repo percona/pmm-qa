@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class PXCGaleraClusterSummary {
+export default class PXCGaleraClusterSummary implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/pxc-cluster-summary/pxc-galera-cluster-summary';

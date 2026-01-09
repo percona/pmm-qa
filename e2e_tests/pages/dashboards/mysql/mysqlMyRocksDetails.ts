@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MysqlMyRocksDetails {
+export default class MysqlMyRocksDetails implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/mysql-myrocks/mysql-myrocks-details';

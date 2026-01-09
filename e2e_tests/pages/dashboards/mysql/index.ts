@@ -25,7 +25,7 @@ const MysqlDashboards = {
   mysqlUserDetails: new MySQLUserDetails(),
   mysqlWaitEventAnalysesDetails: new MysqlWaitEventAnalysesDetails(),
   pxcGaleraClusterSummary: new PXCGaleraClusterSummary(),
-  pxcGaleraNodesCompare: new PXCGaleraNodesCompare(),MysqlInstanceOverview
+  pxcGaleraNodesCompare: new PXCGaleraNodesCompare(),
 };
 
 export default MysqlDashboards;

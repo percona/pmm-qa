@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MysqlInstanceSummary {
+export default class MysqlInstanceSummary implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/mysql-instance-summary/mysql-instance-summary';

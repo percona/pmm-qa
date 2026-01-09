@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MySQLUserDetails {
+export default class MySQLUserDetails implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/mysql-user/mysql-user-details';

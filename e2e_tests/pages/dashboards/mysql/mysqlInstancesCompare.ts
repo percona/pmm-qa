@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MySQLInstancesCompare {
+export default class MySQLInstancesCompare implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/mysql-instance-compare/mysql-instances-compare';

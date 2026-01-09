@@ -2,11 +2,6 @@ import { Page, expect, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
-import TimeSeriesPanel from '@components/dashboards/panels/timeSeries.component';
-import StatPanel from '@components/dashboards/panels/stat.component';
-import BarGaugePanel from '@components/dashboards/panels/barGauge.component';
-import PolyStatPanel from '@components/dashboards/panels/polyStat.component';
-import TablePanel from '@components/dashboards/panels/table.component';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 import ValkeyDashboards from '@valkey';
@@ -15,27 +10,15 @@ import Panels from '@components/dashboards/panels';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class Dashboards extends BasePage {
-  private readonly timeSeriesPanel: TimeSeriesPanel;
-  private readonly statPanel: StatPanel;
-  private readonly barGaugePanel: BarGaugePanel;
-  private readonly polyStatPanel: PolyStatPanel;
-  private readonly tablePanel: TablePanel;
-  // MySQL dashboards
   readonly mysql: Record<string, DashboardInterface>;
   readonly valkey: Record<string, DashboardInterface>;
+  readonly panels;
 
   constructor(page: Page) {
     super(page);
-    this.page = page;
-    this.mysql = MysqlDashboards;
-    this.panels = () => Panels(this.page);
-    this.timeSeriesPanel = new TimeSeriesPanel(this.page);
-    this.statPanel = new StatPanel(this.page);
-    this.barGaugePanel = new BarGaugePanel(this.page);
-    this.polyStatPanel = new PolyStatPanel(this.page);
-    this.tablePanel = new TablePanel(this.page);
     this.mysql = MysqlDashboards;
     this.valkey = ValkeyDashboards;
+    this.panels = () => Panels(this.page);
   }
 
   private elements = {

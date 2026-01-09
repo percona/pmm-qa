@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MysqlInnoDBCompressionDetails {
+export default class MysqlInnoDBCompressionDetails implements DashboardInterface {
   constructor() {}
   url = 'graph/d/mysql-innodb-compression/mysql-innodb-compression-details';
   metrics: GrafanaPanel[] = [

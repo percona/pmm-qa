@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class HaproxyInstanceSummary {
+export default class HaproxyInstanceSummary implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/haproxy-instance-summary/haproxy-instance-summary';

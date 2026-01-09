@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class PXCGaleraNodesCompare {
+export default class PXCGaleraNodesCompare implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/pxc-nodes-compare/pxc-galera-nodes-compare';
