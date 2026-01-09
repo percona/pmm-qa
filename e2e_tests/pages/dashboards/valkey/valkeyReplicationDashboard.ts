@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class ValkeyReplicationDashboard {
+export default class ValkeyReplicationDashboard implements DashboardInterface {
   url = 'graph/d/valkey-replication/valkey-redis-replication';
   metrics: GrafanaPanel[] = [
     { name: 'valkey-primary-1-svc-*', type: 'unknown' },
@@ -19,4 +20,5 @@ export default class ValkeyReplicationDashboard {
     { name: 'Backlog History Bytes', type: 'unknown' },
     { name: 'Replica Resync Info', type: 'unknown' },
   ];
+  noDataMetrics = [];
 }
