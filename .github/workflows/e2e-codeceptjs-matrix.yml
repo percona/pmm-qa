@@ -148,8 +148,8 @@ jobs:
       setup_services: '--help'
       tags_for_tests: '@disconnect'
 
-  ps_integration:
-    name: Percona Server for MySQL UI integration tests
+  valkey_integration:
+    name: Valkey integration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
