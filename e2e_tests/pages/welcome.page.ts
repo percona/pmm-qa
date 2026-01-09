@@ -9,7 +9,7 @@ export default class WelcomePage {
     constructor(public page: Page) { }
 
     public elements() {
-            return {
+        return {
             welcomeCard: () => this.page.getByTestId('welcome-card'),
             addServiceButton: () => this.page.getByTestId('welcome-card-add-service'),
             dismissButton: () => this.page.getByTestId('welcome-card-dismiss'),
@@ -17,18 +17,18 @@ export default class WelcomePage {
             tourPopover: () => this.page.locator('.reactour__popover'),
             updates: () => this.page.getByTestId('update-modal-go-to-updates-button'),
             tourCloseButton: () => this.page.getByTestId('tour-close-button'),
+        }
     }
-}
 
     clickDismiss = async (): Promise<void> => {
-    await this.elements().dismissButton().click();
-};
+        await this.elements().dismissButton().click();
+    };
 
     clickStartTour = async (): Promise<void> => {
         await this.elements().startTourButton().click();
     };
 
-    clickCloseTour = async (): Promise<void> => { 
+    clickCloseTour = async (): Promise<void> => {
         await this.elements().tourCloseButton().click();
     };
 
@@ -74,9 +74,9 @@ export default class WelcomePage {
             const now = new Date();
             const millisecond = now.getMilliseconds().toString().padStart(3, '0');
             const nanosecondTimestamp = now.toISOString().split('.')[0] + '.' + millisecond + '000000Z';
-            
-        
-        await route.fulfill({
+
+
+            await route.fulfill({
                 status: 200,
                 contentType: 'application/json',
                 body: JSON.stringify({
