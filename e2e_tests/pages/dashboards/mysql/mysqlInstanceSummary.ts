@@ -56,7 +56,6 @@ export default class MysqlInstanceSummary implements DashboardInterface {
     'Top Process States Hourly',
     'Top Command Counters Hourly',
     'MySQL Network Usage Hourly',
-    'Buffer Pool Size of Total RAM',
     'MySQL Query Cache Memory',
     'MySQL Query Cache Activity',
   ];
