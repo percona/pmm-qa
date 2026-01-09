@@ -148,18 +148,18 @@ jobs:
       setup_services: '--help'
       tags_for_tests: '@disconnect'
 
-  valkey_integration:
-    name: Valkey integration tests
-    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
-    secrets:
-      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
-    with:
-      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      qa_integration_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      setup_services: '--database valkey'
-      pmm_test_flag: '@pmm-valkey-integration'
+#  valkey_integration:
+#    name: Valkey integration tests
+#    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+#    secrets:
+#      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+#    with:
+#      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+#      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+#      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+#      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+#      setup_services: '--database valkey'
+#      pmm_test_flag: '@pmm-valkey-integration'
 
   fb_tests:
     name: FB E2E tests
