@@ -35,7 +35,7 @@ base.beforeEach(async ({ page }) => {
   );
 });
 
-const pmmTest = base.extend<{
+type pmmTestType = {
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
@@ -43,7 +43,9 @@ const pmmTest = base.extend<{
   api: Api;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
-}>({
+};
+
+const pmmTest = base.extend<pmmTestType>({
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
     await use(cliHelper);

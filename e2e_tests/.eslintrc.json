@@ -22,6 +22,7 @@
     "playwright/no-wait-for-timeout": "off",
     "playwright/no-standalone-expect": "off",
     "no-case-declarations": "off",
+    "indent": ["error", 2, { "SwitchCase": 1 }],
     "max-len": ["error", {
       "code": 110,
       "ignoreUrls": true,
