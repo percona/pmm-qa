@@ -1,15 +1,44 @@
+import { Page, expect, test } from '@playwright/test';
 import { Page, expect } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import { GetService } from '@interfaces/inventory';
+import { replaceWildcards } from '@helpers/metrics.helper';
 import TimeSeriesPanel from '@components/dashboards/panels/timeSeries.component';
 import StatPanel from '@components/dashboards/panels/stat.component';
 import BarGaugePanel from '@components/dashboards/panels/barGauge.component';
 import PolyStatPanel from '@components/dashboards/panels/polyStat.component';
 import TablePanel from '@components/dashboards/panels/table.component';
+import MysqlInstanceOverview from '@pages/dashboards/mysql/mysqlInstanceOverview';
+import {
+  ValkeyClientsDashboard,
+  ValkeyClusterDetailsDashboard,
+  ValkeyCommandDetailDashboard,
+  ValkeyLoadDashboard,
+  ValkeyMemoryDashboard,
+  ValkeyNetworkDashboard,
+  ValkeyOverviewDashboard,
+  ValkeyPersistenceDetailsDashboard,
+  ValkeyReplicationDashboard,
+  ValkeySlowlogDashboard,
+} from '@valkey';
 import { Timeouts } from '@helpers/timeouts';
 import TextPanel from '@components/dashboards/panels/text.component';
 import MysqlDashboards from '@pages/dashboards/mysql/mysql.dashboards';
 import StateTimePanel from '@components/dashboards/panels/stateTime.component';
 import BarTimePanel from '@components/dashboards/panels/barTime.component';
+
+export const valkeyDashboards = {
+  'Valkey Overview': new ValkeyOverviewDashboard(),
+  'Valkey Clients': new ValkeyClientsDashboard(),
+  'Valkey Cluster Details': new ValkeyClusterDetailsDashboard(),
+  'Valkey Command Detail': new ValkeyCommandDetailDashboard(),
+  'Valkey Load': new ValkeyLoadDashboard(),
+  'Valkey Memory': new ValkeyMemoryDashboard(),
+  'Valkey Network': new ValkeyNetworkDashboard(),
+  'Valkey Persistence Details': new ValkeyPersistenceDetailsDashboard(),
+  'Valkey Replication': new ValkeyReplicationDashboard(),
+  'Valkey Slowlog': new ValkeySlowlogDashboard(),
+} as const;
 
 export default class Dashboards {
   private readonly page: Page;
@@ -23,6 +52,9 @@ export default class Dashboards {
   private readonly stateTime: StateTimePanel;
   // MySQL dashboards
   readonly mysql: MysqlDashboards;
+  readonly mysqlInstanceOverview: MysqlInstanceOverview;
+  // Valkey dashboards
+  readonly valkeyDashboards: Record<string, any> = valkeyDashboards;
 
   constructor(page: Page) {
     this.page = page;
@@ -32,17 +64,14 @@ export default class Dashboards {
     this.barTimePanel = new BarTimePanel(this.page);
     this.polyStatPanel = new PolyStatPanel(this.page);
     this.tablePanel = new TablePanel(this.page);
+    this.mysqlInstanceOverview = new MysqlInstanceOverview();
     this.textPanel = new TextPanel(this.page);
     this.stateTime = new StateTimePanel(this.page);
     this.mysql = new MysqlDashboards();
   }
 
   private elements = {
-    expandRow: () => this.page.locator('//*[@aria-label="Expand row"]'),
-    row: () =>
-      this.page.locator(
-        '//button[contains(@data-testid, "dashboard-row-title")]//ancestor::div[contains(@class, "react-grid-item")]',
-      ),
+    expandRow: () => this.page.getByLabel('Expand row'),
     panelName: () => this.page.locator('//section[contains(@data-testid, "Panel header")]//h2'),
     noDataPanel: () =>
       this.page.locator(
@@ -52,32 +81,48 @@ export default class Dashboards {
       this.page.locator(
         '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
       ),
-    rowByName: (rowName: string) =>
-      this.page.locator(
-        `//button[contains(@data-testid, "dashboard-row-title") and contains(@data-testid, "${rowName}")]`,
-      ),
-    summaryPanelText: () =>
-      this.page.locator(
-        '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
-      ),
+    refreshButton: () => this.page.getByLabel('Refresh', { exact: true }),
+    loadingIndicator: () => this.page.getByLabel('data-testid Loading indicator', { exact: true }),
+    loadingText: () => this.page.getByText('Loading plugin panel...', { exact: true }),
+    loadingBar: () => this.page.getByLabel('Panel loading bar'),
+    gridItems: () => this.page.locator('.react-grid-item'),
   };
 
-  public async verifyAllPanelsHaveData(noDataMetrics: string[]) {
-    const noDataPanels = new Set<string>();
+  private async loadAllPanels() {
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+    // Wait for the dashboard to be visible before proceeding.
+    await test.step('Wait for initial loading to finish', async () => {
+      await expectPanel(this.elements.refreshButton()).toBeVisible();
+      await expectPanel(this.elements.loadingIndicator()).toHaveCount(0);
+      await expectPanel(this.elements.loadingText()).toHaveCount(0);
+    });
 
-    for (let i = 0; i < 10; i++) {
-      const noDataPanelNames = await this.elements.noDataPanelName().allTextContents();
-      noDataPanelNames.forEach((panelName: string) => noDataPanels.add(panelName));
+    // Expand rows if present and wait for content in each item.
+    await test.step('Expand rows and load panel content', async () => {
+      for (let i = 0; i < (await this.elements.gridItems().count()); i++) {
+        const item = this.elements.gridItems().nth(i);
+        await item.scrollIntoViewIfNeeded();
 
-      await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
-    }
+        const expandButton = item.getByLabel('Expand row');
+        if (await expandButton.isVisible()) {
+          await expandButton.click();
+        }
 
-    await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
+      }
+    });
 
+    // Confirms that there are no remaining loading bars.
+    await test.step('Wait for loading to finish', async () => {
+      await expectPanel(this.elements.loadingBar()).toHaveCount(0);
+    });
+  }
+
+  async verifyAllPanelsHaveData(noDataMetrics: string[]) {
+    await this.loadAllPanels();
+    const noDataPanels = await this.elements.noDataPanelName().allTextContents();
     const missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
-    const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.has(e));
+    const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.includes(e));
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
     expect
@@ -85,59 +130,19 @@ export default class Dashboards {
       .toHaveLength(0);
   }
 
-  public async verifyMetricsPresent(expectedMetrics: GrafanaPanel[]) {
+  async verifyMetricsPresent(expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) {
+    expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
     const expectedMetricsNames = expectedMetrics.map((e) => e.name);
-    await this.page.keyboard.press('Home');
-    const availableMetrics = (await this.getAllAvailablePanels()).filter((name) => name.trim().length != 0);
+    await this.loadAllPanels();
+    const availableMetrics = await this.elements.panelName().allTextContents();
 
     expect(availableMetrics.sort()).toEqual(expectedMetricsNames.sort());
-
-    await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(Timeouts.HALF_SECOND);
   }
 
-  expandAllRows = async () => {
-    await this.elements
-      .row()
-      .first()
-      .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS })
-      .catch(() => {});
-    await this.page.keyboard.press('End');
-    await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-    const rowsName = await this.elements.expandRow().allTextContents();
-
-    for (const rowName of rowsName) {
-      await this.elements.rowByName(rowName).click();
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-    }
-
-    await this.page.keyboard.press('Home');
-    await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-  };
-
-  private async getAllAvailablePanels(): Promise<string[]> {
-    const availableMetrics: { name: string | null; id: string | null }[] = [];
-
-    for (let i = 0; i < 20; i++) {
-      await this.page.keyboard.press('PageDown');
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-      for (const panel of await this.elements.panelName().all()) {
-        const metric = { name: await panel.textContent(), id: await panel.getAttribute('id') };
-        if (!availableMetrics.some((m) => m.name === metric.name && m.id === metric.id)) {
-          availableMetrics.push(metric);
-        }
-      }
-    }
-
-    return Array.from(availableMetrics.values().map((panel) => panel.name!));
-  }
-
-  public verifyPanelValues = async (panels: GrafanaPanel[], noDataPanels?: string[]) => {
-    for (const panel of panels) {
-      if (noDataPanels?.includes(panel.name)) {
-        break;
-      }
-
+  async verifyPanelValues(panels: GrafanaPanel[], serviceList?: GetService[]) {
+    await this.loadAllPanels();
+    const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
+    for (const panel of panelList) {
       switch (panel.type) {
         case 'timeSeries':
           await this.timeSeriesPanel.verifyPanelData(panel.name);

@@ -1,18 +1,16 @@
 name: _FB integration CLI tests
 
 on:
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
     inputs:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch(CLI tests)'
-        default: 'v3'
+        default: 'main'
         required: false
         type: string
       qa_integration_branch:
         description: 'qa-integration repository branch(for setup)'
-        default: 'v3'
+        default: 'main'
         required: false
         type: string
       pmm_server_image:
@@ -64,8 +62,8 @@ jobs:
     secrets: inherit
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'v3' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'v3' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}

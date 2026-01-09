@@ -7,7 +7,7 @@ on:
       package_testing_branch:
         description: 'Target branch for package-testing repository'
         type: string
-        default: 'v3'
+        default: 'master'
         required: true
       pmm_server_image:
         description: "pmm-server docker image"
@@ -85,7 +85,7 @@ jobs:
         id: filter
         run: |
           pt_os='${{ needs.get_versions.outputs.pt_os }}'
-          filtered_os=$(echo "$pt_os" | jq -c 'map(select(. != "ol-8" and . != "ol-9"))')
+          filtered_os=$(echo "$pt_os" | jq -c 'map(select(. == "noble"))')
           echo "filtered_os=$filtered_os" >> $GITHUB_OUTPUT
 
   fb_test:
@@ -98,7 +98,7 @@ jobs:
       matrix:
         os: ${{ fromJSON(needs.filter_os.outputs.filtered_os) }}
     with:
-      package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
+      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       pmm_server_image: ${{ inputs.pmm_server_image }}
       pmm_client_tarball: ${{ inputs.pmm_client_tarball == '3-dev-latest' && needs.get_versions.outputs.finish_version || inputs.pmm_client_tarball }}
       expected_version: ${{needs.get_versions.outputs.finish_version}}
