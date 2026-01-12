@@ -8,7 +8,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 const services = ['ps_pmm|mysql_pmm', 'pxc_node'];
 
 pmmTest(
-  'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-integration',
+  'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-pxc-haproxy-integration',
   async ({ page, urlHelper, dashboard }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, { from: 'now-1h' }),
@@ -94,7 +94,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T348 - PXC/Galera Node Summary dashboard @pmm-ps-integration',
+  'PMM-T348 - PXC/Galera Node Summary dashboard @pmm-pxc-haproxy-integration',
   async ({ page, urlHelper, dashboard }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.pxcGaleraClusterSummary.url, {
@@ -109,7 +109,7 @@ pmmTest(
 );
 
 pmmTest(
-  'PMM-T349 - PXC/Galera Nodes Compare dashboard @pmm-ps-integration',
+  'PMM-T349 - PXC/Galera Nodes Compare dashboard @pmm-pxc-haproxy-integration',
   async ({ page, urlHelper, api, dashboard }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('pxc_node');
     await page.goto(
@@ -143,7 +143,9 @@ pmmTest(
 pmmTest(
   'PMM-T2029 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
   async ({ page, urlHelper, dashboard, api }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters('ps_pmm_.*_2', {
+      replication_set: 'ps-async-replication',
+    });
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlReplicationSummary.url, {
         from: 'now-1h',

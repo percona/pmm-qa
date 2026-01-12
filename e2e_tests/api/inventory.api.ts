@@ -31,6 +31,27 @@ export default class InventoryApi {
     return service!;
   };
 
+  getServiceDetailsByRegexAndParameters = async (
+    regexString: string,
+    parameters: object,
+  ): Promise<GetService> => {
+    const services = await this.getServices();
+    const regex = new RegExp(regexString);
+    let filteredServices = services.services.filter((service: GetService) =>
+      regex.test(service.service_name),
+    );
+
+    Object.entries(parameters).forEach(([key, value]) => {
+      filteredServices = filteredServices.filter(
+        (service: GetService) => service[key as keyof GetService] === value,
+      );
+    });
+
+    expect(filteredServices.length, `Service matching regex: ${regex} is not present`).toBeGreaterThan(0);
+
+    return filteredServices[0];
+  };
+
   getServicesByType = async (serviceType: ServiceType) => {
     const serviceList = await this.getServices();
 
