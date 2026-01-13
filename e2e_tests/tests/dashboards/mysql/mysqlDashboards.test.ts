@@ -120,7 +120,9 @@ pmmTest(
     );
 
     await dashboard.verifyMetricsPresent(dashboard.mysql.pxcGaleraNodesCompare.metrics(service_name));
-    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.pxcGaleraNodesCompare.noDataMetrics);
+    await dashboard.verifyAllPanelsHaveData(
+      dashboard.mysql.pxcGaleraNodesCompare.noDataMetrics(service_name),
+    );
     await dashboard.verifyPanelValues(dashboard.mysql.pxcGaleraNodesCompare.metricsWithData(service_name));
   },
 );
