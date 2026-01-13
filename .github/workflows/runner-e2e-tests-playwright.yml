@@ -184,8 +184,8 @@ jobs:
           npx playwright install-deps
           npx playwright install
 
-      - name: Wait five minutes for dashboards to get data.
-        run: sleep 300
+      - name: Wait three minutes for dashboards to get data.
+        run: sleep 180
 
       - name: Execute UI tests
         if: ${{ inputs.pmm_test_flag == 'null' }}
