@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import data from '@fixtures/dataTest';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -110,7 +111,12 @@ pmmTest(
 
 pmmTest(
   'PMM-T349 - PXC/Galera Nodes Compare dashboard @pmm-pxc-haproxy-integration',
-  async ({ page, urlHelper, api, dashboard }) => {
+  async ({ page, urlHelper, api, dashboard }, testInfo) => {
+    // Wait for data if the first pass fails.
+    if (testInfo.retry > 0) {
+      await page.waitForTimeout(Timeouts.TWO_MINUTES);
+    }
+
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('pxc_node');
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.pxcGaleraNodesCompare.url, {
