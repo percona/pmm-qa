@@ -12,7 +12,7 @@ on:
         type: string
       pmm_qa_branch:
         description: 'qa-integration repository branch(for setup)'
-        default: 'main'
+        default: 'PMM-13992-mysql'
         required: false
         type: string
       pmm_server_image:
