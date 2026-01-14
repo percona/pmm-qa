@@ -4,7 +4,7 @@ let testContainerName: string;
 
 pmmTest.beforeAll(async ({ cliHelper }) => {
   const out = cliHelper.execSilent('docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}"');
-  testContainerName = out.stdout;
+  testContainerName = out.stdout.split('\n')[0];
 });
 
 pmmTest(

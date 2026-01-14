@@ -316,7 +316,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       qa_integration_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || (github.event_name == 'pull_request' && github.head_ref) || github.ref_name || 'main' }}
-      setup_services: '--database ps,SETUP_TYPE=replication,QUERY_SOURCE=slowlog,MY_ROCKS=true --database ps,SETUP_TYPE=gr'
+      setup_services: '--database ps,SETUP_TYPE=replication,QUERY_SOURCE=slowlog,MY_ROCKS=true --database ps,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
       pmm_test_flag: '@pmm-ps-integration'
 
   rbac:
