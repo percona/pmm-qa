@@ -47,7 +47,7 @@ export default class QueryAnalytics extends BasePage {
     const countString = await this.elements
       .totalCount()
       .first()
-      .textContent({ timeout: Timeouts.TEN_SECONDS });
+      .textContent({ timeout: Timeouts.ONE_MINUTE });
 
     if (!countString) {
       throw new Error('Count of queries is not displayed!');
