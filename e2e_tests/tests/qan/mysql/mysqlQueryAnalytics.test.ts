@@ -3,7 +3,7 @@ import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
   const containerName = cliHelper.execSilent(
-    'docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}" | head -n 1'
+    'docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}" | head -n 1',
   ).stdout;
   const result = cliHelper.execSilent(`docker exec -i ${containerName} mysql -h 127.0.0.1 --port 3306 \
                                                           -u ${credentials.perconaServer.ps_84.username} \

@@ -158,8 +158,8 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_qa_branch: 'PMM-14538-mysql-migration-poc' #${{ inputs.pmm_qa_branch || 'main' }}
-      setup_services: '--database haproxy --database pxc'
-      pmm_test_flag: '@pmm-pxc-haproxy-integration'
+      setup_services: '--database haproxy --database pxc --database ps'
+      pmm_test_flag: '@pmm-ps-pxc-haproxy-integration'
 
 #  valkey_integration:
 #    name: Valkey integration tests
