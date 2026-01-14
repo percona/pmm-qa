@@ -11,15 +11,13 @@ pmmTest(
   'PMM-T2113 - Verify pmm-agent is not not crashing while parsing the slow query log file',
   { tag: ['@pmm-ps-integration'] },
   async ({ cliHelper, credentials }) => {
-    console.log(process.env.CI);
-    const containerPort = testContainerName.includes('8.4') ? 3306 : 3307;
     const user = credentials.perconaServer.ps_84;
 
     let out = await cliHelper.execSilent(`docker exec ${testContainerName} pmm-admin status`);
     out.assertSuccess();
 
     out = await cliHelper.execSilent(
-      `docker exec ${testContainerName} mysql -h 127.0.0.1 --port ${containerPort} -u ${user.username} -p${user.password} -e "set long_query_time = 0; SELECT @@GLOBAL.read_only AS Value;"`,
+      `docker exec ${testContainerName} mysql -h 127.0.0.1 --port 3306 -u ${user.username} -p${user.password} -e "set long_query_time = 0; SELECT @@GLOBAL.read_only AS Value;"`,
     );
     out.assertSuccess();
 
