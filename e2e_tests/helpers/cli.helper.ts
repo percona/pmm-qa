@@ -45,6 +45,7 @@ export default class CliHelper {
    * @return      {@link ExecReturnClass} instance
    */
   execSilent = (command: string): ExecReturn => {
+    console.log(`Running command: ${command.replace(/(\r\n|\n|\r)/gm, '')}`);
     const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
     return new ExecReturn(command, code, stdout, stderr);
   };
