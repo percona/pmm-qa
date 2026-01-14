@@ -48,12 +48,12 @@ const pmmTest = base.extend<{
   welcomePage: WelcomePage;
   mocks: Mocks;
 }>({
-  cliHelper: async ({ }, use) => {
+  cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
     await use(cliHelper);
   },
 
-  credentials: async ({ }, use) => {
+  credentials: async ({}, use) => {
     const credentials = new Credentials();
     await use(credentials);
   },
@@ -78,7 +78,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
 
-  urlHelper: async ({ }, use) => {
+  urlHelper: async ({}, use) => {
     const urlHelper = new UrlHelper();
     await use(urlHelper);
   },
