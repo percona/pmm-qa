@@ -17,7 +17,7 @@ CREATE TABLE Persons1 (
                           FirstName varchar(255),
                           Address varchar(255),
                           City varchar(255)
-);
+) ENGINE=InnoDB;
 INSERT INTO Persons1 VALUES (0,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons1 VALUES (1,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons1 VALUES (2,'Qwerty','Qwe','Address','City');
@@ -31,7 +31,7 @@ CREATE TABLE Persons2 (
                           FirstName varchar(255),
                           Address varchar(255),
                           City varchar(255)
-);
+) ENGINE=InnoDB;
 INSERT INTO Persons2 VALUES (0,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons2 VALUES (1,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons2 VALUES (2,'Qwerty','Qwe','Address','City');
@@ -45,7 +45,7 @@ CREATE TABLE Persons3 (
                           FirstName varchar(255),
                           Address varchar(255),
                           City varchar(255)
-);
+) ENGINE=InnoDB;
 INSERT INTO Persons3 VALUES (0,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons3 VALUES (1,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons3 VALUES (2,'Qwerty','Qwe','Address','City');
@@ -59,7 +59,7 @@ CREATE TABLE Persons4 (
                           FirstName varchar(255),
                           Address varchar(255),
                           City varchar(255)
-);
+) ENGINE=InnoDB;
 INSERT INTO Persons4 VALUES (0,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons4 VALUES (1,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons4 VALUES (2,'Qwerty','Qwe','Address','City');
@@ -73,7 +73,7 @@ CREATE TABLE Persons5 (
                           FirstName varchar(255),
                           Address varchar(255),
                           City varchar(255)
-);
+) ENGINE=InnoDB;
 INSERT INTO Persons5 VALUES (0,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons5 VALUES (1,'Qwerty','Qwe','Address','City');
 INSERT INTO Persons5 VALUES (2,'Qwerty','Qwe','Address','City');
