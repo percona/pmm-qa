@@ -11,6 +11,7 @@ pmmTest(
   'PMM-T2113 - Verify pmm-agent is not not crashing while parsing the slow query log file',
   { tag: ['@pmm-ps-integration'] },
   async ({ cliHelper, credentials }) => {
+    console.log(process.env.CI);
     const containerPort = testContainerName.includes('8.4') ? 3306 : 3307;
     const user = credentials.perconaServer.ps_84;
 
