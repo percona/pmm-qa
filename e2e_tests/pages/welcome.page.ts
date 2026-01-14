@@ -9,30 +9,15 @@ export default class WelcomePage {
 
   constructor(public page: Page) { }
 
-  public elements() {
-    return {
-      welcomeCard: () => this.page.getByTestId('welcome-card'),
-      addServiceButton: () => this.page.getByTestId('welcome-card-add-service'),
-      dismissButton: () => this.page.getByTestId('welcome-card-dismiss'),
-      startTourButton: () => this.page.getByTestId('welcome-card-start-tour'),
-      tourPopover: () => this.page.locator('.reactour__popover'),
-      updates: () => this.page.getByTestId('update-modal-go-to-updates-button'),
-      tourCloseButton: () => this.page.getByTestId('tour-close-button'),
-    }
+  public elements = {
+    welcomeCard: () => this.page.getByTestId('welcome-card'),
+    addServiceButton: () => this.page.getByTestId('welcome-card-add-service'),
+    dismissButton: () => this.page.getByTestId('welcome-card-dismiss'),
+    startTourButton: () => this.page.getByTestId('welcome-card-start-tour'),
+    tourPopover: () => this.page.locator('.reactour__popover'),
+    updates: () => this.page.getByTestId('update-modal-go-to-updates-button'),
+    tourCloseButton: () => this.page.getByTestId('tour-close-button'),
   }
-
-  clickDismiss = async (): Promise<void> => {
-    await this.elements().dismissButton().click();
-  };
-
-  clickStartTour = async (): Promise<void> => {
-    await this.elements().startTourButton().click();
-  };
-
-  clickCloseTour = async (): Promise<void> => {
-    await this.elements().tourCloseButton().click();
-  };
-
 
   // mock api for fresh install
   mockFreshInstall = async (): Promise<void> => {
