@@ -1,6 +1,5 @@
 import pmmTest from "@fixtures/pmmTest";
 import { expect } from "@playwright/test";
-import TourPage from "@pages/tour.page";
 
 pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
   await page.goto('');
@@ -10,7 +9,7 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 
 
 pmmTest('PMM-T2100 verify onboarding tour functionality (PMM start tour) @new-navigation', async ({ tour }) => {
-  const titles = TourPage.titles;
+  const titles = tour.titles;
   await pmmTest.step('Start tour', async () => {
     await tour.elements.startTourButton().click();
   });
@@ -31,7 +30,7 @@ pmmTest('PMM-T2100 verify onboarding tour functionality (PMM start tour) @new-na
 });
 
 pmmTest('verify previous button from card 8 -> 2 @new-navigation', async ({ tour }) => {
-  const titles = TourPage.titles;
+  const titles = tour.titles;
   await pmmTest.step('Start tour and go to the last step', async () => {
     await tour.elements.startTourButton().click();
     await tour.navigateForward(titles.length - 1);
@@ -48,7 +47,7 @@ pmmTest('verify previous button from card 8 -> 2 @new-navigation', async ({ tour
 });
 
 pmmTest('PMM-2125 verify close tour on random card @new-navigation', async ({ tour }) => {
-  const titles = TourPage.titles;
+  const titles = tour.titles;
   await pmmTest.step('Start tour', async () => {
     await tour.elements.startTourButton().click();
   });

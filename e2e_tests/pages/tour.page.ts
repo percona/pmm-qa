@@ -1,7 +1,7 @@
 import { Page, Locator } from '@playwright/test';
 
 export default class TourPage {
-  public static readonly titles = [
+  public readonly titles = [
     'Percona Dashboards',
     'Query Analytics (QAN) dashboard',
     'Explore',
