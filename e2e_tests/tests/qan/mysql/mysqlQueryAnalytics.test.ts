@@ -44,6 +44,6 @@ pmmTest(
 
     await page.goto(url);
     await queryAnalytics.waitForQueryAnalyticsToHaveData(Timeouts.TWO_MINUTES);
-    await queryAnalytics.verifyTotalQueryCount(20);
+    await queryAnalytics.verifyTotalQueryCount(19);
   },
 );
