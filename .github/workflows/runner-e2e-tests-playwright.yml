@@ -189,7 +189,7 @@ jobs:
         run: |
           npm ci
           npx playwright install-deps
-          npx playwright install
+          npx playwright install chromium
 
       - name: Execute UI tests
         if: ${{ inputs.pmm_test_flag == 'null' }}
