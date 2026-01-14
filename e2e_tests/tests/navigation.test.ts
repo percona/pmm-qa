@@ -10,25 +10,24 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 pmmTest('verify left menu sidebar collapse and expand @new-navigation', async ({ page, leftNavigation }) => {
 
   await pmmTest.step('verify left menu sidebar collapse and expand', async () => {
-    // await expect(leftNavigation.elements.sidebar).toBeVisible();
-    await expect(leftNavigation.elements().closeLeftNavigationButton()).toBeVisible();
-    await expect(leftNavigation.elements().openLeftNavigationButton()).toBeHidden();
+    await expect(leftNavigation.elements.closeLeftNavigationButton()).toBeVisible();
+    await expect(leftNavigation.elements.openLeftNavigationButton()).toBeHidden();
   });
 
   await pmmTest.step('collapse left menu sidebar and verify collapsed', async () => {
-    await leftNavigation.collapseSidebar();
-    await expect(leftNavigation.elements().openLeftNavigationButton()).toBeVisible();
-    await expect(leftNavigation.elements().closeLeftNavigationButton()).toBeHidden();
+    await leftNavigation.elements.closeLeftNavigationButton().click();
+    await expect(leftNavigation.elements.openLeftNavigationButton()).toBeVisible();
+    await expect(leftNavigation.elements.closeLeftNavigationButton()).toBeHidden();
     await page.reload();
-    await expect(leftNavigation.elements().openLeftNavigationButton()).toBeVisible();
-    await expect(leftNavigation.elements().closeLeftNavigationButton()).toBeHidden();
+    await expect(leftNavigation.elements.openLeftNavigationButton()).toBeVisible();
+    await expect(leftNavigation.elements.closeLeftNavigationButton()).toBeHidden();
   });
 
   await pmmTest.step('expand left menu sidebar and verify expanded', async () => {
     await leftNavigation.mouseHoverOnPmmLogo();
-    await leftNavigation.expandSidebar();
-    await expect(leftNavigation.elements().closeLeftNavigationButton()).toBeVisible();
-    await expect(leftNavigation.elements().openLeftNavigationButton()).toBeHidden();
+    await leftNavigation.elements.openLeftNavigationButton().click();
+    await expect(leftNavigation.elements.closeLeftNavigationButton()).toBeVisible();
+    await expect(leftNavigation.elements.openLeftNavigationButton()).toBeHidden();
   });
 });
 
@@ -84,9 +83,9 @@ pmmTest('Traverse all the menu items in left menu sidebar @new-navigation', asyn
 
   const traverseAllMenuItems = async () => {
 
-    const simpleMenuItems = LeftNavigation.simpleMenuItems;
-    const menuWithChildren = LeftNavigation.menuWithChildren;
-    const elements = leftNavigation.elements() as Record<string, MenuItem>;
+    const simpleMenuItems = leftNavigation.simpleMenuItems;
+    const menuWithChildren = leftNavigation.menuWithChildren;
+    const elements = leftNavigation.elements as Record<string, MenuItem>;
 
     for (const item of simpleMenuItems) {
       const element = elements[item];
@@ -117,16 +116,16 @@ pmmTest('RBAC/permissions @new-navigation', async ({ leftNavigation, grafanaHelp
     await grafanaHelper.createUser('nonadmin', 'nonadmin');
   });
 
-  await pmmTest.step('Sign out as admin', async () => {
+  await pmmTest.step('Sign out as admin and login as non-admin', async () => {
     await leftNavigation.selectMenuItem('accounts');
-    await leftNavigation.signOut();
+    await leftNavigation.elements.accountsMenu.signOut().click();
+    await grafanaHelper.authorize('nonadmin', 'nonadmin');
   });
 
-  await pmmTest.step('login as non-admin and verify permissions', async () => {
-    await grafanaHelper.authorize('nonadmin', 'nonadmin');
-    await expect(leftNavigation.elements().configuration()).toBeHidden();
+  await pmmTest.step('verify permissions', async () => {
+    await expect(leftNavigation.elements.configuration()).toBeHidden();
     await leftNavigation.selectMenuItem('help');
-    await expect(leftNavigation.elements().dumpLogs()).toBeHidden();
+    await expect(leftNavigation.elements.dumpLogs()).toBeHidden();
   });
 });
 
@@ -134,20 +133,20 @@ pmmTest('verify custom time range persists on any dashboard @new-navigation', as
   const selectedTimeRange = 'Last 15 minutes';
 
   const verifyTimeRangeOnDashboards = async (leftNavigation: LeftNavigation, selectedTimeRange: string) => {
-    const dashboards = LeftNavigation.dashboardsToVerifyTimeRange;
+    const dashboards = leftNavigation.dashboardsToVerifyTimeRange;
     for (const dashboard of dashboards) {
       await pmmTest.step(`Verify time range`, async () => {
         await leftNavigation.selectMenuItem(dashboard);
-        await expect(leftNavigation.elements().timePickerOpenButton()).toContainText(selectedTimeRange, { timeout: 10000 });
+        await expect(leftNavigation.elements.timePickerOpenButton()).toContainText(selectedTimeRange, { timeout: 10000 });
       });
     }
   };
 
   await pmmTest.step('Select time range @new-navigation', async () => {
     await leftNavigation.selectMenuItem('home');
-    await leftNavigation.openTimePicker();
+    await leftNavigation.elements.timePickerOpenButton().click();
     await leftNavigation.selectTimeRange(selectedTimeRange);
-    await expect(leftNavigation.elements().timePickerOpenButton()).toContainText(selectedTimeRange);
+    await expect(leftNavigation.elements.timePickerOpenButton()).toContainText(selectedTimeRange);
   });
 
   await pmmTest.step('Verify time range persistence', async () => {
@@ -156,25 +155,25 @@ pmmTest('verify custom time range persists on any dashboard @new-navigation', as
 
   await pmmTest.step('Verify new tab persistence', async () => {
     const newPage = await leftNavigation.newTab();
-    await expect(leftNavigation.elements().timePickerOpenButton()).toContainText(selectedTimeRange);
+    await expect(leftNavigation.elements.timePickerOpenButton()).toContainText(selectedTimeRange);
   });
 });
 
 pmmTest('Grafana embedding @new-navigation', async ({ leftNavigation }) => {
   await pmmTest.step('Verify old menu hidden', async () => {
-    await expect(leftNavigation.elements().oldLeftMenu()).toBeHidden();
+    await expect(leftNavigation.elements.oldLeftMenu()).toBeHidden();
   });
 
   await pmmTest.step('Verify iframe hidden on Help page', async () => {
     await leftNavigation.selectMenuItem('help');
-    await expect(leftNavigation.elements().iframe()).toBeHidden();
+    await expect(leftNavigation.elements.iframe()).toBeHidden();
   });
 
   await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
     await leftNavigation.selectMenuItem('home');
-    await expect(leftNavigation.elements().iframe()).toBeVisible();
+    await expect(leftNavigation.elements.iframe()).toBeVisible();
     await leftNavigation.selectMenuItem('help');
-    await expect(leftNavigation.elements().iframe()).toBeHidden();
+    await expect(leftNavigation.elements.iframe()).toBeHidden();
   });
 });
 
