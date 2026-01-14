@@ -7,7 +7,7 @@ import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 import WelcomePage from '@pages/welcome.page';
-import MockNoServiceHelper from '@helpers/mockNoSerive.helper';
+import Mocks from '@helpers/mocks.helper';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -46,14 +46,14 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
   welcomePage: WelcomePage;
-  mockNoServiceHelper: MockNoServiceHelper;
+  mocks: Mocks;
 }>({
-  cliHelper: async ({}, use) => {
+  cliHelper: async ({ }, use) => {
     const cliHelper = new CliHelper();
     await use(cliHelper);
   },
 
-  credentials: async ({}, use) => {
+  credentials: async ({ }, use) => {
     const credentials = new Credentials();
     await use(credentials);
   },
@@ -78,7 +78,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
 
-  urlHelper: async ({}, use) => {
+  urlHelper: async ({ }, use) => {
     const urlHelper = new UrlHelper();
     await use(urlHelper);
   },
@@ -88,9 +88,9 @@ const pmmTest = base.extend<{
     await use(welcomePage);
   },
 
-  mockNoServiceHelper: async ({ page }, use) => {
-    const mockNoServiceHelper = new MockNoServiceHelper(page);
-    await use(mockNoServiceHelper);
+  mocks: async ({ page }, use) => {
+    const mocks = new Mocks(page);
+    await use(mocks);
   }
 });
 

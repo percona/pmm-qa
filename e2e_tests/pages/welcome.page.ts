@@ -19,44 +19,11 @@ export default class WelcomePage {
     tourCloseButton: () => this.page.getByTestId('tour-close-button'),
   }
 
-  // mock api for fresh install
-  mockFreshInstall = async (): Promise<void> => {
-    let productTourCompleted = false;
-
-    await this.page.route('**/v1/users/me', route => {
-      const method = route.request().method();
-
-      if (method === 'GET') {
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            user_id: 1,
-            product_tour_completed: productTourCompleted,
-            alerting_tour_completed: false,
-          }),
-        });
-      }
-
-      if (method === 'PATCH' || method === 'PUT') {
-        productTourCompleted = true;
-        return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            product_tour_completed: true,
-          }),
-        });
-      }
-
-      return route.continue();
-    });
-  };
-
   // mock api for update available
   public mockUpdateAvailable = async (updateAvailable: boolean): Promise<void> => {
     await this.page.route('**/v1/server/updates?force=true', async (route) => {
 
+      const installedTimestamp = '2025-12-18T00:00:00Z';
       const now = new Date();
       const millisecond = now.getMilliseconds().toString().padStart(3, '0');
       const nanosecondTimestamp = now.toISOString().split('.')[0] + '.' + millisecond + '000000Z';
@@ -69,7 +36,7 @@ export default class WelcomePage {
           installed: {
             version: '',
             full_version: '',
-            timestamp: '2025-12-18T00:00:00Z',
+            timestamp: installedTimestamp,
           },
           latest: {
             version: '',
