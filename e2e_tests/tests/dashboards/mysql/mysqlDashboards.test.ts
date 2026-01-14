@@ -34,10 +34,7 @@ data(services).pmmTest(
 
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstanceSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInstanceSummary.noDataMetrics);
-    await dashboard.verifyPanelValues(
-      dashboard.mysql.mysqlInstanceSummary.metricsWithData,
-      // dashboard.mysql.mysqlInstanceSummary.noDataMetrics,
-    );
+    await dashboard.verifyPanelValues(dashboard.mysql.mysqlInstanceSummary.metricsWithData);
   },
 );
 
@@ -126,9 +123,7 @@ pmmTest(
     );
 
     await dashboard.verifyMetricsPresent(dashboard.mysql.pxcGaleraNodesCompare.metrics(service_name));
-    await dashboard.verifyAllPanelsHaveData(
-      dashboard.mysql.pxcGaleraNodesCompare.noDataMetrics(service_name),
-    );
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.pxcGaleraNodesCompare.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.pxcGaleraNodesCompare.metricsWithData(service_name));
   },
 );

@@ -148,8 +148,8 @@ jobs:
       setup_services: '--help'
       tags_for_tests: '@disconnect'
 
-  pxc_haproxy_integration:
-    name: PXC and Haproxy integration tests
+  ps_pxc_haproxy_integration:
+    name: PS, PXC and Haproxy integration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}

@@ -25,7 +25,7 @@ export default class PXCGaleraNodesCompare implements DashboardInterface {
     { name: `my_wsrep_cluster - Galera Cluster Size`, type: 'timeSeries' },
   ];
 
-  noDataMetrics = (serviceName: string) => [serviceName];
+  noDataMetrics: string[] = [];
   metricsWithData = (serviceName: string) =>
-    this.metrics(serviceName).filter((metric) => !this.noDataMetrics(serviceName).includes(metric.name));
+    this.metrics(serviceName).filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
