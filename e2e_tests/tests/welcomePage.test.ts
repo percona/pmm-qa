@@ -7,10 +7,10 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 });
 
 
-pmmTest('PMM-T2132 Verify welcome Card appears on fresh install @new-navigation', async ({ welcomePage, mockNoServiceHelper }) => {
+pmmTest('PMM-T2132 Verify welcome Card appears on fresh install @new-navigation', async ({ welcomePage, mocks }) => {
   await pmmTest.step('Mock fresh install and no services', async () => {
-    await welcomePage.mockFreshInstall();
-    await mockNoServiceHelper.mockNoServices();
+    await mocks.mockFreshInstall();
+    await mocks.mockNoServices();
   });
 
   await pmmTest.step('Verify welcome card and its buttons are visible', async () => {
@@ -21,9 +21,9 @@ pmmTest('PMM-T2132 Verify welcome Card appears on fresh install @new-navigation'
   });
 });
 
-pmmTest('PMM-T2101 verify dismiss button on welcome card @new-navigation', async ({ page, welcomePage }) => {
+pmmTest('PMM-T2101 verify dismiss button on welcome card @new-navigation', async ({ page, welcomePage, mocks }) => {
   await pmmTest.step('Mock fresh install', async () => {
-    await welcomePage.mockFreshInstall();
+    await mocks.mockFreshInstall();
   });
 
   await pmmTest.step('Verify welcome card visibility and click dismiss', async () => {
@@ -37,9 +37,9 @@ pmmTest('PMM-T2101 verify dismiss button on welcome card @new-navigation', async
   });
 });
 
-pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ page, welcomePage }) => {
+pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ page, welcomePage, mocks }) => {
   await pmmTest.step('Mock fresh install', async () => {
-    await welcomePage.mockFreshInstall();
+    await mocks.mockFreshInstall();
   });
 
   await pmmTest.step('Verify welcome card and start tour', async () => {
@@ -58,7 +58,7 @@ pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ pag
   });
 });
 
-pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ page, welcomePage }) => {
+pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ page, welcomePage, mocks }) => {
 
   const cases = welcomePage.cases;
 
