@@ -7,11 +7,10 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 });
 
 pmmTest('PMM-T2096 - Verify view docs button @new-navigation', async ({ helpPage, page }) => {
-  const viewDocsButton = helpPage.elements().viewDocsButton;
 
   await pmmTest.step('Verify button visibility and response status', async () => {
-    await expect(viewDocsButton()).toBeVisible();
-    const href = await viewDocsButton().getAttribute('href');
+    await expect(helpPage.elements.viewDocsButton()).toBeVisible();
+    const href = await helpPage.elements.viewDocsButton().getAttribute('href');
 
     if (href) {
       const response = await page.request.get(href);
@@ -21,18 +20,17 @@ pmmTest('PMM-T2096 - Verify view docs button @new-navigation', async ({ helpPage
 
   await pmmTest.step('Verify navigation to external URL', async () => {
     const popup = page.waitForEvent('popup');
-    await helpPage.clickElement(viewDocsButton());
+    await helpPage.elements.viewDocsButton().click();
     const newTab = await popup;
     expect(newTab.url()).toContain('/docs.percona.com/');
   });
 });
 
 pmmTest('PMM-T2116 - Verify Get Percona Support button @new-navigation', async ({ helpPage, page }) => {
-  const contactSupportButton = helpPage.elements().contactSupportButton;
 
   await pmmTest.step('Verify button visibility and response status', async () => {
-    await expect(contactSupportButton()).toBeVisible();
-    const href = await contactSupportButton().getAttribute('href');
+    await expect(helpPage.elements.contactSupportButton()).toBeVisible();
+    const href = await helpPage.elements.contactSupportButton().getAttribute('href');
 
     if (href) {
       const response = await page.request.get(href);
@@ -42,18 +40,17 @@ pmmTest('PMM-T2116 - Verify Get Percona Support button @new-navigation', async (
 
   await pmmTest.step('Verify navigation to external URL', async () => {
     const popup = page.waitForEvent('popup');
-    await helpPage.clickElement(contactSupportButton());
+    await helpPage.elements.contactSupportButton().click();
     const newTab = await popup;
     expect(newTab.url()).toContain('/www.percona.com/about/contact');
   });
 });
 
 pmmTest('PMM-T2117 - Verify view forum button @new-navigation', async ({ helpPage, page }) => {
-  const viewForumButton = helpPage.elements().viewForumButton;
 
   await pmmTest.step('Verify button visibility and response status', async () => {
-    await expect(viewForumButton()).toBeVisible();
-    const href = await viewForumButton().getAttribute('href');
+    await expect(helpPage.elements.viewForumButton()).toBeVisible();
+    const href = await helpPage.elements.viewForumButton().getAttribute('href');
 
     if (href) {
       const response = await page.request.get(href);
@@ -63,18 +60,17 @@ pmmTest('PMM-T2117 - Verify view forum button @new-navigation', async ({ helpPag
 
   await pmmTest.step('Verify navigation to external URL', async () => {
     const popup = page.waitForEvent('popup');
-    await helpPage.clickElement(viewForumButton());
+    await helpPage.elements.viewForumButton().click();
     const newTab = await popup;
     expect(newTab.url()).toContain('/forums.percona.com/');
   });
 });
 
 pmmTest('PMM-T2118 - Verify manage datasets button @new-navigation', async ({ helpPage, page }) => {
-  const manageDatasetsButton = helpPage.elements().manageDatasetsButton;
 
   await pmmTest.step('Verify button visibility and response status', async () => {
-    await expect(manageDatasetsButton()).toBeVisible();
-    const href = await manageDatasetsButton().getAttribute('href');
+    await expect(helpPage.elements.manageDatasetsButton()).toBeVisible();
+    const href = await helpPage.elements.manageDatasetsButton().getAttribute('href');
 
     if (href) {
       const response = await page.request.get(href);
@@ -83,17 +79,16 @@ pmmTest('PMM-T2118 - Verify manage datasets button @new-navigation', async ({ he
   });
 
   await pmmTest.step('Verify navigation to internal URL', async () => {
-    await helpPage.clickElement(manageDatasetsButton());
+    await helpPage.elements.manageDatasetsButton().click();
     expect(page.url()).toContain('/graph/pmm-dump');
   });
 });
 
 pmmTest('PMM-T2119 - Verify export logs button @new-navigation', async ({ helpPage, page }) => {
-  const exportLogsButton = helpPage.elements().exportLogsButton;
 
   await pmmTest.step('Verify button visibility and response status', async () => {
-    await expect(exportLogsButton()).toBeVisible();
-    const href = await exportLogsButton().getAttribute('href');
+    await expect(helpPage.elements.exportLogsButton()).toBeVisible();
+    const href = await helpPage.elements.exportLogsButton().getAttribute('href');
     expect(href).toBeTruthy();
     if (href) {
       const response = await page.request.get(href);
@@ -108,24 +103,22 @@ pmmTest('PMM-T2119 - Verify export logs button @new-navigation', async ({ helpPa
 });
 
 pmmTest('PMM-T2120 - Verify start pmm tour button @new-navigation', async ({ helpPage }) => {
-  const startPmmTourButton = helpPage.elements().startPmmTourButton;
 
   await pmmTest.step('Verify button visibility', async () => {
-    await expect(startPmmTourButton()).toBeVisible();
+    await expect(helpPage.elements.startPmmTourButton()).toBeVisible();
   });
 
   await pmmTest.step('Verify starting PMM tour', async () => {
     await helpPage.clickStartPmmTour();
-    await expect(helpPage.elements().nextTipButton()).toBeVisible();
+    await expect(helpPage.elements.nextTipButton()).toBeVisible();
   });
 });
 
 pmmTest('PMM-T2121 - Verify share your thoughts button @new-navigation', async ({ helpPage, page }) => {
-  const shareYourThoughtsButton = helpPage.elements().shareYourThoughtsButton;
 
   await pmmTest.step('Verify button visibility and response status', async () => {
-    await expect(shareYourThoughtsButton()).toBeVisible();
-    const href = await shareYourThoughtsButton().getAttribute('href');
+    await expect(helpPage.elements.shareYourThoughtsButton()).toBeVisible();
+    const href = await helpPage.elements.shareYourThoughtsButton().getAttribute('href');
 
     if (href) {
       const response = await page.request.get(href);
@@ -135,7 +128,7 @@ pmmTest('PMM-T2121 - Verify share your thoughts button @new-navigation', async (
 
   await pmmTest.step('Verify navigation to external URL', async () => {
     const popup = page.waitForEvent('popup');
-    await helpPage.clickElement(shareYourThoughtsButton());
+    await helpPage.elements.shareYourThoughtsButton().click();
     const newTab = await popup;
     expect(newTab.url()).toContain('/docs.google.com/forms/');
   });
