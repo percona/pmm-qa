@@ -2,9 +2,9 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
-  const containerName = cliHelper
-    .execSilent('docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}"')
-    .stdout.split('\n')[0];
+  const containerName = cliHelper.execSilent(
+    'docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}" | head -n 1'
+  ).stdout;
   const result = cliHelper.execSilent(`docker exec -i ${containerName} mysql -h 127.0.0.1 --port 3306 \
                                                           -u ${credentials.perconaServer.ps_84.username} \
                                                           -p${credentials.perconaServer.ps_84.password} \
@@ -19,7 +19,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2030 - Verify QAN for Percona Server Instance @nightly @pmm-ps-integration',
+  'PMM-T2030 - Verify QAN for PS Replica Instance @nightly @pmm-ps-integration',
   async ({ page, queryAnalytics, urlHelper, api }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
 
@@ -27,6 +27,7 @@ pmmTest(
       urlHelper.buildUrlWithParameters(queryAnalytics.url, {
         from: 'now-15m',
         serviceName: service_name,
+        schema: 'sbtest',
       }),
     );
     await queryAnalytics.verifyQueryAnalyticsHaveData();
