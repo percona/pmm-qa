@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test';
+import { Page, Locator, Download } from '@playwright/test';
 
 export default class HelpPage {
   constructor(public page: Page) { }
@@ -16,7 +16,7 @@ export default class HelpPage {
 
 
 
-  exportLogs = async (): Promise<any> => {
+  exportLogs = async (): Promise<Download> => {
     const download = this.page.waitForEvent('download');
     await this.elements.exportLogsButton().click();
     return download;
