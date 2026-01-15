@@ -6,6 +6,7 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
+import HelpPage from '@pages/helpCenter.page';
 import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 
@@ -45,6 +46,7 @@ const pmmTest = base.extend<{
   api: Api;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
+  helpPage: HelpPage;
   themePage: ThemePage;
   tour: TourPage;
 }>({
@@ -83,6 +85,9 @@ const pmmTest = base.extend<{
     await use(urlHelper);
   },
 
+  helpPage: async ({ page }, use) => {
+    const helpPage = new HelpPage(page);
+    await use(helpPage);
   themePage: async ({ page }, use) => {
     const themePage = new ThemePage(page);
     await use(themePage);
