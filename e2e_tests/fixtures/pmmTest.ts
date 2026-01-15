@@ -7,6 +7,8 @@ import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
+import ThemePage from '@pages/theme.page';
+import TourPage from '@pages/tour.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -45,6 +47,8 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
+  themePage: ThemePage;
+  tour: TourPage;
 }>({
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
@@ -84,6 +88,12 @@ const pmmTest = base.extend<{
   helpPage: async ({ page }, use) => {
     const helpPage = new HelpPage(page);
     await use(helpPage);
+  themePage: async ({ page }, use) => {
+    const themePage = new ThemePage(page);
+    await use(themePage);
+  tour: async ({ page }, use) => {
+    const tour = new TourPage(page);
+    await use(tour);
   },
 });
 

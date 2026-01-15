@@ -1,13 +1,14 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class ValkeyClusterDetailsDashboard {
+export default class ValkeyClusterDetailsDashboard implements DashboardInterface {
   url = 'graph/d/valkey-cluster-details/valkey-redis-cluster-details';
   metrics: GrafanaPanel[] = [
-    { name: 'slots status', type: 'unknown' },
-    { name: 'All - cluster state', type: 'unknown' },
-    { name: 'cluster messages', type: 'unknown' },
-    { name: 'All - cluster connections', type: 'unknown' },
-    { name: 'All - known nodes', type: 'unknown' },
+    { name: 'Slots Status', type: 'unknown' },
+    { name: 'All - Cluster State', type: 'unknown' },
+    { name: 'Cluster Messages', type: 'unknown' },
+    { name: 'All - Cluster Connections', type: 'unknown' },
+    { name: 'All - Known Nodes', type: 'unknown' },
     { name: 'valkey-primary-1-svc-*', type: 'unknown' },
     { name: 'valkey-primary-2-svc-*', type: 'unknown' },
     { name: 'valkey-primary-3-svc-*', type: 'unknown' },
@@ -17,11 +18,12 @@ export default class ValkeyClusterDetailsDashboard {
     { name: 'All - Replica vs Master offsets', type: 'unknown' },
     { name: 'Replicas', type: 'unknown' },
     { name: 'Connected Replicas', type: 'unknown' },
-    { name: 'Full resyncs', type: 'unknown' },
-    { name: 'Partial resyncs', type: 'unknown' },
+    { name: 'Full Resyncs', type: 'unknown' },
+    { name: 'Partial Resyncs', type: 'unknown' },
     { name: 'Backlog Size', type: 'unknown' },
-    { name: 'Backlog first byte offset', type: 'unknown' },
+    { name: 'Backlog First Byte Offset', type: 'unknown' },
     { name: 'Backlog History Bytes', type: 'unknown' },
     { name: 'Replica Resync Info', type: 'unknown' },
   ];
+  noDataMetrics = [];
 }

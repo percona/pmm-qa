@@ -212,9 +212,9 @@ jobs:
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
-          launchable record session --build ${{ env.SHA }} --observation --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt
+          launchable record session --build ${{ env.SHA }} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --use-case feature-branch codeceptjs > launchable-subset.json
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch codeceptjs > launchable-subset.json
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
         working-directory: pmm-ui-tests
@@ -261,6 +261,7 @@ jobs:
           name: "artifacts_for_${{ steps.tags_processed.outputs.result }}"
           path: |
             pmm-ui-tests/tests/output/*.png
+            pmm-ui-tests/tests/output/trace/*.zip
             pmm-ui-tests/logs
 
       - name: Create status check

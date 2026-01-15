@@ -1,25 +1,28 @@
 import { expect, Page } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import BasePage from '@pages/base.page';
 
-export default class QueryAnalytics {
-  constructor(private page: Page) {}
-
-  private elements = {
-    noData: '//*[@data-testid="table-no-data"]',
-    spinner: '//*[@data-testid="Spinner"]',
-    totalCount: '//*[@data-testid="qan-total-items"]',
-    firstRow: '//*[@role="row" and @class="tr tr-1"]',
-  };
+export default class QueryAnalytics extends BasePage {
+  constructor(page: Page) {
+    super(page);
+  }
 
   url = 'graph/d/pmm-qan/pmm-query-analytics';
 
+  elements = {
+    noData: () => this.grafanaIframe().locator('//*[@data-testid="table-no-data"]'),
+    spinner: () => this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
+    totalCount: () => this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
+    firstRow: () => this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
+  };
+
   waitUntilQueryAnalyticsLoaded = async () => {
-    await expect(this.page.locator(this.elements.spinner).first()).toBeHidden({ timeout: 30000 });
+    await expect(this.elements.spinner().first()).toBeHidden({ timeout: 30000 });
   };
 
   waitForQueryAnalyticsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.waitUntilQueryAnalyticsLoaded();
-    const noDataLocator = this.page.locator(this.elements.noData);
+    const noDataLocator = this.elements.noData();
     const timeoutInSeconds = timeout / 1000;
 
     for (let i = 0; i < timeoutInSeconds; i++) {
@@ -36,12 +39,12 @@ export default class QueryAnalytics {
 
   verifyQueryAnalyticsHaveData = async () => {
     await this.waitUntilQueryAnalyticsLoaded();
-    await expect(this.page.locator(this.elements.noData)).toBeHidden({ timeout: 30000 });
-    await expect(this.page.locator(this.elements.firstRow)).toBeVisible({ timeout: 30000 });
+    await expect(this.elements.noData()).toBeHidden({ timeout: 30000 });
+    await expect(this.elements.firstRow()).toBeVisible({ timeout: 30000 });
   };
 
   verifyTotalQueryCount = async (expectedQueryCount: number) => {
-    const countString = await this.page.locator(this.elements.totalCount).first().textContent();
+    const countString = await this.elements.totalCount().first().textContent();
 
     if (!countString) {
       throw new Error('Count of queries is not displayed!');
