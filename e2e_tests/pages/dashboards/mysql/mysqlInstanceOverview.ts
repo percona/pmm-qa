@@ -1,6 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
+import DashboardInterface from '@interfaces/dashboard';
 
-export default class MysqlInstanceOverview {
+export default class MysqlInstanceOverview implements DashboardInterface {
   constructor() {}
 
   url = 'graph/d/mysql-instance-overview/mysql-instances-overview';
@@ -10,6 +11,7 @@ export default class MysqlInstanceOverview {
     { name: 'Max MySQL Uptime', type: 'stat' },
     { name: 'Total Current QPS', type: 'stat' },
     { name: 'Total InnoDB Buffer Pool Size', type: 'stat' },
+    { name: 'Top MySQL Used Connections', type: 'stat' },
     { name: 'Top MySQL Used Connections', type: 'stat' },
     { name: 'Top MySQL Client Threads Connected', type: 'stat' },
     { name: 'Top MySQL Idle Client Threads', type: 'stat' },
@@ -39,20 +41,18 @@ export default class MysqlInstanceOverview {
     { name: 'Percentage of Data Writes', type: 'polyStat' },
     { name: 'Top 5 Data Fsyncs', type: 'timeSeries' },
     { name: 'Percentage of Data Fsyncs', type: 'polyStat' },
-    // TODO: Uncoment after https://perconadev.atlassian.net/browse/PMM-14534 is fixed
-    // { name: 'Top MySQL Questions', type: 'stat' },
+    { name: 'Top MySQL Temporary Objects', type: 'stat' },
     { name: 'Top MySQL Selects', type: 'stat' },
     { name: 'Top MySQL Sorts', type: 'stat' },
     { name: 'Top MySQL Aborted Connections', type: 'stat' },
     { name: 'Top MySQL Table Locks', type: 'stat' },
-    // TODO: Uncoment after https://perconadev.atlassian.net/browse/PMM-14534 is fixed
-    // { name: 'MySQL Temporary Objects', type: 'timeSeries' },
     { name: 'MySQL Temporary Objects', type: 'polyStat' },
     { name: 'Top 5 MySQL Selects', type: 'timeSeries' },
     { name: 'MySQL Selects', type: 'polyStat' },
     { name: 'Top 5 MySQL Sorts', type: 'timeSeries' },
     { name: 'MySQL Sorts', type: 'polyStat' },
     { name: 'Top 5 MySQL Table Locks', type: 'timeSeries' },
+    { name: 'Top 5 MySQL Temporary Objects', type: 'timeSeries' },
     { name: 'MySQL Table Locks', type: 'polyStat' },
     { name: 'Top MySQL Incoming Network Traffic', type: 'stat' },
     { name: 'Top MySQL Outgoing Network Traffic', type: 'stat' },
