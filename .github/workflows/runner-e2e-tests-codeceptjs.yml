@@ -261,6 +261,7 @@ jobs:
           name: "artifacts_for_${{ steps.tags_processed.outputs.result }}"
           path: |
             pmm-ui-tests/tests/output/*.png
+            pmm-ui-tests/tests/output/trace/*.zip
             pmm-ui-tests/logs
 
       - name: Create status check
