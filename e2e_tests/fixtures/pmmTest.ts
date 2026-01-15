@@ -6,6 +6,7 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
+import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 
 base.beforeEach(async ({ page }) => {
@@ -44,6 +45,7 @@ const pmmTest = base.extend<{
   api: Api;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
+  themePage: ThemePage;
   tour: TourPage;
 }>({
   cliHelper: async ({}, use) => {
@@ -81,6 +83,9 @@ const pmmTest = base.extend<{
     await use(urlHelper);
   },
 
+  themePage: async ({ page }, use) => {
+    const themePage = new ThemePage(page);
+    await use(themePage);
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
     await use(tour);
