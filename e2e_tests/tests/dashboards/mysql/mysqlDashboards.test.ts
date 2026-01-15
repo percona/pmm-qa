@@ -147,7 +147,12 @@ pmmTest(
 
 pmmTest(
   'PMM-T2029 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
-  async ({ page, urlHelper, dashboard, api }) => {
+  async ({ page, urlHelper, dashboard, api }, testInfo) => {
+    // Wait for data if the first pass fails.
+    if (testInfo.retry > 0) {
+      await page.waitForTimeout(Timeouts.TWO_MINUTES);
+    }
+
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
       'ps_pmm_replication_.*_2',
       { replication_set: 'ps-async-replication' },
