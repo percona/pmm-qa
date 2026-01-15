@@ -7,7 +7,7 @@ on:
     inputs:
       pmm_ui_tests_branch:
         description: 'pmm-ui-tests repository branch(CLI tests)'
-        default: 'main'
+        default: 'PMM-14538-mysql-migration-poc'
         required: false
         type: string
       pmm_qa_branch:
