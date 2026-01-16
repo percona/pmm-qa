@@ -1,17 +1,16 @@
-import { FrameLocator, Locator, Page } from "@playwright/test";
+import { Locator, Page } from "@playwright/test";
+import basePage from "./base.page";
 
 export type MenuItem = Locator | (() => Locator) | { [key: string]: MenuItem };
 
-const grafanaIframe = '#grafana-iframe';
-
-export default class LeftNavigation {
+export default class LeftNavigation extends basePage {
 
   public readonly simpleMenuItems = ['home', 'qan', 'help'] as const;
 
   public readonly menuWithChildren = [
     'mysql',
     'postgresql',
-    'mongodb',
+    // 'mongodb',
     'operatingsystem',
     'alldashboards',
     'explore',
@@ -36,7 +35,7 @@ export default class LeftNavigation {
     'home'
   ] as const;
 
-  constructor(public page: Page) { }
+  constructor(page: Page) { super(page); }
 
   public elements = {
     // parent menu items
@@ -56,7 +55,6 @@ export default class LeftNavigation {
     usersAndAccess: () => this.page.getByTestId('navitem-users-and-access'),
     accounts: () => this.page.getByTestId('navitem-account'),
     help: () => this.page.getByTestId('navitem-help'),
-
 
     mysqlMenu: {
       overview: () => this.page.getByTestId('navitem-mysql-overview'),
@@ -88,7 +86,6 @@ export default class LeftNavigation {
       },
       topQueries: () => this.page.getByTestId('navitem-postgresql-top-queries'),
       otherDashboards: () => this.page.getByTestId('navitem-postgre-other-dashboards'),
-
     },
 
     mongodbMenu: {
@@ -105,7 +102,6 @@ export default class LeftNavigation {
       collections: () => this.page.getByTestId('navitem-mongo-collections-overview'),
       oplog: () => this.page.getByTestId('navitem-mongo-oplog-details'),
       otherDashboards: () => this.page.getByTestId('navitem-mongo-other-dashboards'),
-
     },
 
     operatingsystemMenu: {
@@ -200,17 +196,13 @@ export default class LeftNavigation {
     dumpLogs: () => this.page.getByTestId('help-card-pmm-dump-logs'),
 
     // time picker (within iframe)
-    iframe: () => this.page.locator(grafanaIframe),
-    timePickerOpenButton: () => this.page.frameLocator(grafanaIframe).getByTestId('data-testid TimePicker Open Button'),
-    refreshButton: () => this.page.frameLocator(grafanaIframe).getByTestId('data-testid RefreshPicker run button'),
+    iframe: () => this.page.locator('//*[@id="grafana-iframe"]'),
+    timePickerOpenButton: () => this.grafanaIframe().getByTestId('data-testid TimePicker Open Button'),
+    refreshButton: () => this.grafanaIframe().getByTestId('data-testid RefreshPicker run button'),
 
     // old navigation 
     oldLeftMenu: () => this.page.getByTestId('data-testid navigation mega-menu'),
   };
-
-  iframe(): FrameLocator {
-    return this.page.frameLocator(grafanaIframe);
-  }
 
   selectMenuItem = async (item: string): Promise<void> => {
     const keys = item.split('.');
@@ -234,8 +226,8 @@ export default class LeftNavigation {
     await this.getTimeRangeOption(timeRange).click();
   }
 
-  private getTimeRangeOption(timeRange: string): Locator {
-    return this.page.frameLocator(grafanaIframe).locator(`//*[contains(text(), "${timeRange}")]`);
+  private getTimeRangeOption = (timeRange: string): Locator => {
+    return this.grafanaIframe().locator(`//*[contains(text(), "${timeRange}")]`);
   }
 
   mouseHoverOnPmmLogo = async (): Promise<void> => {
@@ -249,36 +241,67 @@ export default class LeftNavigation {
     }
   }
 
-  newTab = async (): Promise<Page> => {
-    const url = this.page.url();
-    const newPage = await this.page.context().newPage();
-    await newPage.goto(url);
-    await newPage.locator(grafanaIframe).waitFor({ state: 'visible' });
-    this.page = newPage;
-    return newPage;
-  }
-
-  switchPage = (page: Page) => {
-    this.page = page;
+  private selectVariableValue = async (dashboardIndex: number, regex: RegExp): Promise<string> => {
+    const frame = this.grafanaIframe();
+    await frame.getByText('All').nth(dashboardIndex).click();
+    await frame.locator('input[role="combobox"]').first().waitFor({ state: 'visible' });
+    const option = frame.getByText(regex).first();
+    const selectedValue = (await option.textContent())?.trim() ?? '';
+    await option.click();
+    await frame.locator('input[role="combobox"]').first().press('Escape');
+    return selectedValue;
   }
 
   selectService = async (dashboardIndex: number, serviceRegex: RegExp): Promise<string> => {
-    const frame = this.page.frameLocator(grafanaIframe);
-    await frame.getByText('All').nth(dashboardIndex).click();
-    const serviceOption = frame.getByText(serviceRegex).first();
-    const selectedService = (await serviceOption.textContent())?.trim() ?? '';
-    await serviceOption.click();
-    await frame.locator('input[role="combobox"]').first().press('Escape');
-    return selectedService;
+    return this.selectVariableValue(dashboardIndex, serviceRegex);
   }
 
   selectNode = async (dashboardIndex: number, nodeRegex: RegExp): Promise<string> => {
-    const frame = this.page.frameLocator(grafanaIframe);
-    await frame.getByText('All').nth(dashboardIndex).click();
-    const nodeOption = frame.getByText(nodeRegex).first();
-    const selectedNode = (await nodeOption.textContent())?.trim() ?? '';
-    await nodeOption.click();
-    await frame.locator('input[role="combobox"]').first().press('Escape');
-    return selectedNode;
+    return this.selectVariableValue(dashboardIndex, nodeRegex);
   }
-}
+
+  traverseAllMenuItems = async (responseAfterClick: (locator: Locator, menuItems: string) => Promise<void>): Promise<void> => {
+    const traverseMenuItems = async (child: Record<string, MenuItem>, parent: string) => {
+      const items = Object.entries(child);
+
+      for (const [key, value] of items) {
+        if (key === 'signOut') {
+          if (typeof value === 'function') {
+            await responseAfterClick(value(), `${parent}.${key}`);
+          }
+          return;
+        }
+
+        if (typeof value === 'function') {
+          const locator = value();
+          await responseAfterClick(locator, `${parent}.${key}`);
+        } else if (typeof value === 'object' && value !== null) {
+          if ('click' in value && typeof (value as Record<string, unknown>).click === 'function') {
+            await responseAfterClick(value as Locator, `${parent}.${key}`);
+          } else {
+            await traverseMenuItems(value as Record<string, MenuItem>, `${parent}.${key}`);
+          }
+        }
+      }
+    };
+
+    for (const item of this.simpleMenuItems) {
+      const element = this.elements[item];
+      if (typeof element === 'function') {
+        await responseAfterClick(element(), item);
+      }
+    }
+
+    for (const parent of this.menuWithChildren) {
+      const parentElement = this.elements[parent];
+      if (typeof parentElement === 'function') {
+        await responseAfterClick(parentElement(), parent);
+      }
+
+      const children = this.elements[`${parent}Menu`];
+      if (children) {
+        await traverseMenuItems(children as Record<string, MenuItem>, parent);
+      }
+    }
+  }
+};
