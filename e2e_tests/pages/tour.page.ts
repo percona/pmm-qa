@@ -11,7 +11,7 @@ export default class TourPage implements IPageObject {
     'Query Analytics (QAN) dashboard',
     'Explore',
     'Alerts & Percona Templates',
-    'Advisors',
+    'Percona Advisors',
     'Management: Inventory & Backups',
     'Configurations',
     'Help Center'
