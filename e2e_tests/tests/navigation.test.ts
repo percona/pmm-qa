@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect, Locator, Response } from '@playwright/test';
-import LeftNavigation, { MenuItem } from '../pages/navigation.page';
+import LeftNavigation from '../pages/navigation.page';
 
 pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
   await page.goto('');
@@ -61,20 +61,20 @@ pmmTest('Traverse all the menu items in left menu sidebar @new-navigation', asyn
 
 pmmTest('RBAC/permissions @new-navigation', async ({ leftNavigation, grafanaHelper }) => {
 
-  await pmmTest.step('Create non-admin user', async () => {
-    await leftNavigation.selectMenuItem('usersAndAccess');
+    await pmmTest.step('Create non-admin user', async () => {
+    await leftNavigation.selectMenuItem({ path: 'usersAndAccess' });
     await grafanaHelper.createUser('nonadmin', 'nonadmin');
   });
 
   await pmmTest.step('Sign out as admin and login as non-admin', async () => {
-    await leftNavigation.selectMenuItem('accounts');
+    await leftNavigation.selectMenuItem({ path: 'accounts' });
     await leftNavigation.elements.accountsMenu.signOut().click();
     await grafanaHelper.authorize('nonadmin', 'nonadmin');
   });
 
   await pmmTest.step('verify permissions', async () => {
     await expect(leftNavigation.elements.configuration()).toBeHidden();
-    await leftNavigation.selectMenuItem('help');
+    await leftNavigation.selectMenuItem({ path: 'help' });
     await expect(leftNavigation.elements.dumpLogs()).toBeHidden();
   });
 });
@@ -86,14 +86,14 @@ pmmTest('verify custom time range persists on any dashboard @new-navigation', as
     const dashboards = leftNavigation.dashboardsToVerifyTimeRange;
     for (const dashboard of dashboards) {
       await pmmTest.step(`Verify time range`, async () => {
-        await leftNavigation.selectMenuItem(dashboard);
+        await leftNavigation.selectMenuItem({ path: dashboard });
         await expect(leftNavigation.elements.timePickerOpenButton()).toContainText(selectedTimeRange, { timeout: 10000 });
       });
     }
   };
 
   await pmmTest.step('Select time range @new-navigation', async () => {
-    await leftNavigation.selectMenuItem('home');
+    await leftNavigation.selectMenuItem({ path: 'home' });
     await leftNavigation.elements.timePickerOpenButton().click();
     await leftNavigation.selectTimeRange(selectedTimeRange);
     await expect(leftNavigation.elements.timePickerOpenButton()).toContainText(selectedTimeRange);
@@ -115,25 +115,25 @@ pmmTest('Grafana embedding @new-navigation', async ({ leftNavigation }) => {
   });
 
   await pmmTest.step('Verify iframe hidden on Help page', async () => {
-    // await leftNavigation.selectMenuItem('help');
+    // await leftNavigation.selectMenuItem({ path: 'help' });
     await expect(leftNavigation.elements.iframe()).toBeHidden();
   });
 
   await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
-    await leftNavigation.selectMenuItem('home');
+    await leftNavigation.selectMenuItem({ path: 'home' });
     await leftNavigation.elements.refreshButton().click();
     await expect(leftNavigation.elements.iframe()).toBeVisible();
-    await leftNavigation.selectMenuItem('help');
+    await leftNavigation.selectMenuItem({ path: 'help' });
     await expect(leftNavigation.elements.iframe()).toBeHidden();
   });
 });
 
 pmmTest('verify node/service persistence @new-navigation', async ({ page, leftNavigation }) => {
   await pmmTest.step('verify service persistence in overview and summary dashboards', async () => {
-    await leftNavigation.selectMenuItem('mysql');
+    await leftNavigation.selectMenuItem({ path: 'mysql' });
     const selectedService = await leftNavigation.selectService(5, /ps-single-\d+/);
     await expect(leftNavigation.grafanaIframe().getByText(selectedService)).toBeVisible();
-    await leftNavigation.selectMenuItem('mysqlMenu.summary');
+    await leftNavigation.selectMenuItem({ path: 'mysqlMenu.summary' });
     await expect(leftNavigation.grafanaIframe().getByText(selectedService)).toBeVisible();
     // check persistence in new tab
     const newPage = await leftNavigation.newTab();
@@ -143,20 +143,20 @@ pmmTest('verify node/service persistence @new-navigation', async ({ page, leftNa
   });
 
   await pmmTest.step('verify node persistence in system and postgre dashboards @new-navigation', async () => {
-    await leftNavigation.selectMenuItem('operatingsystem');
+    await leftNavigation.selectMenuItem({ path: 'operatingsystem' });
     const selectedNode = await leftNavigation.selectNode(3, /pmm-server/);
     await leftNavigation.grafanaIframe().getByText(selectedNode).waitFor({ state: 'visible', timeout: 10000 });
     await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeVisible();
-    await leftNavigation.selectMenuItem('postgresql');
+    await leftNavigation.selectMenuItem({ path: 'postgresql' });
     await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeHidden();
   });
 
   await pmmTest.step('Verify node persistence in node overview', async () => {
-    await leftNavigation.selectMenuItem('mysql');
+    await leftNavigation.selectMenuItem({ path: 'mysql' });
     const selectedNode = await leftNavigation.selectNode(4, /client_container_\d+/);
     await leftNavigation.grafanaIframe().getByText(selectedNode).waitFor({ state: 'visible', timeout: 10000 });
     await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeVisible();
-    await leftNavigation.selectMenuItem('operatingsystem');
+    await leftNavigation.selectMenuItem({ path: 'operatingsystem' });
     await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeVisible();
     // check persistence in new tab
     const newPage = await leftNavigation.newTab();
