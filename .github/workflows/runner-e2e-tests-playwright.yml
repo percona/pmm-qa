@@ -130,6 +130,13 @@ jobs:
           repository: percona/pmm-qa
           path: ./pmm-qa
 
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
       - name: Setup PMM Server
         run: |
           ls
@@ -182,7 +189,7 @@ jobs:
         run: |
           npm ci
           npx playwright install-deps
-          npx playwright install
+          npx playwright install chromium
 
       - name: Execute UI tests
         if: ${{ inputs.pmm_test_flag == 'null' }}
