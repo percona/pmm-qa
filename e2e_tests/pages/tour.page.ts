@@ -6,7 +6,7 @@ export default class TourPage {
     'Query Analytics (QAN) dashboard',
     'Explore',
     'Alerts & Percona Templates',
-    'Advisors',
+    'Percona Advisors',
     'Management: Inventory & Backups',
     'Configurations',
     'Help Center'
