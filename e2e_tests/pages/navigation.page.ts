@@ -4,13 +4,11 @@ import basePage from "./base.page";
 export type MenuItem = Locator | (() => Locator) | { [key: string]: MenuItem };
 
 export default class LeftNavigation extends basePage {
-
   public readonly simpleMenuItems = ['home', 'qan', 'help'] as const;
-
   public readonly menuWithChildren = [
     'mysql',
     'postgresql',
-    // 'mongodb',
+    'mongodb',
     'operatingsystem',
     'alldashboards',
     'explore',
@@ -22,7 +20,6 @@ export default class LeftNavigation extends basePage {
     'usersAndAccess',
     'accounts'
   ] as const;
-
   public readonly dashboardsToVerifyTimeRange = [
     'mysql',
     'mysqlMenu.summary',
@@ -30,13 +27,12 @@ export default class LeftNavigation extends basePage {
     'mysqlMenu.ha.replication',
     'postgresql',
     'operatingsystem',
-    // 'qan',
+    // 'qan', // TODO: remove comment after the QAN is fixed
     'help',
     'home'
   ] as const;
 
   constructor(page: Page) { super(page); }
-
   public elements = {
     // parent menu items
     home: () => this.page.getByTestId('navitem-home-page'),
@@ -55,7 +51,7 @@ export default class LeftNavigation extends basePage {
     usersAndAccess: () => this.page.getByTestId('navitem-users-and-access'),
     accounts: () => this.page.getByTestId('navitem-account'),
     help: () => this.page.getByTestId('navitem-help'),
-
+    // child menu items
     mysqlMenu: {
       overview: () => this.page.getByTestId('navitem-mysql-overview'),
       summary: () => this.page.getByTestId('navitem-mysql-summary'),
@@ -87,7 +83,6 @@ export default class LeftNavigation extends basePage {
       topQueries: () => this.page.getByTestId('navitem-postgresql-top-queries'),
       otherDashboards: () => this.page.getByTestId('navitem-postgre-other-dashboards'),
     },
-
     mongodbMenu: {
       overview: () => this.page.getByTestId('navitem-mongo-overview'),
       summary: () => this.page.getByTestId('navitem-mongo-summary'),
@@ -103,7 +98,6 @@ export default class LeftNavigation extends basePage {
       oplog: () => this.page.getByTestId('navitem-mongo-oplog-details'),
       otherDashboards: () => this.page.getByTestId('navitem-mongo-other-dashboards'),
     },
-
     operatingsystemMenu: {
       overview: () => this.page.getByTestId('navitem-node-overview'),
       summary: () => this.page.getByTestId('navitem-node-summary'),
@@ -116,7 +110,6 @@ export default class LeftNavigation extends basePage {
       processes: () => this.page.getByTestId('navitem-processes'),
       otherDashboards: () => this.page.getByTestId('navitem-system-other-dashboards'),
     },
-
     alldashboardsMenu: {
       browseall: () => this.page.getByTestId('navitem-dashboards-browse'),
       shared: () => this.page.getByTestId('navitem-dashboards-shared'),
@@ -124,12 +117,10 @@ export default class LeftNavigation extends basePage {
       snapshots: () => this.page.getByTestId('navitem-dashboards-snapshots'),
       libraryPanels: () => this.page.getByTestId('navitem-dashboards-library-panels'),
     },
-
     exploreMenu: {
       promSqlBuilder: () => this.page.getByTestId('navitem-explore-promsql-builder'),
       metrics: () => this.page.getByTestId('navitem-explore-metrics'),
     },
-
     alertsMenu: {
       firedAlerts: () => this.page.getByTestId('navitem-alerts-fired'),
       alertRules: () => this.page.getByTestId('navitem-alerts-rules'),
@@ -147,20 +138,17 @@ export default class LeftNavigation extends basePage {
       query: () => this.page.getByTestId('navitem-advisors-query'),
       security: () => this.page.getByTestId('navitem-advisors-security'),
     },
-
     inventoryMenu: {
       addServices: () => this.page.getByTestId('navitem-add-instance'),
       services: () => this.page.getByTestId('navitem-inventory-services'),
       nodes: () => this.page.getByTestId('navitem-inventory-nodes'),
     },
-
     backupsMenu: {
       allBackups: () => this.page.getByTestId('navitem-backup-inventory'),
       scheduledJobs: () => this.page.getByTestId('navitem-scheduled-backups'),
       restores: () => this.page.getByTestId('navitem-restore-history'),
       storageLocation: () => this.page.getByTestId('navitem-storage-locations'),
     },
-
     configurationMenu: {
       settings: () => this.page.getByTestId('navitem-configuration-settings'),
       updates: () => this.page.getByTestId('navitem-updates'),
@@ -171,14 +159,11 @@ export default class LeftNavigation extends basePage {
         defaultPreferences: () => this.page.getByTestId('navitem-default-preferences'),
       }
     },
-
     usersAndAccessMenu: {
       users: () => this.page.getByTestId('navitem-users'),
       teams: () => this.page.getByTestId('navitem-teams'),
       serviceAccounts: () => this.page.getByTestId('navitem-service-accounts'),
-
     },
-
     accountsMenu: {
       profile: () => this.page.getByTestId('navitem-profile'),
       notificationHistory: () => this.page.getByTestId('navitem-notification-history'),
