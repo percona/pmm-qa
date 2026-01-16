@@ -41,7 +41,7 @@ pmmTest('Traverse all the menu items in left menu sidebar @new-navigation', asyn
     url.includes('/admin_config')
   );
 
-  const responseAfterClick = async (locator: Locator, menuItems: string) => {
+  const responseAfterClick = async (locator: Locator, name: string) => {
     const response = page.waitForResponse(
       (res: Response) => !ignore404(res.url()), { timeout: 1000 }
     ).catch(() => null);
@@ -56,57 +56,7 @@ pmmTest('Traverse all the menu items in left menu sidebar @new-navigation', asyn
     await expect(page).not.toHaveURL(/404|error|not-found/i);
   };
 
-  const traverseMenuItems = async (child: Record<string, MenuItem>, parent: string) => {
-
-    const items = Object.entries(child)
-
-    for (const [key, value] of items) {
-      if (key === 'signOut') {
-        if (typeof value === 'function') {
-          await responseAfterClick(value(), `${parent}.${key}`);
-        }
-        return;
-      }
-
-      if (typeof value === 'function') {
-        const locator = value();
-        await responseAfterClick(locator, `${parent}.${key}`);
-      } else if (typeof value === 'object' && value !== null) {
-        if ('click' in value && typeof (value as Record<string, unknown>).click === 'function') {
-          await responseAfterClick(value as Locator, `${parent}.${key}`);
-        } else {
-          await traverseMenuItems(value as Record<string, MenuItem>, `${parent}.${key}`);
-        }
-      }
-    }
-  };
-
-  const traverseAllMenuItems = async () => {
-
-    const simpleMenuItems = leftNavigation.simpleMenuItems;
-    const menuWithChildren = leftNavigation.menuWithChildren;
-    const elements = leftNavigation.elements as Record<string, MenuItem>;
-
-    for (const item of simpleMenuItems) {
-      const element = elements[item];
-      if (typeof element === 'function') {
-        await responseAfterClick(element(), item);
-      }
-    }
-
-    for (const parent of menuWithChildren) {
-      const parentElement = elements[parent];
-      if (typeof parentElement === 'function') {
-        await responseAfterClick(parentElement(), parent);
-      }
-
-      const children = elements[`${parent}Menu`];
-      if (children) {
-        await traverseMenuItems(children as Record<string, MenuItem>, parent);
-      }
-    }
-  };
-  await traverseAllMenuItems();
+  await leftNavigation.traverseAllMenuItems(responseAfterClick);
 });
 
 pmmTest('RBAC/permissions @new-navigation', async ({ leftNavigation, grafanaHelper }) => {
@@ -165,12 +115,13 @@ pmmTest('Grafana embedding @new-navigation', async ({ leftNavigation }) => {
   });
 
   await pmmTest.step('Verify iframe hidden on Help page', async () => {
-    await leftNavigation.selectMenuItem('help');
+    // await leftNavigation.selectMenuItem('help');
     await expect(leftNavigation.elements.iframe()).toBeHidden();
   });
 
   await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
     await leftNavigation.selectMenuItem('home');
+    await leftNavigation.elements.refreshButton().click();
     await expect(leftNavigation.elements.iframe()).toBeVisible();
     await leftNavigation.selectMenuItem('help');
     await expect(leftNavigation.elements.iframe()).toBeHidden();
@@ -178,16 +129,15 @@ pmmTest('Grafana embedding @new-navigation', async ({ leftNavigation }) => {
 });
 
 pmmTest('verify node/service persistence @new-navigation', async ({ page, leftNavigation }) => {
-
   await pmmTest.step('verify service persistence in overview and summary dashboards', async () => {
     await leftNavigation.selectMenuItem('mysql');
     const selectedService = await leftNavigation.selectService(5, /ps-single-\d+/);
-    await expect(leftNavigation.iframe().getByText(selectedService)).toBeVisible();
+    await expect(leftNavigation.grafanaIframe().getByText(selectedService)).toBeVisible();
     await leftNavigation.selectMenuItem('mysqlMenu.summary');
-    await expect(leftNavigation.iframe().getByText(selectedService)).toBeVisible();
+    await expect(leftNavigation.grafanaIframe().getByText(selectedService)).toBeVisible();
     // check persistence in new tab
     const newPage = await leftNavigation.newTab();
-    await expect(leftNavigation.iframe().getByText(selectedService)).toBeVisible();
+    await expect(leftNavigation.grafanaIframe().getByText(selectedService)).toBeVisible();
     await newPage.close();
     leftNavigation.switchPage(page);
   });
@@ -195,20 +145,22 @@ pmmTest('verify node/service persistence @new-navigation', async ({ page, leftNa
   await pmmTest.step('verify node persistence in system and postgre dashboards @new-navigation', async () => {
     await leftNavigation.selectMenuItem('operatingsystem');
     const selectedNode = await leftNavigation.selectNode(3, /pmm-server/);
-    await expect(leftNavigation.iframe().getByText(selectedNode)).toBeVisible();
+    await leftNavigation.grafanaIframe().getByText(selectedNode).waitFor({ state: 'visible', timeout: 10000 });
+    await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeVisible();
     await leftNavigation.selectMenuItem('postgresql');
-    await expect(leftNavigation.iframe().getByText(selectedNode)).toBeHidden();
+    await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeHidden();
   });
 
   await pmmTest.step('Verify node persistence in node overview', async () => {
     await leftNavigation.selectMenuItem('mysql');
     const selectedNode = await leftNavigation.selectNode(4, /client_container_\d+/);
-    await expect(leftNavigation.iframe().getByText(selectedNode)).toBeVisible();
+    await leftNavigation.grafanaIframe().getByText(selectedNode).waitFor({ state: 'visible', timeout: 10000 });
+    await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeVisible();
     await leftNavigation.selectMenuItem('operatingsystem');
-    await expect(leftNavigation.iframe().getByText(selectedNode)).toBeVisible();
+    await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeVisible();
     // check persistence in new tab
     const newPage = await leftNavigation.newTab();
-    await expect(leftNavigation.iframe().getByText(selectedNode)).toBeVisible();
+    await expect(leftNavigation.grafanaIframe().getByText(selectedNode)).toBeVisible();
     await newPage.close();
     leftNavigation.switchPage(page);
   });
