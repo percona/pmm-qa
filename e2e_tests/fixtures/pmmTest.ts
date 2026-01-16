@@ -38,15 +38,15 @@ base.beforeEach(async ({ page }) => {
 });
 
 const pmmTest = base.extend<{
-  cliHelper: CliHelper;
-  credentials: Credentials;
-  dashboard: Dashboard;
-  grafanaHelper: GrafanaHelper;
-  api: Api;
-  queryAnalytics: QueryAnalytics;
-  urlHelper: UrlHelper;
-  welcomePage: WelcomePage;
-  mocks: Mocks;
+  cliHelper: CliHelper,
+  credentials: Credentials,
+  dashboard: Dashboard,
+  grafanaHelper: GrafanaHelper,
+  api: Api,
+  queryAnalytics: QueryAnalytics,
+  urlHelper: UrlHelper,
+  welcomePage: WelcomePage,
+  mocks: Mocks,
 }>({
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
