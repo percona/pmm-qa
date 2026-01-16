@@ -1,13 +1,18 @@
 export type GrafanaPanelType =
   | 'timeSeries'
   | 'table'
+  | 'text'
   | 'stat'
   | 'gauge'
   | 'polyStat'
   | 'barGauge'
   | 'pie'
   | 'custom'
-  | 'unknown';
+  | 'barTime'
+  | 'stateTime'
+  | 'summary'
+  | 'unknown'
+  | 'empty';
 
 export interface GrafanaPanel {
   name: string;

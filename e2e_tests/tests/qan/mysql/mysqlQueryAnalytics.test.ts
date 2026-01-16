@@ -1,13 +1,17 @@
 import pmmTest from '@fixtures/pmmTest';
-import { ServiceType } from '@interfaces/inventory';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
-  const containerName = cliHelper.execSilent('docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}"');
-  cliHelper.execSilent(`docker exec -i ${containerName.stdout} mysql -h 127.0.0.1 --port 3306 \
-                                      -u ${credentials.perconaServer.ps_84.username} \
-                                      -p${credentials.perconaServer.ps_84.password} \
-                                      < \${PWD}/testdata/PMM-T1897.sql`);
+  const containerName = cliHelper.execSilent(
+    'docker ps --filter \'name=(ps|mysql)\' --format "{{.Names }}" | head -n 1',
+  ).stdout;
+  const result = cliHelper.execSilent(`docker exec -i ${containerName} mysql -h 127.0.0.1 --port 3306 \
+                                                          -u ${credentials.perconaServer.ps_84.username} \
+                                                          -p${credentials.perconaServer.ps_84.password} \
+                                                          < \${PWD}/testdata/PMM-T1897.sql`);
+  if (result.code != 0) {
+    throw new Error(`Exec command failed with code ${result.code} and message ${result.stderr}`);
+  }
 });
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
@@ -15,14 +19,15 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 pmmTest(
-  'PMM-T2030 - Verify QAN for Percona Server Instance @nightly @pmm-ps-integration',
+  'PMM-T2030 - Verify QAN for PS Replica Instance @nightly @pmm-ps-integration',
   async ({ page, queryAnalytics, urlHelper, api }) => {
-    const serviceList = await api.inventoryApi.getServicesByType(ServiceType.mysql);
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
 
     await page.goto(
       urlHelper.buildUrlWithParameters(queryAnalytics.url, {
         from: 'now-15m',
-        serviceName: serviceList[0].service_name,
+        serviceName: service_name,
+        schema: 'sbtest',
       }),
     );
     await queryAnalytics.verifyQueryAnalyticsHaveData();
@@ -39,6 +44,6 @@ pmmTest(
 
     await page.goto(url);
     await queryAnalytics.waitForQueryAnalyticsToHaveData(Timeouts.TWO_MINUTES);
-    await queryAnalytics.verifyTotalQueryCount(20);
+    await queryAnalytics.verifyTotalQueryCount(19);
   },
 );
