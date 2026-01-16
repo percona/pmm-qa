@@ -3,6 +3,10 @@ import basePage from "./base.page";
 
 export type MenuItem = Locator | (() => Locator) | { [key: string]: MenuItem };
 
+export interface MenuItemPath {
+  path: string;
+}
+
 export default class LeftNavigation extends basePage {
   public readonly simpleMenuItems = ['home', 'qan', 'help'] as const;
   public readonly menuWithChildren = [
@@ -189,8 +193,8 @@ export default class LeftNavigation extends basePage {
     oldLeftMenu: () => this.page.getByTestId('data-testid navigation mega-menu'),
   };
 
-  selectMenuItem = async (item: string): Promise<void> => {
-    const keys = item.split('.');
+  selectMenuItem = async (item: MenuItemPath): Promise<void> => {
+    const keys = item.path.split('.');
     let element: MenuItem = this.elements;
 
     for (const key of keys) {
