@@ -11,7 +11,7 @@ on:
         required: false
         type: string
       pmm_qa_branch:
-        description: 'pmm-qa repository branch(for setup)'
+        description: 'pmm-qa repository branch'
         default: 'main'
         required: false
         type: string
