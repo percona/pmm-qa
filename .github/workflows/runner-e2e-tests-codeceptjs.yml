@@ -7,6 +7,10 @@ on:
         required: false
         type: string
       pmm_qa_branch:
+        description: "Branch for pmm-qa repository to checkout"
+        required: false
+        type: string
+      qa_integration_branch:
         description: "Branch for qa-integration to checkout"
         required: false
         type: string
@@ -53,6 +57,9 @@ on:
         required: false
         type: string
       pmm_qa_branch:
+        required: false
+        type: string
+      qa_integration_branch:
         required: false
         type: string
       pmm_server_image:
@@ -140,7 +147,7 @@ jobs:
       - name: Checkout qa-integration repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.PMM_QA_BRANCH }}
+          ref: ${{ inputs.qa_integration_branch }}
           repository: Percona-Lab/qa-integration
           path: ./qa-integration
 
