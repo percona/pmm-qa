@@ -53,9 +53,6 @@ export default class MysqlInstanceSummary implements DashboardInterface {
     { name: 'Network Traffic', type: 'timeSeries' },
   ];
   noDataMetrics: string[] = [
-    'Top Process States Hourly',
-    'Top Command Counters Hourly',
-    'MySQL Network Usage Hourly',
     'MySQL Query Cache Memory',
     'MySQL Query Cache Activity',
   ];
