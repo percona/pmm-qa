@@ -1,5 +1,6 @@
 import { Page, Download, Locator } from '@playwright/test';
 import { IPageObject } from '../interfaces/pageObject';
+import pmmTest from '@fixtures/pmmTest';
 
 export default class HelpPage implements IPageObject {
   public readonly buttons;
@@ -18,16 +19,20 @@ export default class HelpPage implements IPageObject {
   }
 
   public async clickExternalLink(button: Locator): Promise<{ href: string | null; newTab: Page }> {
-    const href = await button.getAttribute('href');
-    const popup = this.page.waitForEvent('popup');
-    await button.click();
-    const newTab = await popup;
-    return { href, newTab };
+    return await pmmTest.step('Click external link', async () => {
+      const href = await button.getAttribute('href');
+      const popup = this.page.waitForEvent('popup');
+      await button.click();
+      const newTab = await popup;
+      return { href, newTab };
+    });
   }
 
   public async exportLogs(): Promise<Download> {
-    const download = this.page.waitForEvent('download');
-    await this.buttons.exportLogs.click();
-    return download;
+    return await pmmTest.step('Export logs', async () => {
+      const download = this.page.waitForEvent('download');
+      await this.buttons.exportLogs.click();
+      return download;
+    });
   }
 }
