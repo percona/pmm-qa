@@ -11,11 +11,10 @@ pmmTest('PMM-T2100 verify onboarding tour functionality (PMM start tour) @new-na
     await tour.buttons.startTour.click();
   });
   await pmmTest.step('Verify all tour steps in sequence', async () => {
-    for (let i = 0; i < tour.titles.length; i++) {
-      await expect(tour.elements.stepTitle).toHaveText(tour.titles[i]);
-      
-      const isLastStep = i === tour.titles.length - 1;
-      if (!isLastStep) {
+    const lastTitle = tour.titles.at(-1);
+    for (const title of tour.titles) {
+      await expect(tour.elements.stepTitle).toHaveText(title);
+      if (title !== lastTitle) {
         await tour.buttons.nextTip.click();
       }
     }
@@ -33,11 +32,11 @@ pmmTest('verify previous button from card 8 -> 2 @new-navigation', async ({ tour
     await tour.navigateForward(lastStepIndex);
   });
   await pmmTest.step('Verify backward navigation through all steps', async () => {
-    for (let i = lastStepIndex; i >= 0; i--) {
-      await expect(tour.elements.stepTitle).toHaveText(tour.titles[i]);
-      
-      const isFirstStep = i === 0;
-      if (!isFirstStep) {
+    const reversedTitles = tour.titles.reverse();
+    const lastTitle = reversedTitles.at(-1);
+    for (const title of reversedTitles) {
+      await expect(tour.elements.stepTitle).toHaveText(title);
+      if (title !== lastTitle) {
         await tour.buttons.previousTip.click();
       }
     }

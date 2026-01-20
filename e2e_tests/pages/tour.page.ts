@@ -1,19 +1,10 @@
-import { Page, Locator } from '@playwright/test';
-import { NavigationInterface } from '../interfaces/navigation';
+import { Page } from '@playwright/test';
+import { IPageObject } from '../interfaces/pageObject';
 import pmmTest from '@fixtures/pmmTest';
 
-export default class TourPage implements NavigationInterface {
-  public readonly buttons: {
-    startTour: Locator;
-    nextTip: Locator;
-    previousTip: Locator;
-    endTour: Locator;
-    close: Locator;
-  };
-
-  public readonly elements: {
-    stepTitle: Locator;
-  };
+export default class TourPage implements IPageObject {
+  public readonly buttons;
+  public readonly elements;
 
   public readonly titles = [
     'Percona Dashboards',
