@@ -12,6 +12,11 @@ on:
         required: false
         type: string
       pmm_qa_branch:
+        description: 'pmm-qa repository branch'
+        default: 'main'
+        required: false
+        type: string
+      qa_integration_branch:
         description: 'qa-integration repository branch(for setup)'
         default: 'main'
         required: false
@@ -45,6 +50,9 @@ on:
       pmm_qa_branch:
         required: false
         type: string
+      qa_integration_branch:
+        required: false
+        type: string
       pmm_server_image:
         required: true
         type: string
@@ -73,6 +81,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
 #      setup_services: '--database psmdb,SETUP_TYPE=pss'
       setup_services: '--database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra'
@@ -89,6 +98,7 @@ jobs:
 #      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
 #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
 #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+#      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
 #      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
 #      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
 #      setup_services: '--mongo-replica-for-backup --setup-bm-mysql'
@@ -104,6 +114,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss'
@@ -120,6 +131,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps,QUERY_SOURCE=slowlog'
@@ -135,6 +147,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb'
@@ -150,6 +163,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database external --database haproxy'
@@ -165,6 +179,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database mysql'
@@ -180,6 +195,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database psmdb --database pdpgsql'
@@ -195,6 +211,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database pdpgsql'
@@ -210,6 +227,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database pgsql'
@@ -226,6 +244,7 @@ jobs:
   #     pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
   #     pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
   #     pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+  #     qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
   #     pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
   #     sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
   #     setup_services: '--database psmdb,SETUP_TYPE=psa'
@@ -241,6 +260,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss'
@@ -254,8 +274,8 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_qa_branch: 'main'
-      qa_integration_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database psmdb'
@@ -271,6 +291,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps'
@@ -286,6 +307,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps=8.0'
@@ -301,6 +323,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb,SETUP_TYPE=psa'
@@ -314,8 +337,8 @@ jobs:
     with:
       pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      qa_integration_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      pmm_qa_branch: ${{ inputs.pmm_qa_branch || (github.event_name == 'pull_request' && github.head_ref) || github.ref_name || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       setup_services: '--database ps,SETUP_TYPE=replication,MY_ROCKS=true --database ps,SETUP_TYPE=gr,QUERY_SOURCE=slowlog'
       pmm_test_flag: '@pmm-ps-integration'
 
@@ -329,6 +352,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database pdpgsql'
@@ -344,6 +368,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps=8.0'
@@ -359,6 +384,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '-h'
@@ -375,6 +401,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps=8.4 --database pdpgsql --database psmdb'
