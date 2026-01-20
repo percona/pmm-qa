@@ -1,5 +1,6 @@
 import { Page, Locator } from '@playwright/test';
 import { NavigationInterface } from '../interfaces/navigation';
+import pmmTest from '@fixtures/pmmTest';
 
 export default class TourPage implements NavigationInterface {
   public readonly buttons: {
@@ -40,12 +41,16 @@ export default class TourPage implements NavigationInterface {
   }
 
   public async navigateForward(stepsToMove: number): Promise<void> {
-    for (let i = 0; i < stepsToMove; i++) {
-      await this.buttons.nextTip.click();
-    }
+    await pmmTest.step('Navigate forward', async () => {
+      for (let i = 0; i < stepsToMove; i++) {
+        await this.buttons.nextTip.click();
+      }
+    });
   }
 
   public async getStepTitle(): Promise<string> {
-    return await this.elements.stepTitle.innerText();
+    return pmmTest.step('Get current step title text', async () => {
+      return await this.elements.stepTitle.innerText();
+    });
   }
 }
