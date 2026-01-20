@@ -1,6 +1,19 @@
 import { Page, Locator } from '@playwright/test';
+import { NavigationInterface } from '../interfaces/navigation';
 
-export default class TourPage {
+export default class TourPage implements NavigationInterface {
+  public readonly buttons: {
+    startTour: Locator;
+    nextTip: Locator;
+    previousTip: Locator;
+    endTour: Locator;
+    close: Locator;
+  };
+
+  public readonly elements: {
+    stepTitle: Locator;
+  };
+
   public readonly titles = [
     'Percona Dashboards',
     'Query Analytics (QAN) dashboard',
@@ -12,24 +25,27 @@ export default class TourPage {
     'Help Center'
   ];
 
-  constructor(public page: Page) { }
+  constructor(public readonly page: Page) {
+    this.buttons = {
+      startTour: this.page.getByTestId('tips-card-start-product-tour-button'),
+      nextTip: this.page.getByTestId('tour-next-step-button'),
+      previousTip: this.page.getByTestId('tour-previous-step-button'),
+      endTour: this.page.getByTestId('tour-end-tour-button'),
+      close: this.page.getByTestId('tour-close-button'),
+    };
 
-  public elements = {
-    startTourButton: () => this.page.getByTestId('tips-card-start-product-tour-button'),
-    nextTip: () => this.page.getByTestId('tour-next-step-button'),
-    previousTip: () => this.page.getByTestId('tour-previous-step-button'),
-    endTourButton: () => this.page.getByTestId('tour-end-tour-button'),
-    closeButton: () => this.page.getByTestId('tour-close-button'),
-    stepTitle: () => this.page.getByTestId('tour-step-title'),
-  };
+    this.elements = {
+      stepTitle: this.page.getByTestId('tour-step-title'),
+    };
+  }
 
-  public navigateForward = async (stepsToMove: number): Promise<void> => {
+  public async navigateForward(stepsToMove: number): Promise<void> {
     for (let i = 0; i < stepsToMove; i++) {
-      await this.elements.nextTip().click();
+      await this.buttons.nextTip.click();
     }
   }
 
-  public getStepTitle = async (): Promise<string> => {
-    return (await this.elements.stepTitle().innerText());
+  public async getStepTitle(): Promise<string> {
+    return await this.elements.stepTitle.innerText();
   }
 }
