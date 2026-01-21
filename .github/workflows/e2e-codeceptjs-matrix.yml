@@ -185,7 +185,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      setup_services: '--database ps --database pdpgsql --database psmdb'
+      setup_services: '--database ps=8.4 --database pdpgsql --database psmdb --database valkey'
       pmm_test_flag: '@new-navigation'
 
 #  valkey_integration:
