@@ -1,6 +1,11 @@
-import { Page, Locator } from '@playwright/test';
+import { Page } from '@playwright/test';
+import { IPageObject } from '../interfaces/pageObject';
+import pmmTest from '@fixtures/pmmTest';
 
-export default class TourPage {
+export default class TourPage implements IPageObject {
+  public readonly buttons;
+  public readonly elements;
+
   public readonly titles = [
     'Percona Dashboards',
     'Query Analytics (QAN) dashboard',
@@ -12,24 +17,31 @@ export default class TourPage {
     'Help Center'
   ];
 
-  constructor(public page: Page) { }
+  constructor(public readonly page: Page) {
+    this.buttons = {
+      startTour: this.page.getByTestId('tips-card-start-product-tour-button'),
+      nextTip: this.page.getByTestId('tour-next-step-button'),
+      previousTip: this.page.getByTestId('tour-previous-step-button'),
+      endTour: this.page.getByTestId('tour-end-tour-button'),
+      close: this.page.getByTestId('tour-close-button'),
+    };
 
-  public elements = {
-    startTourButton: () => this.page.getByTestId('tips-card-start-product-tour-button'),
-    nextTip: () => this.page.getByTestId('tour-next-step-button'),
-    previousTip: () => this.page.getByTestId('tour-previous-step-button'),
-    endTourButton: () => this.page.getByTestId('tour-end-tour-button'),
-    closeButton: () => this.page.getByTestId('tour-close-button'),
-    stepTitle: () => this.page.getByTestId('tour-step-title'),
-  };
-
-  public navigateForward = async (stepsToMove: number): Promise<void> => {
-    for (let i = 0; i < stepsToMove; i++) {
-      await this.elements.nextTip().click();
-    }
+    this.elements = {
+      stepTitle: this.page.getByTestId('tour-step-title'),
+    };
   }
 
-  public getStepTitle = async (): Promise<string> => {
-    return (await this.elements.stepTitle().innerText());
+  public async navigateForward(stepsToMove: number): Promise<void> {
+    await pmmTest.step('Navigate forward', async () => {
+      for (let i = 0; i < stepsToMove; i++) {
+        await this.buttons.nextTip.click();
+      }
+    });
+  }
+
+  public async getStepTitle(): Promise<string> {
+    return pmmTest.step('Get current step title text', async () => {
+      return await this.elements.stepTitle.innerText();
+    });
   }
 }
