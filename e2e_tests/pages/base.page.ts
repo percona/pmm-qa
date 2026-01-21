@@ -3,7 +3,7 @@ import { Page } from '@playwright/test';
 export default class BasePage {
   constructor(protected page: Page) {}
 
-  public grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
+  protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
 
   newTab = async (): Promise<Page> => {
     const url = this.page.url();
