@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import data from '@fixtures/dataTest';
 import { Timeouts } from '@helpers/timeouts';
+import { expect } from '@playwright/test';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -192,5 +193,40 @@ pmmTest(
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlMyRocksDetails.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlMyRocksDetails.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlMyRocksDetails.metricsWithData);
+  },
+);
+
+pmmTest(
+  'PMM-T2142 - Verify Replication Delay and Relay Log Space panels have multiple series colors @pmm-ps-integration',
+  async ({ page, urlHelper, dashboard }) => {
+    const panels = [
+      {
+        name: 'Replication Delay',
+        url: dashboard.mysql.mysqlGroupReplicationSummary.url,
+        metrics: dashboard.mysql.mysqlGroupReplicationSummary.metrics,
+      },
+      /*{
+        name: 'Relay Log Space',
+        url: dashboard.mysql.mysqlReplicationSummary.url,
+        metrics: dashboard.mysql.mysqlReplicationSummary.metrics,
+      },*/
+    ];
+
+    for (let panel of panels) {
+      await page.goto(urlHelper.buildUrlWithParameters(panel.url, { from: 'now-1h' }));
+      await dashboard.verifyMetricsPresent(panel.metrics);
+      const { colors, labels, seriesCount, labelCount } =
+        await dashboard.panels().timeSeries.getSeriesColorsAndLabels(panel.name);
+      await pmmTest.step(`Verify at least 2 series exist for "${panel.name}" panel`, async () => {
+        expect(seriesCount).toBeGreaterThan(1);
+      });
+      await pmmTest.step(`Verify each series has a unique color for "${panel.name}" panel`, async () => {
+        expect(colors.size).toBe(seriesCount);
+      });
+      await pmmTest.step(`Verify each series has a unique label for "${panel.name}" panel`, async () => {
+        expect(labelCount).toBe(seriesCount);
+        expect(labels.size).toBe(seriesCount);
+      });
+    }
   },
 );
