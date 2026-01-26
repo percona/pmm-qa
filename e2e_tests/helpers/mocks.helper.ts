@@ -1,7 +1,7 @@
 import { Page } from '@playwright/test';
 
 export default class mocksHelper {
-  constructor(public page: Page) { }
+  constructor(public page: Page) {}
 
   // mock no services
   mockNoServices = async (): Promise<void> => {
@@ -10,23 +10,23 @@ export default class mocksHelper {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          "mysql": [],
-          "mongodb": [],
-          "postgresql": [],
-          "proxysql": [],
-          "haproxy": [],
-          "external": [],
-          "valkey": []
-        })
-      })
-    })
-  }
+          mysql: [],
+          mongodb: [],
+          postgresql: [],
+          proxysql: [],
+          haproxy: [],
+          external: [],
+          valkey: [],
+        }),
+      });
+    });
+  };
 
   // mock api for fresh install
   mockFreshInstall = async (): Promise<void> => {
     let productTourCompleted = false;
 
-    await this.page.route('**/v1/users/me', route => {
+    await this.page.route('**/v1/users/me', (route) => {
       const method = route.request().method();
 
       if (method === 'GET') {
@@ -55,4 +55,35 @@ export default class mocksHelper {
       return route.continue();
     });
   };
-};
+
+  public async mockUpdateAvailable(updateAvailable: boolean): Promise<void> {
+    await this.page.route('**/v1/server/updates?force=true', async (route) => {
+      const installedTimestamp = new Date();
+      const now = new Date();
+      const millisecond = now.getMilliseconds().toString().padStart(3, '0');
+      const nanosecondTimestamp = now.toISOString().split('.')[0] + '.' + millisecond + '000000Z';
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          installed: {
+            version: '',
+            full_version: '',
+            timestamp: installedTimestamp,
+          },
+          latest: {
+            version: '',
+            tag: '',
+            timestamp: null,
+            release_notes_url: 'https://example.com',
+            release_notes_text: 'New features',
+          },
+          update_available: updateAvailable,
+          latest_news_url: 'https://example.com',
+          last_check: nanosecondTimestamp,
+        }),
+      });
+    });
+  }
+}
