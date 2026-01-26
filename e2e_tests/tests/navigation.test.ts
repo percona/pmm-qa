@@ -8,7 +8,6 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 });
 
 pmmTest('verify left menu sidebar collapse and expand @new-navigation', async ({ page, leftNavigation }) => {
-
   await pmmTest.step('verify left menu sidebar collapse and expand', async () => {
     await expect(leftNavigation.buttons.closeLeftNavigationButton).toBeVisible();
     await expect(leftNavigation.buttons.openLeftNavigationButton).toBeHidden();
@@ -31,30 +30,27 @@ pmmTest('verify left menu sidebar collapse and expand @new-navigation', async ({
   });
 });
 
-
-pmmTest('Traverse all the menu items in left menu sidebar @new-navigation', async ({ page, leftNavigation }) => {
-
-  pmmTest.slow();
-  const ignore404 = (url: string) => (
-    url.includes('/settings') ||
-    url.includes('/admin_config')
-  );
-  const responseAfterClick = async (locator: Locator, name: string) => {
-    const response = page.waitForResponse(
-      (res: Response) => !ignore404(res.url()), { timeout: 1000 }
-    ).catch(() => null);
-    await locator.click();
-    const res = await response;
-    if (res) {
-      expect(res.status()).not.toBe(404);
-    }
-    await expect(page).not.toHaveURL(/404|error|not-found/i);
-  };
-  await leftNavigation.traverseAllMenuItems(responseAfterClick);
-});
+pmmTest(
+  'Traverse all the menu items in left menu sidebar @new-navigation',
+  async ({ page, leftNavigation }) => {
+    pmmTest.slow();
+    const ignore404 = (url: string) => url.includes('/settings') || url.includes('/admin_config');
+    const responseAfterClick = async (locator: Locator, name: string) => {
+      const response = page
+        .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 1000 })
+        .catch(() => null);
+      await locator.click();
+      const res = await response;
+      if (res) {
+        expect(res.status()).not.toBe(404);
+      }
+      await expect(page).not.toHaveURL(/404|error|not-found/i);
+    };
+    await leftNavigation.traverseAllMenuItems(responseAfterClick);
+  },
+);
 
 pmmTest('RBAC/permissions @new-navigation', async ({ leftNavigation, grafanaHelper }) => {
-
   await pmmTest.step('Create non-admin user', async () => {
     await leftNavigation.selectMenuItem('usersAndAccess');
     await grafanaHelper.createUser('nonadmin', 'nonadmin');
@@ -78,7 +74,9 @@ pmmTest('verify custom time range persists on any dashboard @new-navigation', as
     for (const dashboard of dashboards) {
       await pmmTest.step(`Verify time range`, async () => {
         await leftNavigation.selectMenuItem(dashboard);
-        await expect(leftNavigation.buttons.timePickerOpenButton).toContainText(selectedTimeRange, { timeout: 10000 });
+        await expect(leftNavigation.buttons.timePickerOpenButton).toContainText(selectedTimeRange, {
+          timeout: 10000,
+        });
       });
     }
   };
@@ -102,7 +100,6 @@ pmmTest('Grafana embedding @new-navigation', async ({ leftNavigation }) => {
     await expect(leftNavigation.buttons.oldLeftMenu).toBeHidden();
   });
   await pmmTest.step('Verify iframe hidden on Help page', async () => {
-    // await leftNavigation.selectMenuItem({ path: 'help' });
     await expect(leftNavigation.elements.iframe).toBeHidden();
   });
   await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
@@ -130,7 +127,6 @@ pmmTest('verify service persistence @new-navigation', async ({ page, leftNavigat
 });
 
 pmmTest('verify node persistence @new-navigation', async ({ page, leftNavigation }) => {
-
   await pmmTest.step('verify node persistence in system and postgre dashboards @new-navigation', async () => {
     await leftNavigation.selectMenuItem('operatingsystem');
     const selectedNode = await leftNavigation.selectNode(3);

@@ -14,7 +14,7 @@ export default class TourPage implements IPageObject {
     'Advisors',
     'Management: Inventory & Backups',
     'Configurations',
-    'Help Center'
+    'Help Center',
   ];
 
   constructor(public readonly page: Page) {

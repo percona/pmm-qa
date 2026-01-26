@@ -1,8 +1,10 @@
 import { Locator } from '@playwright/test';
 
+type NestedLocators = Locator | { [key: string]: NestedLocators };
+
 export interface IPageObject {
-  elements?: { [key: string]: Locator };
-  buttons?: { [key: string]: Locator };
-  inputs?: { [key: string]: Locator };
-  messages?: { [key: string]: Locator };
+  elements?: NestedLocators;
+  buttons?: NestedLocators;
+  inputs?: NestedLocators;
+  messages?: NestedLocators;
 }

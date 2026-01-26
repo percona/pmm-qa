@@ -1,10 +1,10 @@
-import { Locator, Page } from "@playwright/test";
-import basePage from "./base.page";
-import { IPageObject } from "@interfaces/pageObject";
-import pmmTest from "@fixtures/pmmTest";
+import { Locator, Page } from '@playwright/test';
+import basePage from './base.page';
+import { IPageObject } from '@interfaces/pageObject';
+import pmmTest from '@fixtures/pmmTest';
 
 export default class LeftNavigation extends basePage implements IPageObject {
-  public readonly buttons: any;
+  public readonly buttons;
   public readonly elements;
 
   public readonly simpleMenuItems = ['home', 'qan', 'help'] as const;
@@ -22,7 +22,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
     'backups',
     'configuration',
     'usersAndAccess',
-    'accounts'
+    'accounts',
   ] as const;
   public readonly dashboardsToVerifyTimeRange = [
     'mysql',
@@ -33,7 +33,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
     'operatingsystem',
     // 'qan', // TODO: remove comment after the QAN is fixed
     'help',
-    'home'
+    'home',
   ] as const;
 
   constructor(page: Page) {
@@ -176,7 +176,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           organizations: this.page.getByTestId('navitem-organizations'),
           statsAndLicense: this.page.getByTestId('navitem-stats-and-licenses'),
           defaultPreferences: this.page.getByTestId('navitem-default-preferences'),
-        }
+        },
       },
       usersAndAccessMenu: {
         users: this.page.getByTestId('navitem-users'),
@@ -202,7 +202,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
       timePickerOpenButton: this.grafanaIframe().getByTestId('data-testid TimePicker Open Button'),
       refreshButton: this.grafanaIframe().getByTestId('data-testid RefreshPicker run button'),
 
-      // old navigation 
+      // old navigation
       oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
     };
 
@@ -230,34 +230,31 @@ export default class LeftNavigation extends basePage implements IPageObject {
         }
       }
     });
-  }
+  };
 
   public selectTimeRange = async (timeRange: string): Promise<void> => {
     await pmmTest.step(`Select time range: ${timeRange}`, async () => {
       await this.getTimeRangeOption(timeRange).click();
     });
-  }
+  };
 
   private getTimeRangeOption = (timeRange: string): Locator => {
     return this.grafanaIframe().locator(`//*[contains(text(), "${timeRange}")]`);
-  }
+  };
 
   public mouseHoverOnPmmLogo = async (): Promise<void> => {
     await pmmTest.step('Hover on PMM Logo', async () => {
       const pmmLogo = this.elements.sidebar.locator('rect').first();
       const rectBox = await pmmLogo.boundingBox();
       if (rectBox) {
-        await this.page.mouse.move(
-          rectBox.x + rectBox.width / 2,
-          rectBox.y + rectBox.height / 2
-        );
+        await this.page.mouse.move(rectBox.x + rectBox.width / 2, rectBox.y + rectBox.height / 2);
       }
     });
-  }
+  };
 
   variableContext = (text: string): Locator => {
     return this.grafanaIframe().getByText(text, { exact: true }).first();
-  }
+  };
   private selectVariableValue = async (dashboardIndex: number): Promise<string> => {
     const frame = this.grafanaIframe();
     const allSelector = frame.getByText('All').nth(dashboardIndex);
@@ -268,17 +265,19 @@ export default class LeftNavigation extends basePage implements IPageObject {
     await allSelector.press('Enter');
     await allSelector.press('Escape');
     return selectedText?.trim() ?? '';
-  }
+  };
 
   public selectService = async (dashboardIndex: number): Promise<string> => {
     return this.selectVariableValue(dashboardIndex);
-  }
+  };
 
   public selectNode = async (dashboardIndex: number): Promise<string> => {
     return this.selectVariableValue(dashboardIndex);
-  }
+  };
 
-  public traverseAllMenuItems = async (responseAfterClick: (locator: Locator, menuItems: string) => Promise<void>): Promise<void> => {
+  public traverseAllMenuItems = async (
+    responseAfterClick: (locator: Locator, menuItems: string) => Promise<void>,
+  ): Promise<void> => {
     await pmmTest.step('Traverse all menu items', async () => {
       const traverseMenuItems = async (child: any, parent: string) => {
         const items = Object.entries(child);
@@ -311,5 +310,5 @@ export default class LeftNavigation extends basePage implements IPageObject {
         }
       }
     });
-  }
-};
+  };
+}
