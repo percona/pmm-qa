@@ -12,9 +12,9 @@ export default class BasePage {
     await newPage.locator('#grafana-iframe').waitFor({ state: 'visible' });
     this.page = newPage;
     return newPage;
-  }
+  };
 
   switchPage = (page: Page) => {
     this.page = page;
-  }
+  };
 }

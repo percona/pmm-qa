@@ -22,8 +22,6 @@ export default class GrafanaHelper {
     return Buffer.from(`${username}:${password}`).toString('base64');
   }
 
-
-  // creates non admin user
   async createUser(username: string, password: string) {
     const authToken = GrafanaHelper.getToken();
     const response = await this.page.request.post('graph/api/admin/users', {
@@ -32,8 +30,8 @@ export default class GrafanaHelper {
         name: username,
         login: username,
         password: password,
-        OrgId: 1
-      }
+        OrgId: 1,
+      },
     });
     return response;
   }

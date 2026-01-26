@@ -1,12 +1,13 @@
-import pmmTest from "@fixtures/pmmTest";
-import { expect } from "@playwright/test";
+import pmmTest from '@fixtures/pmmTest';
+import { expect } from '@playwright/test';
 
 pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
   await page.goto('');
   await grafanaHelper.authorize();
 });
 
-pmmTest('PMM-T2096 - Verify theme change functionality via change to dark/light theme button @new-navigation',
+pmmTest(
+  'PMM-T2096 - Verify theme change functionality via change to dark/light theme button @new-navigation',
   async ({ themePage }) => {
     const darkThemeColor = 'rgb(58, 65, 81)';
     const lightThemeColor = 'rgb(240, 241, 244)';
@@ -17,17 +18,20 @@ pmmTest('PMM-T2096 - Verify theme change functionality via change to dark/light 
         const previousThemeButtonText = await themePage.buttons.changeThemeButton.innerText();
         await themePage.buttons.changeThemeButton.click();
         await expect.poll(() => themePage.getBackgroundColor()).not.toBe(previousBgColor);
-        await expect.poll(() => themePage.buttons.changeThemeButton.innerText()).not.toBe(previousThemeButtonText);
+        await expect
+          .poll(() => themePage.buttons.changeThemeButton.innerText())
+          .not.toBe(previousThemeButtonText);
         const newBgColor = await themePage.getBackgroundColor();
         expect([darkThemeColor, lightThemeColor]).toContain(newBgColor);
         await themePage.buttons.helpNavItem.click();
         expect(await themePage.getBackgroundColor()).toBe(newBgColor);
       });
     }
-  }
+  },
 );
 
-pmmTest('PMM-T2127 Verify interface theme combobox value in sync with background color @new-navigation',
+pmmTest(
+  'PMM-T2127 Verify interface theme combobox value in sync with background color @new-navigation',
   async ({ themePage }) => {
     await themePage.buttons.accountNavItem.click();
     for (let i = 0; i < 2; i++) {
@@ -38,5 +42,5 @@ pmmTest('PMM-T2127 Verify interface theme combobox value in sync with background
         await expect(themePage.getThemeCombobox()).toHaveValue(expectedComboboxValue, { timeout: 10000 });
       });
     }
-  }
+  },
 );
