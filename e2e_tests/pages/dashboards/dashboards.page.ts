@@ -72,11 +72,22 @@ export default class Dashboards extends BasePage {
     });
   }
 
-  async verifyAllPanelsHaveData(noDataMetrics: string[]) {
+  async verifyAllPanelsHaveData(noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) {
     await this.loadAllPanels();
-    const noDataPanels = await this.elements.noDataPanelName().allTextContents();
-    const missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
-    const extraMetrics = noDataMetrics.filter((e) => !noDataPanels.includes(e));
+    let noDataPanels: string[] = [];
+    let missingMetrics: string[] = [];
+    let extraMetrics: string[] = [];
+
+    for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
+      noDataPanels = await this.elements.noDataPanelName().allTextContents();
+      missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
+      extraMetrics = noDataMetrics.filter((e) => !noDataPanels.includes(e));
+      if (missingMetrics.length == 0) {
+        break;
+      }
+
+      await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
+    }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
     expect
