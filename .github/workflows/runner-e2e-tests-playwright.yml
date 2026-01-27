@@ -222,6 +222,12 @@ jobs:
         run: |
           npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
 
+      - name: Record launchable test results
+        if: ${{ env.SHA != 'null' && always() }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+
       - name: Generate and Attach the report
         if: failure()
         uses: actions/upload-artifact@v4
