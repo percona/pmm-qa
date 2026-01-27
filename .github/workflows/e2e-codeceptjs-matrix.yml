@@ -172,7 +172,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      setup_services: '--database haproxy --database ps --database pxc'
+      setup_services: '--database ps --database pxc --database haproxy'
       pmm_test_flag: '@pmm-ps-pxc-haproxy-integration'
 
 #  valkey_integration:
