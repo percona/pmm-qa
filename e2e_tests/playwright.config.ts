@@ -13,7 +13,11 @@ const config: PlaywrightTestConfig = {
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 4 : 1,
-  reporter: [['list'], ['html', { open: 'never', outputFolder: './playwright-report' }]],
+  reporter: [
+    ['list'],
+    ['html', { open: 'never', outputFolder: './playwright-report' }],
+    ['json', { outputFile: 'output/results.json' }],
+  ],
   use: {
     baseURL: pmmUrl,
     trace: 'retain-on-failure',
