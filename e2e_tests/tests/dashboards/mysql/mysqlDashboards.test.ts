@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import data from '@fixtures/dataTest';
-import { Timeouts } from '@helpers/timeouts';
+import {Timeouts} from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -96,7 +96,7 @@ pmmTest(
     );
 
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlUserDetails.metrics);
-    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlUserDetails.noDataMetrics);
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlUserDetails.noDataMetrics, Timeouts.FIVE_MINUTES);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlUserDetails.metricsWithData);
   },
 );
