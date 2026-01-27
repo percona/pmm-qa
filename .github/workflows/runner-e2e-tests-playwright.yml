@@ -163,16 +163,6 @@ jobs:
           sleep 15
           docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
 
-      - name: Run Setup for E2E Tests
-        working-directory: qa-integration/pmm_qa
-        run: |
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --verbosity-level=5 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
-
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -190,6 +180,16 @@ jobs:
           npm ci
           npx playwright install-deps
           npx playwright install
+
+      - name: Run Setup for E2E Tests
+        working-directory: qa-integration/pmm_qa
+        run: |
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install setuptools
+          python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Execute UI tests
         if: ${{ inputs.pmm_test_flag == 'null' }}
