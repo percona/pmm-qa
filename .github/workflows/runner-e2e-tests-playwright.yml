@@ -212,14 +212,12 @@ jobs:
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
         if: ${{ env.SHA == 'null' || github.event_name == 'pull_request' }}
-        id: ui-tests-flagged
         working-directory: pmm-qa/e2e_tests/
         run: |
           npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
         if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
-        id: ui-tests-flagged
         working-directory: pmm-qa/e2e_tests/
         run: |
           npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
