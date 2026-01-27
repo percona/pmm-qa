@@ -55,6 +55,9 @@ export default class MysqlInstanceSummary implements DashboardInterface {
   noDataMetrics: string[] = [
     'MySQL Query Cache Memory',
     'MySQL Query Cache Activity',
+    'MySQL Network Usage Hourly',
+    'Top Command Counters Hourly',
+    'Top Process States Hourly',
   ];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
