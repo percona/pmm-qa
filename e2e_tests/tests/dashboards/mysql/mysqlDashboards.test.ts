@@ -24,11 +24,6 @@ pmmTest(
 data(services).pmmTest(
   'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed for Percona Server for MySQL @pmm-ps-pxc-haproxy-integration',
   async (data, { page, urlHelper, api, dashboard }, testInfo) => {
-    // Wait for data if the first pass fails.
-    if (testInfo.retry > 0) {
-      await page.waitForTimeout(Timeouts.TWO_MINUTES);
-    }
-
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(data);
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceSummary.url, {
@@ -46,11 +41,6 @@ data(services).pmmTest(
 data(services).pmmTest(
   'PMM-T318 - Open the MySQL Instances Compare dashboard and verify Metrics are present and graphs are displayed @pmm-ps-pxc-haproxy-integration',
   async (data, { page, urlHelper, api, dashboard }, testInfo) => {
-    // Wait for data if the first pass fails.
-    if (testInfo.retry > 0) {
-      await page.waitForTimeout(Timeouts.TWO_MINUTES);
-    }
-
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(data);
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstancesCompare.url, {
@@ -122,11 +112,6 @@ pmmTest(
 pmmTest(
   'PMM-T349 - PXC/Galera Nodes Compare dashboard @pmm-ps-pxc-haproxy-integration',
   async ({ page, urlHelper, api, dashboard }, testInfo) => {
-    // Wait for data if the first pass fails.
-    if (testInfo.retry > 0) {
-      await page.waitForTimeout(Timeouts.TWO_MINUTES);
-    }
-
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('pxc_node');
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.pxcGaleraNodesCompare.url, {
@@ -161,11 +146,6 @@ pmmTest(
 pmmTest(
   'PMM-T2029 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
   async ({ page, urlHelper, dashboard, api }, testInfo) => {
-    // Wait for data if the first pass fails.
-    if (testInfo.retry > 0) {
-      await page.waitForTimeout(Timeouts.TWO_MINUTES);
-    }
-
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
       'ps_pmm_replication_.*_2',
       { replication_set: 'ps-async-replication' },
