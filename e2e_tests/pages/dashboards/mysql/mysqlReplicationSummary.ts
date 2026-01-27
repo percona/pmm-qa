@@ -50,7 +50,6 @@ export default class MysqlReplicationSummary implements DashboardInterface {
     'Replication Error No',
     'Binlog Data Written Hourly',
     'Binlogs Created Hourly',
-    'Relay Log Written Hourly',
   ];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
