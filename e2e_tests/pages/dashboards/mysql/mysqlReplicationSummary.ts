@@ -46,6 +46,11 @@ export default class MysqlReplicationSummary implements DashboardInterface {
     { name: 'Disk I/O and Swap Activity', type: 'timeSeries' },
     { name: 'Network Traffic', type: 'timeSeries' },
   ];
-  noDataMetrics: string[] = ['Replication Error No'];
+  noDataMetrics: string[] = [
+    'Replication Error No',
+    'Binlog Data Written Hourly',
+    'Binlogs Created Hourly',
+    'Relay Log Written Hourly',
+  ];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
