@@ -179,7 +179,7 @@ jobs:
         run: |
           npm ci
           npx playwright install-deps
-          npx playwright install
+          npx playwright install chromium
 
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
