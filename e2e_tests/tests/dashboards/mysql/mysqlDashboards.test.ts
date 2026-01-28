@@ -86,10 +86,7 @@ pmmTest(
     );
 
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlUserDetails.metrics);
-    await dashboard.verifyAllPanelsHaveData(
-      dashboard.mysql.mysqlUserDetails.noDataMetrics,
-      Timeouts.FIVE_MINUTES,
-    );
+    await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlUserDetails.noDataMetrics);
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlUserDetails.metricsWithData);
   },
 );
