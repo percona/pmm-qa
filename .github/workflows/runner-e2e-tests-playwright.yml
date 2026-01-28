@@ -219,7 +219,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.REPORT_NAME }}
-          path: ./pmm-qa/e2e_tests/playwright-report
+          path: |
+            ./pmm-qa/e2e_tests/playwright-report
+            ./pmm-qa/e2e_tests/screenshots
 
       - name: Create status check
         uses: percona/gh-action-github-status-action@v1

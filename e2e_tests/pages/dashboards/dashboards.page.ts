@@ -23,6 +23,8 @@ export default class Dashboards extends BasePage {
   private elements = {
     expandRow: () => this.grafanaIframe().getByLabel('Expand row'),
     panelName: () => this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    panelByName: (panelName: string) =>
+      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     noDataPanel: () =>
       this.page.locator(
         '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
@@ -87,6 +89,22 @@ export default class Dashboards extends BasePage {
       }
 
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
+    }
+
+    if (missingMetrics.length > 0) {
+      for (const missingMetric of missingMetrics) {
+        await this.elements.panelByName(missingMetric).screenshot({
+          path: `./screenshots/missing-metric-${missingMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
+        });
+      }
+    }
+
+    if (extraMetrics.length > 0) {
+      for (const extraMetric of extraMetrics) {
+        await this.elements.panelByName(extraMetric).screenshot({
+          path: `./screenshots/extra-metric-${extraMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
+        });
+      }
     }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
