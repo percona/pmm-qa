@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect, Locator, Response } from '@playwright/test';
-import LeftNavigation from '../pages/navigation.page';
+import LeftNavigation from '@pages/navigation.page';
 
 pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
   await page.goto('');
@@ -52,16 +52,15 @@ pmmTest(
 
 pmmTest('RBAC/permissions @new-navigation', async ({ leftNavigation, grafanaHelper }) => {
   await pmmTest.step('Create non-admin user', async () => {
-    await leftNavigation.selectMenuItem('usersAndAccess');
     await grafanaHelper.createUser('nonadmin', 'nonadmin');
   });
   await pmmTest.step('Sign out as admin and login as non-admin', async () => {
     await leftNavigation.selectMenuItem('accounts');
-    await leftNavigation.buttons.accountsMenu.signOut.click();
+    await leftNavigation.buttons.accounts.elements.signOut.click();
     await grafanaHelper.authorize('nonadmin', 'nonadmin');
   });
   await pmmTest.step('verify permissions', async () => {
-    await expect(leftNavigation.buttons.configuration).toBeHidden();
+    await expect(leftNavigation.buttons.configuration.locator).toBeHidden();
     await leftNavigation.selectMenuItem('help');
     await expect(leftNavigation.buttons.dumpLogs).toBeHidden();
   });
@@ -116,9 +115,8 @@ pmmTest('verify service persistence @new-navigation', async ({ page, leftNavigat
     await leftNavigation.selectMenuItem('mysql');
     const selectedService = await leftNavigation.selectService(5);
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
-    await leftNavigation.selectMenuItem('mysqlSummary');
+    await leftNavigation.selectMenuItem('mysql.summary');
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
-
     const newPage = await leftNavigation.newTab();
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
     await newPage.close();
