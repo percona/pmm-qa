@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect, Locator, Response } from '@playwright/test';
-import LeftNavigation from '@pages/navigation.page';
+import LeftNavigation from '../pages/navigation.page';
 
 pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
   await page.goto('');
@@ -9,24 +9,24 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 
 pmmTest('verify left menu sidebar collapse and expand @new-navigation', async ({ page, leftNavigation }) => {
   await pmmTest.step('verify left menu sidebar collapse and expand', async () => {
-    await expect(leftNavigation.buttons.closeLeftNavigationButton).toBeVisible();
-    await expect(leftNavigation.buttons.openLeftNavigationButton).toBeHidden();
+    await expect(leftNavigation.elements.closeLeftNavigationButton).toBeVisible();
+    await expect(leftNavigation.elements.openLeftNavigationButton).toBeHidden();
   });
 
   await pmmTest.step('collapse left menu sidebar and verify collapsed', async () => {
-    await leftNavigation.buttons.closeLeftNavigationButton.click();
-    await expect(leftNavigation.buttons.openLeftNavigationButton).toBeVisible();
-    await expect(leftNavigation.buttons.closeLeftNavigationButton).toBeHidden();
+    await leftNavigation.elements.closeLeftNavigationButton.click();
+    await expect(leftNavigation.elements.openLeftNavigationButton).toBeVisible();
+    await expect(leftNavigation.elements.closeLeftNavigationButton).toBeHidden();
     await page.reload();
-    await expect(leftNavigation.buttons.openLeftNavigationButton).toBeVisible();
-    await expect(leftNavigation.buttons.closeLeftNavigationButton).toBeHidden();
+    await expect(leftNavigation.elements.openLeftNavigationButton).toBeVisible();
+    await expect(leftNavigation.elements.closeLeftNavigationButton).toBeHidden();
   });
 
   await pmmTest.step('expand left menu sidebar and verify expanded', async () => {
     await leftNavigation.mouseHoverOnPmmLogo();
-    await leftNavigation.buttons.openLeftNavigationButton.click();
-    await expect(leftNavigation.buttons.closeLeftNavigationButton).toBeVisible();
-    await expect(leftNavigation.buttons.openLeftNavigationButton).toBeHidden();
+    await leftNavigation.elements.openLeftNavigationButton.click();
+    await expect(leftNavigation.elements.closeLeftNavigationButton).toBeVisible();
+    await expect(leftNavigation.elements.openLeftNavigationButton).toBeHidden();
   });
 });
 
@@ -62,18 +62,18 @@ pmmTest('RBAC/permissions @new-navigation', async ({ leftNavigation, grafanaHelp
   await pmmTest.step('verify permissions', async () => {
     await expect(leftNavigation.buttons.configuration.locator).toBeHidden();
     await leftNavigation.selectMenuItem('help');
-    await expect(leftNavigation.buttons.dumpLogs).toBeHidden();
+    await expect(leftNavigation.elements.dumpLogs).toBeHidden();
   });
 });
 
 pmmTest('verify custom time range persists on any dashboard @new-navigation', async ({ leftNavigation }) => {
   const selectedTimeRange = 'Last 15 minutes';
   const verifyTimeRangeOnDashboards = async (leftNavigation: LeftNavigation, selectedTimeRange: string) => {
-    const dashboards = leftNavigation.dashboardsToVerifyTimeRange;
+    const dashboards = leftNavigation.dashboardsToVerifyTimeRange();
     for (const dashboard of dashboards) {
       await pmmTest.step(`Verify time range`, async () => {
         await leftNavigation.selectMenuItem(dashboard);
-        await expect(leftNavigation.buttons.timePickerOpenButton).toContainText(selectedTimeRange, {
+        await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
           timeout: 10000,
         });
       });
@@ -81,29 +81,29 @@ pmmTest('verify custom time range persists on any dashboard @new-navigation', as
   };
   await pmmTest.step('Select time range @new-navigation', async () => {
     await leftNavigation.selectMenuItem('home');
-    await leftNavigation.buttons.timePickerOpenButton.click();
+    await leftNavigation.elements.timePickerOpenButton.click();
     await leftNavigation.selectTimeRange(selectedTimeRange);
-    await expect(leftNavigation.buttons.timePickerOpenButton).toContainText(selectedTimeRange);
+    await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange);
   });
   await pmmTest.step('Verify time range persistence', async () => {
     await verifyTimeRangeOnDashboards(leftNavigation, selectedTimeRange);
   });
   await pmmTest.step('Verify new tab persistence', async () => {
     const newPage = await leftNavigation.newTab();
-    await expect(leftNavigation.buttons.timePickerOpenButton).toContainText(selectedTimeRange);
+    await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange);
   });
 });
 
 pmmTest('Grafana embedding @new-navigation', async ({ leftNavigation }) => {
   await pmmTest.step('Verify old menu hidden', async () => {
-    await expect(leftNavigation.buttons.oldLeftMenu).toBeHidden();
+    await expect(leftNavigation.elements.oldLeftMenu).toBeHidden();
   });
   await pmmTest.step('Verify iframe hidden on Help page', async () => {
     await expect(leftNavigation.elements.iframe).toBeHidden();
   });
   await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
     await leftNavigation.selectMenuItem('home');
-    await leftNavigation.buttons.refreshButton.click();
+    await leftNavigation.elements.refreshButton.click();
     await expect(leftNavigation.elements.iframe).toBeVisible();
     await leftNavigation.selectMenuItem('help');
     await expect(leftNavigation.elements.iframe).toBeHidden();
