@@ -1,6 +1,13 @@
 import { Locator } from '@playwright/test';
 
-type NestedLocators = Locator | { [key: string]: NestedLocators };
+type NestedLocators =
+  | Locator
+  | {
+      locator?: Locator;
+      verifyTimeRange?: boolean;
+      elements?: { [key: string]: NestedLocators };
+      [key: string]: any;
+    };
 
 export interface IPageObject {
   elements?: NestedLocators;

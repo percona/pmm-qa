@@ -7,50 +7,28 @@ export default class LeftNavigation extends basePage implements IPageObject {
   public readonly buttons;
   public readonly elements;
 
-  public readonly simpleMenuItems = ['home', 'qan', 'help'] as const;
-  public readonly menuWithChildren = [
-    'mysql',
-    'postgresql',
-    'mongodb',
-    'valkey',
-    'operatingsystem',
-    'alldashboards',
-    'explore',
-    'alerts',
-    'perconaadvisors',
-    'inventory',
-    'backups',
-    'configuration',
-    'usersAndAccess',
-    'accounts',
-  ] as const;
-  public readonly dashboardsToVerifyTimeRange = [
-    'mysql',
-    'mysql.summary',
-    'mysql.highAvailability',
-    'mysql.ha.replication',
-    'postgresql',
-    'operatingsystem',
-    // 'qan', // TODO: remove comment after the QAN is fixed
-    'help',
-    'home',
-  ] as const;
-
   constructor(page: Page) {
     super(page);
     this.buttons = {
-      home: this.page.getByTestId('navitem-home-page'),
+      home: { locator: this.page.getByTestId('navitem-home-page'), verifyTimeRange: true },
       qan: this.page.getByTestId('navitem-qan'),
-      help: this.page.getByTestId('navitem-help'),
+      help: { locator: this.page.getByTestId('navitem-help'), verifyTimeRange: true },
       mysql: {
         locator: this.page.getByTestId('navitem-mysql'),
+        verifyTimeRange: true,
         elements: {
           overview: this.page.getByTestId('navitem-mysql-overview'),
-          summary: this.page.getByTestId('navitem-mysql-summary'),
-          highAvailability: this.page.getByTestId('navitem-mysql-high-availability'),
+          summary: { locator: this.page.getByTestId('navitem-mysql-summary'), verifyTimeRange: true },
+          highAvailability: {
+            locator: this.page.getByTestId('navitem-mysql-high-availability'),
+            verifyTimeRange: true,
+          },
           ha: {
             groupReplication: this.page.getByTestId('navitem-mysql-group-replication-summary'),
-            replication: this.page.getByTestId('navitem-mysql-replication-summary'),
+            replication: {
+              locator: this.page.getByTestId('navitem-mysql-replication-summary'),
+              verifyTimeRange: true,
+            },
             pxcGaleraCluster: this.page.getByTestId('navitem-pxc-cluster-summary'),
             pxcGaleraNode: this.page.getByTestId('navitem-pxc-node-summary'),
             pxcGaleraNodes: this.page.getByTestId('navitem-pxc-nodes-compare'),
@@ -66,6 +44,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
       },
       postgresql: {
         locator: this.page.getByTestId('navitem-postgre'),
+        verifyTimeRange: true,
         elements: {
           overview: this.page.getByTestId('navitem-postgresql-overwiew'),
           summary: this.page.getByTestId('navitem-postgresql-summary'),
@@ -114,6 +93,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
       },
       operatingsystem: {
         locator: this.page.getByTestId('navitem-system'),
+        verifyTimeRange: true,
         elements: {
           overview: this.page.getByTestId('navitem-node-overview'),
           summary: this.page.getByTestId('navitem-node-summary'),
@@ -215,18 +195,17 @@ export default class LeftNavigation extends basePage implements IPageObject {
           signOut: this.page.getByTestId('navitem-sign-out'),
         },
       },
+    };
 
+    this.elements = {
+      sidebar: this.page.getByTestId('pmm-sidebar'),
+      iframe: this.page.locator('//*[@id="grafana-iframe"]'),
       closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
       openLeftNavigationButton: this.page.getByTestId('sidebar-open-button'),
       dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
       timePickerOpenButton: this.grafanaIframe().getByTestId('data-testid TimePicker Open Button'),
       refreshButton: this.grafanaIframe().getByTestId('data-testid RefreshPicker run button'),
       oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
-    };
-
-    this.elements = {
-      sidebar: this.page.getByTestId('pmm-sidebar'),
-      iframe: this.page.locator('//*[@id="grafana-iframe"]'),
     };
   }
 
@@ -277,37 +256,47 @@ export default class LeftNavigation extends basePage implements IPageObject {
     responseAfterClick: (locator: Locator, menuItems: string) => Promise<void>,
   ): Promise<void> => {
     await pmmTest.step('Traverse all menu items', async () => {
-      const traverseMenuItems = async (child: any, parent: string) => {
-        const items = Object.entries(child);
-        for (const [key, value] of items) {
-          if (key === 'signOut') {
-            await responseAfterClick(value as Locator, `${parent}.${key}`);
-            return;
-          }
-          if (typeof (value as any).click === 'function') {
-            await responseAfterClick(value as Locator, `${parent}.${key}`);
-          } else if (typeof value === 'object' && value !== null) {
-            await traverseMenuItems(value, `${parent}.${key}`);
+      const traverse = async (node: any, path: string): Promise<void> => {
+        if (!node) return;
+        if (typeof (node as Locator).click === 'function') {
+          await responseAfterClick(node as Locator, path);
+          return;
+        }
+        if (node.locator && typeof (node.locator as Locator).click === 'function') {
+          await responseAfterClick(node.locator as Locator, path);
+        }
+        if (node.elements && typeof node.elements === 'object') {
+          await traverse(node.elements, path);
+        }
+        for (const [key, value] of Object.entries(node)) {
+          if (key === 'locator' || key === 'elements') continue;
+          if (typeof value === 'object' && value !== null) {
+            await traverse(value, path ? `${path}.${key}` : key);
           }
         }
       };
-      for (const item of this.simpleMenuItems) {
-        const element = this.buttons[item];
-        if (element) {
-          await responseAfterClick(element, item);
-        }
-      }
-      for (const parent of this.menuWithChildren) {
-        const parentElement = this.buttons[parent];
-        if (parentElement) {
-          const parentLocator = parentElement.locator ? parentElement.locator : parentElement;
-          await responseAfterClick(parentLocator as Locator, parent);
-        }
-        const children = parentElement && parentElement.elements ? parentElement.elements : null;
-        if (children) {
-          await traverseMenuItems(children, parent);
-        }
+      for (const [key, value] of Object.entries(this.buttons)) {
+        await traverse(value, key);
       }
     });
   };
+
+  public dashboardsToVerifyTimeRange(): string[] {
+    const dashboards: string[] = [];
+    const traverse = (node: any, path: string): void => {
+      if (!node || typeof node !== 'object') return;
+      if (node.verifyTimeRange === true) {
+        dashboards.push(path);
+      }
+      if (node.elements && typeof node.elements === 'object') {
+        for (const [key, value] of Object.entries(node.elements)) {
+          traverse(value, path ? `${path}.${key}` : key);
+        }
+      }
+    };
+    for (const [key, value] of Object.entries(this.buttons)) {
+      traverse(value, key);
+    }
+    return dashboards;
+  }
 }
