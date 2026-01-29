@@ -36,15 +36,18 @@ pmmTest(
     pmmTest.slow();
     const ignore404 = (url: string) => url.includes('/settings') || url.includes('/admin_config');
     const responseAfterClick = async (locator: Locator, name: string) => {
-      const response = page
-        .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 1000 })
-        .catch(() => null);
-      await locator.click();
-      const res = await response;
-      if (res) {
-        expect(res.status()).not.toBe(404);
-      }
-      await expect(page).not.toHaveURL(/404|error|not-found/i);
+      await pmmTest.step(`Click and verify menu item: ${name}`, async () => {
+        await expect(locator, `Menu item '${name}' should be visible`).toBeVisible({ timeout: 2000 });
+        const response = page
+          .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 1000 })
+          .catch(() => null);
+        await locator.click();
+        const res = await response;
+        if (res) {
+          expect(res.status()).not.toBe(404);
+        }
+        await expect(page).not.toHaveURL(/404|error|not-found/i);
+      });
     };
     await leftNavigation.traverseAllMenuItems(responseAfterClick);
   },

@@ -256,8 +256,10 @@ export default class LeftNavigation extends basePage implements IPageObject {
     responseAfterClick: (locator: Locator, menuItems: string) => Promise<void>,
   ): Promise<void> => {
     await pmmTest.step('Traverse all menu items', async () => {
+      const visible = new Set();
       const traverse = async (node: any, path: string): Promise<void> => {
-        if (!node) return;
+        if (!node || typeof node !== 'object' || visible.has(node)) return;
+        visible.add(node);
         if (typeof (node as Locator).click === 'function') {
           await responseAfterClick(node as Locator, path);
           return;
@@ -269,7 +271,8 @@ export default class LeftNavigation extends basePage implements IPageObject {
           await traverse(node.elements, path);
         }
         for (const [key, value] of Object.entries(node)) {
-          if (key === 'locator' || key === 'elements') continue;
+          if (key === 'locator' || key === 'elements' || key === 'verifyTimeRange' || key === 'page')
+            continue;
           if (typeof value === 'object' && value !== null) {
             await traverse(value, path ? `${path}.${key}` : key);
           }
