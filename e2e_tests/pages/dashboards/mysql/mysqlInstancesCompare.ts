@@ -43,6 +43,9 @@ export default class MySQLInstancesCompare implements DashboardInterface {
     `${serviceName} - Buffer Pool Size of Total RAM`,
     `${serviceName} - MySQL Query Cache Memory`,
     `${serviceName} - MySQL Query Cache Activity`,
+    `${serviceName} - MySQL Network Usage Hourly`,
+    `${serviceName} - Top Command Counters Hourly`,
+    `T${serviceName} - Top 5 Process States Hourly`,
   ];
 
   metricsWithData = (serviceName: string) =>

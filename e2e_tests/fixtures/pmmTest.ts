@@ -9,6 +9,8 @@ import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
+import WelcomePage from '@pages/welcome.page';
+import Mocks from '@helpers/mocks.helper';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -49,6 +51,8 @@ const pmmTest = base.extend<{
   helpPage: HelpPage;
   themePage: ThemePage;
   tour: TourPage;
+  welcomePage: WelcomePage;
+  mocks: Mocks;
 }>({
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
@@ -99,6 +103,16 @@ const pmmTest = base.extend<{
     const tour = new TourPage(page);
     await use(tour);
   },
+
+  welcomePage: async ({ page }, use) => {
+    const welcomePage = new WelcomePage(page);
+    await use(welcomePage);
+  },
+
+  mocks: async ({ page }, use) => {
+    const mocks = new Mocks(page);
+    await use(mocks);
+  }
 });
 
 export default pmmTest;

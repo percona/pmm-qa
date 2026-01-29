@@ -6,5 +6,6 @@ e2e_tests/playwright-report/*
 e2e_tests/blob-report/
 e2e_tests/playwright/.cache/
 e2e_tests/playwright/.auth/
+e2e_tests/screenshots/*
 .idea/*
 e2e_tests/.env

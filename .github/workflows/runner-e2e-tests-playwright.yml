@@ -130,13 +130,6 @@ jobs:
           repository: percona/pmm-qa
           path: ./pmm-qa
 
-      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-
       - name: Setup PMM Server
         run: |
           ls
@@ -170,15 +163,12 @@ jobs:
           sleep 15
           docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
 
-      - name: Run Setup for E2E Tests
-        working-directory: qa-integration/pmm_qa
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --verbosity-level=5 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
       - name: Setup PMM-Client
         working-directory: qa-integration/pmm_qa
@@ -191,49 +181,47 @@ jobs:
           npx playwright install-deps
           npx playwright install chromium
 
+      - name: Run Setup for E2E Tests
+        working-directory: qa-integration/pmm_qa
+        run: |
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install setuptools
+          python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: Execute UI tests
+        if: ${{ inputs.pmm_test_flag == 'null' }}
+        id: ui-tests-all
+        working-directory: pmm-ui-tests/playwright-tests
+        run: |
+          npx playwright test --project="chromium" --quiet
+
+      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
+        if: ${{ inputs.pmm_test_flag != 'null' }}
+        id: ui-tests-flagged
+        working-directory: pmm-qa/e2e_tests/
+        run: |
+          npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
+
       - name: 'Create report name'
         if: failure()
         run: |
           # TODO: add job id for matrix call
           job_tag=$(echo "${{ inputs.pmm_test_flag }}" | sed -e "s/-pre-upgrade//" -e "s/@//")
-          report_name="$job_tag"
+          report_name="$job_tag"-report
           echo $report_name
           echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
-
-      - name: Prepare launchable
-        working-directory: pmm-qa/e2e_tests
-        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
-        run: |
-          pip3 install --user --upgrade launchable~=1.0
-          launchable verify || true
-          launchable record session --build ${{ env.SHA }} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt
-          node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.json
-
-      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
-        if: ${{ env.SHA == 'null' || github.event_name == 'pull_request' }}
-        working-directory: pmm-qa/e2e_tests/
-        run: |
-          npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
-
-      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
-        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
-        working-directory: pmm-qa/e2e_tests/
-        run: |
-          npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
-
-      - name: Record launchable test results
-        if: ${{ env.SHA != 'null' && always() }}
-        working-directory: pmm-qa/e2e_tests
-        run: |
-          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
 
       - name: Generate and Attach the report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.REPORT_NAME }}
-          path: ./pmm-qa/e2e_tests/playwright-report
+          path: |
+            ./pmm-qa/e2e_tests/playwright-report
+            ./pmm-qa/e2e_tests/screenshots
 
       - name: Create status check
         uses: percona/gh-action-github-status-action@v1
