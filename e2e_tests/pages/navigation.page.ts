@@ -11,7 +11,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
     super(page);
     this.buttons = {
       home: { locator: this.page.getByTestId('navitem-home-page'), verifyTimeRange: true },
-      qan: this.page.getByTestId('navitem-qan'),
+      qan: this.page.getByTestId('navitem-qan'), // TODO: add verifyTimeRange
       help: { locator: this.page.getByTestId('navitem-help'), verifyTimeRange: true },
       mysql: {
         locator: this.page.getByTestId('navitem-mysql'),
