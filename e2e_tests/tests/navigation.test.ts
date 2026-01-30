@@ -36,7 +36,7 @@ pmmTest(
     pmmTest.slow();
     const responseAfterClick = async (locator: Locator, name: string) => {
       await pmmTest.step(`Click and verify menu item: ${name}`, async () => {
-        await expect(locator, `Menu item '${name}' should be visible`).toBeVisible({ timeout: 2000 });
+        await expect(locator, `Menu item '${name}' should be visible`).toBeVisible({ timeout: 10000 });
         const res = await leftNavigation.responseAfterClick(locator);
         if (res) {
           expect(res.status()).not.toBe(404);

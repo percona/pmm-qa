@@ -6,7 +6,7 @@ pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest('PMM-T2096 - Verify view docs button @new-navigation', async ({ helpPage }) => {
+pmmTest('PMM-T2098 - Verify view docs button @new-navigation', async ({ helpPage }) => {
   await pmmTest.step('Verify navigation to external URL', async () => {
     await expect(helpPage.buttons.viewDocs).toBeVisible();
 
