@@ -33,7 +33,7 @@ pmmTest('verify left menu sidebar collapse and expand @new-navigation', async ({
 pmmTest(
   'Traverse all the menu items in left menu sidebar @new-navigation',
   async ({ page, leftNavigation }) => {
-    pmmTest.setTimeout(300000);
+    pmmTest.slow();
     const responseAfterClick = async (locator: Locator, name: string) => {
       await pmmTest.step(`Click and verify menu item: ${name}`, async () => {
         await expect(locator, `Menu item '${name}' should be visible`).toBeVisible({ timeout: 10000 });
