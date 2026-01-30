@@ -255,12 +255,12 @@ jobs:
             unzip logs.zip -d logs
 
       - name: Record launchable test results
-        if: ${{ env.SHA != 'null' && always() }}
+        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' && always() }}
         working-directory: pmm-ui-tests
         run: |
           sed -i "s|$(pwd)/||g" tests/output/result.xml
           launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
-          launchable record attachment --session $(cat launchable-session.txt) codeceptjs logs.zip true
+          launchable record attachment --session $(cat launchable-session.txt) codeceptjs logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
