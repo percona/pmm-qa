@@ -21,4 +21,18 @@ export default class GrafanaHelper {
   static getToken(username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') {
     return Buffer.from(`${username}:${password}`).toString('base64');
   }
+
+  async createUser(username: string, password: string) {
+    const authToken = GrafanaHelper.getToken();
+    const response = await this.page.request.post('graph/api/admin/users', {
+      headers: { Authorization: `Basic ${authToken}` },
+      data: {
+        name: username,
+        login: username,
+        password: password,
+        OrgId: 1,
+      },
+    });
+    return response;
+  }
 }
