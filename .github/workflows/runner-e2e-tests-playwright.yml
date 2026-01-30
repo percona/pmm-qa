@@ -234,7 +234,7 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         run: |
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
-          launchable record attachment --session $(cat launchable-session.txt) codeceptjs logs.zip || true
+          launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
 
       - name: Generate and Attach the report
         if: failure()
