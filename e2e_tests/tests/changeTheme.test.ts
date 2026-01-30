@@ -8,12 +8,13 @@ pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
 
 pmmTest(
   'PMM-T2096 - Verify theme change functionality via change to dark/light theme button @new-navigation',
-  async ({ themePage }) => {
+  async ({ page, themePage }) => {
     const darkThemeColor = 'rgb(58, 65, 81)';
     const lightThemeColor = 'rgb(240, 241, 244)';
     for (let i = 0; i < 2; i++) {
       await pmmTest.step('Theme change validation', async () => {
         await themePage.buttons.accountNavItem.click();
+        await page.waitForTimeout(2000);
         const previousBgColor = await themePage.getBackgroundColor();
         const previousThemeButtonText = await themePage.buttons.changeThemeButton.innerText();
         await themePage.buttons.changeThemeButton.click();

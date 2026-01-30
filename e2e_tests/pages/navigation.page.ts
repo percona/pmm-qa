@@ -251,7 +251,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
   public responseAfterClick = async (locator: Locator): Promise<Response | null> => {
     const ignore404 = (url: string) => url.includes('/settings') || url.includes('/admin_config');
     const responsePromise = this.page
-      .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 1000 })
+      .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 10000 })
       .catch(() => null);
     await locator.click();
     return await responsePromise;
