@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test';
+import { Locator, Page, Response } from '@playwright/test';
 import basePage from './base.page';
 import { IPageObject } from '@interfaces/pageObject';
 import pmmTest from '@fixtures/pmmTest';
@@ -248,6 +248,15 @@ export default class LeftNavigation extends basePage implements IPageObject {
     });
   };
 
+  public responseAfterClick = async (locator: Locator): Promise<Response | null> => {
+    const ignore404 = (url: string) => url.includes('/settings') || url.includes('/admin_config');
+    const responsePromise = this.page
+      .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 1000 })
+      .catch(() => null);
+    await locator.click();
+    return await responsePromise;
+  };
+
   variableContext = (text: string): Locator => {
     return this.grafanaIframe().getByText(text, { exact: true }).first();
   };
@@ -256,31 +265,23 @@ export default class LeftNavigation extends basePage implements IPageObject {
     responseAfterClick: (locator: Locator, menuItems: string) => Promise<void>,
   ): Promise<void> => {
     await pmmTest.step('Traverse all menu items', async () => {
-      const visible = new Set();
       const traverse = async (node: any, path: string): Promise<void> => {
-        if (!node || typeof node !== 'object' || visible.has(node)) return;
-        visible.add(node);
-        if (typeof (node as Locator).click === 'function') {
-          await responseAfterClick(node as Locator, path);
-          return;
-        }
-        if (node.locator && typeof (node.locator as Locator).click === 'function') {
-          await responseAfterClick(node.locator as Locator, path);
-        }
-        if (node.elements && typeof node.elements === 'object') {
-          await traverse(node.elements, path);
-        }
-        for (const [key, value] of Object.entries(node)) {
-          if (key === 'locator' || key === 'elements' || key === 'verifyTimeRange' || key === 'page')
-            continue;
-          if (typeof value === 'object' && value !== null) {
-            await traverse(value, path ? `${path}.${key}` : key);
-          }
+        if (!node || typeof node !== 'object') return;
+        const locator =
+          node.locator && typeof node.locator !== 'function'
+            ? node.locator
+            : typeof node.click === 'function'
+              ? node
+              : null;
+        if (locator) await responseAfterClick(locator, path);
+        const children = node.elements || (node === locator ? null : node);
+        if (!children) return;
+        for (const [key, value] of Object.entries(children)) {
+          if (['locator', 'elements', 'verifyTimeRange', 'page'].includes(key)) continue;
+          await traverse(value, path ? `${path}.${key}` : key);
         }
       };
-      for (const [key, value] of Object.entries(this.buttons)) {
-        await traverse(value, key);
-      }
+      await traverse(this.buttons, '');
     });
   };
 
