@@ -191,28 +191,50 @@ jobs:
           pip install setuptools
           python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
-      - name: Execute UI tests
-        if: ${{ inputs.pmm_test_flag == 'null' }}
-        id: ui-tests-all
-        working-directory: pmm-ui-tests/playwright-tests
+      - name: 'Create report name'
+        if: always()
         run: |
-          npx playwright test --project="chromium" --quiet
+          # TODO: add job id for matrix call
+          job_tag=$(echo "${{ env.PMM_TEST_FLAG }}" | sed -e "s/-pre-upgrade//" -e "s/@//")
+          report_name="$job_tag"
+          echo $report_name
+          echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
+
+      - name: Prepare launchable
+        working-directory: pmm-qa/e2e_tests
+        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
+        run: |
+          pip3 install --user --upgrade launchable~=1.0
+          launchable verify || true
+          launchable record session --build ${{ env.SHA }} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt
+          node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.json
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
-        if: ${{ inputs.pmm_test_flag != 'null' }}
-        id: ui-tests-flagged
+        if: ${{ env.SHA == 'null' || github.event_name == 'pull_request' }}
         working-directory: pmm-qa/e2e_tests/
         run: |
           npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
 
-      - name: 'Create report name'
-        if: failure()
+      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
+        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
+        working-directory: pmm-qa/e2e_tests/
         run: |
-          # TODO: add job id for matrix call
-          job_tag=$(echo "${{ inputs.pmm_test_flag }}" | sed -e "s/-pre-upgrade//" -e "s/@//")
-          report_name="$job_tag"-report
-          echo $report_name
-          echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
+          npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
+
+      - name: Download logs
+        if: ${{ failure() }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
+          unzip logs.zip -d logs
+
+      - name: Record launchable test results
+        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' && always() }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
 
       - name: Generate and Attach the report
         if: failure()
@@ -222,6 +244,7 @@ jobs:
           path: |
             ./pmm-qa/e2e_tests/playwright-report
             ./pmm-qa/e2e_tests/screenshots
+            ./pmm-qa/e2e_tests/logs
 
       - name: Create status check
         uses: percona/gh-action-github-status-action@v1
