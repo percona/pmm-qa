@@ -222,11 +222,19 @@ jobs:
         run: |
           npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
 
+      - name: Download logs
+        if: ${{ failure() }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
+          unzip logs.zip -d logs
+
       - name: Record launchable test results
         if: ${{ env.SHA != 'null' && always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable record attachment --session $(cat launchable-session.txt) codeceptjs logs.zip true
 
       - name: Generate and Attach the report
         if: failure()
@@ -236,6 +244,7 @@ jobs:
           path: |
             ./pmm-qa/e2e_tests/playwright-report
             ./pmm-qa/e2e_tests/screenshots
+            ./pmm-qa/e2e_tests/logs
 
       - name: Create status check
         uses: percona/gh-action-github-status-action@v1

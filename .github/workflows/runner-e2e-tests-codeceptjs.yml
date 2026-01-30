@@ -247,19 +247,20 @@ jobs:
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat launchable-subset.json)"
 
-      - name: Record launchable test results
-        if: ${{ env.SHA != 'null' && always() }}
-        working-directory: pmm-ui-tests
-        run: |
-          sed -i "s|$(pwd)/||g" tests/output/result.xml
-          launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
-
       - name: Download logs
         if: ${{ failure() }}
         working-directory: pmm-ui-tests
         run: |
             curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
             unzip logs.zip -d logs
+
+      - name: Record launchable test results
+        if: ${{ env.SHA != 'null' && always() }}
+        working-directory: pmm-ui-tests
+        run: |
+          sed -i "s|$(pwd)/||g" tests/output/result.xml
+          launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
+          launchable record attachment --session $(cat launchable-session.txt) codeceptjs logs.zip true
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
