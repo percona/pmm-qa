@@ -192,10 +192,10 @@ jobs:
           python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: 'Create report name'
-        if: failure()
+        if: always()
         run: |
           # TODO: add job id for matrix call
-          job_tag=$(echo "${{ inputs.pmm_test_flag }}" | sed -e "s/-pre-upgrade//" -e "s/@//")
+          job_tag=$(echo "${{ env.PMM_TEST_FLAG }}" | sed -e "s/-pre-upgrade//" -e "s/@//")
           report_name="$job_tag"
           echo $report_name
           echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
