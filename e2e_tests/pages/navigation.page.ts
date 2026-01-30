@@ -277,7 +277,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
         const children = node.elements || (node === locator ? null : node);
         if (!children) return;
         for (const [key, value] of Object.entries(children)) {
-          if (['locator', 'elements', 'verifyTimeRange', 'page'].includes(key)) continue;
+          if (['locator', 'elements', 'verifyTimeRange', 'page', 'signOut'].includes(key)) continue;
           await traverse(value, path ? `${path}.${key}` : key);
         }
       };
