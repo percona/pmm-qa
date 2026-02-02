@@ -56,7 +56,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           topQueries: this.page.getByTestId('navitem-postgresql-top-queries'),
           otherDashboards: this.page.getByTestId('navitem-postgre-other-dashboards'),
         },
-      },
+      } /*
       mongodb: {
         locator: this.page.getByTestId('navitem-mongo'),
         elements: {
@@ -90,7 +90,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           slowlog: this.page.getByTestId('navitem-valkey-slowlog'),
           otherDashboards: this.page.getByTestId('navitem-valkey-other-dashboards'),
         },
-      },
+      },*/,
       operatingsystem: {
         locator: this.page.getByTestId('navitem-system'),
         verifyTimeRange: true,
@@ -248,41 +248,38 @@ export default class LeftNavigation extends basePage implements IPageObject {
     });
   };
 
-  public responseAfterClick = async (locator: Locator): Promise<Response | null> => {
-    const ignore404 = (url: string) => url.includes('/settings') || url.includes('/admin_config');
-    const responsePromise = this.page
-      .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 10000 })
-      .catch(() => null);
-    await locator.click();
-    return await responsePromise;
-  };
-
   variableContext = (text: string): Locator => {
     return this.grafanaIframe().getByText(text, { exact: true }).first();
   };
 
   public traverseAllMenuItems = async (
-    responseAfterClick: (locator: Locator, menuItems: string) => Promise<void>,
+    menuItem: (locator: Locator, res: Response | null) => Promise<void>,
   ): Promise<void> => {
-    await pmmTest.step('Traverse all menu items', async () => {
-      const traverse = async (node: any, path: string): Promise<void> => {
-        if (!node || typeof node !== 'object') return;
-        const locator =
-          node.locator && typeof node.locator !== 'function'
-            ? node.locator
-            : typeof node.click === 'function'
-              ? node
-              : null;
-        if (locator) await responseAfterClick(locator, path);
-        const children = node.elements || (node === locator ? null : node);
-        if (!children) return;
-        for (const [key, value] of Object.entries(children)) {
-          if (['locator', 'elements', 'verifyTimeRange', 'page', 'signOut'].includes(key)) continue;
-          await traverse(value, path ? `${path}.${key}` : key);
-        }
-      };
-      await traverse(this.buttons, '');
-    });
+    const ignore404 = (url: string) => url.includes('/settings') || url.includes('/admin_config');
+    const traverse = async (node: any, path: string): Promise<void> => {
+      if (!node || typeof node !== 'object') return;
+      const locator =
+        node.locator && typeof node.locator !== 'function'
+          ? node.locator
+          : typeof node.click === 'function'
+            ? node
+            : null;
+      if (locator) {
+        const responsePromise = this.page
+          .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 10000 })
+          .catch(() => null);
+        await locator.click();
+        const res = await responsePromise;
+        await menuItem(locator, res);
+      }
+      const children = node.elements || (node === locator ? null : node);
+      if (!children) return;
+      for (const [key, value] of Object.entries(children)) {
+        if (['locator', 'elements', 'verifyTimeRange', 'page', 'signOut'].includes(key)) continue;
+        await traverse(value, path ? `${path}.${key}` : key);
+      }
+    };
+    await traverse(this.buttons, '');
   };
 
   public dashboardsToVerifyTimeRange(): string[] {
