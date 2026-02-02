@@ -56,7 +56,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           topQueries: this.page.getByTestId('navitem-postgresql-top-queries'),
           otherDashboards: this.page.getByTestId('navitem-postgre-other-dashboards'),
         },
-      } /*
+      },
       mongodb: {
         locator: this.page.getByTestId('navitem-mongo'),
         elements: {
@@ -90,7 +90,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           slowlog: this.page.getByTestId('navitem-valkey-slowlog'),
           otherDashboards: this.page.getByTestId('navitem-valkey-other-dashboards'),
         },
-      },*/,
+      },
       operatingsystem: {
         locator: this.page.getByTestId('navitem-system'),
         verifyTimeRange: true,
