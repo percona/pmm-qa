@@ -269,6 +269,9 @@ export default class LeftNavigation extends basePage implements IPageObject {
           .waitForResponse((res: Response) => !ignore404(res.url()), { timeout: 10000 })
           .catch(() => null);
         await locator.click();
+        if (path.includes('alerts')) {
+          await this.handleTourPopover();
+        }
         const res = await responsePromise;
         await menuItem(locator, res);
       }
@@ -300,4 +303,15 @@ export default class LeftNavigation extends basePage implements IPageObject {
     }
     return dashboards;
   }
+
+  private handleTourPopover = async (): Promise<void> => {
+    const tourPopover = this.page.locator('.reactour__popover');
+    const tourMask = this.page.locator('.reactour__mask');
+    const closeButton = this.page.getByTestId('tour-close-button');
+
+    if ((await tourPopover.isVisible()) || (await tourMask.isVisible())) {
+      await closeButton.click();
+      await tourPopover.waitFor({ state: 'hidden' });
+    }
+  };
 }
