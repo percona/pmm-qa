@@ -41,7 +41,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           myRocks: this.page.getByTestId('navitem-mysql-myrocks-details'),
           otherDashboards: this.page.getByTestId('navitem-mysql-other-dashboards'),
         },
-      } /*
+      },
       postgresql: {
         locator: this.page.getByTestId('navitem-postgre'),
         verifyTimeRange: true,
@@ -56,7 +56,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           topQueries: this.page.getByTestId('navitem-postgresql-top-queries'),
           otherDashboards: this.page.getByTestId('navitem-postgre-other-dashboards'),
         },
-      } 
+      },
       mongodb: {
         locator: this.page.getByTestId('navitem-mongo'),
         elements: {
@@ -194,7 +194,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           changeTheme: this.page.getByTestId('navitem-theme-toggle'),
           signOut: this.page.getByTestId('navitem-sign-out'),
         },
-      },*/,
+      },
     };
 
     this.elements = {
