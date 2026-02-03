@@ -56,7 +56,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           topQueries: this.page.getByTestId('navitem-postgresql-top-queries'),
           otherDashboards: this.page.getByTestId('navitem-postgre-other-dashboards'),
         },
-      },
+      } /*
       mongodb: {
         locator: this.page.getByTestId('navitem-mongo'),
         elements: {
@@ -116,7 +116,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           snapshots: this.page.getByTestId('navitem-dashboards-snapshots'),
           libraryPanels: this.page.getByTestId('navitem-dashboards-library-panels'),
         },
-      },
+      },*/,
       explore: {
         locator: this.page.getByTestId('navitem-explore'),
         elements: {
