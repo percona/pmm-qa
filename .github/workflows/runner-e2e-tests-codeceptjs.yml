@@ -245,7 +245,16 @@ jobs:
           GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat launchable-subset.json)"
+
+          SUBSET_FILE="launchable-subset.json"
+
+          # Skip tests if the subset file is empty
+          if [ -s "$SUBSET_FILE" ]; then
+            # Run tests if the subset file is not empty
+            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "$SUBSET_FILE")"
+          else
+            echo "$SUBSET_FILE is empty, so we won't run tests."
+          fi
 
       - name: Download logs
         if: ${{ failure() }}
