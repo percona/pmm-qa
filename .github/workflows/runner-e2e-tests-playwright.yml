@@ -208,7 +208,7 @@ jobs:
           launchable verify || true
           launchable record session --build ${{ env.SHA }} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.json
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.txt
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
         if: ${{ env.SHA == 'null' || github.event_name == 'pull_request' }}
@@ -220,7 +220,15 @@ jobs:
         if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
         working-directory: pmm-qa/e2e_tests/
         run: |
-          npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
+          SUBSET_FILE="launchable-subset.txt"
+
+          # Skip tests if the subset file is empty
+          if [ -s "$SUBSET_FILE" ]; then
+            # Run tests if the subset file is not empty
+            npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
+          else
+            echo "$SUBSET_FILE is empty, so we won't run tests."
+          fi
 
       - name: Download logs
         if: ${{ failure() }}
