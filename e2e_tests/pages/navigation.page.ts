@@ -37,11 +37,11 @@ export default class LeftNavigation extends basePage implements IPageObject {
           innodbDetails: this.page.getByTestId('navitem-mysql-innodb-details'),
           innodbCompression: this.page.getByTestId('navitem-mysql-innodb-compression-details'),
           performanceSchema: this.page.getByTestId('navitem-mysql-performance-schema-details'),
-          queryResponseTime: this.page.getByTestId('navitem-mysql-query-response-time-details'),
           tableDetails: this.page.getByTestId('navitem-mysql-table-details'),
+          myRocks: this.page.getByTestId('navitem-mysql-myrocks-details'),
           otherDashboards: this.page.getByTestId('navitem-mysql-other-dashboards'),
         },
-      },
+      } /*
       postgresql: {
         locator: this.page.getByTestId('navitem-postgre'),
         verifyTimeRange: true,
@@ -56,7 +56,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           topQueries: this.page.getByTestId('navitem-postgresql-top-queries'),
           otherDashboards: this.page.getByTestId('navitem-postgre-other-dashboards'),
         },
-      } /*
+      } 
       mongodb: {
         locator: this.page.getByTestId('navitem-mongo'),
         elements: {
@@ -116,7 +116,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           snapshots: this.page.getByTestId('navitem-dashboards-snapshots'),
           libraryPanels: this.page.getByTestId('navitem-dashboards-library-panels'),
         },
-      },*/,
+      },
       explore: {
         locator: this.page.getByTestId('navitem-explore'),
         elements: {
@@ -194,7 +194,7 @@ export default class LeftNavigation extends basePage implements IPageObject {
           changeTheme: this.page.getByTestId('navitem-theme-toggle'),
           signOut: this.page.getByTestId('navitem-sign-out'),
         },
-      },
+      },*/,
     };
 
     this.elements = {
