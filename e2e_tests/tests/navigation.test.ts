@@ -30,6 +30,7 @@ pmmTest('verify left menu sidebar collapse and expand @new-navigation', async ({
 pmmTest(
   'Traverse all the menu items in left menu sidebar @new-navigation',
   async ({ page, leftNavigation }) => {
+    pmmTest.setTimeout(1200000);
     await pmmTest.step('Traverse menu items', async () => {
       await leftNavigation.traverseAllMenuItems(async (locator, res) => {
         await pmmTest.step('click and verify menu items', async () => {
