@@ -240,6 +240,7 @@ jobs:
           # Skip tests if the subset file is empty
           if [ -s "$SUBSET_FILE" ]; then
             # Run tests if the subset file is not empty
+            echo "$SUBSET_FILE is not empty, so we run tests from the subset."
             ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "$SUBSET_FILE")"
           else
             echo "$SUBSET_FILE is empty, so we run all tests for now."

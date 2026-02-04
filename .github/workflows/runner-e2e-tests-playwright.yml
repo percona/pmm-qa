@@ -220,6 +220,7 @@ jobs:
           # Skip tests if the subset file is empty
           if [ -s "$SUBSET_FILE" ]; then
             # Run tests if the subset file is not empty
+            echo "$SUBSET_FILE is not empty, so we run tests from the subset."
             npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
           else
             echo "$SUBSET_FILE is empty, so we run tests for now."
