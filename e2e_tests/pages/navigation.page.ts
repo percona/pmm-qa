@@ -206,6 +206,9 @@ export default class LeftNavigation extends basePage implements IPageObject {
       timePickerOpenButton: this.grafanaIframe().getByTestId('data-testid TimePicker Open Button'),
       refreshButton: this.grafanaIframe().getByTestId('data-testid RefreshPicker run button'),
       oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
+      tourPopover: this.page.locator('.reactour__popover'),
+      tourMask: this.page.locator('.reactour__mask'),
+      closeButton: this.page.getByTestId('tour-close-button'),
     };
   }
 
@@ -305,13 +308,9 @@ export default class LeftNavigation extends basePage implements IPageObject {
   }
 
   private handleTourPopover = async (): Promise<void> => {
-    const tourPopover = this.page.locator('.reactour__popover');
-    const tourMask = this.page.locator('.reactour__mask');
-    const closeButton = this.page.getByTestId('tour-close-button');
-
-    if ((await tourPopover.isVisible()) || (await tourMask.isVisible())) {
-      await closeButton.click();
-      await tourPopover.waitFor({ state: 'hidden' });
+    if ((await this.elements.tourPopover.isVisible()) || (await this.elements.tourMask.isVisible())) {
+      await this.elements.closeButton.click();
+      await this.elements.tourPopover.waitFor({ state: 'hidden' });
     }
   };
 }
