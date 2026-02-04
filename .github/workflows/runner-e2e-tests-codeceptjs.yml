@@ -215,29 +215,18 @@ jobs:
 
       - name: Prepare launchable
         working-directory: pmm-ui-tests
-        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
-          launchable record session --build ${{ env.SHA }} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt
+          
+          export DOCKER_IMAGE_ID=$(docker inspect ${{ env.DOCKER_VERSION }} -f "{{.Id}}") || true
+          
+          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch codeceptjs > launchable-subset.json
 
-      - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
-        working-directory: pmm-ui-tests
-        if: ${{ env.SHA == 'null' || github.event_name == 'pull_request' }}
-        env:
-          SERVER_IP : "192.168.0.1"
-          PMM_UI_URL : "http://192.168.0.1/"
-          PMM_URL : "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
-          GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
-        run: |
-          sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi
-
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
         working-directory: pmm-ui-tests
-        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
         env:
           SERVER_IP : "192.168.0.1"
           PMM_UI_URL : "http://192.168.0.1/"
@@ -253,7 +242,8 @@ jobs:
             # Run tests if the subset file is not empty
             ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "$SUBSET_FILE")"
           else
-            echo "$SUBSET_FILE is empty, so we won't run tests."
+            echo "$SUBSET_FILE is empty, so we run all tests for now."
+            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi 
           fi
 
       - name: Download logs
@@ -264,12 +254,21 @@ jobs:
             unzip logs.zip -d logs
 
       - name: Record launchable test results
-        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' && always() }}
+        if: ${{ always() }}
         working-directory: pmm-ui-tests
+        continue-on-error: true
         run: |
-          sed -i "s|$(pwd)/||g" tests/output/result.xml
-          launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
-          launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
+          SUBSET_FILE="launchable-subset.txt"
+
+          # Skip tests if the subset file is empty
+          if [ -s "$SUBSET_FILE" ]; then
+            # Attach results if the subset file is not empty
+            sed -i "s|$(pwd)/||g" tests/output/result.xml
+            launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
+            launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
+          else
+            echo "$SUBSET_FILE is empty."
+          fi
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
