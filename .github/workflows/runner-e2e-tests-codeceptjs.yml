@@ -223,7 +223,7 @@ jobs:
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch codeceptjs > launchable-subset.json
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch codeceptjs > launchable-subset.json || true
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
         working-directory: pmm-ui-tests
