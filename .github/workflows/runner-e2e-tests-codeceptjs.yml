@@ -259,7 +259,7 @@ jobs:
         working-directory: pmm-ui-tests
         continue-on-error: true
         run: |
-          SUBSET_FILE="launchable-subset.txt"
+          SUBSET_FILE="launchable-subset.json"
 
           # Skip tests if the subset file is empty
           if [ -s "$SUBSET_FILE" ]; then
