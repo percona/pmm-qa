@@ -21,14 +21,14 @@ class ExecReturn {
   }
 
   logError() {
-    if (this.code !== 0) {
-      console.log(`"${this.command}" exited with error: "${this.stderr || this.stdout}"`);
-    }
+    if (this.code !== 0) console.log(`"${this.command}" exited with error: "${this.stderr || this.stdout}"`);
   }
 
   assertSuccess() {
     const errorMsg = this.code === 0 ? '' : ` Error: "${this.stderr || this.stdout}"`;
+
     expect(this.code, `Verify "${this.command}" exited with 0!${errorMsg}"`).toEqual(0);
+
     return this;
   }
 
@@ -62,10 +62,12 @@ class ExecReturn {
     for (const val of expectedValues) {
       expect.soft(this.stdout.replace(/ +(?= )/g, ''), `Verify Stdout contains '${val}'`).toContain(val);
     }
+
     const errorMsg =
       test.info().errors.length === 0
         ? ''
         : ` But got ${test.info().errors.length} error(s):\n${this.getErrors()}`;
+
     expect(test.info().errors, `'Contains all elements' should have 0 errors.${errorMsg}`).toHaveLength(0);
   }
 
@@ -73,18 +75,22 @@ class ExecReturn {
     for (const val of expectedValues) {
       expect.soft(this.stdout, `Verify Stdout contains '${val}'`).toContain(val);
     }
+
     const errorMsg =
       test.info().errors.length === 0
         ? ''
         : ` But got ${test.info().errors.length} error(s):\n${this.getErrors()}`;
+
     expect(test.info().errors, `'Contains all elements' should have 0 errors.${errorMsg}`).toHaveLength(0);
   }
 
   private getErrors(): string {
     const errors: string[] = [];
+
     for (const obj of test.info().errors) {
-      errors.push(`\t${obj.message!.split('\n')[0]}`);
+      errors.push(`\t${obj.message?.split('\n')[0]}`);
     }
+
     return errors.join('\n');
   }
 }

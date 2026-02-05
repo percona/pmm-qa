@@ -20,7 +20,6 @@ for (const dashboardName in ValkeyDashboards) {
           cluster,
         }),
       );
-
       await dashboard.verifyMetricsPresent(dashboardPage.metrics, serviceList);
       await dashboard.verifyAllPanelsHaveData([]);
       await dashboard.verifyPanelValues(dashboardPage.metrics, serviceList);

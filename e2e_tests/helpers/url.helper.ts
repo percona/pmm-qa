@@ -12,10 +12,9 @@ interface BuildUrlParameters {
 }
 
 export default class UrlHelper {
-  constructor() {}
-
   buildUrlWithParameters(baseUrl: string, parameters: BuildUrlParameters) {
     const queryParams: IQueryParams = {};
+
     for (const key of Object.keys(parameters) as (keyof BuildUrlParameters)[]) {
       switch (key) {
         case 'database':

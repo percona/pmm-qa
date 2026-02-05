@@ -1,11 +1,6 @@
-import { Page } from '@playwright/test';
 import PanelComponent from './panel.component';
 
 export default class TablePanel extends PanelComponent {
-  constructor(page: Page) {
-    super(page);
-  }
-
   private elements = {
     tablePanelValue: (panelName: string) =>
       this.grafanaIframe().locator(
@@ -13,7 +8,7 @@ export default class TablePanel extends PanelComponent {
       ),
   };
 
-  public verifyPanelData = async (panelName: string) => {
+  async verifyPanelData(panelName: string) {
     await this.verifyData(this.elements.tablePanelValue(panelName), panelName);
-  };
+  }
 }

@@ -4,7 +4,7 @@ export default class mocksHelper {
   constructor(public page: Page) {}
 
   // mock no services
-  mockNoServices = async (): Promise<void> => {
+  async mockNoServices(): Promise<void> {
     await this.page.route('**/v1/inventory/services', async (route) => {
       await route.fulfill({
         status: 200,
@@ -20,10 +20,10 @@ export default class mocksHelper {
         }),
       });
     });
-  };
+  }
 
   // mock api for fresh install
-  mockFreshInstall = async (): Promise<void> => {
+  async mockFreshInstall(): Promise<void> {
     let productTourCompleted = false;
 
     await this.page.route('**/v1/users/me', (route) => {
@@ -40,9 +40,9 @@ export default class mocksHelper {
           }),
         });
       }
-
       if (method === 'PATCH' || method === 'PUT') {
         productTourCompleted = true;
+
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -54,9 +54,9 @@ export default class mocksHelper {
 
       return route.continue();
     });
-  };
+  }
 
-  public async mockUpdateAvailable(updateAvailable: boolean): Promise<void> {
+  async mockUpdateAvailable(updateAvailable: boolean): Promise<void> {
     await this.page.route('**/v1/server/updates?force=true', async (route) => {
       const installedTimestamp = new Date();
       const now = new Date();

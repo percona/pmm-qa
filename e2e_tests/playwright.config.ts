@@ -3,8 +3,8 @@ import dotenv from 'dotenv';
 import { Timeouts } from '@helpers/timeouts';
 
 dotenv.config({ quiet: true, override: true });
-const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localhost/';
 
+const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localhost/';
 const config: PlaywrightTestConfig = {
   testDir: './tests',
   fullyParallel: true,
@@ -23,7 +23,7 @@ const config: PlaywrightTestConfig = {
     trace: 'retain-on-failure',
     headless: (process.env.HEADLESS ?? 'true') === 'true',
     ignoreHTTPSErrors: true,
-    viewport: { width: 1920, height: 1080 },
+    viewport: { width: 1_920, height: 1_080 },
     screenshot: 'only-on-failure',
   },
   projects: [

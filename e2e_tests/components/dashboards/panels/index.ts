@@ -9,7 +9,7 @@ import TablePanel from '@components/dashboards/panels/table.component';
 import TextPanel from '@components/dashboards/panels/text.component';
 import TimeSeriesPanel from '@components/dashboards/panels/timeSeries.component';
 
-const panels = (page: Page) => {
+function panels(page: Page) {
   return {
     barGauge: new BarGaugePanel(page),
     barTime: new BarTimePanel(page),
@@ -21,6 +21,6 @@ const panels = (page: Page) => {
     text: new TextPanel(page),
     timeSeries: new TimeSeriesPanel(page),
   };
-};
+}
 
 export default panels;

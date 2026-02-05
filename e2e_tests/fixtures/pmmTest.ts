@@ -25,7 +25,6 @@ base.beforeEach(async ({ page }) => {
       }),
     }),
   );
-
   // Mock upgrade call to prevent upgrade modal from showing.
   await page.route('**/v1/server/updates?force=**', (route) =>
     route.fulfill({
@@ -56,63 +55,75 @@ const pmmTest = base.extend<{
 }>({
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
+
     await use(cliHelper);
   },
 
   credentials: async ({}, use) => {
     const credentials = new Credentials();
+
     await use(credentials);
   },
 
   dashboard: async ({ page }, use) => {
     const dashboardPage = new Dashboard(page);
+
     await use(dashboardPage);
   },
 
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
+
     await use(grafanaHelper);
   },
 
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
+
     await use(inventoryApi);
   },
 
   queryAnalytics: async ({ page }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
+
     await use(queryAnalytics);
   },
 
   urlHelper: async ({}, use) => {
     const urlHelper = new UrlHelper();
+
     await use(urlHelper);
   },
 
   helpPage: async ({ page }, use) => {
     const helpPage = new HelpPage(page);
+
     await use(helpPage);
   },
 
   themePage: async ({ page }, use) => {
     const themePage = new ThemePage(page);
+
     await use(themePage);
   },
 
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
+
     await use(tour);
   },
 
   welcomePage: async ({ page }, use) => {
     const welcomePage = new WelcomePage(page);
+
     await use(welcomePage);
   },
 
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
+
     await use(mocks);
-  }
+  },
 });
 
 export default pmmTest;

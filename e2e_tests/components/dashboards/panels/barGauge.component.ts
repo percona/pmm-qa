@@ -1,11 +1,6 @@
-import { Page } from '@playwright/test';
 import PanelComponent from '@components/dashboards/panels/panel.component';
 
 export default class BarGaugePanel extends PanelComponent {
-  constructor(page: Page) {
-    super(page);
-  }
-
   private elements = {
     barGaugeValues: (panelName: string) =>
       this.grafanaIframe().locator(
@@ -13,7 +8,7 @@ export default class BarGaugePanel extends PanelComponent {
       ),
   };
 
-  public verifyPanelData = async (panelName: string) => {
+  async verifyPanelData(panelName: string) {
     await this.verifyData(this.elements.barGaugeValues(panelName), panelName);
-  };
+  }
 }
