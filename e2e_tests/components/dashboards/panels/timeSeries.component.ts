@@ -1,11 +1,6 @@
-import { Page } from '@playwright/test';
 import PanelComponent from './panel.component';
 
 export default class TimeSeriesPanel extends PanelComponent {
-  constructor(page: Page) {
-    super(page);
-  }
-
   private elements = {
     timeSeriesPanelValues: (panelName: string) =>
       this.grafanaIframe().locator(
@@ -13,7 +8,7 @@ export default class TimeSeriesPanel extends PanelComponent {
       ),
   };
 
-  public verifyPanelData = async (panelName: string) => {
+  async verifyPanelData(panelName: string) {
     await this.verifyData(this.elements.timeSeriesPanelValues(panelName), panelName);
-  };
+  }
 }

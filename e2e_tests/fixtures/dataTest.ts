@@ -8,7 +8,7 @@ import QueryAnalytics from '../pages/qan/queryAnalytics.page';
 import UrlHelper from '../helpers/url.helper';
 import pmmTest from './pmmTest';
 
-type pmmTestDataType = {
+interface pmmTestDataType {
   page: Page;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -17,7 +17,7 @@ type pmmTestDataType = {
   api: Api;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
-};
+}
 
 export default function data<T>(rows: T[]) {
   return {

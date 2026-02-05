@@ -11,18 +11,20 @@ import { GetService } from '@interfaces/inventory';
  * @param services - An array of `GetService` objects, containing service details including `node_name` and `service_name`.
  * @returns A new array of `GrafanaPanel` objects with wildcards replaced by actual service names where applicable.
  */
-export const replaceWildcards = (metrics: GrafanaPanel[], services: GetService[]): GrafanaPanel[] => {
+export function replaceWildcards(metrics: GrafanaPanel[], services: GetService[]): GrafanaPanel[] {
   const newMetrics: GrafanaPanel[] = [];
   const clonedMetrics = JSON.parse(JSON.stringify(metrics));
 
   for (const metric of clonedMetrics) {
     if (metric.name.includes('*')) {
       const prefix = metric.name.substring(0, metric.name.indexOf('*'));
+
       for (const service of services) {
         const nameToMatch = metric.name.includes('-node-') ? service.node_name : service.service_name;
 
         if (nameToMatch.startsWith(prefix)) {
           const newMetricName = metric.name.replace('*', nameToMatch.substring(prefix.length));
+
           if (!newMetrics.find((m) => m.name === newMetricName)) {
             newMetrics.push({ ...metric, name: newMetricName });
           }
@@ -34,4 +36,4 @@ export const replaceWildcards = (metrics: GrafanaPanel[], services: GetService[]
   }
 
   return newMetrics;
-};
+}

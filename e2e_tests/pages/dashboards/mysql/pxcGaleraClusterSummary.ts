@@ -2,8 +2,6 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class PXCGaleraClusterSummary implements DashboardInterface {
-  constructor() {}
-
   url = 'graph/d/pxc-cluster-summary/pxc-galera-cluster-summary';
   metrics: GrafanaPanel[] = [
     { name: 'Percona XtraDB / Galera Cluster Size', type: 'unknown' },
@@ -23,7 +21,6 @@ export default class PXCGaleraClusterSummary implements DashboardInterface {
     { name: 'Average Galera Replication Latency', type: 'timeSeries' },
     { name: 'Maximum Galera Replication Latency', type: 'timeSeries' },
   ];
-
   noDataMetrics: string[] = [];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }

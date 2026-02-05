@@ -11,6 +11,7 @@ import HaproxyInstanceSummary from './haproxyInstanceSummary';
 import MysqlWaitEventAnalysesDetails from './mysqlWaitEventAnalysesDetails';
 import MysqlCommandHandlerCountersCompare from './mysqlCommandHandlerCountersCompare';
 import MysqlInnoDBCompressionDetails from './mysqlInnodbCompressionDetails';
+import DashboardInterface from '@interfaces/dashboard';
 
 export const MysqlDashboards = {
   haproxyInstanceSummary: new HaproxyInstanceSummary(),
@@ -28,4 +29,6 @@ export const MysqlDashboards = {
   pxcGaleraNodesCompare: new PXCGaleraNodesCompare(),
 };
 
-export type MysqlDashboardsType = typeof MysqlDashboards;
+export type MysqlDashboardsType = typeof MysqlDashboards & Record<string, DashboardInterface>;
+
+export default MysqlDashboards;

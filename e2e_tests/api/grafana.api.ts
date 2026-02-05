@@ -8,26 +8,23 @@ export default class GrafanaApi {
     private request: APIRequestContext,
   ) {}
 
-  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+  async waitForMetric(metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) {
     let iterator = 0;
 
     while (true) {
-      if (iterator > timeout) {
-        throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
-      }
+      if (iterator > timeout) throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
 
       const metric = await this.getMetric(metricName);
 
-      if (metric.results.A.frames[0].data.values.length !== 0) {
-        return metric.data;
-      }
+      if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
 
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
       await this.page.waitForTimeout(Timeouts.ONE_SECOND);
       iterator += Timeouts.ONE_SECOND;
     }
-  };
+  }
 
-  getMetric = async (metricName: string) => {
+  async getMetric(metricName: string) {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const datasource = await this.getDataSourceByName();
     const requestBody = {
@@ -41,12 +38,11 @@ export default class GrafanaApi {
           },
           datasourceId: datasource.uid,
           expr: metricName,
-          intervalMs: 1000,
+          intervalMs: 1_000,
           maxDataPoints: 100,
         },
       ],
     };
-
     const metric = await this.request.post('graph/api/ds/query', { data: requestBody, headers });
 
     expect(
@@ -55,9 +51,9 @@ export default class GrafanaApi {
     ).toEqual(200);
 
     return await metric.json();
-  };
+  }
 
-  getDataSourceByName = async (name: string = 'Metrics') => {
+  async getDataSourceByName(name = 'Metrics') {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const dataSources = await this.request.get('graph/api/datasources', { headers });
 
@@ -67,5 +63,5 @@ export default class GrafanaApi {
     ).toEqual(200);
 
     return (await dataSources.json()).find((d: { name: string }) => d.name === name);
-  };
+  }
 }

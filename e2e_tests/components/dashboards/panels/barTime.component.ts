@@ -1,11 +1,6 @@
-import { Page } from '@playwright/test';
 import PanelComponent from '@components/dashboards/panels/panel.component';
 
 export default class BarTimePanel extends PanelComponent {
-  constructor(page: Page) {
-    super(page);
-  }
-
   private elements = {
     barTimeValues: (panelName: string) =>
       this.grafanaIframe().locator(
@@ -13,7 +8,7 @@ export default class BarTimePanel extends PanelComponent {
       ),
   };
 
-  public verifyPanelData = async (panelName: string) => {
+  async verifyPanelData(panelName: string) {
     await this.verifyData(this.elements.barTimeValues(panelName), panelName);
-  };
+  }
 }

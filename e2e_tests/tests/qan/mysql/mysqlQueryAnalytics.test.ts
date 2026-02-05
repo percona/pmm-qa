@@ -9,6 +9,7 @@ pmmTest.beforeAll(async ({ cliHelper, credentials }) => {
                                                           -u ${credentials.perconaServer.ps_84.username} \
                                                           -p${credentials.perconaServer.ps_84.password} \
                                                           < \${PWD}/testdata/PMM-T1897.sql`);
+
   if (result.code != 0) {
     throw new Error(`Exec command failed with code ${result.code} and message ${result.stderr}`);
   }
