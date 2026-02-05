@@ -206,7 +206,7 @@ jobs:
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
           
-          export DOCKER_IMAGE_ID=$(docker inspect ${{ env.DOCKER_VERSION }} -f "{{.Id}}") || true
+          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
