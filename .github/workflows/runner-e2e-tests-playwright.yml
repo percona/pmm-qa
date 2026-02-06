@@ -239,6 +239,7 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         continue-on-error: true
         run: |
+          ls -la
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
           launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
 

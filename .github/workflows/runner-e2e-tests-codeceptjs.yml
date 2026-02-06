@@ -259,6 +259,7 @@ jobs:
         working-directory: pmm-ui-tests
         continue-on-error: true
         run: |
+          ls -la
           sed -i "s|$(pwd)/||g" tests/output/result.xml
           launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
           launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
