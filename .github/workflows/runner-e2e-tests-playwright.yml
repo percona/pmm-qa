@@ -237,17 +237,10 @@ jobs:
       - name: Record launchable test results
         if: ${{ always() }}
         working-directory: pmm-qa/e2e_tests
+        continue-on-error: true
         run: |
-          SUBSET_FILE="launchable-subset.txt"
-
-          # Skip tests if the subset file is empty
-          if [ -s "$SUBSET_FILE" ]; then
-            # Attach results if the subset file is not empty
-            launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
-            launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
-          else
-            echo "$SUBSET_FILE is empty."
-          fi
+          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
 
       - name: Generate and Attach the report
         if: failure()
