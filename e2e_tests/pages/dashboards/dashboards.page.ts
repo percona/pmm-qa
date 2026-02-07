@@ -11,34 +11,66 @@ import Panels from '@components/dashboards/panels';
 export default class Dashboards extends BasePage {
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
-  buttons = {};
-  inputs = {};
-  messages = {};
   builders = {
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
   };
+  buttons = {};
   elements = {
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
-    panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    gridItems: this.grafanaIframe().locator('.react-grid-item'),
+    loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
+    loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
+    loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
     noDataPanel: this.page.locator(
       '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
     ),
     noDataPanelName: this.grafanaIframe().locator(
       '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
     ),
+    panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
-    loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
-    loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
-    loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
-    gridItems: this.grafanaIframe().locator('.react-grid-item'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
     ),
   };
+  inputs = {};
+  messages = {};
+
   readonly panels = () => Panels(this.page);
 
-  async verifyAllPanelsHaveData(noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) {
+  loadAllPanels = async () => {
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+
+    // Wait for the dashboard to be visible before proceeding.
+    await test.step('Wait for initial loading to finish', async () => {
+      await expectPanel(this.elements.refreshButton).toBeVisible();
+      await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
+      await expectPanel(this.elements.loadingText).toHaveCount(0);
+    });
+
+    // Expand rows if present and wait for content in each item.
+    await test.step('Expand rows and load panel content', async () => {
+      for (let i = 0; i < (await this.elements.gridItems.count()); i++) {
+        const item = this.elements.gridItems.nth(i);
+
+        await item.scrollIntoViewIfNeeded();
+
+        const expandButton = item.getByLabel('Expand row');
+
+        if (await expandButton.isVisible()) await expandButton.click();
+
+        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
+      }
+    });
+
+    // Confirms that there are no remaining loading bars.
+    await test.step('Wait for loading to finish', async () => {
+      await expectPanel(this.elements.loadingBar).toHaveCount(0);
+    });
+  };
+
+  verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
     let noDataPanels: string[] = [];
@@ -75,9 +107,9 @@ export default class Dashboards extends BasePage {
     expect
       .soft(extraMetrics, `Metrics with data that are expected to be empty are: ${extraMetrics}`)
       .toHaveLength(0);
-  }
+  };
 
-  async verifyMetricsPresent(expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) {
+  verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
     const expectedMetricsNames = expectedMetrics.map((e) => e.name);
@@ -87,9 +119,9 @@ export default class Dashboards extends BasePage {
     const availableMetrics = await this.elements.panelName.allTextContents();
 
     expect(availableMetrics.sort()).toEqual(expectedMetricsNames.sort());
-  }
+  };
 
-  async verifyPanelValues(panels: GrafanaPanel[], serviceList?: GetService[]) {
+  verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
     await this.loadAllPanels();
 
     const panelList = serviceList ? replaceWildcards(panels, serviceList) : panels;
@@ -130,36 +162,5 @@ export default class Dashboards extends BasePage {
           throw new Error(`Unsupported panel: ${panel.name}`);
       }
     }
-  }
-
-  private async loadAllPanels() {
-    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
-
-    // Wait for the dashboard to be visible before proceeding.
-    await test.step('Wait for initial loading to finish', async () => {
-      await expectPanel(this.elements.refreshButton).toBeVisible();
-      await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
-      await expectPanel(this.elements.loadingText).toHaveCount(0);
-    });
-
-    // Expand rows if present and wait for content in each item.
-    await test.step('Expand rows and load panel content', async () => {
-      for (let i = 0; i < (await this.elements.gridItems.count()); i++) {
-        const item = this.elements.gridItems.nth(i);
-
-        await item.scrollIntoViewIfNeeded();
-
-        const expandButton = item.getByLabel('Expand row');
-
-        if (await expandButton.isVisible()) await expandButton.click();
-
-        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
-      }
-    });
-
-    // Confirms that there are no remaining loading bars.
-    await test.step('Wait for loading to finish', async () => {
-      await expectPanel(this.elements.loadingBar).toHaveCount(0);
-    });
-  }
+  };
 }

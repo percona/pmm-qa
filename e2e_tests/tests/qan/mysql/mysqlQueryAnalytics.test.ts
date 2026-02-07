@@ -21,14 +21,14 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest(
   'PMM-T2030 - Verify QAN for PS Replica Instance @nightly @pmm-ps-integration',
-  async ({ page, queryAnalytics, urlHelper, api }) => {
+  async ({ api, page, queryAnalytics, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
 
     await page.goto(
       urlHelper.buildUrlWithParameters(queryAnalytics.url, {
         from: 'now-15m',
-        serviceName: service_name,
         schema: 'sbtest',
+        serviceName: service_name,
       }),
     );
     await queryAnalytics.verifyQueryAnalyticsHaveData();
@@ -39,8 +39,8 @@ pmmTest(
   'PMM-T1897 - Verify Query Count metric on QAN page for MySQL @pmm-ps-integration',
   async ({ page, queryAnalytics, urlHelper }) => {
     const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
-      schema: 'sbtest3',
       refresh: '5s',
+      schema: 'sbtest3',
     });
 
     await page.goto(url);

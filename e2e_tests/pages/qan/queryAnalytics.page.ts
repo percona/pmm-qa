@@ -4,22 +4,35 @@ import BasePage from '@pages/base.page';
 
 export default class QueryAnalytics extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
-  buttons = {};
-  inputs = {};
-  messages = {};
   builders = {};
+  buttons = {};
   elements = {
+    firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
     noData: this.grafanaIframe().locator('//*[@data-testid="table-no-data"]'),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
-    firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
+  };
+  inputs = {};
+  messages = {};
+
+  verifyQueryAnalyticsHaveData = async () => {
+    await this.waitUntilQueryAnalyticsLoaded();
+    await expect(this.elements.noData).toBeHidden({ timeout: 30_000 });
+    await expect(this.elements.firstRow).toBeVisible({ timeout: 30_000 });
   };
 
-  async waitUntilQueryAnalyticsLoaded() {
-    await expect(this.elements.spinner.first()).toBeHidden({ timeout: 30_000 });
-  }
+  verifyTotalQueryCount = async (expectedQueryCount: number) => {
+    const countString = await this.elements.totalCount.first().textContent({ timeout: Timeouts.ONE_MINUTE });
 
-  async waitForQueryAnalyticsToHaveData(timeout: Timeouts = Timeouts.ONE_MINUTE) {
+    if (!countString) throw new Error('Count of queries is not displayed!');
+
+    const match = countString.match(/of (\d+) items/);
+    const queryCount = match ? parseInt(match[1], 10) : null;
+
+    expect(queryCount).toEqual(expectedQueryCount);
+  };
+
+  waitForQueryAnalyticsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.waitUntilQueryAnalyticsLoaded();
 
     const noDataLocator = this.elements.noData;
@@ -35,22 +48,9 @@ export default class QueryAnalytics extends BasePage {
     await expect(noDataLocator).not.toBeVisible({
       timeout: Timeouts.ONE_SECOND,
     });
-  }
+  };
 
-  async verifyQueryAnalyticsHaveData() {
-    await this.waitUntilQueryAnalyticsLoaded();
-    await expect(this.elements.noData).toBeHidden({ timeout: 30_000 });
-    await expect(this.elements.firstRow).toBeVisible({ timeout: 30_000 });
-  }
-
-  async verifyTotalQueryCount(expectedQueryCount: number) {
-    const countString = await this.elements.totalCount.first().textContent({ timeout: Timeouts.ONE_MINUTE });
-
-    if (!countString) throw new Error('Count of queries is not displayed!');
-
-    const match = countString.match(/of (\d+) items/);
-    const queryCount = match ? parseInt(match[1], 10) : null;
-
-    expect(queryCount).toEqual(expectedQueryCount);
-  }
+  waitUntilQueryAnalyticsLoaded = async () => {
+    await expect(this.elements.spinner.first()).toBeHidden({ timeout: 30_000 });
+  };
 }

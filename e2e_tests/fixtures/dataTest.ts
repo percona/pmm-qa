@@ -19,27 +19,27 @@ interface pmmTestDataType {
   urlHelper: UrlHelper;
 }
 
-export default function data<T>(rows: T[]) {
-  return {
-    pmmTest(
-      title: string,
-      fn: (data: T, fixtures: pmmTestDataType, testInfo: TestInfo) => Promise<void> | void,
-    ) {
-      for (const row of rows) {
-        pmmTest(
-          `${title} | Data: ${JSON.stringify(row)}`,
-          async (
-            { cliHelper, credentials, dashboard, grafanaHelper, api, queryAnalytics, urlHelper, page },
+const data = <T>(rows: T[]) => ({
+  pmmTest: (
+    title: string,
+    fn: (data: T, fixtures: pmmTestDataType, testInfo: TestInfo) => Promise<void> | void,
+  ) => {
+    for (const row of rows) {
+      pmmTest(
+        `${title} | Data: ${JSON.stringify(row)}`,
+        async (
+          { api, cliHelper, credentials, dashboard, grafanaHelper, page, queryAnalytics, urlHelper },
+          testInfo,
+        ) => {
+          await fn(
+            row,
+            { api, cliHelper, credentials, dashboard, grafanaHelper, page, queryAnalytics, urlHelper },
             testInfo,
-          ) => {
-            await fn(
-              row,
-              { cliHelper, credentials, dashboard, grafanaHelper, api, queryAnalytics, urlHelper, page },
-              testInfo,
-            );
-          },
-        );
-      }
-    },
-  };
-}
+          );
+        },
+      );
+    }
+  },
+});
+
+export default data;

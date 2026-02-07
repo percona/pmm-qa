@@ -12,7 +12,7 @@ interface BuildUrlParameters {
 }
 
 export default class UrlHelper {
-  buildUrlWithParameters(baseUrl: string, parameters: BuildUrlParameters) {
+  buildUrlWithParameters = (baseUrl: string, parameters: BuildUrlParameters) => {
     const queryParams: IQueryParams = {};
 
     for (const key of Object.keys(parameters) as (keyof BuildUrlParameters)[]) {
@@ -47,5 +47,5 @@ export default class UrlHelper {
     }
 
     return buildUrl(baseUrl, { queryParams });
-  }
+  };
 }

@@ -8,7 +8,7 @@ export default class PolyStatPanel extends PanelComponent {
       ),
   };
 
-  async verifyPanelData(panelName: string) {
+  verifyPanelData = async (panelName: string) => {
     await this.verifyData(this.elements.polyStatPanelValue(panelName), panelName);
-  }
+  };
 }

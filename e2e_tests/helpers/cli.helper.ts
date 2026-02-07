@@ -15,28 +15,10 @@ export default class CliHelper {
    * @param   pathToFile  path to the file including file name
    * @param   content     content {@code string} to insert as file content
    */
-  async createFile(pathToFile: string, content: string) {
+  createFile = async (pathToFile: string, content: string) => {
     console.log(`echo: "${content}" >> ${pathToFile}`);
     shell.echo(content).to(pathToFile);
-  }
-
-  /**
-   * Shell(sh) exec() wrapper to use outside of {@link test}
-   * returns handy {@link ExecReturn} object.
-   *
-   * @param       command   sh command to execute
-   * @return      {@link ExecReturnClass} instance
-   */
-  execute(command: string): ExecReturn {
-    console.log(`exec: "${command}"`);
-
-    const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
-
-    if (stdout.length > 0) console.log(`Out: "${stdout}"`);
-    if (stderr.length > 0) console.log(`Error: "${stderr}"`);
-
-    return new ExecReturn(command, code, stdout, stderr);
-  }
+  };
 
   /**
    * Silent Shell(sh) exec() wrapper to return handy {@link ExecReturn} object.
@@ -45,11 +27,29 @@ export default class CliHelper {
    * @param       command   sh command to execute
    * @return      {@link ExecReturnClass} instance
    */
-  execSilent(command: string): ExecReturn {
-    const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
+  execSilent = (command: string): ExecReturn => {
+    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
 
     return new ExecReturn(command, code, stdout, stderr);
-  }
+  };
+
+  /**
+   * Shell(sh) exec() wrapper to use outside of {@link test}
+   * returns handy {@link ExecReturn} object.
+   *
+   * @param       command   sh command to execute
+   * @return      {@link ExecReturnClass} instance
+   */
+  execute = (command: string): ExecReturn => {
+    console.log(`exec: "${command}"`);
+
+    const { code, stderr, stdout } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
+
+    if (stdout.length > 0) console.log(`Out: "${stdout}"`);
+    if (stderr.length > 0) console.log(`Error: "${stderr}"`);
+
+    return new ExecReturn(command, code, stdout, stderr);
+  };
 
   /**
    * Scrape all metrics from exporter found by Service Name
@@ -60,8 +60,8 @@ export default class CliHelper {
    *            agentPassword - password for specified username to authenticate to exporter (optional)
    *            dockerContainer - docker container name to scrape metrics from (optional)
    */
-  getMetrics(options: getMetrics): string {
-    let { agentUser, agentPassword } = options;
+  getMetrics = (options: getMetrics): string => {
+    let { agentPassword, agentUser } = options;
     const prefix = options.dockerContainer ? `docker exec ${options.dockerContainer} ` : '';
     const adminList = this.execute(`${prefix || 'sudo '}pmm-admin list`)
       .assertSuccess()
@@ -105,5 +105,5 @@ export default class CliHelper {
     return this.execute(
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
-  }
+  };
 }

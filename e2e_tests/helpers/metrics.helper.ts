@@ -11,7 +11,7 @@ import { GetService } from '@interfaces/inventory';
  * @param services - An array of `GetService` objects, containing service details including `node_name` and `service_name`.
  * @returns A new array of `GrafanaPanel` objects with wildcards replaced by actual service names where applicable.
  */
-export function replaceWildcards(metrics: GrafanaPanel[], services: GetService[]): GrafanaPanel[] {
+export const replaceWildcards = (metrics: GrafanaPanel[], services: GetService[]): GrafanaPanel[] => {
   const newMetrics: GrafanaPanel[] = [];
   const clonedMetrics = JSON.parse(JSON.stringify(metrics));
 
@@ -36,4 +36,4 @@ export function replaceWildcards(metrics: GrafanaPanel[], services: GetService[]
   }
 
   return newMetrics;
-}
+};

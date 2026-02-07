@@ -1,14 +1,14 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
-pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
+pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await page.goto('');
   await grafanaHelper.authorize();
 });
 
 pmmTest(
   'PMM-T2132 Verify welcome Card appears on fresh install @new-navigation',
-  async ({ welcomePage, mocks }) => {
+  async ({ mocks, welcomePage }) => {
     await pmmTest.step('Mock fresh install and no services', async () => {
       await mocks.mockFreshInstall();
       await mocks.mockNoServices();
@@ -25,7 +25,7 @@ pmmTest(
 
 pmmTest(
   'PMM-T2101 verify dismiss button on welcome card @new-navigation',
-  async ({ page, welcomePage, mocks }) => {
+  async ({ mocks, page, welcomePage }) => {
     await pmmTest.step('Mock fresh install', async () => {
       await mocks.mockFreshInstall();
     });
@@ -42,7 +42,7 @@ pmmTest(
   },
 );
 
-pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ page, welcomePage, mocks }) => {
+pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ mocks, page, welcomePage }) => {
   await pmmTest.step('Mock fresh install', async () => {
     await mocks.mockFreshInstall();
   });
@@ -63,7 +63,7 @@ pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ pag
   });
 });
 
-pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ page, welcomePage, mocks }) => {
+pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ mocks, page, welcomePage }) => {
   const cases = welcomePage.cases;
 
   for (const c of cases) {

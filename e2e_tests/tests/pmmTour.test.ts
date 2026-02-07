@@ -1,7 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
-pmmTest.beforeEach(async ({ page, grafanaHelper }) => {
+pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await page.goto('');
   await grafanaHelper.authorize();
 });

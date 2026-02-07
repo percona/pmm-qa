@@ -5,7 +5,7 @@ import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/i
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
 
-  async getServiceDetailsByPartialName(partialServiceName: string): Promise<GetService> {
+  getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
     const service = services.services.find((service: GetService) =>
       service.service_name.includes(partialServiceName),
@@ -14,9 +14,9 @@ export default class InventoryApi {
     if (!service) throw new Error(`Service with name ${partialServiceName} is not present`);
 
     return service;
-  }
+  };
 
-  async getServiceDetailsByRegex(regexString: string): Promise<GetService> {
+  getServiceDetailsByRegex = async (regexString: string): Promise<GetService> => {
     const services = await this.getServices();
     const regex = new RegExp(regexString);
     const service = services.services.find((service: GetService) => regex.test(service.service_name));
@@ -24,9 +24,12 @@ export default class InventoryApi {
     if (!service) throw new Error(`Service matching regex: ${regex} is not present`);
 
     return service;
-  }
+  };
 
-  async getServiceDetailsByRegexAndParameters(regexString: string, parameters: object): Promise<GetService> {
+  getServiceDetailsByRegexAndParameters = async (
+    regexString: string,
+    parameters: object,
+  ): Promise<GetService> => {
     const services = await this.getServices();
     const regex = new RegExp(regexString);
     let filteredServices = services.services.filter((service: GetService) =>
@@ -42,9 +45,25 @@ export default class InventoryApi {
     expect(filteredServices.length, `Service matching regex: ${regex} is not present`).toBeGreaterThan(0);
 
     return filteredServices[0];
-  }
+  };
 
-  async getServicesByType(serviceType: ServiceType) {
+  getServices = async (): Promise<GetServices> => {
+    const authToken = GrafanaHelper.getToken();
+    const services = await this.request.get('/v1/management/services', {
+      headers: {
+        Authorization: `Basic ${authToken}`,
+      },
+    });
+
+    expect(
+      services.status(),
+      `Get services API call returned status code: ${services.status()} with error message: ${services.statusText()}`,
+    ).toEqual(200);
+
+    return (await services.json()) as GetServices;
+  };
+
+  getServicesByType = async (serviceType: ServiceType) => {
     const serviceList = await this.getServices();
 
     if (serviceType === ServiceType.postgresql) {
@@ -60,29 +79,13 @@ export default class InventoryApi {
     expect(service.length, `Service type ${serviceType} is not present`).toBeGreaterThan(0);
 
     return service;
-  }
+  };
 
-  async getServices(): Promise<GetServices> {
-    const authToken = GrafanaHelper.getToken();
-    const services = await this.request.get('/v1/management/services', {
-      headers: {
-        Authorization: `Basic ${authToken}`,
-      },
-    });
-
-    expect(
-      services.status(),
-      `Get services API call returned status code: ${services.status()} with error message: ${services.statusText()}`,
-    ).toEqual(200);
-
-    return (await services.json()) as GetServices;
-  }
-
-  async verifyServiceAgentsStatus(service: GetService, expectedStatus: AgentStatus) {
+  verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
     const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');
 
     for (const agent of agents) {
       expect.soft(agent.status, `Wrong status for agent: ${agent.agent_type}`).toEqual(expectedStatus);
     }
-  }
+  };
 }

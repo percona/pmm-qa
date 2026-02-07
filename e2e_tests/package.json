@@ -22,6 +22,7 @@
     "dotenv": "^17.2.3",
     "eslint": "^9.37.0",
     "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-perfectionist": "^5.5.0",
     "eslint-plugin-playwright": "^2.2.2",
     "eslint-plugin-prettier": "^5.5.4",
     "eslint-plugin-unicorn": "^55.0.0",

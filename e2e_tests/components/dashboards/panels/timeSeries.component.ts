@@ -8,7 +8,7 @@ export default class TimeSeriesPanel extends PanelComponent {
       ),
   };
 
-  async verifyPanelData(panelName: string) {
+  verifyPanelData = async (panelName: string) => {
     await this.verifyData(this.elements.timeSeriesPanelValues(panelName), panelName);
-  }
+  };
 }

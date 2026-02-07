@@ -9,15 +9,15 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 for (const dashboardName in ValkeyDashboards) {
   pmmTest(
     `PMM-T2087 - ${dashboardName} dashboard metrics @nightly @dashboards @pmm-valkey-integration`,
-    async ({ page, urlHelper, api, dashboard }) => {
+    async ({ api, dashboard, page, urlHelper }) => {
       const serviceList = await api.inventoryApi.getServicesByType(ServiceType.valkey);
       const cluster = serviceList[0].cluster;
       const dashboardPage = dashboard.valkey[dashboardName];
 
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboardPage.url, {
-          from: 'now-5m',
           cluster,
+          from: 'now-5m',
         }),
       );
       await dashboard.verifyMetricsPresent(dashboardPage.metrics, serviceList);
