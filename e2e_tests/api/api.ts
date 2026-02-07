@@ -3,14 +3,11 @@ import { APIRequestContext, Page } from '@playwright/test';
 import GrafanaApi from '@api/grafana.api';
 
 export default class Api {
-  public readonly grafanaApi: GrafanaApi;
-  public readonly inventoryApi: InventoryApi;
+  readonly grafanaApi: GrafanaApi;
+  readonly inventoryApi: InventoryApi;
 
-  constructor(
-    private page: Page,
-    private request: APIRequestContext,
-  ) {
-    this.inventoryApi = new InventoryApi(page, request);
+  constructor(page: Page, request: APIRequestContext) {
+    this.inventoryApi = new InventoryApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
   }
 }

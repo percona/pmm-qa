@@ -3,25 +3,6 @@ import { Page } from '@playwright/test';
 export default class mocksHelper {
   constructor(public page: Page) {}
 
-  // mock no services
-  mockNoServices = async (): Promise<void> => {
-    await this.page.route('**/v1/inventory/services', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          mysql: [],
-          mongodb: [],
-          postgresql: [],
-          proxysql: [],
-          haproxy: [],
-          external: [],
-          valkey: [],
-        }),
-      });
-    });
-  };
-
   // mock api for fresh install
   mockFreshInstall = async (): Promise<void> => {
     let productTourCompleted = false;
@@ -31,24 +12,24 @@ export default class mocksHelper {
 
       if (method === 'GET') {
         return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
           body: JSON.stringify({
-            user_id: 1,
-            product_tour_completed: productTourCompleted,
             alerting_tour_completed: false,
+            product_tour_completed: productTourCompleted,
+            user_id: 1,
           }),
+          contentType: 'application/json',
+          status: 200,
         });
       }
-
       if (method === 'PATCH' || method === 'PUT') {
         productTourCompleted = true;
+
         return route.fulfill({
-          status: 200,
-          contentType: 'application/json',
           body: JSON.stringify({
             product_tour_completed: true,
           }),
+          contentType: 'application/json',
+          status: 200,
         });
       }
 
@@ -56,7 +37,26 @@ export default class mocksHelper {
     });
   };
 
-  public async mockUpdateAvailable(updateAvailable: boolean): Promise<void> {
+  // mock no services
+  mockNoServices = async (): Promise<void> => {
+    await this.page.route('**/v1/inventory/services', async (route) => {
+      await route.fulfill({
+        body: JSON.stringify({
+          external: [],
+          haproxy: [],
+          mongodb: [],
+          mysql: [],
+          postgresql: [],
+          proxysql: [],
+          valkey: [],
+        }),
+        contentType: 'application/json',
+        status: 200,
+      });
+    });
+  };
+
+  mockUpdateAvailable = async (updateAvailable: boolean): Promise<void> => {
     await this.page.route('**/v1/server/updates?force=true', async (route) => {
       const installedTimestamp = new Date();
       const now = new Date();
@@ -64,26 +64,26 @@ export default class mocksHelper {
       const nanosecondTimestamp = now.toISOString().split('.')[0] + '.' + millisecond + '000000Z';
 
       await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
         body: JSON.stringify({
           installed: {
-            version: '',
             full_version: '',
             timestamp: installedTimestamp,
-          },
-          latest: {
             version: '',
+          },
+          last_check: nanosecondTimestamp,
+          latest: {
+            release_notes_text: 'New features',
+            release_notes_url: 'https://example.com',
             tag: '',
             timestamp: null,
-            release_notes_url: 'https://example.com',
-            release_notes_text: 'New features',
+            version: '',
           },
-          update_available: updateAvailable,
           latest_news_url: 'https://example.com',
-          last_check: nanosecondTimestamp,
+          update_available: updateAvailable,
         }),
+        contentType: 'application/json',
+        status: 200,
       });
     });
-  }
+  };
 }

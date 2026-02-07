@@ -2,8 +2,6 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class MysqlReplicationSummary implements DashboardInterface {
-  constructor() {}
-
   url = 'graph/d/mysql-replicaset-summary/mysql-replication-summary';
   metrics: GrafanaPanel[] = [
     { name: 'Node', type: 'stat' },
