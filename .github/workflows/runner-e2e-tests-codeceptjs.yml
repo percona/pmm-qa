@@ -251,7 +251,7 @@ jobs:
           ls -la
           sed -i "s|$(pwd)/||g" tests/output/result.xml
           launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
-          launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
+          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}

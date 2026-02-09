@@ -1,4 +1,4 @@
-name: "E2E tests Matrix (CodeceptJS)"
+name: "E2E tests Matrix"
 
 on:
   schedule:
