@@ -211,6 +211,7 @@ jobs:
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.txt || true
+          echo "$(cat launchable-subset.txt)" || true
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
         working-directory: pmm-qa/e2e_tests/
