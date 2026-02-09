@@ -2,8 +2,6 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class MysqlMyRocksDetails implements DashboardInterface {
-  constructor() {}
-
   url = 'graph/d/mysql-myrocks/mysql-myrocks-details';
   metrics: GrafanaPanel[] = [
     { name: 'MyRocks Cache', type: 'timeSeries' },
@@ -55,7 +53,6 @@ export default class MysqlMyRocksDetails implements DashboardInterface {
     { name: 'Disk I/O and Swap Activity', type: 'timeSeries' },
     { name: 'Network Traffic', type: 'timeSeries' },
   ];
-
   noDataMetrics: string[] = [];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }

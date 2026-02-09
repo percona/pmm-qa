@@ -16,26 +16,25 @@ base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
   await page.route('**/v1/users/me', (route) =>
     route.fulfill({
-      status: 200,
       body: JSON.stringify({
-        user_id: 1,
-        product_tour_completed: true,
         alerting_tour_completed: true,
+        product_tour_completed: true,
         snoozed_pmm_version: '',
+        user_id: 1,
       }),
+      status: 200,
     }),
   );
-
   // Mock upgrade call to prevent upgrade modal from showing.
   await page.route('**/v1/server/updates?force=**', (route) =>
     route.fulfill({
-      status: 200,
       body: JSON.stringify({
         installed: {},
         last_check: new Date().toISOString(),
         latest: {},
         update_available: false,
       }),
+      status: 200,
     }),
   );
 });
@@ -54,65 +53,66 @@ const pmmTest = base.extend<{
   welcomePage: WelcomePage;
   mocks: Mocks;
 }>({
-  cliHelper: async ({}, use) => {
-    const cliHelper = new CliHelper();
-    await use(cliHelper);
-  },
-
-  credentials: async ({}, use) => {
-    const credentials = new Credentials();
-    await use(credentials);
-  },
-
-  dashboard: async ({ page }, use) => {
-    const dashboardPage = new Dashboard(page);
-    await use(dashboardPage);
-  },
-
-  grafanaHelper: async ({ page }, use) => {
-    const grafanaHelper = new GrafanaHelper(page);
-    await use(grafanaHelper);
-  },
-
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
+
     await use(inventoryApi);
   },
+  cliHelper: async ({}, use) => {
+    const cliHelper = new CliHelper();
 
-  queryAnalytics: async ({ page }, use) => {
-    const queryAnalytics = new QueryAnalytics(page);
-    await use(queryAnalytics);
+    await use(cliHelper);
   },
+  credentials: async ({}, use) => {
+    const credentials = new Credentials();
 
-  urlHelper: async ({}, use) => {
-    const urlHelper = new UrlHelper();
-    await use(urlHelper);
+    await use(credentials);
   },
+  dashboard: async ({ page }, use) => {
+    const dashboardPage = new Dashboard(page);
 
+    await use(dashboardPage);
+  },
+  grafanaHelper: async ({ page }, use) => {
+    const grafanaHelper = new GrafanaHelper(page);
+
+    await use(grafanaHelper);
+  },
   helpPage: async ({ page }, use) => {
     const helpPage = new HelpPage(page);
+
     await use(helpPage);
   },
-
-  themePage: async ({ page }, use) => {
-    const themePage = new ThemePage(page);
-    await use(themePage);
-  },
-
-  tour: async ({ page }, use) => {
-    const tour = new TourPage(page);
-    await use(tour);
-  },
-
-  welcomePage: async ({ page }, use) => {
-    const welcomePage = new WelcomePage(page);
-    await use(welcomePage);
-  },
-
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
+
     await use(mocks);
-  }
+  },
+  queryAnalytics: async ({ page }, use) => {
+    const queryAnalytics = new QueryAnalytics(page);
+
+    await use(queryAnalytics);
+  },
+  themePage: async ({ page }, use) => {
+    const themePage = new ThemePage(page);
+
+    await use(themePage);
+  },
+  tour: async ({ page }, use) => {
+    const tour = new TourPage(page);
+
+    await use(tour);
+  },
+  urlHelper: async ({}, use) => {
+    const urlHelper = new UrlHelper();
+
+    await use(urlHelper);
+  },
+  welcomePage: async ({ page }, use) => {
+    const welcomePage = new WelcomePage(page);
+
+    await use(welcomePage);
+  },
 });
 
 export default pmmTest;

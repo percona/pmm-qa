@@ -2,7 +2,6 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class MysqlInnoDBCompressionDetails implements DashboardInterface {
-  constructor() {}
   url = 'graph/d/mysql-innodb-compression/mysql-innodb-compression-details';
   metrics: GrafanaPanel[] = [
     { name: 'InnoDB Compression level', type: 'stat' },
@@ -27,7 +26,6 @@ export default class MysqlInnoDBCompressionDetails implements DashboardInterface
     { name: 'Fsync Rate', type: 'stat' },
     { name: 'Row Lock Blocking', type: 'stat' },
   ];
-
   noDataMetrics: string[] = [];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }

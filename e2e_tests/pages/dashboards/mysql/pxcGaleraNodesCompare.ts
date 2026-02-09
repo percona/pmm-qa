@@ -2,10 +2,9 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class PXCGaleraNodesCompare implements DashboardInterface {
-  constructor() {}
-
   url = 'graph/d/pxc-nodes-compare/pxc-galera-nodes-compare';
-  metrics: (serviceName: string) => GrafanaPanel[] = (serviceName: string): GrafanaPanel[] => [
+
+  metrics = (serviceName: string): GrafanaPanel[] => [
     { name: `${serviceName} - Ready to Accept Queries`, type: 'stat' },
     { name: `${serviceName} - Local State`, type: 'stat' },
     { name: `${serviceName} - Desync Mode`, type: 'stat' },
@@ -25,7 +24,8 @@ export default class PXCGaleraNodesCompare implements DashboardInterface {
     { name: `my_wsrep_cluster - Galera Cluster Size`, type: 'timeSeries' },
   ];
 
-  noDataMetrics = (serviceName: string): string[] => [serviceName];
   metricsWithData = (serviceName: string) =>
     this.metrics(serviceName).filter((metric) => !this.noDataMetrics(serviceName).includes(metric.name));
+
+  noDataMetrics = (serviceName: string): string[] => [serviceName];
 }

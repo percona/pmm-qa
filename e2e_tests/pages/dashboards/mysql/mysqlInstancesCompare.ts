@@ -2,10 +2,9 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class MySQLInstancesCompare implements DashboardInterface {
-  constructor() {}
-
   url = 'graph/d/mysql-instance-compare/mysql-instances-compare';
-  metrics: (serviceName: string) => GrafanaPanel[] = (serviceName: string): GrafanaPanel[] => [
+
+  metrics = (serviceName: string): GrafanaPanel[] => [
     { name: `${serviceName} - Service Info`, type: 'table' },
     { name: `${serviceName} - MySQL Uptime`, type: 'stat' },
     { name: `${serviceName} - Current QPS`, type: 'stat' },
@@ -39,7 +38,11 @@ export default class MySQLInstancesCompare implements DashboardInterface {
     { name: `${serviceName} - MySQL Open Tables`, type: 'timeSeries' },
     { name: `${serviceName} - MySQL Table Definition Cache`, type: 'timeSeries' },
   ];
-  noDataMetrics: (serviceName: string) => string[] = (serviceName: string) => [
+
+  metricsWithData = (serviceName: string) =>
+    this.metrics(serviceName).filter((metric) => !this.noDataMetrics(serviceName).includes(metric.name));
+
+  noDataMetrics = (serviceName: string): string[] => [
     `${serviceName} - Buffer Pool Size of Total RAM`,
     `${serviceName} - MySQL Query Cache Memory`,
     `${serviceName} - MySQL Query Cache Activity`,
@@ -47,7 +50,4 @@ export default class MySQLInstancesCompare implements DashboardInterface {
     `${serviceName} - Top Command Counters Hourly`,
     `T${serviceName} - Top 5 Process States Hourly`,
   ];
-
-  metricsWithData = (serviceName: string) =>
-    this.metrics(serviceName).filter((metric) => !this.noDataMetrics(serviceName).includes(metric.name));
 }

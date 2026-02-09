@@ -1,29 +1,22 @@
-import { Locator, Page } from '@playwright/test';
-import { IPageObject } from '@interfaces/pageObject';
+import { Locator } from '@playwright/test';
 import BasePage from './base.page';
 import pmmTest from '@fixtures/pmmTest';
 
-export default class ThemePage extends BasePage implements IPageObject {
-  public readonly buttons;
+export default class ThemePage extends BasePage {
+  builders = {};
+  buttons = {
+    accountNavItem: this.page.getByTestId('navitem-account'),
+    changeThemeButton: this.page.getByTestId('navitem-theme-toggle'),
+    helpNavItem: this.page.getByTestId('navitem-help'),
+  };
+  elements = {};
+  inputs = {};
+  messages = {};
 
-  constructor(public readonly page: Page) {
-    super(page);
-    this.buttons = {
-      accountNavItem: this.page.getByTestId('navitem-account'),
-      changeThemeButton: this.page.getByTestId('navitem-theme-toggle'),
-      helpNavItem: this.page.getByTestId('navitem-help'),
-    };
-  }
+  getBackgroundColor = (): Promise<string> =>
+    pmmTest.step('Get background color', async () =>
+      this.page.locator('body').evaluate((el) => window.getComputedStyle(el).backgroundColor),
+    );
 
-  public async getBackgroundColor(): Promise<string> {
-    return pmmTest.step('Get background color', async () => {
-      return this.page.locator('body').evaluate((el) => {
-        return window.getComputedStyle(el).backgroundColor;
-      });
-    });
-  }
-
-  public getThemeCombobox(): Locator {
-    return this.grafanaIframe().getByRole('combobox', { name: 'Interface theme' });
-  }
+  getThemeCombobox = (): Locator => this.grafanaIframe().getByRole('combobox', { name: 'Interface theme' });
 }

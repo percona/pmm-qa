@@ -2,10 +2,10 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class MysqlCommandHandlerCountersCompare implements DashboardInterface {
-  constructor() {}
-
   url = 'graph/d/mysql-commandhandler-compare/mysql-command-handler-counters-compare';
-  metrics: (serviceName: string) => GrafanaPanel[] = (serviceName: string): GrafanaPanel[] => [
+  noDataMetrics: string[] = [];
+
+  metrics = (serviceName: string): GrafanaPanel[] => [
     { name: serviceName, type: 'unknown' },
     { name: `${serviceName} - alter_table`, type: 'timeSeries' },
     { name: `${serviceName} - delete`, type: 'timeSeries' },
@@ -20,7 +20,6 @@ export default class MysqlCommandHandlerCountersCompare implements DashboardInte
     { name: `${serviceName} - write`, type: 'timeSeries' },
   ];
 
-  noDataMetrics: string[] = [];
   metricsWithData = (serviceName: string) =>
     this.metrics(serviceName).filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
