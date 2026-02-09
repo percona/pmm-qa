@@ -1,7 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
-export default class ValkeyOverviewDashboard implements DashboardInterface{
+export default class ValkeyOverviewDashboard implements DashboardInterface {
   url = 'graph/d/valkey-overview/valkey-redis-overview';
   metrics: GrafanaPanel[] = [
     { name: 'Min Uptime', type: 'unknown' },

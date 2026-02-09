@@ -8,23 +8,16 @@ export default class GrafanaApi {
     private request: APIRequestContext,
   ) {}
 
-  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
-    let iterator = 0;
+  getDataSourceByName = async (name = 'Metrics') => {
+    const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
+    const dataSources = await this.request.get('graph/api/datasources', { headers });
 
-    while (true) {
-      if (iterator > timeout) {
-        throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
-      }
+    expect(
+      dataSources.status(),
+      `Get datasource by name API call returned status code: ${dataSources.status()} with error message: ${dataSources.statusText()}`,
+    ).toEqual(200);
 
-      const metric = await this.getMetric(metricName);
-
-      if (metric.results.A.frames[0].data.values.length !== 0) {
-        return metric.data;
-      }
-
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-      iterator += Timeouts.ONE_SECOND;
-    }
+    return (await dataSources.json()).find((d: { name: string }) => d.name === name);
   };
 
   getMetric = async (metricName: string) => {
@@ -32,7 +25,6 @@ export default class GrafanaApi {
     const datasource = await this.getDataSourceByName();
     const requestBody = {
       from: 'now-1m',
-      to: 'now',
       queries: [
         {
           datasource: {
@@ -41,12 +33,12 @@ export default class GrafanaApi {
           },
           datasourceId: datasource.uid,
           expr: metricName,
-          intervalMs: 1000,
+          intervalMs: 1_000,
           maxDataPoints: 100,
         },
       ],
+      to: 'now',
     };
-
     const metric = await this.request.post('graph/api/ds/query', { data: requestBody, headers });
 
     expect(
@@ -57,15 +49,19 @@ export default class GrafanaApi {
     return await metric.json();
   };
 
-  getDataSourceByName = async (name: string = 'Metrics') => {
-    const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
-    const dataSources = await this.request.get('graph/api/datasources', { headers });
+  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+    let iterator = 0;
 
-    expect(
-      dataSources.status(),
-      `Get datasource by name API call returned status code: ${dataSources.status()} with error message: ${dataSources.statusText()}`,
-    ).toEqual(200);
+    while (true) {
+      if (iterator > timeout) throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
 
-    return (await dataSources.json()).find((d: { name: string }) => d.name === name);
+      const metric = await this.getMetric(metricName);
+
+      if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Rework with proper poll or waitFor
+      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
+      iterator += Timeouts.ONE_SECOND;
+    }
   };
 }
