@@ -1,34 +1,29 @@
-import { APIRequestContext, expect, Page } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 
 export default class InventoryApi {
-  constructor(
-    private readonly page: Page,
-    private request: APIRequestContext,
-  ) {}
+  constructor(private request: APIRequestContext) {}
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
-
     const service = services.services.find((service: GetService) =>
       service.service_name.includes(partialServiceName),
     );
 
-    expect(service, `Service with name ${partialServiceName} is not present`).toBeDefined();
+    if (!service) throw new Error(`Service with name ${partialServiceName} is not present`);
 
-    return service!;
+    return service;
   };
 
   getServiceDetailsByRegex = async (regexString: string): Promise<GetService> => {
     const services = await this.getServices();
     const regex = new RegExp(regexString);
-
     const service = services.services.find((service: GetService) => regex.test(service.service_name));
 
-    expect(service, `Service matching regex: ${regex} is not present`).toBeDefined();
+    if (!service) throw new Error(`Service matching regex: ${regex} is not present`);
 
-    return service!;
+    return service;
   };
 
   getServiceDetailsByRegexAndParameters = async (
@@ -52,6 +47,22 @@ export default class InventoryApi {
     return filteredServices[0];
   };
 
+  getServices = async (): Promise<GetServices> => {
+    const authToken = GrafanaHelper.getToken();
+    const services = await this.request.get('/v1/management/services', {
+      headers: {
+        Authorization: `Basic ${authToken}`,
+      },
+    });
+
+    expect(
+      services.status(),
+      `Get services API call returned status code: ${services.status()} with error message: ${services.statusText()}`,
+    ).toEqual(200);
+
+    return (await services.json()) as GetServices;
+  };
+
   getServicesByType = async (serviceType: ServiceType) => {
     const serviceList = await this.getServices();
 
@@ -68,22 +79,6 @@ export default class InventoryApi {
     expect(service.length, `Service type ${serviceType} is not present`).toBeGreaterThan(0);
 
     return service;
-  };
-
-  getServices = async (): Promise<GetServices> => {
-    const authToken = GrafanaHelper.getToken();
-    const services = await this.request.get('/v1/management/services', {
-      headers: {
-        Authorization: `Basic ${authToken}`,
-      },
-    });
-
-    expect(
-      services.status(),
-      `Get services API call returned status code: ${services.status()} with error message: ${services.statusText()}`,
-    ).toEqual(200);
-
-    return <GetServices>await services.json();
   };
 
   verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {

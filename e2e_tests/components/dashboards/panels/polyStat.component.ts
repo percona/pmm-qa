@@ -1,11 +1,6 @@
-import { Page } from '@playwright/test';
 import PanelComponent from './panel.component';
 
 export default class PolyStatPanel extends PanelComponent {
-  constructor(page: Page) {
-    super(page);
-  }
-
   private elements = {
     polyStatPanelValue: (panelName: string) =>
       this.grafanaIframe().locator(
@@ -13,7 +8,7 @@ export default class PolyStatPanel extends PanelComponent {
       ),
   };
 
-  public verifyPanelData = async (panelName: string) => {
+  verifyPanelData = async (panelName: string) => {
     await this.verifyData(this.elements.polyStatPanelValue(panelName), panelName);
   };
 }

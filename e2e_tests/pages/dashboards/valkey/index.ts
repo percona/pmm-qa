@@ -8,6 +8,7 @@ import ValkeyOverviewDashboard from '@pages/dashboards/valkey/valkeyOverviewDash
 import ValkeyPersistenceDetailsDashboard from '@pages/dashboards/valkey/valkeyPersistenceDetailsDashboard';
 import ValkeyReplicationDashboard from '@pages/dashboards/valkey/valkeyReplicationDashboard';
 import ValkeySlowlogDashboard from '@pages/dashboards/valkey/valkeySlowlogDashboard';
+import DashboardInterface from '@interfaces/dashboard';
 
 export const ValkeyDashboards = {
   valkeyClientsDashboard: new ValkeyClientsDashboard(),
@@ -22,4 +23,6 @@ export const ValkeyDashboards = {
   valkeySlowlogDashboard: new ValkeySlowlogDashboard(),
 };
 
-export type ValkeyDashboardsType = typeof ValkeyDashboards;
+export type ValkeyDashboardsType = typeof ValkeyDashboards & Record<string, DashboardInterface>;
+
+export default ValkeyDashboards;

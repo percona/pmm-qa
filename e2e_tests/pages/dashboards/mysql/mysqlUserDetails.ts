@@ -2,8 +2,6 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import DashboardInterface from '@interfaces/dashboard';
 
 export default class MySQLUserDetails implements DashboardInterface {
-  constructor() {}
-
   url = 'graph/d/mysql-user/mysql-user-details';
   metrics: GrafanaPanel[] = [
     { name: ' ', type: 'empty' },
@@ -60,7 +58,6 @@ export default class MySQLUserDetails implements DashboardInterface {
     { name: 'Disk I/O and Swap Activity', type: 'timeSeries' },
     { name: 'Network Traffic', type: 'timeSeries' },
   ];
-
   noDataMetrics: string[] = [];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
