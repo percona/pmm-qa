@@ -202,22 +202,18 @@ jobs:
 
       - name: Prepare launchable
         working-directory: pmm-qa/e2e_tests
-        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
-          launchable record session --build ${{ env.SHA }} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt
+          
+          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          
+          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.txt
-
-      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }}'
-        if: ${{ env.SHA == 'null' || github.event_name == 'pull_request' }}
-        working-directory: pmm-qa/e2e_tests/
-        run: |
-          npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.txt || true
+          echo "$(cat launchable-subset.txt)" || true
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
-        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' }}
         working-directory: pmm-qa/e2e_tests/
         run: |
           SUBSET_FILE="launchable-subset.txt"
@@ -225,9 +221,11 @@ jobs:
           # Skip tests if the subset file is empty
           if [ -s "$SUBSET_FILE" ]; then
             # Run tests if the subset file is not empty
+            echo "$SUBSET_FILE is not empty, so we run tests from the subset."
             npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
           else
-            echo "$SUBSET_FILE is empty, so we won't run tests."
+            echo "$SUBSET_FILE is empty, so we run tests for now."
+            npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
           fi
 
       - name: Download logs
@@ -238,11 +236,13 @@ jobs:
           unzip logs.zip -d logs
 
       - name: Record launchable test results
-        if: ${{ env.SHA != 'null' && github.event_name != 'pull_request' && always() }}
+        if: ${{ always() }}
         working-directory: pmm-qa/e2e_tests
+        continue-on-error: true
         run: |
+          ls -la
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
-          launchable record attachment --session $(cat launchable-session.txt) logs.zip || true
+          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - name: Generate and Attach the report
         if: failure()
