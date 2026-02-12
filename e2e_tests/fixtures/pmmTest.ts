@@ -11,6 +11,7 @@ import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
+import PortalRemovalPage from '@pages/portalRemoval.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -52,6 +53,7 @@ const pmmTest = base.extend<{
   tour: TourPage;
   welcomePage: WelcomePage;
   mocks: Mocks;
+  portalRemoval: PortalRemovalPage;
 }>({
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
@@ -87,6 +89,11 @@ const pmmTest = base.extend<{
     const mocks = new Mocks(page);
 
     await use(mocks);
+  },
+  portalRemoval: async ({ page }, use) => {
+    const portalRemoval = new PortalRemovalPage(page);
+
+    await use(portalRemoval);
   },
   queryAnalytics: async ({ page }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
