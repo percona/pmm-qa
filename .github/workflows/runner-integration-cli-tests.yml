@@ -43,7 +43,7 @@ on:
 jobs:
   cli-tests:
     name: ${{ inputs.test_name || inputs.cli_test}}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 40
     env:
       SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
