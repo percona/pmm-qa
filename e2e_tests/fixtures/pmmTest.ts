@@ -11,6 +11,8 @@ import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
+import ServicesPage from '@pages/inventory/services.page';
+import AgentsPage from '@pages/inventory/agents.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -40,6 +42,7 @@ base.beforeEach(async ({ page }) => {
 });
 
 const pmmTest = base.extend<{
+  agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
@@ -48,11 +51,13 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
+  servicesPage: ServicesPage;
   themePage: ThemePage;
   tour: TourPage;
   welcomePage: WelcomePage;
   mocks: Mocks;
 }>({
+  agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
@@ -92,6 +97,9 @@ const pmmTest = base.extend<{
     const queryAnalytics = new QueryAnalytics(page);
 
     await use(queryAnalytics);
+  },
+  servicesPage: async ({ page }, use) => {
+    await use(new ServicesPage(page));
   },
   themePage: async ({ page }, use) => {
     const themePage = new ThemePage(page);
