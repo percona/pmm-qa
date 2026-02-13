@@ -98,9 +98,7 @@ const pmmTest = base.extend<{
 
     await use(queryAnalytics);
   },
-  servicesPage: async ({ page }, use) => {
-    await use(new ServicesPage(page));
-  },
+  servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   themePage: async ({ page }, use) => {
     const themePage = new ThemePage(page);
 
