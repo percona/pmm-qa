@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 
-export default class QueryAnalytics extends BasePage {
+export default class QanStoredMetrics extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
   builders = {};
   buttons = {};
@@ -15,8 +15,8 @@ export default class QueryAnalytics extends BasePage {
   inputs = {};
   messages = {};
 
-  verifyQueryAnalyticsHaveData = async () => {
-    await this.waitUntilQueryAnalyticsLoaded();
+  verifyQanStoredMetricsHaveData = async () => {
+    await this.waitUntilQanStoredMetricsLoaded();
     await expect(this.elements.noData).toBeHidden({ timeout: 30_000 });
     await expect(this.elements.firstRow).toBeVisible({ timeout: 30_000 });
   };
@@ -32,8 +32,8 @@ export default class QueryAnalytics extends BasePage {
     expect(queryCount).toEqual(expectedQueryCount);
   };
 
-  waitForQueryAnalyticsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
-    await this.waitUntilQueryAnalyticsLoaded();
+  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+    await this.waitUntilQanStoredMetricsLoaded();
 
     const noDataLocator = this.elements.noData;
     const timeoutInSeconds = timeout / 1_000;
@@ -50,7 +50,7 @@ export default class QueryAnalytics extends BasePage {
     });
   };
 
-  waitUntilQueryAnalyticsLoaded = async () => {
+  waitUntilQanStoredMetricsLoaded = async () => {
     await expect(this.elements.spinner.first()).toBeHidden({ timeout: 30_000 });
   };
 }

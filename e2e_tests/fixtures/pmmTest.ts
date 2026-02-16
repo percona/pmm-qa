@@ -2,7 +2,7 @@ import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
-import QueryAnalytics from '@pages/qan/queryAnalytics.page';
+import QanStoredMetrics from '@pages/qanStoredMetrics/qanStoredMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
@@ -15,6 +15,7 @@ import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
 import RtaMain from '@pages/rta/rtaMain.page';
+import QueryAnalytics from '@pages/rta/queryAnalytics.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -50,7 +51,7 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   api: Api;
-  queryAnalytics: QueryAnalytics;
+  qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;
@@ -60,6 +61,7 @@ const pmmTest = base.extend<{
   mocks: Mocks;
   portalRemoval: PortalRemoval;
   rtaMain: RtaMain;
+  queryAnalytics: QueryAnalytics;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
@@ -102,17 +104,22 @@ const pmmTest = base.extend<{
 
     await use(portalRemoval);
   },
+  qanStoredMetrics: async ({ page }, use) => {
+    const qanStoredMetrics = new QanStoredMetrics(page);
+
+    await use(qanStoredMetrics);
+  },
   queryAnalytics: async ({ page }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
 
     await use(queryAnalytics);
   },
-  servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   rtaMain: async ({ page }, use) => {
     const rtaMain = new RtaMain(page);
 
     await use(rtaMain);
   },
+  servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   themePage: async ({ page }, use) => {
     const themePage = new ThemePage(page);
 
