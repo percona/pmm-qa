@@ -2,7 +2,7 @@ import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
-import QueryAnalytics from '@pages/qan/queryAnalytics.page';
+import QanStoredMetrics from '@pages/qanStoredMetrics/qanStoredMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
@@ -11,6 +11,7 @@ import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
+import QueryAnalytics from '@pages/rta/queryAnalytics.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -45,13 +46,14 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   api: Api;
-  queryAnalytics: QueryAnalytics;
+  qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   themePage: ThemePage;
   tour: TourPage;
   welcomePage: WelcomePage;
   mocks: Mocks;
+  queryAnalytics: QueryAnalytics;
 }>({
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
@@ -87,6 +89,11 @@ const pmmTest = base.extend<{
     const mocks = new Mocks(page);
 
     await use(mocks);
+  },
+  qanStoredMetrics: async ({ page }, use) => {
+    const qanStoredMetrics = new QanStoredMetrics(page);
+
+    await use(qanStoredMetrics);
   },
   queryAnalytics: async ({ page }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
