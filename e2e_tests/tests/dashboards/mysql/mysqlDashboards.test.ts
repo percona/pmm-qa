@@ -138,20 +138,19 @@ pmmTest(
 pmmTest(
   'PMM-T2029 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
-      'ps_pmm_replication_.*_2',
-      { replication_set: 'ps-async-replication' },
-    );
+    const service = await api.inventoryApi.getServiceDetailsByRegexAndParameters('ps_pmm_replication_.*_2', {
+      replication_set: 'ps-async-replication',
+    });
 
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlReplicationSummary.url, {
         from: 'now-1h',
-        serviceName: service_name,
+        serviceName: service.service_name,
       }),
     );
-    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlReplicationSummary.metrics);
+    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlReplicationSummary.metrics, [service]);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlReplicationSummary.noDataMetrics);
-    await dashboard.verifyPanelValues(dashboard.mysql.mysqlReplicationSummary.metricsWithData);
+    await dashboard.verifyPanelValues(dashboard.mysql.mysqlReplicationSummary.metricsWithData, [service]);
   },
 );
 

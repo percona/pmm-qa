@@ -13,6 +13,7 @@ const config: PlaywrightTestConfig = {
     {
       name: 'chromium',
       use: {
+        actionTimeout: Timeouts.TEN_SECONDS,
         launchOptions: {
           args: ['--window-size=1920,1080'],
         },

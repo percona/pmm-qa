@@ -17,18 +17,12 @@ export const replaceWildcards = (metrics: GrafanaPanel[], services: GetService[]
 
   for (const metric of clonedMetrics) {
     if (metric.name.includes('*')) {
-      const prefix = metric.name.substring(0, metric.name.indexOf('*'));
-
       for (const service of services) {
-        const nameToMatch = metric.name.includes('-node-') ? service.node_name : service.service_name;
+        const isNodeMetric = metric.name.includes('-node-');
+        const nameToMatch = isNodeMetric ? service.node_name : service.service_name;
+        const newMetricName = metric.name.replaceAll('*', nameToMatch);
 
-        if (nameToMatch.startsWith(prefix)) {
-          const newMetricName = metric.name.replace('*', nameToMatch.substring(prefix.length));
-
-          if (!newMetrics.find((m) => m.name === newMetricName)) {
-            newMetrics.push({ ...metric, name: newMetricName });
-          }
-        }
+        newMetrics.push({ ...metric, name: newMetricName });
       }
     } else {
       newMetrics.push(metric);
