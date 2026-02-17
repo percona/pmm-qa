@@ -11,6 +11,7 @@ import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
+import LeftNavigation from '@pages/navigation.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -52,6 +53,7 @@ const pmmTest = base.extend<{
   tour: TourPage;
   welcomePage: WelcomePage;
   mocks: Mocks;
+  leftNavigation: LeftNavigation;
 }>({
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
@@ -82,6 +84,11 @@ const pmmTest = base.extend<{
     const helpPage = new HelpPage(page);
 
     await use(helpPage);
+  },
+  leftNavigation: async ({ page }, use) => {
+    const leftNavigation = new LeftNavigation(page);
+
+    await use(leftNavigation);
   },
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
