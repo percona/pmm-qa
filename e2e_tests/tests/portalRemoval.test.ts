@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import GrafanaHelper from '@helpers/grafana.helper';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await page.goto('');
@@ -10,32 +11,26 @@ pmmTest(
   'PMM- 2075 Verify there is no "Want more Advisors?" message on Advisors page @settings',
   async ({ page, portalRemoval }) => {
     await pmmTest.step('Check Advisors UI and iframe for portal content', async () => {
-      await page.goto('/advisors');
+      await page.goto(portalRemoval.advisorsUrl);
 
-      for (const isIframe of [false, true]) {
-        await expect(portalRemoval.advisorsText(isIframe)).toHaveCount(0);
-        await expect(portalRemoval.connectToPlatform(isIframe)).toHaveCount(0);
-      }
+      await expect(portalRemoval.elements.advisorsText).toHaveCount(0);
+      await expect(portalRemoval.elements.connectToPlatform).toHaveCount(0);
     });
   },
 );
 
 pmmTest('Verify Settings UI elements are removed @settings', async ({ page, portalRemoval }) => {
   await pmmTest.step('Check Settings UI and iframe for portal content', async () => {
-    await page.goto('/graph/settings');
+    await page.goto(portalRemoval.settingsUrl);
 
-    for (const isIframe of [false, true]) {
-      await expect(portalRemoval.perconaPlatformTab(isIframe)).toHaveCount(0);
-    }
+    await expect(portalRemoval.elements.perconaPlatformTab).toHaveCount(0);
   });
 });
 
 pmmTest(
   'Verify navigation to removed Percona Platform URLs results in page not found @settings',
   async ({ page, portalRemoval }) => {
-    const removedUrls = ['/entitlements', '/tickets', '/settings/percona-platform'];
-
-    for (const url of removedUrls) {
+    for (const url of portalRemoval.removedUrls) {
       await pmmTest.step(`Check navigation to ${url}`, async () => {
         await page.goto(url);
         await expect(portalRemoval.elements.pageNotFound).toBeVisible();
@@ -44,15 +39,21 @@ pmmTest(
   },
 );
 
-pmmTest('Verify Percona Platform connect API is disabled @settings', async ({ request }) => {
+pmmTest('Verify Percona Platform connect API is disabled @settings', async ({ page, portalRemoval }) => {
   await pmmTest.step('API platform connect disabled', async () => {
-    const response = await request.post('/v1/platform:connect', {
+    await portalRemoval.openAdvancedSettings();
+
+    const response = await page.request.post('/v1/platform:connect', {
       data: {
         personal_access_token: 'test-token',
         server_name: 'server-name',
       },
+      headers: {
+        Authorization: `Basic ${GrafanaHelper.getToken()}`,
+        'Content-Type': 'application/json',
+      },
     });
 
-    expect([404, 410, 501]).toContain(response.status());
+    expect([404]).toContain(response.status());
   });
 });
