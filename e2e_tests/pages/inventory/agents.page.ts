@@ -1,5 +1,6 @@
- import BasePage from '../base.page';
+import BasePage from '../base.page';
 import { Timeouts } from '@helpers/timeouts';
+import { expect } from '@playwright/test';
 
 export default class AgentsPage extends BasePage {
   builders = {};
@@ -13,22 +14,14 @@ export default class AgentsPage extends BasePage {
   messages = {};
 
   verifyRTAAgentStatus = async (expectedStatus: string, timeout: Timeouts = Timeouts.TEN_SECONDS) => {
-    const timeoutInSeconds = timeout / 1000;
-    for (let i = 0; i <= timeoutInSeconds; i++) {
-      if (i == timeoutInSeconds) {
-        throw new Error(
-          `Real time analytics agent status is: ${await this.elements.rtaAgentStatus.textContent()} but should be ${expectedStatus}`,
-        );
-      }
-
+    await expect(async () => {
       await this.page.reload();
       await this.elements.rtaAgentStatus.waitFor({ state: 'visible' });
 
-      if ((await this.elements.rtaAgentStatus.textContent()) == expectedStatus) {
-        break;
-      }
-
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-    }
+      expect(
+        await this.elements.rtaAgentStatus.textContent(),
+        `Real time analytics agent status is: ${await this.elements.rtaAgentStatus.textContent()} but should be ${expectedStatus}`,
+      ).toEqual(expectedStatus);
+    }).toPass({ timeout: timeout });
   };
 }
