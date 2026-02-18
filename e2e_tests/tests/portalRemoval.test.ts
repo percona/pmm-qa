@@ -8,7 +8,7 @@ pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
 });
 
 pmmTest(
-  'PMM- 2075 Verify there is no "Want more Advisors?" message on Advisors page @settings',
+  'PMM-T2075 Verify there is no "Want more Advisors?" message on Advisors page @settings',
   async ({ page, portalRemoval }) => {
     await pmmTest.step('Check Advisors UI and iframe for portal content', async () => {
       await page.goto(portalRemoval.advisorsUrl);
@@ -19,7 +19,7 @@ pmmTest(
   },
 );
 
-pmmTest('Verify Settings UI elements are removed @settings', async ({ page, portalRemoval }) => {
+pmmTest('PMM-T2161 Verify Settings UI elements are removed @settings', async ({ page, portalRemoval }) => {
   await pmmTest.step('Check Settings UI and iframe for portal content', async () => {
     await page.goto(portalRemoval.settingsUrl);
 
@@ -28,7 +28,7 @@ pmmTest('Verify Settings UI elements are removed @settings', async ({ page, port
 });
 
 pmmTest(
-  'Verify navigation to removed Percona Platform URLs results in page not found @settings',
+  'PMM-T2162 Verify navigation to removed Percona Platform URLs results in page not found @settings',
   async ({ page, portalRemoval }) => {
     for (const url of portalRemoval.removedUrls) {
       await pmmTest.step(`Check navigation to ${url}`, async () => {
@@ -39,21 +39,24 @@ pmmTest(
   },
 );
 
-pmmTest('Verify Percona Platform connect API is disabled @settings', async ({ page, portalRemoval }) => {
-  await pmmTest.step('API platform connect disabled', async () => {
-    await portalRemoval.openAdvancedSettings();
+pmmTest(
+  'PMM-T2163 Verify Percona Platform connect API is removed @settings',
+  async ({ page, portalRemoval }) => {
+    await pmmTest.step('API platform connect removed', async () => {
+      await portalRemoval.openAdvancedSettings();
 
-    const response = await page.request.post('/v1/platform:connect', {
-      data: {
-        personal_access_token: 'test-token',
-        server_name: 'server-name',
-      },
-      headers: {
-        Authorization: `Basic ${GrafanaHelper.getToken()}`,
-        'Content-Type': 'application/json',
-      },
+      const response = await page.request.post('/v1/platform:connect', {
+        data: {
+          personal_access_token: 'test-token',
+          server_name: 'server-name',
+        },
+        headers: {
+          Authorization: `Basic ${GrafanaHelper.getToken()}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      expect([404]).toContain(response.status());
     });
-
-    expect([404]).toContain(response.status());
-  });
-});
+  },
+);
