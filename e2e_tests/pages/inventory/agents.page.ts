@@ -18,10 +18,10 @@ export default class AgentsPage extends BasePage {
       await this.page.reload();
       await this.elements.rtaAgentStatus.waitFor({ state: 'visible' });
 
-      expect(
-        await this.elements.rtaAgentStatus.textContent(),
+      await expect(
+        this.elements.rtaAgentStatus,
         `Real time analytics agent status is: ${await this.elements.rtaAgentStatus.textContent()} but should be ${expectedStatus}`,
-      ).toEqual(expectedStatus);
+      ).toHaveText(expectedStatus);
     }).toPass({ timeout: timeout });
   };
 }
