@@ -148,9 +148,14 @@ pmmTest(
         serviceName: service.service_name,
       }),
     );
-    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlReplicationSummary.metrics, [service]);
+    await dashboard.verifyMetricsPresent(
+      dashboard.mysql.mysqlReplicationSummary.metrics(service.service_name),
+    );
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlReplicationSummary.noDataMetrics);
-    await dashboard.verifyPanelValues(dashboard.mysql.mysqlReplicationSummary.metricsWithData, [service]);
+    await dashboard.verifyPanelValues(
+      dashboard.mysql.mysqlReplicationSummary.metricsWithData(service.service_name),
+      [service],
+    );
   },
 );
 

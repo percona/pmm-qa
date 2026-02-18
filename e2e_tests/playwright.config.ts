@@ -33,7 +33,7 @@ const config: PlaywrightTestConfig = {
     headless: (process.env.HEADLESS ?? 'true') === 'true',
     ignoreHTTPSErrors: true,
     screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
+    trace: 'retain-on-first-failure',
     viewport: { height: 1_080, width: 1_920 },
   },
   workers: process.env.CI ? 4 : 1,

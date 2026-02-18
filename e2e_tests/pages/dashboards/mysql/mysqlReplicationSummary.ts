@@ -3,7 +3,14 @@ import DashboardInterface from '@interfaces/dashboard';
 
 export default class MysqlReplicationSummary implements DashboardInterface {
   url = 'graph/d/mysql-replicaset-summary/mysql-replication-summary';
-  metrics: GrafanaPanel[] = [
+  noDataMetrics: string[] = [
+    'Replication error no',
+    'Binlog data written hourly',
+    'Binlogs created hourly',
+    'Relay log written hourly',
+  ];
+
+  metrics = (serviceName: string): GrafanaPanel[] => [
     { name: 'Node', type: 'stat' },
     { name: 'IO thread running', type: 'stat' },
     { name: 'SQL thread running', type: 'stat' },
@@ -25,12 +32,12 @@ export default class MysqlReplicationSummary implements DashboardInterface {
     { name: 'Table open cache size', type: 'stat' },
     { name: 'Table definition cache size', type: 'stat' },
     { name: 'Service', type: 'text' },
-    { name: 'MySQL connections - *', type: 'timeSeries' },
-    { name: 'MySQL client thread activity - *', type: 'timeSeries' },
-    { name: 'MySQL handlers - *', type: 'timeSeries' },
-    { name: 'Top command counters - *', type: 'timeSeries' },
-    { name: 'Process states - *', type: 'timeSeries' },
-    { name: 'MySQL network traffic  - *', type: 'timeSeries' },
+    { name: `MySQL connections - ${serviceName}`, type: 'timeSeries' },
+    { name: `MySQL client thread activity - ${serviceName}`, type: 'timeSeries' },
+    { name: `MySQL handlers - ${serviceName}`, type: 'timeSeries' },
+    { name: `Top command counters - ${serviceName}`, type: 'timeSeries' },
+    { name: `Process states - ${serviceName}`, type: 'timeSeries' },
+    { name: `MySQL network traffic  - ${serviceName}`, type: 'timeSeries' },
     { name: 'System uptime', type: 'stat' },
     { name: 'Load average', type: 'stat' },
     { name: 'RAM', type: 'stat' },
@@ -39,16 +46,12 @@ export default class MysqlReplicationSummary implements DashboardInterface {
     { name: 'Disk space', type: 'stat' },
     { name: 'Min space available', type: 'stat' },
     { name: 'Node', type: 'text' },
-    { name: 'CPU usage - *', type: 'timeSeries' },
-    { name: 'CPU saturation and max core usage - *', type: 'timeSeries' },
-    { name: 'Disk I/O and swap activity -  - *', type: 'timeSeries' },
-    { name: 'Network traffic -  - *', type: 'timeSeries' },
+    { name: `CPU usage - ${serviceName}`, type: 'timeSeries' },
+    { name: `CPU saturation and max core usage - ${serviceName}`, type: 'timeSeries' },
+    { name: `Disk I/O and swap activity -  - ${serviceName}`, type: 'timeSeries' },
+    { name: `Network traffic -  - ${serviceName}`, type: 'timeSeries' },
   ];
-  noDataMetrics: string[] = [
-    'Replication error no',
-    'Binlog data written hourly',
-    'Binlogs created hourly',
-    'Relay log written hourly',
-  ];
-  metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
+
+  metricsWithData = (serviceName: string) =>
+    this.metrics(serviceName).filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
