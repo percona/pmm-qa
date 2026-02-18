@@ -41,18 +41,7 @@ export default class QueryAnalytics extends BasePage {
       tabName === this.tabNames.realTime ? this.realtimeurlPattern : this.storedmetricsurlPattern;
 
     await tab.click();
-
-    try {
-      await this.page.waitForURL(urlPattern, {
-        timeout: Timeouts.TEN_SECONDS,
-      });
-    } catch {
-      await tab.click();
-      await this.page.waitForURL(urlPattern, {
-        timeout: Timeouts.TEN_SECONDS,
-      });
-    }
-
+    await expect(this.page).toHaveURL(urlPattern);
     await this.noSpinner();
   };
 
