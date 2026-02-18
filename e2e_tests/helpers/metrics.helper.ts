@@ -37,3 +37,24 @@ export const replaceWildcards = (metrics: GrafanaPanel[], services: GetService[]
 
   return newMetrics;
 };
+
+export const replaceWildcardsUpdated = (metrics: GrafanaPanel[], services: GetService[]): GrafanaPanel[] => {
+  const newMetrics: GrafanaPanel[] = [];
+  const clonedMetrics = JSON.parse(JSON.stringify(metrics));
+
+  for (const metric of clonedMetrics) {
+    if (metric.name.includes('*')) {
+      for (const service of services) {
+        const isNodeMetric = metric.name.includes('-node-');
+        const nameToMatch = isNodeMetric ? service.node_name : service.service_name;
+        const newMetricName = metric.name.replaceAll('*', nameToMatch);
+
+        newMetrics.push({ ...metric, name: newMetricName });
+      }
+    } else {
+      newMetrics.push(metric);
+    }
+  }
+
+  return newMetrics;
+};
