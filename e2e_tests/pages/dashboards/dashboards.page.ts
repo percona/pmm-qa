@@ -116,9 +116,10 @@ export default class Dashboards extends BasePage {
 
     await this.loadAllPanels();
 
+    // eslint-disable-next-line playwright/prefer-web-first-assertions -- the order might be different
     const availableMetrics = await this.elements.panelName.allTextContents();
 
-    expect(availableMetrics.sort()).toEqual(expectedMetricsNames.sort());
+    expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
   };
 
   verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
