@@ -1,193 +1,164 @@
-import { Locator, Response } from '@playwright/test';
-import BasePage, { NestedLocatorMap, NestedLocatorNode, NestedLocators } from './base.page';
+import { Locator } from '@playwright/test';
+import BasePage, { NestedLocatorMap, NestedLocator, NestedLocators } from './base.page';
 import pmmTest from '@fixtures/pmmTest';
+import { Timeouts } from '@helpers/timeouts';
 
 export default class LeftNavigation extends BasePage {
-  builders: Record<string, (...args: string[]) => Locator> = {};
+  builders = {};
   buttons: NestedLocatorMap = {
     accounts: {
-      elements: {
-        changePassword: this.page.getByTestId('navitem-password-change'),
-        changeTheme: this.page.getByTestId('navitem-theme-toggle'),
-        notificationHistory: this.page.getByTestId('navitem-notification-history'),
-        profile: this.page.getByTestId('navitem-profile'),
-        signOut: this.page.getByTestId('navitem-sign-out'),
-      },
+      changePassword: { locator: this.page.getByTestId('navitem-password-change') },
+      changeTheme: { locator: this.page.getByTestId('navitem-theme-toggle') },
       locator: this.page.getByTestId('navitem-account'),
+      notificationHistory: { locator: this.page.getByTestId('navitem-notification-history') },
+      profile: { locator: this.page.getByTestId('navitem-profile') },
+      signOut: { locator: this.page.getByTestId('navitem-sign-out') },
     },
     alerts: {
-      elements: {
-        alertGroups: this.page.getByTestId('navitem-alerts-groups'),
-        alertRules: this.page.getByTestId('navitem-alerts-rules'),
-        alertSettings: this.page.getByTestId('navitem-alerts-settings'),
-        contactPoints: this.page.getByTestId('navitem-alerts-contact-points'),
-        firedAlerts: this.page.getByTestId('navitem-alerts-fired'),
-        notificationPolicies: this.page.getByTestId('navitem-alerts-policies'),
-        perconaAlertTemplates: this.page.getByTestId('navitem-alerts-templates'),
-        silences: this.page.getByTestId('navitem-alerts-silences'),
-      },
+      alertGroups: { locator: this.page.getByTestId('navitem-alerts-groups') },
+      alertRules: { locator: this.page.getByTestId('navitem-alerts-rules') },
+      alertSettings: { locator: this.page.getByTestId('navitem-alerts-settings') },
+      contactPoints: { locator: this.page.getByTestId('navitem-alerts-contact-points') },
+      firedAlerts: { locator: this.page.getByTestId('navitem-alerts-fired') },
       locator: this.page.getByTestId('navitem-alerts'),
+      notificationPolicies: { locator: this.page.getByTestId('navitem-alerts-policies') },
+      perconaAlertTemplates: { locator: this.page.getByTestId('navitem-alerts-templates') },
+      silences: { locator: this.page.getByTestId('navitem-alerts-silences') },
     },
     alldashboards: {
-      elements: {
-        browseall: this.page.getByTestId('navitem-dashboards-browse'),
-        libraryPanels: this.page.getByTestId('navitem-dashboards-library-panels'),
-        playlists: this.page.getByTestId('navitem-dashboards-playlists'),
-        shared: this.page.getByTestId('navitem-dashboards-shared'),
-        snapshots: this.page.getByTestId('navitem-dashboards-snapshots'),
-      },
+      browseall: { locator: this.page.getByTestId('navitem-dashboards-browse') },
+      libraryPanels: { locator: this.page.getByTestId('navitem-dashboards-library-panels') },
       locator: this.page.getByTestId('navitem-dashboards'),
+      playlists: { locator: this.page.getByTestId('navitem-dashboards-playlists') },
+      shared: { locator: this.page.getByTestId('navitem-dashboards-shared') },
+      snapshots: { locator: this.page.getByTestId('navitem-dashboards-snapshots') },
     },
     backups: {
-      elements: {
-        allBackups: this.page.getByTestId('navitem-backup-inventory'),
-        restores: this.page.getByTestId('navitem-restore-history'),
-        scheduledJobs: this.page.getByTestId('navitem-scheduled-backups'),
-        storageLocation: this.page.getByTestId('navitem-storage-locations'),
-      },
+      allBackups: { locator: this.page.getByTestId('navitem-backup-inventory') },
       locator: this.page.getByTestId('navitem-backups'),
+      restores: { locator: this.page.getByTestId('navitem-restore-history') },
+      scheduledJobs: { locator: this.page.getByTestId('navitem-scheduled-backups') },
+      storageLocation: { locator: this.page.getByTestId('navitem-storage-locations') },
     },
     configuration: {
-      elements: {
-        org: {
-          defaultPreferences: this.page.getByTestId('navitem-default-preferences'),
-          organizations: this.page.getByTestId('navitem-organizations'),
-          statsAndLicense: this.page.getByTestId('navitem-stats-and-licenses'),
-        },
-        orgManagement: this.page.getByTestId('navitem-org-management'),
-        settings: this.page.getByTestId('navitem-configuration-settings'),
-        updates: this.page.getByTestId('navitem-updates'),
-      },
       locator: this.page.getByTestId('navitem-configuration'),
+      org: {
+        defaultPreferences: { locator: this.page.getByTestId('navitem-default-preferences') },
+        organizations: { locator: this.page.getByTestId('navitem-organizations') },
+        statsAndLicense: { locator: this.page.getByTestId('navitem-stats-and-licenses') },
+      },
+      orgManagement: { locator: this.page.getByTestId('navitem-org-management') },
+      settings: { locator: this.page.getByTestId('navitem-configuration-settings') },
+      updates: { locator: this.page.getByTestId('navitem-updates') },
     },
     explore: {
-      elements: {
-        metrics: this.page.getByTestId('navitem-explore-metrics'),
-        promSqlBuilder: this.page.getByTestId('navitem-explore-promsql-builder'),
-      },
       locator: this.page.getByTestId('navitem-explore'),
+      metrics: { locator: this.page.getByTestId('navitem-explore-metrics') },
+      promSqlBuilder: { locator: this.page.getByTestId('navitem-explore-promsql-builder') },
     },
     help: { locator: this.page.getByTestId('navitem-help'), verifyTimeRange: true },
     home: { locator: this.page.getByTestId('navitem-home-page'), verifyTimeRange: true },
     inventory: {
-      elements: {
-        addServices: this.page.getByTestId('navitem-add-instance'),
-        nodes: this.page.getByTestId('navitem-inventory-nodes'),
-        services: this.page.getByTestId('navitem-inventory-services'),
-      },
+      addServices: { locator: this.page.getByTestId('navitem-add-instance') },
       locator: this.page.getByTestId('navitem-inventory'),
+      nodes: { locator: this.page.getByTestId('navitem-inventory-nodes') },
+      services: { locator: this.page.getByTestId('navitem-inventory-services') },
     },
     mongodb: {
-      elements: {
-        backupStatus: this.page.getByTestId('navitem-mongo-backup-details-list-item'),
-        collections: this.page.getByTestId('navitem-mongo-collections-overview'),
-        ha: {
-          cluster: this.page.getByTestId('navitem-mongo-cluster-summary'),
-          replSet: this.page.getByTestId('navitem-mongo-rplset-summary'),
-          router: this.page.getByTestId('navitem-mongo-router-summary'),
-        },
-        highAvailability: this.page.getByTestId('navitem-mongo-high-availability'),
-        oplog: this.page.getByTestId('navitem-mongo-oplog-details'),
-        otherDashboards: this.page.getByTestId('navitem-mongo-other-dashboards'),
-        overview: this.page.getByTestId('navitem-mongo-overview'),
-        summary: this.page.getByTestId('navitem-mongo-summary'),
+      backupStatus: { locator: this.page.getByTestId('navitem-mongo-backup-details-list-item') },
+      collections: { locator: this.page.getByTestId('navitem-mongo-collections-overview') },
+      ha: {
+        cluster: { locator: this.page.getByTestId('navitem-mongo-cluster-summary') },
+        replSet: { locator: this.page.getByTestId('navitem-mongo-rplset-summary') },
+        router: { locator: this.page.getByTestId('navitem-mongo-router-summary') },
       },
+      highAvailability: { locator: this.page.getByTestId('navitem-mongo-high-availability') },
       locator: this.page.getByTestId('navitem-mongo'),
+      oplog: { locator: this.page.getByTestId('navitem-mongo-oplog-details') },
+      otherDashboards: { locator: this.page.getByTestId('navitem-mongo-other-dashboards') },
+      overview: { locator: this.page.getByTestId('navitem-mongo-overview') },
+      summary: { locator: this.page.getByTestId('navitem-mongo-summary') },
     },
     mysql: {
-      elements: {
-        commandHandler: this.page.getByTestId('navitem-mysql-command-handler-counters-compare'),
-        ha: {
-          groupReplication: this.page.getByTestId('navitem-mysql-group-replication-summary'),
-          pxcGaleraCluster: this.page.getByTestId('navitem-pxc-cluster-summary'),
-          pxcGaleraNode: this.page.getByTestId('navitem-pxc-node-summary'),
-          pxcGaleraNodes: this.page.getByTestId('navitem-pxc-nodes-compare'),
-          replication: {
-            locator: this.page.getByTestId('navitem-mysql-replication-summary'),
-          },
-        },
-        highAvailability: {
-          locator: this.page.getByTestId('navitem-mysql-high-availability'),
-          verifyTimeRange: true,
-        },
-        innodbCompression: this.page.getByTestId('navitem-mysql-innodb-compression-details'),
-        innodbDetails: this.page.getByTestId('navitem-mysql-innodb-details'),
-        myRocks: this.page.getByTestId('navitem-mysql-myrocks-details'),
-        otherDashboards: this.page.getByTestId('navitem-mysql-other-dashboards'),
-        overview: this.page.getByTestId('navitem-mysql-overview'),
-        performanceSchema: this.page.getByTestId('navitem-mysql-performance-schema-details'),
-        summary: { locator: this.page.getByTestId('navitem-mysql-summary'), verifyTimeRange: true },
-        tableDetails: this.page.getByTestId('navitem-mysql-table-details'),
+      commandHandler: { locator: this.page.getByTestId('navitem-mysql-command-handler-counters-compare') },
+      ha: {
+        groupReplication: { locator: this.page.getByTestId('navitem-mysql-group-replication-summary') },
+        pxcGaleraCluster: { locator: this.page.getByTestId('navitem-pxc-cluster-summary') },
+        pxcGaleraNode: { locator: this.page.getByTestId('navitem-pxc-node-summary') },
+        pxcGaleraNodes: { locator: this.page.getByTestId('navitem-pxc-nodes-compare') },
+        replication: { locator: this.page.getByTestId('navitem-mysql-replication-summary') },
       },
+      highAvailability: {
+        locator: this.page.getByTestId('navitem-mysql-high-availability'),
+        verifyTimeRange: true,
+      },
+      innodbCompression: { locator: this.page.getByTestId('navitem-mysql-innodb-compression-details') },
+      innodbDetails: { locator: this.page.getByTestId('navitem-mysql-innodb-details') },
       locator: this.page.getByTestId('navitem-mysql'),
+      myRocks: { locator: this.page.getByTestId('navitem-mysql-myrocks-details') },
+      otherDashboards: { locator: this.page.getByTestId('navitem-mysql-other-dashboards') },
+      overview: { locator: this.page.getByTestId('navitem-mysql-overview') },
+      performanceSchema: { locator: this.page.getByTestId('navitem-mysql-performance-schema-details') },
+      summary: { locator: this.page.getByTestId('navitem-mysql-summary') },
+      tableDetails: { locator: this.page.getByTestId('navitem-mysql-table-details') },
       verifyTimeRange: true,
     },
     operatingsystem: {
-      elements: {
-        cpuUtilization: this.page.getByTestId('navitem-cpu-utilization'),
-        disk: this.page.getByTestId('navitem-disk'),
-        memory: this.page.getByTestId('navitem-memory'),
-        network: this.page.getByTestId('navitem-network'),
-        numa: this.page.getByTestId('navitem-numa'),
-        otherDashboards: this.page.getByTestId('navitem-system-other-dashboards'),
-        overview: this.page.getByTestId('navitem-node-overview'),
-        processes: this.page.getByTestId('navitem-processes'),
-        summary: this.page.getByTestId('navitem-node-summary'),
-        temperature: this.page.getByTestId('navitem-temperature'),
-      },
+      cpuUtilization: { locator: this.page.getByTestId('navitem-cpu-utilization') },
+      disk: { locator: this.page.getByTestId('navitem-disk') },
       locator: this.page.getByTestId('navitem-system'),
+      memory: { locator: this.page.getByTestId('navitem-memory') },
+      network: { locator: this.page.getByTestId('navitem-network') },
+      numa: { locator: this.page.getByTestId('navitem-numa') },
+      otherDashboards: { locator: this.page.getByTestId('navitem-system-other-dashboards') },
+      overview: { locator: this.page.getByTestId('navitem-node-overview') },
+      processes: { locator: this.page.getByTestId('navitem-processes') },
+      summary: { locator: this.page.getByTestId('navitem-node-summary') },
+      temperature: { locator: this.page.getByTestId('navitem-temperature') },
       verifyTimeRange: true,
     },
     perconaadvisors: {
-      elements: {
-        configurtaion: this.page.getByTestId('navitem-advisors-configuration'),
-        insights: this.page.getByTestId('navitem-advisors-insights'),
-        performance: this.page.getByTestId('navitem-advisors-performance'),
-        query: this.page.getByTestId('navitem-advisors-query'),
-        security: this.page.getByTestId('navitem-advisors-security'),
-      },
+      configuration: { locator: this.page.getByTestId('navitem-advisors-configuration') },
+      insights: { locator: this.page.getByTestId('navitem-advisors-insights') },
       locator: this.page.getByTestId('navitem-advisors'),
+      performance: { locator: this.page.getByTestId('navitem-advisors-performance') },
+      query: { locator: this.page.getByTestId('navitem-advisors-query') },
+      security: { locator: this.page.getByTestId('navitem-advisors-security') },
     },
     postgresql: {
-      elements: {
-        ha: {
-          patroni: this.page.getByTestId('navitem-postgresql-patroni'),
-          replication: this.page.getByTestId('navitem-postgresql-replication'),
-        },
-        highAvailability: this.page.getByTestId('navitem-postgresql-ha'),
-        otherDashboards: this.page.getByTestId('navitem-postgre-other-dashboards'),
-        overview: this.page.getByTestId('navitem-postgresql-overwiew'),
-        summary: this.page.getByTestId('navitem-postgresql-summary'),
-        topQueries: this.page.getByTestId('navitem-postgresql-top-queries'),
+      ha: {
+        patroni: { locator: this.page.getByTestId('navitem-postgresql-patroni') },
+        replication: { locator: this.page.getByTestId('navitem-postgresql-replication') },
       },
+      highAvailability: { locator: this.page.getByTestId('navitem-postgresql-ha') },
       locator: this.page.getByTestId('navitem-postgre'),
+      otherDashboards: { locator: this.page.getByTestId('navitem-postgre-other-dashboards') },
+      overview: { locator: this.page.getByTestId('navitem-postgresql-overwiew') },
+      summary: { locator: this.page.getByTestId('navitem-postgresql-summary') },
+      topQueries: { locator: this.page.getByTestId('navitem-postgresql-top-queries') },
       verifyTimeRange: true,
     },
     qan: this.page.getByTestId('navitem-qan'),
     usersAndAccess: {
-      elements: {
-        serviceAccounts: this.page.getByTestId('navitem-service-accounts'),
-        teams: this.page.getByTestId('navitem-teams'),
-        users: this.page.getByTestId('navitem-users'),
-      },
       locator: this.page.getByTestId('navitem-users-and-access'),
+      serviceAccounts: { locator: this.page.getByTestId('navitem-service-accounts') },
+      teams: { locator: this.page.getByTestId('navitem-teams') },
+      users: { locator: this.page.getByTestId('navitem-users') },
     },
     valkey: {
-      elements: {
-        clients: this.page.getByTestId('navitem-valkey-clients'),
-        clusterDetails: this.page.getByTestId('navitem-valkey-cluster-details'),
-        commands: this.page.getByTestId('navitem-valkey-commands'),
-        load: this.page.getByTestId('navitem-valkey-load'),
-        memory: this.page.getByTestId('navitem-valkey-memory'),
-        network: this.page.getByTestId('navitem-valkey-network'),
-        otherDashboards: this.page.getByTestId('navitem-valkey-other-dashboards'),
-        overview: this.page.getByTestId('navitem-valkey-overview'),
-        persistence: this.page.getByTestId('navitem-valkey-persistence'),
-        replication: this.page.getByTestId('navitem-valkey-replication'),
-        slowlog: this.page.getByTestId('navitem-valkey-slowlog'),
-        summary: this.page.getByTestId('navitem-valkey-overview'),
-      },
+      clients: { locator: this.page.getByTestId('navitem-valkey-clients') },
+      clusterDetails: { locator: this.page.getByTestId('navitem-valkey-cluster-details') },
+      commands: { locator: this.page.getByTestId('navitem-valkey-commands') },
+      load: { locator: this.page.getByTestId('navitem-valkey-load') },
       locator: this.page.getByTestId('navitem-valkey'),
+      memory: { locator: this.page.getByTestId('navitem-valkey-memory') },
+      network: { locator: this.page.getByTestId('navitem-valkey-network') },
+      otherDashboards: { locator: this.page.getByTestId('navitem-valkey-other-dashboards') },
+      overview: { locator: this.page.getByTestId('navitem-valkey-overview') },
+      persistence: { locator: this.page.getByTestId('navitem-valkey-persistence') },
+      replication: { locator: this.page.getByTestId('navitem-valkey-replication') },
+      slowlog: { locator: this.page.getByTestId('navitem-valkey-slowlog') },
+      summary: { locator: this.page.getByTestId('navitem-valkey-overview') },
     },
   };
   elements: Record<string, Locator> = {
@@ -203,8 +174,8 @@ export default class LeftNavigation extends BasePage {
     tourMask: this.page.locator('.reactour__mask'),
     tourPopover: this.page.locator('.reactour__popover'),
   };
-  inputs: Record<string, Locator> = {};
-  messages: Record<string, Locator> = {};
+  inputs = {};
+  messages = {};
 
   mouseHoverOnPmmLogo = async (): Promise<void> => {
     await pmmTest.step('Hover on PMM Logo', async () => {
@@ -220,25 +191,46 @@ export default class LeftNavigation extends BasePage {
   selectMenuItem = async (path: string): Promise<void> => {
     await pmmTest.step(`Select menu item: ${path}`, async () => {
       const parts = path.split('.');
+      let node = this.buttons as NestedLocators;
 
-      for (let i = 0; i < parts.length; i++) {
-        const openerKey =
-          parts[i] === 'ha' ? 'highAvailability' : parts[i] === 'org' ? 'orgManagement' : undefined;
-        if (!openerKey) continue;
+      for (const part of parts) {
+        const item = node[part];
 
-        const openerPath = [...parts.slice(0, i), openerKey].join('.');
+        if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
+        if (part === 'ha' || part === 'org') {
+          const expandKey = part === 'ha' ? 'highAvailability' : 'orgManagement';
+          const expander = node[expandKey];
+          const expandLocator = this.getLocator(expander as NestedLocator);
 
-        await this.resolveLocator(openerPath)?.click();
+          await expandLocator?.click();
+        }
+
+        node = item as NestedLocators;
       }
 
-      await this.resolveLocator(path)?.click();
+      const locator = this.getLocator(node as NestedLocator);
+
+      if (!locator) throw new Error(`No locator found for path: ${path}`);
+
+      await locator.click();
     });
   };
 
-  traverseAllMenuItems = async (
-    menuItem: (locator: Locator, res: Response | null) => Promise<void>,
-  ): Promise<void> => {
-    await this.traverseNode(this.buttons, '', menuItem);
+  traverseAllMenuItems = async (navigate: () => Promise<void>): Promise<void> => {
+    const paths: string[] = [];
+
+    this.collectTraversePaths(this.buttons, '', paths);
+
+    for (const path of paths) {
+      await this.selectMenuItem(path);
+
+      if (path.includes('alerts')) {
+        await this.handleTourPopover();
+      }
+
+      await this.page.waitForLoadState('load', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
+      await navigate();
+    }
   };
 
   variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
@@ -246,52 +238,45 @@ export default class LeftNavigation extends BasePage {
   dashboardsToVerifyTimeRange(): string[] {
     const dashboards: string[] = [];
 
-    for (const [key, value] of Object.entries(this.buttons)) {
-      this.collectVerifyTimeRange(value, key, dashboards);
-    }
+    this.collectVerifyTimeRangePaths(this.buttons, '', dashboards);
 
     return dashboards;
   }
 
-  private collectVerifyTimeRange(node: NestedLocators, path: string, dashboards: string[]): void {
-    if (!this.isLocator(node) && (node as NestedLocatorNode).verifyTimeRange === true) {
-      dashboards.push(path);
-    }
+  private collectTraversePaths(node: NestedLocator, path: string, paths: string[]): void {
+    if (this.getLocator(node)) paths.push(path);
+    if (node && typeof node === 'object' && !this.isLocator(node)) {
+      for (const [key, value] of Object.entries(node as NestedLocators)) {
+        if (['locator', 'verifyTimeRange', 'elements', 'signOut'].includes(key)) continue;
 
-    const children = this.extractChildren(node);
-
-    if (!children) return;
-
-    for (const [key, value] of Object.entries(children)) {
-      this.collectVerifyTimeRange(value, path ? `${path}.${key}` : key, dashboards);
+        this.collectTraversePaths(value as NestedLocator, path ? `${path}.${key}` : key, paths);
+      }
     }
   }
 
-  private extractChildren(node: NestedLocators): Record<string, NestedLocators> | null {
-    if (this.isLocator(node)) return null;
-
-    const typed = node as NestedLocatorNode;
-
-    if (typed.elements) return typed.elements;
-    if (!typed.locator) {
-      return Object.fromEntries(
-        Object.entries(typed)
-          .filter(([key]) => !['locator', 'elements', 'verifyTimeRange', 'page', 'signOut'].includes(key))
-          .map(([key, value]) => [key, value as NestedLocators]),
-      );
+  private collectVerifyTimeRangePaths(node: NestedLocator, path: string, paths: string[]): void {
+    if (
+      node &&
+      typeof node === 'object' &&
+      'verifyTimeRange' in node &&
+      (node as NestedLocators).verifyTimeRange === true
+    ) {
+      paths.push(path);
     }
+    if (node && typeof node === 'object' && !this.isLocator(node)) {
+      for (const [key, value] of Object.entries(node as NestedLocators)) {
+        if (['locator', 'verifyTimeRange', 'elements'].includes(key)) continue;
 
-    return null;
+        this.collectVerifyTimeRangePaths(value as NestedLocator, path ? `${path}.${key}` : key, paths);
+      }
+    }
   }
 
-  private extractLocator(node: NestedLocators): Locator | null {
-    if (this.isLocator(node)) return node;
+  private getLocator(item: NestedLocator | undefined): Locator | undefined {
+    if (!item) return undefined;
+    if (this.isLocator(item)) return item;
 
-    const typed = node as NestedLocatorNode;
-
-    if (typed.locator && this.isLocator(typed.locator)) return typed.locator;
-
-    return null;
+    return 'locator' in item ? (item as NestedLocators).locator : undefined;
   }
 
   private handleTourPopover = async (): Promise<void> => {
@@ -301,63 +286,7 @@ export default class LeftNavigation extends BasePage {
     }
   };
 
-  private isIgnoredUrl(url: string): boolean {
-    return url.includes('/settings') || url.includes('/admin_config');
+  private isLocator(item: NestedLocator | boolean | undefined): item is Locator {
+    return !!item && typeof item === 'object' && 'click' in item && 'waitFor' in item;
   }
-
-  private isLocator(value: NestedLocators): value is Locator {
-    return typeof (value as Locator).click === 'function';
-  }
-
-  private resolveLocator(path: string): Locator | null {
-    const keys = path.split('.');
-    let node: NestedLocators | undefined = this.buttons[keys[0]];
-
-    for (let i = 1; i < keys.length; i++) {
-      if (!node || this.isLocator(node)) return null;
-
-      const typed = node as NestedLocatorNode;
-      const key = keys[i];
-
-      node = (typed.elements?.[key] ?? typed[key]) as NestedLocators | undefined;
-    }
-
-    return node ? this.extractLocator(node) : null;
-  }
-
-  private traverseNode = async (
-    node: NestedLocators,
-    path: string,
-    menuItem: (locator: Locator, res: Response | null) => Promise<void>,
-  ): Promise<void> => {
-    const locator = this.extractLocator(node);
-
-    if (locator) {
-      const responsePromise = this.page
-        .waitForResponse((res: Response) => !this.isIgnoredUrl(res.url()), { timeout: 10_000 })
-        .catch(() => null);
-
-      await locator.click();
-
-      if (path.includes('alerts')) await this.handleTourPopover();
-
-      await menuItem(locator, await responsePromise);
-    }
-
-    const children = this.extractChildren(node);
-
-    if (!children) return;
-
-    for (const [key, value] of Object.entries(children)) {
-      if (['locator', 'elements', 'verifyTimeRange', 'page', 'signOut'].includes(key)) continue;
-
-      const openMenu = key === 'ha' ? 'highAvailability' : key === 'org' ? 'orgManagement' : undefined;
-
-      if (openMenu && children[openMenu]) {
-        await this.extractLocator(children[openMenu])?.click();
-      }
-
-      await this.traverseNode(value, path ? `${path}.${key}` : key, menuItem);
-    }
-  };
 }

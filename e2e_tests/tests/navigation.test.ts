@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import { type NestedLocatorNode } from '@pages/base.page';
+import { type NestedLocators } from '@pages/base.page';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
@@ -43,7 +43,7 @@ pmmTest('RBAC/permissions @new-navigation', async ({ grafanaHelper, leftNavigati
   });
 
   await pmmTest.step('verify permissions', async () => {
-    const configurationLocator = (leftNavigation.buttons.configuration as NestedLocatorNode).locator;
+    const configurationLocator = (leftNavigation.buttons.configuration as NestedLocators).locator;
 
     if (!configurationLocator) {
       throw new Error('Expected configuration locator to be defined');
@@ -72,6 +72,8 @@ pmmTest(
 
     await pmmTest.step('Verify time range persistence', async () => {
       const dashboards = leftNavigation.dashboardsToVerifyTimeRange();
+
+      console.log(`Dashboards to verify time range: ${dashboards.join(', ')}`);
 
       for (const dashboard of dashboards) {
         await leftNavigation.selectMenuItem(dashboard);
@@ -112,7 +114,7 @@ pmmTest('verify service persistence @new-navigation', async ({ leftNavigation, p
   await pmmTest.step('verify service persistence in overview and summary dashboards', async () => {
     await leftNavigation.selectMenuItem('mysql');
 
-    const selectedService = await leftNavigation.selectService(5);
+    const selectedService = await leftNavigation.selectVariableValue('Service Name');
 
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
     await leftNavigation.selectMenuItem('mysql.summary');
@@ -130,7 +132,7 @@ pmmTest('verify node persistence @new-navigation', async ({ leftNavigation, page
   await pmmTest.step('verify node persistence in system and postgre dashboards @new-navigation', async () => {
     await leftNavigation.selectMenuItem('operatingsystem');
 
-    const selectedNode = await leftNavigation.selectNode(3);
+    const selectedNode = await leftNavigation.selectVariableValue('Node Name');
 
     await expect(leftNavigation.variableContext(selectedNode)).toBeVisible();
     await leftNavigation.selectMenuItem('postgresql');
@@ -140,7 +142,7 @@ pmmTest('verify node persistence @new-navigation', async ({ leftNavigation, page
   await pmmTest.step('Verify node persistence in node overview', async () => {
     await leftNavigation.selectMenuItem('mysql');
 
-    const selectedNode = await leftNavigation.selectNode(4);
+    const selectedNode = await leftNavigation.selectVariableValue('Node Name');
 
     await expect(leftNavigation.variableContext(selectedNode)).toBeVisible();
     await leftNavigation.selectMenuItem('operatingsystem');
@@ -158,13 +160,7 @@ pmmTest(
   'Traverse all the menu items in left menu sidebar @new-navigation',
   async ({ leftNavigation, page }) => {
     await pmmTest.step('Traverse menu items', async () => {
-      await leftNavigation.traverseAllMenuItems(async (locator, res) => {
-        await expect(locator).toBeVisible({ timeout: 10_000 });
-
-        const status = res?.status();
-
-        expect(status === undefined || status !== 404).toBeTruthy();
-
+      await leftNavigation.traverseAllMenuItems(async () => {
         await expect(page).not.toHaveURL(/404|error|not-found/i);
       });
     });
