@@ -159,6 +159,8 @@ pmmTest('verify node persistence @new-navigation', async ({ leftNavigation, page
 pmmTest(
   'Traverse all the menu items in left menu sidebar @new-navigation',
   async ({ leftNavigation, page }) => {
+    pmmTest.slow();
+
     await pmmTest.step('Traverse menu items', async () => {
       await leftNavigation.traverseAllMenuItems(async () => {
         await expect(page).not.toHaveURL(/404|error|not-found/i);
