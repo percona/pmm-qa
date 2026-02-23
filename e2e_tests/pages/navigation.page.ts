@@ -221,7 +221,6 @@ export default class LeftNavigation extends BasePage {
     this.collectTraversePaths(this.buttons, '', paths);
 
     for (const path of paths) {
-      console.log(`Traversing to: ${path}`);
       await this.selectMenuItem(path);
 
       if (path.includes('alerts')) {
