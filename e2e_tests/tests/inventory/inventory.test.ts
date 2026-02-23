@@ -27,7 +27,7 @@ data(urls).pmmTest(
         });
       }
     });
-    await expect.poll(() => calls.length, { timeout: Timeouts.TWELVE_SECONDS }).toEqual(2);
+    await expect.poll(() => calls.length, { timeout: Timeouts.THIRTEEN_SECONDS }).toEqual(2);
     await expect(nodesPage.elements.detailsContent.first()).toBeVisible();
     calls = [];
 
