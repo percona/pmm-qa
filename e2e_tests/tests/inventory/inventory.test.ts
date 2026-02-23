@@ -27,7 +27,7 @@ data(urls).pmmTest(
     });
     await page.goto(data.name === 'NodesPage' ? nodesPage.url : servicesPage.url);
     await nodesPage.builders.showRowDetailsByIndex('0').click();
-    await expect.poll(() => calls.length, { timeout: Timeouts.THIRTEEN_SECONDS }).toEqual(2);
+    await expect.poll(() => calls.length, { timeout: Timeouts.TEN_SECONDS }).toEqual(2);
     await expect(nodesPage.elements.detailsContent.first()).toBeVisible();
     calls = [];
 
