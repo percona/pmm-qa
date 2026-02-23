@@ -214,7 +214,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      setup_services: '--database ps'
+      setup_services: '--database pdpgsql'
       pmm_test_flag: '@inventory'
 
   fb_tests:
