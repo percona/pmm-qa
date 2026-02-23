@@ -54,7 +54,7 @@ export default class LeftNavigation extends BasePage {
     explore: {
       locator: this.page.getByTestId('navitem-explore'),
       metrics: { locator: this.page.getByTestId('navitem-explore-metrics') },
-      promSqlBuilder: { locator: this.page.getByTestId('navitem-explore-promsql-builder') },
+      promSqlBuilder: { locator: this.page.getByTestId('navitem-explore-promql-builder') },
     },
     help: { locator: this.page.getByTestId('navitem-help'), verifyTimeRange: true },
     home: { locator: this.page.getByTestId('navitem-home-page'), verifyTimeRange: true },
@@ -199,10 +199,9 @@ export default class LeftNavigation extends BasePage {
         if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
         if (part === 'ha' || part === 'org') {
           const expandKey = part === 'ha' ? 'highAvailability' : 'orgManagement';
-          const expander = node[expandKey];
-          const expandLocator = this.getLocator(expander as NestedLocator);
+          const expandLocator = this.getLocator(node[expandKey] as NestedLocator);
 
-          await expandLocator?.click();
+          await expandLocator?.click({ timeout: Timeouts.TEN_SECONDS });
         }
 
         node = item as NestedLocators;
@@ -212,7 +211,7 @@ export default class LeftNavigation extends BasePage {
 
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
-      await locator.click();
+      await locator.click({ timeout: Timeouts.TEN_SECONDS });
     });
   };
 
@@ -222,6 +221,7 @@ export default class LeftNavigation extends BasePage {
     this.collectTraversePaths(this.buttons, '', paths);
 
     for (const path of paths) {
+      console.log(`Traversing to: ${path}`);
       await this.selectMenuItem(path);
 
       if (path.includes('alerts')) {
