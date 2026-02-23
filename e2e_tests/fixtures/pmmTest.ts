@@ -14,7 +14,6 @@ import Mocks from '@helpers/mocks.helper';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
-import RtaMain from '@pages/rta/rtaMain.page';
 import QueryAnalytics from '@pages/rta/queryAnalytics.page';
 
 base.beforeEach(async ({ page }) => {
@@ -60,7 +59,6 @@ const pmmTest = base.extend<{
   welcomePage: WelcomePage;
   mocks: Mocks;
   portalRemoval: PortalRemoval;
-  rtaMain: RtaMain;
   queryAnalytics: QueryAnalytics;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
@@ -113,11 +111,6 @@ const pmmTest = base.extend<{
     const queryAnalytics = new QueryAnalytics(page);
 
     await use(queryAnalytics);
-  },
-  rtaMain: async ({ page }, use) => {
-    const rtaMain = new RtaMain(page);
-
-    await use(rtaMain);
   },
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   themePage: async ({ page }, use) => {
