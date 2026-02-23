@@ -14,6 +14,7 @@ import Mocks from '@helpers/mocks.helper';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
+import NodesPage from '@pages/inventory/nodes.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -58,6 +59,7 @@ const pmmTest = base.extend<{
   welcomePage: WelcomePage;
   mocks: Mocks;
   portalRemoval: PortalRemoval;
+  nodesPage: NodesPage;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
@@ -95,6 +97,7 @@ const pmmTest = base.extend<{
 
     await use(mocks);
   },
+  nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 

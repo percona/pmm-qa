@@ -7,9 +7,19 @@ import Api from '../api/api';
 import QueryAnalytics from '../pages/qan/queryAnalytics.page';
 import UrlHelper from '../helpers/url.helper';
 import pmmTest from './pmmTest';
+import AgentsPage from '@pages/inventory/agents.page';
+import HelpPage from '@pages/helpCenter.page';
+import ServicesPage from '@pages/inventory/services.page';
+import ThemePage from '@pages/theme.page';
+import TourPage from '@pages/tour.page';
+import WelcomePage from '@pages/welcome.page';
+import Mocks from '@helpers/mocks.helper';
+import PortalRemoval from '@pages/portalRemoval.page';
+import NodesPage from '@pages/inventory/nodes.page';
 
 interface pmmTestDataType {
   page: Page;
+  agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
@@ -17,6 +27,14 @@ interface pmmTestDataType {
   api: Api;
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
+  helpPage: HelpPage;
+  servicesPage: ServicesPage;
+  themePage: ThemePage;
+  tour: TourPage;
+  welcomePage: WelcomePage;
+  mocks: Mocks;
+  portalRemoval: PortalRemoval;
+  nodesPage: NodesPage;
 }
 
 const data = <T>(rows: T[]) => ({
@@ -28,12 +46,48 @@ const data = <T>(rows: T[]) => ({
       pmmTest(
         `${title} | Data: ${JSON.stringify(row)}`,
         async (
-          { api, cliHelper, credentials, dashboard, grafanaHelper, page, queryAnalytics, urlHelper },
+          {
+            agentsPage,
+            api,
+            cliHelper,
+            credentials,
+            dashboard,
+            grafanaHelper,
+            helpPage,
+            mocks,
+            nodesPage,
+            page,
+            portalRemoval,
+            queryAnalytics,
+            servicesPage,
+            themePage,
+            tour,
+            urlHelper,
+            welcomePage,
+          },
           testInfo,
         ) => {
           await fn(
             row,
-            { api, cliHelper, credentials, dashboard, grafanaHelper, page, queryAnalytics, urlHelper },
+            {
+              agentsPage,
+              api,
+              cliHelper,
+              credentials,
+              dashboard,
+              grafanaHelper,
+              helpPage,
+              mocks,
+              nodesPage,
+              page,
+              portalRemoval,
+              queryAnalytics,
+              servicesPage,
+              themePage,
+              tour,
+              urlHelper,
+              welcomePage,
+            },
             testInfo,
           );
         },

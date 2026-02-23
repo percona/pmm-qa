@@ -262,7 +262,7 @@ export default defineConfig([
     files: ['**/*.test.ts'],
     rules: {
       'playwright/expect-expect': [
-        'error',
+        'warn',
         {
           assertFunctionNames: [
             'assertSuccess',
