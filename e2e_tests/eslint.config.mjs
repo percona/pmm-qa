@@ -262,7 +262,7 @@ export default defineConfig([
     files: ['**/*.test.ts'],
     rules: {
       'playwright/expect-expect': [
-        'warn',
+        'error',
         {
           assertFunctionNames: [
             'assertSuccess',
@@ -272,6 +272,7 @@ export default defineConfig([
             'verifyServiceAgentsStatus',
             'verifyQueryAnalyticsHaveData',
             'verifyTotalQueryCount',
+            'verifyRTAAgentStatus',
           ],
         },
       ],
