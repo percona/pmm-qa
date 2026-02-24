@@ -27,8 +27,13 @@ data(urls).pmmTest(
     });
     await page.goto(data.name === 'NodesPage' ? nodesPage.url : servicesPage.url);
     await nodesPage.builders.showRowDetailsByIndex('0').click();
-    await expect.poll(() => calls.length, { timeout: Timeouts.TEN_SECONDS }).toEqual(2);
-    await expect(nodesPage.elements.detailsContent.first()).toBeVisible();
+    await expect
+      .poll(() => calls.length, {
+        message: 'BE calls should be in the 5s interval!',
+        timeout: Timeouts.TEN_SECONDS,
+      })
+      .toEqual(2);
+    await expect(nodesPage.elements.detailsContent.first(), 'Page should not reload data!').toBeVisible();
     calls = [];
 
     page.on('request', (request) => {
@@ -42,7 +47,12 @@ data(urls).pmmTest(
     });
     await nodesPage.elements.runningAgents.click();
     await nodesPage.builders.showRowDetailsByIndex('0').click();
-    await expect.poll(() => calls.length, { timeout: Timeouts.TEN_SECONDS }).toEqual(2);
-    await expect(nodesPage.elements.detailsContent.first()).toBeVisible();
+    await expect
+      .poll(() => calls.length, {
+        message: 'BE calls should be in the 5s interval!',
+        timeout: Timeouts.TEN_SECONDS,
+      })
+      .toEqual(2);
+    await expect(nodesPage.elements.detailsContent.first(), 'Page should not reload data!').toBeVisible();
   },
 );
