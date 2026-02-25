@@ -33,6 +33,10 @@ export default class GrafanaHelper {
   static getToken = (username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') =>
     Buffer.from(`${username}:${password}`).toString('base64');
 
+  static getAuthHeader = (username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') => {
+    return {  Authorization: `Basic ${this.getToken(username, password)}` };
+  }
+
   unAuthorize = async () => {
     await this.page.setExtraHTTPHeaders({});
     await this.page.reload();

@@ -12,6 +12,11 @@ import TourPage from '@pages/tour.page';
 import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import LeftNavigation from '@pages/navigation.page';
+import ServicesPage from '@pages/inventory/services.page';
+import AgentsPage from '@pages/inventory/agents.page';
+import PortalRemoval from '@pages/portalRemoval.page';
+import RealTimeAnalyticsPage from '@pages/rta/realTimeAnalytics.page';
+import NodesPage from '@pages/inventory/nodes.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -41,6 +46,7 @@ base.beforeEach(async ({ page }) => {
 });
 
 const pmmTest = base.extend<{
+  agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
@@ -49,12 +55,17 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
+  servicesPage: ServicesPage;
   themePage: ThemePage;
   tour: TourPage;
   welcomePage: WelcomePage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
+  portalRemoval: PortalRemoval;
+  nodesPage: NodesPage;
+  realTimeAnalyticsPage: RealTimeAnalyticsPage;
 }>({
+  agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
@@ -95,11 +106,19 @@ const pmmTest = base.extend<{
 
     await use(mocks);
   },
+  nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
+  portalRemoval: async ({ page }, use) => {
+    const portalRemoval = new PortalRemoval(page);
+
+    await use(portalRemoval);
+  },
   queryAnalytics: async ({ page }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
 
     await use(queryAnalytics);
   },
+  realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   themePage: async ({ page }, use) => {
     const themePage = new ThemePage(page);
 

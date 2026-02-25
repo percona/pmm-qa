@@ -15,6 +15,7 @@ pmmTest(
     for (let i = 0; i < 2; i++) {
       await pmmTest.step('Theme change validation', async () => {
         await themePage.buttons.accountNavItem.click();
+        //eslint-disable-next-line playwright/no-wait-for-timeout -- needed for transition
         await page.waitForTimeout(2_000);
 
         const previousBgColor = await themePage.getBackgroundColor();
