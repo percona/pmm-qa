@@ -2,7 +2,7 @@ import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
-import QanStoredMetrics from '@pages/qanStoredMetrics/qanStoredMetrics.page';
+import QanStoredMetrics from '@pages/qan/qanStoredMetrics/qanStoredMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
@@ -14,8 +14,9 @@ import Mocks from '@helpers/mocks.helper';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
-import QueryAnalytics from '@pages/rta/queryAnalytics.page';
-import RealTimeAnalyticsPage from '@pages/rta/realTimeAnalytics.page';
+import QueryAnalytics from '@pages/qan/queryAnalytics.page';
+import RtaOverview from '@pages/qan/rta/rtaOverview.page';
+import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 
 base.beforeEach(async ({ page }) => {
@@ -47,98 +48,44 @@ base.beforeEach(async ({ page }) => {
 
 const pmmTest = base.extend<{
   agentsPage: AgentsPage;
+  api: Api;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
-  api: Api;
-  qanStoredMetrics: QanStoredMetrics;
-  urlHelper: UrlHelper;
   helpPage: HelpPage;
+  mocks: Mocks;
+  nodesPage: NodesPage;
+  portalRemoval: PortalRemoval;
+  qanStoredMetrics: QanStoredMetrics;
+  queryAnalytics: QueryAnalytics;
+  realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  rtaOverview: RtaOverview;
   servicesPage: ServicesPage;
   themePage: ThemePage;
   tour: TourPage;
+  urlHelper: UrlHelper;
   welcomePage: WelcomePage;
-  mocks: Mocks;
-  portalRemoval: PortalRemoval;
-  queryAnalytics: QueryAnalytics;
-  nodesPage: NodesPage;
-  realTimeAnalyticsPage: RealTimeAnalyticsPage;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
-  api: async ({ page, request }, use) => {
-    const inventoryApi = new Api(page, request);
-
-    await use(inventoryApi);
-  },
-  cliHelper: async ({}, use) => {
-    const cliHelper = new CliHelper();
-
-    await use(cliHelper);
-  },
-  credentials: async ({}, use) => {
-    const credentials = new Credentials();
-
-    await use(credentials);
-  },
-  dashboard: async ({ page }, use) => {
-    const dashboardPage = new Dashboard(page);
-
-    await use(dashboardPage);
-  },
-  grafanaHelper: async ({ page }, use) => {
-    const grafanaHelper = new GrafanaHelper(page);
-
-    await use(grafanaHelper);
-  },
-  helpPage: async ({ page }, use) => {
-    const helpPage = new HelpPage(page);
-
-    await use(helpPage);
-  },
-  mocks: async ({ page }, use) => {
-    const mocks = new Mocks(page);
-
-    await use(mocks);
-  },
+  api: async ({ page, request }, use) => await use(new Api(page, request)),
+  cliHelper: async ({}, use) => await use(new CliHelper()),
+  credentials: async ({}, use) => await use(new Credentials()),
+  dashboard: async ({ page }, use) => await use(new Dashboard(page)),
+  grafanaHelper: async ({ page }, use) => await use(new GrafanaHelper(page)),
+  helpPage: async ({ page }, use) => await use(new HelpPage(page)),
+  mocks: async ({ page }, use) => await use(new Mocks(page)),
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
-  portalRemoval: async ({ page }, use) => {
-    const portalRemoval = new PortalRemoval(page);
-
-    await use(portalRemoval);
-  },
-  qanStoredMetrics: async ({ page }, use) => {
-    const qanStoredMetrics = new QanStoredMetrics(page);
-
-    await use(qanStoredMetrics);
-  },
-  queryAnalytics: async ({ page }, use) => {
-    const queryAnalytics = new QueryAnalytics(page);
-
-    await use(queryAnalytics);
-  },
+  portalRemoval: async ({ page }, use) => await use(new PortalRemoval(page)),
+  qanStoredMetrics: async ({ page }, use) => await use(new QanStoredMetrics(page)),
+  queryAnalytics: async ({ page }, use) => await use(new QueryAnalytics(page)),
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  rtaOverview: async ({ page }, use) => await use(new RtaOverview(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
-  themePage: async ({ page }, use) => {
-    const themePage = new ThemePage(page);
-
-    await use(themePage);
-  },
-  tour: async ({ page }, use) => {
-    const tour = new TourPage(page);
-
-    await use(tour);
-  },
-  urlHelper: async ({}, use) => {
-    const urlHelper = new UrlHelper();
-
-    await use(urlHelper);
-  },
-  welcomePage: async ({ page }, use) => {
-    const welcomePage = new WelcomePage(page);
-
-    await use(welcomePage);
-  },
+  themePage: async ({ page }, use) => await use(new ThemePage(page)),
+  tour: async ({ page }, use) => await use(new TourPage(page)),
+  urlHelper: async ({}, use) => await use(new UrlHelper()),
+  welcomePage: async ({ page }, use) => await use(new WelcomePage(page)),
 });
 
 export default pmmTest;

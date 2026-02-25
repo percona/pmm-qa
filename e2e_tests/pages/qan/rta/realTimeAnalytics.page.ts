@@ -1,4 +1,4 @@
-import BasePage from '../base.page';
+import BasePage from '@pages/base.page';
 
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
