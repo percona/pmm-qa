@@ -19,9 +19,7 @@ export default abstract class BasePage {
 
   constructor(protected page: Page) {}
 
-  protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
-
-  newTab = async (): Promise<Page> => {
+  duplicateCurrentPage = async (): Promise<Page> => {
     const url = this.page.url();
     const newPage = await this.page.context().newPage();
 
@@ -31,6 +29,8 @@ export default abstract class BasePage {
 
     return newPage;
   };
+
+  protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
 
   selectTimeRange = async (timeRange: string): Promise<void> => {
     await this.getTimeRangeOption(timeRange).click();

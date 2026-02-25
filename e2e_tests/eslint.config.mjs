@@ -273,6 +273,7 @@ export default defineConfig([
             'verifyQueryAnalyticsHaveData',
             'verifyTotalQueryCount',
             'verifyRTAAgentStatus',
+            'verifyAllMenuItems',
           ],
         },
       ],

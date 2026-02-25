@@ -84,7 +84,7 @@ pmmTest(
     });
 
     await pmmTest.step('Verify new tab persistence', async () => {
-      await leftNavigation.newTab();
+      await leftNavigation.duplicateCurrentPage();
       await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
         timeout: Timeouts.TEN_SECONDS,
       });
@@ -120,7 +120,7 @@ pmmTest('verify service persistence @new-navigation', async ({ leftNavigation, p
     await leftNavigation.selectMenuItem('mysql.summary');
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
 
-    const newPage = await leftNavigation.newTab();
+    const newPage = await leftNavigation.duplicateCurrentPage();
 
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
     await newPage.close();
@@ -148,7 +148,7 @@ pmmTest('verify node persistence @new-navigation', async ({ leftNavigation, page
     await leftNavigation.selectMenuItem('operatingsystem');
     await expect(leftNavigation.variableContext(selectedNode)).toBeVisible();
 
-    const newPage = await leftNavigation.newTab();
+    const newPage = await leftNavigation.duplicateCurrentPage();
 
     await expect(leftNavigation.variableContext(selectedNode)).toBeVisible();
     await newPage.close();
@@ -156,13 +156,8 @@ pmmTest('verify node persistence @new-navigation', async ({ leftNavigation, page
   });
 });
 
-pmmTest(
-  'Traverse all the menu items in left menu sidebar @new-navigation',
-  async ({ leftNavigation, page }) => {
-    await pmmTest.step('Traverse menu items', async () => {
-      await leftNavigation.traverseAllMenuItems(async () => {
-        await expect(page).not.toHaveURL(/404|error|not-found/i);
-      });
-    });
-  },
-);
+pmmTest('Traverse all the menu items in left menu sidebar @new-navigation', async ({ leftNavigation }) => {
+  await pmmTest.step('Traverse menu items', async () => {
+    await leftNavigation.verifyAllMenuItems();
+  });
+});

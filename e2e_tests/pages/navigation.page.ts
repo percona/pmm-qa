@@ -1,4 +1,4 @@
-import { Locator } from '@playwright/test';
+import { expect, Locator } from '@playwright/test';
 import BasePage, { NestedLocatorMap, NestedLocator, NestedLocators } from './base.page';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
@@ -215,7 +215,9 @@ export default class LeftNavigation extends BasePage {
     });
   };
 
-  traverseAllMenuItems = async (navigate: () => Promise<void>): Promise<void> => {
+  variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
+
+  verifyAllMenuItems = async (navigate?: () => Promise<void>): Promise<void> => {
     const paths: string[] = [];
 
     this.collectTraversePaths(this.buttons, '', paths);
@@ -228,11 +230,13 @@ export default class LeftNavigation extends BasePage {
       }
 
       await this.page.waitForLoadState('load', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
-      await navigate();
+      await expect(this.page).not.toHaveURL(/404|error|not-found/i);
+
+      if (navigate) {
+        await navigate();
+      }
     }
   };
-
-  variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
 
   dashboardsToVerifyTimeRange(): string[] {
     const dashboards: string[] = [];
