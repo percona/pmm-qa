@@ -270,7 +270,7 @@ export default defineConfig([
             'verifyAllPanelsHaveData',
             'verifyPanelValues',
             'verifyServiceAgentsStatus',
-            'verifyQueryAnalyticsHaveData',
+            'verifyQanStoredMetricsHaveData',
             'verifyTotalQueryCount',
             'verifyRTAAgentStatus',
           ],

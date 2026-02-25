@@ -1,56 +1,56 @@
 import { expect } from '@playwright/test';
-import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
+import { Timeouts } from '@helpers/timeouts';
+
+const tabNames = {
+  realTime: 'Real-Time',
+  storedMetrics: 'Stored metrics',
+} as const;
+
+type TabName = (typeof tabNames)[keyof typeof tabNames];
 
 export default class QueryAnalytics extends BasePage {
-  readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
+  realtimeurlPattern = /\/rta\//;
+  storedmetricsurlPattern = /\/pmm-qan\//;
+  url = 'pmm-ui/graph/d/pmm-qan';
   builders = {};
-  buttons = {};
+  buttons = {
+    copyButton: this.page.getByTestId('qan-header-actions-copy-button'),
+    realTimeTab: this.page.getByTestId('qan-header-tabs-real-time-tab'),
+    startSessionButton: this.page.getByTestId('start-realtime-session'),
+    storedMetricsTab: this.page.getByTestId('qan-header-tabs-historical-tab'),
+  };
   elements = {
-    firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
-    noData: this.grafanaIframe().locator('//*[@data-testid="table-no-data"]'),
+    documentationLink: this.page.getByRole('link', { name: 'Documentation' }),
+    feedbackLink: this.page.getByRole('link', { name: 'Provide feedback' }),
+    iframe: this.page.locator('//*[@id="grafana-iframe"]'),
+    pageTitle: this.page.getByRole('heading', { name: 'Query Analytics' }),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
-    totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
   };
   inputs = {};
   messages = {};
+  tabNames = tabNames;
 
-  verifyQueryAnalyticsHaveData = async () => {
-    await this.waitUntilQueryAnalyticsLoaded();
-    await expect(this.elements.noData).toBeHidden({ timeout: 30_000 });
-    await expect(this.elements.firstRow).toBeVisible({ timeout: 30_000 });
+  noSpinner = async () => {
+    await expect(this.elements.spinner.first()).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
-  verifyTotalQueryCount = async (expectedQueryCount: number) => {
-    const countString = await this.elements.totalCount.first().textContent({ timeout: Timeouts.ONE_MINUTE });
+  switchTab = async (tabName: TabName) => {
+    const tab = this.getTab(tabName);
+    const urlPattern =
+      tabName === this.tabNames.realTime ? this.realtimeurlPattern : this.storedmetricsurlPattern;
 
-    if (!countString) throw new Error('Count of queries is not displayed!');
-
-    const match = countString.match(/of (\d+) items/);
-    const queryCount = match ? parseInt(match[1], 10) : null;
-
-    expect(queryCount).toEqual(expectedQueryCount);
+    await tab.click();
+    await expect(this.page).toHaveURL(urlPattern);
+    await this.noSpinner();
   };
 
-  waitForQueryAnalyticsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
-    await this.waitUntilQueryAnalyticsLoaded();
+  verifyTabIsSelected = async (tabName: TabName) => {
+    const tab = this.getTab(tabName);
 
-    const noDataLocator = this.elements.noData;
-    const timeoutInSeconds = timeout / 1_000;
-
-    for (let i = 0; i < timeoutInSeconds; i++) {
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Replace with a better approach
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-
-      if (!(await noDataLocator.isVisible())) return;
-    }
-
-    await expect(noDataLocator).not.toBeVisible({
-      timeout: Timeouts.ONE_SECOND,
-    });
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
   };
 
-  waitUntilQueryAnalyticsLoaded = async () => {
-    await expect(this.elements.spinner.first()).toBeHidden({ timeout: 30_000 });
-  };
+  private getTab = (tabName: TabName) =>
+    tabName === this.tabNames.realTime ? this.buttons.realTimeTab : this.buttons.storedMetricsTab;
 }

@@ -21,30 +21,30 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest(
   'PMM-T2030 - Verify QAN for PS Replica Instance @nightly @pmm-ps-integration',
-  async ({ api, page, queryAnalytics, urlHelper }) => {
+  async ({ api, page, qanStoredMetrics, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm_replication_.*_2');
 
     await page.goto(
-      urlHelper.buildUrlWithParameters(queryAnalytics.url, {
+      urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
         from: 'now-15m',
         schema: 'sbtest',
         serviceName: service_name,
       }),
     );
-    await queryAnalytics.verifyQueryAnalyticsHaveData();
+    await qanStoredMetrics.verifyQanStoredMetricsHaveData();
   },
 );
 
 pmmTest(
   'PMM-T1897 - Verify Query Count metric on QAN page for MySQL @pmm-ps-integration',
-  async ({ page, queryAnalytics, urlHelper }) => {
-    const url = urlHelper.buildUrlWithParameters(queryAnalytics.url, {
+  async ({ page, qanStoredMetrics, urlHelper }) => {
+    const url = urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
       refresh: '5s',
       schema: 'sbtest3',
     });
 
     await page.goto(url);
-    await queryAnalytics.waitForQueryAnalyticsToHaveData(Timeouts.TWO_MINUTES);
-    await queryAnalytics.verifyTotalQueryCount(19);
+    await qanStoredMetrics.waitForQanStoredMetricsToHaveData(Timeouts.TWO_MINUTES);
+    await qanStoredMetrics.verifyTotalQueryCount(19);
   },
 );
