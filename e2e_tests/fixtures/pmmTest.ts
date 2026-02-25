@@ -16,7 +16,8 @@ import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
 import QueryAnalytics from '@pages/rta/queryAnalytics.page';
 import RtaOverview from '@pages/rta/rtaOverview.page';
-import RtaSelection from '@pages/rta/rtaSelection.page';
+import RealTimeAnalyticsPage from '@pages/rta/realTimeAnalytics.page';
+import NodesPage from '@pages/inventory/nodes.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -63,7 +64,8 @@ const pmmTest = base.extend<{
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   rtaOverview: RtaOverview;
-  rtaSelection: RtaSelection;
+  nodesPage: NodesPage;
+  realTimeAnalyticsPage: RealTimeAnalyticsPage;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => await use(new Api(page, request)),
@@ -73,11 +75,12 @@ const pmmTest = base.extend<{
   grafanaHelper: async ({ page }, use) => await use(new GrafanaHelper(page)),
   helpPage: async ({ page }, use) => await use(new HelpPage(page)),
   mocks: async ({ page }, use) => await use(new Mocks(page)),
+  nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   portalRemoval: async ({ page }, use) => await use(new PortalRemoval(page)),
-  qanStoredMetrics: async ({ page }, use) => await use(new QanStoredMetrics(page)),
   queryAnalytics: async ({ page }, use) => await use(new QueryAnalytics(page)),
+  qanStoredMetrics: async ({ page }, use) => await use(new QanStoredMetrics(page)),
+  realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
   rtaOverview: async ({ page }, use) => await use(new RtaOverview(page)),
-  rtaSelection: async ({ page }, use) => await use(new RtaSelection(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   themePage: async ({ page }, use) => await use(new ThemePage(page)),
   tour: async ({ page }, use) => await use(new TourPage(page)),

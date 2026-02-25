@@ -272,6 +272,7 @@ export default defineConfig([
             'verifyServiceAgentsStatus',
             'verifyQanStoredMetricsHaveData',
             'verifyTotalQueryCount',
+            'verifyRTAAgentStatus',
           ],
         },
       ],
