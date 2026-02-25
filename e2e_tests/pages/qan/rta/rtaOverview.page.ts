@@ -37,7 +37,7 @@ export default class RtaOverview extends BasePage {
     return count;
   };
 
-  selectClusterService = async (): Promise<void> => {
+  startMonitoringClusterService = async (): Promise<void> => {
     await this.page.goto(this.url);
     await this.inputs.clusterService.click();
     await this.page.getByRole('option').first().click();

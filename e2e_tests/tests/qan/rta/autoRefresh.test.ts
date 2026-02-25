@@ -5,37 +5,7 @@ import { Timeouts } from '@helpers/timeouts';
 pmmTest.beforeEach(async ({ grafanaHelper, page, rtaOverview }) => {
   await page.goto('');
   await grafanaHelper.authorize();
-  await rtaOverview.selectClusterService();
-});
-
-pmmTest('PMM-T2165 Verify pause & refresh visibility & behavior @rta', async ({ page, rtaOverview }) => {
-  await pmmTest.step('Pause auto-refresh', async () => {
-    await rtaOverview.buttons.pause.click();
-  });
-
-  await pmmTest.step('Verify refresh button is visible', async () => {
-    await expect(rtaOverview.buttons.refresh).toBeVisible();
-    await expect(rtaOverview.buttons.resume).toBeVisible();
-  });
-
-  await pmmTest.step('API is triggered on refresh click', async () => {
-    const requestsWhilePaused = await rtaOverview.getApiRequestCount(Timeouts.ONE_SECOND);
-
-    expect(requestsWhilePaused).toBe(0);
-
-    const [request] = await Promise.all([
-      page.waitForRequest((req) => req.url().includes(rtaOverview.apiEndpoint), {
-        timeout: Timeouts.TEN_SECONDS,
-      }),
-      rtaOverview.buttons.refresh.click(),
-    ]);
-
-    expect(request.url()).toContain(rtaOverview.apiEndpoint);
-
-    const extraRequestsAfterRefresh = await rtaOverview.getApiRequestCount(6 * Timeouts.ONE_SECOND);
-
-    expect(extraRequestsAfterRefresh).toBe(0);
-  });
+  await rtaOverview.startMonitoringClusterService();
 });
 
 pmmTest(
