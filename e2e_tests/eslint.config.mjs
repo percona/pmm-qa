@@ -264,16 +264,7 @@ export default defineConfig([
       'playwright/expect-expect': [
         'error',
         {
-          assertFunctionNames: [
-            'assertSuccess',
-            'verifyMetricsPresent',
-            'verifyAllPanelsHaveData',
-            'verifyPanelValues',
-            'verifyServiceAgentsStatus',
-            'verifyQueryAnalyticsHaveData',
-            'verifyTotalQueryCount',
-            'verifyRTAAgentStatus',
-          ],
+          assertFunctionPatterns: ['^assert.*', '^verify.*'],
         },
       ],
       'playwright/no-skipped-test': 'error',
