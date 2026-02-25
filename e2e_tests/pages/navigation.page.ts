@@ -202,6 +202,10 @@ export default class LeftNavigation extends BasePage {
           const expandLocator = this.getLocator(node[expandKey] as NestedLocator);
 
           await expandLocator?.click({ timeout: Timeouts.TEN_SECONDS });
+
+          const expandedItem = this.getLocator(item as NestedLocator);
+
+          await expandedItem?.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
         }
 
         node = item as NestedLocators;
@@ -211,6 +215,8 @@ export default class LeftNavigation extends BasePage {
 
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
+      await locator.scrollIntoViewIfNeeded();
+      await locator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
       await locator.click({ timeout: Timeouts.TEN_SECONDS });
     });
   };

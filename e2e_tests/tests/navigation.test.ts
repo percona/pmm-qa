@@ -57,7 +57,7 @@ pmmTest('RBAC/permissions @new-navigation', async ({ grafanaHelper, leftNavigati
 
 pmmTest(
   'verify custom time range persists on any dashboard @new-navigation',
-  async ({ leftNavigation, page }) => {
+  async ({ leftNavigation, page }, testInfo) => {
     const selectedTimeRange = 'Last 15 minutes';
 
     await pmmTest.step('Select time range @new-navigation', async () => {
@@ -73,7 +73,10 @@ pmmTest(
     await pmmTest.step('Verify time range persistence', async () => {
       const dashboards = leftNavigation.dashboardsToVerifyTimeRange();
 
-      console.log(`Dashboards to verify time range: ${dashboards.join(', ')}`);
+      testInfo.annotations.push({
+        description: dashboards.join(', '),
+        type: 'Dashboards to verify time range',
+      });
 
       for (const dashboard of dashboards) {
         await leftNavigation.selectMenuItem(dashboard);
