@@ -2,7 +2,7 @@ import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
-import QueryAnalytics from '@pages/qan/queryAnalytics.page';
+import QanStoredMetrics from '@pages/qanStoredMetrics/qanStoredMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
@@ -15,6 +15,7 @@ import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
+import QueryAnalytics from '@pages/rta/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 
@@ -52,7 +53,7 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   api: Api;
-  queryAnalytics: QueryAnalytics;
+  qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;
@@ -62,6 +63,7 @@ const pmmTest = base.extend<{
   mocks: Mocks;
   leftNavigation: LeftNavigation;
   portalRemoval: PortalRemoval;
+  queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
 }>({
@@ -111,6 +113,11 @@ const pmmTest = base.extend<{
     const portalRemoval = new PortalRemoval(page);
 
     await use(portalRemoval);
+  },
+  qanStoredMetrics: async ({ page }, use) => {
+    const qanStoredMetrics = new QanStoredMetrics(page);
+
+    await use(qanStoredMetrics);
   },
   queryAnalytics: async ({ page }, use) => {
     const queryAnalytics = new QueryAnalytics(page);
