@@ -4,6 +4,8 @@ import pmmTest from '@fixtures/pmmTest';
 export default class PortalRemoval extends BasePage {
   advancedSettingsUrl = 'pmm-ui/graph/settings/advanced-settings';
   advisorsUrl = '/advisors';
+  removedUrls = ['/entitlements', '/tickets', '/settings/percona-platform'];
+  settingsUrl = '/graph/settings';
   builders = {};
   buttons = {
     applyChanges: this.grafanaIframe().getByTestId('advanced-button'),
@@ -19,8 +21,6 @@ export default class PortalRemoval extends BasePage {
   };
   inputs = {};
   messages = {};
-  removedUrls = ['/entitlements', '/tickets', '/settings/percona-platform'];
-  settingsUrl = '/graph/settings';
 
   openAdvancedSettings = async (): Promise<void> => {
     await pmmTest.step('Open Advanced Settings page and apply required actions', async () => {
