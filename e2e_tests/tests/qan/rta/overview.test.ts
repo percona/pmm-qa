@@ -32,7 +32,7 @@ pmmTest(
       });
     });
 
-    await pmmTest.step('PMM-T2174 Filter by query text', async () => {
+    await pmmTest.step('PMM-T2174 Filter by query text and verify 2 queries are visible', async () => {
       await queryAnalytics.rta.filterQueriesByText('rta');
       await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2);
       await expect(queryAnalytics.rta.builders.rowByQueryText('rta-1')).toBeVisible();
