@@ -2,7 +2,7 @@ import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
-import QanStoredMetrics from '@pages/qanStoredMetrics/qanStoredMetrics.page';
+import QanStoredMetrics from '@pages/qan/qanStoredMetrics/qanStoredMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
@@ -14,8 +14,8 @@ import Mocks from '@helpers/mocks.helper';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
-import QueryAnalytics from '@pages/rta/queryAnalytics.page';
-import RealTimeAnalyticsPage from '@pages/rta/realTimeAnalytics.page';
+import QueryAnalytics from '@pages/qan/queryAnalytics.page';
+import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 
 base.beforeEach(async ({ page }) => {
