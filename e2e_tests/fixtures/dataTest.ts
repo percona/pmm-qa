@@ -1,11 +1,10 @@
 import { Page, TestInfo } from '@playwright/test';
-import CliHelper from '../helpers/cli.helper';
-import Credentials from '../helpers/credentials.helper';
-import Dashboard from '../pages/dashboards/dashboards.page';
-import GrafanaHelper from '../helpers/grafana.helper';
-import Api from '../api/api';
-import QanStoredMetrics from '../pages/qanStoredMetrics/qanStoredMetrics.page';
-import UrlHelper from '../helpers/url.helper';
+import CliHelper from '@helpers/cli.helper';
+import Credentials from '@helpers/credentials.helper';
+import Dashboard from '@pages/dashboards/dashboards.page';
+import GrafanaHelper from '@helpers/grafana.helper';
+import Api from '@api/api';
+import UrlHelper from '@helpers/url.helper';
 import pmmTest from './pmmTest';
 import AgentsPage from '@pages/inventory/agents.page';
 import HelpPage from '@pages/helpCenter.page';
@@ -16,6 +15,7 @@ import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import PortalRemoval from '@pages/portalRemoval.page';
 import NodesPage from '@pages/inventory/nodes.page';
+import QueryAnalyticsPage from '@pages/qan/queryAnalytics.page';
 
 interface pmmTestDataType {
   page: Page;
@@ -25,7 +25,7 @@ interface pmmTestDataType {
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   api: Api;
-  qanStoredMetrics: QanStoredMetrics;
+  queryAnalytics: QueryAnalyticsPage;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;

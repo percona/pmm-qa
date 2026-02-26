@@ -2,23 +2,27 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-pmmTest.beforeEach(async ({ api, grafanaHelper, page, realTimeAnalyticsPage }) => {
+pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
 
   const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
 
-  await page.goto(realTimeAnalyticsPage.getUrlWithServices([service.service_id]));
+  await page.goto(queryAnalytics.rta.getUrlWithServices([service.service_id]));
 });
 
 pmmTest(
   'PMM-T2169 - Verify Pause/Resume functionality for Real Time Analytics @rta',
-  async ({ page, realTimeAnalyticsPage }) => {
+  async ({ page, queryAnalytics }) => {
     let calls: { method: string; requestTime: Date; url: string }[] = [];
 
-    await realTimeAnalyticsPage.buttons.pauseRealTimeAnalytics.click();
+    await pmmTest.step('Filter queries to not conflict with other tests', async () => {
+      await queryAnalytics.rta.filterQueriesByText('hello');
+    });
+
+    await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
 
     const operationId =
-      (await realTimeAnalyticsPage.builders.operationIdForRow('1').first().textContent()) || '';
+      (await queryAnalytics.rta.builders.operationIdForRow('1').first().textContent()) || '';
 
     page.on('request', (request) => {
       if (request.url().includes('v1/realtimeanalytics/queries:search')) {
@@ -40,12 +44,12 @@ pmmTest(
       .toHaveLength(0);
 
     await expect(
-      realTimeAnalyticsPage.builders.operationIdForRow('1').first(),
+      queryAnalytics.rta.builders.operationIdForRow('1').first(),
       `Operation ID of the newest query should not change when RTA is paused`,
     ).toHaveText(operationId);
 
     calls = [];
-    await realTimeAnalyticsPage.buttons.resumeRealTimeAnalytics.click();
+    await queryAnalytics.rta.buttons.resumeRealTimeAnalytics.click();
     await expect
       .poll(() => calls.length, {
         message: `Numbers of BE calls to RTA endpoint is expected to be 5 due to 2 seconds default interval but count of calls is: ${calls.length}`,
@@ -53,8 +57,8 @@ pmmTest(
       })
       .toEqual(5);
     await expect(
-      realTimeAnalyticsPage.builders.operationIdForRow('1').first(),
+      queryAnalytics.rta.builders.operationIdForRow('1').first(),
       `Operation ID of the newest query should change when RTA is resumed`,
-    ).not.toHaveText(operationId);
+    ).not.toHaveText(operationId, { timeout: Timeouts.TEN_SECONDS });
   },
 );
