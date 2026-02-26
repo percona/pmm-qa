@@ -11,6 +11,11 @@ enum TabNames {
 
 export default class QueryAnalyticsPage extends BasePage {
   url = 'pmm-ui/graph/d/pmm-qan';
+  rta = new RealTimeAnalyticsPage(this.page);
+  rtaUrlPattern = /\/rta\//;
+  storedMetrics = new StoredMetricsPage(this.page);
+  storedMetricsUrlPattern = /\/pmm-qan\//;
+  tabNames = TabNames;
   builders = {};
   buttons = {
     copyButton: this.page.getByTestId('qan-header-actions-copy-button'),
@@ -27,11 +32,6 @@ export default class QueryAnalyticsPage extends BasePage {
   };
   inputs = {};
   messages = {};
-  rta = new RealTimeAnalyticsPage(this.page);
-  rtaUrlPattern = /\/rta\//;
-  storedMetrics = new StoredMetricsPage(this.page);
-  storedMetricsUrlPattern = /\/pmm-qan\//;
-  tabNames = TabNames;
 
   noSpinner = async () => {
     await expect(this.elements.spinner.first()).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });

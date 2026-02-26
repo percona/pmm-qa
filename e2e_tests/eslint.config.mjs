@@ -172,6 +172,11 @@ export default defineConfig([
               elementNamePattern: 'url',
               groupName: 'url-property',
             },
+            {
+              elementNamePattern: '^(elements|buttons|builders|inputs|messages)$',
+              groupName: 'locator-properties',
+              newlinesInside: 0,
+            },
           ],
           groups: [
             'index-signature',
@@ -186,6 +191,8 @@ export default defineConfig([
               group: 'property',
               newlinesInside: 0,
             },
+            { newlinesBetween: 0 },
+            'locator-properties',
             { newlinesBetween: 1 },
             'constructor',
             { newlinesBetween: 1 },
