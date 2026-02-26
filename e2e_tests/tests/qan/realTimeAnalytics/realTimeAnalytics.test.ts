@@ -51,7 +51,7 @@ pmmTest(
 
 pmmTest(
   'PMM-T14588 - Verify session start and redirect @rta',
-  async ({ api, page, queryAnalytics, realTimeAnalyticsPage }) => {
+  async ({ api, page, realTimeAnalyticsPage }) => {
     const services = await api.inventoryApi.getServices();
     const service = services.services.find((s) => s.service_type === 'mongodb');
 
@@ -59,7 +59,7 @@ pmmTest(
       throw new Error('No MongoDB service found');
     }
 
-    await page.goto(queryAnalytics.url);
+    await page.goto(realTimeAnalyticsPage.url);
     await realTimeAnalyticsPage.navigateToRealTimeTab();
     await realTimeAnalyticsPage.selectService(service.service_name);
     await realTimeAnalyticsPage.startRealTimeSession();
