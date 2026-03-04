@@ -1,11 +1,15 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page, queryAnalytics }) => {
   await page.goto('');
   await grafanaHelper.authorize();
   await page.goto(queryAnalytics.url);
-  await queryAnalytics.storedMetrics.elements.firstRow.waitFor({ state: 'visible' });
+  await queryAnalytics.storedMetrics.elements.firstRow.waitFor({
+    state: 'visible',
+    timeout: Timeouts.THIRTY_SECONDS,
+  });
 });
 
 pmmTest('PMM-T2147 Verify Stored metrics and Real-Time tabs visibility @rta', async ({ queryAnalytics }) => {
