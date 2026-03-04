@@ -416,3 +416,4 @@ jobs:
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       setup_services: '--database psmdb'
       pmm_test_flag: '@rta'
+      workers: 1

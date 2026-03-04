@@ -37,7 +37,7 @@ const config: PlaywrightTestConfig = {
     trace: 'retain-on-first-failure',
     viewport: { height: 1_080, width: 1_920 },
   },
-  workers: process.env.CI ? 4 : 1,
+  workers: Number(process.env.WORKERS) || 1,
 };
 
 export default config;
