@@ -7,6 +7,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
 
   const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
 
+  await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
   await page.goto(queryAnalytics.rta.getUrlWithServices([service.service_id]));
 });
 

@@ -19,7 +19,7 @@ pmmTest(
 
     await pmmTest.step('Simulate long running queries', async () => {
       mongoDbHelper.simulateLongRunningQuery({
-        delayMs: Timeouts.ONE_MINUTE,
+        delayMs: Timeouts.TWENTY_SECONDS,
         queryLabel: 'rta-1',
       });
 
@@ -27,7 +27,7 @@ pmmTest(
       await page.waitForTimeout(3_000);
 
       mongoDbHelper.simulateLongRunningQuery({
-        delayMs: Timeouts.ONE_MINUTE,
+        delayMs: Timeouts.TWENTY_SECONDS,
         queryLabel: 'rta-2',
       });
     });

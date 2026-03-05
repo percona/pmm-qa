@@ -28,6 +28,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
   elements = {
     elapsedTimeColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Elapsed time'),
     mongoDbQuery: this.page.locator('.language-mongodb'),
+    noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tr'),
   };
@@ -44,6 +45,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
   filterQueriesByText = async (queryText: string) => {
     await pmmTest.step(`Filter queries by text: ${queryText}`, async () => {
       await this.builders.rowByIndex('1').waitFor({ state: 'visible' });
+      await this.elements.noQueriesAvailable.waitFor({ state: 'hidden' });
       await this.openFilters();
       await this.inputs.filterByQueryText.fill(queryText);
 
