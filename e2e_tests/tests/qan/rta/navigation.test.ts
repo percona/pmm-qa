@@ -1,10 +1,15 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page, queryAnalytics }) => {
   await page.goto('');
   await grafanaHelper.authorize();
   await page.goto(queryAnalytics.url);
+  await queryAnalytics.storedMetrics.elements.firstRow.waitFor({
+    state: 'visible',
+    timeout: Timeouts.THIRTY_SECONDS,
+  });
 });
 
 pmmTest('PMM-T2147 Verify Stored metrics and Real-Time tabs visibility @rta', async ({ queryAnalytics }) => {
@@ -19,14 +24,14 @@ pmmTest(
   async ({ page, queryAnalytics }) => {
     await pmmTest.step('Switch to Real-Time tab and verify title', async () => {
       await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
-      await expect(queryAnalytics.elements.pageTitle).toBeVisible();
-      await expect(page).toHaveURL(queryAnalytics.realtimeurlPattern);
+      await expect(queryAnalytics.elements.pageTitle.first()).toBeVisible();
+      await expect(page).toHaveURL(queryAnalytics.rtaUrlPattern);
     });
 
     await pmmTest.step('Switch back to Stored metrics and verify title', async () => {
       await queryAnalytics.switchTab(queryAnalytics.tabNames.storedMetrics);
-      await expect(queryAnalytics.elements.pageTitle).toBeVisible();
-      await expect(page).toHaveURL(queryAnalytics.storedmetricsurlPattern);
+      await expect(queryAnalytics.elements.pageTitle.first()).toBeVisible();
+      await expect(page).toHaveURL(queryAnalytics.storedMetricsUrlPattern);
     });
   },
 );
@@ -34,18 +39,20 @@ pmmTest(
 pmmTest('PMM-T2149 verify selected tab persists after refresh @rta', async ({ page, queryAnalytics }) => {
   await pmmTest.step('Switch to Real-Time tab, reload and verify it persists', async () => {
     await queryAnalytics.switchTab(queryAnalytics.tabNames.realTime);
+    await expect(page).toHaveURL(queryAnalytics.rtaUrlPattern);
 
     await page.reload();
-    await expect(page).toHaveURL(queryAnalytics.realtimeurlPattern);
+    await expect(page).toHaveURL(queryAnalytics.rtaUrlPattern);
     await queryAnalytics.verifyTabIsSelected(queryAnalytics.tabNames.realTime);
   });
 
   await pmmTest.step('Switch back to Stored metrics, reload and verify it persists', async () => {
     await queryAnalytics.switchTab(queryAnalytics.tabNames.storedMetrics);
+    await expect(page).toHaveURL(queryAnalytics.storedMetricsUrlPattern);
 
     await page.reload();
     await queryAnalytics.noSpinner();
-    await expect(page).toHaveURL(queryAnalytics.storedmetricsurlPattern);
+    await expect(page).toHaveURL(queryAnalytics.storedMetricsUrlPattern);
     await queryAnalytics.verifyTabIsSelected(queryAnalytics.tabNames.storedMetrics);
   });
 });
