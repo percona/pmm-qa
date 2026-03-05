@@ -1,14 +1,10 @@
 import { Page, TestInfo } from '@playwright/test';
-import CliHelper from '../helpers/cli.helper';
-import Credentials from '../helpers/credentials.helper';
-import Dashboard from '../pages/dashboards/dashboards.page';
-import GrafanaHelper from '../helpers/grafana.helper';
-import Api from '../api/api';
-import QueryAnalytics from '@pages/qan/queryAnalytics.page';
-import RtaOverview from '@pages/qan/rta/rtaOverview.page';
-import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
-import QanStoredMetrics from '../pages/qan/qanStoredMetrics/qanStoredMetrics.page';
-import UrlHelper from '../helpers/url.helper';
+import CliHelper from '@helpers/cli.helper';
+import Credentials from '@helpers/credentials.helper';
+import Dashboard from '@pages/dashboards/dashboards.page';
+import GrafanaHelper from '@helpers/grafana.helper';
+import Api from '@api/api';
+import UrlHelper from '@helpers/url.helper';
 import pmmTest from './pmmTest';
 import AgentsPage from '@pages/inventory/agents.page';
 import HelpPage from '@pages/helpCenter.page';
@@ -19,28 +15,26 @@ import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import PortalRemoval from '@pages/portalRemoval.page';
 import NodesPage from '@pages/inventory/nodes.page';
+import QueryAnalyticsPage from '@pages/qan/queryAnalytics.page';
 
 interface pmmTestDataType {
+  page: Page;
   agentsPage: AgentsPage;
-  api: Api;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
+  api: Api;
+  queryAnalytics: QueryAnalyticsPage;
+  urlHelper: UrlHelper;
   helpPage: HelpPage;
-  mocks: Mocks;
-  nodesPage: NodesPage;
-  page: Page;
-  portalRemoval: PortalRemoval;
-  qanStoredMetrics: QanStoredMetrics;
-  queryAnalytics: QueryAnalytics;
-  realTimeAnalyticsPage: RealTimeAnalyticsPage;
-  rtaOverview: RtaOverview;
   servicesPage: ServicesPage;
   themePage: ThemePage;
   tour: TourPage;
-  urlHelper: UrlHelper;
   welcomePage: WelcomePage;
+  mocks: Mocks;
+  portalRemoval: PortalRemoval;
+  nodesPage: NodesPage;
 }
 
 const data = <T>(rows: T[]) => ({
@@ -64,10 +58,7 @@ const data = <T>(rows: T[]) => ({
             nodesPage,
             page,
             portalRemoval,
-            qanStoredMetrics,
             queryAnalytics,
-            realTimeAnalyticsPage,
-            rtaOverview,
             servicesPage,
             themePage,
             tour,
@@ -90,10 +81,7 @@ const data = <T>(rows: T[]) => ({
               nodesPage,
               page,
               portalRemoval,
-              qanStoredMetrics,
               queryAnalytics,
-              realTimeAnalyticsPage,
-              rtaOverview,
               servicesPage,
               themePage,
               tour,

@@ -34,6 +34,11 @@ on:
         type: string
         default: 'main'
         required: true
+      workers:
+        description: 'Number of workers for Playwright tests'
+        type: number
+        default: 4
+        required: false
 
   workflow_call:
     inputs:
@@ -55,6 +60,9 @@ on:
       qa_integration_branch:
         type: string
         required: true
+      workers:
+        type: number
+        required: false
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -101,6 +109,7 @@ jobs:
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
+      WORKERS: ${{ inputs.workers || 4 }}
 
     steps:
       - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
