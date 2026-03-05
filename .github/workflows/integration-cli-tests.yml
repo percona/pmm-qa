@@ -265,6 +265,21 @@ jobs:
       services_list: '--database pdpgsql=17'
       test_name: 'PD PostgreSQL 17'
 
+  pdpgsql-18-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'postgreSql --workers=1'
+      services_list: '--database pdpgsql=18'
+      test_name: 'PD PostgreSQL 18'
+
   # FIXME: PMM-12966
   #  mongo-44-tests:
   #    name: 'CLI / Integration'
