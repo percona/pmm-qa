@@ -19,7 +19,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
   buttons = {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),
-    filters: this.page.getByTestId('FilterListIcon'),
+    filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
     openNewSessionModal: this.page.getByTestId('open-new-modal'),
     openStopAllModal: this.page.getByTestId('open-stop-all-modal'),
     pauseRealTimeAnalytics: this.page.getByTestId('overview-table-pause-button'),
