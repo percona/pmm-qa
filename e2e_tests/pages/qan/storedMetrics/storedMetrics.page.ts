@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 
-export default class QanStoredMetrics extends BasePage {
+export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
   builders = {};
   buttons = {};

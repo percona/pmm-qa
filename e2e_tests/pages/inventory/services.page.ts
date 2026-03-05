@@ -10,4 +10,4 @@ export default class ServicesPage extends BasePage {
   elements = {};
   inputs = {};
   messages = {};
-};
+}

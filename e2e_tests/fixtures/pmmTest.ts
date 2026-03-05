@@ -2,7 +2,7 @@ import { test as base } from '@playwright/test';
 import Dashboard from '@pages/dashboards/dashboards.page';
 import UrlHelper from '@helpers/url.helper';
 import GrafanaHelper from '@helpers/grafana.helper';
-import QanStoredMetrics from '@pages/qan/qanStoredMetrics/qanStoredMetrics.page';
+import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
@@ -18,6 +18,7 @@ import PortalRemoval from '@pages/portalRemoval.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
+import MongoDBHelper from '@helpers/mongodb.helper';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -52,6 +53,7 @@ const pmmTest = base.extend<{
   credentials: Credentials;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
+  mongoDbHelper: MongoDBHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
@@ -107,6 +109,16 @@ const pmmTest = base.extend<{
     const mocks = new Mocks(page);
 
     await use(mocks);
+  },
+  mongoDbHelper: async ({}, use) => {
+    const mongoDbHelper = new MongoDBHelper({
+      host: '127.0.0.1',
+      password: 'pmmpass',
+      port: 27_027,
+      username: 'pmm',
+    });
+
+    await use(mongoDbHelper);
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   portalRemoval: async ({ page }, use) => {
