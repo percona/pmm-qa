@@ -23,11 +23,11 @@ export default class RealTimeAnalyticsPage extends BasePage {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),
     filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
     openNewSessionModal: this.page.getByTestId('open-new-modal'),
-    openStopAllModal: this.page.getByTestId('open-stop-all-modal'),
     pauseRealTimeAnalytics: this.page.getByTestId('overview-table-pause-button'),
     refresh: this.page.getByTestId('overview-table-refresh-button'),
     refreshIntervalDropdown: this.page.getByTestId('auto-refresh-button'),
     resumeRealTimeAnalytics: this.page.getByTestId('overview-table-resume-button'),
+    stopAllSessions: this.page.getByTestId('open-stop-all-modal'),
   };
   elements = {
     elapsedTimeColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Elapsed time'),
@@ -110,6 +110,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   openFilters = async () => {
     await this.buttons.filters.click();
+  };
+
+  stopAllSessions = async () => {
+    if (await this.buttons.stopAllSessions.isVisible()) {
+      await this.buttons.stopAllSessions.click();
+    }
   };
 
   verifyRequestInterval = async (
