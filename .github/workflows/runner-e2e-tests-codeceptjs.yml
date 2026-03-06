@@ -247,10 +247,9 @@ jobs:
       - name: Record launchable test results
         if: ${{ always() }}
         working-directory: pmm-ui-tests
-        continue-on-error: true
         run: |
           ls -la
-          sed -i "s|$(pwd)/||g" tests/output/result.xml
+          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
           launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
           launchable gate --session "$(cat launchable-session.txt)"
           launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true

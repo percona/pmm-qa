@@ -247,7 +247,6 @@ jobs:
       - name: Record launchable test results
         if: ${{ always() }}
         working-directory: pmm-qa/e2e_tests
-        continue-on-error: true
         run: |
           ls -la
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
