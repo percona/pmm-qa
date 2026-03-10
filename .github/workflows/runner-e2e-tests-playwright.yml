@@ -34,6 +34,11 @@ on:
         type: string
         default: 'main'
         required: true
+      workers:
+        description: 'Number of workers for Playwright tests'
+        type: number
+        default: 4
+        required: false
 
   workflow_call:
     inputs:
@@ -55,6 +60,9 @@ on:
       qa_integration_branch:
         type: string
         required: true
+      workers:
+        type: number
+        required: false
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -101,6 +109,7 @@ jobs:
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
+      WORKERS: ${{ inputs.workers || 4 }}
 
     steps:
       - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
@@ -222,7 +231,7 @@ jobs:
           if [ -s "$SUBSET_FILE" ]; then
             # Run tests if the subset file is not empty
             echo "$SUBSET_FILE is not empty, so we run tests from the subset."
-            npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
+            npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt) || true
           else
             echo "$SUBSET_FILE is empty, so we run tests for now."
             npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
@@ -238,10 +247,10 @@ jobs:
       - name: Record launchable test results
         if: ${{ always() }}
         working-directory: pmm-qa/e2e_tests
-        continue-on-error: true
         run: |
           ls -la
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable gate --session "$(cat launchable-session.txt)"
           launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - name: Generate and Attach the report
