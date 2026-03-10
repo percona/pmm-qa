@@ -400,5 +400,5 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb-change-agent.spec.ts'
-      services_list: '--database psmdb=8.0,SETUP_TYPE=pss'
+      services_list: '--database ssl_psmdb'
       test_name: 'PSMDB Replica 8.x change agent tests'
