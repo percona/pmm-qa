@@ -27,6 +27,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     refresh: this.page.getByTestId('overview-table-refresh-button'),
     refreshIntervalDropdown: this.page.getByTestId('auto-refresh-button'),
     resumeRealTimeAnalytics: this.page.getByTestId('overview-table-resume-button'),
+    stopAgentsButton: this.page.getByTestId('stop-multiple-sessions-modal-stop'),
     stopAllSessions: this.page.getByTestId('open-stop-all-modal'),
   };
   elements = {
@@ -113,9 +114,10 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
 
   stopAllSessions = async () => {
-    if (await this.buttons.stopAllSessions.isVisible()) {
-      await this.buttons.stopAllSessions.click();
-    }
+    await this.buttons.stopAllSessions.waitFor({ state: 'visible', timeout: 3_000 });
+    await this.buttons.stopAllSessions.click();
+    await this.buttons.stopAgentsButton.click();
+    await this.buttons.stopAgentsButton.waitFor({ state: 'hidden', timeout: 3_000 });
   };
 
   verifyRequestInterval = async (

@@ -13,6 +13,7 @@ export default class QueryAnalyticsPage extends BasePage {
   url = 'pmm-ui/graph/d/pmm-qan';
   rta = new RealTimeAnalyticsPage(this.page);
   rtaSelectionUrl = 'pmm-ui/rta/selection';
+  rtaSessionsUrl = 'pmm-ui/rta/sessions';
   rtaUrlPattern = /\/rta\//;
   storedMetrics = new StoredMetricsPage(this.page);
   storedMetricsUrlPattern = /\/pmm-qan\//;

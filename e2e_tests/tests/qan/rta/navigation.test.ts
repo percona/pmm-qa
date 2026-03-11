@@ -93,9 +93,15 @@ pmmTest.describe('RTA Navigation and Session', () => {
 
   pmmTest(
     'PMM-T2181 Verify redirect to selection page when no session exists @rta',
-    async ({ page, queryAnalytics }) => {
-      await page.goto(queryAnalytics.rtaSelectionUrl);
-      await queryAnalytics.rta.stopAllSessions();
+    async ({ page, queryAnalytics, realTimeAnalyticsPage }) => {
+      await page.goto(queryAnalytics.rtaSessionsUrl);
+      await expect(page).toHaveURL(
+        new RegExp(`${queryAnalytics.rtaSessionsUrl}|${queryAnalytics.rtaSelectionUrl}`),
+      );
+
+      if (page.url().includes(queryAnalytics.rtaSessionsUrl)) {
+        await realTimeAnalyticsPage.stopAllSessions();
+      }
 
       await pmmTest.step('Navigate directly to /rta/overview', async () => {
         await page.goto(queryAnalytics.rta.url);
