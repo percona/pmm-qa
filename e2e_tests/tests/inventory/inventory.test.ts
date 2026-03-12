@@ -63,5 +63,5 @@ pmmTest('PMM-T999 - Verify encrypted pmm client config file @inventory', async (
     `docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep "server"`,
   ).code;
 
-  expect(exitCode, 'PMM Client config file is not encrypted!').toBe(0);
+  expect(exitCode, 'PMM Client config file is not encrypted!').toBe(1);
 });
