@@ -248,9 +248,14 @@ jobs:
         if: ${{ always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
-          ls -la
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
           launchable gate --session "$(cat launchable-session.txt)"
+
+      - name: Record launchable logs
+        if: ${{ failure() }}
+        working-directory: pmm-qa/e2e_tests
+        continue-on-error: true
+        run: |
           launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - name: Generate and Attach the report
