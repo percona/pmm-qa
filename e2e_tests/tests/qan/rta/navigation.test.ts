@@ -2,10 +2,13 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
+pmmTest.beforeEach(async ({ grafanaHelper }) => {
+  await grafanaHelper.authorize();
+});
+
 pmmTest.describe('RTA Navigation and Persistence', () => {
-  pmmTest.beforeEach(async ({ grafanaHelper, page, queryAnalytics }) => {
+  pmmTest.beforeEach(async ({ page, queryAnalytics }) => {
     await page.goto('');
-    await grafanaHelper.authorize();
     await page.goto(queryAnalytics.url);
     await queryAnalytics.storedMetrics.elements.firstRow.waitFor({
       state: 'visible',
@@ -80,28 +83,20 @@ pmmTest.describe('RTA Navigation and Persistence', () => {
   // Note: verify copy links on both tabs is part of another ticket PMM-14758
 });
 
-pmmTest.describe('RTA Navigation and Session', () => {
-  let serviceId: string;
-
-  pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
-    await grafanaHelper.authorize();
-
-    const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
-
-    serviceId = service.service_id;
-  });
-
+pmmTest.describe('RTA Navigation without active session', () => {
   pmmTest(
     'PMM-T2181 Verify redirect to selection page when no session exists @rta',
     async ({ page, queryAnalytics, realTimeAnalyticsPage }) => {
-      await page.goto(queryAnalytics.rtaSessionsUrl);
-      await expect(page).toHaveURL(
-        new RegExp(`${queryAnalytics.rtaSessionsUrl}|${queryAnalytics.rtaSelectionUrl}`),
-      );
+      await pmmTest.step('Ensure no active session exists', async () => {
+        await page.goto(queryAnalytics.rtaSessionsUrl);
+        await expect(page).toHaveURL(
+          new RegExp(`${queryAnalytics.rtaSessionsUrl}|${queryAnalytics.rtaSelectionUrl}`),
+        );
 
-      if (page.url().includes(queryAnalytics.rtaSessionsUrl)) {
-        await realTimeAnalyticsPage.stopAllSessions();
-      }
+        if (page.url().includes(queryAnalytics.rtaSessionsUrl)) {
+          await realTimeAnalyticsPage.stopAllSessions();
+        }
+      });
 
       await pmmTest.step('Navigate directly to /rta/overview', async () => {
         await page.goto(queryAnalytics.rta.url);
@@ -115,25 +110,47 @@ pmmTest.describe('RTA Navigation and Session', () => {
       });
     },
   );
+});
+
+pmmTest.describe('RTA Navigation with active session', () => {
+  pmmTest.beforeEach(async ({ api }) => {
+    const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+
+    await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
+  });
+
+  pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ page, queryAnalytics }) => {
+    await pmmTest.step('Navigate directly to overview', async () => {
+      await page.goto(queryAnalytics.rta.url);
+    });
+
+    await pmmTest.step('Overview page loads', async () => {
+      await expect(queryAnalytics.rta.elements.realTimeTable).toBeVisible();
+    });
+
+    await pmmTest.step('Cluster/Service input is visible and functional', async () => {
+      await expect(queryAnalytics.rta.inputs.clusterService).toBeVisible();
+      await queryAnalytics.rta.inputs.clusterService.click();
+      await expect(page.getByRole('option').first()).toBeVisible();
+      await page.keyboard.press('Escape');
+    });
+  });
 
   pmmTest(
-    'PMM-T2182 Verify overview loads when session exists @rta',
-    async ({ api, page, queryAnalytics }) => {
-      await api.realTimeAnalyticsApi.startRealTimeAnalytics(serviceId);
-
-      await pmmTest.step('Navigate directly to overview', async () => {
-        await page.goto(queryAnalytics.rta.url);
+    'PMM-T2195 Verify user is redirected to Sessions page when sessions are running @rta',
+    async ({ helpPage, page, queryAnalytics }) => {
+      await pmmTest.step('Navigate to help page', async () => {
+        await page.goto(helpPage.url);
       });
 
-      await pmmTest.step('Overview page loads', async () => {
-        await expect(queryAnalytics.rta.elements.realTimeTable).toBeVisible();
+      await pmmTest.step('Navigate to selection page via url', async () => {
+        await page.goto(queryAnalytics.rtaSelectionUrl);
       });
 
-      await pmmTest.step('Cluster/Service input is visible and functional', async () => {
-        await expect(queryAnalytics.rta.inputs.clusterService).toBeVisible();
-        await queryAnalytics.rta.inputs.clusterService.click();
-        await expect(page.getByRole('option').first()).toBeVisible();
-        await page.keyboard.press('Escape');
+      await pmmTest.step('User is redirected to the Sessions page', async () => {
+        await expect(page).toHaveURL(new RegExp(queryAnalytics.rtaSessionsUrl), {
+          timeout: Timeouts.TEN_SECONDS,
+        });
       });
     },
   );

@@ -3,6 +3,7 @@ import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 
 export default class HelpPage extends BasePage {
+  url = '/pmm-ui/help';
   builders = {};
   buttons = {
     contactSupport: this.page.getByRole('link', { name: 'Contact Support' }),
