@@ -138,7 +138,10 @@ pmmTest.describe('RTA Navigation with active session', () => {
 
   pmmTest(
     'PMM-T2195 Verify user is redirected to Sessions page when sessions are running @rta',
-    async ({ helpPage, page, queryAnalytics }) => {
+    async ({ helpPage, page, queryAnalytics, realTimeAnalyticsPage }) => {
+      await page.goto(queryAnalytics.rtaSessionsUrl);
+      await expect(realTimeAnalyticsPage.buttons.stopAllSessions).toBeVisible();
+
       await pmmTest.step('Navigate to help page', async () => {
         await page.goto(helpPage.url);
         await helpPage.buttons.viewDocs.waitFor({ state: 'visible' });
