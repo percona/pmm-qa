@@ -245,6 +245,7 @@ jobs:
           path: |
             ./pmm-qa/e2e_tests/playwright-report
             ./pmm-qa/e2e_tests/screenshots
+            ./pmm-qa/e2e_tests/tests/dashboards/image-renderer/imageRenderer.test.ts-snapshots
             ./pmm-qa/e2e_tests/logs
 
       - name: Create status check
