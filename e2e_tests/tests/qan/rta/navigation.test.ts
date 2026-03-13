@@ -141,6 +141,7 @@ pmmTest.describe('RTA Navigation with active session', () => {
     async ({ helpPage, page, queryAnalytics }) => {
       await pmmTest.step('Navigate to help page', async () => {
         await page.goto(helpPage.url);
+        await helpPage.buttons.viewDocs.waitFor({ state: 'visible' });
       });
 
       await pmmTest.step('Navigate to selection page via url', async () => {
