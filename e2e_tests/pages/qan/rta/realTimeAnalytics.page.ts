@@ -1,13 +1,14 @@
 import pmmTest from '@fixtures/pmmTest';
 import BasePage from '@pages/base.page';
 import { expect, type Request } from '@playwright/test';
+import apiEndpoints from '@helpers/apiEndpoints';
 
 const realTimeTableTestId = 'realtime-overview-table';
 
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
-  apiEndpoint = '/v1/realtimeanalytics/queries:search';
+  apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   builders = {
     elapsedTimeForQueryByText: (queryText: string) =>
       this.builders.rowByQueryText(queryText).locator('//td[position()=4]'),
@@ -33,7 +34,6 @@ export default class RealTimeAnalyticsPage extends BasePage {
     elapsedTimeColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Elapsed time'),
     mongoDbQuery: this.page.locator('.language-mongodb'),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
-    // overviewTableBody: this.page.locator('tbody.MuiTableBody-root').first(),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tr'),
   };
@@ -114,9 +114,9 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   verifyRequestInterval = async (
     intervalMs: number,
-    toleranceMs: number,
     timeoutMs: number,
-    intervalsToCheck: number,
+    toleranceMs = 200,
+    intervalsToCheck = 2,
   ): Promise<boolean> => {
     const timestamps: number[] = [];
     const startedAt = Date.now();
