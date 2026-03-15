@@ -1,6 +1,8 @@
 import { expect, Page, Locator } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
+export type DropdownName = 'Service Name' | 'Node Name';
+
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
   locator?: Locator;
@@ -36,7 +38,7 @@ export default abstract class BasePage {
     await this.getTimeRangeOption(timeRange).click();
   };
 
-  selectVariableValue = async (dropDownName: string, dropDownValue?: string): Promise<string> => {
+  selectVariableValue = async (dropDownName: DropdownName, dropDownValue?: string): Promise<string> => {
     const frame = this.grafanaIframe();
     const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
     const combobox = wrapper.getByRole('combobox');

@@ -217,30 +217,34 @@ export default class LeftNavigation extends BasePage {
 
       await locator.scrollIntoViewIfNeeded();
       await locator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+
+      const currentUrl = this.page.url();
+
       await locator.click({ timeout: Timeouts.TEN_SECONDS });
+      await this.page
+        .waitForFunction((url) => window.location.href !== url, currentUrl, { timeout: Timeouts.TEN_SECONDS })
+        .catch(Boolean);
     });
   };
 
   variableContext = (text: string): Locator => this.grafanaIframe().getByText(text, { exact: true }).first();
 
-  verifyAllMenuItems = async (navigate?: () => Promise<void>): Promise<void> => {
+  verifyAllMenuItems = async (): Promise<void> => {
     const paths: string[] = [];
 
     this.collectTraversePaths(this.buttons, '', paths);
 
     for (const path of paths) {
-      await this.selectMenuItem(path);
+      await pmmTest.step(`Verify menu item: ${path}`, async () => {
+        await this.selectMenuItem(path);
 
-      if (path.includes('alerts')) {
-        await this.handleTourPopover();
-      }
+        if (path.includes('alerts')) {
+          await this.handleTourPopover();
+        }
 
-      await this.page.waitForLoadState('load', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
-      await expect(this.page).not.toHaveURL(/404|error|not-found/i);
-
-      if (navigate) {
-        await navigate();
-      }
+        await this.page.waitForLoadState('load', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
+        await expect(this.page).not.toHaveURL(/404|error|not-found/i);
+      });
     }
   };
 

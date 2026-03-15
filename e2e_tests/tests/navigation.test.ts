@@ -8,30 +8,33 @@ pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest('verify left menu sidebar collapse and expand @new-navigation', async ({ leftNavigation, page }) => {
-  await pmmTest.step('verify left menu sidebar collapse and expand', async () => {
-    await expect(leftNavigation.elements.closeLeftNavigationButton).toBeVisible();
-    await expect(leftNavigation.elements.openLeftNavigationButton).toBeHidden();
-  });
+pmmTest(
+  'PMM-T2196 verify left menu sidebar collapse and expand @new-navigation',
+  async ({ leftNavigation, page }) => {
+    await pmmTest.step('verify left menu sidebar collapse and expand', async () => {
+      await expect(leftNavigation.elements.closeLeftNavigationButton).toBeVisible();
+      await expect(leftNavigation.elements.openLeftNavigationButton).toBeHidden();
+    });
 
-  await pmmTest.step('collapse left menu sidebar and verify collapsed', async () => {
-    await leftNavigation.elements.closeLeftNavigationButton.click();
-    await expect(leftNavigation.elements.openLeftNavigationButton).toBeVisible();
-    await expect(leftNavigation.elements.closeLeftNavigationButton).toBeHidden();
-    await page.reload();
-    await expect(leftNavigation.elements.openLeftNavigationButton).toBeVisible();
-    await expect(leftNavigation.elements.closeLeftNavigationButton).toBeHidden();
-  });
+    await pmmTest.step('collapse left menu sidebar and verify collapsed', async () => {
+      await leftNavigation.elements.closeLeftNavigationButton.click();
+      await expect(leftNavigation.elements.openLeftNavigationButton).toBeVisible();
+      await expect(leftNavigation.elements.closeLeftNavigationButton).toBeHidden();
+      await page.reload();
+      await expect(leftNavigation.elements.openLeftNavigationButton).toBeVisible();
+      await expect(leftNavigation.elements.closeLeftNavigationButton).toBeHidden();
+    });
 
-  await pmmTest.step('expand left menu sidebar and verify expanded', async () => {
-    await leftNavigation.mouseHoverOnPmmLogo();
-    await leftNavigation.elements.openLeftNavigationButton.click();
-    await expect(leftNavigation.elements.closeLeftNavigationButton).toBeVisible();
-    await expect(leftNavigation.elements.openLeftNavigationButton).toBeHidden();
-  });
-});
+    await pmmTest.step('expand left menu sidebar and verify expanded', async () => {
+      await leftNavigation.mouseHoverOnPmmLogo();
+      await leftNavigation.elements.openLeftNavigationButton.click();
+      await expect(leftNavigation.elements.closeLeftNavigationButton).toBeVisible();
+      await expect(leftNavigation.elements.openLeftNavigationButton).toBeHidden();
+    });
+  },
+);
 
-pmmTest('RBAC/permissions @new-navigation', async ({ grafanaHelper, leftNavigation }) => {
+pmmTest('PMM-T2197 RBAC/permissions @new-navigation', async ({ grafanaHelper, leftNavigation }) => {
   await pmmTest.step('Create non-admin user', async () => {
     await grafanaHelper.createUser('nonadmin', 'nonadmin');
   });
@@ -56,7 +59,7 @@ pmmTest('RBAC/permissions @new-navigation', async ({ grafanaHelper, leftNavigati
 });
 
 pmmTest(
-  'verify custom time range persists on any dashboard @new-navigation',
+  'PMM-T2198 verify custom time range persists on any dashboard @new-navigation',
   async ({ leftNavigation, page }, testInfo) => {
     const selectedTimeRange = 'Last 15 minutes';
 
@@ -95,7 +98,7 @@ pmmTest(
   },
 );
 
-pmmTest('Grafana embedding @new-navigation', async ({ leftNavigation }) => {
+pmmTest('PMM-T2199 Grafana embedding @new-navigation', async ({ leftNavigation }) => {
   await pmmTest.step('Verify old menu hidden', async () => {
     await expect(leftNavigation.elements.oldLeftMenu).toBeHidden();
   });
@@ -113,7 +116,7 @@ pmmTest('Grafana embedding @new-navigation', async ({ leftNavigation }) => {
   });
 });
 
-pmmTest('verify service persistence @new-navigation', async ({ leftNavigation, page }) => {
+pmmTest('PMM-T2200 verify service persistence @new-navigation', async ({ leftNavigation, page }) => {
   await pmmTest.step('verify service persistence in overview and summary dashboards', async () => {
     await leftNavigation.selectMenuItem('mysql');
 
@@ -131,7 +134,7 @@ pmmTest('verify service persistence @new-navigation', async ({ leftNavigation, p
   });
 });
 
-pmmTest('verify node persistence @new-navigation', async ({ leftNavigation, page }) => {
+pmmTest('PMM-T2201 verify node persistence @new-navigation', async ({ leftNavigation, page }) => {
   await pmmTest.step('verify node persistence in system and postgre dashboards @new-navigation', async () => {
     await leftNavigation.selectMenuItem('operatingsystem');
 
@@ -159,8 +162,11 @@ pmmTest('verify node persistence @new-navigation', async ({ leftNavigation, page
   });
 });
 
-pmmTest('Traverse all the menu items in left menu sidebar @new-navigation', async ({ leftNavigation }) => {
-  await pmmTest.step('Traverse menu items', async () => {
-    await leftNavigation.verifyAllMenuItems();
-  });
-});
+pmmTest(
+  'PMM-T2202 Traverse all the menu items in left menu sidebar @new-navigation',
+  async ({ leftNavigation }) => {
+    await pmmTest.step('Traverse menu items', async () => {
+      await leftNavigation.verifyAllMenuItems();
+    });
+  },
+);
