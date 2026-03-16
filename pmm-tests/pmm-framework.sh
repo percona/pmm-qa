@@ -3075,6 +3075,7 @@ setup_mongo_replica_for_backup() {
   fi
   popd
   popd
+  pmm-admin add mongodb --port=27027 --service-name=bm_mongodb_replica_44 --replication-set=rs0
 }
 
 setup_bm_mysql() {
