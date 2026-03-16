@@ -34,7 +34,6 @@ export default class RealTimeAnalyticsPage extends BasePage {
     elapsedTimeColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Elapsed time'),
     mongoDbQuery: this.page.locator('.language-mongodb'),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
-    // overviewTableBody: this.page.locator('tbody.MuiTableBody-root').first(),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tr'),
   };
