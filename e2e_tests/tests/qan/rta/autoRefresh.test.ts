@@ -30,10 +30,8 @@ pmmTest(
 
     await pmmTest.step('Verify default 2s interval', async () => {
       const isTwoSecondInterval = await realTimeAnalyticsPage.verifyRequestInterval(
-        2 * Timeouts.ONE_SECOND,
-        200,
-        10 * Timeouts.ONE_SECOND,
-        2,
+        Timeouts.TWO_SECONDS,
+        Timeouts.TEN_SECONDS,
       );
 
       expect(isTwoSecondInterval).toBeTruthy();
@@ -47,10 +45,8 @@ pmmTest('PMM-T2170 verify query refresh interval every 4s @rta', async ({ page, 
   await expect(realTimeAnalyticsPage.buttons.refreshIntervalDropdown).toContainText('4s');
 
   const isFourSecondInterval = await realTimeAnalyticsPage.verifyRequestInterval(
-    4 * Timeouts.ONE_SECOND,
-    200,
-    15 * Timeouts.ONE_SECOND,
-    2,
+    Timeouts.FOUR_SECONDS,
+    Timeouts.FIFTEEN_SECONDS,
   );
 
   expect(isFourSecondInterval).toBeTruthy();

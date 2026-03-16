@@ -1,13 +1,14 @@
 import pmmTest from '@fixtures/pmmTest';
 import BasePage from '@pages/base.page';
 import { expect, type Request } from '@playwright/test';
+import apiEndpoints from '@helpers/apiEndpoints';
 
 const realTimeTableTestId = 'realtime-overview-table';
 
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
-  apiEndpoint = '/v1/realtimeanalytics/queries:search';
+  apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   builders = {
     elapsedTimeForQueryByText: (queryText: string) =>
       this.builders.rowByQueryText(queryText).locator('//td[position()=4]'),
@@ -118,12 +119,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await this.buttons.stopAgentsButton.click();
     await this.buttons.stopAgentsButton.waitFor({ state: 'hidden', timeout: 3_000 });
   };
-
+  
   verifyRequestInterval = async (
     intervalMs: number,
-    toleranceMs: number,
     timeoutMs: number,
-    intervalsToCheck: number,
+    toleranceMs = 200,
+    intervalsToCheck = 2,
   ): Promise<boolean> => {
     const timestamps: number[] = [];
     const startedAt = Date.now();
