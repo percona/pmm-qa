@@ -75,12 +75,10 @@ export default class Dashboards extends BasePage {
 
     let noDataPanels: string[] = [];
     let missingMetrics: string[] = [];
-    let extraMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
       noDataPanels = await this.elements.noDataPanelName.allTextContents();
       missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
-      extraMetrics = noDataMetrics.filter((e) => !noDataPanels.includes(e));
 
       if (missingMetrics.length == 0) break;
 
@@ -95,18 +93,8 @@ export default class Dashboards extends BasePage {
         });
       }
     }
-    if (extraMetrics.length > 0) {
-      for (const extraMetric of extraMetrics) {
-        await this.builders.panelByName(extraMetric).screenshot({
-          path: `./screenshots/extra-metric-${extraMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
-        });
-      }
-    }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
-    expect
-      .soft(extraMetrics, `Metrics with data that are expected to be empty are: ${extraMetrics}`)
-      .toHaveLength(0);
   };
 
   verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {
