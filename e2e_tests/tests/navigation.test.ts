@@ -65,7 +65,6 @@ pmmTest(
 
     await pmmTest.step('Select time range @new-navigation', async () => {
       await leftNavigation.selectMenuItem('home');
-      await leftNavigation.elements.timePickerOpenButton.click();
       await leftNavigation.selectTimeRange(selectedTimeRange);
       await page.reload();
       await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {

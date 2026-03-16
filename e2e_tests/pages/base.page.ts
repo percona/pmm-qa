@@ -35,7 +35,11 @@ export default abstract class BasePage {
   protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');
 
   selectTimeRange = async (timeRange: string): Promise<void> => {
-    await this.getTimeRangeOption(timeRange).click();
+    await this.elements.timePickerOpenButton.click();
+
+    const timeRangeOption = this.grafanaIframe().locator(`//*[contains(text(), "${timeRange}")]`);
+
+    await timeRangeOption.click();
   };
 
   selectVariableValue = async (dropDownName: DropdownName, dropDownValue?: string): Promise<string> => {
@@ -72,7 +76,4 @@ export default abstract class BasePage {
   switchPage = (page: Page) => {
     this.page = page;
   };
-
-  private getTimeRangeOption = (timeRange: string): Locator =>
-    this.grafanaIframe().locator(`//*[contains(text(), "${timeRange}")]`);
 }
