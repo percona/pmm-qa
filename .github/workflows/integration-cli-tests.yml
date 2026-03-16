@@ -160,6 +160,21 @@ jobs:
       services_list: '--database ps=8.0'
       test_name: 'Percona Server 8.0'
 
+  ps-84-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'pmm-ui-tests/cli/tests/perconaMySqlServer.spec.ts'
+      services_list: '--database ps=8.4'
+      test_name: 'Percona Server 8.4'
+
   mysql-80-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -174,6 +189,21 @@ jobs:
       cli_test: 'pmm-ui-tests/cli/tests/mysql.spec.ts pmm-ui-tests/cli/tests/mysql-conf-file.spec.ts --workers=1'
       services_list: '--database mysql=8.0'
       test_name: 'MySQL 8.0'
+
+  mysql-84-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mysql.spec.ts pmm-ui-tests/cli/tests/mysql-conf-file.spec.ts --workers=1'
+      services_list: '--database mysql=8.4'
+      test_name: 'MySQL 8.4'
 
   pdpgsql-14-tests:
     name: 'CLI / Integration'
@@ -219,6 +249,36 @@ jobs:
       cli_test: 'postgreSql --workers=1'
       services_list: '--database pdpgsql=16'
       test_name: 'PD PostgreSQL 16'
+
+  pdpgsql-17-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'postgreSql --workers=1'
+      services_list: '--database pdpgsql=17'
+      test_name: 'PD PostgreSQL 17'
+
+  pdpgsql-18-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'postgreSql --workers=1'
+      services_list: '--database pdpgsql=18'
+      test_name: 'PD PostgreSQL 18'
 
   # FIXME: PMM-12966
   #  mongo-44-tests:
@@ -313,6 +373,21 @@ jobs:
       services_list: '--database psmdb=7.0,SETUP_TYPE=pss --verbose'
       test_name: 'PSMDB Replica 7.x'
 
+  psmdb-8-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets: inherit
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=pss --verbose'
+      test_name: 'PSMDB Replica 8.x'
+
   psmdb-7-shard-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -328,7 +403,7 @@ jobs:
       services_list: '--database psmdb=7.0,SETUP_TYPE=shards --verbose'
       test_name: 'PSMDB Shard 7.x'
 
-  psmdb-8-tests:
+  psmdb-8-shard-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
     secrets: inherit
@@ -339,9 +414,9 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb.spec.ts'
-      services_list: '--database psmdb=8.0,SETUP_TYPE=pss --verbose'
-      test_name: 'PSMDB Replica 8.x'
+      cli_test: 'pmm-ui-tests/cli/tests/mongoDb-psmdb-shard.spec.ts'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=shards --verbose'
+      test_name: 'PSMDB Shard 8.x'
 
   haproxy-tests:
     name: 'CLI / Integration'

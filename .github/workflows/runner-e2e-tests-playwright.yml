@@ -231,7 +231,7 @@ jobs:
           if [ -s "$SUBSET_FILE" ]; then
             # Run tests if the subset file is not empty
             echo "$SUBSET_FILE is not empty, so we run tests from the subset."
-            npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt)
+            npx playwright test --grep ${{ env.PMM_TEST_FLAG }} $(cat launchable-subset.txt) || true
           else
             echo "$SUBSET_FILE is empty, so we run tests for now."
             npx playwright test --grep ${{ env.PMM_TEST_FLAG }}
@@ -247,10 +247,15 @@ jobs:
       - name: Record launchable test results
         if: ${{ always() }}
         working-directory: pmm-qa/e2e_tests
+        run: |
+          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable gate --session "$(cat launchable-session.txt)"
+
+      - name: Record launchable logs
+        if: ${{ failure() }}
+        working-directory: pmm-qa/e2e_tests
         continue-on-error: true
         run: |
-          ls -la
-          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
           launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - name: Generate and Attach the report
