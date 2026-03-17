@@ -26,6 +26,8 @@ def get_pmm_admin_list(service_type):
 
 def get_agent_version(service_type):
     container_name = containers[i][containers[i].index(service_type):]
+    tempVersion = subprocess.run([f"docker {container_name}", "pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
+    print(f"Version of pmm agent for container name: {container_name} is: {tempVersion}")
     return subprocess.run([f"docker {container_name}", "pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
 psContainerStatus = []
