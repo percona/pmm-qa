@@ -27,7 +27,7 @@ def get_agent_version(service_type):
     temp_version = subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
     print(f"Command line result is: ")
-    print(subprocess.run(f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$4}}\'"', capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
+    print(subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
     print(subprocess.run(
         f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"',
         capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
