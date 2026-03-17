@@ -61,6 +61,7 @@ for i in range(len(containers)):
     pgContainerStatus = get_pmm_admin_status("pgsql_pgss_pmm")
     pgContainerList = get_pmm_admin_list("pgsql_pgss_pmm")
     admin_version = get_agent_version("pgsql_pgss_pmm")
+    print(f"Actual agent version is: {admin_version}")
   elif "rs101" in containers[i]:
     firstMongoReplicaStatus = get_pmm_admin_status("rs101")
     firstMongoReplicaList = get_pmm_admin_list("rs101")
