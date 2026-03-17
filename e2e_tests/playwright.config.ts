@@ -18,6 +18,7 @@ const config: PlaywrightTestConfig = {
         launchOptions: {
           args: ['--window-size=1920,1080'],
         },
+        navigationTimeout: Timeouts.TEN_SECONDS,
       },
     },
   ],
