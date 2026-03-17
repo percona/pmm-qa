@@ -10,7 +10,9 @@ export default class GrafanaHelper {
     await this.page.request.post(`${baseUrl}graph/login`, {
       data: { password, user: username },
     });
+    await this.page.goto('');
     await this.page.reload();
+    await this.page.waitForURL('pmm-ui/help');
 
     return this.page;
   };

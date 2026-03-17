@@ -205,7 +205,7 @@ jobs:
 #      pmm_test_flag: '@pmm-valkey-integration'
 
   inventory:
-    name: Inventory tests
+    name: Inventory|Image renderer tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -215,7 +215,7 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       setup_services: '--database pdpgsql'
-      pmm_test_flag: '@inventory'
+      pmm_test_flag: '@inventory|@image-renderer'
 
   fb_tests:
     name: FB E2E tests
