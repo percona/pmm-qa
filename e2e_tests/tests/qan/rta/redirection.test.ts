@@ -30,6 +30,7 @@ pmmTest(
       await expect(page).toHaveURL(new RegExp(queryAnalytics.rtaSessionsUrl), {
         timeout: Timeouts.TEN_SECONDS,
       });
+      await expect(realTimeAnalyticsPage.buttons.stopAllSessions).toBeVisible();
     });
   },
 );
