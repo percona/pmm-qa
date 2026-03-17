@@ -19,8 +19,18 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByName(panelName).getByTestId('header-container'),
+    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
+    panelMenuItemByName: (menuItemName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
   };
-  buttons = {};
+  buttons = {
+    imageRendererDownloadImage: this.grafanaIframe().getByTestId(
+      'data-testid share panel internally download image button',
+    ),
+    imageRendererGenerateImage: this.grafanaIframe().getByTestId(
+      'data-testid share panel internally generate image button',
+    ),
+  };
   elements = {
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
@@ -80,7 +90,7 @@ export default class Dashboards extends BasePage {
     await pmmTest.step(`Open ${panelName} panel menu`, async () => {
       await this.builders.panelByName(panelName).scrollIntoViewIfNeeded();
       await this.builders.panelHeaderByName(panelName).hover();
-      await this.builders.panelHeaderByName(panelName).getByTitle('menu').click();
+      await this.builders.panelMenuIconByName(panelName).click();
     });
   };
 
@@ -88,17 +98,13 @@ export default class Dashboards extends BasePage {
     await this.openPanelMenu(panelName);
 
     await pmmTest.step(`Hover over Share and click on generate image menu item`, async () => {
-      await this.grafanaIframe().getByTestId('data-testid Panel menu item Share').hover();
-      await this.grafanaIframe().getByTestId('data-testid Panel menu item Share link').click();
+      await this.builders.panelMenuItemByName('Share').hover();
+      await this.builders.panelMenuItemByName('Share link').click();
     });
 
     await pmmTest.step('Click on generate image button and verify that image is rendered', async () => {
-      await this.grafanaIframe()
-        .getByTestId('data-testid share panel internally generate image button')
-        .click();
-      await expect(
-        this.grafanaIframe().getByTestId('data-testid share panel internally download image button'),
-      ).toBeEnabled({ timeout: Timeouts.THIRTY_SECONDS });
+      await this.buttons.imageRendererGenerateImage.click();
+      await expect(this.buttons.imageRendererGenerateImage).toBeEnabled({ timeout: Timeouts.THIRTY_SECONDS });
       await expect(this.elements.renderedImage).toBeVisible({
         timeout: Timeouts.THIRTY_SECONDS,
       });
