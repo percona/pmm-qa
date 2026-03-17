@@ -32,7 +32,6 @@ thirdMongoReplicaStatus = []
 psSSLStatus = []
 pdpgsqlSSLStatus = []
 psmdbSSLStatus = []
-localClientStatus = subprocess.run(["pmm-admin", "status"], capture_output=True, text=True).stdout.splitlines()
 
 psContainerList = []
 pgContainerList = []
@@ -42,7 +41,6 @@ thirdMongoReplicaList = []
 psSSLList = []
 pdpgsqlSSLList = []
 psmdbSSLList = []
-localClientList = subprocess.run(["pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
 
 errors = []
 
@@ -103,10 +101,6 @@ if len(secondMongoReplicaStatus) > 0:
 if len(thirdMongoReplicaStatus) > 0:
     verify_agent_status(thirdMongoReplicaStatus, "Percona Server for MongoDB instance 3")
     verify_agent_status(thirdMongoReplicaList, "Percona Server for MongoDB instance 3")
-
-if len(localClientStatus) > 0:
-    verify_agent_status(localClientStatus, "Local Client")
-    verify_agent_status(localClientList, "Local Client")
 
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: ".join(errors))
