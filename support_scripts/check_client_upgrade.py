@@ -20,21 +20,16 @@ def get_pmm_admin_list(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     return subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
 
-def get_agent_version(service_type):
+def get_admin_version(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"'
-    print(f"Command is: {agent_version_cmd}")
-    temp_version = subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
-    print(f"Command line result is: ")
-    print(subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
-    print(subprocess.run(
-        f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"',
-        capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
-    print(subprocess.run(
-        f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin',
-        capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
-    print(f"Version of pmm agent for container name: {container_name} is: {temp_version}")
+    return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
+
+def get_agent_version(service_type):
+    container_name = containers[i][containers[i].index(service_type):]
+    agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-agent | awk \'{{print \\$3}}\'"'
+
     return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
 psContainerStatus = []
@@ -55,6 +50,7 @@ psSSLList = []
 pdpgsqlSSLList = []
 psmdbSSLList = []
 admin_version = ""
+agent_version = ""
 
 errors = []
 
@@ -62,37 +58,43 @@ for i in range(len(containers)):
   if "ps_pmm_" in containers[i]:
     psContainerStatus = get_pmm_admin_status("ps_pmm")
     psContainerList = get_pmm_admin_list("ps_pmm")
-    admin_version = get_agent_version("ps_pmm")
-    print(f"Actual agent version is: {admin_version}")
+    admin_version = get_admin_version("ps_pmm")
+    agent_version =get_agent_version("ps_pmm")
   elif "pgsql_pgss_pmm" in containers[i]:
     pgContainerStatus = get_pmm_admin_status("pgsql_pgss_pmm")
     pgContainerList = get_pmm_admin_list("pgsql_pgss_pmm")
-    admin_version = get_agent_version("pgsql_pgss_pmm")
-    print(f"Actual agent version is: {admin_version}")
+    admin_version = get_admin_version("pgsql_pgss_pmm")
+    agent_version = get_agent_version("pgsql_pgss_pmm")
   elif "rs101" in containers[i]:
     firstMongoReplicaStatus = get_pmm_admin_status("rs101")
     firstMongoReplicaList = get_pmm_admin_list("rs101")
-    admin_version = get_agent_version("rs101")
+    admin_version = get_admin_version("rs101")
+    agent_version = get_agent_version("rs101")
   elif "rs102" in containers[i]:
     secondMongoReplicaStatus = get_pmm_admin_status("rs102")
     secondMongoReplicaList = get_pmm_admin_list("rs102")
-    admin_version = get_agent_version("rs102")
+    admin_version = get_admin_version("rs102")
+    agent_version = get_agent_version("rs102")
   elif "rs103" in containers[i]:
     thirdMongoReplicaStatus = get_pmm_admin_status("rs103")
     thirdMongoReplicaList = get_pmm_admin_list("rs103")
-    admin_version = get_agent_version("rs103")
+    admin_version = get_admin_version("rs103")
+    agent_version = get_agent_version("rs103")
   elif "mysql_ssl" in containers[i]:
     psSSLStatus = get_pmm_admin_status("mysql_ssl")
     psSSLList = get_pmm_admin_list("mysql_ssl")
-    admin_version = get_agent_version("mysql_ssl")
+    admin_version = get_admin_version("mysql_ssl")
+    agent_version = get_agent_version("mysql_ssl")
   elif "pdpgsql_pgsm_ssl" in containers[i]:
     pdpgsqlSSLStatus = get_pmm_admin_status("pdpgsql_pgsm_ssl")
     pdpgsqlSSLList = get_pmm_admin_list("pdpgsql_pgsm_ssl")
-    admin_version = get_agent_version("pdpgsql_pgsm_ssl")
+    admin_version = get_admin_version("pdpgsql_pgsm_ssl")
+    agent_version = get_agent_version("pdpgsql_pgsm_ssl")
   elif "psmdb-server" in containers[i]:
     psmdbSSLStatus = get_pmm_admin_status("psmdb-server")
     psmdbSSLList = get_pmm_admin_list("psmdb-server")
-    admin_version = get_agent_version("psmdb-server")
+    admin_version = get_admin_version("psmdb-server")
+    agent_version = get_agent_version("psmdb-server")
 
 if len(psContainerStatus) > 0:
     verify_agent_status(psContainerStatus, "Percona Server")
