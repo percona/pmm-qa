@@ -63,6 +63,7 @@ for i in range(len(containers)):
     psContainerStatus = get_pmm_admin_status("ps_pmm")
     psContainerList = get_pmm_admin_list("ps_pmm")
     admin_version = get_agent_version("ps_pmm")
+    print(f"Actual agent version is: {admin_version}")
   elif "pgsql_pgss_pmm" in containers[i]:
     pgContainerStatus = get_pmm_admin_status("pgsql_pgss_pmm")
     pgContainerList = get_pmm_admin_list("pgsql_pgss_pmm")
