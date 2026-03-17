@@ -24,6 +24,10 @@ def get_pmm_admin_list(service_type):
     print(subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines())
     return subprocess.run(["docker", "exec", container_name, "pmm-admin", "list"], capture_output=True, text=True).stdout.splitlines()
 
+def get_agent_version(service_type):
+    container_name = containers[i][containers[i].index(service_type):]
+    return subprocess.run([f"docker {container_name}", "pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
+
 psContainerStatus = []
 pgContainerStatus = []
 firstMongoReplicaStatus = []
@@ -41,6 +45,7 @@ thirdMongoReplicaList = []
 psSSLList = []
 pdpgsqlSSLList = []
 psmdbSSLList = []
+admin_version = ""
 
 errors = []
 
@@ -73,40 +78,48 @@ for i in range(len(containers)):
 if len(psContainerStatus) > 0:
     verify_agent_status(psContainerStatus, "Percona Server")
     verify_agent_status(psContainerList, "Percona Server")
+    admin_version = get_agent_version("ps_pmm")
 
 if len(pgContainerStatus) > 0:
     verify_agent_status(pgContainerStatus, "Percona Distribution for PostgreSQL")
     verify_agent_status(pgContainerList, "Percona Distribution for PostgreSQL")
+    admin_version = get_agent_version("pgsql_pgss_pmm")
 
 if len(psSSLStatus) > 0:
     verify_agent_status(psSSLStatus, "Percona Server SSl")
     verify_agent_status(psSSLList, "Percona Server SSl")
+    admin_version = get_agent_version("mysql_ssl")
 
 if len(pdpgsqlSSLStatus) > 0:
     verify_agent_status(pdpgsqlSSLStatus, "Percona Distribution for PostgreSQL SSL")
     verify_agent_status(pdpgsqlSSLList, "Percona Distribution for PostgreSQL SSL")
+    admin_version = get_agent_version("pdpgsql_pgsm_ssl")
 
 if len(psmdbSSLStatus) > 0:
     verify_agent_status(psmdbSSLStatus, "Percona Server for MongoDB instance SSL status")
     verify_agent_status(psmdbSSLList, "Percona Server for MongoDB instance SSL list")
+    admin_version = get_agent_version("psmdb-server")
 
 if len(firstMongoReplicaStatus) > 0:
     verify_agent_status(firstMongoReplicaStatus, "Percona Server for MongoDB instance 1")
     verify_agent_status(firstMongoReplicaList, "Percona Server for MongoDB instance 1")
+    admin_version = get_agent_version("rs101")
 
 if len(secondMongoReplicaStatus) > 0:
     verify_agent_status(secondMongoReplicaStatus, "Percona Server for MongoDB instance 2")
     verify_agent_status(secondMongoReplicaList, "Percona Server for MongoDB instance 2")
+    admin_version = get_agent_version("rs102")
 
 if len(thirdMongoReplicaStatus) > 0:
     verify_agent_status(thirdMongoReplicaStatus, "Percona Server for MongoDB instance 3")
     verify_agent_status(thirdMongoReplicaList, "Percona Server for MongoDB instance 3")
+    admin_version = get_agent_version("rs103")
 
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: ".join(errors))
 
 expected_version=arguments[1].replace("\\r\\n", "").replace("-rc", "")
-admin_version = subprocess.run(["pmm-admin status | grep pmm-admin | awk -F' ' '{print $3}'"], capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
+
 
 if admin_version != expected_version:
   print(f"admin version is: {admin_version} and expected version is: {expected_version}")
