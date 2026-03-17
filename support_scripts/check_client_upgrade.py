@@ -28,6 +28,15 @@ def get_agent_version(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$4}}\'"'
     temp_version = subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
+
+    print(f"Command line result is: ")
+    print(ubprocess.run(f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$4}}\'"', capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
+    print(ubprocess.run(
+        f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"',
+        capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
+    print(ubprocess.run(
+        f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin',
+        capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip())
     print(f"Version of pmm agent for container name: {container_name} is: {temp_version}")
     return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
