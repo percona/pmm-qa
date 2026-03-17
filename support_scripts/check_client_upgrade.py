@@ -23,6 +23,7 @@ def get_pmm_admin_list(service_type):
 def get_agent_version(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"'
+    print(f"Command is: {agent_version_cmd}")
     temp_version = subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
     print(f"Command line result is: ")
