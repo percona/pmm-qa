@@ -14,15 +14,8 @@ pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
 
 pmmTest(
   'PMM-T2181 Verify redirect to selection page when no session exists @rta',
-  async ({ page, queryAnalytics, realTimeAnalyticsPage }) => {
-    await page.goto(queryAnalytics.rtaSessionsUrl);
-    await expect(page).toHaveURL(
-      new RegExp(`${queryAnalytics.rtaSessionsUrl}|${queryAnalytics.rtaSelectionUrl}`),
-    );
-
-    if (page.url().includes(queryAnalytics.rtaSessionsUrl)) {
-      await realTimeAnalyticsPage.stopAllSessions();
-    }
+  async ({ api, page, queryAnalytics }) => {
+    await api.realTimeAnalyticsApi.stopRealTimeAnalytics(serviceId);
 
     await pmmTest.step('Navigate directly to /rta/overview', async () => {
       await page.goto(queryAnalytics.rta.url);
@@ -50,8 +43,7 @@ pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api
 
   await pmmTest.step('Cluster/Service input is visible and functional', async () => {
     await expect(queryAnalytics.rta.inputs.clusterService).toBeVisible();
-    await queryAnalytics.rta.inputs.clusterService.click();
-    await expect(page.getByRole('option').first()).toBeVisible();
-    await page.keyboard.press('Escape');
+    await queryAnalytics.rta.selectClusterService();
+    await expect(queryAnalytics.rta.elements.realTimeTable).toBeVisible();
   });
 });

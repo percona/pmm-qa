@@ -113,6 +113,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await this.buttons.filters.click();
   };
 
+  selectClusterService = async () => {
+    await this.inputs.clusterService.click();
+    await this.page.getByRole('option').first().click();
+    await this.page.keyboard.press('Escape');
+  };
+
   stopAllSessions = async () => {
     await this.buttons.stopAllSessions.waitFor({ state: 'visible', timeout: 3_000 });
     await this.buttons.stopAllSessions.click();
