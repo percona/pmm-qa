@@ -53,67 +53,67 @@ for i in range(len(containers)):
   if "ps_pmm_" in containers[i]:
     psContainerStatus = get_pmm_admin_status("ps_pmm")
     psContainerList = get_pmm_admin_list("ps_pmm")
+    admin_version = get_agent_version("ps_pmm")
   elif "pgsql_pgss_pmm" in containers[i]:
     pgContainerStatus = get_pmm_admin_status("pgsql_pgss_pmm")
     pgContainerList = get_pmm_admin_list("pgsql_pgss_pmm")
+    admin_version = get_agent_version("pgsql_pgss_pmm")
   elif "rs101" in containers[i]:
     firstMongoReplicaStatus = get_pmm_admin_status("rs101")
     firstMongoReplicaList = get_pmm_admin_list("rs101")
+    admin_version = get_agent_version("rs101")
   elif "rs102" in containers[i]:
     secondMongoReplicaStatus = get_pmm_admin_status("rs102")
     secondMongoReplicaList = get_pmm_admin_list("rs102")
+    admin_version = get_agent_version("rs102")
   elif "rs103" in containers[i]:
     thirdMongoReplicaStatus = get_pmm_admin_status("rs103")
     thirdMongoReplicaList = get_pmm_admin_list("rs103")
+    admin_version = get_agent_version("rs103")
   elif "mysql_ssl" in containers[i]:
     psSSLStatus = get_pmm_admin_status("mysql_ssl")
     psSSLList = get_pmm_admin_list("mysql_ssl")
+    admin_version = get_agent_version("mysql_ssl")
   elif "pdpgsql_pgsm_ssl" in containers[i]:
     pdpgsqlSSLStatus = get_pmm_admin_status("pdpgsql_pgsm_ssl")
     pdpgsqlSSLList = get_pmm_admin_list("pdpgsql_pgsm_ssl")
+    admin_version = get_agent_version("pdpgsql_pgsm_ssl")
   elif "psmdb-server" in containers[i]:
     psmdbSSLStatus = get_pmm_admin_status("psmdb-server")
     psmdbSSLList = get_pmm_admin_list("psmdb-server")
+    admin_version = get_agent_version("psmdb-server")
 
 if len(psContainerStatus) > 0:
     verify_agent_status(psContainerStatus, "Percona Server")
     verify_agent_status(psContainerList, "Percona Server")
-    admin_version = get_agent_version("ps_pmm")
 
 if len(pgContainerStatus) > 0:
     verify_agent_status(pgContainerStatus, "Percona Distribution for PostgreSQL")
     verify_agent_status(pgContainerList, "Percona Distribution for PostgreSQL")
-    admin_version = get_agent_version("pgsql_pgss_pmm")
 
 if len(psSSLStatus) > 0:
     verify_agent_status(psSSLStatus, "Percona Server SSl")
     verify_agent_status(psSSLList, "Percona Server SSl")
-    admin_version = get_agent_version("mysql_ssl")
 
 if len(pdpgsqlSSLStatus) > 0:
     verify_agent_status(pdpgsqlSSLStatus, "Percona Distribution for PostgreSQL SSL")
     verify_agent_status(pdpgsqlSSLList, "Percona Distribution for PostgreSQL SSL")
-    admin_version = get_agent_version("pdpgsql_pgsm_ssl")
 
 if len(psmdbSSLStatus) > 0:
     verify_agent_status(psmdbSSLStatus, "Percona Server for MongoDB instance SSL status")
     verify_agent_status(psmdbSSLList, "Percona Server for MongoDB instance SSL list")
-    admin_version = get_agent_version("psmdb-server")
 
 if len(firstMongoReplicaStatus) > 0:
     verify_agent_status(firstMongoReplicaStatus, "Percona Server for MongoDB instance 1")
     verify_agent_status(firstMongoReplicaList, "Percona Server for MongoDB instance 1")
-    admin_version = get_agent_version("rs101")
 
 if len(secondMongoReplicaStatus) > 0:
     verify_agent_status(secondMongoReplicaStatus, "Percona Server for MongoDB instance 2")
     verify_agent_status(secondMongoReplicaList, "Percona Server for MongoDB instance 2")
-    admin_version = get_agent_version("rs102")
 
 if len(thirdMongoReplicaStatus) > 0:
     verify_agent_status(thirdMongoReplicaStatus, "Percona Server for MongoDB instance 3")
     verify_agent_status(thirdMongoReplicaList, "Percona Server for MongoDB instance 3")
-    admin_version = get_agent_version("rs103")
 
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: ".join(errors))
