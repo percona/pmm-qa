@@ -75,6 +75,8 @@ pmmTest(
     await pmmTest.step('Verify time range persistence', async () => {
       const dashboards = leftNavigation.dashboardsToVerifyTimeRange();
 
+      expect(dashboards.length).toBeGreaterThan(0);
+
       testInfo.annotations.push({
         description: dashboards.join(', '),
         type: 'Dashboards to verify time range',
