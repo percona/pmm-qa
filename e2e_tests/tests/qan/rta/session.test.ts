@@ -2,23 +2,20 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+let serviceId: string;
+
+pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
   await grafanaHelper.authorize();
+
+  const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+
+  serviceId = service.service_id;
 });
 
 pmmTest(
   'PMM-T2181 Verify redirect to selection page when no session exists @rta',
-  async ({ page, queryAnalytics, realTimeAnalyticsPage }) => {
-    await pmmTest.step('Ensure no active session exists', async () => {
-      await page.goto(queryAnalytics.rtaSessionsUrl);
-      await expect(page).toHaveURL(
-        new RegExp(`${queryAnalytics.rtaSessionsUrl}|${queryAnalytics.rtaSelectionUrl}`),
-      );
-
-      if (page.url().includes(queryAnalytics.rtaSessionsUrl)) {
-        await realTimeAnalyticsPage.stopAllSessions();
-      }
-    });
+  async ({ api, page, queryAnalytics }) => {
+    await api.realTimeAnalyticsApi.stopRealTimeAnalytics(serviceId);
 
     await pmmTest.step('Navigate directly to /rta/overview', async () => {
       await page.goto(queryAnalytics.rta.url);
@@ -34,9 +31,6 @@ pmmTest(
 );
 
 pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api, page, queryAnalytics }) => {
-  const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
-  const serviceId = service.service_id;
-
   await api.realTimeAnalyticsApi.startRealTimeAnalytics(serviceId);
 
   await pmmTest.step('Navigate directly to overview', async () => {
@@ -49,8 +43,7 @@ pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api
 
   await pmmTest.step('Cluster/Service input is visible and functional', async () => {
     await expect(queryAnalytics.rta.inputs.clusterService).toBeVisible();
-    await queryAnalytics.rta.inputs.clusterService.click();
-    await expect(page.getByRole('option').first()).toBeVisible();
-    await page.keyboard.press('Escape');
+    await queryAnalytics.rta.selectClusterService();
+    await expect(queryAnalytics.rta.elements.realTimeTable).toBeVisible();
   });
 });
