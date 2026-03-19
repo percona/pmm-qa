@@ -1,0 +1,57 @@
+---
+
+volumes:
+  pmm-volume:
+
+networks:
+  pmm-network:
+    driver: bridge
+  pmm-qa:
+    external: true
+
+services:
+  pmm-server:
+    image: ${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}
+    container_name: pmm-server
+    platform: linux/amd64
+    ports:
+      - "80:8080"
+      - "443:8443"
+    environment:
+      - PMM_DEBUG=1
+      - PMM_ENABLE_ACCESS_CONTROL=1
+      - GF_AUTH_OAUTH_ALLOW_INSECURE_EMAIL_LOOKUP=1
+      - PMM_DEV_TELEMETRY_INTERVAL=10s
+      - PMM_DEV_TELEMETRY_RETRY_BACKOFF=10s
+      - GF_RENDERING_SERVER_URL=http://renderer:8081/render
+      - GF_RENDERING_CALLBACK_URL=https://pmm-server:8443/graph
+    volumes:
+      - pmm-volume:/srv
+    networks:
+      - pmm-network
+      - pmm-qa
+
+  renderer:
+    image: grafana/grafana-image-renderer:latest
+    container_name: renderer
+    platform: linux/amd64
+    environment:
+      - GF_RENDERER_PLUGIN_IGNORE_HTTPS_ERRORS=true
+      - BROWSER_FLAG=--ignore-certificate-errors
+    networks:
+      - pmm-network
+      - pmm-qa
+
+  watchtower:
+    image: perconalab/watchtower:dev-latest
+    container_name: watchtower
+    platform: linux/amd64
+    environment:
+      - WATCHTOWER_DEBUG=1
+      - WATCHTOWER_HTTP_API_TOKEN=testUpgradeToken
+      - WATCHTOWER_HTTP_API_UPDATE=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - pmm-network
+      - pmm-qa

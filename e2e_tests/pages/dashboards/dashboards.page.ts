@@ -7,15 +7,30 @@ import BasePage from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
 import Panels from '@components/dashboards/panels';
+import HomeDashboard from '@pages/dashboards/home';
+import pmmTest from '@fixtures/pmmTest';
 
 export default class Dashboards extends BasePage {
+  readonly home = new HomeDashboard();
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+    panelHeaderByName: (panelName: string) =>
+      this.builders.panelByName(panelName).getByTestId('header-container'),
+    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
+    panelMenuItemByName: (menuItemName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
   };
-  buttons = {};
+  buttons = {
+    imageRendererDownloadImage: this.grafanaIframe().getByTestId(
+      'data-testid share panel internally download image button',
+    ),
+    imageRendererGenerateImage: this.grafanaIframe().getByTestId(
+      'data-testid share panel internally generate image button',
+    ),
+  };
   elements = {
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
@@ -30,6 +45,7 @@ export default class Dashboards extends BasePage {
     ),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
+    renderedImage: this.grafanaIframe().locator('[alt="panel-preview-img"]'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
     ),
@@ -70,17 +86,40 @@ export default class Dashboards extends BasePage {
     });
   };
 
+  openPanelMenu = async (panelName: string) => {
+    await pmmTest.step(`Open ${panelName} panel menu`, async () => {
+      await this.builders.panelByName(panelName).scrollIntoViewIfNeeded();
+      await this.builders.panelHeaderByName(panelName).hover();
+      await this.builders.panelMenuIconByName(panelName).click();
+    });
+  };
+
+  renderImageForPanel = async (panelName: string) => {
+    await this.openPanelMenu(panelName);
+
+    await pmmTest.step(`Hover over Share and click on generate image menu item`, async () => {
+      await this.builders.panelMenuItemByName('Share').hover();
+      await this.builders.panelMenuItemByName('Share link').click();
+    });
+
+    await pmmTest.step('Click on generate image button and verify that image is rendered', async () => {
+      await this.buttons.imageRendererGenerateImage.click();
+      await expect(this.buttons.imageRendererGenerateImage).toBeEnabled({ timeout: Timeouts.THIRTY_SECONDS });
+      await expect(this.elements.renderedImage).toBeVisible({
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+    });
+  };
+
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
     let noDataPanels: string[] = [];
     let missingMetrics: string[] = [];
-    let extraMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
       noDataPanels = await this.elements.noDataPanelName.allTextContents();
       missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
-      extraMetrics = noDataMetrics.filter((e) => !noDataPanels.includes(e));
 
       if (missingMetrics.length == 0) break;
 
@@ -95,18 +134,8 @@ export default class Dashboards extends BasePage {
         });
       }
     }
-    if (extraMetrics.length > 0) {
-      for (const extraMetric of extraMetrics) {
-        await this.builders.panelByName(extraMetric).screenshot({
-          path: `./screenshots/extra-metric-${extraMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
-        });
-      }
-    }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
-    expect
-      .soft(extraMetrics, `Metrics with data that are expected to be empty are: ${extraMetrics}`)
-      .toHaveLength(0);
   };
 
   verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {

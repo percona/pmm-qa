@@ -83,7 +83,7 @@ pmmTest(
 
     await pmmTest.step('Verify sessions list page is opened', async () => {
       await expect(queryAnalytics.rta.elements.realTimeTable).toBeHidden();
-      await expect(queryAnalytics.rta.buttons.openStopAllModal).toBeVisible();
+      await expect(queryAnalytics.rta.buttons.stopAllSessions).toBeVisible();
       await expect(queryAnalytics.rta.buttons.openNewSessionModal).toBeVisible();
     });
   },
