@@ -18,10 +18,11 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import apiEndpoints from '@helpers/apiEndpoints';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
-  await page.route('**/v1/users/me', (route) =>
+  await page.route(apiEndpoints.users.me, (route) =>
     route.fulfill({
       body: JSON.stringify({
         alerting_tour_completed: true,
@@ -33,7 +34,7 @@ base.beforeEach(async ({ page }) => {
     }),
   );
   // Mock upgrade call to prevent upgrade modal from showing.
-  await page.route('**/v1/server/updates?force=**', (route) =>
+  await page.route(apiEndpoints.server.updates, (route) =>
     route.fulfill({
       body: JSON.stringify({
         installed: {},
