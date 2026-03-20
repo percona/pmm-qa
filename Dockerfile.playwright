@@ -6,7 +6,7 @@ RUN curl -sL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh
 RUN bash nodesource_setup.sh
 RUN apt install nodejs
 
-COPY ../e2e_tests /tests
+COPY ./e2e_tests /tests
 RUN e2e_tests && npm ci
 RUN e2e_tests && npx playwright install --with-deps
 
