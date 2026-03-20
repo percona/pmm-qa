@@ -10,7 +10,7 @@ RUN apt install -y nodejs
 COPY ./e2e_tests /tests
 WORKDIR /tests
 RUN npm ci
-RUN npx playwright install --with-deps
+RUN npx playwright install chromium --with-deps
 
 ARG PMM_UI_URL
 ENV PMM_UI_URL=$PMM_UI_URL
