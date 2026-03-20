@@ -8,8 +8,9 @@ RUN bash nodesource_setup.sh
 RUN apt install -y nodejs
 
 COPY ./e2e_tests /tests
-RUN e2e_tests && npm ci
-RUN e2e_tests && npx playwright install --with-deps
+WORKDIR /tests
+RUN npm ci
+RUN npx playwright install --with-deps
 
 VOLUME [ "/sys/fs/cgroup" ]
 
