@@ -19,7 +19,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 
-base.beforeEach(async ({ context }) => {
+base.beforeEach(async ({ context }, testInfo) => {
   // Mock user details call to prevent the tours from showing
   await context.route('**/v1/users/me', (route) =>
     route.fulfill({
@@ -44,6 +44,12 @@ base.beforeEach(async ({ context }) => {
       status: 200,
     }),
   );
+
+  await context.route('**/v1/server/updates**', (route) => {
+    console.log(`mocked /v1/server/updates in test ${testInfo.title}`, route.request().url());
+
+    return route.fulfill({ /* … */ });
+  });
 });
 
 const pmmTest = base.extend<{
