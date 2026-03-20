@@ -1,23 +1,19 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import { GetService } from '@interfaces/inventory';
 
-let service: GetService;
-
-pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
+pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
 
-  service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+  const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
 
   await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
+  await page.goto(queryAnalytics.rta.getUrlWithServices([service.service_id]));
 });
 
 pmmTest(
   'PMM-T2169 - Verify Pause/Resume functionality for Real Time Analytics @rta',
   async ({ page, queryAnalytics }) => {
-    await page.goto(queryAnalytics.rta.getUrlWithServices([service.service_id]));
-
     let calls: { method: string; requestTime: Date; url: string }[] = [];
 
     await pmmTest.step('Filter queries to not conflict with other tests', async () => {
