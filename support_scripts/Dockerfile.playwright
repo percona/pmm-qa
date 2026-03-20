@@ -1,0 +1,15 @@
+FROM antmelekhin/docker-systemd:ubuntu-24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+curl -sL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh
+bash nodesource_setup.sh
+apt install nodejs
+
+COPY ../e2e_tests /tests
+RUN e2e_tests && npm ci
+RUN e2e_tests && npx playwright install --with-deps
+
+VOLUME [ "/sys/fs/cgroup" ]
+
+ENTRYPOINT [ "/lib/systemd/systemd" ]
