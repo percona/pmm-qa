@@ -12,6 +12,11 @@ WORKDIR /tests
 RUN npm ci
 RUN npx playwright install --with-deps
 
+ARG PMM_UI_URL
+ENV PMM_UI_URL=$PMM_UI_URL
+ARG ADMIN_PASSWORD
+ENV ADMIN_PASSWORD=$ADMIN_PASSWORD
+
 VOLUME [ "/sys/fs/cgroup" ]
 
 ENTRYPOINT [ "/lib/systemd/systemd" ]
