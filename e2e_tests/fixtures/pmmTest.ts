@@ -48,7 +48,9 @@ base.beforeEach(async ({ context }, testInfo) => {
   await context.route('**/v1/server/updates**', (route) => {
     console.log(`mocked /v1/server/updates in test ${testInfo.title}`, route.request().url());
 
-    return route.fulfill({ /* … */ });
+    return route.fulfill({
+      /* … */
+    });
   });
 });
 
@@ -83,6 +85,35 @@ const pmmTest = base.extend<{
     const cliHelper = new CliHelper();
 
     await use(cliHelper);
+  },
+  context: async ({ context }, use) => {
+    await context.route('**/v1/users/me', (route) =>
+      route.fulfill({
+        body: JSON.stringify({
+          alerting_tour_completed: true,
+          product_tour_completed: true,
+          snoozed_pmm_version: '',
+          user_id: 1,
+        }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    );
+    await context.route('**/v1/server/updates**', (route) => {
+      console.log(`mocked /v1/server/updates in test`, route.request().url());
+
+      return route.fulfill({
+        body: JSON.stringify({
+          installed: {},
+          last_check: new Date().toISOString(),
+          latest: {},
+          update_available: false,
+        }),
+        contentType: 'application/json',
+        status: 200,
+      });
+    });
+    await use(context);
   },
   credentials: async ({}, use) => {
     const credentials = new Credentials();
