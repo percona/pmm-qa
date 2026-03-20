@@ -19,7 +19,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 
-base.beforeEach(async ({ page }) => {
+base.beforeAll(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
   await page.route('**/v1/users/me', (route) =>
     route.fulfill({
@@ -33,7 +33,7 @@ base.beforeEach(async ({ page }) => {
     }),
   );
   // Mock upgrade call to prevent upgrade modal from showing.
-  await page.route('**/v1/server/updates?force=**', (route) =>
+  await page.route('**/v1/server/updates**', (route) =>
     route.fulfill({
       body: JSON.stringify({
         installed: {},
