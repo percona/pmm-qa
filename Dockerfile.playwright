@@ -2,10 +2,10 @@ FROM antmelekhin/docker-systemd:ubuntu-24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN apt install curl
+RUN apt install -y curl
 RUN curl -sL https://deb.nodesource.com/setup_22.x -o nodesource_setup.sh
 RUN bash nodesource_setup.sh
-RUN apt install nodejs
+RUN apt install -y nodejs
 
 COPY ./e2e_tests /tests
 RUN e2e_tests && npm ci
