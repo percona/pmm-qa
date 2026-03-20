@@ -19,7 +19,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 
-base.beforeAll(async ({ page }) => {
+base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
   await page.route('**/v1/users/me', (route) =>
     route.fulfill({
