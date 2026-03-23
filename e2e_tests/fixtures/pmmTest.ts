@@ -19,33 +19,6 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 
-base.beforeEach(async ({ page }) => {
-  // Mock user details call to prevent the tours from showing
-  await page.route('**/v1/users/me', (route) =>
-    route.fulfill({
-      body: JSON.stringify({
-        alerting_tour_completed: true,
-        product_tour_completed: true,
-        snoozed_pmm_version: '',
-        user_id: 1,
-      }),
-      status: 200,
-    }),
-  );
-  // Mock upgrade call to prevent upgrade modal from showing.
-  await page.route('**/v1/server/updates?force=**', (route) =>
-    route.fulfill({
-      body: JSON.stringify({
-        installed: {},
-        last_check: new Date().toISOString(),
-        latest: {},
-        update_available: false,
-      }),
-      status: 200,
-    }),
-  );
-});
-
 const pmmTest = base.extend<{
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
@@ -77,6 +50,33 @@ const pmmTest = base.extend<{
     const cliHelper = new CliHelper();
 
     await use(cliHelper);
+  },
+  context: async ({ context }, use) => {
+    await context.route('**/v1/users/me', (route) =>
+      route.fulfill({
+        body: JSON.stringify({
+          alerting_tour_completed: true,
+          product_tour_completed: true,
+          snoozed_pmm_version: '',
+          user_id: 1,
+        }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    );
+    await context.route('**/v1/server/updates**', (route) => {
+      return route.fulfill({
+        body: JSON.stringify({
+          installed: {},
+          last_check: new Date().toISOString(),
+          latest: {},
+          update_available: false,
+        }),
+        contentType: 'application/json',
+        status: 200,
+      });
+    });
+    await use(context);
   },
   credentials: async ({}, use) => {
     const credentials = new Credentials();
