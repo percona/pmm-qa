@@ -24,14 +24,14 @@ def get_admin_version(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     admin_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-admin | awk \'{{print \\$3}}\'"'
     print(f"PMM Agent versions for container: {container_name}")
-    print(subprocess.run(f'docker exec {container_name} sh -lc "pmm-admin status', capture_output=True, text=True, shell=True))
+    print(subprocess.run(f'docker exec {container_name} sh -lc "pmm-admin status"', capture_output=True, text=True, shell=True))
     return subprocess.run(admin_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
 def get_agent_version(service_type):
     container_name = containers[i][containers[i].index(service_type):]
     agent_version_cmd = f'docker exec {container_name} sh -lc "pmm-admin status | grep pmm-agent | awk \'{{print \\$3}}\'"'
     print(f"PMM Agent versions for container: {container_name}")
-    print(subprocess.run(f'docker exec {container_name} sh -lc "pmm-admin status', capture_output=True, text=True, shell=True))
+    print(subprocess.run(f'docker exec {container_name} sh -lc "pmm-admin status"', capture_output=True, text=True, shell=True))
     return subprocess.run(agent_version_cmd, capture_output=True, text=True, shell=True).stdout.replace("\\r\\n", "").strip()
 
 psContainerStatus = []
