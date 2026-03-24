@@ -98,7 +98,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       cli_test: 'pmm-client-docker'
-      services_list: '--database dockerclients'
+      services_list: '--help'
       test_name: 'pmm-client docker'
 
   generic-tests:
