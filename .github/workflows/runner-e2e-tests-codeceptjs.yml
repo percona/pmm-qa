@@ -233,8 +233,7 @@ jobs:
             echo "$SUBSET_FILE is not empty, so we run tests from the subset."
             ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "$SUBSET_FILE")" || true
           else
-            echo "$SUBSET_FILE is empty, so we run all tests for now."
-            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi 
+            echo "$FILE is empty, so we won't run tests."
           fi
 
       - name: Download logs
