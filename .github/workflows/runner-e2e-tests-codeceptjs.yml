@@ -118,6 +118,7 @@ jobs:
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      SUBSET_FILE_NAME: 'launchable-subset.json'
 
     steps:
       - name: Create status check
@@ -234,16 +235,13 @@ jobs:
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
 
-          SUBSET_FILE="launchable-subset.json"
-
           # Skip tests if the subset file is empty
-          if [ -s "$SUBSET_FILE" ]; then
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
             # Run tests if the subset file is not empty
-            echo "$SUBSET_FILE is not empty, so we run tests from the subset."
-            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "$SUBSET_FILE")" || true
+            echo "${{ env.SUBSET_FILE_NAME }} is not empty, so we run tests from the subset."
+            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
           else
-            echo "$SUBSET_FILE is empty, so we run all tests for now."
-            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi 
+            echo "${{ env.SUBSET_FILE_NAME }} is empty, so we won't run tests."
           fi
 
       - name: Download logs
@@ -257,9 +255,11 @@ jobs:
         if: ${{ always() }}
         working-directory: pmm-ui-tests
         run: |
-          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-          launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
-          launchable gate --session "$(cat launchable-session.txt)"
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            sed -i "s|$(pwd)/||g" tests/output/result.xml || true
+            launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
+            launchable gate --session "$(cat launchable-session.txt)"
+          fi
 
       - name: Record launchable logs
         if: ${{ failure() }}
