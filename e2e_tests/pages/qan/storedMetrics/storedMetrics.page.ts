@@ -1,9 +1,11 @@
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
+import QueryAnalyticsDetails from '@components/qan/storedMetrics/queryAnalyticsDetails.component';
 
 export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
+  qanDetails = new QueryAnalyticsDetails(this.page);
   builders = {};
   buttons = {};
   elements = {
