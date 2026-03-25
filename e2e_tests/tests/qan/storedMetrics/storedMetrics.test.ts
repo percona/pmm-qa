@@ -29,11 +29,12 @@ pmmTest(
       urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
         from: 'now-5m',
         qanQuerySearch: 'SELECT pg_sleep',
+        refresh: '5s',
         serviceName: service_name,
       }),
     );
 
-    await qanStoredMetrics.waitForQanStoredMetricsToHaveData();
+    await qanStoredMetrics.waitForQanStoredMetricsToHaveData(Timeouts.TWO_MINUTES);
     await qanStoredMetrics.elements.firstRow.click();
     await qanStoredMetrics.qanDetails.buttons.explainTab.click();
     await expect(qanStoredMetrics.qanDetails.elements.explainNoData).toHaveText(
