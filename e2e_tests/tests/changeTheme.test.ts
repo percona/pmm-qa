@@ -8,7 +8,7 @@ pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
 });
 
 pmmTest(
-  'PMM-T2096 - Verify theme change functionality via change to dark/light theme button @new-navigation',
+  'PMM-T2098 - Verify theme change functionality via change to dark/light theme button @new-navigation',
   async ({ themePage }) => {
     const darkThemeColor = 'rgb(58, 65, 81)';
     const lightThemeColor = 'rgb(240, 241, 244)';
