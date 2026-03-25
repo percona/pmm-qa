@@ -212,8 +212,7 @@ jobs:
             echo "$SUBSET_FILE is not empty, so we run tests from the subset."
             npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat launchable-subset.txt) || true
           else
-            echo "$SUBSET_FILE is empty, so we run tests for now."
-            npx playwright test --grep "${{ env.PMM_TEST_FLAG }}"
+            echo "$FILE is empty, so we won't run tests."
           fi
 
       - name: Download logs
