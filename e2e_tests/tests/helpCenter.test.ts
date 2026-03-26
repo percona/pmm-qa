@@ -1,8 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
-  await page.goto('');
+pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
@@ -83,6 +82,6 @@ pmmTest('PMM-T2121 - Verify share your thoughts button @new-navigation', async (
     const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.shareYourThoughts);
 
     expect(href).toBeTruthy();
-    expect(newTab.url()).toContain('/docs.google.com/forms/');
+    await expect(newTab).toHaveURL(/docs.google.com\/forms\//);
   });
 });
