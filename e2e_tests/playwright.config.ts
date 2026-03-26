@@ -4,6 +4,8 @@ import { Timeouts } from '@helpers/timeouts';
 
 dotenv.config({ override: true, quiet: true });
 
+console.log(`Process env CI value is: ${process.env.CI}`);
+
 const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localhost/';
 const config: PlaywrightTestConfig = {
   forbidOnly: !!process.env.CI,
