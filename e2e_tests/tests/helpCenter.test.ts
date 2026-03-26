@@ -73,11 +73,11 @@ pmmTest('PMM-T2120 - Verify start pmm tour button @new-navigation', async ({ hel
 });
 
 pmmTest('PMM-T2121 - Verify share your thoughts button @new-navigation', async ({ context, helpPage }) => {
+  await context.unroute('**/v1/server/updates**');
+  await context.unroute('**/v1/users/me');
+
   await pmmTest.step('Verify navigation to external URL', async () => {
     await expect(helpPage.buttons.shareYourThoughts).toBeVisible();
-
-    await context.unroute('**/v1/server/updates**');
-    await context.unroute('**/v1/users/me');
 
     const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.shareYourThoughts);
 
