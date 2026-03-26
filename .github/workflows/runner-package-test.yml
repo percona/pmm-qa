@@ -121,9 +121,11 @@ jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
     container:
-      image: python:3.10-bookworm
+      image: antmelekhin/docker-systemd:ubuntu-24.04
       env:
         PATH: /usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/github/home/.local/bin
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
     runs-on: percona-runners
     timeout-minutes: 60
     env:
@@ -152,6 +154,16 @@ jobs:
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
+
+      - name: Install docker CLI (client) in the job container
+        shell: bash
+        run: |
+          set -euxo pipefail
+          apt-get update
+          # docker.io is fine on Ubuntu base images for getting the CLI quickly
+          apt-get install -y --no-install-recommends docker.io ca-certificates
+          docker version
+          docker ps
 
       - name: 'Checkout package-testing: "${{ inputs.package_testing_branch }}"'
         uses: actions/checkout@v4
