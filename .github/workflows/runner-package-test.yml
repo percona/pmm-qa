@@ -182,13 +182,6 @@ jobs:
           repository: Percona-QA/package-testing
           ref: ${{ inputs.package_testing_branch }}
 
-#      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-#        run: |
-#          sudo rm -rf /usr/share/dotnet
-#          sudo rm -rf /opt/ghc
-#          sudo rm -rf "/usr/local/share/boost"
-#          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-
       - name: 'Convert choices'
         run: |
           ### pmm-server docker image ###
@@ -223,58 +216,8 @@ jobs:
             RC_VERSION=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
             echo "EXPECTED_VERSION=$RC_VERSION" >> $GITHUB_ENV
           fi
-                    
           echo "repo=${{ env.REPO }}"
           
-          ### vagrant vm ###
-          if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
-            echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.os }}" =~ "bookworm" ]]; then
-            echo "VM_BOX=generic-x64/debian12" >> $GITHUB_ENV
-          fi 
-          if [[ "${{ inputs.os }}" =~ "bionic" ]]; then
-            echo "VM_BOX=generic/ubuntu1804" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
-            echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.os }}" =~ "ol-8" ]]; then
-            echo "VM_BOX=generic/oracle8" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.os }}" =~ "noble" ]]; then
-            echo "VM_BOX=bento/ubuntu-24.04" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.os }}" =~ "ol-9" ]]; then
-            echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.os }}" =~ "ol-10" ]]; then
-            echo "VM_BOX=almalinux/10" >> $GITHUB_ENV
-            echo "PS_REPOSITORY=testing" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
-            echo "VM_BOX=gbailey/al2023" >> $GITHUB_ENV
-          fi
-          echo "${{ env.VM_BOX }}"
-          
-          ### test name -> playbook map ###
-          # basic         -> pmm2-client.yml
-          # basic upgrade -> pmm2-client_upgrade.yml
-          # basic tarball -> pmm2-client_custom_path.yml
-          
-          # config password          -> pmm2-client_integration_auth_config.yml
-          # register password        -> pmm2-client_integration_auth_register.yml
-          # tarball setup password   -> pmm2-client_integration_auth_setup.yml
-          # tarball path             -> pmm2-client_integration_custom_path.yml
-          # tarball port             -> pmm2-client_integration_custom_port.yml
-          # integration upgrade port -> pmm2-client_integration_upgrade_custom_port.yml
-          
-          ######### Matrix tests
-          # integration          -> pmm2-client_integration.yml
-          # integration upgrade  -> pmm2-client_integration_upgrade.yml
-          # tarball upgrade path -> pmm2-client_integration_upgrade_custom_path.yml
-
-
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
@@ -283,13 +226,13 @@ jobs:
 
       - name: "Setup tools"
         run: |
-          wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-          sudo apt-get update
-          sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system qemu-utils qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils libvirt-dev
-          sudo apt update
-          sudo vagrant plugin install vagrant-libvirt
-          ip addr show virbr0
+          DISTRIBUTION=$(cat /proc/version)
+          echo "$DISTRIBUTION"
+          if [[ "${DISTRIBUTION}" =~ "Debian" ]]; then
+            apt-get update
+            apt-get install -y apt-transport-https ca-certificates ansible
+            apt update
+          fi
 
       - name: "Wait for PMM Server to be healthy"
         run: |
