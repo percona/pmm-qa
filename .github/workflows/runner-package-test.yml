@@ -120,7 +120,11 @@ on:
 jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
-    runs-on: ubuntu-latest
+    container:
+      image: python:3.10-bookworm
+      env:
+        PATH: /usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/github/home/.local/bin
+    runs-on: percona-runners
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
