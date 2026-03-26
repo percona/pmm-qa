@@ -230,7 +230,7 @@ jobs:
           echo "$DISTRIBUTION"
           if [[ "${DISTRIBUTION}" =~ "Debian" ]]; then
             apt-get update
-            apt-get install -y apt-transport-https ca-certificates ansible
+            apt-get install -y apt-transport-https ca-certificates ansible curl
             apt update
           fi
 
