@@ -63,15 +63,15 @@ on:
         default: "jammy"
         type: choice
         options:
-          - bullseye
-          - bookworm
-          - noble
-          - jammy
-          - focal
-          - ol-8
-          - ol-9
-          - ol-10
-          - al2023
+          - Debian 11 (bullseye)
+          - Debian 12 (bookworm)
+          - Debian 13 (trixie)
+          - Ubuntu 22.04 (jammy)
+          - Ubuntu 24.04 (noble)
+          - Oracle Linux 8 (ol-8)
+          - Oracle Linux 9 (ol-9)
+          - Oracle Linux 10 (ol-10)
+          - Amazon Linux 2023 (al2023)
 
   workflow_call:
     inputs:
@@ -120,8 +120,30 @@ on:
 jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
+    strategy:
+      matrix:
+        include:
+          - os: Debian 11 (bullseye)
+            image: antmelekhin/docker-systemd:debian-11
+          - os: Debian 12 (bookworm)
+            image: antmelekhin/docker-systemd:debian-12
+          - os: Debian 13 (trixie)
+            image: antmelekhin/docker-systemd:debian-13
+          - os: Ubuntu 22.04 (jammy)
+            image: antmelekhin/docker-systemd:ubuntu-22.04
+          - os: Ubuntu 24.04 (noble)
+            image: antmelekhin/docker-systemd:ubuntu-24.04
+          - os: Oracle Linux 8 (ol-8)
+            image: antmelekhin/docker-systemd:rockylinux-8
+          - os: Oracle Linux 9 (ol-9)
+            image: antmelekhin/docker-systemd:rockylinux-9
+          - os: Oracle Linux 10 (ol-10)
+            image: antmelekhin/docker-systemd:rockylinux-10
+          - os: Amazon Linux 2023 (al2023)
+            image: antmelekhin/docker-systemd:amazonlinux-2023
+    if: ${{ matrix.os == inputs.os }}
     container:
-      image: antmelekhin/docker-systemd:ubuntu-24.04
+      image: ${{ matrix.image }}
       env:
         PATH: /usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/github/home/.local/bin
       volumes:
