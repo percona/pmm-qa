@@ -225,7 +225,9 @@ jobs:
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
 
       - name: "Setup tools"
+        shell: bash
         run: |
+          set -euo pipefail
           DISTRIBUTION=$(cat /proc/version)
           echo "$DISTRIBUTION"
           if [[ "${DISTRIBUTION}" =~ "Debian" ]]; then
