@@ -24,11 +24,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),
     filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
     openNewSessionModal: this.page.getByTestId('open-new-modal'),
-    openStopAllModal: this.page.getByTestId('open-stop-all-modal'),
     pauseRealTimeAnalytics: this.page.getByTestId('overview-table-pause-button'),
     refresh: this.page.getByTestId('overview-table-refresh-button'),
     refreshIntervalDropdown: this.page.getByTestId('auto-refresh-button'),
     resumeRealTimeAnalytics: this.page.getByTestId('overview-table-resume-button'),
+    stopAgentsButton: this.page.getByTestId('stop-multiple-sessions-modal-stop'),
+    stopAllSessions: this.page.getByTestId('open-stop-all-modal'),
   };
   elements = {
     elapsedTimeColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Elapsed time'),
@@ -110,6 +111,19 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   openFilters = async () => {
     await this.buttons.filters.click();
+  };
+
+  selectClusterService = async () => {
+    await this.inputs.clusterService.click();
+    await this.page.getByRole('option').first().click();
+    await this.page.keyboard.press('Escape');
+  };
+
+  stopAllSessions = async () => {
+    await this.buttons.stopAllSessions.waitFor({ state: 'visible', timeout: 3_000 });
+    await this.buttons.stopAllSessions.click();
+    await this.buttons.stopAgentsButton.click();
+    await this.buttons.stopAgentsButton.waitFor({ state: 'hidden', timeout: 3_000 });
   };
 
   verifyRequestInterval = async (
