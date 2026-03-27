@@ -120,7 +120,8 @@ on:
 jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
