@@ -170,10 +170,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          cat /etc/os-release
-          echo "ID=$ID VERSION_ID=$VERSION_ID PRETTY_NAME=$PRETTY_NAME"
-          DISTRIBUTION=$(cat /proc/version)
-          echo "$DISTRIBUTION"
+          cat /etc/os-release | grep "ID_LIKE"
           apt-get update
           # docker.io is fine on Ubuntu base images for getting the CLI quickly
           apt-get install -y --no-install-recommends docker.io ca-certificates
