@@ -30,15 +30,15 @@ on:
           - original
           - pmm3-client
           - tools
-      repository:
+      test_repo:
         description: "Select Repo to install PMM Client:"
         required: true
-        default: "dev-latest"
+        default: "experimental"
         type: choice
         options:
+          - experimental
+          - testing
           - release
-          - release candidate
-          - dev-latest
       metrics_mode:
         description: "Select the Metrics Mode for PMM Client:"
         required: true
@@ -92,9 +92,9 @@ on:
         required: true
         default: "pmm3-client"
         type: string
-      repository:
+      test_repo:
         required: true
-        default: "dev-latest"
+        default: "experimental"
         type: string
       metrics_mode:
         required: true
@@ -145,8 +145,7 @@ jobs:
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}
       TARBALL_LINK: ${{ inputs.pmm_client_tarball || 'null' }}
       EXPECTED_VERSION: ${{ inputs.expected_version }}
-
-      REPO: ${{ inputs.repository || 'dev-latest' }}
+      install_repo: ${{ inputs.test_repo || 'experimental' }}
       INSTALL_PACKAGE: ${{ inputs.package || 'pmm3-client' }}
       METRICS_MODE: ${{ inputs.metrics_mode || 'auto' }}
       PLAYBOOK: ${{ inputs.playbook }}
