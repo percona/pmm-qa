@@ -245,11 +245,12 @@ jobs:
         working-directory: ./
         run: |
           ls
+          echo "playbooks/${{ env.PLAYBOOK }}.yml"
           ansible-playbook \
             -vvvvv \
             --connection=local \
             --inventory 127.0.0.1, \
-            --limit 127.0.0.1 playbooks/{{ env.PLAYBOOK }}.yml
+            --limit 127.0.0.1 playbooks/${{ env.PLAYBOOK }}.yml
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
