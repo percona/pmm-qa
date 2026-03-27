@@ -172,9 +172,15 @@ jobs:
           set -euxo pipefail
           source /etc/os-release
           echo "ID_LIKE=${ID_LIKE:-}"
-          apt-get update
-          # docker.io is fine on Ubuntu base images for getting the CLI quickly
-          apt-get install -y --no-install-recommends docker.io ca-certificates
+          if [[ "${ID_LIKE:-}" == *rhel* ]]; then
+            echo "RHEL-like distro"
+            dnf -y install dnf-plugins-core ca-certificates curl
+            dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            dnf -y install docker-ce-cli
+          elif [[ "${ID_LIKE:-}" == *debian* ]]; then
+            apt-get update
+            apt-get install -y --no-install-recommends docker.io ca-certificates
+          fi
           docker version
           docker ps
 
