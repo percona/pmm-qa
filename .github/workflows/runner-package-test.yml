@@ -166,7 +166,7 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: Install docker CLI (client) in the job container
+      - name: Install docker CLI and other dependencies
         shell: bash
         run: |
           set -euxo pipefail
@@ -231,18 +231,6 @@ jobs:
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
           docker run -d -e PMM_ENABLE_NOMAD=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_PUBLIC_ADDRESS=127.0.0.1  -p 80:8080 -p 443:8443 -p 9000:9000 -p 4647:4647 \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }}
-
-      - name: "Setup tools"
-        shell: bash
-        run: |
-          set -euo pipefail
-          DISTRIBUTION=$(cat /proc/version)
-          echo "$DISTRIBUTION"
-          if [[ "${DISTRIBUTION}" =~ "Debian" ]]; then
-            apt-get update
-            apt-get install -y apt-transport-https ca-certificates  curl
-            apt update
-          fi
 
       - name: "Wait for PMM Server to be healthy"
         run: |
