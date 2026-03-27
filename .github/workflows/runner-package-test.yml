@@ -170,7 +170,7 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          cat /etc/os-release | grep "ID_LIKE"
+          cat /etc/os-release
           apt-get update
           # docker.io is fine on Ubuntu base images for getting the CLI quickly
           apt-get install -y --no-install-recommends docker.io ca-certificates
