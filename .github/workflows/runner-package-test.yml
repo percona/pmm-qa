@@ -244,10 +244,8 @@ jobs:
       - name: "Run (${{ contains(env.TARBALL, 'PR-') && 'feature build' || inputs.repository }})${{ inputs.playbook }} test on ${{ inputs.os }}"
         working-directory: ./
         run: |
-          ls
-          echo "playbooks/${{ env.PLAYBOOK }}.yml"
           ansible-playbook \
-            -vvvvv \
+            -vvv \
             --connection=local \
             --inventory 127.0.0.1, \
             --limit 127.0.0.1 playbooks/${{ env.PLAYBOOK }}.yml
