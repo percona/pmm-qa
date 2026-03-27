@@ -10,10 +10,10 @@ on:
         default: "master"
         required: true
       pmm_server_image:
-        description: "pmm-server docker image(auto detected if empty)"
+        description: "pmm-server docker image"
+        default: "perconalab/pmm-server:3-dev-latest"
         required: false
         type: string
-        default: "perconalab/pmm-server:3-dev-latest"
       pmm_client_tarball:
         description: "PMM Client tarball link or FB-code"
         type: string
@@ -80,6 +80,7 @@ on:
         default: "master"
         required: true
       pmm_server_image:
+        default: "perconalab/pmm-server:3-dev-latest"
         required: false
         type: string
       pmm_client_tarball:
@@ -189,42 +190,6 @@ jobs:
           repository: Percona-QA/package-testing
           ref: ${{ inputs.package_testing_branch }}
 
-      - name: 'Convert choices'
-        run: |
-          ### pmm-server docker image ###
-          if [[ -z "${{ env.PMM_SERVER_IMAGE }}" ]]; then
-            if [[ "${{ inputs.repository }}" = "dev-latest" ]]; then
-              echo "PMM_SERVER_IMAGE=perconalab/pmm-server:3-dev-latest" >> $GITHUB_ENV
-            fi
-            if [[ "${{ inputs.repository }}" =~ "candidate" ]]; then
-              rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
-              echo "PMM_SERVER_IMAGE=perconalab/pmm-server:$rc_latest" >> $GITHUB_ENV
-            fi
-            if [[ "${{ inputs.repository }}" = "release" ]]; then
-              r_latest=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name  | grep -v latest | sort -V | tail -n1)
-              echo "PMM_SERVER_IMAGE=percona/pmm-server:$r_latest" >> $GITHUB_ENV
-            fi
-          fi
-          echo "${{ env.PMM_SERVER_IMAGE }}"
-          
-          ### pmm2-client repository ### 
-          if [[ "${{ inputs.repository }}" = "dev-latest" ]]; then
-            echo "REPO=experimental" >> $GITHUB_ENV
-          fi
-          if [[ "${{ inputs.repository }}" =~ "candidate" ]]; then
-            echo "REPO=testing" >> $GITHUB_ENV
-            echo "EXPECTED_VERSION=$(echo ${{ inputs.expected_version }} | awk -F'-' '{print $1}')" >> $GITHUB_ENV
-            echo "expected version is ${{ env.EXPECTED_VERSION }}"
-          fi
-          if [[ "${{ inputs.expected_version}}" = "3-dev-latest" ]]; then
-            DEV_VERSION=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION -O -)
-            echo "EXPECTED_VERSION=$DEV_VERSION" >> $GITHUB_ENV
-          elif [[ "${{ inputs.expected_version}}" = "pmm3-rc" ]]; then
-            RC_VERSION=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
-            echo "EXPECTED_VERSION=$RC_VERSION" >> $GITHUB_ENV
-          fi
-          echo "repo=${{ env.REPO }}"
-          
       - name: 'Setup "${{ env.PMM_SERVER_IMAGE }}"'
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
