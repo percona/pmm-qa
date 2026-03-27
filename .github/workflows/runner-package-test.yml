@@ -174,7 +174,7 @@ jobs:
           echo "ID_LIKE=${ID_LIKE:-}"
           if [[ "${ID_LIKE:-}" == *rhel* ]]; then
             echo "RHEL-like distro"
-            dnf -y install dnf-plugins-core ca-certificates curl
+            dnf -y --skip-broken install dnf-plugins-core ca-certificates curl
             dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
             dnf -y install docker-ce-cli
           elif [[ "${ID_LIKE:-}" == *debian* ]]; then
