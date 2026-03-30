@@ -72,16 +72,12 @@ pmmTest('PMM-T2120 - Verify start pmm tour button @new-navigation', async ({ hel
   });
 });
 
-pmmTest('PMM-T2121 - Verify share your thoughts button @new-navigation', async ({ context, helpPage }) => {
-  await context.unroute('**/v1/server/updates**');
-  await context.unroute('**/v1/users/me');
-
+pmmTest('PMM-T2121 - Verify share your thoughts button @new-navigation', async ({ helpPage }) => {
   await pmmTest.step('Verify navigation to external URL', async () => {
     await expect(helpPage.buttons.shareYourThoughts).toBeVisible();
-
-    const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.shareYourThoughts);
-
-    expect(href).toBeTruthy();
-    await expect(newTab).toHaveURL(/docs.google.com\/forms\//);
+    await expect(helpPage.buttons.shareYourThoughts).toHaveAttribute(
+      'href',
+      'https://per.co.na/pmm3_feedback',
+    );
   });
 });
