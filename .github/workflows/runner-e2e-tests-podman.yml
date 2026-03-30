@@ -219,6 +219,19 @@ jobs:
           podman exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
           # bash -x testdata/db_setup.sh
 
+      - name: Print Podman logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "---systemctl-status---"
+          systemctl --user status pmm-server || true
+          echo "---systemctl-status---"
+          echo "---podman-logs---"
+          podman logs pmm-server 2>&1 || true
+          echo "---podman-logs---"
+          echo "---journal-logs---"
+          journalctl --user -u pmm-server --no-pager -n 100 || true
+          echo "---journal-logs---"
+
       - name: Export path to pmm-qa repo
         working-directory: ./pmm-qa
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
