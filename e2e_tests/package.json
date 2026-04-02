@@ -32,14 +32,12 @@
     "jiti": "^2.6.1",
     "lint-staged": "^16.2.7",
     "mongodb": "^7.1.0",
+    "pg": "8.20.0",
     "playwright": "^1.56.0",
     "prettier": "^3.6.2",
     "shelljs": "^0.10.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1"
-  },
-  "dependencies": {
-    "pg": "^8.20.0"
   }
 }

@@ -22,9 +22,10 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest(
   'PMM-T2204 - Verify explain tab in QAN does not load forever if there is no example @qan',
   async ({ api, page, qanStoredMetrics, urlHelper }) => {
+    await client.query('SELECT pg_sleep(1)');
+
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('pgsql_pgss');
 
-    await client.query('SELECT pg_sleep(1)');
     await page.goto(
       urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
         from: 'now-5m',
