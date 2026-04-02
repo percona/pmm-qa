@@ -1,9 +1,11 @@
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
+import QueryAnalyticsDetails from '@components/qan/storedMetrics/queryAnalyticsDetails.component';
 
 export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
+  qanDetails = new QueryAnalyticsDetails(this.page);
   builders = {};
   buttons = {};
   elements = {
@@ -34,19 +36,11 @@ export default class StoredMetricsPage extends BasePage {
 
   waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.waitUntilQanStoredMetricsLoaded();
-
-    const noDataLocator = this.elements.noData;
-    const timeoutInSeconds = timeout / 1_000;
-
-    for (let i = 0; i < timeoutInSeconds; i++) {
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Replace with a better approach
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-
-      if (!(await noDataLocator.isVisible())) return;
-    }
-
-    await expect(noDataLocator).not.toBeVisible({
-      timeout: Timeouts.ONE_SECOND,
+    await expect(
+      this.elements.firstRow,
+      'Query Analytics does not have data for selected parameters!',
+    ).toBeVisible({
+      timeout: timeout,
     });
   };
 
