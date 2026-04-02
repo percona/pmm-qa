@@ -10,3 +10,4 @@ e2e_tests/playwright/.auth/
 e2e_tests/screenshots/*
 .idea/*
 e2e_tests/.env
+.playwright-mcp/
