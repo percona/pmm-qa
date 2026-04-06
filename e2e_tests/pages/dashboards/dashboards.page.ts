@@ -16,7 +16,7 @@ export default class Dashboards extends BasePage {
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
     panelByName: (panelName: string) =>
-      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
@@ -56,14 +56,9 @@ export default class Dashboards extends BasePage {
   readonly panels = () => Panels(this.page);
 
   loadAllPanels = async () => {
-    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+    await this.waitForDashboardToLoad();
 
-    // Wait for the dashboard to be visible before proceeding.
-    await test.step('Wait for initial loading to finish', async () => {
-      await expectPanel(this.elements.refreshButton).toBeVisible();
-      await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
-      await expectPanel(this.elements.loadingText).toHaveCount(0);
-    });
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
 
     // Expand rows if present and wait for content in each item.
     await test.step('Expand rows and load panel content', async () => {
@@ -192,5 +187,15 @@ export default class Dashboards extends BasePage {
           throw new Error(`Unsupported panel: ${panel.name}`);
       }
     }
+  };
+
+  waitForDashboardToLoad = async () => {
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+
+    await test.step('Wait for initial loading to finish', async () => {
+      await expectPanel(this.elements.refreshButton).toBeVisible();
+      await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
+      await expectPanel(this.elements.loadingText).toHaveCount(0);
+    });
   };
 }
