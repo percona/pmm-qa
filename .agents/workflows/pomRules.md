@@ -2,38 +2,40 @@
 description: Steps to create POM
 ---
 
-## Creating a new POM:
+# Locators & Discovery
 
-# STRICT Rules
---------------------------
-- Do not reference any files when creating a POM.
-- Capture DOM once. Do not repeat.
-- Prefer locators in this order:
-   - getByTestId -> getByRole -> getByPlaceHolder.
-- If element in iframe use grafanaIframe().
+- PREFER existing POM locators/helpers over rediscovery.
+- Focus inside Grafana? Use `grafanaIframe()`.
+- Priority: `getByTestId` > `getByRole` > `getByLabel` > `getByPlaceholder`.
+- AVOID: `nth()`, `first()`, `last()`.
+- Missing locators? Do EXACTLY ONE DOM capture pass. Update POM immediately.
 
-# POM rules:
---------------------------
-- Path: e2e_tests/pages/[pageName].page.ts
-- Import pmmTest from @fixtures/pmmTest
-- Class extends BasePage
-- Properties order:
-  - url, builders, buttons, elements, inputs, messages
-- All locators as class properties
-- Arrow functions for methods
-- Use pmmTest.step to wrap steps wherever necessary inside methods.
+# Code Structure
+
+- Path: `e2e_tests/pages/[pageName].page.ts`
+- Extend: `BasePage`. Import: `pmmTest` from `@fixtures/pmmTest`.
+- Property order: `url`, `builders`, `buttons`, `elements`, `inputs`, `messages`.
+- Locators MUST be class properties.
+- Methods MUST be arrow functions. Wrap critical actions in `pmmTest.step`.
+- Keep methods tightly scoped and logically named.
 
 # Template
---------------------
-import BasePage from './base.page';
-import pmmTest from '@fixtures/pmmTest;
+
+```typescript
+import BasePage from "./base.page";
+import pmmTest from "@fixtures/pmmTest";
 
 export default class TemplatePage extends BasePage {
+  url = "";
   builders = {};
   buttons = {};
   elements = {};
   inputs = {};
   messages = {};
+}
+```
 
-Do not re-scan DOM after writing POM.
-Do not explain after creating POM. Just say `Done`.
+# Hand-off
+
+- DO NOT scan DOM again if the POM handles locators.
+- Reply ONLY `Done` when finished. NO extra info.

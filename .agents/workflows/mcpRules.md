@@ -1,65 +1,29 @@
 ---
-description: Rules to save LLM tokens
+description: Execution, browser, and locator strategy rules for PMM Playwright tasks
 ---
 
-# STRICT Login Rules
-----------------------------
-- When performing a login, strictly follow the instructions defined in pmmLogin.md.
-- Do not attempt to locate or reference any alternative URLs, environment variables, or configuration files.
-- Treat the defaults specified in pmmLogin.md as the single source of truth.
-- Do not read any files inside `e2e_tests/`.
-- Do not provide explanations unless explicitly requested. Just say `Done`.
+# Execution & Context
+- Execute directly; DO NOT output plans or reasoning unless blocked.
+- Search first, read smallest possible files second (prefer nearby tests, POMs, helpers).
+- NO broad repo scans.
 
-# CRITICAL Rules
-----------------------------
-- Auth via Basic Auth header only (see `pmmLogin.md`).
-- NEVER use UI login form.
-- NEVER call `/graph/login` unless explicitly debugging authentication.
-- Snapshots OFF by default.
-- If completely blocked, use `mcp_playwright_browser_snapshot` once only.
-- NEVER dump raw DOM.
+# API Setup
+- Use PMM REST API to build test state; use UI ONLY to verify behavior.
+- Check `apiIndex.md` first for routes. Open `pmmApi.json` ONLY for precise schema definitions.
 
-----------------------------
-# HIGH Priority Rules
-----------------------------
-- Prefer PMM REST API over UI (see `.agents/workflows/pmmApi.json`).
-- Use `browser_evaluate` for:
-  - text checks
-  - attribute checks
-  - state validation
-- Use `browser_wait_for(text = '...')` instead of polling or loops.
-- Batch all actions into a single `mcp_playwright_browser_run_code` block:
-  - fills
-  - clicks
-  - assertions
-- Avoid multiple sequential tool calls when one can do the job.
+# Login
+- Follow `pmmLogin.md`.
+- Basic Auth headers ONLY.
+- NEVER use the UI login form or `/graph/login` (except when debugging auth).
 
-----------------------------
-# EXECUTION Strategy
--------------------------
-- Navigate directly to target page (avoid extra redirects).
-- Do not reload page unless strictly required.
-- Do not re-authenticate if already authenticated.
-- Do not re-scan DOM if selectors are already known.
+# Browser interactions
+- Batch multiple actions (fills, clicks, asserts) into one `mcp_playwright_browser_run_code` call.
+- Use `browser_wait_for` or Playwright assertions. NO manual sleeps.
+- Do not reload or re-authenticate unless state explicitly demands it.
+- If blocked, `browser_snapshot` once, stop, and reassess.
 
-----------------------------
-# SELECTOR Strategy
-----------------------------
-- Use stable selectors only:
-  - getByTestId (preferred)
-  - getByRole
-  - getByPlaceholder
-- Avoid:
-  - text-heavy selectors
-  - dynamic XPath
-  - full DOM traversal
-
-----------------------------
-# ANTI-PATTERNS
-----------------------------
-- UI login flows unless specified
-- Calling `/graph/login` in normal execution
-- Repeated snapshots
-- Raw HTML extraction
-- Multiple small MCP calls instead of one batched call
-- Unnecessary waits, reloads, or navigation loops
+# Locators & POM
+- Priority: `getByTestId` > `getByRole` > `getByLabel` > `getByPlaceholder`.
+- Reuse existing POM locators.
+- If missing: do EXACTLY ONE DOM discovery pass, then update the POM. NEVER re-evaluate the same page's DOM.
+- AVOID: `nth()`, `first()`, `last()`, dynamic XPath, and text-heavy selectors.
