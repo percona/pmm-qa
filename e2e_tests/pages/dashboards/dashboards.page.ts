@@ -16,7 +16,7 @@ export default class Dashboards extends BasePage {
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
     panelByName: (panelName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
+      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
