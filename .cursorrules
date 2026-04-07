@@ -1,0 +1,8 @@
+# PMM QA Automation — Cursor Entry Point
+
+Read AGENTS.md for the complete guide covering test architecture, Playwright E2E suite, Helm/Bats tests, CI orchestration, page object patterns, and development workflow.
+
+## PMM Context
+
+QA automation for PMM (Percona Monitoring and Management).
+See https://github.com/percona/pmm/blob/v3/.github/copilot-instructions.md for the product overview.
