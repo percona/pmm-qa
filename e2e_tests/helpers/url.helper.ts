@@ -9,6 +9,7 @@ interface BuildUrlParameters {
   from?: string;
   to?: string;
   cluster?: string;
+  qanQuerySearch?: string;
 }
 
 export default class UrlHelper {
@@ -40,6 +41,9 @@ export default class UrlHelper {
           break;
         case 'cluster':
           queryParams['var-cluster'] = parameters[key];
+          break;
+        case 'qanQuerySearch':
+          queryParams['dimensionSearchText'] = parameters[key];
           break;
         default:
           throw new Error('Unsupported environment ' + key);
