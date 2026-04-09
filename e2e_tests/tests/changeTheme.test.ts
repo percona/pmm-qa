@@ -1,13 +1,13 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
-  await page.goto('');
+pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
 pmmTest(
-  'PMM-T2096 - Verify theme change functionality via change to dark/light theme button @new-navigation',
+  'PMM-T2098 - Verify theme change functionality via change to dark/light theme button @new-navigation',
   async ({ themePage }) => {
     const darkThemeColor = 'rgb(58, 65, 81)';
     const lightThemeColor = 'rgb(240, 241, 244)';
@@ -21,9 +21,11 @@ pmmTest(
         const previousThemeButtonText = await themePage.buttons.changeThemeButton.innerText();
 
         await themePage.buttons.changeThemeButton.click();
-        await expect.poll(() => themePage.getBackgroundColor()).not.toBe(previousBgColor);
         await expect
-          .poll(() => themePage.buttons.changeThemeButton.innerText())
+          .poll(() => themePage.getBackgroundColor(), { timeout: Timeouts.TEN_SECONDS })
+          .not.toBe(previousBgColor);
+        await expect
+          .poll(() => themePage.buttons.changeThemeButton.innerText(), { timeout: Timeouts.TEN_SECONDS })
           .not.toBe(previousThemeButtonText);
 
         const newBgColor = await themePage.getBackgroundColor();
@@ -48,7 +50,9 @@ pmmTest(
         const buttonText = await themePage.buttons.changeThemeButton.innerText();
         const expectedComboboxValue = buttonText === 'Switch to light mode' ? 'Dark' : 'Light';
 
-        await expect(themePage.getThemeCombobox()).toHaveValue(expectedComboboxValue, { timeout: 10_000 });
+        await expect(themePage.getThemeCombobox()).toHaveValue(expectedComboboxValue, {
+          timeout: Timeouts.TEN_SECONDS,
+        });
       });
     }
   },

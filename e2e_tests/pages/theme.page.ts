@@ -1,6 +1,5 @@
 import { Locator } from '@playwright/test';
 import BasePage from './base.page';
-import pmmTest from '@fixtures/pmmTest';
 
 export default class ThemePage extends BasePage {
   builders = {};
@@ -14,9 +13,7 @@ export default class ThemePage extends BasePage {
   messages = {};
 
   getBackgroundColor = (): Promise<string> =>
-    pmmTest.step('Get background color', async () =>
-      this.page.locator('body').evaluate((el) => window.getComputedStyle(el).backgroundColor),
-    );
+    this.page.locator('body').evaluate((el) => window.getComputedStyle(el).backgroundColor);
 
   getThemeCombobox = (): Locator => this.grafanaIframe().getByRole('combobox', { name: 'Interface theme' });
 }
