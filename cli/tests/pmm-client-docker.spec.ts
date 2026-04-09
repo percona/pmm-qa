@@ -29,12 +29,12 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
       const mongodbServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'mongodb-7.0');
       const unknownAgentStatus = output.agent.some((agent: { status: string }) => agent.status.toLowerCase().includes('unknown'));
 
-      expect.soft(mysqlServicePresent).toBeTruthy();
-      expect.soft(postgresqlServicePresent).toBeTruthy();
-      expect.soft(mongodbServicePresent).toBeTruthy();
-      expect.soft(unknownAgentStatus).toBeFalsy();
+      expect(mysqlServicePresent).toBeTruthy();
+      expect(postgresqlServicePresent).toBeTruthy();
+      expect(mongodbServicePresent).toBeTruthy();
+      expect(unknownAgentStatus).toBeFalsy();
     }).toPass({
-      timeout: 180_000,
+      timeout: 120_000,
       intervals: [2_000],
     });
   });
