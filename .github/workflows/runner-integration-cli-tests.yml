@@ -126,6 +126,11 @@ jobs:
         working-directory: ./pmm-qa/cli
         run: |
           npm ci
+      
+      - name: Pull PMM Server image
+        working-directory: ./pmm-qa/cli
+        run: |
+          docker pull ${{ env.PMM_SERVER_IMAGE }}
 
       - uses: actions/github-script@v7
         if: ${{ always() }}
@@ -220,7 +225,6 @@ jobs:
         run: npx playwright test --grep "${{ inputs.cli_tag }}" $(cat launchable-subset.txt) || true
 
       - name: Record launchable test results
-        if: ${{ always() }}
         working-directory: pmm-qa/cli
         run: |
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
