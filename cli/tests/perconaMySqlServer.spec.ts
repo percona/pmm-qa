@@ -7,7 +7,7 @@ const MYSQL_PASSWORD = 'GRgrO9301RuF';
 const ipPort = '127.0.0.1:3306';
 let containerName: string;
 
-test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@ps' }, async () => {
+test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@percona-server' }, async () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^ps_pmm\'');
     await result.outContains('ps_pmm', 'Percona MySQL docker container should exist. please run pmm-framework with --database ps');

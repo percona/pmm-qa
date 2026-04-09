@@ -159,7 +159,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@ps'
+      cli_tag: '@percona-server'
       services_list: '--database ps=5.7'
       test_name: 'Percona Server 5.7'
 
@@ -175,7 +175,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@ps'
+      cli_tag: '@percona-server'
       services_list: '--database ps=8.0'
       test_name: 'Percona Server 8.0'
 
@@ -191,7 +191,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@ps'
+      cli_tag: '@percona-server'
       services_list: '--database ps=8.4'
       test_name: 'Percona Server 8.4'
 
