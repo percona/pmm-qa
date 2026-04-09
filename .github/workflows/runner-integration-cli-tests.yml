@@ -44,6 +44,9 @@ on:
         description: "SHA (leave empty if running manually, default - 'null')"
         required: false
         type: string
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
 
 jobs:
   cli-tests:
@@ -56,6 +59,7 @@ jobs:
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
 
       ###  used in tests ###
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:3-dev-latest' }}
