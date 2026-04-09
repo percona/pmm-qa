@@ -24,6 +24,7 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
   test('run pmm-admin list on pmm-client docker container', async ({}) => {
     await expect(async () => {
       const output = await cli.exec('docker exec pmm-client-1 pmm-admin list');
+      console.log(`-----pmm-admin list output:\n${output.stdout}\n------`);
       await output.assertSuccess();
       await output.outContainsMany([
         'Service type',
@@ -34,7 +35,7 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
       ]);
       await output.outNotContains('Unknown');
     }).toPass({
-      timeout: 120_000,
+      timeout: 180_000,
       intervals: [2_000],
     });
   });

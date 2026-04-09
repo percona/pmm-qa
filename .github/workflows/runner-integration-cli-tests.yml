@@ -223,7 +223,7 @@ jobs:
       - name: 'Run CLI tests: ${{ inputs.cli_tag }}'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/cli
-        run: npx playwright test --quiet --grep "${{ inputs.cli_tag }}" $(cat launchable-subset.txt) || true
+        run: npx playwright test --grep "${{ inputs.cli_tag }}" $(cat launchable-subset.txt) || true
 
       - name: Record launchable test results
         working-directory: pmm-qa/cli
@@ -270,7 +270,7 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
       
-      - name: Setup tmate session  on failure
-        if: ${{ failure() }}
-        uses: percona/gh-action-action-tmate@v2
+      # - name: Setup tmate session  on failure
+      #   if: ${{ failure() }}
+      #   uses: percona/gh-action-action-tmate@v2
 
