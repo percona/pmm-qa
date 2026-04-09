@@ -1,0 +1,74 @@
+---
+version: '3.7'
+
+services:
+  pmm-server-remove:
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    container_name: pmm-server-remove
+    ports:
+      - '8081:80'
+      - '8444:8443'
+    environment:
+      - PMM_DEBUG=1
+
+  pmm-client-remove:
+    image: ${PMM_CLIENT_IMAGE:-perconalab/pmm-client:3-dev-latest}
+    container_name: pmm-client-remove
+    depends_on:
+      pmm-server-remove:
+        condition: service_healthy
+      mysql5.7:
+        condition: service_healthy
+      mongo4.2:
+        condition: service_healthy
+      postgres11:
+        condition: service_healthy
+    environment:
+      - PMM_AGENT_SETUP=1
+      - PMM_AGENT_SERVER_ADDRESS=pmm-server-remove:8443
+      - PMM_AGENT_SERVER_USERNAME=admin
+      - PMM_AGENT_SERVER_PASSWORD=admin
+      - PMM_AGENT_SERVER_INSECURE_TLS=1
+      - PMM_AGENT_CONFIG_FILE=config/pmm-agent.yaml
+      - PMM_AGENT_SETUP_NODE_NAME=pmm-client-remove-container
+      - PMM_AGENT_SETUP_FORCE=1
+      - PMM_AGENT_SETUP_NODE_TYPE=container
+    restart: on-failure
+
+  mysql5.7:
+    container_name: mysql5.7
+    image: mysql:5.7
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: gfaks4d8OH
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-pgfaks4d8OH"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  mongo4.2:
+    image: ${MONGO_IMAGE:-percona/percona-server-mongodb:4.2}
+    container_name: mongo4.2
+    command: --profile 2
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=gfaks4d8OH
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')", "-u", "root", "-p", "gfaks4d8OH"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  postgres11:
+    image: ${POSTGRES_IMAGE:-postgres:11}
+    container_name: postgres11
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=gfaks4d8OH
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
