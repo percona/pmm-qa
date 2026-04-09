@@ -23,17 +23,16 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
    */
   test('run pmm-admin list on pmm-client docker container', async ({}) => {
     await expect(async () => {
-      const output = await cli.exec('docker exec pmm-client-1 pmm-admin list');
-      console.log(`-----pmm-admin list output:\n${output.stdout}\n------`);
-      await output.assertSuccess();
-      await output.outContainsMany([
-        'Service type',
-        'ps-8.0',
-        'mongodb-7.0',
-        'pdpgsql-1',
-        'Running',
-      ]);
-      await output.outNotContains('Unknown');
+      const output = JSON.parse((await cli.exec('docker exec pmm-client-1 pmm-admin list --json')).stdout);
+      const mysqlServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'ps-8.0');
+      const postgresqlServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'pdpgsql-1');
+      const mongodbServicePresent = output.service.some((service: { service_name: string }) => service.service_name === 'mongodb-7.0');
+      const unknownAgentStatus = output.agent.some((agent: { status: string }) => agent.status.toLowerCase().includes('unknown'));
+
+      expect.soft(mysqlServicePresent).toBeTruthy();
+      expect.soft(postgresqlServicePresent).toBeTruthy();
+      expect.soft(mongodbServicePresent).toBeTruthy();
+      expect.soft(unknownAgentStatus).toBeFalsy();
     }).toPass({
       timeout: 180_000,
       intervals: [2_000],

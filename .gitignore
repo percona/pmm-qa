@@ -11,3 +11,7 @@ e2e_tests/screenshots/*
 e2e_tests/.env
 cli/node_modules/
 e2e_tests/dist/
+cli/test-results/*
+cli/output/*
+cli/playwright-report/*
+cli/test-report/*
