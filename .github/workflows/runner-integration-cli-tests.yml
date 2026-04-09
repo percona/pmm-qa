@@ -75,6 +75,7 @@ jobs:
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.services_list || '--help' }}
       TAGS_FOR_TESTS: ${{ inputs.cli_tag }}
+      TEST_NAME: ${{ inputs.test_name || 'none' }}
 
     steps:
       - name: Create status check
@@ -135,7 +136,7 @@ jobs:
         id: test_name_processed
         with:
           script: |
-            return `${inputs.test_name.replaceAll(' ', '-')}`
+            return `${process.env.TEST_NAME.replaceAll(' ', '-')}`
           result-encoding: string
 
       - name: Prepare launchable
