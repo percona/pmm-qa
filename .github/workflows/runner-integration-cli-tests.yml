@@ -214,6 +214,7 @@ jobs:
         run: npx playwright test --quiet --grep "${{ inputs.cli_tag }}" $(cat launchable-subset.txt) || true
 
       - name: Record launchable test results
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/cli
         run: |
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json

@@ -65,6 +65,10 @@ on:
         required: false
         type: string
 
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
+
 jobs:
   # Canonical CLI tag mapping (defined in cli/tests/*.spec.ts):
   # @help, @server-only, @client-docker, @generic, @unregister,
