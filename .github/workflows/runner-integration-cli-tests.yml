@@ -157,7 +157,7 @@ jobs:
           export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.PMM_SERVER_IMAGE }} | cut -d@ -f2) || true
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "cli-tests-${{ steps.test_name_processed.outputs.result }}-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
-          
+          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > launchable-subset.txt || true
           echo "$(cat launchable-subset.txt)" || true
 
