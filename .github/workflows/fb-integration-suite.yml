@@ -62,6 +62,10 @@ on:
       sha:
         required: false
         type: string
+    
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: true
 
 jobs:
   help-tests:
