@@ -196,7 +196,7 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
-          docker run -d -p 80:80 -p 443:8443 -p 9000:9000 \
+          docker run -d -p 80:8080 -p 443:8443 -p 9000:9000 \
             -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             -e PMM_ENABLE_TELEMETRY=0 \
             -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
@@ -231,6 +231,14 @@ jobs:
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
           launchable gate --session "$(cat launchable-session.txt)"
 
+      # - name: Download logs
+      #   if: ${{ failure() }}
+      #   working-directory: pmm-qa/cli
+      #   run: |
+      #     curl --insecure http://admin:admin@127.0.0.1/logs.zip --output server-logs.zip
+      #     sudo pmm-admin summary --filename=client-logs.zip
+      #     unzip server-logs.zip -d server-logs
+      #     unzip client-logs.zip -d client-logs
       - name: Download logs
         if: ${{ failure() }}
         working-directory: pmm-qa/cli
