@@ -77,7 +77,8 @@ jobs:
   help-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -92,7 +93,8 @@ jobs:
   pmm-server-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -107,7 +109,8 @@ jobs:
   pmm-client-container-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -123,7 +126,8 @@ jobs:
   generic-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -139,7 +143,8 @@ jobs:
   remove-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -154,7 +159,8 @@ jobs:
   ps-57-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -170,7 +176,8 @@ jobs:
   ps-80-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -186,7 +193,8 @@ jobs:
   ps-84-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -202,7 +210,8 @@ jobs:
   mysql-80-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -218,7 +227,8 @@ jobs:
   mysql-84-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -234,7 +244,8 @@ jobs:
   pdpgsql-14-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -250,7 +261,8 @@ jobs:
   pdpgsql-15-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -266,7 +278,8 @@ jobs:
   pdpgsql-16-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -282,7 +295,8 @@ jobs:
   pdpgsql-17-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -298,7 +312,8 @@ jobs:
   pdpgsql-18-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -377,7 +392,8 @@ jobs:
   psmdb-6-replica-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -393,7 +409,8 @@ jobs:
   psmdb-7-replica-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -409,7 +426,8 @@ jobs:
   psmdb-8-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -425,7 +443,8 @@ jobs:
   psmdb-7-shard-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -441,7 +460,8 @@ jobs:
   psmdb-8-shard-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -457,7 +477,8 @@ jobs:
   haproxy-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -473,7 +494,8 @@ jobs:
   pxc-57-proxysql-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -489,7 +511,8 @@ jobs:
   pxc-80-proxysql-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
-    secrets: inherit
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
