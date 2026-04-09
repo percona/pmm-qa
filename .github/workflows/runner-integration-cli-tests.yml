@@ -218,13 +218,23 @@ jobs:
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
           launchable gate --session "$(cat launchable-session.txt)"
 
-      - name: Generate and Attach the report
-        if: ${{ failure() && !!inputs.cli_tag }}
+      - name: Download logs
+        if: ${{ failure() }}
+        working-directory: pmm-qa/cli
+        run: |
+          curl --insecure http://admin:admin@127.0.0.1/logs.zip --output server-logs.zip
+          sudo pmm-admin summary --filename=client-logs.zip
+          unzip server-logs.zip -d server-logs
+          unzip client-logs.zip -d client-logs
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
         continue-on-error: true
-        uses: actions/upload-artifact@v4
         with:
-          name: "report-${{ matrix.db-type }}"
-          path: ./pmm-qa/cli/test-report
+          name: "artifacts_for_${{ steps.tags_processed.outputs.result }}-${{ steps.test_name_processed.outputs.result }}"
+          path: |
+            pmm-qa/cli/server-logs
+            pmm-qa/cli/client-logs
 
       - name: Create status check
         if: ${{ env.SHA != 'null' && always() }}
