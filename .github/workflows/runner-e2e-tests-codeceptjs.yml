@@ -37,6 +37,11 @@ on:
         default: '3-dev-latest'
         required: false
         type: string
+      launchable_confidence:
+        description: "Launchable subset confidence percentage"
+        default: '100%'
+        required: false
+        type: string
       setup_services:
         description: "Setup arguments, ex.: --database=ps --database=psmdb"
         required: false
@@ -74,6 +79,9 @@ on:
       pmm_client_image:
         required: false
         type: string
+      launchable_confidence:
+        required: false
+        type: string
       setup_services:
         required: false
         type: string
@@ -107,6 +115,7 @@ jobs:
       CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
 
@@ -212,7 +221,7 @@ jobs:
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch codeceptjs > launchable-subset.json || true
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
           echo "$(cat launchable-subset.json)" || true
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable

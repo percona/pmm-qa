@@ -39,6 +39,11 @@ on:
         type: number
         default: 4
         required: false
+      launchable_confidence:
+        description: 'Launchable subset confidence percentage'
+        type: string
+        default: '100%'
+        required: false
 
   workflow_call:
     inputs:
@@ -62,6 +67,9 @@ on:
         required: true
       workers:
         type: number
+        required: false
+      launchable_confidence:
+        type: string
         required: false
     secrets:
       LAUNCHABLE_TOKEN:
@@ -110,6 +118,7 @@ jobs:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
       WORKERS: ${{ inputs.workers || 4 }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
 
     steps:
       - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
@@ -198,7 +207,7 @@ jobs:
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.txt || true
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > launchable-subset.txt || true
           echo "$(cat launchable-subset.txt)" || true
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
