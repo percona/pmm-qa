@@ -29,6 +29,11 @@ on:
         default: '3-dev-latest'
         required: false
         type: string
+      launchable_confidence:
+        description: 'Launchable subset confidence percentage'
+        default: '100%'
+        required: false
+        type: string
       setup_services:
         description: "Setup arguments, ex.: --addclient=ps,1 --ps-version=5.7"
         required: false
@@ -61,6 +66,9 @@ on:
         required: false
         type: string
       pmm_client_image:
+        required: false
+        type: string
+      launchable_confidence:
         required: false
         type: string
       setup_services:
