@@ -75,7 +75,7 @@ test.describe(
       removeList.push('PMM-T225');
       // @ts-ignore
       await out.outContains(
-        'Configuration warning: unknown environment variable PMM_DATA_TENTION=48.',
+        'Configuration warning: unknown environment variable PMM_DATA_TENTION=48',
       );
     });
 
