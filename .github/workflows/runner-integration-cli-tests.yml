@@ -220,14 +220,6 @@ jobs:
           launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
           launchable gate --session "$(cat launchable-session.txt)"
 
-      # - name: Download logs
-      #   if: ${{ failure() }}
-      #   working-directory: pmm-qa/cli
-      #   run: |
-      #     curl --insecure http://admin:admin@127.0.0.1/logs.zip --output server-logs.zip
-      #     sudo pmm-admin summary --filename=client-logs.zip
-      #     unzip server-logs.zip -d server-logs
-      #     unzip client-logs.zip -d client-logs
       - name: Download logs
         if: ${{ failure() }}
         working-directory: pmm-qa/cli
