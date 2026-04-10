@@ -88,7 +88,7 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ matrix.db-type }} CLI tests"
+          context: "CLI tests ${{ env.TEST_NAME }}"
           description: "Test execution ${{ job.status }}"
           state: "pending"
           repository: ${{ github.repository }}
