@@ -62,7 +62,7 @@ jobs:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
 
       ###  used in tests ###
-      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:3-dev-latest' }}
+      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
 
       # TODO: rename and update tests to use PMM_CLIENT_IMAGE instead
       CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
