@@ -1,4 +1,3 @@
-node_modules/*
 e2e_tests/node_modules/*
 e2e_tests/.idea/*
 e2e_tests/test-results/*
@@ -11,3 +10,9 @@ e2e_tests/screenshots/*
 .idea/*
 e2e_tests/.env
 .playwright-mcp/
+cli/node_modules/
+e2e_tests/dist/
+cli/test-results/*
+cli/output/*
+cli/playwright-report/*
+cli/test-report/*

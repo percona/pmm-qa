@@ -6,8 +6,8 @@ on:
         description: "Branch for qa-integration to checkout"
         required: false
         type: string
-      pmm_ui_tests_branch:
-        description: "Branch for PMM-UI(CLI) tests to checkout"
+      pmm_qa_branch:
+        description: "Branch for pmm-qa (CLI tests) to checkout"
         required: false
         type: string
       pmm_server_image:
@@ -28,8 +28,13 @@ on:
         description: "pmm-framework.py flags to perform setup"
         required: false
         type: string
-      cli_test:
-        description: "playwright test arguments to execute tests"
+      cli_tag:
+        description: "Playwright --grep tag expression to execute CLI tests"
+        required: true
+        type: string
+      launchable_confidence:
+        description: "Launchable subset confidence percentage"
+        default: "100%"
         required: false
         type: string
       test_name:
@@ -39,20 +44,25 @@ on:
         description: "SHA (leave empty if running manually, default - 'null')"
         required: false
         type: string
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
 
 jobs:
   cli-tests:
-    name: ${{ inputs.test_name || inputs.cli_test}}
+    name: ${{ inputs.test_name || inputs.cli_tag}}
     runs-on: ubuntu-22.04
     timeout-minutes: 40
     env:
       SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
-      PMM_QA_BRANCH: ${{ inputs.qa_integration_branch || 'main' }}
-      PMM_UI_TESTS_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'main' }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
 
       ###  used in tests ###
-      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-client:3-dev-latest' }}
+      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
 
       # TODO: rename and update tests to use PMM_CLIENT_IMAGE instead
       CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
@@ -68,6 +78,8 @@ jobs:
       # TODO: update tests to use PMM_SERVER_IMAGE instead
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.services_list || '--help' }}
+      TAGS_FOR_TESTS: ${{ inputs.cli_tag }}
+      TEST_NAME: ${{ inputs.test_name || 'none' }}
 
     steps:
       - name: Create status check
@@ -76,7 +88,7 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ matrix.db-type }} CLI tests"
+          context: "CLI tests ${{ env.TEST_NAME }}"
           description: "Test execution ${{ job.status }}"
           state: "pending"
           repository: ${{ github.repository }}
@@ -99,48 +111,94 @@ jobs:
       - name: Checkout qa-integration repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.PMM_QA_BRANCH }}
+          ref: ${{ env.QA_INTEGRATION_BRANCH }}
           repository: Percona-Lab/qa-integration
           path: ./qa-integration
 
-      - name: 'Checkout pmm-ui-tests: <${{ env.PMM_UI_TESTS_BRANCH }}>'
+      - name: 'Checkout pmm-qa: <${{ env.PMM_QA_BRANCH }}>'
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.PMM_UI_TESTS_BRANCH }}
-          repository: percona/pmm-ui-tests
-          path: ./pmm-ui-tests
+          ref: ${{ env.PMM_QA_BRANCH }}
+          repository: percona/pmm-qa
+          path: ./pmm-qa
 
       - name: Install playwright
-        working-directory: ./pmm-ui-tests/cli
+        working-directory: ./pmm-qa/cli
         run: |
           npm ci
-
-      - name: Setup tools
+   
+      - name: Pull PMM Server image <${{ env.PMM_SERVER_IMAGE }}>
+        working-directory: ./pmm-qa/cli
         run: |
-          sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio-dev libnuma-dev socat sysbench
-          sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
-          echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
-              /etc/apt/sources.list.d/clickhouse.list
-          sudo apt-get update
-          sudo apt-get install -y clickhouse-client
-          sudo apt-get install -y ansible
-          sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
+          docker pull ${{ env.PMM_SERVER_IMAGE }}
+
+      - uses: actions/github-script@v7
+        if: ${{ always() }}
+        id: tags_processed
+        with:
+          script: |
+            return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
+          result-encoding: string
+
+      - uses: actions/github-script@v7
+        if: ${{ always() }}
+        id: test_name_processed
+        with:
+          script: |
+            return `${process.env.TEST_NAME.replaceAll(' ', '-')}`
+          result-encoding: string
+
+      - name: Prepare launchable
+        working-directory: ./pmm-qa/cli
+        run: |
+          pip3 install --user --upgrade launchable~=1.0
+          launchable verify || true
+          
+          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.PMM_SERVER_IMAGE }} | cut -d@ -f2) || true
+          
+          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "cli-tests-${{ steps.test_name_processed.outputs.result }}-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > launchable-subset.txt || true
+          echo "$(cat launchable-subset.txt)" || true
+
+      - name: 'Check if launchable subset is empty'
+        working-directory: pmm-qa/cli
+        id: check_launchable_subset
+        run: |
+          SUBSET_FILE="launchable-subset.txt"
+
+          # Skip downstream setup/tests when subset is empty.
+          if [ -s "$SUBSET_FILE" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with setup and tests."
+          else
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Downstream setup and tests will be skipped."
+          fi
+
+      - name: Skip notice
+        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
+        run: echo "No tests selected by Launchable subset. Skipping setup and test execution."
 
       - name: 'Setup <PMM Sever>: "${{ env.PMM_SERVER_IMAGE }}"'
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         run: |
           docker create -v /srv --name pmm-server-data ${{ env.PMM_SERVER_IMAGE }}
-          docker run -d -p 80:80 -p 443:8443 -p 9000:9000 \
+          docker run -d -p 80:8080 -p 443:8443 -p 9000:9000 \
             -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+            -e PMM_ENABLE_TELEMETRY=0 \
             -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
             -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }} 
           timeout 240 bash -c 'while [[ "$(curl -k -s -o /dev/null -w ''%{http_code}'' https://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
 
       - name: 'Run qa-integration setup: ${{ env.WIZARD_ARGS }}'
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: qa-integration/pmm_qa
         run: |
           python3 -m venv virtenv
@@ -150,16 +208,35 @@ jobs:
           pip install -r requirements.txt
           python pmm-framework.py ${{ env.WIZARD_ARGS }}
 
-      - name: 'Run CLI tests: ${{ inputs.cli_test }}'
-        working-directory: ./pmm-ui-tests/cli
-        run: npx playwright test ${{ inputs.cli_test }} --quiet
+      - name: 'Run CLI tests: ${{ inputs.cli_tag }}'
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ./pmm-qa/cli
+        run: npx playwright test --quiet --grep "${{ inputs.cli_tag }}" $(cat launchable-subset.txt) || true
 
-      - name: Generate and Attach the report
-        if: ${{ failure() && !!inputs.cli_test }}
-        uses: actions/upload-artifact@v4
+      - name: Record launchable test results
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/cli
+        run: |
+          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable gate --session "$(cat launchable-session.txt)"
+
+      - name: Download logs
+        if: ${{ failure() }}
+        working-directory: pmm-qa/cli
+        run: |
+          curl --insecure http://admin:admin@127.0.0.1/logs.zip --output server-logs.zip
+          sudo pmm-admin summary --filename=client-logs.zip
+          unzip server-logs.zip -d server-logs
+          unzip client-logs.zip -d client-logs
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        continue-on-error: true
         with:
-          name: "report-${{ matrix.db-type }}"
-          path: ./pmm-ui-tests/cli/test-report
+          name: "artifacts_for_${{ steps.tags_processed.outputs.result }}-${{ steps.test_name_processed.outputs.result }}"
+          path: |
+            pmm-qa/cli/server-logs
+            pmm-qa/cli/client-logs
 
       - name: Create status check
         if: ${{ env.SHA != 'null' && always() }}
@@ -173,4 +250,8 @@ jobs:
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
+      
+      # - name: Setup tmate session  on failure
+      #   if: ${{ failure() }}
+      #   uses: percona/gh-action-action-tmate@v2
 
