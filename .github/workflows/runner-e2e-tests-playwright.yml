@@ -119,7 +119,7 @@ jobs:
       ADMIN_PASSWORD: 'admin-password'
       WORKERS: ${{ inputs.workers || 4 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
-      SUBSET_FILE_NAME: 'launchable-subset.json'
+      SUBSET_FILE_NAME: 'launchable-subset.txt'
 
     steps:
       - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
