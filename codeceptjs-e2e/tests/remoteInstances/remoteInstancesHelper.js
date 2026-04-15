@@ -323,12 +323,6 @@ module.exports = {
         aws_secret_key: process.env.PMM_QA_AWS_ACCESS_KEY,
         port: '42001',
         username: 'pmm',
-        mysqlaurora2: {
-          address: process.env.PMM_QA_AURORA2_MYSQL_HOST,
-          password: process.env.PMM_QA_AURORA2_MYSQL_PASSWORD,
-          instance_id: 'pmm-qa-aurora2-mysql-instance-1',
-          cluster_name: 'mysqlaws_aurora2',
-        },
         mysqlaurora3: {
           username: process.env.PMM_QA_AURORA3_MYSQL_USER,
           address: process.env.PMM_QA_AURORA3_MYSQL_HOST,

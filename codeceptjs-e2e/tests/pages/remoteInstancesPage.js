@@ -140,12 +140,6 @@ module.exports = {
     'Replication Set': 'rds57-replication',
     Cluster: 'rds57-cluster',
   },
-  postgresql13rds: {
-    'Service Name': 'pmmqa-rds-pgsql13-4',
-    Environment: 'RDS PGSQL 13',
-    'Replication Set': 'pgsqlrds13-replication',
-    Cluster: 'pgsqlrds13-cluster',
-  },
   postgresql14rds: {
     'Service Name': 'pmm-qa-rds-pgsql-14',
     Environment: 'RDS PGSQL 14',
