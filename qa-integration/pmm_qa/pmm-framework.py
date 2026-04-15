@@ -10,6 +10,15 @@ from scripts.get_env_value import get_value
 from scripts.database_options import database_options as database_configs
 from scripts.run_ansible_playbook import run_ansible_playbook
 
+LATEST_TARBALL_URL = "https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz"
+
+
+def normalize_client_version(client_version):
+    if client_version == "latest-tarball":
+        return LATEST_TARBALL_URL
+    return client_version
+
+
 def get_running_container_name():
     container_image_name = "pmm-server"
     container_name = ''
@@ -67,13 +76,14 @@ def setup_ps(db_type, db_version=None, db_config=None, args=None):
     ps_version = os.getenv('PS_VERSION') or db_version or database_configs[db_type]["versions"][-1]
     ps_version_int = int(ps_version.replace(".", ""))
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'SETUP_TYPE': setup_type_value,
         'NODES_COUNT': get_value('NODES_COUNT', db_type, args, db_config),
         'QUERY_SOURCE': get_value('QUERY_SOURCE', db_type, args, db_config),
         'PS_VERSION': ps_version,
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'MY_ROCKS': get_value('MY_ROCKS', db_type, args, db_config),
         'ENCRYPTED_CLIENT_CONFIG': get_value('ENCRYPTED_CLIENT_CONFIG', db_type, args, db_config),
@@ -103,6 +113,7 @@ def setup_mysql(db_type, db_version=None, db_config=None, args=None):
         no_of_nodes = 2
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'GROUP_REPLICATION': setup_type,
         'MS_NODES': no_of_nodes,
@@ -110,7 +121,7 @@ def setup_mysql(db_type, db_version=None, db_config=None, args=None):
         'SETUP_TYPE': setup_type_value,
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'MS_CONTAINER': 'mysql_pmm_' + str(ms_version),
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'QUERY_SOURCE': get_value('QUERY_SOURCE', db_type, args, db_config),
         'MS_TARBALL': get_value('TARBALL', db_type, args, db_config),
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
@@ -135,11 +146,12 @@ def setup_ssl_mysql(db_type, db_version=None, db_config=None, args=None):
     # Gather Version details
     ms_version = os.getenv('MS_VERSION') or db_version or database_configs[db_type]["versions"][-1]
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'MYSQL_VERSION': ms_version,
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'MYSQL_SSL_CONTAINER': 'mysql_ssl_' + str(ms_version),
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
     }
@@ -164,12 +176,13 @@ def setup_pdpgsql(db_type, db_version=None, db_config=None, args=None):
     pgsm_branch = get_value('PGSM_BRANCH', db_type, args, db_config).lower()
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PGSTAT_MONITOR_BRANCH': 'main',
         'PDPGSQL_VERSION': pdpgsql_version,
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'PDPGSQL_PGSM_CONTAINER': 'pdpgsql_pgsm_pmm_' + str(pdpgsql_version),
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PDPGSQL_PGSM_PORT': 5447,
@@ -198,12 +211,13 @@ def setup_ssl_pdpgsql(db_type, db_version=None, db_config=None, args=None):
     pdpgsql_version = os.getenv('PDPGSQL_VERSION') or db_version or database_configs[db_type]["versions"][-1]
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PGSTAT_MONITOR_BRANCH': 'main',
         'PGSQL_VERSION': pdpgsql_version,
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'PGSQL_SSL_CONTAINER': 'pdpgsql_pgsm_ssl_' + str(pdpgsql_version),
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
@@ -228,6 +242,7 @@ def setup_pgsql(db_type, db_version=None, db_config=None, args=None):
     setup_type_value = get_value('SETUP_TYPE', db_type, args, db_config).lower()
 
     print(f"Setup type is {setup_type_value}")
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
 
     if setup_type_value == "replication":
         # Define environment variables for playbook
@@ -235,7 +250,7 @@ def setup_pgsql(db_type, db_version=None, db_config=None, args=None):
             'PGSQL_VERSION': pgsql_version,
             'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
             'PGSQL_PGSS_CONTAINER': 'pgsql_pgss_pmm_' + str(pgsql_version),
-            'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+            'CLIENT_VERSION': client_version,
             'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
             'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
             'PGSQL_PGSS_PORT': 5448,
@@ -252,7 +267,7 @@ def setup_pgsql(db_type, db_version=None, db_config=None, args=None):
             'PGSQL_VERSION': pgsql_version,
             'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
             'PGSQL_PGSS_CONTAINER': 'pgsql_pgss_pmm_' + str(pgsql_version),
-            'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+            'CLIENT_VERSION': client_version,
             'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
             'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
             'PGSQL_PGSS_PORT': 5448,
@@ -274,10 +289,11 @@ def setup_haproxy(db_type, db_version=None, db_config=None, args=None):
         exit()
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'HAPROXY_CONTAINER': 'haproxy_pmm',
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
     }
@@ -302,12 +318,13 @@ def setup_external(db_type, db_version=None, db_config=None, args=None):
                           database_configs["EXTERNAL"]["NODEPROCESS"]["versions"][-1]
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'REDIS_EXPORTER_VERSION': redis_version,
         'NODE_PROCESS_EXPORTER_VERSION': nodeprocess_version,
         'EXTERNAL_CONTAINER': 'external_pmm',
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
     }
@@ -331,12 +348,13 @@ def setup_mlaunch_psmdb(db_type, db_version=None, db_config=None, args=None):
                     database_configs[db_type]["versions"][-1]
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PSMDB_VERSION': psmdb_version,
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'PSMDB_CONTAINER': 'psmdb_pmm_' + str(psmdb_version),
         'PSMDB_SETUP': get_value('SETUP_TYPE', db_type, args, db_config),
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
     }
@@ -360,12 +378,13 @@ def setup_mlaunch_modb(db_type, db_version=None, db_config=None, args=None):
                    database_configs[db_type]["versions"][-1]
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'MODB_VERSION': modb_version,
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'MODB_CONTAINER': 'modb_pmm_' + str(modb_version),
         'MODB_SETUP': get_value('SETUP_TYPE', db_type, args, db_config),
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
     }
@@ -513,12 +532,13 @@ def setup_psmdb(db_type, db_version=None, db_config=None, args=None):
     server_address = f'{server_hostname}:{port}'
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PSMDB_VERSION': psmdb_version,
         'PMM_SERVER_CONTAINER_ADDRESS': server_address,
         'PSMDB_CONTAINER': 'psmdb_pmm_' + str(psmdb_version),
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
-        'PMM_CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'PMM_CLIENT_VERSION': client_version,
         'COMPOSE_PROFILES': get_value('COMPOSE_PROFILES', db_type, args, db_config),
         'MONGO_SETUP_TYPE': get_value('SETUP_TYPE', db_type, args, db_config),
         'OL_VERSION': get_value('OL_VERSION', db_type, args, db_config),
@@ -655,12 +675,13 @@ def setup_ssl_psmdb(db_type, db_version=None, db_config=None, args=None):
     server_address = f'{server_hostname}:{port}'
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PSMDB_VERSION': psmdb_version,
         'PMM_SERVER_CONTAINER_ADDRESS': server_address,
         'PSMDB_CONTAINER': 'psmdb_pmm_' + str(psmdb_version),
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
-        'PMM_CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'PMM_CLIENT_VERSION': client_version,
         'COMPOSE_PROFILES': get_value('COMPOSE_PROFILES', db_type, args, db_config),
         'MONGO_SETUP_TYPE': get_value('SETUP_TYPE', db_type, args, db_config),
         'TESTS': 'no',
@@ -689,11 +710,12 @@ def setup_ssl_mlaunch(db_type, db_version=None, db_config=None, args=None):
                     database_configs[db_type]["versions"][-1]
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'MONGODB_VERSION': psmdb_version,
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'MONGODB_SSL_CONTAINER': 'psmdb_ssl_pmm_' + str(psmdb_version),
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
     }
@@ -717,6 +739,7 @@ def setup_pxc_proxysql(db_type, db_version=None, db_config=None, args=None):
     proxysql_version = os.getenv('PROXYSQL_VERSION') or database_configs["PROXYSQL"]["versions"][-1]
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PXC_NODES': '3',
         'PXC_VERSION': pxc_version,
@@ -725,7 +748,7 @@ def setup_pxc_proxysql(db_type, db_version=None, db_config=None, args=None):
         'PROXYSQL_PACKAGE': get_value('PACKAGE', 'PROXYSQL', args, db_config),
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'PXC_CONTAINER': 'pxc_proxysql_pmm_' + str(pxc_version),
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'QUERY_SOURCE': get_value('QUERY_SOURCE', db_type, args, db_config),
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
@@ -762,10 +785,11 @@ def setup_valkey(db_type, db_version=None, db_config=None, args=None):
     setup_type_value = get_value('SETUP_TYPE', db_type, args, db_config).lower()
 
     # Define environment variables for playbook
+    client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'VALKEY_VERSION': valkey_version,
-        'CLIENT_VERSION': get_value('CLIENT_VERSION', db_type, args, db_config),
+        'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
         'SETUP_TYPE': setup_type_value,

@@ -20,7 +20,7 @@ on:
             - 'docker-compose-nomad.yml'
           type: choice
       pmm_client_image:
-        description: 'pmm2-client docker image'
+        description: 'pmm3-client docker image'
         default: 'perconalab/pmm-client:3-dev-latest'
         required: false
         type: string
