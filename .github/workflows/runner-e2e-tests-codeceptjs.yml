@@ -174,7 +174,7 @@ jobs:
 
       - name: Setup PMM-Client
         working-directory: qa-integration/pmm_qa
-        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
@@ -218,8 +218,8 @@ jobs:
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
         working-directory: pmm-qa/codeceptjs-e2e
         env:
-          SERVER_IP : "192.168.0.1"
-          PMM_UI_URL : "http://192.168.0.1/"
+          SERVER_IP : "127.0.0.1"
+          PMM_UI_URL : "http://127.0.0.1/"
           PMM_URL : "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
           GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
         run: |
