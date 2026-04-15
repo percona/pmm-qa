@@ -266,7 +266,9 @@ jobs:
         working-directory: pmm-ui-tests
         continue-on-error: true
         run: |
-          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          fi
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}

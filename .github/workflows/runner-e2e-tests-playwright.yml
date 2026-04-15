@@ -244,7 +244,9 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         continue-on-error: true
         run: |
-          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          fi
 
       - name: Generate and Attach the report
         if: failure()
