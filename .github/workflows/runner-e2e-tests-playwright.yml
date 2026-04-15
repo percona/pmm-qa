@@ -29,11 +29,6 @@ on:
         type: string
         default: '--database ps=8.4,QUERY_SOURCE=slowlog'
         required: true
-      qa_integration_branch:
-        description: 'Branch for the qa-integration repository.'
-        type: string
-        default: 'main'
-        required: true
       workers:
         description: 'Number of workers for Playwright tests'
         type: number
@@ -62,9 +57,6 @@ on:
       setup_services:
         type: string
         required: false
-      qa_integration_branch:
-        type: string
-        required: true
       workers:
         type: number
         required: false
@@ -106,7 +98,6 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'main' }}
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       DOCKER_VERSION: ${{ inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
       CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
@@ -135,13 +126,6 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: Checkout qa-integration repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.QA_INTEGRATION_BRANCH }}
-          repository: Percona-Lab/qa-integration
-          path: ./qa-integration
-
       - name: Checkout pmm-qa repo
         uses: actions/checkout@v4
         with:
@@ -169,7 +153,7 @@ jobs:
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
       - name: Setup PMM-Client
-        working-directory: qa-integration/pmm_qa
+        working-directory: pmm-qa/qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Install playwright
@@ -180,7 +164,7 @@ jobs:
           npx playwright install chromium
 
       - name: Run Setup for E2E Tests
-        working-directory: qa-integration/pmm_qa
+        working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
           python3 -m venv virtenv
           . virtenv/bin/activate

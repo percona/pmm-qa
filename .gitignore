@@ -134,3 +134,6 @@ dist
 # Config for Local developmnent
 /local.config.js
 
+# Pytest cache
+**/__pycache__
+**/.pytest_cache

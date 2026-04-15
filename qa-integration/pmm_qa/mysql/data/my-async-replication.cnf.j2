@@ -1,0 +1,42 @@
+[mysqld]
+# General server configuration
+server_id={{ item }}
+bind-address=0.0.0.0
+port={{ mysql_listen_port }}
+
+# Authentication settings for caching_sha2_password
+caching_sha2_password_auto_generate_rsa_keys=ON
+# The following two parameters tell MySQL where to store the RSA key pair
+caching_sha2_password_private_key_path=private_key.pem
+caching_sha2_password_public_key_path=public_key.pem
+
+# Replication settings
+gtid_mode=ON
+enforce_gtid_consistency=ON
+log_bin=binlog
+log_replica_updates=ON
+sync_binlog=1
+binlog_checksum=NONE
+disabled_storage_engines="MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY"
+# MacOS-specific, where table names are case-sensitive
+lower_case_table_names=2
+
+# MySQL 8.4 compatibility settings
+report_host={{ container_prefix }}{{ item }}
+
+# Replica configuration - applies to all nodes except primary (they'll be able to become replicas)
+{% if item != 1 %}
+# Replica specific settings
+replica_parallel_workers=4
+replica_parallel_type=LOGICAL_CLOCK
+replica_preserve_commit_order=1
+{% endif %}
+
+# Crash-safe replication settings
+relay-log={{ container_prefix }}{{ item }}-relay-bin
+relay_log_recovery=ON
+relay_log_purge=ON
+
+# Performance and connection settings
+max_connections=1000
+innodb_buffer_pool_size=256M

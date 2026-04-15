@@ -1,0 +1,36 @@
+- name: Detect OS inside the container
+  shell: docker exec {{ container_prefix }}1 cat /etc/os-release
+  register: container_os_info
+
+- name: Set distro family (debian/rhel)
+  set_fact:
+    distro_family: >-
+      {{
+        (
+          'debian' if 'debian' in container_os_info.stdout | lower else
+          'rhel' if 'rhel' in container_os_info.stdout | lower or 'centos' in container_os_info.stdout | lower or 'fedora' in container_os_info.stdout | lower
+          else 'unknown'
+        ) | trim
+      }}
+
+- name: Install dependencies inside Debian-family container
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} apt update
+    docker exec {{ container_prefix }}{{ item }} apt install -y percona-pg-stat-monitor{{ pdpgsql_version }}
+  when: distro_family == "debian"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install dependencies inside RHEL-family container
+  shell: docker exec {{ container_prefix }}{{ item }} microdnf install percona-pg-stat-monitor{{ pdpgsql_version }}
+  when: distro_family == "rhel"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Create pg_stat_statements extension
+  shell: |
+    docker exec -u postgres {{ container_prefix }}1 \
+      env PGPASSWORD=postgres \
+      psql -U postgres -d 'postgres' -c "
+        CREATE EXTENSION IF NOT EXISTS pg_stat_monitor;
+        SELECT pg_stat_monitor_version();
+      "
+
