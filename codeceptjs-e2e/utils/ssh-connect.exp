@@ -1,0 +1,58 @@
+#!/usr/bin/expect
+
+# Get arguments
+set ip [lindex $argv 0]
+set username [lindex $argv 1]
+set password [lindex $argv 2]
+set port [lindex $argv 3]
+
+# Start SSH session
+spawn ssh $username@$ip -p $port
+
+expect {
+    # Handle first-time fingerprint prompt
+    "Are you sure you want to continue connecting" {
+        send "yes\r"
+        exp_continue
+    }
+
+    # Handle password prompt
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+
+    # Handle incorrect password
+    "Permission denied, please try again." {
+        puts "❌ Permission denied error."
+        exit 1
+    }
+
+    # Handle successful SSH connection (which is considered an error in your case)
+    "Welcome*" {
+        puts "✅ Successful SSH login."
+        exit 1
+    }
+
+    # Handle various connection errors
+    "Connection refused" {
+        puts "❌ SSH connection refused. Please check IP and port."
+        exit 1
+    }
+    "No route to host" {
+        puts "❌ No route to host. Please check network connection."
+        exit 1
+    }
+    "Could not resolve hostname" {
+        puts "❌ Invalid IP or hostname. Please verify your input."
+        exit 1
+    }
+    "Host key verification failed." {
+        puts "❌ SSH fingerprint verification failed. Try removing known hosts entry."
+        exit 1
+    }
+    timeout {
+        puts "❌ Connection timed out. The server might be unreachable."
+        exit 1
+    }
+}

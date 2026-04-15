@@ -4,11 +4,6 @@ name: runner-upgrade-tests
 on:
   workflow_call:
     inputs:
-      pmm_ui_tests_branch:
-        description: 'pmm-ui-tests repository branch'
-        default: 'main'
-        type: string
-        required: true
       pre_upgrade_tests:
         description: 'Tag(s) to run tests before upgrade'
         type: string
@@ -56,10 +51,6 @@ on:
 
   workflow_dispatch:
     inputs:
-      pmm_ui_tests_branch:
-        description: 'pmm-ui-tests repository branch'
-        default: 'main'
-        required: true
       pre_upgrade_tests:
         description: 'Tag(s) to run tests before upgrade'
         required: true
@@ -142,7 +133,7 @@ jobs:
           echo $job_tag
           echo "JOB_TAG=$job_tag" >> $GITHUB_ENV
 
-      - name: 'PMM Server(${{ inputs.pmm_server_start_version }}) and UI tests with tags "${{ inputs.pre_upgrade_tests }}, ${{ inputs.post_upgrade_tests }}" from pmm-ui-tests branch: ${{ inputs.pmm_ui_tests_branch }}'
+      - name: 'PMM Server(${{ inputs.pmm_server_start_version }}) and UI tests with tags "${{ inputs.pre_upgrade_tests }}, ${{ inputs.post_upgrade_tests }}"'
         if: ${{ env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@v1
         with:
@@ -206,19 +197,6 @@ jobs:
             fi
           fi
 
-      - name: 'Checkout UI tests: "${{ inputs.pmm_ui_tests_branch }}"'
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ inputs.pmm_ui_tests_branch }}
-          repository: percona/pmm-ui-tests
-          path: ./pmm-ui-tests
-
-      - name: 'Install playwright'
-        working-directory: ./pmm-ui-tests/playwright-tests
-        run: |
-          npm install
-          npx playwright install
-
       - name: 'Checkout pmm-qa: "${{ inputs.pmm_qa_branch }}"'
         uses: actions/checkout@v3
         with:
@@ -227,9 +205,15 @@ jobs:
           ref: ${{ inputs.pmm_qa_branch }}
           path: ./pmm-qa
 
+      - name: 'Install playwright'
+        working-directory: ./pmm-qa/e2e_tests
+        run: |
+          npm install
+          npx playwright install
+
       - name: 'Install Podman'
         if: ${{ inputs.upgrade_type == 'Podman way' }}
-        working-directory: ./pmm-ui-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           . /etc/os-release
           echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee \
@@ -242,7 +226,7 @@ jobs:
 
       - name: 'Setup Podman <PMM Sever>: "${{ steps.pmm_server_start_image.outputs.result }}"'
         if: ${{ inputs.upgrade_type == 'Podman way' }}
-        working-directory: ./pmm-ui-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           ### create service files
           mkdir -p ~/.config/systemd/user/
@@ -336,7 +320,7 @@ jobs:
 
       - name: 'Tests <BEFORE> upgrade'
         id: ui-tests-flagged
-        working-directory: ./pmm-ui-tests/playwright-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           project="${{ contains(env.PMM_TEST_FLAG, 'portal') && 'Portal' || 'Chromium' }}"
           npx playwright test --project=$project --grep="${{ inputs.pre_upgrade_tests }}" --pass-with-no-tests
@@ -345,7 +329,7 @@ jobs:
 
       - name: 'Enable <${{ steps.target_repo.outputs.result }}> repo in pmm-server container'
         if: ${{ inputs.upgrade_type == 'UI way' }}
-        working-directory: ./pmm-ui-tests/playwright-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           docker exec pmm-integration-server dnf update -y percona-release || true
           if [[ "${{ inputs.repository }}" != "release" ]]; then
@@ -361,14 +345,14 @@ jobs:
 
       - name: 'Upgrade pmm-server: <UI way>'
         if: ${{ inputs.upgrade_type == 'UI way' }}
-        working-directory: ./pmm-ui-tests/playwright-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: npx playwright test --project=Chromium --grep="@pmm-upgrade"
         env:
           NODE_TLS_REJECT_UNAUTHORIZED: 0
 
       - name: 'Upgrade pmm-server: <Docker way>'
         if: ${{ inputs.upgrade_type == 'Docker way' }}
-        working-directory: ./pmm-ui-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           # TODO: implement qa-integration docker upgrade
           echo "Upgrading to ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
@@ -386,7 +370,7 @@ jobs:
 
       - name: 'Upgrade pmm-server: <Podman way>'
         if: ${{ inputs.upgrade_type == 'Podman way' }}
-        working-directory: ./pmm-ui-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           echo "Upgrading to ${{ steps.pmm_server_to_image.outputs.IMAGE }}"
           mkdir -p ~/.config/pmm-server/
@@ -398,7 +382,7 @@ jobs:
           timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://${{ env.PMM_SERVER_IP }}/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: 'Tests <before PMM Client> upgrade'
-        working-directory: ./pmm-ui-tests/playwright-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           echo "Hook to inject tests: test are coming soon..."
 
@@ -412,7 +396,7 @@ jobs:
           # TODO: add client check after update here
 
       - name: 'Tests <AFTER> upgrading Client and Server'
-        working-directory: ./pmm-ui-tests/playwright-tests
+        working-directory: ./pmm-qa/e2e_tests
         run: |
           project="${{ contains(env.PMM_TEST_FLAG, 'portal') && 'Portal' || 'Chromium' }}"
           npx playwright test --project=$project --grep="${{ inputs.post_upgrade_tests }}" --pass-with-no-tests
@@ -432,4 +416,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPORT_NAME }}
-          path: ./pmm-ui-tests/playwright-tests/playwright-report
+          path: ./pmm-qa/e2e_tests/playwright-report
