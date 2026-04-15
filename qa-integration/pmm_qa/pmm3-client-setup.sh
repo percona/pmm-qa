@@ -72,6 +72,10 @@ if [[ "$client_version" == "pmm3-latest" ]]; then
     percona-release enable-only pmm3-client experimental
 fi
 
+if [[ "$client_version" == "latest-tarball" ]]; then
+    client_version="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz"
+fi
+
 ## Only supported for debian based systems for now
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   wget -O pmm-client.deb https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-7.$(lsb_release -sc)_amd64.deb

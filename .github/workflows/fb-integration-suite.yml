@@ -19,8 +19,8 @@ on:
         required: false
         type: string
       pmm_client_version:
-        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        description: 'PMM Client version (latest-tarball|pmm3-rc|x.xx.x|https...)'
+        default: 'latest-tarball'
         required: false
         type: string
       launchable_confidence:
@@ -70,5 +70,5 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}

@@ -16,8 +16,8 @@ on:
         required: false
         type: string
       pmm_client_version:
-        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        description: 'PMM Client version (latest-tarball|pmm3-rc|x.xx.x|https...)'
+        default: 'latest-tarball'
         required: true
         type: string
       services_list:
@@ -52,7 +52,7 @@ jobs:
     env:
       SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
 
@@ -63,7 +63,7 @@ jobs:
       CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
 
       # TODO: rename and update tests to use PMM_CLIENT_VERSION instead
-      CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
 
       # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
       # TODO: update tests to use PMM_SERVER_IMAGE instead
