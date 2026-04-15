@@ -8,11 +8,6 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
     inputs:
-      pmm_ui_tests_branch:
-        description: 'pmm-ui-tests repository branch(CLI tests)'
-        default: 'main'
-        required: false
-        type: string
       pmm_qa_branch:
         description: 'pmm-qa repository branch'
         default: 'main'
@@ -46,9 +41,6 @@ on:
 
   workflow_call:
     inputs:
-      pmm_ui_tests_branch:
-        required: false
-        type: string
       pmm_qa_branch:
         required: false
         type: string
@@ -85,7 +77,6 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database pgsql'
       tags_for_tests: '@settings|@cli'
@@ -100,7 +91,6 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ssl_mysql'
       tags_for_tests: '@ssl-mysql'
@@ -115,7 +105,6 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ssl_psmdb'
       tags_for_tests: '@ssl-mongo'
@@ -130,7 +119,6 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ssl_pdpgsql=16'
       tags_for_tests: '@ssl-postgres'
@@ -145,7 +133,6 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database pdpgsql'
       tags_for_tests: '@experimental'
@@ -160,7 +147,6 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--help'
       tags_for_tests: '@disconnect'
@@ -227,6 +213,5 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
-      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
 
