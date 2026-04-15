@@ -54,12 +54,6 @@ if (remoteInstancesHelper.getInstanceStatus('azure').azure_postgresql.enabled) {
 const aws_instances = new DataTable(['service_name', 'password', 'instance_id', 'cluster_name']);
 
 aws_instances.add([
-  remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora2.address,
-  remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora2.password,
-  remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora2.instance_id,
-  remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora2.cluster_name,
-]);
-aws_instances.add([
   remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora3.address,
   remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora3.password,
   remoteInstancesHelper.remote_instance.aws.aurora.mysqlaurora3.instance_id,
