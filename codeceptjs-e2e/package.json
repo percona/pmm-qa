@@ -4,7 +4,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/percona/pmm-ui-tests.git"
+    "url": "https://github.com/percona/pmm-qa.git"
   },
   "scripts": {
     "lint:tests": "eslint --ext .js --fix tests/",
