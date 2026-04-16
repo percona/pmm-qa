@@ -7,6 +7,10 @@ networks:
   pmm-network:
     driver: bridge
     # No fixed subnet: Docker assigns an available range to avoid "Pool overlaps" errors.
+    ipam:
+      config:
+        - subnet: 192.168.0.0/24
+          gateway: 192.168.0.1
   pmm-qa:
     external: true
 
