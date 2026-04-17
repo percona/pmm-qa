@@ -81,7 +81,7 @@ Scenario(
     let logs = '';
 
     await I.asyncWaitFor(async () => {
-      logs = await I.verifyCommand('docker exec pmm-server cat /srv/logs/pmm-managed.log | grep mongodb_collector_scrape_time');
+      logs = await I.verifyCommand('docker exec pmm-server cat /srv/logs/pmm-managed.log | grep mongodb_collector_scrape_time || true');
 
       return logs.includes(telemetry.collstats) && logs.includes(telemetry.dbstats) && logs.includes(telemetry.diagnosticData)
         && logs.includes(telemetry.general) && logs.includes(telemetry.indexstats) && logs.includes(telemetry.top)
