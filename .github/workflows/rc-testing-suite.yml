@@ -1,0 +1,378 @@
+name: "RC Testing Suite"
+
+# One-click umbrella that fans out to every GitHub Actions workflow listed in
+# the PMM Release Sign Off checklist (see "SDET Activities" table in
+# https://www.notion.so/percona/3-7-0-31e674d091f380cdb6cae81e6451ee14 ).
+#
+# Scope of this umbrella: ONLY GHA workflows referenced by the checklist.
+# The Jenkins-hosted rows in the checklist (pmm3-ui-tests-nightly,
+# pmm3-upgrade-tests-matrix, pmm3-ui-tests-matrix, pmm3-ui-tests-nightly-gssapi,
+# pmm3-migration-tests, pmm3-upgrade-ami-test, pmm3-package-testing-matrix,
+# pmm3-package-testing-arm-matrix, openshift-helm-tests) are orchestrated
+# from the Jenkins side (pmm3-rc-testing.groovy in percona-Lab/jenkins-pipelines).
+#
+# Checklist-to-workflow mapping (from the PMM 3.7.0 sign-off):
+#   - pmm-cli-integration-tests     -> integration-cli-tests.yml
+#   - Compatibility integration     -> integration-cli-tests.yml (older client)
+#   - E2E tests Matrix (CodeceptJS) -> e2e-tests-matrix.yml
+#   - pmm3-helm                     -> helm-tests.yml
+#   - GSSAPI Tests Matrix           -> gssapi-psmdb-tests-matrix.yml
+#   - qa-integration/PMM_PSMDB_PBM_FULL -> Percona-Lab/qa-integration
+#   - qa-integration/PMM_PROXYSQL       -> Percona-Lab/qa-integration
+#   - qa-integration/PMM_PDPGSQL        -> Percona-Lab/qa-integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_server_image:
+        description: 'PMM Server docker image (e.g. perconalab/pmm-server:3.7.0-rc)'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        required: true
+        type: string
+      pmm_client_image:
+        description: 'PMM Client docker image (e.g. perconalab/pmm-client:3.7.0-rc)'
+        default: 'perconalab/pmm-client:3-dev-latest'
+        required: true
+        type: string
+      pmm_client_version:
+        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.y.z|https://...tar.gz)'
+        default: '3-dev-latest'
+        required: true
+        type: string
+      pmm_client_tarball_ol8:
+        description: 'OL8 pmm-client tarball (GSSAPI matrix)'
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz'
+        required: false
+        type: string
+      pmm_client_tarball_ol9:
+        description: 'OL9 pmm-client tarball (GSSAPI matrix)'
+        default: 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz'
+        required: false
+        type: string
+      expected_client_version:
+        description: 'Expected pmm-client version for GSSAPI package tests'
+        default: '3-dev-latest'
+        required: false
+        type: string
+      repository:
+        description: 'Repository used by package/GSSAPI tests'
+        default: 'release candidate'
+        required: true
+        type: choice
+        options:
+          - release
+          - release candidate
+          - dev-latest
+      compatibility_client_version:
+        description: 'Older PMM Client version for compatibility run (empty = skip compatibility)'
+        default: ''
+        required: false
+        type: string
+      compatibility_client_image:
+        description: 'Older PMM Client image for compatibility run (empty = skip compatibility)'
+        default: ''
+        required: false
+        type: string
+      pmm_qa_branch:
+        description: 'Branch for pmm-qa'
+        default: 'main'
+        required: false
+        type: string
+      pmm_ui_tests_branch:
+        description: 'Branch for pmm-ui-tests'
+        default: 'main'
+        required: false
+        type: string
+      qa_integration_branch:
+        description: 'Branch for qa-integration'
+        default: 'main'
+        required: false
+        type: string
+      pmm_chart_branch:
+        description: 'Branch for percona-helm-charts (helm tests)'
+        default: 'latest'
+        required: false
+        type: string
+      suites:
+        description: 'Comma-separated suite list or "all" (cli, compatibility, e2e, helm, gssapi, qa_integration)'
+        default: 'all'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_server_image:
+        required: true
+        type: string
+      pmm_client_image:
+        required: true
+        type: string
+      pmm_client_version:
+        required: true
+        type: string
+      pmm_client_tarball_ol8:
+        required: false
+        type: string
+      pmm_client_tarball_ol9:
+        required: false
+        type: string
+      expected_client_version:
+        required: false
+        type: string
+      repository:
+        required: true
+        type: string
+      compatibility_client_version:
+        required: false
+        type: string
+      compatibility_client_image:
+        required: false
+        type: string
+      pmm_qa_branch:
+        required: false
+        type: string
+      pmm_ui_tests_branch:
+        required: false
+        type: string
+      qa_integration_branch:
+        required: false
+        type: string
+      pmm_chart_branch:
+        required: false
+        type: string
+      suites:
+        required: false
+        type: string
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
+      BACKUP_LOCATION_ACCESS_KEY:
+        required: false
+      BACKUP_LOCATION_SECRET_KEY:
+        required: false
+      QA_INTEGRATION_DISPATCH_TOKEN:
+        required: false
+
+jobs:
+  plan:
+    name: Plan suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    outputs:
+      run_cli: ${{ steps.pick.outputs.run_cli }}
+      run_compatibility: ${{ steps.pick.outputs.run_compatibility }}
+      run_e2e: ${{ steps.pick.outputs.run_e2e }}
+      run_helm: ${{ steps.pick.outputs.run_helm }}
+      run_gssapi: ${{ steps.pick.outputs.run_gssapi }}
+      run_qa_integration: ${{ steps.pick.outputs.run_qa_integration }}
+    steps:
+      - id: pick
+        shell: bash
+        env:
+          SUITES: ${{ inputs.suites || 'all' }}
+          COMPAT_VERSION: ${{ inputs.compatibility_client_version }}
+        run: |
+          set -euo pipefail
+          should_run() {
+            local suite=$1
+            if [[ "$SUITES" == "all" ]]; then
+              echo "true"; return
+            fi
+            IFS=',' read -ra items <<< "$SUITES"
+            for item in "${items[@]}"; do
+              [[ "$(echo "$item" | tr -d ' ')" == "$suite" ]] && echo "true" && return
+            done
+            echo "false"
+          }
+
+          run_cli=$(should_run cli)
+          run_e2e=$(should_run e2e)
+          run_helm=$(should_run helm)
+          run_gssapi=$(should_run gssapi)
+          run_qa_integration=$(should_run qa_integration)
+
+          # Compatibility piggybacks on the CLI workflow with an older client.
+          # Skip it if no older client was supplied.
+          run_compatibility=$(should_run compatibility)
+          if [[ -z "$COMPAT_VERSION" ]]; then
+            run_compatibility=false
+          fi
+
+          {
+            echo "run_cli=$run_cli"
+            echo "run_compatibility=$run_compatibility"
+            echo "run_e2e=$run_e2e"
+            echo "run_helm=$run_helm"
+            echo "run_gssapi=$run_gssapi"
+            echo "run_qa_integration=$run_qa_integration"
+          } >> "$GITHUB_OUTPUT"
+
+  cli_integration_tests:
+    name: CLI integration (pmm-cli-integration-tests)
+    needs: plan
+    if: needs.plan.outputs.run_cli == 'true'
+    uses: ./.github/workflows/integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image }}
+      pmm_client_image: ${{ inputs.pmm_client_image }}
+      pmm_client_version: ${{ inputs.pmm_client_version }}
+
+  compatibility_integration_tests:
+    name: Compatibility integration (older client)
+    needs: plan
+    if: needs.plan.outputs.run_compatibility == 'true'
+    uses: ./.github/workflows/integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image }}
+      pmm_client_image: ${{ inputs.compatibility_client_image || inputs.pmm_client_image }}
+      pmm_client_version: ${{ inputs.compatibility_client_version || inputs.pmm_client_version }}
+
+  e2e_tests_matrix:
+    name: E2E Tests Matrix (CodeceptJS)
+    needs: plan
+    if: needs.plan.outputs.run_e2e == 'true'
+    uses: ./.github/workflows/e2e-tests-matrix.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image }}
+      pmm_client_image: ${{ inputs.pmm_client_image }}
+      pmm_client_version: ${{ inputs.pmm_client_version }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
+
+  helm_tests:
+    name: pmm3-helm
+    needs: plan
+    if: needs.plan.outputs.run_helm == 'true'
+    uses: ./.github/workflows/helm-tests.yml
+    secrets: inherit
+    with:
+      server_image: ${{ inputs.pmm_server_image }}
+      client_image: ${{ inputs.pmm_client_image }}
+      pmm_chart_branch: ${{ inputs.pmm_chart_branch || 'latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+
+  gssapi_tests:
+    name: GSSAPI Tests Matrix
+    needs: plan
+    if: needs.plan.outputs.run_gssapi == 'true'
+    uses: ./.github/workflows/gssapi-psmdb-tests-matrix.yml
+    secrets: inherit
+    with:
+      pmm_server_image: ${{ inputs.pmm_server_image }}
+      pmm_client_image: ${{ inputs.pmm_client_image }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_ui_tests_branch: ${{ inputs.pmm_ui_tests_branch || 'main' }}
+      expected_version: ${{ inputs.expected_client_version || inputs.pmm_client_version }}
+
+  # qa-integration lives in Percona-Lab/qa-integration, so we dispatch each of
+  # its three checklist workflows over the GitHub API. Requires a PAT with
+  # `actions:write` on Percona-Lab/qa-integration, exposed here as the
+  # `QA_INTEGRATION_DISPATCH_TOKEN` secret. If the secret is missing, this job
+  # is skipped and the umbrella continues without failing.
+  qa_integration_dispatch:
+    name: qa-integration (PSMDB_PBM_FULL | PROXYSQL | PDPGSQL)
+    needs: plan
+    if: needs.plan.outputs.run_qa_integration == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check for dispatch token
+        id: gate
+        env:
+          QA_INTEGRATION_DISPATCH_TOKEN: ${{ secrets.QA_INTEGRATION_DISPATCH_TOKEN }}
+        run: |
+          if [[ -z "${QA_INTEGRATION_DISPATCH_TOKEN:-}" ]]; then
+            echo "::warning::QA_INTEGRATION_DISPATCH_TOKEN not set – skipping qa-integration dispatches."
+            echo "dispatch=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "dispatch=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dispatch qa-integration workflows
+        if: steps.gate.outputs.dispatch == 'true'
+        env:
+          QA_INTEGRATION_DISPATCH_TOKEN: ${{ secrets.QA_INTEGRATION_DISPATCH_TOKEN }}
+          PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}
+          PMM_CLIENT_IMAGE: ${{ inputs.pmm_client_image }}
+          PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version }}
+          QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'main' }}
+        run: |
+          set -euo pipefail
+          dispatch() {
+            local workflow=$1
+            echo "Dispatching Percona-Lab/qa-integration/.github/workflows/${workflow}"
+            curl -fsS -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${QA_INTEGRATION_DISPATCH_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/Percona-Lab/qa-integration/actions/workflows/${workflow}/dispatches" \
+              -d "$(jq -nc \
+                    --arg ref "$QA_INTEGRATION_BRANCH" \
+                    --arg server "$PMM_SERVER_IMAGE" \
+                    --arg client "$PMM_CLIENT_IMAGE" \
+                    --arg client_version "$PMM_CLIENT_VERSION" \
+                    '{ref: $ref, inputs: {pmm_server_image: $server, pmm_client_image: $client, pmm_client_version: $client_version}}')"
+          }
+
+          # Filenames come from the actual 3.7.0 executions (gh run view):
+          #   PMM_PSMDB_PBM_FULL.yml, PMM_PROXYSQL.yaml, PMM_PDPGSQL.yaml
+          dispatch PMM_PSMDB_PBM_FULL.yml
+          dispatch PMM_PROXYSQL.yaml
+          dispatch PMM_PDPGSQL.yaml
+          echo "qa-integration dispatches issued; follow them at https://github.com/Percona-Lab/qa-integration/actions"
+
+  summary:
+    name: RC Suite Summary
+    if: always()
+    needs:
+      - plan
+      - cli_integration_tests
+      - compatibility_integration_tests
+      - e2e_tests_matrix
+      - helm_tests
+      - gssapi_tests
+      - qa_integration_dispatch
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Aggregate results
+        shell: bash
+        env:
+          CLI: ${{ needs.cli_integration_tests.result }}
+          COMPAT: ${{ needs.compatibility_integration_tests.result }}
+          E2E: ${{ needs.e2e_tests_matrix.result }}
+          HELM: ${{ needs.helm_tests.result }}
+          GSSAPI: ${{ needs.gssapi_tests.result }}
+          QA_INT: ${{ needs.qa_integration_dispatch.result }}
+        run: |
+          set -euo pipefail
+          printf 'Suite                  | Result\n'
+          printf '-----------------------+---------\n'
+          printf 'CLI integration        | %s\n' "$CLI"
+          printf 'Compatibility integ.   | %s\n' "$COMPAT"
+          printf 'E2E Tests Matrix       | %s\n' "$E2E"
+          printf 'Helm tests             | %s\n' "$HELM"
+          printf 'GSSAPI Tests Matrix    | %s\n' "$GSSAPI"
+          printf 'qa-integration fan-out | %s\n' "$QA_INT"
+
+          fail=0
+          for r in "$CLI" "$COMPAT" "$E2E" "$HELM" "$GSSAPI" "$QA_INT"; do
+            case "$r" in
+              success|skipped|"") ;;
+              *) fail=1 ;;
+            esac
+          done
+          if [[ "$fail" == "1" ]]; then
+            echo "::error::One or more RC suites failed"
+            exit 1
+          fi
