@@ -11,6 +11,7 @@ import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
+import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
@@ -63,6 +64,7 @@ const pmmTest = base.extend<{
   tour: TourPage;
   welcomePage: WelcomePage;
   mocks: Mocks;
+  leftNavigation: LeftNavigation;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
@@ -78,6 +80,33 @@ const pmmTest = base.extend<{
     const cliHelper = new CliHelper();
 
     await use(cliHelper);
+  },
+  context: async ({ context }, use) => {
+    await context.route('**/v1/users/me', (route) =>
+      route.fulfill({
+        body: JSON.stringify({
+          alerting_tour_completed: true,
+          product_tour_completed: true,
+          snoozed_pmm_version: '',
+          user_id: 1,
+        }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    );
+    await context.route('**/v1/server/updates**', (route) => {
+      return route.fulfill({
+        body: JSON.stringify({
+          installed: {},
+          last_check: new Date().toISOString(),
+          latest: {},
+          update_available: false,
+        }),
+        contentType: 'application/json',
+        status: 200,
+      });
+    });
+    await use(context);
   },
   credentials: async ({}, use) => {
     const credentials = new Credentials();
@@ -98,6 +127,11 @@ const pmmTest = base.extend<{
     const helpPage = new HelpPage(page);
 
     await use(helpPage);
+  },
+  leftNavigation: async ({ page }, use) => {
+    const leftNavigation = new LeftNavigation(page);
+
+    await use(leftNavigation);
   },
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);

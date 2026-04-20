@@ -39,6 +39,11 @@ on:
         type: number
         default: 4
         required: false
+      launchable_confidence:
+        description: 'Launchable subset confidence percentage'
+        type: string
+        default: '100%'
+        required: false
 
   workflow_call:
     inputs:
@@ -62,6 +67,9 @@ on:
         required: true
       workers:
         type: number
+        required: false
+      launchable_confidence:
+        type: string
         required: false
     secrets:
       LAUNCHABLE_TOKEN:
@@ -110,6 +118,8 @@ jobs:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
       WORKERS: ${{ inputs.workers || 4 }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
+      SUBSET_FILE_NAME: 'launchable-subset.txt'
 
     steps:
       - name: PMM server version ${{ inputs.pmm_server_version }} and UI tests for flag "${{ inputs.pmm_test_flag }}" and pmm-ui-tests branch ${{ inputs.pmm_qa_branch }}
@@ -198,22 +208,19 @@ jobs:
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "pw-ui-tests-${{ env.REPORT_NAME }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch playwright > launchable-subset.txt || true
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > launchable-subset.txt || true
           echo "$(cat launchable-subset.txt)" || true
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
         working-directory: pmm-qa/e2e_tests/
         run: |
-          SUBSET_FILE="launchable-subset.txt"
-
           # Skip tests if the subset file is empty
-          if [ -s "$SUBSET_FILE" ]; then
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
             # Run tests if the subset file is not empty
-            echo "$SUBSET_FILE is not empty, so we run tests from the subset."
-            npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat launchable-subset.txt) || true
+            echo "${{ env.SUBSET_FILE_NAME }} is not empty, so we run tests from the subset."
+            npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
           else
-            echo "$SUBSET_FILE is empty, so we run tests for now."
-            npx playwright test --grep "${{ env.PMM_TEST_FLAG }}"
+            echo "${{ env.SUBSET_FILE_NAME }} is empty, so we won't run tests."
           fi
 
       - name: Download logs
@@ -227,15 +234,19 @@ jobs:
         if: ${{ always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
-          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
-          launchable gate --session "$(cat launchable-session.txt)"
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+            launchable gate --session "$(cat launchable-session.txt)"
+          fi
 
       - name: Record launchable logs
         if: ${{ failure() }}
         working-directory: pmm-qa/e2e_tests
         continue-on-error: true
         run: |
-          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          fi
 
       - name: Generate and Attach the report
         if: failure()

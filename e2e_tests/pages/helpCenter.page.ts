@@ -3,6 +3,7 @@ import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 
 export default class HelpPage extends BasePage {
+  url = '/pmm-ui/help';
   builders = {};
   buttons = {
     contactSupport: this.page.getByRole('link', { name: 'Contact Support' }),
@@ -21,11 +22,7 @@ export default class HelpPage extends BasePage {
   clickExternalLink = async (button: Locator): Promise<{ href: string | null; newTab: Page }> =>
     await pmmTest.step('Click external link', async () => {
       const href = await button.getAttribute('href');
-      const popup = this.page.waitForEvent('popup');
-
-      await button.click();
-
-      const newTab = await popup;
+      const [newTab] = await Promise.all([this.page.waitForEvent('popup'), button.click()]);
 
       return { href, newTab };
     });

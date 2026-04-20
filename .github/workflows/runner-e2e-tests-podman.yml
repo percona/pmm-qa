@@ -29,6 +29,11 @@ on:
         default: '3-dev-latest'
         required: false
         type: string
+      launchable_confidence:
+        description: 'Launchable subset confidence percentage'
+        default: '100%'
+        required: false
+        type: string
       setup_services:
         description: "Setup arguments, ex.: --addclient=ps,1 --ps-version=5.7"
         required: false
@@ -61,6 +66,9 @@ on:
         required: false
         type: string
       pmm_client_image:
+        required: false
+        type: string
+      launchable_confidence:
         required: false
         type: string
       setup_services:
@@ -218,6 +226,19 @@ jobs:
           timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://admin:admin@127.0.0.1/ping)" != "200" ]]; do sleep 5; done' || false
           podman exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
           # bash -x testdata/db_setup.sh
+
+      - name: Print Podman logs on failure
+        if: ${{ failure() }}
+        run: |
+          echo "---systemctl-status---"
+          systemctl --user status pmm-server || true
+          echo "---systemctl-status---"
+          echo "---podman-logs---"
+          podman logs pmm-server 2>&1 || true
+          echo "---podman-logs---"
+          echo "---journal-logs---"
+          journalctl --user -u pmm-server --no-pager -n 100 || true
+          echo "---journal-logs---"
 
       - name: Export path to pmm-qa repo
         working-directory: ./pmm-qa

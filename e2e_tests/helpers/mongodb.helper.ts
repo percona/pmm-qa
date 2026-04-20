@@ -77,6 +77,9 @@ export default class MongoDBHelper {
       '}',
     ].join(' ');
 
-    return collection.find({ $where: whereFn }).maxTimeMS(delayMs).toArray();
+    return collection
+      .find({ $where: whereFn })
+      .maxTimeMS(delayMs * 3)
+      .toArray();
   };
 }

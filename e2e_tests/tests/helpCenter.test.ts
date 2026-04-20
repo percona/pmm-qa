@@ -1,12 +1,11 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
-  await page.goto('');
+pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest('PMM-T2096 - Verify view docs button @new-navigation', async ({ helpPage }) => {
+pmmTest('PMM-T2098 - Verify view docs button @new-navigation', async ({ helpPage }) => {
   await pmmTest.step('Verify navigation to external URL', async () => {
     await expect(helpPage.buttons.viewDocs).toBeVisible();
 
@@ -24,7 +23,7 @@ pmmTest('PMM-T2116 - Verify Get Percona Support button @new-navigation', async (
     const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.contactSupport);
 
     expect(href).toBeTruthy();
-    expect(newTab.url()).toContain('/www.percona.com/about/contact');
+    expect(newTab.url()).toContain('/www.percona.com/contact-us');
   });
 });
 
@@ -76,10 +75,9 @@ pmmTest('PMM-T2120 - Verify start pmm tour button @new-navigation', async ({ hel
 pmmTest('PMM-T2121 - Verify share your thoughts button @new-navigation', async ({ helpPage }) => {
   await pmmTest.step('Verify navigation to external URL', async () => {
     await expect(helpPage.buttons.shareYourThoughts).toBeVisible();
-
-    const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.shareYourThoughts);
-
-    expect(href).toBeTruthy();
-    expect(newTab.url()).toContain('/docs.google.com/forms/');
+    await expect(helpPage.buttons.shareYourThoughts).toHaveAttribute(
+      'href',
+      'https://per.co.na/pmm3_feedback',
+    );
   });
 });
