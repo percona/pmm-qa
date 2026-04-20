@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class mocksHelper {
   constructor(public page: Page) {}
@@ -7,7 +8,7 @@ export default class mocksHelper {
   mockFreshInstall = async (): Promise<void> => {
     let productTourCompleted = false;
 
-    await this.page.route('**/v1/users/me', (route) => {
+    await this.page.route(apiEndpoints.users.me, (route) => {
       const method = route.request().method();
 
       if (method === 'GET') {
@@ -39,7 +40,7 @@ export default class mocksHelper {
 
   // mock no services
   mockNoServices = async (): Promise<void> => {
-    await this.page.route('**/v1/inventory/services', async (route) => {
+    await this.page.route(apiEndpoints.management.services, async (route) => {
       await route.fulfill({
         body: JSON.stringify({
           external: [],
@@ -57,7 +58,7 @@ export default class mocksHelper {
   };
 
   mockUpdateAvailable = async (updateAvailable: boolean): Promise<void> => {
-    await this.page.route('**/v1/server/updates?force=true', async (route) => {
+    await this.page.route(apiEndpoints.server.updates, async (route) => {
       const installedTimestamp = new Date();
       const now = new Date();
       const millisecond = now.getMilliseconds().toString().padStart(3, '0');
