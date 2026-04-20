@@ -19,6 +19,7 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import VacuumDashboardPage from '@pages/dashboards/postgresql/vacuumDashboard.page';
 
 const pmmTest = base.extend<{
   agentsPage: AgentsPage;
@@ -41,6 +42,7 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  vacuumDashboardPage: VacuumDashboardPage;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
@@ -66,8 +68,8 @@ const pmmTest = base.extend<{
         status: 200,
       }),
     );
-    await context.route('**/v1/server/updates**', (route) => {
-      return route.fulfill({
+    await context.route('**/v1/server/updates**', (route) =>
+      route.fulfill({
         body: JSON.stringify({
           installed: {},
           last_check: new Date().toISOString(),
@@ -76,8 +78,8 @@ const pmmTest = base.extend<{
         }),
         contentType: 'application/json',
         status: 200,
-      });
-    });
+      }),
+    );
     await use(context);
   },
   credentials: async ({}, use) => {
@@ -153,6 +155,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
+  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboardPage(page)),
   welcomePage: async ({ page }, use) => {
     const welcomePage = new WelcomePage(page);
 
