@@ -208,7 +208,7 @@ jobs:
           fi
 
       - name: Download logs
-        if: ${{ failure() }}
+        if: ${{ always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
           curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
