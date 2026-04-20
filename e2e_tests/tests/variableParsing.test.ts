@@ -1,5 +1,6 @@
 import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page, urlHelper }) => {
   await grafanaHelper.authorize();
@@ -13,11 +14,23 @@ pmmTest(
       await leftNavigation.selectMenuItem('postgresql');
       await dashboard.waitForDashboardToLoad();
       await leftNavigation.selectMenuItem('postgresql.summary');
-      await dashboard.selectVariableValue('Service Name');
+
+      const selectedService = await dashboard.selectVariableValue('Service Name');
+
+      await expect
+        .poll(() => decodeURIComponent(page.url()), {
+          timeout: Timeouts.ONE_MINUTE,
+        })
+        .toContain(selectedService);
       await dashboard.waitForDashboardToLoad();
       await leftNavigation.selectMenuItem('postgresql.overview');
       await dashboard.waitForDashboardToLoad();
       await leftNavigation.selectMenuItem('postgresql.summary');
+      await expect
+        .poll(() => decodeURIComponent(page.url()), {
+          timeout: Timeouts.ONE_MINUTE,
+        })
+        .toContain(selectedService);
     });
 
     await pmmTest.step('Verify panels have data and URL does not have broken variables', async () => {
@@ -39,8 +52,11 @@ pmmTest(
 
     await pmmTest.step('Navigate to Disk, Memory and Summary', async () => {
       await leftNavigation.selectMenuItem('operatingsystem.disk');
+      await dashboard.waitForDashboardToLoad();
       await leftNavigation.selectMenuItem('operatingsystem.memory');
+      await dashboard.waitForDashboardToLoad();
       await leftNavigation.selectMenuItem('operatingsystem.summary');
+      await dashboard.waitForDashboardToLoad();
       await expect(page).not.toHaveURL(/.*timezone=.*=true/);
       await expect(page).not.toHaveURL(/.*var-service_name=.*=true/);
       await expect(page).not.toHaveURL(/.*=true/);

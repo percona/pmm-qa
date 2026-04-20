@@ -66,6 +66,11 @@ pmmTest(
     await pmmTest.step('Select time range @new-navigation', async () => {
       await leftNavigation.selectMenuItem('home');
       await leftNavigation.selectTimeRange(selectedTimeRange);
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get('from'), {
+          timeout: Timeouts.ONE_MINUTE,
+        })
+        .toBe('now-15m');
       await page.reload();
       await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
         timeout: Timeouts.TEN_SECONDS,
@@ -91,29 +96,40 @@ pmmTest(
     });
 
     await pmmTest.step('Verify new tab persistence', async () => {
-      await leftNavigation.duplicateCurrentPage();
+      const newPage = await leftNavigation.duplicateCurrentPage();
+
+      await expect
+        .poll(() => new URL(newPage.url()).searchParams.get('from'), {
+          timeout: Timeouts.ONE_MINUTE,
+        })
+        .toBe('now-15m');
       await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
         timeout: Timeouts.TEN_SECONDS,
       });
+      await newPage.close();
+      leftNavigation.switchPage(page);
     });
   },
 );
 
-pmmTest('PMM-T2199 Grafana embedding @new-navigation', async ({ leftNavigation }) => {
+pmmTest('PMM-T2199 Grafana embedding @new-navigation', async ({ leftNavigation, page }) => {
   await pmmTest.step('Verify old menu hidden', async () => {
     await expect(leftNavigation.elements.oldLeftMenu).toBeHidden();
   });
 
   await pmmTest.step('Verify iframe hidden on Help page', async () => {
+    await expect(page).toHaveURL(/\/pmm-ui\/help$/);
     await expect(leftNavigation.elements.iframe).toBeHidden();
   });
 
   await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
     await leftNavigation.selectMenuItem('home');
+    await expect(page).toHaveURL(/\/pmm-ui\/graph\//);
     await leftNavigation.elements.refreshButton.click();
     await expect(leftNavigation.elements.iframe).toBeVisible();
     await leftNavigation.selectMenuItem('help');
-    await expect(leftNavigation.elements.iframe).toBeAttached();
+    await expect(page).toHaveURL(/\/pmm-ui\/help$/);
+    await expect(leftNavigation.elements.iframe).toBeHidden();
   });
 });
 
@@ -123,11 +139,23 @@ pmmTest('PMM-T2200 verify service persistence @new-navigation', async ({ leftNav
 
     const selectedService = await leftNavigation.selectVariableValue('Service Name');
 
+    await expect
+      .poll(() => decodeURIComponent(page.url()), {
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toContain(selectedService);
+
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
     await leftNavigation.selectMenuItem('mysql.summary');
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
 
     const newPage = await leftNavigation.duplicateCurrentPage();
+
+    await expect
+      .poll(() => decodeURIComponent(newPage.url()), {
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toContain(selectedService);
 
     await expect(leftNavigation.variableContext(selectedService)).toBeVisible();
     await newPage.close();
@@ -141,6 +169,12 @@ pmmTest('PMM-T2201 verify node persistence @new-navigation', async ({ leftNaviga
 
     const selectedNode = await leftNavigation.selectVariableValue('Node Name');
 
+    await expect
+      .poll(() => decodeURIComponent(page.url()), {
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toContain(selectedNode);
+
     await expect(leftNavigation.variableContext(selectedNode)).toBeVisible();
     await leftNavigation.selectMenuItem('postgresql');
     await expect(leftNavigation.variableContext(selectedNode)).toBeHidden();
@@ -151,11 +185,23 @@ pmmTest('PMM-T2201 verify node persistence @new-navigation', async ({ leftNaviga
 
     const selectedNode = await leftNavigation.selectVariableValue('Node Name');
 
+    await expect
+      .poll(() => decodeURIComponent(page.url()), {
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toContain(selectedNode);
+
     await expect(leftNavigation.variableContext(selectedNode)).toBeVisible();
     await leftNavigation.selectMenuItem('operatingsystem');
     await expect(leftNavigation.variableContext(selectedNode)).toBeVisible();
 
     const newPage = await leftNavigation.duplicateCurrentPage();
+
+    await expect
+      .poll(() => decodeURIComponent(newPage.url()), {
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toContain(selectedNode);
 
     await expect(leftNavigation.variableContext(selectedNode)).toBeVisible();
     await newPage.close();

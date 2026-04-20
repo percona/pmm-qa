@@ -56,7 +56,7 @@ export default class LeftNavigation extends BasePage {
       metrics: { locator: this.page.getByTestId('navitem-explore-metrics') },
       promSqlBuilder: { locator: this.page.getByTestId('navitem-explore-promql-builder') },
     },
-    help: { locator: this.page.getByTestId('navitem-help'), verifyTimeRange: true },
+    help: { locator: this.page.getByTestId('navitem-help') },
     home: { locator: this.page.getByTestId('navitem-home-page'), verifyTimeRange: true },
     inventory: {
       addServices: { locator: this.page.getByTestId('navitem-add-instance') },
@@ -88,10 +88,7 @@ export default class LeftNavigation extends BasePage {
         pxcGaleraNodes: { locator: this.page.getByTestId('navitem-pxc-nodes-compare') },
         replication: { locator: this.page.getByTestId('navitem-mysql-replication-summary') },
       },
-      highAvailability: {
-        locator: this.page.getByTestId('navitem-mysql-high-availability'),
-        verifyTimeRange: true,
-      },
+      highAvailability: { locator: this.page.getByTestId('navitem-mysql-high-availability') },
       innodbCompression: { locator: this.page.getByTestId('navitem-mysql-innodb-compression-details') },
       innodbDetails: { locator: this.page.getByTestId('navitem-mysql-innodb-details') },
       locator: this.page.getByTestId('navitem-mysql'),
@@ -224,6 +221,14 @@ export default class LeftNavigation extends BasePage {
       await this.page
         .waitForFunction((url) => window.location.href !== url, currentUrl, { timeout: Timeouts.TEN_SECONDS })
         .catch(Boolean);
+      await this.page.waitForLoadState('domcontentloaded', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
+
+      if (!this.page.url().includes('/pmm-ui/help')) {
+        await this.page
+          .locator('#grafana-iframe')
+          .waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
+        await this.elements.timePickerOpenButton.waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
+      }
     });
   };
 
