@@ -19,7 +19,7 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
-import VacuumDashboardPage from '@pages/dashboards/postgresql/vacuumDashboard.page';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 
 const pmmTest = base.extend<{
   agentsPage: AgentsPage;
@@ -42,7 +42,7 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
-  vacuumDashboardPage: VacuumDashboardPage;
+  vacuumDashboardPage: VacuumDashboard;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
@@ -155,7 +155,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
-  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboardPage(page)),
+  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
   welcomePage: async ({ page }, use) => {
     const welcomePage = new WelcomePage(page);
 

@@ -2,16 +2,16 @@ import { expect, Locator } from '@playwright/test';
 import CliHelper from '@helpers/cli.helper';
 import { Timeouts } from '@helpers/timeouts';
 import pmmTest from '@fixtures/pmmTest';
+import DashboardInterface from '@interfaces/dashboard';
 import BasePage from '@pages/base.page';
 
-export default class VacuumDashboardPage extends BasePage {
+export default class VacuumDashboard extends BasePage implements DashboardInterface {
   readonly url = 'graph/d/postgres_vacuum_monitoring/postgresql-vacuum-monitoring';
+  metrics = [];
+  noDataMetrics = [];
   builders = {};
   buttons = {};
   elements = {
-    barWithValue: this.grafanaIframe().locator(
-      '//div[@data-testid="data-testid Bar gauge value"]//span[text() > "0"]',
-    ),
     lastAnalyzeValue: this.grafanaIframe().locator(
       '//div[contains(@class, "react-grid-item")][6]//div[contains(text(), "dvdrental")]//following-sibling::*',
     ),

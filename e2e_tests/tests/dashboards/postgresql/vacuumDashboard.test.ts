@@ -2,10 +2,6 @@ import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 
-const TABLES_COUNT = 10;
-const ITERATIONS = 3;
-const MIN_LENGTH = 100;
-const MAX_LENGTH = 220;
 const SETUP_SQL = 'testdata/vacuumDashboardSetup.sql';
 const randomInRange = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 let pgsqlContainerName: string;
@@ -29,10 +25,15 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest(
   'PMM-T1365 - Verify PostgreSQL Vacuum monitoring dashboard @dashboards @experimental @pmm-pgsql-integration',
-  async ({ cliHelper, page, urlHelper, vacuumDashboardPage }) => {
-    await pmmTest.step('Churn rows to produce vacuum/analyze activity', async () => {
+  async ({ cliHelper, dashboard, page, urlHelper, vacuumDashboardPage }) => {
+    const MIN_LENGTH = 100;
+    const MAX_LENGTH = 220;
+    const ITERATIONS = 3;
+
+
+      await pmmTest.step('Churn rows to produce vacuum/analyze activity', async () => {
       for (let i = 0; i < ITERATIONS; i++) {
-        const table = randomInRange(1, TABLES_COUNT);
+        const table = randomInRange(1, 10);
         const oldLength = randomInRange(MIN_LENGTH, MAX_LENGTH);
         const newLength = randomInRange(MIN_LENGTH, MAX_LENGTH);
         const churnSql = [
@@ -60,7 +61,7 @@ pmmTest(
       }),
     );
 
-    await expect(vacuumDashboardPage.elements.barWithValue.first()).toBeVisible({
+    await expect(dashboard.panels().barGauge.elements.barWithValue('Dead Tuples').first()).toBeVisible({
       timeout: Timeouts.FIVE_MINUTES,
     });
 
