@@ -73,6 +73,15 @@ on:
       pmm_client_image:
         required: false
         type: string
+      pmm_client_version_ol8:
+        required: false
+        type: string
+      pmm_client_version_ol9:
+        required: false
+        type: string
+      repository:
+        required: false
+        type: string
       expected_version:
         required: false
         type: string
