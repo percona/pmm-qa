@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       rc_version:
-        description: 'Numeric RC line, e.g. 3.7.0 (images perconalab/pmm-server:<value>-rc and perconalab/pmm-client:<value>-rc; GSSAPI expected_version equals this)'
+        description: 'Numeric RC version, e.g. 3.7.0 (images perconalab/pmm-server:<value>-rc and perconalab/pmm-client:<value>-rc;)'
         required: true
         type: string
       pmm_client_tarball_ol8:
