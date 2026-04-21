@@ -62,19 +62,57 @@ pmmTest(
   'PMM-T2198 verify custom time range persists on any dashboard @new-navigation',
   async ({ leftNavigation, page }, testInfo) => {
     const selectedTimeRange = 'Last 15 minutes';
+    const persistedFromValue = 'now-15m';
+
+    const waitForDashboardLinkToNotBeStale = async (dashboard: string) => {
+      if (dashboard === 'home') return;
+
+      await expect
+        .poll(
+          async () => {
+            const href = await leftNavigation.menuItemLocator(dashboard).getAttribute('href');
+
+            if (!href) return false;
+            if (!href.includes('from=')) return true;
+
+            return href.includes(`from=${persistedFromValue}`);
+          },
+          {
+            timeout: Timeouts.THIRTY_SECONDS,
+          },
+        )
+        .toBe(true);
+    };
+
+    const assertPersistedTimeRange = async (currentPage = page) => {
+      leftNavigation.switchPage(currentPage);
+
+      // eslint-disable-next-line playwright/no-networkidle -- needed here to stabilize dashboard navigation before validating persisted time range
+      await currentPage.waitForLoadState('networkidle', {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      await expect
+        .poll(() => new URL(currentPage.url()).searchParams.get('from'), {
+          timeout: Timeouts.THIRTY_SECONDS,
+        })
+        .toBe(persistedFromValue);
+      await expect(leftNavigation.elements.loadingBar).toHaveCount(0, {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      await expect(leftNavigation.elements.refreshButton).not.toHaveAttribute('aria-label', 'Cancel', {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+      await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+    };
 
     await pmmTest.step('Select time range @new-navigation', async () => {
       await leftNavigation.selectMenuItem('home');
       await leftNavigation.selectTimeRange(selectedTimeRange);
-      await expect
-        .poll(() => new URL(page.url()).searchParams.get('from'), {
-          timeout: Timeouts.ONE_MINUTE,
-        })
-        .toBe('now-15m');
+      await assertPersistedTimeRange();
       await page.reload();
-      await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
-        timeout: Timeouts.TEN_SECONDS,
-      });
+      await assertPersistedTimeRange();
     });
 
     await pmmTest.step('Verify time range persistence', async () => {
@@ -88,24 +126,16 @@ pmmTest(
       });
 
       for (const dashboard of dashboards) {
+        await waitForDashboardLinkToNotBeStale(dashboard);
         await leftNavigation.selectMenuItem(dashboard);
-        await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
-          timeout: Timeouts.TEN_SECONDS,
-        });
+        await assertPersistedTimeRange();
       }
     });
 
     await pmmTest.step('Verify new tab persistence', async () => {
       const newPage = await leftNavigation.duplicateCurrentPage();
 
-      await expect
-        .poll(() => new URL(newPage.url()).searchParams.get('from'), {
-          timeout: Timeouts.ONE_MINUTE,
-        })
-        .toBe('now-15m');
-      await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
-        timeout: Timeouts.TEN_SECONDS,
-      });
+      await assertPersistedTimeRange(newPage);
       await newPage.close();
       leftNavigation.switchPage(page);
     });

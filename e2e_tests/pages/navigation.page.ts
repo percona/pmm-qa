@@ -163,6 +163,7 @@ export default class LeftNavigation extends BasePage {
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
     dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
+    loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
     openLeftNavigationButton: this.page.getByTestId('sidebar-open-button'),
     refreshButton: this.grafanaIframe().getByTestId('data-testid RefreshPicker run button'),
@@ -223,7 +224,7 @@ export default class LeftNavigation extends BasePage {
         .catch(Boolean);
       await this.page.waitForLoadState('domcontentloaded', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
 
-      if (!this.page.url().includes('/pmm-ui/help')) {
+      if (this.isDashboardPage()) {
         await this.page
           .locator('#grafana-iframe')
           .waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
@@ -259,6 +260,25 @@ export default class LeftNavigation extends BasePage {
     this.collectVerifyTimeRangePaths(this.buttons, '', dashboards);
 
     return dashboards;
+  }
+
+  menuItemLocator(path: string): Locator {
+    const parts = path.split('.');
+    let node = this.buttons as NestedLocators;
+
+    for (const part of parts) {
+      const item = node[part];
+
+      if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
+
+      node = item as NestedLocators;
+    }
+
+    const locator = this.getLocator(node as NestedLocator);
+
+    if (!locator) throw new Error(`No locator found for path: ${path}`);
+
+    return locator;
   }
 
   private collectTraversePaths(node: NestedLocator, path: string, paths: string[]): void {
@@ -303,6 +323,8 @@ export default class LeftNavigation extends BasePage {
       await this.elements.tourPopover.waitFor({ state: 'hidden' });
     }
   };
+
+  private isDashboardPage = (): boolean => /\/pmm-ui\/graph\/d\//.test(this.page.url());
 
   private isLocator(item: NestedLocator | boolean | undefined): item is Locator {
     return !!item && typeof item === 'object' && 'click' in item && 'waitFor' in item;
