@@ -20,6 +20,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
+import apiEndpoints from '@helpers/apiEndpoints';
 
 const pmmTest = base.extend<{
   agentsPage: AgentsPage;
@@ -56,7 +57,7 @@ const pmmTest = base.extend<{
     await use(cliHelper);
   },
   context: async ({ context }, use) => {
-    await context.route('**/v1/users/me', (route) =>
+    await context.route(apiEndpoints.users.me, (route) =>
       route.fulfill({
         body: JSON.stringify({
           alerting_tour_completed: true,
@@ -68,7 +69,7 @@ const pmmTest = base.extend<{
         status: 200,
       }),
     );
-    await context.route('**/v1/server/updates**', (route) =>
+    await context.route(apiEndpoints.server.updates, (route) =>
       route.fulfill({
         body: JSON.stringify({
           installed: {},
