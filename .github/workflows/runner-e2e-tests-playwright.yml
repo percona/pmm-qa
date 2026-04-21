@@ -177,7 +177,7 @@ jobs:
         if: always()
         run: |
           # TODO: add job id for matrix call
-          job_tag=$(echo "${{ env.PMM_TEST_FLAG }}" | sed -e "s/-pre-upgrade//" -e "s/@//")
+          job_tag=$(echo "${{ env.PMM_TEST_FLAG }}" | sed -e "s/@//" -e "s/|/-/g")
           report_name="$job_tag"
           echo $report_name
           echo "REPORT_NAME=$report_name" >> $GITHUB_ENV
