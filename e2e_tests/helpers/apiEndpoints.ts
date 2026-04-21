@@ -1,9 +1,9 @@
 const apiEndpoints = {
   inventory: {
-    services: '**/v1/inventory/services',
+    services: '**/v1/inventory/services**',
   },
   management: {
-    services: '/v1/management/services',
+    services: '**/v1/management/services**',
   },
   platform: {
     connect: '/v1/platform:connect',
