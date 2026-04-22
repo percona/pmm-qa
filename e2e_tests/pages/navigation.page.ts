@@ -175,6 +175,13 @@ export default class LeftNavigation extends BasePage {
   inputs = {};
   messages = {};
 
+  getBackgroundColor = (): Promise<string> =>
+    pmmTest.step('Get background color', async () =>
+      this.page.locator('body').evaluate((el) => window.getComputedStyle(el).backgroundColor),
+    );
+
+  getThemeCombobox = (): Locator => this.grafanaIframe().getByRole('combobox', { name: 'Interface theme' });
+
   mouseHoverOnPmmLogo = async (): Promise<void> => {
     await pmmTest.step('Hover on PMM Logo', async () => {
       const pmmLogo = this.elements.sidebar.locator('rect').first();
@@ -213,7 +220,6 @@ export default class LeftNavigation extends BasePage {
 
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
-      await locator.scrollIntoViewIfNeeded();
       await locator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
 
       const currentUrl = this.page.url();

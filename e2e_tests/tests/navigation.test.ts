@@ -1,10 +1,8 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import { type NestedLocators } from '@pages/base.page';
 import { Timeouts } from '@helpers/timeouts';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
-  await page.goto('');
+pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
@@ -46,13 +44,7 @@ pmmTest('PMM-T2197 RBAC/permissions @new-navigation', async ({ grafanaHelper, le
   });
 
   await pmmTest.step('verify permissions', async () => {
-    const configurationLocator = (leftNavigation.buttons.configuration as NestedLocators).locator;
-
-    if (!configurationLocator) {
-      throw new Error('Expected configuration locator to be defined');
-    }
-
-    await expect(configurationLocator).toBeHidden();
+    await expect(leftNavigation.menuItemLocator('configuration')).toBeHidden();
     await leftNavigation.selectMenuItem('help');
     await expect(leftNavigation.elements.dumpLogs).toBeHidden();
   });
@@ -142,13 +134,14 @@ pmmTest(
   },
 );
 
-pmmTest('PMM-T2199 Grafana embedding @new-navigation', async ({ leftNavigation, page }) => {
+pmmTest('PMM-T2199 Grafana embedding @new-navigation', async ({ helpPage, leftNavigation, page }) => {
   await pmmTest.step('Verify old menu hidden', async () => {
     await expect(leftNavigation.elements.oldLeftMenu).toBeHidden();
   });
 
   await pmmTest.step('Verify iframe hidden on Help page', async () => {
     await expect(page).toHaveURL(/\/pmm-ui\/help$/);
+    await expect(helpPage.buttons.viewDocs).toBeVisible();
     await expect(leftNavigation.elements.iframe).toBeHidden();
   });
 
@@ -158,7 +151,7 @@ pmmTest('PMM-T2199 Grafana embedding @new-navigation', async ({ leftNavigation, 
     await leftNavigation.elements.refreshButton.click();
     await expect(leftNavigation.elements.iframe).toBeVisible();
     await leftNavigation.selectMenuItem('help');
-    await expect(page).toHaveURL(/\/pmm-ui\/help$/);
+    await expect(helpPage.buttons.viewDocs).toBeVisible();
     await expect(leftNavigation.elements.iframe).toBeHidden();
   });
 });
