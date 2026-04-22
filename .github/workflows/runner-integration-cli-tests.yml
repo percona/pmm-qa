@@ -114,7 +114,7 @@ jobs:
         working-directory: ./pmm-qa/cli
         run: |
           npm ci
-   
+
       - name: Pull PMM Server image <${{ env.PMM_SERVER_IMAGE }}>
         working-directory: ./pmm-qa/cli
         run: |
@@ -232,13 +232,13 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ inputs.test_name }} CLI tests"
+          context: "CLI tests ${{ env.TEST_NAME }}"
           description: "Test execution ${{ job.status }}"
           state: ${{ job.status }}
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
-      
+
       # - name: Setup tmate session  on failure
       #   if: ${{ failure() }}
       #   uses: percona/gh-action-action-tmate@v2
