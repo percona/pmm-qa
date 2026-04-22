@@ -9,12 +9,6 @@ on:
         required: false
         type: string
 
-  workflow_call:
-    inputs:
-      qa_integration_branch:
-        required: false
-        type: string
-
 jobs:
   easy_install_ubuntu:
     name: Run Easy install on Ubuntu Noble
