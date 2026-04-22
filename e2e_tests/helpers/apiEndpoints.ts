@@ -1,6 +1,6 @@
 const apiEndpoints = {
   inventory: {
-    services: '/v1/inventory/services',
+    services: '**/v1/inventory/services',
   },
   management: {
     services: '/v1/management/services',
@@ -14,10 +14,10 @@ const apiEndpoints = {
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
-    updates: '/v1/server/updates',
+    updates: '**/v1/server/updates?force=**',
   },
   users: {
-    me: '/v1/users/me',
+    me: '**/v1/users/me',
   },
 } as const;
 
