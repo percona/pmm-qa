@@ -566,7 +566,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
   });
 
   test('PMM-T9999 @generic', async ({}) => {
-    const startContainer = (await cli.exec(`docker run --rm -d --name="{{ container_prefix }}{{ item }}" \\
+    const startContainer = (await cli.exec(`docker run --rm -d --name="tarball_client" \\
       --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd \\
       antmelekhin/docker-systemd:almalinux-10`)).stdout;
 
