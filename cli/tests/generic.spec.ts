@@ -571,5 +571,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
       antmelekhin/docker-systemd:almalinux-10`)).stdout;
 
     console.log(startContainer);
+
+    console.log((await cli.exec('docker exec ps -a')).stdout);
   })
 });
