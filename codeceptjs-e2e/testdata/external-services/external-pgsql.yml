@@ -1,0 +1,96 @@
+---
+- hosts: localhost
+  gather_facts: no
+  vars:
+    data_dir: "./data"
+    postgres_image: "{{ lookup('env', 'POSTGRES_IMAGE') | default('perconalab/percona-distribution-postgresql:17', true) }}"
+    pmm_server_image: "{{ lookup('env', 'PMM_SERVER_IMAGE') | default('perconalab/pmm-server:3-dev-latest', true) }}"
+  tasks:
+    - name: Remove existing folder
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ data_dir }}"
+      ignore_errors: true
+
+    - name: Create pmm-qa network if not exist
+      shell: docker network create pmm-qa
+      ignore_errors: true
+
+    - name: Ensure utils dir exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ data_dir }}"
+
+    - name: Stop containers if already running
+      shell: |
+        docker rm -f external-postgres
+        docker rm -f pmm-server-external-postgres
+        docker volume rm pmm-server-external-pg
+      ignore_errors: true
+
+    - name: Start external-postgres container
+      shell: >
+        docker run -d --name external-postgres
+        --restart always
+        --network=pmm-qa
+        -e POSTGRES_PASSWORD=pmm_password
+        -e POSTGRES_DB=grafana
+        -v {{ data_dir }}:/var/lib/postgresql/data
+        {{ postgres_image }}
+        postgres -c shared_preload_libraries=pg_stat_statements
+        -c pg_stat_statements.track=all
+        -c max_connections=1000
+      args:
+        creates: "/var/lib/docker/containers/external-postgres"
+
+    - name: Wait until external-postgres is healthy
+      shell: docker inspect --format='{{ "{{.State.Status}}" }}' external-postgres
+      register: pg_health
+      until: "'running' in pg_health.stdout"
+      retries: 5
+      delay: 5
+
+    - name: Wait 10 seconds for setup to finish
+      pause:
+        seconds: 10
+
+    - name: Enable pg_stat_statements extension in grafana database
+      shell: docker exec external-postgres psql -U postgres -d grafana -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+      register: pg_stat_statements_create
+      changed_when: "'CREATE EXTENSION' in pg_stat_statements_create.stdout"
+      failed_when: "'ERROR' in pg_stat_statements_create.stderr"
+
+    - name: Start pmm-server-external-postgres container
+      shell: >
+        docker run -d --name pmm-server-external-postgres
+        --restart always
+        --network=pmm-qa
+        -p 8082:8080
+        -p 8447:8443
+        -e PMM_POSTGRES_DBNAME=grafana
+        -e PMM_POSTGRES_ADDR=external-postgres:5432
+        -e PMM_POSTGRES_USERNAME=postgres
+        -e PMM_POSTGRES_DBPASSWORD=pmm_password
+        -e PMM_DISABLE_BUILTIN_POSTGRES=1
+        -e GF_DATABASE_TYPE=postgres
+        -e GF_DATABASE_NAME=grafana
+        -e GF_DATABASE_PASSWORD=pmm_password
+        -e GF_DATABASE_HOST=external-postgres:5432
+        -e GF_DATABASE_USER=postgres
+        -e PMM_ENABLE_INTERNAL_PG_QAN=1
+        -v pmm-server-external-pg:/srv
+        {{ pmm_server_image }}
+      args:
+        creates: "/var/lib/docker/containers/pmm-server-external-postgres"
+
+    - name: Wait until PMM Server is healthy
+      shell: docker inspect --format='{{ "{{.State.Health.Status}}" }}' pmm-server-external-postgres
+      register: pmm_server_health
+      until: "'healthy' in pmm_server_health.stdout"
+      retries: 5
+      delay: 5

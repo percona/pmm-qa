@@ -1,0 +1,44 @@
+[mysqld]
+# General server configuration
+server_id={{ server_id_start + item - 1 }}
+bind-address=0.0.0.0
+port={{ mysql_listen_port }}
+
+# General replication settings
+gtid_mode=ON
+enforce_gtid_consistency=ON
+binlog_checksum=NONE
+log_bin=binlog
+log_replica_updates=ON
+disabled_storage_engines="MyISAM,BLACKHOLE,FEDERATED,ARCHIVE,MEMORY"
+lower_case_table_names=2 # MacOS-specific, but also good generally
+
+# MySQL 8.4 compatibility settings
+report_host={{ container_prefix }}{{ item }}
+
+# Group Replication Settings
+plugin_load_add='group_replication.so'
+loose-group_replication_group_name='aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+loose-group_replication_local_address='{{ container_prefix }}{{ item }}:{{ group_seeds_port }}'
+loose-group_replication_group_seeds='{% for i in range(1, nodes_count | int + 1) %}{{ container_prefix }}{{ i }}:{{ group_seeds_port }}{% if not loop.last %},{% endif %}{% endfor %}'
+loose-group_replication_communication_stack=XCOM
+
+# Group replication behavior
+loose-group_replication_start_on_boot=OFF
+loose-group_replication_bootstrap_group=OFF
+loose-group_replication_single_primary_mode=ON
+loose-group_replication_enforce_update_everywhere_checks=OFF
+
+# Recovery settings
+loose-group_replication_recovery_get_public_key=ON
+loose-group_replication_recovery_retry_count=10
+loose-group_replication_recovery_reconnect_interval=60
+
+# Crash-safe replication settings
+relay-log={{ container_prefix }}{{ item }}-relay-bin
+relay_log_recovery=ON
+relay_log_purge=ON
+
+# Performance and connection settings
+max_connections=1000
+innodb_buffer_pool_size=256M

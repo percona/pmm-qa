@@ -1,0 +1,12 @@
+listen_addresses = '*'
+hba_file = '/etc/postgresql/{{ pdpgsql_version }}/main/pg_hba.conf'
+data_directory = '/var/lib/postgresql/{{ pdpgsql_version }}/main'
+shared_preload_libraries = 'pg_stat_monitor'
+track_activity_query_size=2048
+track_io_timing=ON
+max_connections=1000
+pg_stat_monitor.pgsm_enable_query_plan = 'yes'
+log_connections = on
+log_disconnections = on
+log_replication_commands = on
+log_statement = 'all'
