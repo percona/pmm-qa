@@ -77,34 +77,16 @@ jobs:
 
       PMM_TEST_FLAG: ${{ inputs.pmm_test_flag }}
 
-      OKTA_TOKEN: ${{ secrets.OKTA_TOKEN }}
-      OAUTH_ISSUER_URL: 'https://id-dev.percona.com/oauth2/aus15pi5rjdtfrcH51d7'
-      OAUTH_CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
-      OAUTH_CLIENT_SECRET: ${{ secrets.OAUTH_CLIENT_SECRET }}
-      OAUTH_PMM_CLIENT_ID: ${{ secrets.OAUTH_PMM_CLIENT_ID }}
-      OAUTH_PMM_CLIENT_SECRET: ${{ secrets.OAUTH_PMM_CLIENT_SECRET }}
-      OAUTH_DEV_HOST: 'id-dev.percona.com'
-      OAUTH_SCOPES: percona
-
-      # Variables for E2E tests
-      MAILOSAUR_API_KEY: ${{ secrets.MAILOSAUR_API_KEY }}
-      MAILOSAUR_UI_TESTS_SERVER_ID: ${{ secrets.MAILOSAUR_UI_TESTS_SERVER_ID }}
-      MAILOSAUR_API_TESTS_SERVER_ID: ${{ secrets.MAILOSAUR_API_TESTS_SERVER_ID }}
-
-      SERVICENOW_LOGIN: percona_platform
-      SERVICENOW_PASSWORD: ${{ secrets.SERVICENOW_PASSWORD }}
-      SERVICENOW_DEV_URL: 'https://perconadev.service-now.com/api/x_pellc_percona_pl/platform/settest'
-
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       PMM_SERVER_VERSION: ${{ inputs.pmm_server_version }}
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      DOCKER_VERSION: ${{ inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
-      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
-      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_version || github.event.inputs.pmm_server_version || 'perconalab/pmm-server:3-dev-latest' }}
+      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || github.event.inputs.setup_services || '' }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || github.event.inputs.tags_for_tests || '@settings-fb' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'

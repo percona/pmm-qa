@@ -91,15 +91,15 @@ jobs:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      DOCKER_COMPOSE_FILE: ${{ inputs.pmm_server_compose_file || 'docker-compose.yml' }}
-      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
-      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
-      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      DOCKER_COMPOSE_FILE: ${{ inputs.pmm_server_compose_file || github.event.inputs.pmm_server_compose_file || 'docker-compose.yml' }}
+      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || github.event.inputs.setup_services || '' }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || github.event.inputs.tags_for_tests || '@settings-fb' }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
