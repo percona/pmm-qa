@@ -197,6 +197,8 @@ jobs:
           launchable verify || true
           
           export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
+          echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
