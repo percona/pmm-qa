@@ -4,7 +4,7 @@ export default class TablePanel extends PanelComponent {
   private elements = {
     tablePanelValue: (panelName: string) =>
       this.grafanaIframe().locator(
-        `//section[@data-testid="data-testid Panel header ${panelName}"]//div[@data-testid="data-testid table body"]//div[@role="row"]//div[@role="cell" and position() >= 1 and position() <= last()]`,
+        `//section[@data-testid="data-testid Panel header ${panelName}"]//div[@role="grid"]//div[@role="row"]//div[@role="gridcell" and position() >= 1 and position() <= last()]`,
       ),
   };
 
