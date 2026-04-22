@@ -12,7 +12,7 @@ import shell from 'shelljs';
 export async function createFile(pathToFile: string, content: string, stepTitle: string | null = null) {
   const stepName = stepTitle || `Create "${pathToFile}" file with content:\n"${content}"`;
   await test.step(stepName, async () => {
-    console.log(`echo: "${content}" >> ${pathToFile}`);
+    // console.log(`echo: "${content}" >> ${pathToFile}`);
     shell.echo(content).to(pathToFile);
   });
 }
@@ -25,10 +25,10 @@ export async function createFile(pathToFile: string, content: string, stepTitle:
  * @return      {@link ExecReturnClass} instance
  */
 export function execute(command: string): ExecReturn {
-  console.log(`exec: "${command}"`);
-  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
-  if (stdout.length > 0) console.log(`Out: "${stdout}"`);
-  if (stderr.length > 0) console.log(`Error: "${stderr}"`);
+  // console.log(`exec: "${command}"`);
+  const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
+  // if (stdout.length > 0) console.log(`Out: "${stdout}"`);
+  // if (stderr.length > 0) console.log(`Error: "${stderr}"`);
   return new ExecReturn(command, code, stdout, stderr);
 }
 
@@ -53,7 +53,7 @@ export async function exec(command: string): Promise<ExecReturn> {
  */
 export async function execSilent(command: string): Promise<ExecReturn> {
   const { stdout, stderr, code } = await test.step(`Run "${command}" command`, async () => {
-    return shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
+    return shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: true });
   });
   return new ExecReturn(command, code, stdout, stderr);
 }

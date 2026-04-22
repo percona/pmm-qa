@@ -564,4 +564,12 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
       expect(metrics, `Metrics for Percona Distribution for PgSQL with non-encrypted pmm client config are not present!`).toContain(expectedValue);
     }).toPass({ intervals: [2_000], timeout: 30_000 });
   });
+
+  test('PMM-T9999', async ({}) => {
+    const startContainer = (await cli.exec(`docker run --rm -d --name="{{ container_prefix }}{{ item }}" \\
+      --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd \\
+      antmelekhin/docker-systemd:almalinux-10`)).stdout;
+
+    console.log(startContainer);
+  })
 });
