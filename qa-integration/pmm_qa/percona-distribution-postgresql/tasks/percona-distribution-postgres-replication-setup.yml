@@ -1,0 +1,217 @@
+- name: Chance to correct nodes count for replication
+  set_fact:
+    nodes_count: 2
+  when: nodes_count | int < 2 and setup_type == "replication"
+
+- name: Remove old data folders
+  shell: 'rm -fr {{ data_dir }}'
+  become: true
+
+- name: Create data directories
+  file:
+    path: "{{ data_dir }}/node{{ item }}/data"
+    state: directory
+    mode: '0755'
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Generate pg_hba.conf for primary node
+  template:
+    src: data/pg_hba.conf.j2
+    dest: "{{ data_dir }}/node1/pg_hba.conf"
+  become: true
+
+- name: Generate postgres.conf for primary node
+  template:
+    src: data/postgresql-primary.conf.j2
+    dest: "{{ data_dir }}/node1/postgresql.conf"
+  become: true
+
+- name: Generate postgres.conf for replica nodes
+  template:
+    src: data/postgresql-replica.conf.j2
+    dest: "{{ data_dir }}/node{{ item }}/postgresql.conf"
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Generate pg_hba.conf for replica node
+  template:
+    src: data/pg_hba_replica.conf.j2
+    dest: "{{ data_dir }}/node{{ item }}/pg_hba.conf"
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Fix permissions on data directory
+  become: true
+  file:
+    path: "{{ data_dir }}/node{{ item }}/data"
+    owner: 1001
+    group: 1001
+    recurse: yes
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare and install Percona Distribution for Postgresql
+  include_tasks: tasks/install-pdpgsql.yml
+
+- name: Install pg stat monitor.
+  include_tasks: ./tasks/install_pg_stat-monitor.yml
+  vars:
+    container_name: "{{ container_prefix }}"
+
+- name: Stop Percona distribution for Postgresql
+  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl stop postgresql
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Copy config files to primary node
+  shell: |
+    docker cp {{ data_dir }}/node1/postgresql.conf {{ container_prefix }}1:/etc/postgresql/{{ pdpgsql_version }}/main/postgresql.conf
+    docker cp {{ data_dir }}/node1/pg_hba.conf {{ container_prefix }}1:/etc/postgresql/{{ pdpgsql_version }}/main/pg_hba.conf
+  become: true
+
+- name: Start Percona distribution for Postgresql primary node
+  shell: docker exec -u root {{ container_prefix }}1 systemctl start postgresql
+  become: true
+
+- name: Wait 5 seconds for Percona Distribution for postgresql to start
+  pause:
+    seconds: 5
+
+- name: Create replication user
+  shell: docker exec {{ container_prefix }}1 psql -U postgres -c "CREATE ROLE {{ replication_user }} WITH REPLICATION LOGIN ENCRYPTED PASSWORD '{{ replication_password }}';"
+  become: true
+
+- name: Wipe replica data directory before basebackup
+  shell: docker exec {{ container_prefix }}{{ item }} rm -rf /var/lib/postgresql/{{ pdpgsql_version }}/main/
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Create PostgreSQL user 'pmm' with password and grant pg_monitor
+  shell: |
+    docker exec -u postgres {{ container_prefix }}1 psql -U postgres -d {{ db_name | default('postgres') }} -c "
+      DO \$\$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'pmm') THEN
+          CREATE ROLE pmm LOGIN PASSWORD 'pmm';
+        END IF;
+        GRANT pg_monitor TO pmm;
+      END
+      \$\$;
+    "
+  become: true
+
+- name: Create custom database
+  shell: |
+    docker exec -u postgres {{ container_prefix }}1 bash -c "
+      echo \"
+      CREATE DATABASE test_database;
+      \\c test_database
+      GRANT CONNECT ON DATABASE test_database TO pmm;
+      GRANT USAGE ON SCHEMA public TO pmm;
+      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO pmm;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public
+        GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO pmm;
+      \" | psql -U postgres -v ON_ERROR_STOP=1
+    "
+  become: true
+
+- name: Run pg_basebackup from primary to replica
+  shell: |
+    docker exec -u root {{ container_prefix }}{{ item }} bash -c "
+      export PGPASSWORD='{{ replication_password }}' && \
+      timeout 120s \
+      pg_basebackup --pgdata=/var/lib/postgresql/{{ pdpgsql_version }}/main -R -v -Fp -Xs -P \
+      --host={{ container_prefix}}1 --port=5432 -U {{ replication_user }}
+    "
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Copy config files to replica nodes
+  shell: |
+    docker cp {{ data_dir }}/node{{ item }}/postgresql.conf {{ container_prefix }}{{ item }}:/etc/postgresql/{{ pdpgsql_version }}/main/postgresql.conf
+    docker cp {{ data_dir }}/node{{ item }}/pg_hba.conf {{ container_prefix }}{{ item }}:/etc/postgresql/{{ pdpgsql_version }}/main/pg_hba.conf
+    docker exec {{ container_prefix}}{{ item }} chown -R postgres:postgres /var/lib/postgresql/{{ pdpgsql_version }}/main
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Start Percona distribution for Postgresql
+  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl start postgresql
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Wait 5 seconds for Percona Distribution for postgresql to start
+  pause:
+    seconds: 5
+
+- name: Install and add pmm client.
+  include_tasks: ../tasks/install_pmm_client.yml
+  vars:
+    container_name: "{{ container_prefix }}{{ item }}"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Get already connected services to pmm server
+  shell: docker exec {{ container_prefix }}1 sh -c 'curl --location --insecure -u"admin:{{ admin_password }}" -s --request GET "http://{{ pmm_server_ip }}:{{ "80" if pmm_server_ip is match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$') else "8080" }}/v1/management/services" | jq -r ".services[].service_name"'
+  become: true
+  register: pmm_server_services
+
+- name: Display already connected services to pmm server
+  debug:
+    msg: "{{ pmm_server_services.stdout | split('\n') }}"
+
+- name: Find out if service is already connected to pmm server
+  block:
+    - name: Loop through percona servers
+      set_fact:
+        random_service_name_value: "_{{ 9999 | random + 1 }}"
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+      when: "('pdpgsql_pmm_' ~ pdpgsql_version ~ '_' ~ item) in pmm_server_services.stdout"
+
+- name: Add service to pmm server
+  shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=pmm --password=pmm --cluster=pdpgsql_replication_cluster --environment=pdpgsql_replication_environment --query-source=pgstatmonitor {{ container_prefix}}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:5432
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Create pg_custom_publication view using psql
+  shell: |
+    docker exec -u postgres {{ container_prefix }}1 bash -c 'psql -U postgres -d postgres <<SQL
+    CREATE OR REPLACE VIEW pg_custom_publication AS
+    SELECT
+      pubname,
+      puballtables,
+      pubinsert,
+      pubupdate,
+      pubdelete
+    FROM
+      pg_publication;
+    SQL'
+  become: true
+
+- name: Copy sample load into container
+  shell: docker cp ../data/load_pgsql.sql {{ container_prefix }}1:/load_pgsql.sql
+  become: true
+
+- name: Start permanent SQL load in background
+  shell: |
+    docker exec {{ container_prefix }}1 sh -c 'nohup bash -c "while true; do echo Starting insert at \$(date +\"%Y-%m-%d %H:%M:%S\"); psql -U postgres -d test_database -f /load_pgsql.sql; sleep 30; done" > /tmp/sql_loop.log 2>&1 &'
+  become: true
+
+- name: Create logical replication slots
+  shell: docker exec {{ container_prefix }}1 psql -U postgres -d postgres -c "SELECT * FROM pg_create_logical_replication_slot('test_slot', 'test_decoding');"
+  become: true
+
+- name: Copy a file into the container
+  shell: docker cp ./data/pgsql_load.sql {{ container_prefix }}1:/pgsql_load.sql
+  become: true
+
+- name: Create database if it doesn't exist
+  shell: docker exec {{ container_prefix }}1 psql -U postgres -c "CREATE DATABASE school;"
+  become: true
+
+- name: Run SQL script using docker exec
+  shell: docker exec {{ container_prefix }}1 psql -U postgres -d school -f /pgsql_load.sql > /dev/null
+  become: true
+
+- name: Change postgres user password
+  shell: |
+    docker exec -u postgres {{ container_prefix }}1 psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'pass+this';"
+  become: true

@@ -1,0 +1,152 @@
+- name: Get first free docker port
+  include_tasks: ../tasks/find_first_empty_docker_port.yml
+  vars:
+    port_start: 3306
+
+- name: Prepare socket folders
+  shell: |
+    sudo rm -fr /tmp/mysql-sockets/{{ item }}
+    sudo mkdir -p /tmp/mysql-sockets/{{ item }}
+    sudo chmod 0777 /tmp/mysql-sockets/{{ item }}
+
+- name: Prepare Container for MySQL 8.0+
+  shell: |
+    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+      --network="pmm-qa" \
+      --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      -v /var/lib/containerd \
+      -v ./ssl:/ssl \
+      -v /tmp/mysql-sockets/{{ item }}:/tmp \
+      -p {{ docker_port|int + item - 1 }}:3306 \
+      antmelekhin/docker-systemd:ubuntu-24.04
+  when: mysql_version | replace('_', '') | int >= 80
+
+- name: Prepare Container for MySQL 5.7
+  shell: |
+    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+      --network="pmm-qa" \
+      --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      -v /var/lib/containerd \
+      -v ./ssl:/ssl \
+      -v /tmp/mysql-sockets/{{ item }}:/var/run/mysqld \
+      -p {{ docker_port|int + item - 1 }}:3306 \
+      antmelekhin/docker-systemd:ubuntu-22.04
+  when: mysql_version | replace('_', '') | int < 80
+
+- name: Install dependencies
+  shell: |
+    docker exec {{ container_prefix }}{{ index }} apt-get update
+    docker exec {{ container_prefix }}{{ index }} apt-get -y install wget gnupg2 lsb-release curl xz-utils libnuma1
+- name: Install MySQL 8.0+ dependencies
+  shell: |
+    docker exec {{ container_prefix }}{{ index }} apt-get update
+    docker exec {{ container_prefix }}{{ index }} apt-get install -y libncurses6 libaio1t64
+    docker exec {{ container_prefix }}{{ index }} ln -s /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
+  when: mysql_version | replace('_', '') | int >= 80
+
+- name: Install MySQL 5.7 dependencies
+  shell: |
+    docker exec {{ container_prefix }}{{ index }} apt-get update
+    docker exec {{ container_prefix }}{{ index }} apt-get install -y libaio1 libncurses5
+  when: mysql_version | replace('_', '') | int == 57
+
+- name: Query Docker Hub for MySQL tags
+  uri:
+    url: "https://hub.docker.com/v2/repositories/library/mysql/tags?page_size=100&name={{ mysql_version | replace('_', '.') }}"
+    method: GET
+    return_content: yes
+  register: mysql_tags_response
+
+- name: Extract tag names (only versions)
+  set_fact:
+    mysql_exact_version: "{{ mysql_tags_response.json.results | map(attribute='name') | list | select('match', '^[0-9]+\\.[0-9]+\\.[0-9]+$') | first }}"
+
+- name: Install MySQL 8.0+
+  shell: |
+    docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.xz https://dev.mysql.com/get/Downloads/MySQL-{{ mysql_version | replace('_', '.') }}/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64.tar.xz
+    docker exec {{ container_prefix }}{{ index }} tar -xf mysql.tar.xz
+    docker exec {{ container_prefix }}{{ index }} groupadd mysql
+    docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql
+    docker exec {{ container_prefix }}{{ index }} mv mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64 /usr/local/mysql
+    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64 mysql
+    docker exec {{ container_prefix }}{{ index }} chown -R mysql:mysql /usr/local/mysql
+    docker exec {{ container_prefix }}{{ index }} mkdir /usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} chown mysql:mysql /usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} /usr/local/mysql/bin/mysqld --initialize --user=mysql --basedir=/usr/local/mysql --datadir=/usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
+    docker exec {{ container_prefix }}{{ index }} chmod +x /etc/init.d/mysql
+    docker exec {{ container_prefix }}{{ index }} sh -c "echo 'export PATH=/usr/local/mysql/bin:\$PATH' >> /etc/profile"
+    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql/bin/mysql /usr/bin/mysql
+    docker exec {{ container_prefix }}{{ index }} bash -c 'source ~/.bashrc'
+  register: mysql_80_root_password
+  when: mysql_version | replace('_', '') | int >= 80
+
+- name: Install MySQL 5.7
+  shell: |
+    docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.gz https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.44-linux-glibc2.12-x86_64.tar.gz
+    docker exec {{ container_prefix }}{{ index }} tar zxf mysql.tar.gz
+    docker exec {{ container_prefix }}{{ index }} groupadd mysql
+    docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql
+    docker exec {{ container_prefix }}{{ index }} mv mysql-5.7.44-linux-glibc2.12-x86_64 /usr/local/mysql
+    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql-5.7.44-linux-glibc2.12-x86_64 mysql
+    docker exec {{ container_prefix }}{{ index }} chown -R mysql:mysql /usr/local/mysql
+    docker exec {{ container_prefix }}{{ index }} mkdir /usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} chown mysql:mysql /usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} /usr/local/mysql/bin/mysqld --initialize --user=mysql --basedir=/usr/local/mysql --datadir=/usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
+    docker exec {{ container_prefix }}{{ index }} chmod +x /etc/init.d/mysql
+    docker exec {{ container_prefix }}{{ index }} sh -c "echo 'export PATH=/usr/local/mysql/bin:\$PATH' >> /etc/profile"
+    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql/bin/mysql /usr/bin/mysql
+    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql/bin/mysqldump /usr/bin/mysqldump
+    docker exec {{ container_prefix }}{{ index }} bash -c 'source ~/.bashrc'
+  register: mysql_57_root_password
+  when: mysql_version | replace('_', '') | int == 57
+
+- debug: var=mysql_80_root_password
+  when: mysql_version | replace('_', '') | int >= 80
+
+- name: Store Mysql root password for MySQL 8.0+
+  set_fact:
+    mysql_root_password: "{{ mysql_80_root_password.stderr | regex_search('root@localhost: (.+)', '\\1') | first }}"
+  when: mysql_version | replace('_', '') | int >= 80
+
+- name: Store Mysql root password for MySQL 5.7
+  set_fact:
+    mysql_root_password: "{{ mysql_57_root_password.stderr | regex_search('root@localhost: (.+)', '\\1') | first }}"
+  when: mysql_version | replace('_', '') | int == 57
+
+- name: Start MySQL
+  shell: |
+    docker exec {{ container_prefix }}{{ index }} systemctl enable mysql 
+    docker exec {{ container_prefix }}{{ index }} systemctl start mysql
+- name: Copy config file to docker container
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} mkdir -p /etc/mysql
+    docker cp {{ data_dir }}/node{{ index }}/my.cnf {{ container_prefix }}{{ item }}:/etc/mysql/my.cnf
+
+- name: Restart MySQL
+  shell: docker exec {{ container_prefix }}{{ index }} systemctl restart mysql
+
+- name: Wait 5 seconds for MySQL to start
+  pause:
+    seconds: 5
+
+- name: Change root password + allow root from any host (Percona Server for MySQL 5.7)
+  shell: >
+    docker exec {{ container_prefix }}{{ index }} mysql --connect-expired-password
+    -uroot -p'{{ mysql_root_password }}'
+    -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{{ root_password }}';
+        CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED WITH mysql_native_password BY '{{ root_password }}';
+        GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+        FLUSH PRIVILEGES;"
+  when: mysql_version|replace('_', '')|int < 80
+
+- name: Chance root password Percona Server for MySQL 8.0+
+  shell: >
+    docker exec {{ container_prefix }}{{ index }} mysql --connect-expired-password
+    -uroot -p'{{ mysql_root_password }}'
+    -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '{{ root_password }}';
+        CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED WITH caching_sha2_password BY '{{ root_password }}';
+        GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+        FLUSH PRIVILEGES;"
+  when: mysql_version|replace('_', '')|int >= 80

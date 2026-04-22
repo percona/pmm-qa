@@ -1,0 +1,88 @@
+- name: Get first free docker port
+  include_tasks: ../tasks/find_first_empty_docker_port.yml
+  vars:
+    port_start: 3306
+
+- name: Prepare Container for Percona Server for MySQL 8.0+
+  shell: |
+    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+      --network="pmm-qa" \
+      --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      -v /var/lib/containerd \
+      -v ./ssl:/ssl \
+      -p {{ docker_port|int + item - 1 }}:3306 \
+      antmelekhin/docker-systemd:ubuntu-24.04
+  when: ps_version | replace('_', '') | int >= 80
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare Container for Percona Server for MySQL 5.7
+  shell: |
+    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+      --network="pmm-qa" \
+      --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      -v /var/lib/containerd \
+      -v ./ssl:/ssl \
+      antmelekhin/docker-systemd:ubuntu-22.04
+  when: ps_version | replace('_', '') | int < 80
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install dependencies
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} apt-get update
+    docker exec {{ container_prefix }}{{ item }} apt-get -y install wget gnupg2 lsb-release curl
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install Percona Release
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+    docker exec {{ container_prefix }}{{ item }} dpkg -i ./percona-release_latest.generic_all.deb
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Enable Percona Server for MySQL repository
+  shell: docker exec {{ container_prefix }}{{ item }} percona-release enable {{ 'ps-84-lts' if ps_version == '8_4' else 'ps-' + ps_version | replace('_', '') }} release
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install Percona Server for MySQL
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} apt install -y \
+      percona-server-server{{ '-5.7' if ps_version | replace('_', '') == '57' else '' }} \
+      percona-server-rocksdb{{ '-5.7' if ps_version | replace('_', '') == '57' else '' }} \
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Start Percona Server for MySQL
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} systemctl enable mysql 
+    docker exec {{ container_prefix }}{{ item }} systemctl start mysql
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Copy config file to docker container
+  shell: docker cp {{ data_dir }}/node{{ item }}/my.cnf {{ container_prefix }}{{ item }}:/etc/mysql/my.cnf
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Restart Percona Server for MySQL
+  shell: docker exec {{ container_prefix }}{{ item }} systemctl restart mysql
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Wait 5 seconds for MySQL to start
+  pause:
+    seconds: 5
+
+- name: Chance root password Percona Server for MySQL 5.7
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -e "
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '{{ root_password }}';
+    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED WITH mysql_native_password BY '{{ root_password }}' WITH GRANT OPTION;
+    FLUSH PRIVILEGES;"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: ps_version|replace('_', '')|int < 80
+
+- name: Chance root password Percona Server for MySQL 8.0+
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -e "
+    ALTER USER 'root'@'localhost' IDENTIFIED WITH caching_sha2_password BY '{{ root_password }}';
+    CREATE USER IF NOT EXISTS 'root'@'%' IDENTIFIED WITH caching_sha2_password BY '{{ root_password }}';
+    ALTER USER 'root'@'%' IDENTIFIED WITH caching_sha2_password BY '{{ root_password }}';
+    GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' WITH GRANT OPTION;
+    FLUSH PRIVILEGES;"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: ps_version|replace('_', '')|int >= 80

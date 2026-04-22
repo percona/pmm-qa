@@ -1,0 +1,85 @@
+---
+
+- hosts: all
+  become: true
+  become_method: sudo
+  vars:
+    modb_version: "{{ lookup('vars', 'extra_modb_version', default=lookup('env','MODB_VERSION') | default('4.4', true) ) }}"
+    modb_tarball: "{{ lookup('vars', 'extra_modb_tarball', default=lookup('env','MODB_TARBALL') | default('', true) ) }}"
+    modb_setup: "{{ lookup('vars', 'extra_modb_setup', default=lookup('env','MODB_SETUP') | default('pss', true) ) }}"
+    modb_container: "{{ lookup('vars', 'extra_modb_container', default=lookup('env','MODB_CONTAINER') | default('MODB', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('v3', true) ) }}"
+
+  tasks:
+  - name: cleanup container for client and DB setup
+    shell: >
+      docker ps -a --filter "name={{ modb_container }}" | grep -q . && docker stop {{ modb_container }} && docker rm -fv {{ modb_container }}
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Create pmm-qa network if not exist
+    shell: docker network create pmm-qa
+    ignore_errors: true
+
+  - name: Prepare Container for modb
+    shell: >
+      docker run -d --name={{ modb_container }}
+      -p 27017:27017
+      phusion/baseimage:focal-1.2.0
+
+  - name: Copy all required Artifacts to the docker modb_container
+    shell: "{{ item }}"
+    with_items:
+      - docker cp ./mlaunch_modb_setup.sh {{ modb_container }}:/
+      - docker cp ./pmm3-client-setup.sh {{ modb_container }}:/
+      - docker exec {{ modb_container }} apt-get update
+      - docker exec {{ modb_container }} apt-get -y install wget curl git gnupg2 lsb-release jq python3 pip
+
+  - name: Install required software's to the docker modb_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ modb_container }} python3 -m pip install --upgrade pip
+      - docker exec {{ modb_container }} pip3 install 'mtools[all]'
+
+  - name: Install pmm2-client on the modb_container
+    shell: "{{ item }}"
+    with_items:
+      - docker network connect pmm-qa {{ modb_container }}
+      - docker exec {{ modb_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+
+  - name: Setup modb for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ modb_container }} bash -x ./mlaunch_modb_setup.sh --mongodb_version {{ modb_version }} --mongodb_setup {{ modb_setup }} > setup_modb_{{ modb_version }}_{{ modb_setup }}.log
+
+  - name: Setup Load Running Docker Container
+    shell: "{{ item }}"
+    with_items:
+      - rm -rf ~/modb_{{ modb_version }} || true; mkdir -p ~/modb_{{ modb_version }}
+      - wget -P ~/modb_{{ modb_version }}/ "https://raw.githubusercontent.com/Percona-Lab/qa-integration/{{pmm_qa_branch}}/pmm_qa/Dockerfile"
+      - wget -P ~/modb_{{ modb_version }}/ "https://raw.githubusercontent.com/Percona-Lab/qa-integration/{{pmm_qa_branch}}/pmm_qa/mongodb_query.php"
+      - docker build --tag php-db ~/modb_{{ modb_version }}/ > ~/docker-build_mongodb_load_{{ modb_version }}_{{ modb_setup }}.log || true
+      - docker rm mongodb_load_{{ modb_version }}_{{ modb_setup }} || true
+      - docker run --rm --name mongodb_load_{{ modb_version }}_{{ modb_setup }} --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb || true
+
+  - name: Run load on Replica Set Master(PSS)
+    shell: "{{ item }}"
+    with_items:
+      - docker run --name mongodb_load_{{ modb_version }}_{{ modb_setup }} -d -e MONGODB_HOST={{ modb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_modb_{{ modb_version }}_{{ modb_setup }}.log
+    when: modb_setup == "pss"
+
+  - name: Run load on Replica Set Master(PSA)
+    shell: "{{ item }}"
+    with_items:
+      - docker run --name mongodb_load_{{ modb_version }}_{{ modb_setup }} -d -e MONGODB_HOST={{ modb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_modb_{{ modb_version }}_{{ modb_setup }}.log
+    when: modb_setup == "psa"
+
+  - name: Run load on Sharded Clusters Master
+    shell: "{{ item }}"
+    with_items:
+      - docker run --name mongodb_load_{{ modb_version }}_{{ modb_setup }} -d -e MONGODB_HOST={{ modb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_modb_{{ modb_version }}_{{ modb_setup }}.log
+    when: modb_setup == "sharded"

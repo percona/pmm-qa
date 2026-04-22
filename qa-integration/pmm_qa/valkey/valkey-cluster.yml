@@ -1,0 +1,264 @@
+---
+- name: Deploy Valkey Native Cluster
+  hosts: localhost
+  gather_facts: false
+  vars:
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    metrics_mode: "{{ lookup('env', 'metrics_mode') }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    valkey_version: "{{ lookup('env', 'VALKEY_VERSION') | default('7', true) }}"
+    valkey_image: "valkey/valkey:{{ valkey_version }}-bookworm"
+    valkey_network_name: "pmm-qa"
+    valkey_password: "VKvl41568AsE"
+    valkey_cluster_node_count: 6 # total nodes
+    valkey_cluster_primaries: 3 # number of primary nodes
+    valkey_cluster_replicas: 1 # replicas per primary
+    valkey_cluster_start_port: 6379 # Base host port to map sequentially
+    valkey_config_dir: "{{ lookup('env', 'HOME') }}/valkey/cluster-config"
+    valkey_primary_prefix: "valkey-primary-"
+    valkey_replica_prefix: "valkey-replica-"
+    pmm_server_name: "pmm-server"
+    encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
+
+  tasks:
+    - name: Set Random Number Fact
+      set_fact:
+        random_number: "{{ (10000 | random) | int }}"
+
+    - name: Validate cluster counts
+      assert:
+        that:
+          - valkey_cluster_node_count == valkey_cluster_primaries + (valkey_cluster_primaries * valkey_cluster_replicas)
+        fail_msg: "Mismatch: total nodes must equal primaries + primaries*replicas"
+
+    - name: Create Docker network
+      community.docker.docker_network:
+        name: "{{ valkey_network_name }}"
+        driver: bridge
+        state: present
+
+    - name: Create cluster config directory
+      file:
+        path: "{{ valkey_config_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create per-primary config directories
+      file:
+        path: "{{ valkey_config_dir }}/{{ valkey_primary_prefix }}{{ item }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ range(1, valkey_cluster_primaries + 1) | list }}"
+
+    - name: Create per-replica config directories
+      file:
+        path: "{{ valkey_config_dir }}/{{ valkey_replica_prefix }}{{ item }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ range(valkey_cluster_primaries + 1, valkey_cluster_node_count + 1) | list }}"
+
+    - name: Generate base configuration for each primary
+      copy:
+        dest: "{{ valkey_config_dir }}/{{ valkey_primary_prefix }}{{ item }}/valkey.conf"
+        mode: "0644"
+        content: |
+          port 6379
+          requirepass {{ valkey_password }}
+          masterauth {{ valkey_password }}
+          protected-mode no
+          appendonly yes
+          cluster-enabled yes
+          cluster-config-file nodes.conf
+          cluster-node-timeout 5000
+          # Minimal persistence & logging
+          save 900 1
+          save 300 10
+          save 60 10000
+          loglevel notice
+          maxmemory-policy allkeys-lru
+          maxmemory 1gb
+      loop: "{{ range(1, valkey_cluster_primaries + 1) | list }}"
+
+    - name: Generate base configuration for each replica
+      copy:
+        dest: "{{ valkey_config_dir }}/{{ valkey_replica_prefix }}{{ item }}/valkey.conf"
+        mode: "0644"
+        content: |
+          port 6379
+          requirepass {{ valkey_password }}
+          masterauth {{ valkey_password }}
+          protected-mode no
+          appendonly yes
+          cluster-enabled yes
+          cluster-config-file nodes.conf
+          cluster-node-timeout 5000
+          # Minimal persistence & logging
+          save 900 1
+          save 300 10
+          save 60 10000
+          loglevel notice
+          maxmemory-policy allkeys-lru
+          maxmemory 1gb
+      loop: "{{ range(valkey_cluster_primaries + 1, valkey_cluster_node_count + 1) | list }}"
+
+    - name: Create docker volumes for primary nodes
+      community.docker.docker_volume:
+        name: "{{ valkey_primary_prefix }}{{ item }}-data"
+        state: present
+      loop: "{{ range(1, valkey_cluster_primaries + 1) | list }}"
+
+    - name: Create docker volumes for replica nodes
+      community.docker.docker_volume:
+        name: "{{ valkey_replica_prefix }}{{ item }}-data"
+        state: present
+      loop: "{{ range(valkey_cluster_primaries + 1, valkey_cluster_node_count + 1) | list }}"
+
+    - name: Start primary node containers
+      community.docker.docker_container:
+        name: "{{ valkey_primary_prefix }}{{ item }}"
+        hostname: "{{ valkey_primary_prefix }}{{ item }}-node-{{ random_number }}"
+        image: "{{ valkey_image }}"
+        state: started
+        restart_policy: unless-stopped
+        networks:
+          - name: "{{ valkey_network_name }}"
+        ports:
+          - "{{ valkey_cluster_start_port + item - 1 }}:6379"
+        volumes:
+          - "{{ valkey_primary_prefix }}{{ item }}-data:/data"
+          - "{{ valkey_config_dir }}/{{ valkey_primary_prefix }}{{ item }}/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro"
+        command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+        healthcheck:
+          test: ["CMD", "valkey-cli", "-a", "{{ valkey_password }}", "ping"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+      loop: "{{ range(1, valkey_cluster_primaries + 1) | list }}"
+
+    - name: Start replica node containers
+      community.docker.docker_container:
+        name: "{{ valkey_replica_prefix }}{{ item }}"
+        hostname: "{{ valkey_replica_prefix }}{{ item }}-node-{{ random_number }}"
+        image: "{{ valkey_image }}"
+        state: started
+        restart_policy: unless-stopped
+        networks:
+          - name: "{{ valkey_network_name }}"
+        ports:
+          - "{{ (valkey_cluster_start_port + valkey_cluster_primaries - 1) + item }}:6379"
+        volumes:
+          - "{{ valkey_replica_prefix }}{{ item }}-data:/data"
+          - "{{ valkey_config_dir }}/{{ valkey_replica_prefix }}{{ item }}/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro"
+        command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+        healthcheck:
+          test: ["CMD", "valkey-cli", "-a", "{{ valkey_password }}", "ping"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+      loop: "{{ range(valkey_cluster_primaries + 1, valkey_cluster_node_count + 1) | list }}"
+
+    - name: Wait for primary node ports
+      wait_for:
+        host: localhost
+        port: "{{ valkey_cluster_start_port + item - 1 }}"
+        timeout: 30
+        delay: 1
+      loop: "{{ range(1, valkey_cluster_primaries + 1) | list }}"
+
+    - name: Wait for replica node ports
+      wait_for:
+        host: localhost
+        port: "{{ (valkey_cluster_start_port + valkey_cluster_primaries - 1) + item }}"
+        timeout: 30
+        delay: 1
+      loop: "{{ range(valkey_cluster_primaries + 1, valkey_cluster_node_count + 1) | list }}"
+
+    - name: Build list of internal container addresses
+      set_fact:
+        primary_nodes: "{{ range(1, valkey_cluster_primaries + 1) | map('string') | map('regex_replace', '^(.*)$', valkey_primary_prefix ~ '\\1') | list }}"
+        replica_nodes: "{{ range(valkey_cluster_primaries + 1, valkey_cluster_node_count + 1) | map('string') | map('regex_replace', '^(.*)$', valkey_replica_prefix ~ '\\1') | list }}"
+
+    - name: Build combined list of internal container addresses
+      set_fact:
+        cluster_node_addresses: "{{ (primary_nodes | map('regex_replace', '^(.*)$', '\\1:6379') | list) + (replica_nodes | map('regex_replace', '^(.*)$', '\\1:6379') | list) }}"
+
+    - name: Display cluster node addresses
+      debug:
+        var: cluster_node_addresses
+
+    - name: Create the cluster (run once)
+      community.docker.docker_container_exec:
+        container: "{{ valkey_primary_prefix }}1"
+        command: >-
+          bash -c "yes 'yes' | valkey-cli --cluster create {{ cluster_node_addresses | join(' ') }} --cluster-replicas {{ valkey_cluster_replicas }} -a {{ valkey_password }}"
+      register: cluster_create_output
+      changed_when: "'[OK]' in cluster_create_output.stdout"
+
+    - name: Show cluster creation output
+      debug:
+        msg: "{{ cluster_create_output.stdout_lines }}"
+
+    - name: Check cluster info on first primary
+      community.docker.docker_container_exec:
+        container: "{{ valkey_primary_prefix }}1"
+        command: valkey-cli -a "{{ valkey_password }}" cluster info
+      register: cluster_info
+
+    - name: Display cluster info
+      debug:
+        msg: "{{ cluster_info.stdout_lines }}"
+
+    - name: Install PMM Client in each container
+      ansible.builtin.include_tasks: ../tasks/install_pmm_client.yml
+      loop: "{{ primary_nodes + replica_nodes }}"
+      loop_control:
+        loop_var: current_container_name
+      vars:
+        container_name: "{{ current_container_name }}"
+
+    - name: Add primary nodes to monitoring
+      community.docker.docker_container_exec:
+        container: "{{ item }}"
+        command: >-
+          pmm-admin add valkey --cluster=valkey-native-cluster --environment=valkey-test --username=default 
+          --password="{{ valkey_password }}" --service-name={{ item }}-svc-{{ random_number }} 
+          --host={{ item }} --port=6379 --custom-labels='role=primary'
+      loop: "{{ primary_nodes }}"
+      ignore_errors: yes
+
+    - name: Add replica nodes to monitoring
+      community.docker.docker_container_exec:
+        container: "{{ item }}"
+        command: >-
+          pmm-admin add valkey --cluster=valkey-native-cluster --environment=valkey-test --username=default 
+          --password="{{ valkey_password }}" --service-name={{ item }}-svc-{{ random_number }} 
+          --host={{ item }} --port=6379 --custom-labels='role=replica'
+      loop: "{{ replica_nodes }}"
+      ignore_errors: yes
+
+    - name: Seed sample list data on first primary
+      community.docker.docker_container_exec:
+        container: "{{ valkey_primary_prefix }}1"
+        command: valkey-cli -a "{{ valkey_password }}" RPUSH mylist "one" "two" "three" "four" "five"
+
+    - name: Pop one item from sample list on first primary
+      community.docker.docker_container_exec:
+        container: "{{ valkey_primary_prefix }}1"
+        command: valkey-cli -a "{{ valkey_password }}" RPOP mylist
+
+    - name: Generate workload on primary nodes (latency metrics)
+      community.docker.docker_container_exec:
+        container: "{{ item }}"
+        command: >-
+          bash -c "for i in $(seq 1 50); do valkey-cli -a {{ valkey_password }} SET k$i v$i >/dev/null; valkey-cli -a {{ valkey_password }} GET k$i >/dev/null; valkey-cli -a {{ valkey_password }} HSET h$i f v >/dev/null; valkey-cli -a {{ valkey_password }} LPUSH l$i a b c >/dev/null; valkey-cli -a {{ valkey_password }} RPUSH l$i d e f >/dev/null; valkey-cli -a {{ valkey_password }} LRANGE l$i 0 -1 >/dev/null; valkey-cli -a {{ valkey_password }} LPOP l$i >/dev/null || true; valkey-cli -a {{ valkey_password }} RPOP l$i >/dev/null || true; done"
+      loop: "{{ primary_nodes }}"
+      ignore_errors: yes
+
+    - name: Generate read workload on replica nodes (latency metrics)
+      community.docker.docker_container_exec:
+        container: "{{ item }}"
+        command: >-
+          bash -c "for i in $(seq 1 50); do valkey-cli -a {{ valkey_password }} GET k$i >/dev/null || true; valkey-cli -a {{ valkey_password }} LRANGE l$i 0 -1 >/dev/null || true; done"
+      loop: "{{ replica_nodes }}"
+      ignore_errors: yes
