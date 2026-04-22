@@ -135,7 +135,7 @@ jobs:
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
       - name: Setup PMM-Client
-        working-directory: pmm-qa/qa-integration/pmm_qa
+        working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Install playwright
@@ -146,7 +146,7 @@ jobs:
           npx playwright install chromium
 
       - name: Run Setup for E2E Tests
-        working-directory: pmm-qa/qa-integration/pmm_qa
+        working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: |
           python3 -m venv virtenv
           . virtenv/bin/activate
