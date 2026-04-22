@@ -566,9 +566,18 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
   });
 
   test('PMM-T9999 @generic', async ({}) => {
-    const startContainer = (await cli.exec(`docker run --rm -d --name="tarball_client" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`)).stdout;
+    const containerName = 'tarball_client'
+    await cli.exec('docker network create pmm-qa || true');
+    await cli.exec('docker network connect pmm-server pmm-qa');
+    await cli.exec(`docker run --rm -d --name="${containerName}" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`);
+    const latestVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout;
+    const installResponse = (await cli.exec(`../package_tests/scripts/pmm3_client_install_tarball.sh -v ${latestVersion}`)).stdout;
+    const connectResponse = (await cli.exec(`pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`)).stdout;
 
-    console.log(startContainer);
+
+    console.log(`Latest version: ${latestVersion}`);
+    console.log(`Install response is: ${installResponse}`);
+    console.log(`Connect response is: ${connectResponse}`);
     console.log((await cli.exec('docker ps -a')).stdout);
   })
 });
