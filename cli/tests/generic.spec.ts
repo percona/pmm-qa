@@ -588,9 +588,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     await cli.exec(`docker exec ${containerName} pkill -f pmm-agent`);
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
 
-    console.log(`Old pid is: ${oldPid}`);
+    console.log(`Old pid is: ${oldPid.stdout}`);
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
-    console.log(`New pid is: ${newPid}`);
+    console.log(`New pid is: ${newPid.stdout}`);
     await newPid.outNotContains(oldPid.stdout);
   })
 });
