@@ -584,6 +584,6 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     await oldVersion.outContains(latestReleasedVersion)
 
     console.log(oldPid.stdout);
-    console.log(`PMM Client version is: ${process.env.pmm_client_version}`);
+    console.log(`PMM Client version is: ${process.env.PMM_CLIENT_VERSION}`);
   })
 });
