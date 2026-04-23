@@ -1,0 +1,38 @@
+[mysqld]
+# General server configuration
+server_id={{ item }}
+bind-address=0.0.0.0
+port={{ mysql_listen_port }}
+userstat=1
+
+# Replication settings
+gtid_mode=ON
+enforce_gtid_consistency=ON
+log_bin=binlog
+log_slave_updates=ON
+sync_binlog=1
+binlog_checksum=NONE
+# Only disable engines supported in 5.7 and safe for GTID
+disabled_storage_engines="MyISAM,BLACKHOLE,FEDERATED,ARCHIVE"
+# MacOS-specific, where table names are case-sensitive
+lower_case_table_names=2
+
+# Optional: report_host is valid in 5.7
+report_host={{ container_prefix }}{{ item }}
+
+# Replica configuration - applies to all nodes except primary (they'll be able to become replicas)
+{% if item != 1 %}
+# Replica specific settings (use slave_parallel_* in 5.7)
+slave_parallel_workers=4
+slave_parallel_type=LOGICAL_CLOCK
+slave_preserve_commit_order=1
+{% endif %}
+
+# Crash-safe replication settings
+relay-log={{ container_prefix }}{{ item }}-relay-bin
+relay_log_recovery=ON
+relay_log_purge=ON
+
+# Performance and connection settings
+max_connections=1000
+innodb_buffer_pool_size=256M

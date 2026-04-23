@@ -2,10 +2,6 @@ name: _runner-integration-cli-tests
 on:
   workflow_call:
     inputs:
-      qa_integration_branch:
-        description: "Branch for qa-integration to checkout"
-        required: false
-        type: string
       pmm_qa_branch:
         description: "Branch for pmm-qa (CLI tests) to checkout"
         required: false
@@ -20,8 +16,8 @@ on:
         required: false
         type: string
       pmm_client_version:
-        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        description: 'PMM Client version (latest-tarball|pmm3-rc|x.xx.x|https...)'
+        default: 'latest-tarball'
         required: true
         type: string
       services_list:
@@ -55,9 +51,8 @@ jobs:
     timeout-minutes: 40
     env:
       SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
-      QA_INTEGRATION_BRANCH: ${{ inputs.qa_integration_branch || 'main' }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
 
@@ -68,7 +63,7 @@ jobs:
       CLIENT_IMAGE: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
 
       # TODO: rename and update tests to use PMM_CLIENT_VERSION instead
-      CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
 
       # TODO: used in pmm-framework.sh as well. Remove setup dependency on this var.
       # TODO: update tests to use PMM_SERVER_IMAGE instead
@@ -108,13 +103,6 @@ jobs:
             }
           result-encoding: string
 
-      - name: Checkout qa-integration repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.QA_INTEGRATION_BRANCH }}
-          repository: Percona-Lab/qa-integration
-          path: ./qa-integration
-
       - name: 'Checkout pmm-qa: <${{ env.PMM_QA_BRANCH }}>'
         uses: actions/checkout@v4
         with:
@@ -126,7 +114,7 @@ jobs:
         working-directory: ./pmm-qa/cli
         run: |
           npm ci
-   
+
       - name: Pull PMM Server image <${{ env.PMM_SERVER_IMAGE }}>
         working-directory: ./pmm-qa/cli
         run: |
@@ -194,12 +182,12 @@ jobs:
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
-        working-directory: qa-integration/pmm_qa
+        working-directory: pmm-qa/qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password admin --use_metrics_mode no
 
       - name: 'Run qa-integration setup: ${{ env.WIZARD_ARGS }}'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
-        working-directory: qa-integration/pmm_qa
+        working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
           python3 -m venv virtenv
           . virtenv/bin/activate
@@ -244,13 +232,13 @@ jobs:
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
-          context: "${{ inputs.test_name }} CLI tests"
+          context: "CLI tests ${{ env.TEST_NAME }}"
           description: "Test execution ${{ job.status }}"
           state: ${{ job.status }}
           repository: ${{ github.repository }}
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
-      
+
       # - name: Setup tmate session  on failure
       #   if: ${{ failure() }}
       #   uses: percona/gh-action-action-tmate@v2

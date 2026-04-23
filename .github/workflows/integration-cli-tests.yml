@@ -10,11 +10,6 @@ on:
         default: 'main'
         required: false
         type: string
-      qa_integration_branch:
-        description: 'qa_integration repository branch(for setup)'
-        default: 'main'
-        required: false
-        type: string
       pmm_server_image:
         description: 'PMM Server docker image'
         default: 'perconalab/pmm-server:3-dev-latest'
@@ -26,8 +21,8 @@ on:
         required: false
         type: string
       pmm_client_version:
-        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        description: 'PMM Client version (latest-tarball|pmm3-rc|x.xx.x|https...)'
+        default: 'latest-tarball'
         required: false
         type: string
       launchable_confidence:
@@ -44,9 +39,6 @@ on:
   workflow_call:
     inputs:
       pmm_qa_branch:
-        required: false
-        type: string
-      qa_integration_branch:
         required: false
         type: string
       pmm_server_image:
@@ -82,10 +74,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@help'
       test_name: 'help tests'
@@ -98,10 +89,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@server-only'
       test_name: 'pmm-server container'
@@ -114,10 +104,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@client-docker'
       services_list: '--help'
@@ -131,10 +120,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@generic|@unregister'
       services_list: '--database pdpgsql=16 --database ps,ENCRYPTED_CLIENT_CONFIG=true'
@@ -148,10 +136,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@service-removal'
       test_name: 'Remove'
@@ -164,10 +151,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@percona-server'
       services_list: '--database ps=5.7'
@@ -181,10 +167,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@percona-server'
       services_list: '--database ps=8.0'
@@ -198,10 +183,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@percona-server'
       services_list: '--database ps=8.4'
@@ -215,10 +199,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@mysql|@mysql-conf-file'
       services_list: '--database mysql=8.0'
@@ -232,10 +215,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@mysql|@mysql-conf-file'
       services_list: '--database mysql=8.4'
@@ -249,10 +231,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@pdpgsql'
       services_list: '--database pdpgsql=14'
@@ -266,10 +247,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@pdpgsql'
       services_list: '--database pdpgsql=15'
@@ -283,10 +263,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@pdpgsql'
       services_list: '--database pdpgsql=16'
@@ -300,10 +279,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@pdpgsql'
       services_list: '--database pdpgsql=17'
@@ -317,10 +295,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@pdpgsql'
       services_list: '--database pdpgsql=18'
@@ -397,10 +374,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@psmdb'
       services_list: '--database psmdb=6.0,SETUP_TYPE=pss --verbose'
@@ -414,10 +390,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@psmdb'
       services_list: '--database psmdb=7.0,SETUP_TYPE=pss --verbose'
@@ -431,10 +406,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@psmdb'
       services_list: '--database psmdb=8.0,SETUP_TYPE=pss --verbose'
@@ -448,10 +422,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@psmdb-shard'
       services_list: '--database psmdb=7.0,SETUP_TYPE=shards --verbose'
@@ -465,10 +438,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@psmdb-shard'
       services_list: '--database psmdb=8.0,SETUP_TYPE=shards --verbose'
@@ -482,10 +454,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@haproxy'
       services_list: '--database=haproxy'
@@ -499,10 +470,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@proxysql'
       services_list: '--database pxc=5.7'
@@ -516,10 +486,9 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      qa_integration_branch: ${{ inputs.qa_integration_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@proxysql'
       services_list: '--database pxc=8.0'

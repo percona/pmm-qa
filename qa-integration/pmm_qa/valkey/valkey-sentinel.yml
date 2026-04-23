@@ -1,0 +1,254 @@
+---
+- name: Deploy Valkey Cluster with Sentinel
+  hosts: localhost
+  gather_facts: false
+  vars:
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    metrics_mode: "{{ lookup('env', 'metrics_mode') }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    valkey_version: "{{ lookup('env', 'VALKEY_VERSION') | default('7', true) }}"
+    valkey_image: "valkey/valkey:{{ valkey_version }}-bookworm"
+    valkey_network_name: "pmm-qa"
+    valkey_password: "VKvl41568AsE"
+    valkey_data_dir: "{{ lookup('env', 'HOME') }}/valkey/data"
+    valkey_config_dir: "{{ lookup('env', 'HOME') }}/valkey/config"
+    valkey_primary_port: 6379
+    valkey_replica_count: 2
+    valkey_replica_start_port: 6380
+    sentinel_count: 3
+    sentinel_start_port: 26379
+    sentinel_quorum: 2
+    encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
+    pmm_server_name: "pmm-server"
+
+  tasks:
+    - name: Set Random Number Fact
+      set_fact:
+        random_number: "{{ (10000 | random) | int }}"
+
+    - name: Create Docker network
+      community.docker.docker_network:
+        name: "{{ valkey_network_name }}"
+        driver: bridge
+        state: present
+
+    - name: Create config directory
+      file:
+        path: "{{ valkey_config_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Create a config directory per Sentinel
+      file:
+        path: "{{ valkey_config_dir }}/sentinel-{{ item }}"
+        state: directory
+        mode: "0755"
+      loop: "{{ range(1, sentinel_count + 1) | list }}"
+
+    - name: Create data directory
+      file:
+        path: "{{ valkey_data_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Generate Valkey primary configuration
+      template:
+        src: valkey-primary.conf.j2
+        dest: "{{ valkey_config_dir }}/valkey-primary.conf"
+        mode: "0644"
+
+    - name: Generate Valkey replica configurations
+      template:
+        src: valkey-replica.conf.j2
+        dest: "{{ valkey_config_dir }}/valkey-replica-{{ item }}.conf"
+        mode: "0644"
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+
+    - name: Generate Sentinel configurations
+      template:
+        src: sentinel.conf.j2
+        dest: "{{ valkey_config_dir }}/sentinel-{{ item }}/sentinel.conf"
+        mode: "0664"
+      loop: "{{ range(1, sentinel_count + 1) | list }}"
+
+    - name: Create Docker volume for primary data
+      community.docker.docker_volume:
+        name: "valkey-primary-data"
+        state: present
+
+    - name: Create Docker volumes for replica data
+      community.docker.docker_volume:
+        name: "valkey-replica-{{ item }}-data"
+        state: present
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+
+    - name: Start Valkey primary container
+      community.docker.docker_container:
+        name: "valkey-primary"
+        hostname: "valkey-primary-node-{{ random_number }}"
+        image: "{{ valkey_image }}"
+        state: started
+        restart_policy: unless-stopped
+        networks:
+          - name: "{{ valkey_network_name }}"
+        ports:
+          - "{{ valkey_primary_port }}:6379"
+        volumes:
+          - "valkey-primary-data:/data"
+          - "{{ valkey_config_dir }}/valkey-primary.conf:/usr/local/etc/valkey/valkey.conf:ro"
+        command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+        healthcheck:
+          test: ["CMD", "valkey-cli", "-a", "{{ valkey_password }}", "ping"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+
+    - name: Wait for the primary to be ready
+      wait_for:
+        host: localhost
+        port: "{{ valkey_primary_port }}"
+        timeout: 30
+        delay: 1
+
+    - name: Start Valkey replica containers
+      community.docker.docker_container:
+        name: "valkey-replica-{{ item }}"
+        hostname: "valkey-replica-{{ item }}-node-{{ random_number }}"
+        image: "{{ valkey_image }}"
+        state: started
+        restart_policy: unless-stopped
+        networks:
+          - name: "{{ valkey_network_name }}"
+        ports:
+          - "{{ valkey_replica_start_port + item - 1 }}:6379"
+        volumes:
+          - "valkey-replica-{{ item }}-data:/data"
+          - "{{ valkey_config_dir }}/valkey-replica-{{ item }}.conf:/usr/local/etc/valkey/valkey.conf:ro"
+        command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+        healthcheck:
+          test: ["CMD", "valkey-cli", "-a", "{{ valkey_password }}", "ping"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+
+    - name: Wait for replicas to be ready
+      wait_for:
+        host: localhost
+        port: "{{ valkey_replica_start_port + item - 1 }}"
+        timeout: 30
+        delay: 1
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+
+    - name: Start Sentinel containers
+      community.docker.docker_container:
+        name: "sentinel-{{ item }}"
+        hostname: "sentinel-{{ item }}-node-{{ random_number }}"
+        image: "{{ valkey_image }}"
+        state: started
+        restart_policy: unless-stopped
+        networks:
+          - name: "{{ valkey_network_name }}"
+        ports:
+          - "{{ sentinel_start_port + item - 1 }}:26379"
+        volumes:
+          - "{{ valkey_config_dir }}/sentinel-{{ item }}:/usr/local/etc/valkey"
+        command: ["valkey-sentinel", "/usr/local/etc/valkey/sentinel.conf"]
+        healthcheck:
+          test: ["CMD", "valkey-cli", "-p", "{{ sentinel_start_port }}", "ping"]
+          interval: 10s
+          timeout: 5s
+          retries: 5
+      loop: "{{ range(1, sentinel_count + 1) | list }}"
+
+    - name: Wait for Sentinels to be ready
+      wait_for:
+        host: localhost
+        port: "{{ sentinel_start_port + item - 1 }}"
+        timeout: 30
+        delay: 1
+      loop: "{{ range(1, sentinel_count + 1) | list }}"
+
+    - name: Verify cluster status
+      community.docker.docker_container_exec:
+        container: "valkey-primary"
+        command: valkey-cli -a "{{ valkey_password }}" info replication
+      register: cluster_status
+
+    - name: Display cluster status
+      debug:
+        msg: "{{ cluster_status.stdout_lines }}"
+
+    - name: Run Sentinel status command
+      community.docker.docker_container_exec:
+        container: "sentinel-1"
+        command: valkey-cli -p {{ sentinel_start_port }} sentinel masters
+      register: sentinel_status
+
+    - name: Display Sentinel status
+      debug:
+        msg: "{{ sentinel_status.stdout_lines }}"
+
+    - name: Install PMM Client in each container
+      ansible.builtin.include_tasks: ../tasks/install_pmm_client.yml
+      loop: >-
+        {{ ['valkey-primary']
+          + (range(1, valkey_replica_count + 1) | map('string') | map('regex_replace', '^(.*)$', 'valkey-replica-\1') | list)
+          + (range(1, sentinel_count + 1) | map('string') | map('regex_replace', '^(.*)$', 'sentinel-\1') | list)
+        }}
+      loop_control:
+        loop_var: current_container_name
+      vars:
+        container_name: "{{ current_container_name }}"
+    - name: Add the primary to monitoring
+      community.docker.docker_container_exec:
+        container: "valkey-primary"
+        command: >-
+          pmm-admin add valkey --cluster=valkey-cluster --replication-set=valkey-repl --environment=valkey-test 
+          --username=default --password="{{ valkey_password }}" --service-name=valkey-primary-svc-{{ random_number }} 
+          --host=valkey-primary --port=6379 --custom-labels='role=primary'
+      ignore_errors: yes
+    - name: Add the replicas to monitoring
+      community.docker.docker_container_exec:
+        container: "valkey-replica-{{ item }}"
+        command: >-
+          pmm-admin add valkey --cluster=valkey-cluster --replication-set=valkey-repl --environment=valkey-test 
+          --username=default --password="{{ valkey_password }}" --service-name=valkey-replica{{ item }}-svc-{{ random_number }} 
+          --host=valkey-replica-{{ item }} --port=6379 --custom-labels='role=replica'
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+      ignore_errors: yes
+    - name: Add Sentinels to monitoring
+      community.docker.docker_container_exec:
+        container: "sentinel-{{ item }}"
+        command: >-
+          pmm-admin add valkey --cluster=valkey-cluster --environment=valkey-test --username=default 
+          --password="{{ valkey_password }}" --service-name=sentinel{{ item }}-svc-{{ random_number }} 
+          --host=sentinel-{{ item }} --port={{ sentinel_start_port }}  --custom-labels='role=sentinel'
+      loop: "{{ range(1, sentinel_count + 1) | list }}"
+      ignore_errors: yes
+
+    - name: Seed sample list data on primary (sentinel setup)
+      community.docker.docker_container_exec:
+        container: "valkey-primary"
+        command: valkey-cli -a "{{ valkey_password }}" RPUSH mylist "one" "two" "three" "four" "five"
+
+    - name: Pop one item from sample list (sentinel setup)
+      community.docker.docker_container_exec:
+        container: "valkey-primary"
+        command: valkey-cli -a "{{ valkey_password }}" RPOP mylist
+
+    - name: Generate workload on primary (sentinel setup)
+      community.docker.docker_container_exec:
+        container: "valkey-primary"
+        command: >-
+          bash -c "for i in $(seq 1 50); do valkey-cli -a {{ valkey_password }} SET k$i v$i >/dev/null; valkey-cli -a {{ valkey_password }} GET k$i >/dev/null; valkey-cli -a {{ valkey_password }} HSET h$i f v >/dev/null; valkey-cli -a {{ valkey_password }} LPUSH l$i a b c >/dev/null; valkey-cli -a {{ valkey_password }} RPUSH l$i d e f >/dev/null; valkey-cli -a {{ valkey_password }} LRANGE l$i 0 -1 >/dev/null; valkey-cli -a {{ valkey_password }} LPOP l$i >/dev/null || true; valkey-cli -a {{ valkey_password }} RPOP l$i >/dev/null || true; done"
+      ignore_errors: yes
+
+    - name: Generate read workload on replicas (sentinel setup)
+      community.docker.docker_container_exec:
+        container: "valkey-replica-{{ item }}"
+        command: >-
+          bash -c "for i in $(seq 1 50); do valkey-cli -a {{ valkey_password }} GET k$i >/dev/null || true; valkey-cli -a {{ valkey_password }} LRANGE l$i 0 -1 >/dev/null || true; done"
+      loop: "{{ range(1, valkey_replica_count + 1) | list }}"
+      ignore_errors: yes

@@ -1,0 +1,120 @@
+---
+networks:
+  pmm-network:
+
+services:
+  mysql:
+    image: ${MYSQL_IMAGE:-percona:5.7.30}
+    container_name: pmm-agent_mysql_5_7
+    command: >
+      --sql-mode="ANSI_QUOTES"
+      --performance-schema --innodb_monitor_enable=all --userstat
+      --slow_query_log --log_slow_rate_limit=1 --log_slow_admin_statements --log_slow_slave_statements --slow_query_log_file=/tmp/mysql/log/ps5_slow_log.log --long_query_time=0
+      --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+    ports:
+      - "42300:3306"
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=^O6VrIoC1@9b
+      - MYSQL_USER=pmm-agent
+      - MYSQL_PASSWORD=pmm%*&agent-password
+      - UMASK=0777  # for slowlog file
+    volumes:
+      - /tmp/mysql/log:/tmp/mysql/log:rw
+    networks:
+      - pmm-network
+
+  mongo:
+    image: ${MONGO_IMAGE:-percona/percona-server-mongodb:4.2.8}
+    container_name: pmm-agent_mongo
+    command: --profile 2
+    restart: always
+    ports:
+      - "42100:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root-!@#%^password
+    networks:
+      - pmm-network
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:14.7}
+    container_name: pmm-agent_postgres
+    restart: always
+    command: >
+      -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements
+      -c track_activity_query_size=2048
+      -c pg_stat_statements.max=10000
+      -c pg_stat_monitor.pgsm_query_max_len=10000
+      -c pg_stat_monitor.pgsm_normalized_query=0
+      -c pg_stat_monitor.pgsm_extract_comments=yes
+      -c pg_stat_statements.track=all
+      -c pg_stat_statements.save=off
+      -c track_io_timing=on
+    ports:
+      - "42200:5432"
+    environment:
+      - POSTGRES_PASSWORD=pmm-^*&@agent-password
+    networks:
+      - pmm-network
+
+  proxysql:
+    image: ${PROXYSQL_IMAGE:-proxysql/proxysql:2.1.1}
+    container_name: pmm-agent_proxysql
+    restart: on-failure:5
+    ports:
+      - "46032:6032"
+      - "46033:6033"
+      - "46070:6070"
+    volumes:
+      - ${PWD}/testdata/proxysql/proxysql.cnf:/etc/proxysql.cnf:rw
+    networks:
+      - pmm-network
+
+  sysbench:
+    image: perconalab/sysbench
+    container_name: pmm-agent_sysbench
+    depends_on:
+      - mysql
+    networks:
+      - pmm-network
+    command: >
+      bash -c "
+          set -o xtrace
+          sleep 20
+          mysql \
+              --host=mysql \
+              --port=3306 \
+              --user=root \
+              --password=^O6VrIoC1@9b \
+              -e 'CREATE DATABASE IF NOT EXISTS sbtest'
+          sysbench \
+              --db-driver=mysql \
+              --mysql-host=mysql \
+              --mysql-port=3306 \
+              --mysql-user=root \
+              --mysql-password=^O6VrIoC1@9b \
+              --mysql-db=sbtest \
+              --mysql-table-engine=innodb \
+              --oltp-table-size=1000000 \
+              /usr/share/sysbench/tests/include/oltp_legacy/oltp.lua \
+              prepare
+          sysbench \
+              --rate=200 \
+              --threads=64 \
+              --report-interval=10 \
+              --time=0 \
+              --events=0 \
+              --rand-type=pareto \
+              --db-driver=mysql \
+              --mysql-host=mysql \
+              --mysql-port=3306 \
+              --mysql-user=root \
+              --mysql-password=^O6VrIoC1@9b \
+              --mysql-db=sbtest \
+              --mysql-table-engine=innodb \
+              --oltp-reconnect \
+              --oltp-table-size=1000000 \
+              /usr/share/sysbench/tests/include/oltp_legacy/select.lua \
+              run
+      "

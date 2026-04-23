@@ -1,0 +1,94 @@
+- name: Remove old data folders
+  shell: 'rm -fr {{ data_dir }}'
+  become: true
+
+- name: Create data directories
+  file:
+    path: "{{ data_dir }}/node{{ item }}/data"
+    state: directory
+    mode: '0755'
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Generate pg_hba.conf for primary node
+  template:
+    src: data/pg_hba.conf.j2
+    dest: "{{ data_dir }}/node{{ item }}/pg_hba.conf"
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Generate postgres.conf for primary node
+  template:
+    src: data/postgresql-single.conf.j2
+    dest: "{{ data_dir }}/node1/postgresql.conf"
+  become: true
+
+- name: Install Percona Distribution for Postgres
+  include_tasks: tasks/install-pdpgsql.yml
+
+- name: Install pg stat monitor.
+  include_tasks: ./tasks/install_pg_stat-monitor.yml
+
+- name: Install and add pmm client.
+  include_tasks: ../tasks/install_pmm_client.yml
+  vars:
+    container_name: "{{ container_prefix }}{{ item }}"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Copy config files
+  shell: |
+    docker cp {{ data_dir }}/node{{ item }}/postgresql.conf {{ container_prefix }}{{ item }}:/etc/postgresql/{{ pdpgsql_version }}/main/postgresql.conf
+    docker cp {{ data_dir }}/node{{ item }}/pg_hba.conf {{ container_prefix }}{{ item }}:/etc/postgresql/{{ pdpgsql_version }}/main/pg_hba.conf
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Restart Percona distribution for Postgresql
+  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl restart postgresql
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Create PostgreSQL user 'pmm' with password and grant pg_monitor
+  shell: |
+    docker exec -u postgres {{ container_prefix }}{{ item }} psql -U postgres -d {{ db_name | default('postgres') }} -c "
+      DO \$\$
+      BEGIN
+        IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = 'pmm') THEN
+          CREATE ROLE pmm LOGIN PASSWORD 'pmm';
+        END IF;
+        GRANT pg_monitor TO pmm;
+      END
+      \$\$;
+    "
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Add service to pmm server
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:5432
+    docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatmonitor --socket=/var/run/postgresql socket_{{ container_prefix }}{{ item }}{{ random_service_name_value }}
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Run queries for generating data
+  shell: docker exec {{ container_prefix }}{{ item }} bash ./data/pgsm_run_queries.sh &
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Copy a file into the container
+  shell: docker cp ./data/pgsql_load.sql {{ container_prefix }}{{ item }}:/pgsql_load.sql
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Create database if it doesn't exist
+  shell: docker exec {{ container_prefix }}{{ item }} psql -U postgres -c "CREATE DATABASE school;"
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Run SQL script using docker exec
+  shell: docker exec {{ container_prefix }}{{ item }} psql -U postgres -d school -f /pgsql_load.sql > /dev/null
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Change postgres user password
+  shell: |
+    docker exec -u postgres {{ container_prefix }}1 psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'pass+this';"
