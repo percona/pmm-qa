@@ -1,4 +1,7 @@
 const apiEndpoints = {
+  ha: {
+    status: '/v1/ha/status',
+  },
   inventory: {
     services: '**/v1/inventory/services',
   },
@@ -14,6 +17,7 @@ const apiEndpoints = {
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
+    settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
   },
   users: {
