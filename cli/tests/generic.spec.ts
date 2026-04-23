@@ -570,14 +570,17 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     await cli.exec('docker network create pmm-qa || true');
     await cli.exec('docker network connect pmm-server pmm-qa');
     await cli.exec(`docker run --rm -d --name="${containerName}" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`);
-    const latestVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout;
+    const latestReleasedVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout;
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`)
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
-    await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestVersion}`);
+    await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestReleasedVersion}`);
     await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`);
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
     const adminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
-    const oldVersion = await cli.exec(`docker exec ${containerName} pmm-admin version`);
+    const oldVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
+
+    await adminStatus.outContains("Connected");
+    await oldVersion.outContains(latestReleasedVersion)
 
     console.log(adminStatus);
     console.log(oldVersion);
