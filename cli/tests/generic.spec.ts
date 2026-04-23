@@ -591,7 +591,8 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     console.log(`Old pid is: ${oldPid.stdout}`);
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
     console.log(`New pid is: ${newPid.stdout}`);
-    console.log(`Latest PMM Version is: ${process.env.PMM_VERSION}`);
+    const latestVersion = (await cli.exec('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')).stdout.trim();
+    console.log(`Latest PMM Version is: ${latestVersion}`);
     await newPid.outNotContains(oldPid.stdout);
   })
 });
