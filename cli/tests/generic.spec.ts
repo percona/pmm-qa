@@ -575,7 +575,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
     const installResponse = (await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestVersion}`)).stdout;
     const connectResponse = (await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`)).stdout;
-    const startResponse = await cli.exec(`docker exec ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
+    const startResponse = await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
 
     console.log(`Latest version: ${latestVersion}`);
     console.log(`Install response is: ${installResponse}`);
