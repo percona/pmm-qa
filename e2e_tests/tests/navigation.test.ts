@@ -85,12 +85,9 @@ pmmTest(
       });
 
       for (const dashboardPath of dashboards) {
-        console.log(`[PMM-T2198] Navigating to dashboard: ${dashboardPath}`);
         await leftNavigation.selectMenuItem(dashboardPath);
-        console.log(`[PMM-T2198] Verifying time range on dashboard: ${dashboardPath}`);
         await dashboard.waitForDashboardToLoad();
         await assertSelectedTimeRange();
-        console.log(`[PMM-T2198] Time range verified on dashboard: ${dashboardPath}`);
       }
     });
   },
