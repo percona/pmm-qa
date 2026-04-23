@@ -573,14 +573,13 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     const latestVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout;
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`)
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
-    const installResponse = (await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestVersion}`)).stdout;
-    const connectResponse = (await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`)).stdout;
-    const startResponse = await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
+    await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestVersion}`);
+    await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`);
+    await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
+    const adminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
+    const oldVersion = await cli.exec(`docker exec ${containerName} pmm-admin version`);
 
-    console.log(`Latest version: ${latestVersion}`);
-    console.log(`Install response is: ${installResponse}`);
-    console.log(`Connect response is: ${connectResponse}`);
-    console.log(`Start response is: ${startResponse.stdout}`)
-    console.log((await cli.exec('docker ps -a')).stdout);
+    console.log(adminStatus);
+    console.log(oldVersion);
   })
 });
