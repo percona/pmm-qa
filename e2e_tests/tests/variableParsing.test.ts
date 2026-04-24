@@ -1,6 +1,7 @@
 import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
+import { ServiceType } from '@interfaces/inventory';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page, urlHelper }) => {
   await grafanaHelper.authorize();
@@ -9,13 +10,21 @@ pmmTest.beforeEach(async ({ grafanaHelper, page, urlHelper }) => {
 
 pmmTest(
   'PMM-T2205 - Verify Postgres Summary service name persistence @inventory',
-  async ({ dashboard, leftNavigation, page }) => {
+  async ({ api, dashboard, leftNavigation, page }) => {
     await pmmTest.step('Open PostgreSQL menu and go to Summary', async () => {
+      const postgresServices = await api.inventoryApi.getServicesByType(ServiceType.postgresql);
+      const selectedPostgresService =
+        postgresServices.find((service) => service.service_name !== 'pmm-server-postgresql') ??
+        postgresServices[0];
+
       await leftNavigation.selectMenuItem('postgresql');
       await dashboard.waitForDashboardToLoad();
       await leftNavigation.selectMenuItem('postgresql.summary');
 
-      const selectedService = await dashboard.selectVariableValue('Service Name');
+      const selectedService = await dashboard.selectVariableValue(
+        'Service Name',
+        selectedPostgresService.service_name,
+      );
 
       await expect
         .poll(() => decodeURIComponent(page.url()), {
