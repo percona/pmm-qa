@@ -588,15 +588,12 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     await cli.exec(`docker exec ${containerName} pkill -f pmm-agent`);
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
 
-    console.log(`Old pid is: ${oldPid.stdout}`);
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
-    console.log(`New pid is: ${newPid.stdout}`);
     const latestVersion = (await cli.exec('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')).stdout.trim();
-    console.log(`Latest PMM Version is: ${latestVersion}`);
-    await newPid.outNotContains(oldPid.stdout);
     const newAdminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
+    await newPid.outNotContains(oldPid.stdout);
     await newAdminStatus.outContains("Connected");
     await newVersion.outContains(latestVersion)
   })
