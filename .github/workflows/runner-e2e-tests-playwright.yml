@@ -115,18 +115,6 @@ jobs:
           repository: percona/pmm-qa
           path: ./pmm-qa
 
-      - name: Setup PMM Server
-        working-directory: ./pmm-qa/e2e_tests
-        run: |
-          ls
-          docker network create pmm-qa
-          docker volume create pmm-volume
-
-          PWD=$(pwd) docker compose -f docker-compose.yml up -d
-          
-          sleep 15
-          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
-
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
           sudo rm -rf /usr/share/dotnet
@@ -134,26 +122,12 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      - name: Setup PMM-Client
-        working-directory: ./pmm-qa/qa-integration/pmm_qa
-        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
-
       - name: Install playwright
         working-directory: ./pmm-qa/e2e_tests/
         run: |
           npm ci
           npx playwright install-deps
           npx playwright install chromium
-
-      - name: Run Setup for E2E Tests
-        working-directory: ./pmm-qa/qa-integration/pmm_qa
-        run: |
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: 'Create report name'
         if: always()
@@ -170,6 +144,7 @@ jobs:
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
           
+          docker pull ${{ env.DOCKER_VERSION }} || true
           export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
@@ -179,42 +154,80 @@ jobs:
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > launchable-subset.txt || true
           echo "$(cat launchable-subset.txt)" || true
 
-      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
-        working-directory: pmm-qa/e2e_tests/
+      - name: Check if launchable subset is empty
+        id: check_launchable_subset
+        working-directory: pmm-qa/e2e_tests
         run: |
-          # Skip tests if the subset file is empty
-          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
-            # Run tests if the subset file is not empty
-            echo "${{ env.SUBSET_FILE_NAME }} is not empty, so we run tests from the subset."
-            npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
+          SUBSET_FILE="${{ env.SUBSET_FILE_NAME }}"
+
+          # Skip downstream setup/tests when subset is empty.
+          if [ -s "$SUBSET_FILE" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with setup and tests."
           else
-            echo "${{ env.SUBSET_FILE_NAME }} is empty, so we won't run tests."
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Downstream setup and tests will be skipped."
           fi
 
+      - name: Skip notice
+        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
+        run: echo "No tests selected by Launchable subset. Skipping setup and test execution."
+
+      - name: Setup PMM Server
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ./pmm-qa/e2e_tests
+        run: |
+          ls
+          docker network create pmm-qa
+          docker volume create pmm-volume
+
+          PWD=$(pwd) docker compose -f docker-compose.yml up -d
+          
+          sleep 15
+          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
+
+      - name: Setup PMM-Client
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ./pmm-qa/qa-integration/pmm_qa
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+
+      - name: Run Setup for E2E Tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: ./pmm-qa/qa-integration/pmm_qa
+        run: |
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install setuptools
+          python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+
+      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/e2e_tests/
+        run: |
+          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
+
       - name: Download logs
-        if: ${{ always() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
           curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
           unzip logs.zip -d logs
 
       - name: Record launchable test results
-        if: ${{ always() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
-          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
-            launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
-            launchable gate --session "$(cat launchable-session.txt)"
-          fi
+          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs
-        if: ${{ failure() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
         working-directory: pmm-qa/e2e_tests
         continue-on-error: true
         run: |
-          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
-            launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
-          fi
+          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - name: Generate and Attach the report
         if: failure()

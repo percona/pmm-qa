@@ -179,7 +179,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
-      cli_test: 'tests/mongoDb-psmdb.spec.ts'
+      cli_tag: '@psmdb'
       services_list: '--database psmdb=6.0,SETUP_TYPE=pss,OL_VERSION=8 --verbose'
       test_name: 'PSMDB Replica 6.x'
 
@@ -192,7 +192,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
-      cli_test: 'tests/mongoDb-psmdb.spec.ts'
+      cli_tag: '@psmdb'
       services_list: '--database psmdb=7.0,SETUP_TYPE=pss,OL_VERSION=8 --verbose'
       test_name: 'PSMDB Replica 7.x'
 
@@ -205,7 +205,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
-      cli_test: 'tests/mongoDb-psmdb.spec.ts'
+      cli_tag: '@psmdb'
       services_list: '--database psmdb=8.0,SETUP_TYPE=pss,OL_VERSION=8 --verbose'
       test_name: 'PSMDB Replica 8.x'
 
@@ -218,7 +218,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
-      cli_test: 'tests/mongoDb-psmdb.spec.ts'
+      cli_tag: '@psmdb'
       services_list: '--database psmdb=6.0,SETUP_TYPE=pss,OL_VERSION=9 --verbose'
       test_name: 'PSMDB Replica 6.x'
 
@@ -231,7 +231,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
-      cli_test: 'tests/mongoDb-psmdb.spec.ts'
+      cli_tag: '@psmdb'
       services_list: '--database psmdb=7.0,SETUP_TYPE=pss,OL_VERSION=9 --verbose'
       test_name: 'PSMDB Replica 7.x'
 
@@ -244,7 +244,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
-      cli_test: 'tests/mongoDb-psmdb.spec.ts'
+      cli_tag: '@psmdb'
       services_list: '--database psmdb=8.0,SETUP_TYPE=pss,OL_VERSION=9 --verbose'
       test_name: 'PSMDB Replica 8.x'
 
