@@ -19,6 +19,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
+import AdvancedSettingsPage from '@pages/ha/advancedSettings.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -48,6 +49,7 @@ base.beforeEach(async ({ page }) => {
 });
 
 const pmmTest = base.extend<{
+  advancedSettingsPage: AdvancedSettingsPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -68,6 +70,7 @@ const pmmTest = base.extend<{
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
 }>({
+  advancedSettingsPage: async ({ page }, use) => await use(new AdvancedSettingsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
