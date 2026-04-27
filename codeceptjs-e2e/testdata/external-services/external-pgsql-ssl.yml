@@ -1,0 +1,178 @@
+---
+- hosts: localhost
+  gather_facts: no
+  vars:
+    ssl_dir: "./ssl"
+    data_dir: "./data"
+    ca_subj: "/CN=CA"
+    client_subj: "/CN=client"
+    postgres_image: "{{ lookup('env', 'POSTGRES_IMAGE') | default('perconalab/percona-distribution-postgresql:17', true) }}"
+    pmm_server_image: "{{ lookup('env', 'PMM_SERVER_IMAGE') | default('perconalab/pmm-server:3-dev-latest', true) }}"
+  tasks:
+    - name: Remove existing ssl folder
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "{{ ssl_dir }}"
+        - "{{ data_dir }}"
+      ignore_errors: true
+
+    - name: Create pmm-qa network if not exist
+      shell: docker network create pmm-qa
+      ignore_errors: true
+
+    - name: Ensure ssl and utils dirs exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ ssl_dir }}"
+        - "{{ data_dir }}"
+    - name: Stop containers if already running
+      shell: |
+        docker rm -f external-postgres-ssl 
+        docker rm -f pmm-server-external-postgres-ssl
+        docker volume rm pmm-server-external-pg-ssl
+      ignore_errors: true
+
+    - name: Install openssl package
+      apt:
+        name: openssl
+        state: present
+      become: true
+
+    - name: Generate CA key
+      shell: "openssl genrsa -out {{ ssl_dir }}/ca.key 2048"
+      args:
+        creates: "{{ ssl_dir }}/ca.key"
+
+    - name: Generate CA certificate
+      shell: "openssl req -x509 -new -nodes -key {{ ssl_dir }}/ca.key -sha256 -days 3650 -subj '{{ ca_subj }}' -out {{ ssl_dir }}/ca.crt"
+      args:
+        creates: "{{ ssl_dir }}/ca.crt"
+
+    - name: Generate server key
+      shell: "openssl genrsa -out {{ ssl_dir }}/server.key 2048"
+      args:
+        creates: "{{ ssl_dir }}/server.key"
+
+    - name: Set permissions for server.key to 0600
+      file:
+        path: "{{ ssl_dir }}/server.key"
+        mode: '0600'
+
+    - name: Generate server CSR
+      shell: "openssl req -new -key {{ ssl_dir }}/server.key -config ./external-pgsql-ssl-config.cnf -out {{ ssl_dir }}/server.csr"
+      args:
+        creates: "{{ ssl_dir }}/server.csr"
+
+    - name: Generate server certificate
+      shell: "openssl x509 -req -in {{ ssl_dir }}/server.csr -CA {{ ssl_dir }}/ca.crt -CAkey {{ ssl_dir }}/ca.key -CAcreateserial -out {{ ssl_dir }}/server.crt -days 365 -extensions v3_req -extfile ./external-pgsql-ssl-config.cnf"
+      args:
+        creates: "{{ ssl_dir }}/server.crt"
+
+    - name: Generate client key
+      shell: "openssl genrsa -out {{ ssl_dir }}/client.key 2048"
+      args:
+        creates: "{{ ssl_dir }}/client.key"
+
+    - name: Generate client CSR
+      shell: "openssl req -new -key {{ ssl_dir }}/client.key -subj '{{ client_subj }}' -out {{ ssl_dir }}/client.csr"
+      args:
+        creates: "{{ ssl_dir }}/client.csr"
+
+    - name: Generate client certificate
+      shell: "openssl x509 -req -in {{ ssl_dir }}/client.csr -CA {{ ssl_dir }}/ca.crt -CAkey {{ ssl_dir }}/ca.key -CAcreateserial -out {{ ssl_dir }}/client.crt -days 365 -sha256"
+      args:
+        creates: "{{ ssl_dir }}/client.crt"
+
+    - name: Set permissions for cert files
+      file:
+        path: "{{ item.path }}"
+        owner: "{{ item.owner }}"
+        group: "{{ item.owner }}"
+        mode: '0600'
+      loop:
+        - { path: "{{ ssl_dir }}/ca.crt", owner: "1000" }
+        - { path: "{{ ssl_dir }}/server.crt", owner: "26" }
+        - { path: "{{ ssl_dir }}/server.key", owner: "26" }
+        - { path: "{{ ssl_dir }}/client.key", owner: "1000" }
+        - { path: "{{ ssl_dir }}/client.crt", owner: "1000" }
+      become: yes
+
+    - name: Start external-postgres-ssl container
+      shell: >
+        docker run -d --name external-postgres-ssl
+        --restart always
+        --network=pmm-qa
+        -e POSTGRES_PASSWORD=pmm_password
+        -e POSTGRES_DB=grafana
+        -v {{ data_dir }}:/var/lib/postgresql/data
+        -v {{ ssl_dir }}:/var/lib/postgresql/ssl
+        {{ postgres_image }}
+        postgres -c ssl=on
+        -c ssl_cert_file=/var/lib/postgresql/ssl/server.crt
+        -c ssl_key_file=/var/lib/postgresql/ssl/server.key
+        -c shared_preload_libraries=pg_stat_statements
+        -c pg_stat_statements.track=all
+        -c max_connections=1000
+      args:
+        creates: "/var/lib/docker/containers/external-postgres-ssl"
+
+    - name: Wait until external-postgres-ssl is healthy
+      shell: docker inspect --format='{{ "{{.State.Status}}" }}' external-postgres-ssl
+      register: pg_health
+      until: "'running' in pg_health.stdout"
+      retries: 5
+      delay: 5
+
+    - name: Wait 10 seconds for setup to finish
+      pause:
+        seconds: 10
+
+    - name: Enable pg_stat_statements extension in grafana database
+      shell: docker exec external-postgres-ssl psql -U postgres -d grafana -c "CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"
+      register: pg_stat_statements_create
+      changed_when: "'CREATE EXTENSION' in pg_stat_statements_create.stdout"
+      failed_when: "'ERROR' in pg_stat_statements_create.stderr"
+
+    - name: Start pmm-server-external-postgres-ssl container
+      shell: >
+        docker run -d --name pmm-server-external-postgres-ssl
+        --restart always
+        --network=pmm-qa
+        -p 8082:8080
+        -p 8447:8443
+        -e PMM_POSTGRES_DBNAME=grafana
+        -e PMM_POSTGRES_ADDR=external-postgres-ssl:5432
+        -e PMM_POSTGRES_USERNAME=postgres
+        -e PMM_POSTGRES_DBPASSWORD=pmm_password
+        -e PMM_DISABLE_BUILTIN_POSTGRES=1
+        -e PMM_POSTGRES_SSL_MODE=verify-ca
+        -e PMM_POSTGRES_SSL_CA_PATH=/etc/ssl/postgresql/ca.crt
+        -e PMM_POSTGRES_SSL_KEY_PATH=/etc/ssl/postgresql/client.key
+        -e PMM_POSTGRES_SSL_CERT_PATH=/etc/ssl/postgresql/client.crt
+        -e GF_DATABASE_TYPE=postgres
+        -e GF_DATABASE_NAME=grafana
+        -e GF_DATABASE_PASSWORD=pmm_password
+        -e GF_DATABASE_HOST=external-postgres-ssl:5432
+        -e GF_DATABASE_USER=postgres
+        -e GF_DATABASE_SSL_MODE=verify-ca
+        -e GF_DATABASE_CA_CERT_PATH=/etc/ssl/postgresql/ca.crt
+        -e GF_DATABASE_CLIENT_KEY_PATH=/etc/ssl/postgresql/client.key
+        -e GF_DATABASE_CLIENT_CERT_PATH=/etc/ssl/postgresql/client.crt
+        -e PMM_ENABLE_INTERNAL_PG_QAN=1
+        -v pmm-server-external-pg-ssl:/srv
+        -v {{ ssl_dir }}:/etc/ssl/postgresql
+        {{ pmm_server_image }}
+      args:
+        creates: "/var/lib/docker/containers/pmm-server-external-postgres-ssl"
+
+    - name: Wait until PMM Server is healthy
+      shell: docker inspect --format='{{ "{{.State.Health.Status}}" }}' pmm-server-external-postgres-ssl
+      register: pmm_server_health
+      until: "'healthy' in pmm_server_health.stdout"
+      retries: 5
+      delay: 5

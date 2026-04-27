@@ -1,0 +1,86 @@
+- name: Generate my.cnf for each node
+  template:
+    src: ./data/my-async-replication{{ '-57' if mysql_version | replace('_', '') == '57' else '' }}.cnf.j2
+    dest: "{{ data_dir }}/node{{ item }}/my.cnf"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare docker container and install MySQL
+  include_tasks: ./tasks/prepare_install_mysql.yml
+  vars:
+    index: "{{ item }}"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Reset configuration for all nodes
+  shell: docker exec {{ container_prefix}}{{ item }} mysql -uroot -p{{ root_password }} -e "RESET BINARY LOGS AND GTIDS; RESET REPLICA ALL;"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  ignore_errors: yes
+
+- name: Configure replica servers (container2-containerN) for MySQL 8.0 and above
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "
+    CHANGE REPLICATION SOURCE TO
+    SOURCE_HOST='{{ container_prefix }}1',
+    SOURCE_PORT={{ mysql_listen_port }},
+    SOURCE_USER='{{ replication_user }}',
+    SOURCE_PASSWORD='{{ replication_password }}',
+    SOURCE_AUTO_POSITION=1,
+    SOURCE_PUBLIC_KEY_PATH='',
+    GET_SOURCE_PUBLIC_KEY=1;
+    START REPLICA;
+    "
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+  when: mysql_version | replace('_', '') | int >= 80
+
+- name: Configure replica servers (container2-containerN) for Mysql 5.7
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "
+    CHANGE MASTER TO
+    MASTER_HOST='{{ container_prefix }}1',
+    MASTER_PORT={{ mysql_listen_port }},
+    MASTER_USER='{{ replication_user }}',
+    MASTER_PASSWORD='{{ replication_password }}',
+    MASTER_AUTO_POSITION=1;
+    START SLAVE;
+    "
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+  when: mysql_version | replace('_', '') | int < 80
+
+- name: Create and seed a test database on primary
+  shell: >
+    docker exec {{ container_prefix }}1 mysql -uroot -p{{ root_password }} -e "
+      CREATE DATABASE testdb;
+      USE testdb;
+      CREATE TABLE testdb (id INT PRIMARY KEY, data VARCHAR(100));
+      INSERT INTO testdb VALUES (1, 'Initial data from node mysql1');
+    "
+- name: Check replication status on replica nodes
+  shell: docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SHOW REPLICA STATUS\G"
+  register: replication_status
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+  changed_when: false
+  when: mysql_version | replace('_', '') | int >= 80
+
+- name: Check replication status on replica nodes
+  shell: docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SHOW SLAVE STATUS\G"
+  register: replication_status
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+  changed_when: false
+  when: mysql_version | replace('_', '') | int < 80
+
+- name: Set verification instructions
+  set_fact:
+    verification_msg: |
+      MySQL Cluster setup complete with asynchronous replication!
+      To verify replication is working:
+        1. Connect to the primary ({{ container_prefix }}1):
+            docker exec -it {{ container_prefix }}1 mysql -uroot -p{{ root_password }}
+        2. Insert data in the test database:
+           USE testdb;
+           INSERT INTO testdb VALUES (100, 'Test replication');
+        3. Connect to replicas and verify data is replicated:
+            docker exec -it {{ container_prefix }}2 mysql -uroot -p{{ root_password }}
+             USE testdb;
+             SELECT * FROM testdb;
+- name: Display verification instructions
+  debug:
+    msg: "{{ verification_msg | split('\n') }}"

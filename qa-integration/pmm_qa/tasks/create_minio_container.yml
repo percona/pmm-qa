@@ -1,0 +1,80 @@
+---
+- name: Deploy MinIO bucket.
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars:
+    network_name: "pmm-qa"
+    buckets: "{{ lookup('env', 'BUCKETS') | default('bcp', true) }}"
+    minio_access_key: minio1234
+    minio_secret_key: minio1234
+    minio_volume_name: minio_backups
+    minio_ports:
+      - "9010:9000"
+      - "9001:9001"
+
+  tasks:
+    - name: Run docker ps with port info
+      shell: docker ps -a
+      register: docker_ps_output
+
+    - name: Create Docker network
+      community.docker.docker_network:
+        name: "{{ network_name }}"
+        state: present
+      ignore_errors: yes
+
+    - name: Remove old MinIO docker container
+      community.docker.docker_container:
+        name: minio
+        image: minio/minio
+        restart_policy: always
+        state: absent
+      ignore_errors: yes
+
+    - name: Remove MinIO Docker volume
+      community.docker.docker_volume:
+        name: "{{ minio_volume_name }}"
+        state: absent
+      ignore_errors: true
+
+    - name: Create MinIO Docker volume
+      community.docker.docker_volume:
+        name: "{{ minio_volume_name }}"
+
+    - name: Run MinIO container
+      community.docker.docker_container:
+        name: minio
+        image: minio/minio
+        restart_policy: unless-stopped
+        ports: "{{ minio_ports }}"
+        networks:
+          - name: "{{ network_name }}"
+        volumes:
+          - "{{ minio_volume_name }}:/backups"
+        env:
+          MINIO_ACCESS_KEY: "{{ minio_access_key }}"
+          MINIO_SECRET_KEY: "{{ minio_secret_key }}"
+        command: server /backups --address 0.0.0.0:9000 --console-address 0.0.0.0:9001
+
+    - name: Show the list of buckets
+      debug:
+        var: buckets
+
+    - name: Set MinIO alias inside the container
+      community.docker.docker_container_exec:
+        container: "minio"
+        command: >
+          /bin/sh -c "
+          sleep 5;
+          /usr/bin/mc alias set myminio http://127.0.0.1:9000 minio1234 minio1234;
+          exit 0;"
+
+    - name: Create MinIO buckets
+      community.docker.docker_container_exec:
+        container: "minio"
+        command: >
+          /bin/sh -c "
+          /usr/bin/mc mb myminio/{{ item }} || echo 'Bucket {{ item }} already exists';
+          exit 0;"
+      loop: "{{ buckets }}"

@@ -9,7 +9,6 @@ import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
-import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
@@ -19,6 +18,34 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import apiEndpoints from '@helpers/apiEndpoints';
+
+base.beforeEach(async ({ page }) => {
+  // Mock user details call to prevent the tours from showing
+  await page.route(apiEndpoints.users.me, (route) =>
+    route.fulfill({
+      body: JSON.stringify({
+        alerting_tour_completed: true,
+        product_tour_completed: true,
+        snoozed_pmm_version: '',
+        user_id: 1,
+      }),
+      status: 200,
+    }),
+  );
+  // Mock upgrade call to prevent upgrade modal from showing.
+  await page.route(apiEndpoints.server.updates, (route) =>
+    route.fulfill({
+      body: JSON.stringify({
+        installed: {},
+        last_check: new Date().toISOString(),
+        latest: {},
+        update_available: false,
+      }),
+      status: 200,
+    }),
+  );
+});
 
 const pmmTest = base.extend<{
   agentsPage: AgentsPage;
@@ -34,7 +61,6 @@ const pmmTest = base.extend<{
   servicesPage: ServicesPage;
   themePage: ThemePage;
   tour: TourPage;
-  welcomePage: WelcomePage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
   portalRemoval: PortalRemoval;
@@ -152,11 +178,6 @@ const pmmTest = base.extend<{
     const urlHelper = new UrlHelper();
 
     await use(urlHelper);
-  },
-  welcomePage: async ({ page }, use) => {
-    const welcomePage = new WelcomePage(page);
-
-    await use(welcomePage);
   },
 });
 
