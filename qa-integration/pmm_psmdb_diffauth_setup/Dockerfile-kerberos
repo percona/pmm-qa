@@ -1,0 +1,5 @@
+FROM alpine
+RUN apk add --no-cache bash krb5 krb5-server krb5-pkinit
+COPY conf/configure_krb5.sh /var/lib/krb5kdc/
+EXPOSE 88/udp
+ENTRYPOINT [ "sh", "/var/lib/krb5kdc/configure_krb5.sh"]

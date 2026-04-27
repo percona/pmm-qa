@@ -1,0 +1,106 @@
+---
+# This playbook does following:
+#   enables Percona testing repository
+
+- hosts: all
+  vars:
+    external_container: "{{ lookup('vars', 'extra_haproxy_container', default=lookup('env','EXTERNAL_CONTAINER') | default('EXTERNAL', true) ) }}"
+    redis_version: "{{ lookup('vars', 'extra_redis_version', default=lookup('env','REDIS_EXPORTER_VERSION') | default('0.7.5', true) ) }}"
+    nodeprocess_version: "{{ lookup('vars', 'extra_nodeprocess_version', default=lookup('env','NODE_PROCESS_EXPORTER_VERSION') | default('0.7.5', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
+
+  tasks:
+  - name: cleanup container for client and DB setup
+    shell: >
+      docker ps -a --filter "name={{ external_container }}" | grep -q . && docker stop {{ external_container }} && docker rm -fv {{ external_container }}
+      docker stop redis_container
+      docker rm -fv redis_container
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Create pmm-qa network if not exist
+    shell: docker network create pmm-qa
+    ignore_errors: true
+
+  - name: Prepare Container for External Exporters
+    shell: |
+      docker run -d \
+        -p 43100:43100 \
+        --name={{ external_container }} \
+        --network=pmm-qa \
+        --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+        -v /var/lib/containerd \
+        antmelekhin/docker-systemd:ubuntu-24.04
+
+  - name: Copy all required Artifacts to the docker external_container
+    shell: "{{ item }}"
+    with_items:
+      - docker cp ./external_setup.sh {{ external_container }}:/
+      - docker exec {{ external_container }} apt-get update
+      - docker exec {{ external_container }} apt-get -y install wget curl git gnupg2 lsb-release
+
+  - name: Run Redis Container in Host
+    shell: |
+      docker run -d \
+        --name=redis_container \
+        --network=pmm-qa \
+        -p 6379:6379 \
+        redis '--requirepass oFukiBRg7GujAJXq3tmd'
+
+  - name: Setup External Exporters for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ external_container }} bash -x ./external_setup.sh > setup_external.log
+
+  - name: Install PMM Client inside of container
+    include_tasks: ./tasks/install_pmm_client.yml
+    vars:
+      container_name: "{{ external_container }}"
+
+  - name: Execute Setup script inside the External container for Redis
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ external_container }} bash -xe ./external_setup.sh --setup_type redis --setup_version {{ redis_version }} > setup_external_redis.log
+    delay: 10
+
+  - name: Start Redis for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ external_container }} nohup bash -c './redis_exporter/redis_exporter -redis.password=oFukiBRg7GujAJXq3tmd -redis.addr=redis_container:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
+
+  - name: Execute Setup script inside the External container for Process Exporter
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ external_container }} bash -xe ./external_setup.sh --setup_type nodeprocess --setup_version {{ nodeprocess_version }} > setup_external_nodeprocess.log
+
+  - name: Start Node Process Exporter for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ external_container }} nohup bash -c './process-exporter/process-exporter > process-exporter.log 2>&1 &'
+
+  - name: Set Random Number Fact
+    set_fact:
+      random_number: "{{ (10000 | random) | int }}"
+
+  - name: Remove EXTERNAL process for monitoring from PMM if already exist with same service name
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ external_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove external redis_service_{{ random_number }}'
+      - docker exec {{ external_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove external nodeprocess_service_{{ random_number }}'
+    ignore_errors: true
+
+  - name: Add Redis for Monitoring to PMM via pmm-admin add external command
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ external_container }} pmm-admin list
+      - docker exec {{ external_container }} pmm-admin add external --listen-port=42200 --group="redis" --service-name=redis_external_service_{{ random_number }}
+
+  - name: Add Node Process for Monitoring to PMM via pmm-admin add external command
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ external_container }} pmm-admin list
+      - docker exec {{ external_container }} pmm-admin add external --group=processes  --listen-port=9256 --service-name=nodeprocess_service_{{ random_number }}
