@@ -10,6 +10,14 @@ import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
 
+const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
+const hasKnownNoDataMarker = (panelText: string) =>
+  panelNoDataMarkers.some((marker) => panelText.includes(marker)) ||
+  panelText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .includes('-');
+
 export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard();
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
@@ -144,6 +152,30 @@ export default class Dashboards extends BasePage {
     const availableMetrics = await this.elements.panelName.allTextContents();
 
     expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
+  };
+
+  verifyNamedPanelsHaveData = async (panelNames: string[]) => {
+    await this.loadAllPanels();
+
+    for (const panelName of panelNames) {
+      const panelText = await this.builders.panelByName(panelName).innerText();
+
+      expect(hasKnownNoDataMarker(panelText), `Panel ${panelName} should contain real data`).toBeFalsy();
+    }
+  };
+
+  verifyPanelsShowNoRealDataMarkers = async (panelNames: string[]) => {
+    await this.loadAllPanels();
+
+    for (const panelName of panelNames) {
+      const panel = this.builders.panelByName(panelName);
+
+      await panel.scrollIntoViewIfNeeded();
+
+      const panelText = await panel.innerText();
+
+      expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
+    }
   };
 
   verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {

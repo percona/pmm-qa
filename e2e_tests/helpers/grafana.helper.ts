@@ -1,4 +1,5 @@
-import { Page } from '@playwright/test';
+import { expect, Page } from '@playwright/test';
+import { GrafanaUserSearchResponse } from '@interfaces/grafana';
 
 export default class GrafanaHelper {
   constructor(private page: Page) {}
@@ -32,12 +33,28 @@ export default class GrafanaHelper {
     return response;
   };
 
+  findUserByUsername = async (username: string) => {
+    const users = await this.listUsers();
+
+    return users.users.find((user) => user.login === username);
+  };
+
   static getAuthHeader = (username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') => ({
     Authorization: `Basic ${this.getToken(username, password)}`,
   });
 
   static getToken = (username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') =>
     Buffer.from(`${username}:${password}`).toString('base64');
+
+  listUsers = async () => {
+    const response = await this.page.request.get('graph/api/users/search', {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return (await response.json()) as GrafanaUserSearchResponse;
+  };
 
   unAuthorize = async () => {
     await this.page.setExtraHTTPHeaders({});
