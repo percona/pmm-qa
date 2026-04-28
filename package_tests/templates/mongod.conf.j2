@@ -1,0 +1,35 @@
+storage:
+  dbPath: /var/lib/mongo
+  journal:
+    enabled: true
+  wiredTiger:
+    engineConfig:
+      cacheSizeGB: 1
+
+systemLog:
+  destination: syslog
+
+net:
+  port: 27017
+  bindIp: 0.0.0.0
+  tls:
+    mode: allowTLS
+    CAFile: /mongodb_certs/ca-certs.pem
+    certificateKeyFile: /mongodb_certs/psmdb-server.pem
+
+security:
+  authorization: enabled
+  ldap:
+    validateLDAPServerConfig: true
+    transportSecurity: none
+    servers: 127.0.0.1:1389
+    userToDNMapping: '[{match: "arn:aws:iam::(.+):user/(.+)|CN=(.+)|([^@]+)@PERCONATEST.COM", substitution: "cn={1}{2}{3},ou=users,dc=example,dc=org"}]'
+    authz:
+      queryTemplate: 'dc=example,dc=org??sub?(&(objectClass=groupOfNames)(member={USER}))'
+
+setParameter:
+  authenticationMechanisms: SCRAM-SHA-1,PLAIN,MONGODB-X509,MONGODB-AWS,GSSAPI
+
+operationProfiling:
+  mode: all
+  slowOpThresholdMs: 100  # More reasonable threshold
