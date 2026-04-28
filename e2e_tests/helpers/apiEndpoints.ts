@@ -1,6 +1,6 @@
 const apiEndpoints = {
   inventory: {
-    services: '**/v1/inventory/services',
+    services: '/v1/inventory/services',
   },
   management: {
     services: '/v1/management/services',
