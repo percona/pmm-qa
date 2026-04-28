@@ -22,22 +22,24 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.page.getByRole('heading', { name: 'Query Analytics' })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(this.page.getByRole('progressbar')).toBeHidden({ timeout: 120_000 });
+    await expect(this.page.getByRole('progressbar')).toBeHidden({ timeout: 60_000 });
     await expect(this.page.locator('iframe').first()).toBeVisible({ timeout: 60_000 });
 
     const serviceTypeHeader = this.grafanaIframe()
       .getByTestId('checkbox-group-header')
       .getByText('Service Type', { exact: true });
+    const serviceTypeSection = serviceTypeHeader.locator(
+      'xpath=ancestor::div[.//input[@type="checkbox"]][1]',
+    );
 
-    await expect(serviceTypeHeader).toBeVisible({ timeout: 60_000 });
+    await expect(serviceTypeSection).toBeVisible({ timeout: 60_000 });
 
-    const sectionText = ((await serviceTypeHeader.textContent()) ?? '').trim();
     const disallowedServiceTypes = serviceTypes.filter((value) => value !== expected);
 
-    expect(sectionText).toContain(expected);
+    await expect(serviceTypeSection.getByText(expected, { exact: true })).toBeVisible();
 
     for (const serviceType of disallowedServiceTypes) {
-      expect(sectionText).not.toContain(serviceType);
+      await expect(serviceTypeSection.getByText(serviceType, { exact: true })).toHaveCount(0);
     }
   };
 
