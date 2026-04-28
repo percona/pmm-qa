@@ -22,24 +22,23 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.page.getByRole('heading', { name: 'Query Analytics' })).toBeVisible({
       timeout: 30_000,
     });
-    await expect(this.page.getByRole('progressbar')).toBeHidden({ timeout: 60_000 });
-    await expect(this.page.locator('iframe').first()).toBeVisible({ timeout: 60_000 });
+    await expect(this.page.getByRole('progressbar')).toBeHidden({ timeout: 30_000 });
+    await expect(this.page.locator('iframe').first()).toBeVisible({ timeout: 30_000 });
 
     const serviceTypeHeader = this.grafanaIframe()
       .getByTestId('checkbox-group-header')
       .getByText('Service Type', { exact: true });
-    const serviceTypeSection = serviceTypeHeader.locator(
-      'xpath=ancestor::div[.//input[@type="checkbox"]][1]',
-    );
-
-    await expect(serviceTypeSection).toBeVisible({ timeout: 60_000 });
-
+    const serviceTypeSection = serviceTypeHeader.locator('xpath=ancestor::p[1]/parent::div');
     const disallowedServiceTypes = serviceTypes.filter((value) => value !== expected);
 
-    await expect(serviceTypeSection.getByText(expected, { exact: true })).toBeVisible();
+    await expect(serviceTypeSection).toBeVisible({ timeout: 30_000 });
+
+    const sectionText = ((await serviceTypeSection.textContent()) ?? '').trim();
+
+    expect(sectionText).toContain(expected);
 
     for (const serviceType of disallowedServiceTypes) {
-      await expect(serviceTypeSection.getByText(serviceType, { exact: true })).toHaveCount(0);
+      expect(sectionText).not.toContain(serviceType);
     }
   };
 
