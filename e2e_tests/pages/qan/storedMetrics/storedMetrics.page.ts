@@ -22,6 +22,7 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.page.getByRole('heading', { name: 'Query Analytics' })).toBeVisible({
       timeout: 30_000,
     });
+    await this.waitUntilQanStoredMetricsLoaded();
     await expect(this.page.getByRole('progressbar')).toBeHidden({ timeout: 30_000 });
     await expect(this.page.locator('iframe').first()).toBeVisible({ timeout: 30_000 });
 
