@@ -23,10 +23,12 @@ export default class Dashboards extends BasePage {
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
+    panelByExactName: (panelName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     panelHeaderByName: (panelName: string) =>
-      this.builders.panelByName(panelName).getByTestId('header-container'),
+      this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
@@ -168,10 +170,7 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     for (const panelName of panelNames) {
-      const panel = this.builders.panelByName(panelName);
-
-      await panel.scrollIntoViewIfNeeded();
-
+      const panel = this.builders.panelByExactName(panelName);
       const panelText = await panel.innerText();
 
       expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
