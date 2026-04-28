@@ -1,8 +1,8 @@
 ARG OL_VERSION=9
 FROM oraclelinux:${OL_VERSION}
-ARG REPO=testing
+ARG REPO=release
 ARG PMM_REPO=experimental
-ARG PBM_VERSION=latest
+ARG PBM_VERSION=2.9.1-1
 ARG PSMDB_VERSION=latest
 ARG PMM_CLIENT_VERSION=latest
 
