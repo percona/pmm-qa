@@ -102,7 +102,7 @@
     mongo --eval 'db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] })'
 - name: Setup MongoDB config file
   shell: |
-    mongo -u root -p 'root' ../support-files/setup_psmdb.js
+    mongo -u root -p 'root' ./support-files/setup_psmdb.js
 - name: Restart mongodb to use new config
   shell: |
     chown -R mongod:mongod /var/lib/mongo
@@ -116,4 +116,3 @@
 - name: Wait 30 seconds for percona server for mongodb start to complete
   pause:
     seconds: 30
-    
