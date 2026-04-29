@@ -10,6 +10,7 @@ export default class StoredMetricsPage extends BasePage {
   builders = {};
   buttons = {};
   elements = {
+    filtersSearchField: this.grafanaIframe().getByTestId('filters-search-field'),
     firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
     noData: this.grafanaIframe().locator('//*[@data-testid="table-no-data"]'),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
@@ -26,20 +27,27 @@ export default class StoredMetricsPage extends BasePage {
     await expect(this.page.getByRole('progressbar')).toBeHidden({ timeout: 30_000 });
     await expect(this.page.locator('iframe').first()).toBeVisible({ timeout: 30_000 });
 
-    const serviceTypeHeader = this.grafanaIframe()
-      .getByTestId('checkbox-group-header')
-      .getByText('Service Type', { exact: true });
-    const serviceTypeSection = serviceTypeHeader.locator('xpath=ancestor::p[1]/parent::div');
     const disallowedServiceTypes = serviceTypes.filter((value) => value !== expected);
 
-    await expect(serviceTypeSection).toBeVisible({ timeout: 30_000 });
+    await expect(this.elements.filtersSearchField).toBeVisible({ timeout: 30_000 });
+    await this.elements.filtersSearchField.click();
+    await this.elements.filtersSearchField.fill('Service Type');
 
-    const sectionText = ((await serviceTypeSection.textContent()) ?? '').trim();
+    const allowedServiceTypeCheckbox = this.grafanaIframe().getByTestId(`filter-checkbox-${expected}`);
 
-    expect(sectionText).toContain(expected);
+    await expect(allowedServiceTypeCheckbox).toBeVisible({ timeout: 30_000 });
 
     for (const serviceType of disallowedServiceTypes) {
-      expect(sectionText).not.toContain(serviceType);
+      const serviceTypeCheckbox = this.grafanaIframe().getByTestId(`filter-checkbox-${serviceType}`);
+      const checkboxCount = await serviceTypeCheckbox.count();
+
+      if (checkboxCount === 0) {
+        await expect(serviceTypeCheckbox).toHaveCount(0);
+
+        continue;
+      }
+
+      await expect(serviceTypeCheckbox.first()).toBeHidden({ timeout: 30_000 });
     }
   };
 
