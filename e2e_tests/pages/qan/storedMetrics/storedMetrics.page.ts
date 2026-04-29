@@ -33,6 +33,10 @@ export default class StoredMetricsPage extends BasePage {
     await this.elements.filtersSearchField.click();
     await this.elements.filtersSearchField.fill('Service Type');
 
+    await expect(
+      this.grafanaIframe().getByTestId('checkbox-group-header').getByText('Service Type', { exact: true }),
+    ).toBeVisible({ timeout: 30_000 });
+
     const allowedServiceTypeCheckbox = this.grafanaIframe().getByTestId(`filter-checkbox-${expected}`);
 
     await expect(allowedServiceTypeCheckbox).toBeVisible({ timeout: 30_000 });
