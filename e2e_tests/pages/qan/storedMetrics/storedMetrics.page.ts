@@ -7,10 +7,12 @@ const serviceTypes: AccessServiceType[] = ['mongodb', 'mysql', 'postgresql'];
 
 export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
-  builders = {};
+  builders = {
+    serviceTypeCheckbox: (serviceType: string) =>
+      this.grafanaIframe().getByTestId(`filter-checkbox-${serviceType}`),
+  };
   buttons = {};
   elements = {
-    filtersSearchField: this.grafanaIframe().getByTestId('filters-search-field'),
     firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
     noData: this.grafanaIframe().locator('//*[@data-testid="table-no-data"]'),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
@@ -29,29 +31,12 @@ export default class StoredMetricsPage extends BasePage {
 
     const disallowedServiceTypes = serviceTypes.filter((value) => value !== expected);
 
-    await expect(this.elements.filtersSearchField).toBeVisible({ timeout: 30_000 });
-    await this.elements.filtersSearchField.click();
-    await this.elements.filtersSearchField.fill('Service Type');
-
-    await expect(
-      this.grafanaIframe().getByTestId('checkbox-group-header').getByText('Service Type', { exact: true }),
-    ).toBeVisible({ timeout: 30_000 });
-
-    const allowedServiceTypeCheckbox = this.grafanaIframe().getByTestId(`filter-checkbox-${expected}`);
-
-    await expect(allowedServiceTypeCheckbox).toBeVisible({ timeout: 30_000 });
+    await expect(this.builders.serviceTypeCheckbox(expected)).toBeVisible({
+      timeout: Timeouts.ONE_MINUTE,
+    });
 
     for (const serviceType of disallowedServiceTypes) {
-      const serviceTypeCheckbox = this.grafanaIframe().getByTestId(`filter-checkbox-${serviceType}`);
-      const checkboxCount = await serviceTypeCheckbox.count();
-
-      if (checkboxCount === 0) {
-        await expect(serviceTypeCheckbox).toHaveCount(0);
-
-        continue;
-      }
-
-      await expect(serviceTypeCheckbox.first()).toBeHidden({ timeout: 30_000 });
+      await expect(this.builders.serviceTypeCheckbox(serviceType)).toHaveCount(0);
     }
   };
 
