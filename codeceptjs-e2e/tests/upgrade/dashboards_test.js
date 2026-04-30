@@ -155,8 +155,8 @@ Scenario(
   async ({
     I, grafanaAPI, dashboardPage,
   }) => {
-    console.log(`Current folder is: ${await I.verifyCommand(`pwd`)}`)
-    const resp = JSON.parse(await I.readFileSync('/home/ec2-user/workspace/pmm3-upgrade-test-runner/dashboard.json', false));
+    const workFolder = await I.verifyCommand(`pwd`);
+    const resp = JSON.parse(await I.readFileSync(`${workFolder}/dashboard.json`, false));
 
     const resp1 = await grafanaAPI.getDashboard(resp.DASHBOARD1_UID);
     const resp2 = await grafanaAPI.getDashboard(resp.DASHBOARD2_UID);
