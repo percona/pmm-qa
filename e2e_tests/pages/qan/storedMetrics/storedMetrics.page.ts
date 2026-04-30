@@ -14,7 +14,10 @@ export default class StoredMetricsPage extends BasePage {
   buttons = {};
   elements = {
     firstRow: this.grafanaIframe().locator('//*[@role="row" and @class="tr tr-1"]'),
+    iframe: this.page.locator('iframe').first(),
     noData: this.grafanaIframe().locator('//*[@data-testid="table-no-data"]'),
+    pageProgressBar: this.page.getByRole('progressbar'),
+    pageTitle: this.page.getByRole('heading', { name: 'Query Analytics' }),
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
   };
@@ -22,12 +25,12 @@ export default class StoredMetricsPage extends BasePage {
   messages = {};
 
   verifyOnlyServiceTypeVisible = async (expected: AccessServiceType) => {
-    await expect(this.page.getByRole('heading', { name: 'Query Analytics' })).toBeVisible({
-      timeout: 30_000,
+    await expect(this.elements.pageTitle).toBeVisible({
+      timeout: Timeouts.THIRTY_SECONDS,
     });
     await this.waitUntilQanStoredMetricsLoaded();
-    await expect(this.page.getByRole('progressbar')).toBeHidden({ timeout: 30_000 });
-    await expect(this.page.locator('iframe').first()).toBeVisible({ timeout: 30_000 });
+    await expect(this.elements.pageProgressBar).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.elements.iframe).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
 
     const disallowedServiceTypes = serviceTypes.filter((value) => value !== expected);
 
@@ -57,7 +60,7 @@ export default class StoredMetricsPage extends BasePage {
     expect(queryCount).toEqual(expectedQueryCount);
   };
 
-  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {
     await this.waitUntilQanStoredMetricsLoaded();
 
     const noDataLocator = this.elements.noData;
@@ -76,14 +79,14 @@ export default class StoredMetricsPage extends BasePage {
   };
 
   waitUntilQanStoredMetricsLoaded = async () => {
-    await expect(this.elements.spinner.first()).toBeHidden({ timeout: 30_000 });
+    await expect(this.elements.spinner.first()).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
 
     if (await this.elements.noData.isVisible()) {
       await this.page.reload();
-      await expect(this.elements.spinner.first()).toBeHidden({ timeout: 30_000 });
+      await expect(this.elements.spinner.first()).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
     }
 
-    await expect(this.elements.noData).toBeHidden({ timeout: 30_000 });
-    await expect(this.elements.firstRow).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
+    await expect(this.elements.noData).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.elements.firstRow).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 }

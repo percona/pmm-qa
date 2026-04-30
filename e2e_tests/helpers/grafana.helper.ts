@@ -1,5 +1,5 @@
 import { expect, Page } from '@playwright/test';
-import { GrafanaUserSearchResponse } from '@interfaces/grafana';
+import { GrafanaUser, GrafanaUserSearchResponse } from '@interfaces/grafana';
 
 export default class GrafanaHelper {
   constructor(private page: Page) {}
@@ -33,10 +33,15 @@ export default class GrafanaHelper {
     return response;
   };
 
-  findUserByUsername = async (username: string) => {
+  findUserByUsername = async (username: string): Promise<GrafanaUser> => {
     const users = await this.listUsers();
+    const user = users.users.find((user) => user.login === username);
 
-    return users.users.find((user) => user.login === username);
+    if (!user) {
+      throw new Error(`User ${username} was not found`);
+    }
+
+    return user;
   };
 
   static getAuthHeader = (username = 'admin', password = process.env.ADMIN_PASSWORD || 'admin') => ({

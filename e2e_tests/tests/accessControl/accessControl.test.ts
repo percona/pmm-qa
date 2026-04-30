@@ -16,10 +16,6 @@ pmmTest.beforeEach(async ({ api, context, grafanaHelper, page }) => {
 
     const ensuredUser = await grafanaHelper.findUserByUsername(scenario.username);
 
-    if (!ensuredUser) {
-      throw new Error(`User ${scenario.username} was not found after creation`);
-    }
-
     await api.accessControlApi.assignRole(ensuredUser.id, ensuredRole.role_id);
   }
 });
