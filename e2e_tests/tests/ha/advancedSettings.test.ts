@@ -19,21 +19,20 @@ pmmTest.skip(
       await page.goto(advancedSettingsPage.url);
       await expect(advancedSettingsPage.elements.pageTitle).toBeVisible();
 
-      const updateSettingsResponse = page.waitForResponse(
-        (response) =>
-          response.url().includes(apiEndpoints.server.settings) && response.request().method() === 'PUT',
-      );
-
-      await advancedSettingsPage.enableToggleAndApplyChanges('qanForPmmServer');
-
-      const response = await updateSettingsResponse;
+      const [response] = await Promise.all([
+        page.waitForResponse(
+          (response) =>
+            response.url().includes(apiEndpoints.server.settings) && response.request().method() === 'PUT',
+        ),
+        advancedSettingsPage.enableToggleAndApplyChanges('qanForPmmServer'),
+      ]);
 
       expect(response.status()).toEqual(400);
 
       const responseBody = (await response.json()) as { message: string };
 
       expect(responseBody.message).toEqual(advancedSettingsPage.haQanErrorMessage);
-      await expect(page.frameLocator('#grafana-iframe').locator('body')).toContainText(
+      await expect(advancedSettingsPage.elements.iframeBody).toContainText(
         advancedSettingsPage.haQanErrorMessage,
       );
     });

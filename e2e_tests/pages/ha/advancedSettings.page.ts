@@ -25,6 +25,7 @@ export default class AdvancedSettingsPage extends BasePage {
     },
   };
   elements = {
+    iframeBody: this.grafanaIframe().locator('body'),
     pageTitle: this.grafanaIframe().getByRole('heading', { name: 'Advanced Settings' }),
   };
   inputs = {
