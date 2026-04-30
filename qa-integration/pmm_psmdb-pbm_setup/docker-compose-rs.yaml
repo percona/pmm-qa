@@ -1,0 +1,292 @@
+version: "3"
+services:
+  build_member:
+    image: replica_member/local
+    profiles: ["classic", "extra"]
+    build:
+      dockerfile: ./Dockerfile
+      context: .
+      args:
+        - REPO=${REPO:-release}
+        - PMM_REPO=${PMM_REPO:-experimental}
+        - PBM_VERSION=${PBM_VERSION:-2.9.1-1}
+        - PSMDB_VERSION=${PSMDB_VERSION:-latest}
+        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
+        - OL_VERSION=${OL_VERSION:-9}
+    command: /bin/bash
+
+  rs101:
+    depends_on:
+      build_member:
+        condition: service_started
+      kerberos:
+        condition: service_healthy
+    image: replica_member/local
+    profiles: ["classic", "extra"]
+    ports:
+      - "27027:27017"
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
+    volumes:
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs:/etc/mongod
+      - ./conf/datagen:/etc/datagen:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+    privileged: true
+    cgroup: host
+    environment:
+      PBM_MONGODB_URI: mongodb://${PBM_USER:-pbm}:${PBM_PASS:-pbmpass}@127.0.0.1:27017
+      PMM_AGENT_SERVER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
+      PMM_AGENT_SERVER_USERNAME: admin
+      PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
+      PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs101
+    hostname: rs101
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+
+  rs102:
+    depends_on:
+      build_member:
+        condition: service_started
+      kerberos:
+        condition: service_healthy
+    image: replica_member/local
+    profiles: ["classic", "extra"]
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests2
+      - pmm-ui-tests3
+    volumes:
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs:/etc/mongod
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+    privileged: true
+    cgroup: host
+    environment:
+      PBM_MONGODB_URI: mongodb://${PBM_USER:-pbm}:${PBM_PASS:-pbmpass}@127.0.0.1:27017
+      PMM_AGENT_SERVER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
+      PMM_AGENT_SERVER_USERNAME: admin
+      PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
+      PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs102
+    hostname: rs102
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+
+  rs103:
+    depends_on:
+      build_member:
+        condition: service_started
+      kerberos:
+        condition: service_healthy
+    image: replica_member/local
+    profiles: ["classic", "extra"]
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests2
+      - pmm-ui-tests3
+    volumes:
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs:/etc/mongod
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+    privileged: true
+    cgroup: host
+    environment:
+      PBM_MONGODB_URI: mongodb://${PBM_USER:-pbm}:${PBM_PASS:-pbmpass}@127.0.0.1:27017
+      PMM_AGENT_SERVER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
+      PMM_AGENT_SERVER_USERNAME: admin
+      PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
+      PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs103
+    hostname: rs103
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+
+  rs201:
+    depends_on:
+      build_member:
+        condition: service_started
+      kerberos:
+        condition: service_healthy
+    image: replica_member/local
+    profiles: ["extra"]
+    ports:
+      - "27037:27017"
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
+    volumes:
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs:/etc/mongod
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+    privileged: true
+    cgroup: host
+    environment:
+      PBM_MONGODB_URI: mongodb://${PBM_USER:-pbm}:${PBM_PASS:-pbmpass}@127.0.0.1:27017
+      PMM_AGENT_SERVER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
+      PMM_AGENT_SERVER_USERNAME: admin
+      PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
+      PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs201
+    hostname: rs201
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+
+  rs202:
+    depends_on:
+      build_member:
+        condition: service_started
+      kerberos:
+        condition: service_healthy
+    image: replica_member/local
+    profiles: ["extra"]
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests2
+      - pmm-ui-tests3
+    volumes:
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs:/etc/mongod
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+    privileged: true
+    cgroup: host
+    environment:
+      PBM_MONGODB_URI: mongodb://${PBM_USER:-pbm}:${PBM_PASS:-pbmpass}@127.0.0.1:27017
+      PMM_AGENT_SERVER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
+      PMM_AGENT_SERVER_USERNAME: admin
+      PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
+      PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs202
+    hostname: rs202
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+
+  rs203:
+    depends_on:
+      build_member:
+        condition: service_started
+      kerberos:
+        condition: service_healthy
+    image: replica_member/local
+    profiles: ["extra"]
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests2
+      - pmm-ui-tests3
+    volumes:
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs:/etc/mongod
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+    privileged: true
+    cgroup: host
+    environment:
+      PBM_MONGODB_URI: mongodb://${PBM_USER:-pbm}:${PBM_PASS:-pbmpass}@127.0.0.1:27017
+      PMM_AGENT_SERVER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
+      PMM_AGENT_SERVER_USERNAME: admin
+      PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
+      PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs203
+    hostname: rs203
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+
+  minio:
+    image: minio/minio
+    profiles: ["classic", "extra"]
+    container_name: minio
+    ports:
+      - "9001:9000"
+    depends_on:
+      - build_member
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests2
+      - pmm-ui-tests3
+    volumes:
+      - /tmp/minio/backups:/backups
+    environment:
+      - "MINIO_ACCESS_KEY=minio1234"
+      - "MINIO_SECRET_KEY=minio1234"
+    command: server /backups
+
+  createbucket:
+    container_name: createbucket
+    image: minio/mc
+    profiles: ["classic", "extra"]
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests2
+      - pmm-ui-tests3
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c " sleep 5; /usr/bin/mc alias set myminio http://minio:9000 minio1234 minio1234; /usr/bin/mc mb myminio/bcp; exit 0; "
+
+  kerberos:
+    image: kerberos/local
+    build:
+      dockerfile: ./Dockerfile-kerberos
+      context: .
+    container_name: kerberos
+    hostname: kerberos
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
+    environment:
+      - "KRB5_TRACE=/dev/stderr"
+    volumes:
+      - keytabs:/keytabs
+    healthcheck:
+      test: ["CMD", "kadmin.local", "-q", "listprincs"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
+
+networks:
+  qa-integration:
+    external: true
+  pmm-ui-tests1:
+    external: true
+    name: pmm-ui-tests_pmm-network
+  pmm-ui-tests2:
+    external: true
+    name: pmm2-upgrade-tests_pmm-network
+  pmm-ui-tests3:
+    external: true
+    name: pmm2-ui-tests_pmm-network
+  pmm-qa:
+    name: pmm-qa
+    external: true
+
+volumes:
+  keytabs:
+    driver: local

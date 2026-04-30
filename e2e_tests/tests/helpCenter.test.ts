@@ -23,7 +23,7 @@ pmmTest('PMM-T2116 - Verify Get Percona Support button @new-navigation', async (
     const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.contactSupport);
 
     expect(href).toBeTruthy();
-    expect(newTab.url()).toContain('/www.percona.com/about/contact');
+    expect(newTab.url()).toContain('www.percona.com/contact-us');
   });
 });
 

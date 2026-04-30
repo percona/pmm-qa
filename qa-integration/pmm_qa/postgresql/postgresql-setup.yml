@@ -1,0 +1,234 @@
+---
+# Postgresql Replication
+- name: Setup Postgresql replication
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars:
+    pg_version: "{{ lookup('env', 'PGSQL_VERSION') | default('17', true) }}"
+    replication_user: "repl_user"
+    replication_password: "GRgrO9301RuF"
+    root_password: "GRgrO9301RuF"
+    pgsql_port: 6432
+    nodes_count: "{{ (lookup('env', 'NODES_COUNT') | default('2', true)) | int }}"
+    network_name: "pmm-qa"
+    data_dir: "{{ lookup('env', 'HOME') }}/pgsql_cluster_data"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    query_source: "{{ lookup('env', 'QUERY_SOURCE') | default('pgstatements', true) }}"
+    metrics_mode: "auto"
+    setup_type: "{{ lookup('env', 'SETUP_TYPE') }}"
+    random_service_name_value: ""
+    encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
+
+  tasks:
+    - name: Create Docker network
+      community.docker.docker_network:
+        name: "{{ network_name }}"
+        state: present
+      ignore_errors: yes
+
+    - name: Remove old data folders
+      shell: 'rm -fr {{ data_dir }}'
+
+    - name: Create data directories
+      file:
+        path: "{{ data_dir }}/node{{ item }}/data"
+        state: directory
+        mode: '0755'
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+    - name: Generate pg_hba.conf for primary node
+      template:
+        src: data/pg_hba.conf.j2
+        dest: "{{ data_dir }}/node1/pg_hba.conf"
+
+    - name: Remove old PostgreSQL primary container
+      community.docker.docker_container:
+        name: "pgsql_pmm_{{ pg_version }}_1"
+        image: "postgres:{{ pg_version }}-bookworm"
+        restart_policy: always
+        state: absent
+      ignore_errors: yes
+
+    - name: Start PostgreSQL primary container
+      community.docker.docker_container:
+        name: "pgsql_pmm_{{ pg_version }}_1"
+        image: "postgres:{{ pg_version }}-bookworm"
+        restart_policy: always
+        state: started
+        recreate: true
+        networks:
+          - name: "{{ network_name }}"
+        env:
+          POSTGRES_PASSWORD: "{{ root_password }}"
+        volumes:
+          - "{{ data_dir }}/node1/data:/var/lib/postgresql/data"
+          - "./data/postgresql-primary.conf.j2:/etc/postgresql/postgresql.conf:ro"
+          - "{{ data_dir }}/node1/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro"
+        command: -c config_file=/etc/postgresql/postgresql.conf
+        ports:
+          - "{{ pgsql_port }}:5432"
+
+    - name: Wait for PgSQL to be available
+      wait_for:
+        host: localhost
+        port: "{{ pgsql_port }}"
+        delay: 10
+        timeout: 300
+
+    - name: Create replication user
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_1"
+        user: postgres
+        command: >
+          psql -c "
+          CREATE ROLE {{ replication_user }} WITH REPLICATION LOGIN ENCRYPTED PASSWORD '{{ replication_password }}';
+          "
+
+    - name: Stop and remove replica if exists
+      community.docker.docker_container:
+        name: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+        state: absent
+      loop: "{{ range(2, nodes_count | int + 1) | list }}"
+      ignore_errors: yes
+
+    - name: Start PostgreSQL replica container
+      community.docker.docker_container:
+        name: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+        image: "postgres:{{ pg_version }}-bookworm"
+        restart_policy: "no"
+        state: started
+        command: sleep infinity
+        networks:
+          - name: "{{ network_name }}"
+        env:
+          POSTGRES_PASSWORD: "{{ root_password }}"
+        volumes:
+          - "{{ data_dir }}/node{{ item }}/data:/var/lib/postgresql/data"
+          - "./data/postgresql-replica.conf:/etc/postgresql/postgresql.conf:ro"
+          - "{{ data_dir }}/node1/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro"
+      loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+    - name: Wipe replica data directory before basebackup
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+        user: root
+        command: rm -rf /var/lib/postgresql/data/*
+      loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+    - name: Create PostgreSQL user 'pmm' with password
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_1"
+        user: postgres
+        command: >
+          bash -c '
+            psql -U postgres -d {{ db_name | default("postgres") }} -c "
+              CREATE USER pmm WITH PASSWORD '\''pmm'\'';
+              GRANT pg_monitor TO pmm;
+            "
+          '
+
+    - name: Create custom database for pgbench
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_1"
+        user: postgres
+        command: >
+          bash -c "
+            echo \"
+            CREATE DATABASE pgbench;
+            \\c pgbench
+            GRANT CONNECT ON DATABASE pgbench TO pmm;
+            GRANT USAGE ON SCHEMA public TO pmm;
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO pmm;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public
+              GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO pmm;
+            \" | psql -U postgres -v ON_ERROR_STOP=1
+          "
+
+    - name: Run pg_basebackup from primary to replica
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+        user: root
+        command: >
+          bash -c "
+            export PGPASSWORD='{{ replication_password }}' && \
+            timeout 120s \
+            pg_basebackup --pgdata=/var/lib/postgresql/data -R -v -Fp -Xs -P \
+            --host=pgsql_pmm_{{ pg_version }}_1 --port=5432 -U {{ replication_user }}
+          "
+      loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+    - name: Restart PostgreSQL container with custom command
+      community.docker.docker_container:
+        name: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+        image: "postgres:{{ pg_version }}-bookworm"
+        restart: true
+        state: started
+        command: -c config_file=/etc/postgresql/postgresql.conf
+        networks:
+          - name: "{{ network_name }}"
+        env:
+          POSTGRES_PASSWORD: "{{ root_password }}"
+        volumes:
+          - "{{ data_dir }}/node{{ item }}/data:/var/lib/postgresql/data"
+          - "./data/postgresql-replica.conf.j2:/etc/postgresql/postgresql.conf:ro"
+          - "{{ data_dir }}/node1/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro"
+        ports:
+          - "{{ pgsql_port + item - 1 }}:5432"
+      loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+    - name: Create pg_stat_statements extension
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_1"
+        user: postgres
+        command: >
+          psql -U postgres -d 'postgres' -c " 
+            CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+          "
+
+    - name: Install and add pmm client.
+      include_tasks: ../tasks/install_pmm_client.yml
+      vars:
+        container_name: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+    - name: Get already connected services to pmm server
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_1"
+        command: >
+          sh -c 'curl --location --insecure -u"admin:{{ admin_password }}" -s --request GET "http://{{ pmm_server_ip }}:{{ '80' if pmm_server_ip is match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$') else '8080' }}/v1/management/services" | jq -r ".services[].service_name"'
+      register: pmm_server_services
+
+    - name: Display already connected services to pmm server
+      debug:
+        msg: "{{ pmm_server_services.stdout | split('\n') }}"
+
+    - name: Find out if service is already connected to pmm server
+      block:
+        - name: Loop through percona servers
+          set_fact:
+            random_service_name_value: "_{{ 9999 | random + 1 }}"
+          loop: "{{ range(1, nodes_count | int + 1) | list }}"
+          when: "('pgsql_pmm_' ~ pg_version ~ '_' ~ item) in pmm_server_services.stdout"
+
+    - name: Add service to pmm server
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+        command: pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements pgsql_pmm_{{ pg_version }}_{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:5432
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+    - name: Run load on primary node.
+      include_tasks: ./tasks/run_load_pgsql.yml
+      vars:
+        node_name: "pgsql_pmm_{{ pg_version }}_1"
+        pgbench_clients: 10
+        pgbench_time: 120
+        pgbench_scale: 1000
+
+    - name: Check replication status on primary
+      community.docker.docker_container_exec:
+        container: "pgsql_pmm_{{ pg_version }}_1"
+        user: postgres
+        command: psql -c "SELECT * FROM pg_stat_replication;"

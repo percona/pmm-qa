@@ -1,4 +1,8 @@
 const apiEndpoints = {
+  accessControl: {
+    roles: '/v1/accesscontrol/roles',
+    rolesAssign: '/v1/accesscontrol/roles:assign',
+  },
   inventory: {
     services: '/v1/inventory/services',
   },
@@ -14,10 +18,11 @@ const apiEndpoints = {
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
-    updates: '/v1/server/updates',
+    settings: '/v1/server/settings',
+    updates: '**/v1/server/updates?force=**',
   },
   users: {
-    me: '/v1/users/me',
+    me: '**/v1/users/me',
   },
 } as const;
 

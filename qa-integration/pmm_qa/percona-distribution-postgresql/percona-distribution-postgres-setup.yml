@@ -1,0 +1,48 @@
+---
+# Percona Distribution Postgresql Replication
+- name: Setup Postgresql replication
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars:
+    pdpgsql_version: "{{ lookup('env', 'PDPGSQL_VERSION') | default('17', true) }}"
+    replication_user: "repl_user"
+    replication_password: "GRgrO9301RuF"
+    root_password: "GRgrO9301RuF"
+    pdpgsql_port: 5432
+    nodes_count: "{{ (lookup('env', 'NODES_COUNT') | default('1', true)) | int }}"
+    network_name: "pmm-qa"
+    data_dir: "{{ lookup('env', 'HOME') }}/pgsql_cluster_data"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('3-dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    query_source: "{{ lookup('env', 'QUERY_SOURCE') | default('pgstatements', true) }}"
+    metrics_mode: "auto"
+    setup_type: "{{ lookup('env', 'SETUP_TYPE') }}"
+    random_service_name_value: ""
+    docker_repo: "percona/percona-distribution-postgresql"
+    container_prefix: "pdpgsql_pmm{{ (setup_type|default('')) and '_' ~ setup_type }}_{{ pdpgsql_version }}_"
+    pgsm_branch: "{{ lookup('env', 'PGSM_BRANCH') }}"
+    encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
+
+  tasks:
+    - name: Display setup type selected
+      debug:
+        msg: "{{ setup_type }}"
+
+    - name: Create Docker network
+      shell: docker network create {{ network_name }}
+      ignore_errors: yes
+      become: true
+
+    - name: Install Percona Distribution for Postgres
+      include_tasks: tasks/install-percona-distribution-postgresql-single.yml
+      when: setup_type != "replication" and setup_type != "patroni"
+
+    - name: Install Percona Distribution for Postgres with Replication
+      include_tasks: tasks/percona-distribution-postgres-replication-setup.yml
+      when: setup_type == "replication"
+
+    - name: Install Percona Distribution for Postgres with Patroni replication
+      include_tasks: tasks/percona-distribution-postgres-patroni-setup.yml
+      when: setup_type == "patroni"
