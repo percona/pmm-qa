@@ -86,7 +86,7 @@ jobs:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
 #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -146,35 +146,6 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      - name: Setup PMM Server
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          docker network create pmm-qa || true
-          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
-          sleep 60
-          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
-          bash -x testdata/db_setup.sh
-          docker network connect pmm-qa pmm-server || true
-
-      - name: Export path to qa-integration repo
-        working-directory: pmm-qa/qa-integration
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
-
-      - name: Setup PMM-Client
-        working-directory: pmm-qa/qa-integration/pmm_qa
-        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
-
-      - name: Run Setup for E2E Tests
-        working-directory: pmm-qa/qa-integration/pmm_qa
-        run: |
-          mkdir -m 777 -p /tmp/backup_data
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
-
       - name: Setup npm modules for e2e tests
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
@@ -196,6 +167,7 @@ jobs:
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
           
+          docker pull ${{ env.DOCKER_VERSION }} || true
           export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
@@ -205,7 +177,60 @@ jobs:
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
           echo "$(cat launchable-subset.json)" || true
 
+      - name: Check if launchable subset is empty
+        id: check_launchable_subset
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          SUBSET_FILE="${{ env.SUBSET_FILE_NAME }}"
+
+          # Skip downstream setup/tests when subset is empty.
+          if [ -s "$SUBSET_FILE" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with setup and tests."
+          else
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Downstream setup and tests will be skipped."
+          fi
+
+      - name: Skip notice
+        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
+        run: echo "No tests selected by Launchable subset. Skipping setup and test execution."
+
+      - name: Setup PMM Server
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          docker network create pmm-qa || true
+          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
+          sleep 60
+          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
+          bash -x testdata/db_setup.sh
+          docker network connect pmm-qa pmm-server || true
+
+      - name: Export path to qa-integration repo
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/qa-integration
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+
+      - name: Setup PMM-Client
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+
+      - name: Run Setup for E2E Tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: |
+          mkdir -m 777 -p /tmp/backup_data
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install setuptools
+          python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
+
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/codeceptjs-e2e
         env:
           SERVER_IP : "127.0.0.1"
@@ -215,40 +240,29 @@ jobs:
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
 
-          # Skip tests if the subset file is empty
-          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
-            # Run tests if the subset file is not empty
-            echo "${{ env.SUBSET_FILE_NAME }} is not empty, so we run tests from the subset."
-            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
-          else
-            echo "${{ env.SUBSET_FILE_NAME }} is empty, so we won't run tests."
-          fi
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
 
       - name: Download logs
-        if: ${{ always() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
             curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
             unzip logs.zip -d logs
 
       - name: Record launchable test results
-        if: ${{ always() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
-          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
-            sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-            launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
-            launchable gate --session "$(cat launchable-session.txt)"
-          fi
+          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
+          launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
+          launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs
-        if: ${{ failure() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
         working-directory: pmm-qa/codeceptjs-e2e
         continue-on-error: true
         run: |
-          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
-            launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
-          fi
+          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}

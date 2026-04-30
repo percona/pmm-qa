@@ -1,0 +1,84 @@
+name: PMM_PDPGSQL
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_qa_branch:
+        description: 'Branch of PMM QA'
+        default: 'main'
+        required: false
+        type: string
+      pdpgsql_version:
+        description: 'PDPGSQL major version, e.g. 15, 16, 17'
+        required: true
+        default: '17'
+        type: string
+      pmm_server_image:
+        description: 'PMM Server image, example: perconalab/pmm-server:3-dev-latest'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        required: false
+        type: string
+      pmm_client_version:
+        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
+        default: '3-dev-latest'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_qa_branch:
+        required: false
+        type: string
+      pdpgsql_version:
+        required: false
+        type: string
+      pmm_server_image:
+        required: false
+        type: string
+      pmm_client_version:
+        required: false
+        type: string
+
+jobs:
+  PMM_PDPGSQL_TEST:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    env:
+      ADMIN_PASSWORD: 'admin'
+      PDPGSQL_VERSION: ${{ inputs.pdpgsql_version || '17' }}
+      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+
+    steps:
+      - name: Run the PMM Server container
+        run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server ${{ env.PMM_SERVER_IMAGE }}
+
+      - name: Checkout pmm-qa
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.pmm_qa_branch || 'main' }}
+
+      - name: Export path to qa-integration tree
+        working-directory: qa-integration
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+
+      - name: Run Setup for E2E Tests
+        working-directory: qa-integration/pmm_qa
+        run: |
+          mkdir -m 777 -p /tmp/backup_data
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install --force-reinstall -U setuptools
+          pip install -r requirements.txt
+          python pmm-framework.py --verbose --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PDPGSQL=${{ env.PDPGSQL_VERSION }}
+
+      - name: Setup npm modules for CodeceptJS
+        working-directory: codeceptjs-e2e
+        run: npm ci && npx playwright install --with-deps && npx codeceptjs def pr.codecept.js
+
+      - name: Run the Integration tests of PDPGSQL
+        working-directory: codeceptjs-e2e
+        run: |
+          export PMM_UI_URL="http://127.0.0.1:8081/"
+          npx codeceptjs run -c pr.codecept.js tests/qa-integration/pmm_pdpgsql_integration_test.js

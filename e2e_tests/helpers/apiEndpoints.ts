@@ -2,8 +2,12 @@ const apiEndpoints = {
   ha: {
     status: '/v1/ha/status',
   },
+  accessControl: {
+    roles: '/v1/accesscontrol/roles',
+    rolesAssign: '/v1/accesscontrol/roles:assign',
+  },
   inventory: {
-    services: '**/v1/inventory/services',
+    services: '/v1/inventory/services',
   },
   management: {
     services: '/v1/management/services',
