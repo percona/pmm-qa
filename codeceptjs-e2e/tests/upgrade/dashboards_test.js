@@ -48,14 +48,15 @@ Scenario(
 
     const resp1 = await grafanaAPI.createCustomDashboard('test-dashboard', insightFolder.id);
     const resp2 = await grafanaAPI.createCustomDashboard('test-dashboard', experimentalFolder.id);
+    const workFolder = await I.verifyCommand(`pwd`);
 
-    await I.writeFileSync('./dashboard.json', JSON.stringify({
+    await I.writeFileSync(`${workFolder}/dashboard.json`, JSON.stringify({
       DASHBOARD1_UID: resp1.uid,
       DASHBOARD2_UID: resp2.uid,
     }), false);
 
     // Check if file with Dashboard info is present.
-    I.assertNotEqual(I.fileSize('./dashboard.json', false), 0, 'Was expecting Dashboard info in the File, but its empty');
+    I.assertNotEqual(I.fileSize(`${workFolder}/dashboard.json`, false), 0, 'Was expecting Dashboard info in the File, but its empty');
   },
 );
 
