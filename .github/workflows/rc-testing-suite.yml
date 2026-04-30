@@ -23,7 +23,7 @@ on:
       pxc_version:
         description: 'PMM_PROXYSQL: PXC version or VERSIONS URL'
         required: false
-        default: 'https://github.com/Percona-QA/package-testing/blob/master/VERSIONS'
+        default: '8.0'
         type: string
       pxc_glibc:
         description: 'PMM_PROXYSQL: glibc suffix (e.g. 2.35)'
@@ -135,9 +135,8 @@ jobs:
       repository: 'release candidate'
       expected_version: ${{ inputs.rc_version }}
 
-  # PSMDB / PROXYSQL / PDPGSQL — scripts under qa-integration/ in this repo.
   qa_integration_psmdb_pbm_full:
-    name: PMM_PSMDB_PBM_FULL (qa-integration/)
+    name: PMM_PSMDB_PBM_FULL
     needs: plan
     uses: ./.github/workflows/PMM_PSMDB_PBM_FULL.yml
     with:
@@ -146,7 +145,7 @@ jobs:
       pmm_image: 'perconalab/pmm-server:${{ inputs.rc_version }}-rc'
 
   qa_integration_proxysql:
-    name: PMM_PROXYSQL (qa-integration/)
+    name: PMM_PROXYSQL
     needs: plan
     uses: ./.github/workflows/PMM_PROXYSQL.yaml
     with:
@@ -157,7 +156,7 @@ jobs:
       pmm_client_version: pmm3-rc
 
   qa_integration_pdpgsql:
-    name: PMM_PDPGSQL (qa-integration/)
+    name: PMM_PDPGSQL
     needs: plan
     uses: ./.github/workflows/PMM_PDPGSQL.yaml
     with:
