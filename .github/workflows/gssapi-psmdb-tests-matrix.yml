@@ -1,4 +1,4 @@
-﻿name: "PSMDB GSSAPI E2E Tests Matrix"
+name: "PSMDB GSSAPI E2E Tests Matrix"
 
 on:
   schedule:
