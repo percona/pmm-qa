@@ -1,0 +1,120 @@
+- name: Generate my.cnf for each node
+  template:
+    src: ./data/my-group-replication{{ '-57' if ps_version | replace('_', '') == '57' else '' }}.cnf.j2
+    dest: "{{ data_dir }}/node{{ item }}/my.cnf"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare docker container and install Percona Server for MySQL
+  include_tasks: ./tasks/prepare_install_ps.yml
+
+- name: Reset configuration for all nodes for MySQL 8.4
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e"RESET BINARY LOGS AND GTIDS; RESET REPLICA ALL; SET GLOBAL gtid_purged='';"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: ps_version | replace('_', '') | int >= 84
+
+- name: Reset configuration for all nodes for MySQL 8.0 and bellow
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "RESET MASTER; RESET SLAVE ALL;"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: ps_version | replace('_', '') | int < 84
+
+- name: Init configuration for group replication (single exec per node, no binlog) for MySQL 8.0+
+  shell: |
+    docker exec -i {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} <<'EOSQL'
+    SET SQL_LOG_BIN=0;
+    CREATE USER IF NOT EXISTS '{{ replication_user }}'@'%' IDENTIFIED BY '{{ replication_password }}';
+    GRANT REPLICATION SLAVE ON *.* TO '{{ replication_user }}'@'%';
+    GRANT CONNECTION_ADMIN ON *.* TO '{{ replication_user }}'@'%';
+    GRANT BACKUP_ADMIN ON *.* TO '{{ replication_user }}'@'%';
+    GRANT GROUP_REPLICATION_STREAM ON *.* TO '{{ replication_user }}'@'%';
+    GRANT SERVICE_CONNECTION_ADMIN ON *.* TO '{{ replication_user }}'@'%';
+    GRANT SYSTEM_VARIABLES_ADMIN ON *.* TO '{{ replication_user }}'@'%';
+    FLUSH PRIVILEGES;
+    -- Configure recovery channel credentials (explicit host/port to primary node)
+    CHANGE REPLICATION SOURCE TO
+      SOURCE_USER='{{ replication_user }}',
+      SOURCE_PASSWORD='{{ replication_password }}'
+    FOR CHANNEL 'group_replication_recovery';
+    SET SQL_LOG_BIN=1;
+    EOSQL
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: ps_version | replace('_', '') | int >= 80
+
+- name: Init configuration for group replication (single exec per node, no binlog) for MySQL 5.7
+  shell: |
+    docker exec -i {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} <<'EOSQL'
+    SET SQL_LOG_BIN=0;
+    CREATE USER IF NOT EXISTS 'repl_user'@'%' IDENTIFIED BY 'GRgrO9301RuF';
+    GRANT REPLICATION SLAVE ON *.* TO 'repl_user'@'%';
+    FLUSH PRIVILEGES;
+    -- Configure recovery channel credentials (explicit host/port to primary node)
+    CHANGE MASTER TO
+      MASTER_USER='{{ replication_user }}',
+      MASTER_PASSWORD='{{ replication_password }}'
+    FOR CHANNEL 'group_replication_recovery';
+    SET SQL_LOG_BIN=1;
+    EOSQL
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: ps_version | replace('_', '') | int < 80
+
+- name: Bootstrap first node (primary) for MySQL 8.4/8.0
+  shell: |
+    docker exec {{ container_prefix }}1 mysql -uroot -p{{ root_password }} -e "SET GLOBAL group_replication_bootstrap_group=ON;"
+    docker exec {{ container_prefix }}1 mysql -uroot -p{{ root_password }} -e "START GROUP_REPLICATION;"
+    docker exec {{ container_prefix }}1 mysql -uroot -p{{ root_password }} -e "SET GLOBAL group_replication_bootstrap_group=OFF;"
+- name: Wait for bootstrap to complete
+  pause:
+    seconds: 10
+
+- name: Start group replication on other nodes
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "START GROUP_REPLICATION;"
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Wait 10 seconds for the other nodes to join
+  pause:
+    seconds: 10
+
+- name: Create and seed a test database on primary
+  shell: >
+    docker exec {{ container_prefix }}1 mysql -uroot -p{{ root_password }} -e "
+      CREATE DATABASE testdb;
+      USE testdb;
+      CREATE TABLE testdb (id INT PRIMARY KEY, data VARCHAR(100));
+      INSERT INTO testdb VALUES (1, 'Initial data from node mysql1');
+    "
+- name: Check replication status on first node
+  shell: docker exec {{ container_prefix }}1 mysql -uroot -p{{ root_password }} -e "SELECT * FROM performance_schema.replication_group_members;"
+  register: replication_status
+
+- name: Display replication status
+  debug:
+    var: replication_status.stdout
+
+- name: Check replication group members count
+  shell: docker exec {{ container_prefix }}1 mysql -uroot -p{{ root_password }} -e "SELECT COUNT(*) AS count FROM performance_schema.replication_group_members;"
+  register: member_count
+
+- name: Display member count
+  debug:
+    var: member_count.stdout
+
+- name: Set verification instructions
+  set_fact:
+    verification_msg: |
+      MySQL Cluster setup complete!
+      To verify replication is working:
+      1. Connect to the first node:
+         docker exec -it {{ container_prefix }}1 mysql -uroot -p{{ root_password }}
+      2. Insert data in the test database:
+         USE testdb;
+         INSERT INTO testdb VALUES (100, 'Test replication');
+      3. Connect to other nodes and verify data is replicated:
+         docker exec -it {{ container_prefix }}2 mysql -uroot -p{{ root_password }}
+         USE testdb;
+         SELECT * FROM testdb;
+
+- name: Display verification instructions
+  debug:
+    msg: "{{ verification_msg | split('\n') }}"

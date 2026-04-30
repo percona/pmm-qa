@@ -9,7 +9,6 @@ import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
-import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
@@ -36,7 +35,6 @@ const pmmTest = base.extend<{
   servicesPage: ServicesPage;
   themePage: ThemePage;
   tour: TourPage;
-  welcomePage: WelcomePage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
   portalRemoval: PortalRemoval;

@@ -1,0 +1,51 @@
+---
+services:
+
+  pmm-server-ubuntu:
+    container_name: pmm-server-ubuntu
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    ports:
+      - 8445:8443
+    restart: always
+
+  pmm-client-ubuntu:
+    container_name: pmm-client-ubuntu
+    image: ubuntu
+    depends_on:
+      - pmm-server-ubuntu
+      - postgres-ubuntu
+    healthcheck:
+      test: [ "CMD-SHELL", "pmm-admin list | grep postgres || exit 1" ]
+      interval: 30s
+      timeout: 300s
+      retries: 10
+    command: >
+      bash -c "
+        apt-get update
+        apt-get install -y lsb-release
+        apt-get install wget curl gnupg2 -y
+        wget https://repo.percona.com/apt/percona-release_latest.jammy_all.deb
+        dpkg -i percona-release_latest.jammy_all.deb
+        percona-release enable-only original experimental
+        apt-get update
+        apt-get install pmm-client -y
+        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=pmm-server-ubuntu:8443 --server-insecure-tls --server-username=admin --server-password=admin
+        nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml &
+        sleep 10
+        pmm-admin add postgresql --username=postgres --password=postgres --agent-password=agentpass postgres-ubuntu postgres-ubuntu:5432
+        tail -f /dev/null
+      "
+
+  pmm-client-ubuntu-test:
+    container_name: pmm-client-ubuntu-test
+    image: ubuntu
+    depends_on:
+      pmm-client-ubuntu:
+        condition: service_healthy
+
+  postgres-ubuntu:
+    image: postgres
+    container_name: postgres-ubuntu
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
