@@ -4,18 +4,27 @@ import pmmTest from '@fixtures/pmmTest';
 
 export default class HelpPage extends BasePage {
   url = '/pmm-ui/help';
+  readonly cases = [{ updateAvailable: true }, { updateAvailable: false }];
   builders = {};
   buttons = {
+    addServiceButton: this.page.getByTestId('welcome-card-add-service'),
     contactSupport: this.page.getByRole('link', { name: 'Contact Support' }),
+    dismissButton: this.page.getByTestId('welcome-card-dismiss'),
     exportLogs: this.page.getByRole('link', { name: 'Export logs' }),
     manageDatasets: this.page.getByRole('link', { name: 'Manage datasets' }),
     nextTip: this.page.getByTestId('tour-next-step-button'),
     shareYourThoughts: this.page.getByRole('link', { name: 'Share your thoughts' }),
+    startTourButton: this.page.getByTestId('welcome-card-start-tour'),
     startPmmTour: this.page.getByTestId('tips-card-start-product-tour-button'),
+    tourCloseButton: this.page.getByTestId('tour-close-button'),
+    updates: this.page.getByTestId('update-modal-go-to-updates-button'),
     viewDocs: this.page.getByRole('link', { name: 'View docs' }),
     viewForum: this.page.getByRole('link', { name: 'View forum' }),
   };
-  elements = {};
+  elements = {
+    tourPopover: this.page.locator('.reactour__popover'),
+    welcomeCard: this.page.getByTestId('welcome-card'),
+  };
   inputs = {};
   messages = {};
 

@@ -1,0 +1,57 @@
+# This ansible file run load on docker container of pgsql with variable name node_name
+
+- name: Detect OS inside the container
+  community.docker.docker_container_exec:
+    container: "{{ node_name }}"
+    command: cat /etc/os-release
+  register: container_os_info
+
+- name: Set distro family (debian/rhel)
+  set_fact:
+    distro_family: >-
+      {{
+        (
+          'debian' if 'debian' in container_os_info.stdout | lower else
+          'rhel' if 'rhel' in container_os_info.stdout | lower or 'centos' in container_os_info.stdout | lower or 'fedora' in container_os_info.stdout | lower
+          else 'unknown'
+        ) | trim
+      }}
+
+
+
+- name: Ensure pgbench is installed (Debian-based container)
+  community.docker.docker_container_exec:
+    container: "{{ node_name }}"
+    user: root
+    command: >
+      /bin/sh -c "
+      apt-get update &&
+      apt-get install -y postgresql-contrib
+      "
+  when: distro_family == "debian"
+
+- name: Ensure pgbench is installed (RHEL-based container)
+  community.docker.docker_container_exec:
+    container: "{{ node_name }}"
+    user: root
+    command: microdnf install -y postgresql-contrib
+  when: distro_family == "rhel"
+
+- name: Initialize pgbench database
+  community.docker.docker_container_exec:
+    container: "{{ node_name }}"
+    user: postgres
+    command: >
+      pgbench -i -s {{ pgbench_scale }} pgbench
+
+- name: Run pgbench benchmark
+  community.docker.docker_container_exec:
+    container: "{{ node_name }}"
+    user: postgres
+    command: >
+      pgbench -c {{ pgbench_clients }} -T {{ pgbench_time }} -j 4 pgbench
+  register: pgbench_result
+
+- name: Print pgbench results
+  debug:
+    var: pgbench_result.stdout_lines
