@@ -7,28 +7,28 @@ Before(async ({ I, rulesAPI }) => {
   await rulesAPI.removeAllAlertRules();
 });
 
-Scenario(
-  'PMM-T643 - Verify message about disabled IA @fb-alerting',
-  async ({
-    I, pmmSettingsPage, codeceptjsConfig,
-  }) => {
-    await settingsAPI.apiDisableIA();
-    I.amOnPage(alertsPage.url);
-    I.waitForVisible(iaCommon.elements.disabledIa, 30);
-    I.seeTextEquals(iaCommon.messages.disabledIa, iaCommon.elements.disabledIa);
+Scenario('PMM-T643 - Verify message about disabled IA @fb-alerting', async ({ I, pmmSettingsPage, codeceptjsConfig }) => {
+  await settingsAPI.apiDisableIA();
+  I.amOnPage(alertsPage.url);
+  I.waitForVisible(iaCommon.elements.disabledIa, 30);
+  I.seeTextEquals(iaCommon.messages.disabledIa, iaCommon.elements.disabledIa);
 
-    const link = await I.grabAttributeFrom(iaCommon.elements.settingsLink, 'href');
+  const link = await I.grabAttributeFrom(iaCommon.elements.settingsLink, 'href');
 
-    I.assertContain(link, pmmSettingsPage.advancedSettingsUrl, 'Settings link does not contain expected link.');
-  },
-);
+  I.assertContain(link, pmmSettingsPage.advancedSettingsUrl, 'Settings link does not contain expected link.');
+});
 
 Scenario(
-  'PMM-T481 + PMM-T620 + PMM-T776 - Verify IA tab bar, '
-  + 'Verify after reloading the page user is on the same IA tab, '
-  + 'Verify that user is able to see valid HTML Title on alerts page @fb-alerting',
+  'PMM-T481 + PMM-T620 + PMM-T776 - Verify IA tab bar, Verify after reloading the page user is on the same IA tab, Verify that user is able to see valid HTML Title on alerts page @fb-alerting',
   async ({
-    I, alertRulesPage, ruleTemplatesPage, contactPointsPage, nPoliciesPage, silencesPage, alertGroupsPage, aiAdminPage,
+    I,
+    alertRulesPage,
+    ruleTemplatesPage,
+    contactPointsPage,
+    nPoliciesPage,
+    silencesPage,
+    alertGroupsPage,
+    aiAdminPage,
   }) => {
     await settingsAPI.apiEnableIA();
     const verifyNotificationChannelsPage = async () => {
@@ -40,7 +40,7 @@ Scenario(
     I.wait(10);
     // PMM-T776
     const verifyTitle = (page) => {
-      I.seeTitleEquals(`${page} - Percona Monitoring and Management`);
+      I.seeTitleEquals(`${page} - Alerting - Percona Monitoring and Management`);
     };
 
     verifyTitle('Fired alerts');

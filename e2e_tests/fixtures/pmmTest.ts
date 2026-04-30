@@ -8,7 +8,6 @@ import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import TourPage from '@pages/tour.page';
-import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
@@ -19,6 +18,7 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
+import AdvancedSettingsPage from '@pages/ha/advancedSettings.page';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -48,6 +48,7 @@ base.beforeEach(async ({ page }) => {
 });
 
 const pmmTest = base.extend<{
+  advancedSettingsPage: AdvancedSettingsPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -60,7 +61,6 @@ const pmmTest = base.extend<{
   helpPage: HelpPage;
   servicesPage: ServicesPage;
   tour: TourPage;
-  welcomePage: WelcomePage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
   portalRemoval: PortalRemoval;
@@ -68,6 +68,7 @@ const pmmTest = base.extend<{
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
 }>({
+  advancedSettingsPage: async ({ page }, use) => await use(new AdvancedSettingsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
@@ -173,11 +174,6 @@ const pmmTest = base.extend<{
     const urlHelper = new UrlHelper();
 
     await use(urlHelper);
-  },
-  welcomePage: async ({ page }, use) => {
-    const welcomePage = new WelcomePage(page);
-
-    await use(welcomePage);
   },
 });
 
