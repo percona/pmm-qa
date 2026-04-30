@@ -155,11 +155,6 @@ const pmmTest = base.extend<{
     await use(urlHelper);
   },
   vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
-  welcomePage: async ({ page }, use) => {
-    const welcomePage = new WelcomePage(page);
-
-    await use(welcomePage);
-  },
 });
 
 export default pmmTest;
