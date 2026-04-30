@@ -45,8 +45,8 @@ export default class StoredMetricsPage extends BasePage {
 
   verifyQanStoredMetricsHaveData = async () => {
     await this.waitUntilQanStoredMetricsLoaded();
-    await expect(this.elements.noData).toBeHidden({ timeout: 30_000 });
-    await expect(this.elements.firstRow).toBeVisible({ timeout: 30_000 });
+    await expect(this.elements.noData).toBeHidden({ timeout: Timeouts.THIRTY_SECONDS });
+    await expect(this.elements.firstRow).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   };
 
   verifyTotalQueryCount = async (expectedQueryCount: number) => {
@@ -64,7 +64,7 @@ export default class StoredMetricsPage extends BasePage {
     await this.waitUntilQanStoredMetricsLoaded();
 
     const noDataLocator = this.elements.noData;
-    const timeoutInSeconds = timeout / 1_000;
+    const timeoutInSeconds = timeout / Timeouts.ONE_SECOND;
 
     for (let i = 0; i < timeoutInSeconds; i++) {
       // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Replace with a better approach
