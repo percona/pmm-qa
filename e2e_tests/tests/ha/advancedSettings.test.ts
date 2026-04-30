@@ -9,7 +9,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 // TODO: Reenable this test after HA workflow is created
 // eslint-disable-next-line playwright/no-skipped-test -- PMM-T2217 is intentionally skipped for the HA scenario.
 pmmTest.skip(
-  'PMM-T2217 Verify HA mode shows detailed error when enabling QAN for PMM Server @settings',
+  'PMM-T2217 Verify HA mode shows detailed error when enabling QAN for PMM Server @ha-settings',
   async ({ advancedSettingsPage, page, request }) => {
     await pmmTest.step('Verify HA mode is enabled', async () => {
       await advancedSettingsPage.haEnableCheck(request);
