@@ -66,9 +66,6 @@ on:
       pmm_client_version_ol9:
         required: false
         type: string
-      package_testing_branch:
-        required: false
-        type: string
       repository:
         required: false
         type: string

@@ -131,7 +131,6 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
       pmm_client_version_ol8: ${{ inputs.pmm_client_tarball_ol8 }}
       pmm_client_version_ol9: ${{ inputs.pmm_client_tarball_ol9 }}
-      package_testing_branch: v3
       repository: 'release candidate'
       expected_version: ${{ inputs.rc_version }}
 
