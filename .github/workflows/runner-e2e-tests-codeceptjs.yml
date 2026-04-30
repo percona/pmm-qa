@@ -230,7 +230,9 @@ jobs:
           python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
+        id: run_ui_tests
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        continue-on-error: true
         working-directory: pmm-qa/codeceptjs-e2e
         env:
           SERVER_IP : "127.0.0.1"
@@ -240,7 +242,7 @@ jobs:
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
 
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
 
       - name: Download logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
@@ -273,6 +275,10 @@ jobs:
             pmm-qa/codeceptjs-e2e/tests/output/*.png
             pmm-qa/codeceptjs-e2e/tests/output/trace/*.zip
             pmm-qa/codeceptjs-e2e/logs
+
+      - name: Fail job if UI tests failed
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && steps.run_ui_tests.outcome == 'failure' }}
+        run: exit 1
 
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && always() }}
