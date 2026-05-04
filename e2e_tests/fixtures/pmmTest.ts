@@ -18,35 +18,9 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import AdvancedSettingsPage from '@pages/ha/advancedSettings.page';
-
-base.beforeEach(async ({ page }) => {
-  // Mock user details call to prevent the tours from showing
-  await page.route(apiEndpoints.users.me, (route) =>
-    route.fulfill({
-      body: JSON.stringify({
-        alerting_tour_completed: true,
-        product_tour_completed: true,
-        snoozed_pmm_version: '',
-        user_id: 1,
-      }),
-      status: 200,
-    }),
-  );
-  // Mock upgrade call to prevent upgrade modal from showing.
-  await page.route(apiEndpoints.server.updates, (route) =>
-    route.fulfill({
-      body: JSON.stringify({
-        installed: {},
-        last_check: new Date().toISOString(),
-        latest: {},
-        update_available: false,
-      }),
-      status: 200,
-    }),
-  );
-});
 
 const pmmTest = base.extend<{
   advancedSettingsPage: AdvancedSettingsPage;
@@ -69,6 +43,7 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  vacuumDashboardPage: VacuumDashboard;
 }>({
   advancedSettingsPage: async ({ page }, use) => await use(new AdvancedSettingsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
@@ -83,7 +58,7 @@ const pmmTest = base.extend<{
     await use(cliHelper);
   },
   context: async ({ context }, use) => {
-    await context.route('**/v1/users/me', (route) =>
+    await context.route(apiEndpoints.users.me, (route) =>
       route.fulfill({
         body: JSON.stringify({
           alerting_tour_completed: true,
@@ -95,8 +70,8 @@ const pmmTest = base.extend<{
         status: 200,
       }),
     );
-    await context.route('**/v1/server/updates**', (route) => {
-      return route.fulfill({
+    await context.route(apiEndpoints.server.updates, (route) =>
+      route.fulfill({
         body: JSON.stringify({
           installed: {},
           last_check: new Date().toISOString(),
@@ -105,8 +80,8 @@ const pmmTest = base.extend<{
         }),
         contentType: 'application/json',
         status: 200,
-      });
-    });
+      }),
+    );
     await use(context);
   },
   credentials: async ({}, use) => {
@@ -182,6 +157,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
+  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
 });
 
 export default pmmTest;
