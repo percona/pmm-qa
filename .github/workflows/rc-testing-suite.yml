@@ -140,8 +140,8 @@ jobs:
     uses: ./.github/workflows/PMM_PSMDB_PBM_FULL.yml
     with:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
-      pmm_version: pmm3-rc
-      pmm_image: 'perconalab/pmm-server:${{ inputs.rc_version }}-rc'
+      pmm_client_version: pmm3-rc
+      pmm_server_image: 'perconalab/pmm-server:${{ inputs.rc_version }}-rc'
 
   qa_integration_proxysql:
     name: PMM_PROXYSQL

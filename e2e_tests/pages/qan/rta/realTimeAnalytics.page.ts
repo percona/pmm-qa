@@ -2,6 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import BasePage from '@pages/base.page';
 import { expect, type Request } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
+import { Timeouts } from '@helpers/timeouts';
 
 const realTimeTableTestId = 'realtime-overview-table';
 
@@ -120,10 +121,10 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
 
   stopAllSessions = async () => {
-    await this.buttons.stopAllSessions.waitFor({ state: 'visible', timeout: 3_000 });
+    await this.buttons.stopAllSessions.waitFor({ state: 'visible', timeout: Timeouts.THREE_SECONDS });
     await this.buttons.stopAllSessions.click();
     await this.buttons.stopAgentsButton.click();
-    await this.buttons.stopAgentsButton.waitFor({ state: 'hidden', timeout: 3_000 });
+    await this.buttons.stopAgentsButton.waitFor({ state: 'hidden', timeout: Timeouts.THREE_SECONDS });
   };
 
   verifyRequestInterval = async (
