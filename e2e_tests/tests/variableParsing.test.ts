@@ -43,6 +43,7 @@ pmmTest(
     });
 
     await pmmTest.step('Verify panels have data and URL does not have broken variables', async () => {
+      await dashboard.waitForDashboardToLoad();
       await dashboard.verifyAllPanelsHaveData([], Timeouts.TWO_MINUTES);
       await expect(page).not.toHaveURL(/.*var-service_name=.*=true/);
       await expect(page).not.toHaveURL(/.*=true/);

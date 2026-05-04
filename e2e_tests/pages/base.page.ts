@@ -64,7 +64,7 @@ export default abstract class BasePage {
     const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
     const combobox = wrapper.getByRole('combobox');
 
-    await wrapper.click();
+    await combobox.click();
 
     const options = frame.getByRole('option');
 
