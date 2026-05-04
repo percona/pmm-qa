@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await page.goto('');
@@ -73,9 +74,9 @@ pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mock
 
       /* eslint-disable playwright/no-conditional-expect -- TODO: Refactor test case to avoid conditional expect */
       if (c.updateAvailable) {
-        await expect(helpPage.buttons.updates).toBeVisible({ timeout: 10_000 });
+        await expect(helpPage.buttons.updates).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
       } else {
-        await expect(helpPage.buttons.updates).toBeHidden({ timeout: 10_000 });
+        await expect(helpPage.buttons.updates).toBeHidden({ timeout: Timeouts.TEN_SECONDS });
       }
       /* eslint-enable playwright/no-conditional-expect */
     });

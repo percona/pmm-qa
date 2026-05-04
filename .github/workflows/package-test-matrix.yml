@@ -4,11 +4,6 @@ name: Package Test Matrix
 on:
   workflow_dispatch:
     inputs:
-      package_testing_branch:
-        description: 'Target branch for package-testing repository'
-        type: string
-        default: 'master'
-        required: true
       pmm_server_image:
         description: "pmm-server docker image(auto detected if empty)"
         required: false
@@ -51,7 +46,6 @@ jobs:
     uses: ./.github/workflows/package-test-single.yml
     secrets: inherit
     with:
-      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
@@ -64,7 +58,6 @@ jobs:
     uses: ./.github/workflows/package-test-single.yml
     secrets: inherit
     with:
-      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
@@ -77,7 +70,6 @@ jobs:
     uses: ./.github/workflows/package-test-single.yml
     secrets: inherit
     with:
-      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       package: ${{ inputs.package || 'pmm3-client' }}
       repository: ${{ inputs.repository || 'dev-latest' }}
       metrics_mode: ${{ inputs.metrics_mode || 'auto' }}
