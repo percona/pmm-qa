@@ -2,16 +2,8 @@ name: _runner-e2e-tests
 on:
   workflow_dispatch:
     inputs:
-      pmm_ui_tests_branch:
-        description: "Branch for PMM-UI tests to checkout"
-        required: false
-        type: string
       pmm_qa_branch:
         description: "Branch for pmm-qa repository to checkout"
-        required: false
-        type: string
-      qa_integration_branch:
-        description: "Branch for qa-integration to checkout"
         required: false
         type: string
       pmm_server_image:
@@ -28,13 +20,18 @@ on:
             - 'docker-compose-nomad.yml'
           type: choice
       pmm_client_image:
-        description: 'pmm2-client docker image'
+        description: 'pmm3-client docker image'
         default: 'perconalab/pmm-client:3-dev-latest'
         required: false
         type: string
       pmm_client_version:
-        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
-        default: '3-dev-latest'
+        description: 'PMM Client version (latest-tarball|pmm3-rc|x.xx.x|https...)'
+        default: 'latest-tarball'
+        required: false
+        type: string
+      launchable_confidence:
+        description: "Launchable subset confidence percentage"
+        default: '100%'
         required: false
         type: string
       setup_services:
@@ -53,13 +50,7 @@ on:
 
   workflow_call:
     inputs:
-      pmm_ui_tests_branch:
-        required: false
-        type: string
       pmm_qa_branch:
-        required: false
-        type: string
-      qa_integration_branch:
         required: false
         type: string
       pmm_server_image:
@@ -72,6 +63,9 @@ on:
         required: false
         type: string
       pmm_client_image:
+        required: false
+        type: string
+      launchable_confidence:
         required: false
         type: string
       setup_services:
@@ -92,23 +86,24 @@ jobs:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
 #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
-      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-      PMM_UI_BRANCH: ${{ inputs.pmm_ui_tests_branch || 'main' }}
-      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      DOCKER_COMPOSE_FILE: ${{ inputs.pmm_server_compose_file || 'docker-compose.yml' }}
-      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
-      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
-      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
-      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || '@settings-fb' }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      DOCKER_COMPOSE_FILE: ${{ inputs.pmm_server_compose_file || github.event.inputs.pmm_server_compose_file || 'docker-compose.yml' }}
+      CLIENT_DOCKER_VERSION: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || github.event.inputs.setup_services || '' }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || github.event.inputs.tags_for_tests || '@settings-fb' }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      SUBSET_FILE_NAME: 'launchable-subset.json'
 
     steps:
       - name: Create status check
@@ -137,19 +132,12 @@ jobs:
             }
           result-encoding: string
 
-      - name: Checkout PMM UI tests
+      - name: Checkout pmm-qa repo
         uses: actions/checkout@v4
         with:
-          ref: ${{ env.PMM_UI_BRANCH }}
-          repository: percona/pmm-ui-tests
-          path: ./pmm-ui-tests
-
-      - name: Checkout qa-integration repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.qa_integration_branch }}
-          repository: Percona-Lab/qa-integration
-          path: ./qa-integration
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: ./pmm-qa
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
@@ -158,37 +146,8 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
-      - name: Setup PMM Server
-        working-directory: pmm-ui-tests
-        run: |
-          docker network create pmm-qa || true
-          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
-          sleep 60
-          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
-          bash -x testdata/db_setup.sh
-          docker network connect pmm-qa pmm-server || true
-
-      - name: Export path to qa-integration repo
-        working-directory: qa-integration
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
-
-      - name: Setup PMM-Client
-        working-directory: qa-integration/pmm_qa
-        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 192.168.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
-
-      - name: Run Setup for E2E Tests
-        working-directory: qa-integration/pmm_qa
-        run: |
-          mkdir -m 777 -p /tmp/backup_data
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
-
       - name: Setup npm modules for e2e tests
-        working-directory: pmm-ui-tests
+        working-directory: pmm-qa/codeceptjs-e2e
         run: |
           npm ci
           npx playwright install --with-deps
@@ -203,58 +162,104 @@ jobs:
           result-encoding: string
 
       - name: Prepare launchable
-        working-directory: pmm-ui-tests
+        working-directory: pmm-qa/codeceptjs-e2e
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
           
+          docker pull ${{ env.DOCKER_VERSION }} || true
           export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
+          echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence 93% --use-case feature-branch codeceptjs > launchable-subset.json || true
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
           echo "$(cat launchable-subset.json)" || true
 
+      - name: Check if launchable subset is empty
+        id: check_launchable_subset
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          SUBSET_FILE="${{ env.SUBSET_FILE_NAME }}"
+
+          # Skip downstream setup/tests when subset is empty.
+          if [ -s "$SUBSET_FILE" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with setup and tests."
+          else
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Downstream setup and tests will be skipped."
+          fi
+
+      - name: Skip notice
+        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
+        run: echo "No tests selected by Launchable subset. Skipping setup and test execution."
+
+      - name: Setup PMM Server
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          docker network create pmm-qa || true
+          PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
+          sleep 60
+          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
+          bash -x testdata/db_setup.sh
+          docker network connect pmm-qa pmm-server || true
+
+      - name: Export path to qa-integration repo
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/qa-integration
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+
+      - name: Setup PMM-Client
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
+
+      - name: Run Setup for E2E Tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: |
+          mkdir -m 777 -p /tmp/backup_data
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install setuptools
+          python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
+
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
-        working-directory: pmm-ui-tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/codeceptjs-e2e
         env:
-          SERVER_IP : "192.168.0.1"
-          PMM_UI_URL : "http://192.168.0.1/"
+          SERVER_IP : "127.0.0.1"
+          PMM_UI_URL : "http://127.0.0.1/"
           PMM_URL : "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
           GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
 
-          SUBSET_FILE="launchable-subset.json"
-
-          # Skip tests if the subset file is empty
-          if [ -s "$SUBSET_FILE" ]; then
-            # Run tests if the subset file is not empty
-            echo "$SUBSET_FILE is not empty, so we run tests from the subset."
-            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "$SUBSET_FILE")" || true
-          else
-            echo "$SUBSET_FILE is empty, so we run all tests for now."
-            ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi 
-          fi
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
 
       - name: Download logs
-        if: ${{ failure() }}
-        working-directory: pmm-ui-tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        working-directory: pmm-qa/codeceptjs-e2e
         run: |
             curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
             unzip logs.zip -d logs
 
       - name: Record launchable test results
-        if: ${{ always() }}
-        working-directory: pmm-ui-tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        working-directory: pmm-qa/codeceptjs-e2e
         run: |
           sed -i "s|$(pwd)/||g" tests/output/result.xml || true
           launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs
-        if: ${{ failure() }}
-        working-directory: pmm-ui-tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
+        working-directory: pmm-qa/codeceptjs-e2e
         continue-on-error: true
         run: |
           launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
@@ -265,9 +270,9 @@ jobs:
         with:
           name: "artifacts_for_${{ steps.tags_processed.outputs.result }}"
           path: |
-            pmm-ui-tests/tests/output/*.png
-            pmm-ui-tests/tests/output/trace/*.zip
-            pmm-ui-tests/logs
+            pmm-qa/codeceptjs-e2e/tests/output/*.png
+            pmm-qa/codeceptjs-e2e/tests/output/trace/*.zip
+            pmm-qa/codeceptjs-e2e/logs
 
       - name: Create status check
         if: ${{ github.event_name != 'pull_request' && always() }}

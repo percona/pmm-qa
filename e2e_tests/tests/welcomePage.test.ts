@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await page.goto('');
@@ -8,63 +9,63 @@ pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
 
 pmmTest(
   'PMM-T2132 Verify welcome Card appears on fresh install @new-navigation',
-  async ({ mocks, welcomePage }) => {
+  async ({ helpPage, mocks }) => {
     await pmmTest.step('Mock fresh install and no services', async () => {
       await mocks.mockFreshInstall();
       await mocks.mockNoServices();
     });
 
     await pmmTest.step('Verify welcome card and its buttons are visible', async () => {
-      await expect(welcomePage.elements.welcomeCard).toBeVisible();
-      await expect(welcomePage.buttons.addServiceButton).toBeVisible();
-      await expect(welcomePage.buttons.dismissButton).toBeVisible();
-      await expect(welcomePage.buttons.startTourButton).toBeVisible();
+      await expect(helpPage.elements.welcomeCard).toBeVisible();
+      await expect(helpPage.buttons.addServiceButton).toBeVisible();
+      await expect(helpPage.buttons.dismissButton).toBeVisible();
+      await expect(helpPage.buttons.startTourButton).toBeVisible();
     });
   },
 );
 
 pmmTest(
   'PMM-T2101 verify dismiss button on welcome card @new-navigation',
-  async ({ mocks, page, welcomePage }) => {
+  async ({ helpPage, mocks, page }) => {
     await pmmTest.step('Mock fresh install', async () => {
       await mocks.mockFreshInstall();
     });
 
     await pmmTest.step('Verify welcome card visibility and click dismiss', async () => {
-      await expect(welcomePage.elements.welcomeCard).toBeVisible();
-      await welcomePage.buttons.dismissButton.click();
+      await expect(helpPage.elements.welcomeCard).toBeVisible();
+      await helpPage.buttons.dismissButton.click();
     });
 
     await pmmTest.step('Reload page and verify welcome card is not visible', async () => {
       await page.reload();
-      await expect(welcomePage.elements.welcomeCard).toBeHidden();
+      await expect(helpPage.elements.welcomeCard).toBeHidden();
     });
   },
 );
 
-pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ mocks, page, welcomePage }) => {
+pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ helpPage, mocks, page }) => {
   await pmmTest.step('Mock fresh install', async () => {
     await mocks.mockFreshInstall();
   });
 
   await pmmTest.step('Verify welcome card and start tour', async () => {
-    await expect(welcomePage.elements.welcomeCard).toBeVisible();
-    await welcomePage.buttons.startTourButton.click();
+    await expect(helpPage.elements.welcomeCard).toBeVisible();
+    await helpPage.buttons.startTourButton.click();
   });
 
   await pmmTest.step('Verify tour popover and close tour', async () => {
-    await expect(welcomePage.elements.tourPopover).toBeVisible();
-    await welcomePage.buttons.tourCloseButton.click();
+    await expect(helpPage.elements.tourPopover).toBeVisible();
+    await helpPage.buttons.tourCloseButton.click();
   });
 
   await pmmTest.step('Reload page and verify welcome card is not visible', async () => {
     await page.reload();
-    await expect(welcomePage.elements.welcomeCard).toBeHidden();
+    await expect(helpPage.elements.welcomeCard).toBeHidden();
   });
 });
 
-pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ mocks, page, welcomePage }) => {
-  const cases = welcomePage.cases;
+pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mocks, page }) => {
+  const cases = helpPage.cases;
 
   for (const c of cases) {
     await pmmTest.step('Verify update check', async () => {
@@ -73,9 +74,9 @@ pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ mocks, page, w
 
       /* eslint-disable playwright/no-conditional-expect -- TODO: Refactor test case to avoid conditional expect */
       if (c.updateAvailable) {
-        await expect(welcomePage.buttons.updates).toBeVisible({ timeout: 10_000 });
+        await expect(helpPage.buttons.updates).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
       } else {
-        await expect(welcomePage.buttons.updates).toBeHidden({ timeout: 10_000 });
+        await expect(helpPage.buttons.updates).toBeHidden({ timeout: Timeouts.TEN_SECONDS });
       }
       /* eslint-enable playwright/no-conditional-expect */
     });

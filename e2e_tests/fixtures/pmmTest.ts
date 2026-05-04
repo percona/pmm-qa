@@ -9,8 +9,8 @@ import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
-import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
+import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
 import AgentsPage from '@pages/inventory/agents.page';
 import PortalRemoval from '@pages/portalRemoval.page';
@@ -18,8 +18,12 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
+import apiEndpoints from '@helpers/apiEndpoints';
+import AdvancedSettingsPage from '@pages/ha/advancedSettings.page';
 
 const pmmTest = base.extend<{
+  advancedSettingsPage: AdvancedSettingsPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -33,13 +37,15 @@ const pmmTest = base.extend<{
   servicesPage: ServicesPage;
   themePage: ThemePage;
   tour: TourPage;
-  welcomePage: WelcomePage;
   mocks: Mocks;
+  leftNavigation: LeftNavigation;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  vacuumDashboardPage: VacuumDashboard;
 }>({
+  advancedSettingsPage: async ({ page }, use) => await use(new AdvancedSettingsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
@@ -52,7 +58,7 @@ const pmmTest = base.extend<{
     await use(cliHelper);
   },
   context: async ({ context }, use) => {
-    await context.route('**/v1/users/me', (route) =>
+    await context.route(apiEndpoints.users.me, (route) =>
       route.fulfill({
         body: JSON.stringify({
           alerting_tour_completed: true,
@@ -64,8 +70,8 @@ const pmmTest = base.extend<{
         status: 200,
       }),
     );
-    await context.route('**/v1/server/updates**', (route) => {
-      return route.fulfill({
+    await context.route(apiEndpoints.server.updates, (route) =>
+      route.fulfill({
         body: JSON.stringify({
           installed: {},
           last_check: new Date().toISOString(),
@@ -74,8 +80,8 @@ const pmmTest = base.extend<{
         }),
         contentType: 'application/json',
         status: 200,
-      });
-    });
+      }),
+    );
     await use(context);
   },
   credentials: async ({}, use) => {
@@ -97,6 +103,11 @@ const pmmTest = base.extend<{
     const helpPage = new HelpPage(page);
 
     await use(helpPage);
+  },
+  leftNavigation: async ({ page }, use) => {
+    const leftNavigation = new LeftNavigation(page);
+
+    await use(leftNavigation);
   },
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
@@ -146,11 +157,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
-  welcomePage: async ({ page }, use) => {
-    const welcomePage = new WelcomePage(page);
-
-    await use(welcomePage);
-  },
+  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
 });
 
 export default pmmTest;

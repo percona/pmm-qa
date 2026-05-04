@@ -5,7 +5,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-pmmTest('PMM-T2096 - Verify view docs button @new-navigation', async ({ helpPage }) => {
+pmmTest('PMM-T2098 - Verify view docs button @new-navigation', async ({ helpPage }) => {
   await pmmTest.step('Verify navigation to external URL', async () => {
     await expect(helpPage.buttons.viewDocs).toBeVisible();
 
@@ -23,7 +23,7 @@ pmmTest('PMM-T2116 - Verify Get Percona Support button @new-navigation', async (
     const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.contactSupport);
 
     expect(href).toBeTruthy();
-    expect(newTab.url()).toContain('/www.percona.com/about/contact');
+    expect(newTab.url()).toContain('www.percona.com/contact-us');
   });
 });
 

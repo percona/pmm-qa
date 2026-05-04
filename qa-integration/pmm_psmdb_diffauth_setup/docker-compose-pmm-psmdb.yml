@@ -1,0 +1,153 @@
+---
+services:
+  build_member:
+    image: replica_member/local
+    build:
+      dockerfile: ../pmm_psmdb-pbm_setup/Dockerfile
+      context: ../pmm_psmdb-pbm_setup/
+      args:
+        - REPO=${REPO:-testing}
+        - PMM_REPO=${PMM_REPO:-experimental}
+        - PBM_VERSION=${PBM_VERSION:-latest}
+        - PSMDB_VERSION=${PSMDB_VERSION:-latest}
+        - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
+    command: /bin/bash
+
+  test:
+    container_name: test
+    hostname: test
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    build:
+      dockerfile: ../pmm_psmdb-pbm_setup/Dockerfile-testinfra
+      context: .
+    volumes:
+      - ./test:/test
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  psmdb-server:
+    container_name: psmdb-server
+    hostname: psmdb-server
+    image: replica_member/local
+    environment:
+      - PBM_MONGODB_URI=mongodb://${PBM_USER:-pbm}:${PBM_PASS:-pbmpass}@127.0.0.1:27017
+      - PMM_AGENT_SERVER_USERNAME=admin
+      - PMM_AGENT_SERVER_PASSWORD=admin
+      - PMM_AGENT_SERVER_ADDRESS=pmm-server:8443
+      - PMM_AGENT_PORTS_MIN=43000
+      - PMM_AGENT_PORTS_MAX=43020
+    entrypoint:
+      - bash
+      - -c
+      - |
+         cp /mongodb_certs/ca-certs.pem /etc/pki/tls/certs/
+         chown -R mongod:mongod /keytabs
+         exec /usr/sbin/init
+    volumes:
+      - ./conf:/etc/mongod
+      - ./certs:/mongodb_certs
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - 'psmdb-server-data:/data/db'
+      - keytabs:/keytabs
+      - ../pmm_psmdb-pbm_setup/conf/datagen:/etc/datagen:ro
+    privileged: true
+    cgroup: host
+    ports:
+      - "43000-43020:43000-43020"
+    healthcheck:
+      test: |
+       test $$(mongo --quiet --eval "try { rs.initiate().ok } catch (_) {} rs.status().ok") -eq 1
+      interval: 5s
+      start_period: 10s
+      retries: 3
+    depends_on:
+      pmm-server:
+       condition: service_healthy
+      kerberos:
+       condition: service_healthy
+
+  pmm-server:
+    container_name: pmm-server
+    hostname: pmm-server
+    image: ${PMM_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/ping" ]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    environment:
+      - "PMM_DEBUG=1"
+    ports:
+      - "443:8443"
+      - "8081:8080"
+    volumes:
+      - ./certs:/srv/nginx
+      - 'pmm-server-data:/srv'
+
+  ldap-server:
+    container_name: ldap-server
+    hostname: ldap-server
+    image: bitnamilegacy/openldap
+    environment:
+      - LDAP_ADMIN_USERNAME=admin
+      - LDAP_ADMIN_PASSWORD=adminpassword
+      - LDAP_USERS=pmm-test,${AWS_USERNAME:-awsuser}
+      - LDAP_PASSWORDS=password1,${AWS_USERNAME:-awspass}
+    ports:
+      - '1389:1389'
+      - '1636:1636'
+    volumes:
+      - 'openldap-data:/bitnamilegacy/openldap'
+
+  kerberos:
+    image: kerberos/local
+    build:
+      dockerfile: ./Dockerfile-kerberos
+      context: .
+    container_name: kerberos
+    hostname: kerberos
+    environment:
+      - "KRB5_TRACE=/dev/stderr"
+    volumes:
+      - keytabs:/keytabs
+    healthcheck:
+      test: ["CMD", "kadmin.local", "-q", "listprincs"]
+      interval: 2s
+      timeout: 1s
+      retries: 5
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9001:9000"
+    volumes:
+      - /tmp/minio/backups:/backups
+    environment:
+      - "MINIO_ACCESS_KEY=minio1234"
+      - "MINIO_SECRET_KEY=minio1234"
+    command: server /backups
+    depends_on:
+      psmdb-server:
+       condition: service_healthy
+
+  createbucket:
+    container_name: createbucket
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c " sleep 5; /usr/bin/mc alias set myminio http://minio:9000 minio1234 minio1234; /usr/bin/mc mb myminio/bcp; exit 0; "
+
+volumes:
+  psmdb-server-data:
+    driver: local
+  pmm-client-data:
+    driver: local
+  pmm-server-data:
+    driver: local
+  openldap-data:
+    driver: local
+  keytabs:
+    driver: local

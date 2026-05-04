@@ -1,0 +1,4 @@
+FROM alpine
+RUN apk add --no-cache docker python3 py-pip
+RUN pip install --no-cache-dir --break-system-packages docker && pip install --no-cache-dir --break-system-packages pytest-testinfra && pip install --no-cache-dir --break-system-packages pymongo
+WORKDIR /test
