@@ -176,7 +176,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
   test("PMM-T9999 User can use connection timeout while using pmm-admin add mysql", async ({ }) => {
     const serviceName = 'mysql_connection_timeout_service';
 
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${serviceName} ${ipPort}`);
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${serviceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
     console.log(output.stdout)
