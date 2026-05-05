@@ -20,10 +20,10 @@ import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
-import AdvancedSettingsPage from '@pages/ha/advancedSettings.page';
+import SettingsPage from '@pages/ha/settings.page';
 
 const pmmTest = base.extend<{
-  advancedSettingsPage: AdvancedSettingsPage;
+  settingsPage: SettingsPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -45,7 +45,6 @@ const pmmTest = base.extend<{
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   vacuumDashboardPage: VacuumDashboard;
 }>({
-  advancedSettingsPage: async ({ page }, use) => await use(new AdvancedSettingsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
@@ -142,6 +141,7 @@ const pmmTest = base.extend<{
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
+  settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   themePage: async ({ page }, use) => {
     const themePage = new ThemePage(page);
 
