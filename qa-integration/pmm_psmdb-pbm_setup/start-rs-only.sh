@@ -13,22 +13,16 @@ export COMPOSE_PROFILES=${profile}
 export MONGO_SETUP_TYPE=${mongo_setup_type}
 export OL_VERSION=${ol_version}
 
-case "$mongo_storage_engine" in
-  wiredtiger)
-    ;;
-  inmemory)
+if [ "$mongo_storage_engine" = "inmemory" ]; then
 
     generated_config_dir="/tmp/pmm-qa-mongod-rs-inmemory"
     rm -rf "$generated_config_dir"
     mkdir -p "$generated_config_dir"
     cp ./conf/mongod-rs-inmemory/mongod.conf "$generated_config_dir/mongod.conf"
     export MONGOD_RS_CONFIG_DIR="$generated_config_dir"
-    ;;
-  *)
-    echo "Unsupported MongoDB storage engine: $mongo_storage_engine"
-    exit 1
-    ;;
-esac
+else
+    mongo_storage_engine="wiredTiger"
+fi
 
 docker network create qa-integration || true
 docker network create pmm-qa || true
