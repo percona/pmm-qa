@@ -180,6 +180,8 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await output.exitCodeEquals(0);
 
     console.log(output.stdout)
+    const outputLog = await cli.exec(`docker exec ${containerName} cat /var/log/pmm-agent.log`);
+    console.log(outputLog.stdout);
     // await output.outContains('Socket and port cannot be specified together.');
   });
 });
