@@ -187,7 +187,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
 
   test("PMM-T9998 User can change connection timeout while using pmm-admin inventory change agent mysqld-exporter", async ({ }) => {
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep mysql_connection_timeout_service | awk -F' ' '{print $4}'`);
-    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
 
