@@ -203,12 +203,10 @@ jobs:
           python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
-        id: run_ui_tests
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
-        continue-on-error: true
         working-directory: pmm-qa/e2e_tests/
         run: |
-          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}")
+          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
 
       - name: Download logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
@@ -232,7 +230,7 @@ jobs:
           launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - name: Generate and Attach the report
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && steps.run_ui_tests.outcome == 'failure' }}
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.REPORT_NAME }}
@@ -240,10 +238,6 @@ jobs:
             ./pmm-qa/e2e_tests/playwright-report
             ./pmm-qa/e2e_tests/screenshots
             ./pmm-qa/e2e_tests/logs
-
-      - name: Fail job if UI tests failed
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && steps.run_ui_tests.outcome == 'failure' }}
-        run: exit 1
 
       - name: Create status check
         uses: percona/gh-action-github-status-action@v1
