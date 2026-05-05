@@ -6,6 +6,7 @@ const MYSQL_USER = 'root';
 const MYSQL_PASSWORD = 'GRgrO9301RuF';
 const ipPort = '127.0.0.1:3306';
 let containerName: string;
+const connectionTimeoutServiceName = 'mysql_connection_timeout_service';
 
 test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@percona-server' }, async () => {
   test.beforeAll(async ({}) => {
@@ -174,9 +175,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
   });
 
   test("PMM-T9999 User can use connection timeout while using pmm-admin add mysql", async ({ }) => {
-    const serviceName = 'mysql_connection_timeout_service';
-
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${serviceName} ${ipPort}`);
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
     console.log(output.stdout)
@@ -184,6 +183,20 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     console.log(outputLog.stdout);
     const outputAgents = await cli.exec(`docker exec ${containerName} pmm-admin list`);
     console.log(outputAgents.stdout);
-    // await output.outContains('Socket and port cannot be specified together.');
+  });
+
+  test("PMM-T9998 User can change connection timeout while using pmm-admin inventory change agent mysqld-exporter", async ({ }) => {
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep mysql_connection_timeout_service | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
+    await serviceId.exitCodeEquals(0);
+    await agentId.exitCodeEquals(0);
+
+    console.log(`Service id is: ${serviceId.stdout}`)// pmm-admin inventory change agent mysqld-exporter
+    console.log(`Agent id is: ${agentId.stdout}`)//
+
+    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId} --connection-timeout=4s`);
+    await chaneAgent.exitCodeEquals(0);
+    console.log(chaneAgent.stdout);
   });
 });
+
