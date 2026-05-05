@@ -127,7 +127,7 @@ jobs:
 
     steps:
       - name: "Create status check"
-        if: ${{ env.SHA != 'null' }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
         with:
@@ -338,7 +338,7 @@ jobs:
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
-        if: ${{ env.SHA != 'null' && always() }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
