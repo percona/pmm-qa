@@ -194,7 +194,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     console.log(`Service id is: ${serviceId.stdout}`)// pmm-admin inventory change agent mysqld-exporter
     console.log(`Agent id is: ${agentId.stdout}`)//
 
-    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId} --connection-timeout=4s`);
+    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId.stdout} --connection-timeout=4s`);
     await chaneAgent.exitCodeEquals(0);
     console.log(chaneAgent.stdout);
   });
