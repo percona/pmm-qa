@@ -81,7 +81,6 @@ jobs:
       pmm_server_image: 'perconalab/pmm-server:${{ inputs.rc_version }}-rc'
       pmm_client_image: 'perconalab/pmm-client:${{ inputs.rc_version }}-rc'
       pmm_client_version: pmm3-rc
-      sha: ${{ github.sha }}
 
   compatibility_integration_tests:
     name: Compatibility CLI (${{ matrix.version }})
@@ -98,7 +97,6 @@ jobs:
       pmm_server_image: 'perconalab/pmm-server:${{ inputs.rc_version }}-rc'
       pmm_client_image: ${{ matrix.image }}
       pmm_client_version: ${{ matrix.version }}
-      sha: ${{ github.sha }}
 
   e2e_tests_matrix:
     name: E2E Tests Matrix (CodeceptJS)
@@ -110,7 +108,6 @@ jobs:
       pmm_client_image: 'perconalab/pmm-client:${{ inputs.rc_version }}-rc'
       pmm_client_version: pmm3-rc
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
-      sha: ${{ github.sha }}
 
   helm_tests:
     name: pmm3-helm
@@ -122,7 +119,6 @@ jobs:
       client_image: 'perconalab/pmm-client:${{ inputs.rc_version }}-rc'
       pmm_chart_branch: latest
       pmm_qa_branch: ${{ inputs.pmm_qa_branch }}
-      sha: ${{ github.sha }}
 
   gssapi_tests:
     name: GSSAPI Tests Matrix
@@ -137,7 +133,6 @@ jobs:
       pmm_client_version_ol9: ${{ inputs.pmm_client_tarball_ol9 }}
       repository: 'release candidate'
       expected_version: ${{ inputs.rc_version }}
-      sha: ${{ github.sha }}
 
   qa_integration_psmdb_pbm_full:
     name: PMM_PSMDB_PBM_FULL
