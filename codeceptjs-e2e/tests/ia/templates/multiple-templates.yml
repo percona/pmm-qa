@@ -1,0 +1,64 @@
+---
+templates:
+  - name: template1
+    version: 1
+    summary: Template bulk 1
+    expr: |-
+      sum(pg_stat_activity_count{datname!~"template.*|postgres"})
+      > bool pg_settings_max_connections * [[ .threshold ]] / 100
+    params:
+      - name: threshold
+        summary: A percentage from configured maximum
+        unit: '%'
+        type: float
+        range: [0, 100]
+        value: 80
+    for: 5m
+    severity: warning
+    annotations:
+      description: |-
+        {{ $value }}% of connections (more than [[ .threshold ]]%) are used
+        by {{ $labels.service_name }} on {{ $labels.node_name }}.
+      summary: PostgreSQL too many connections ({{ $labels.service_name }})
+
+  - name: template2
+    version: 1
+    summary: Template bulk 2
+    expr: |-
+      sum(pg_stat_activity_count{datname!~"template.*|postgres"})
+      > bool pg_settings_max_connections * [[ .threshold ]] / 100
+    params:
+      - name: threshold
+        summary: A percentage from configured maximum
+        unit: '%'
+        type: float
+        range: [0, 100]
+        value: 80
+    for: 5m
+    severity: warning
+    annotations:
+      description: |-
+        {{ $value }}% of connections (more than [[ .threshold ]]%) are used
+        by {{ $labels.service_name }} on {{ $labels.node_name }}.
+      summary: PostgreSQL too many connections ({{ $labels.service_name }})
+
+  - name: template3
+    version: 1
+    summary: Template bulk 3
+    expr: |-
+      sum(pg_stat_activity_count{datname!~"template.*|postgres"})
+      > bool pg_settings_max_connections * [[ .threshold ]] / 100
+    params:
+      - name: threshold
+        summary: A percentage from configured maximum
+        unit: '%'
+        type: float
+        range: [0, 100]
+        value: 80
+    for: 5m
+    severity: warning
+    annotations:
+      description: |-
+        {{ $value }}% of connections (more than [[ .threshold ]]%) are used
+        by {{ $labels.service_name }} on {{ $labels.node_name }}.
+      summary: PostgreSQL too many connections ({{ $labels.service_name }})

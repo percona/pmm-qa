@@ -1,0 +1,45 @@
+volumes:
+  pmm-server-external-pg:
+
+services:
+  pmm-server-external-postgres:
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    container_name: pmm-server-external-postgres
+    depends_on:
+      external-postgres:
+        condition: service_healthy
+    ports:
+      - '8081:8080'
+      - '8444:8443'
+    volumes:
+      - pmm-server-external-pg:/srv
+    environment:
+      - PMM_DEBUG=1
+      - PMM_POSTGRES_DBNAME=grafana
+      - PMM_POSTGRES_ADDR=external-postgres:5432
+      - PMM_POSTGRES_USERNAME=postgres
+      - PMM_POSTGRES_DBPASSWORD=pmm_password
+      - PMM_DISABLE_BUILTIN_POSTGRES=1
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_NAME=grafana
+      - GF_DATABASE_PASSWORD=pmm_password
+      - GF_DATABASE_HOST=external-postgres
+      - GF_DATABASE_USER=postgres
+      # Need to use separate variables due to https://github.com/grafana/grafana/issues/102337#issuecomment-2853847084
+      #- GF_DATABASE_URL=postgres://postgres:pmm_password@external-postgres:5432/grafana
+
+  external-postgres:
+    image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:17}
+    container_name: external-postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track=all 
+      -c max_connections=200
+    environment:
+      - POSTGRES_PASSWORD=pmm_password
+      - POSTGRES_DB=grafana

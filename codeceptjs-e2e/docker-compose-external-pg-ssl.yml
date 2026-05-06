@@ -1,0 +1,83 @@
+volumes:
+  pmm-server-external-pg-ssl:
+
+services:
+  ca-generator:
+    image: phusion/baseimage:focal-1.2.0
+    volumes:
+      - ./ssl:/certs
+      - ./utils:/utils
+    entrypoint: sh -c "mkdir -p ./certs && apt install -y openssl && openssl genrsa -out /certs/ca.key 2048 && openssl req -x509 -new -nodes -key /certs/ca.key -sha256 -days 3650 -subj '/CN=CA' -out /certs/ca.crt && chown 1000 /certs/ca.crt"
+
+  cert-generator:
+    image: phusion/baseimage:focal-1.2.0
+    depends_on:
+      - ca-generator
+    volumes:
+      - ./ssl:/certs
+      - ./utils:/utils
+    entrypoint: sh -c "apt install -y openssl && openssl genrsa -out /certs/server.key 2048 && openssl req -new -key /certs/server.key -config /utils/external-pgsql-ssl-config.cnf -out /certs/server.csr && openssl x509 -req -in /certs/server.csr -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial -out /certs/server.crt -days 365 -extensions v3_req -extfile /utils/external-pgsql-ssl-config.cnf && chown 1001 /certs/server.crt && chown 1001 /certs/server.key"
+
+  client-cert-generator:
+    image: phusion/baseimage:focal-1.2.0
+    depends_on:
+      - ca-generator
+    volumes:
+      - ./ssl:/certs
+      - ./utils:/utils
+    entrypoint: sh -c "apt install -y openssl && openssl genrsa -out /certs/client.key 2048 && openssl req -new -key /certs/client.key -subj '/CN=client' -out /certs/client.csr && openssl x509 -req -in /certs/client.csr -CA /certs/ca.crt -CAkey /certs/ca.key -CAcreateserial -out /certs/client.crt -days 365 -sha256 && chown 1000 /certs/client.key && chown 1000 /certs/client.crt && chown 1000 /certs/ca.crt"
+
+
+  external-postgres-ssl:
+    image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:17}
+    container_name: external-postgres-ssl
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - cert-generator
+    environment:
+      - POSTGRES_PASSWORD=pmm_password
+      - POSTGRES_DB=grafana
+    volumes:
+      - ./data:/var/lib/postgresql/data
+      - ./ssl:/var/lib/postgresql/ssl
+    command: postgres -c ssl=on -c ssl_cert_file=/var/lib/postgresql/ssl/server.crt -c ssl_key_file=/var/lib/postgresql/ssl/server.key -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c max_connections=1000
+
+  pmm-server-external-postgres-ssl:
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    container_name: pmm-server-external-postgres-ssl
+    depends_on:
+      external-postgres-ssl:
+        condition: service_healthy
+    restart: always
+    ports:
+      - '8082:8080'
+      - '8447:8443'
+    environment:
+      - PMM_POSTGRES_DBNAME=grafana
+      - PMM_POSTGRES_ADDR=external-postgres-ssl:5432
+      - PMM_POSTGRES_USERNAME=postgres
+      - PMM_POSTGRES_DBPASSWORD=pmm_password
+      - PMM_DISABLE_BUILTIN_POSTGRES=1
+      - PMM_POSTGRES_SSL_MODE=verify-ca
+      - PMM_POSTGRES_SSL_CA_PATH=/etc/ssl/postgresql/ca.crt
+      - PMM_POSTGRES_SSL_KEY_PATH=/etc/ssl/postgresql/client.key
+      - PMM_POSTGRES_SSL_CERT_PATH=/etc/ssl/postgresql/client.crt
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_NAME=grafana
+      - GF_DATABASE_PASSWORD=pmm_password
+      - GF_DATABASE_HOST=external-postgres-ssl
+      - GF_DATABASE_USER=postgres
+      # Need to use separate variables due to https://github.com/grafana/grafana/issues/102337#issuecomment-2853847084
+      #- GF_DATABASE_URL=postgres://postgres:pmm_password@external-postgres-ssl:5432/grafana
+      - GF_DATABASE_SSL_MODE=verify-ca
+      - GF_DATABASE_CA_CERT_PATH=/etc/ssl/postgresql/ca.crt
+      - GF_DATABASE_CLIENT_KEY_PATH=/etc/ssl/postgresql/client.key
+      - GF_DATABASE_CLIENT_CERT_PATH=/etc/ssl/postgresql/client.crt
+    volumes:
+      - pmm-server-external-pg-ssl:/srv
+      - ./ssl:/etc/ssl/postgresql
