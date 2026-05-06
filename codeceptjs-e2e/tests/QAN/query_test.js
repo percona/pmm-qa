@@ -20,7 +20,7 @@ Before(async ({ I }) => {
 });
 
 Data(services).Scenario(
-  'PMM-T2063 - Verify QAN has data for all services @qan @gssapi-nightly',
+  'PMM-T2063 - Verify QAN has data for all services @qan @nightly-qan @gssapi-nightly',
   async ({
     I, queryAnalyticsPage, inventoryAPI, current,
   }) => {

@@ -1,5 +1,3 @@
-const { isJenkinsGssapiJob } = require('./helper/constants');
-
 Feature('Test Dashboards inside the MongoDB Folder');
 
 Before(async ({ I }) => {
@@ -7,7 +5,7 @@ Before(async ({ I }) => {
 });
 
 Scenario(
-  'PMM-T305 - Open the MongoDB Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards @gssapi-nightly',
+  'PMM-T305 - Open the MongoDB Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-myrocks-mongo-replica @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mongodbOverviewDashboard.url, {
       from: 'now-5m',
@@ -23,7 +21,7 @@ Scenario(
 );
 
 Scenario(
-  'Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
+  'Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-mongo-sharded @dashboards',
   async ({ I, dashboardPage }) => {
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
       cluster: 'sharded',
@@ -38,7 +36,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1698 - Verify that Disk I/O and Swap Activity and Network Traffic panels have graphs if Node name contains dot symbol @nightly @dashboards @gssapi-nightly',
+  'PMM-T1698 - Verify that Disk I/O and Swap Activity and Network Traffic panels have graphs if Node name contains dot symbol @nightly @nightly-myrocks-mongo-replica @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, {
       from: 'now-5m',
@@ -54,7 +52,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1333 - Verify MongoDB - MongoDB Collections Overview @mongodb-exporter @nightly @gssapi-nightly',
+  'PMM-T1333 - Verify MongoDB - MongoDB Collections Overview @mongodb-exporter @nightly @nightly-myrocks-mongo-replica @gssapi-nightly',
   async ({
     I, dashboardPage, inventoryAPI, adminPage,
   }) => {
@@ -72,26 +70,18 @@ Scenario(
   },
 ).retry(2);
 
-const fcvPanelTestData = () => {
-  const { dashboardPage } = inject();
-  let dashboards = [
-    { url: dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, cluster: 'replicaset' },
-    { url: dashboardPage.mongoDbShardedClusterSummary.url, cluster: 'sharded' },
-  ];
-
-  if (isJenkinsGssapiJob) {
-    dashboards = dashboards.filter((item) => item.cluster !== 'sharded');
-  }
-
-  return dashboards;
-};
-
-Data(fcvPanelTestData()).Scenario(
-  'PMM-T2035 - Verify MongoDb Cluster and MongoDB ReplSet dashboards has FCV panel @nightly @dashboards @gssapi-nightly',
-  async ({ I, dashboardPage, current }) => {
-    const url = I.buildUrlWithParams(current.url, {
+// PMM-T2035 used to be a single Data() scenario iterating both replicaset and
+// sharded clusters. It was split into two independent scenarios so each can run
+// in the shard that has the matching PSMDB setup (replicaset in
+// @nightly-myrocks-mongo-replica, sharded in @nightly-mongo-sharded). The
+// replicaset variant keeps @gssapi-nightly because the GSSAPI job only deploys
+// a replicaset; the sharded variant intentionally drops that tag.
+Scenario(
+  'PMM-T2035 - Verify MongoDB ReplSet dashboard has FCV panel @nightly @nightly-myrocks-mongo-replica @dashboards @gssapi-nightly',
+  async ({ I, dashboardPage }) => {
+    const url = I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, {
       from: 'now-5m',
-      cluster: current.cluster,
+      cluster: 'replicaset',
     });
 
     I.amOnPage(url);
@@ -107,7 +97,28 @@ Data(fcvPanelTestData()).Scenario(
   },
 );
 
-Scenario('PMM-T2003 - Verify that MongoDB Compare dashboard has Cluster, Replication, Node filters @nightly', async ({
+Scenario(
+  'PMM-T2035 - Verify MongoDB Cluster dashboard has FCV panel @nightly @nightly-mongo-sharded @dashboards',
+  async ({ I, dashboardPage }) => {
+    const url = I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
+      from: 'now-5m',
+      cluster: 'sharded',
+    });
+
+    I.amOnPage(url);
+    dashboardPage.waitForDashboardOpened();
+    const fcvVersion = await I.grabTextFrom(dashboardPage.panelValueByTitle('Feature Compatibility Version'));
+    const mongodbVersion = process.env.PSMDB_VERSION || '8.0';
+
+    I.assertEqual(
+      fcvVersion,
+      mongodbVersion.split('.')[0],
+      'Feature Compatibility Version is not correct.',
+    );
+  },
+);
+
+Scenario('PMM-T2003 - Verify that MongoDB Compare dashboard has Cluster, Replication, Node filters @nightly @nightly-myrocks-mongo-replica', async ({
   I, dashboardPage, inventoryAPI,
 }) => {
   const newClusterName = 'replicaset';

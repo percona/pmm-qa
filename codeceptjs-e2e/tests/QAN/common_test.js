@@ -8,7 +8,7 @@ Before(async ({ I, queryAnalyticsPage }) => {
 });
 
 Scenario(
-  'PMM-T269 - Verify QAN UI Elements are displayed @qan',
+  'PMM-T269 - Verify QAN UI Elements are displayed @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -46,7 +46,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T186 - Verify values in overview and in details match @qan',
+  'PMM-T186 - Verify values in overview and in details match @qan @nightly-qan',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {
@@ -71,7 +71,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T215 - Verify that buttons in QAN are disabled and visible on the screen @qan',
+  'PMM-T215 - Verify that buttons in QAN are disabled and visible on the screen @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -90,7 +90,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T188 - Verify dashboard refresh @qan',
+  'PMM-T188 - Verify dashboard refresh @qan @nightly-qan',
   async ({
     dashboardPage, adminPage, queryAnalyticsPage,
   }) => {
