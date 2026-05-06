@@ -70,12 +70,6 @@ Scenario(
   },
 ).retry(2);
 
-// PMM-T2035 used to be a single Data() scenario iterating both replicaset and
-// sharded clusters. It was split into two independent scenarios so each can run
-// in the shard that has the matching PSMDB setup (replicaset in
-// @nightly-myrocks-mongo-replica, sharded in @nightly-mongo-sharded). The
-// replicaset variant keeps @gssapi-nightly because the GSSAPI job only deploys
-// a replicaset; the sharded variant intentionally drops that tag.
 Scenario(
   'PMM-T2035 - Verify MongoDB ReplSet dashboard has FCV panel @nightly @nightly-myrocks-mongo-replica @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
