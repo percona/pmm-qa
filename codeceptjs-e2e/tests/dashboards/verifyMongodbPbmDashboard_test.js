@@ -17,7 +17,7 @@ After(async ({ scheduledAPI, locationsAPI }) => {
   await locationsAPI.clearAllLocations();
 });
 
-Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @nightly @gssapi-nightly', async ({
+Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @nightly @nightly-myrocks-mongo-replica @gssapi-nightly', async ({
   I, current, dashboardPage, inventoryAPI, scheduledAPI, backupAPI,
 }) => {
   // Preparation
