@@ -25,6 +25,11 @@ on:
         required: false
         default: 'latest-tarball'
         type: string
+      pmm_server_image:
+        description: "PMM Server docker container version (image-name:version-tag)"
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
       launchable_confidence:
         description: "Launchable subset confidence percentage"
         required: false
@@ -48,6 +53,10 @@ on:
         required: false
         default: 'latest-tarball'
         type: string
+      pmm_server_image:
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
       launchable_confidence:
         required: false
         default: '100%'
@@ -69,6 +78,7 @@ jobs:
       admin_password: ${{ inputs.admin_password || 'admin' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: '--database ps,SETUP_TYPE=replication --database pxc'
       tags_for_tests: '@nightly-pxc-ps-replication'
       shard_name: 'pxc-ps-replication'
@@ -200,6 +210,7 @@ jobs:
       admin_password: ${{ inputs.admin_password || 'admin' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: '--database ps --database psmdb,SETUP_TYPE=pss'
       tags_for_tests: '@nightly-generic'
       shard_name: 'generic'

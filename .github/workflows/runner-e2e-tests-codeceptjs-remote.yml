@@ -25,6 +25,11 @@ on:
         required: false
         default: 'latest-tarball'
         type: string
+      pmm_server_image:
+        description: "PMM Server docker container version (image-name:version-tag)"
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
       setup_services:
         description: "pmm-framework arguments, ex.: --database=ps --database=psmdb,SETUP_TYPE=pss"
         required: false
@@ -62,6 +67,10 @@ on:
         required: false
         default: 'latest-tarball'
         type: string
+      pmm_server_image:
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
       setup_services:
         required: false
         default: ''
@@ -94,6 +103,7 @@ jobs:
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests }}
       SHARD_NAME: ${{ inputs.shard_name || 'remote' }}
@@ -168,26 +178,16 @@ jobs:
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
-
-          # Build a deterministic Launchable build id per shard. We don't have a
-          # docker image to inspect (server is remote), so use run id + shard.
-          echo "Launchable build: ${{ github.run_id }}-${{ env.SHARD_NAME }}"
+          
+          docker pull ${{ env.DOCKER_VERSION }} || true
+          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
-
-          launchable record session \
-            --build "${{ github.run_id }}-${{ env.SHARD_NAME }}" \
-            --test-suite "nightly-${{ env.SHARD_NAME }}" \
-            --flavor pmm-server-address="${SERVER_IP}" \
-            --flavor pmm-client-version="${{ env.CLIENT_VERSION }}" \
-            --flavor shard="${{ env.SHARD_NAME }}" \
-            > launchable-session.txt || true
-          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}" || true
-          cat test_list.txt | launchable subset \
-            --session "$(cat launchable-session.txt)" \
-            --confidence "${{ env.LAUNCHABLE_CONFIDENCE }}" \
-            --use-case feature-branch \
-            codeceptjs > "${{ env.SUBSET_FILE_NAME }}" || true
-          cat "${{ env.SUBSET_FILE_NAME }}" || true
+          
+          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
+          echo "$(cat launchable-subset.json)" || true
 
       - name: Check if launchable subset is empty
         id: check_launchable_subset
