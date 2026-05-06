@@ -270,7 +270,7 @@ jobs:
         run: |
           sed -i "s|$(pwd)/||g" tests/output/result.xml || true
           launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
-          launchable gate --session "$(cat launchable-session.txt)" || true
+          launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs on failure
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
