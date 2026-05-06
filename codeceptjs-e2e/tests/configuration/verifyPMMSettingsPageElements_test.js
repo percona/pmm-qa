@@ -36,7 +36,7 @@ Scenario('PMM-T84 - Verify Section Tabs and Metrics Section Elements [critical] 
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
 
   I.waitForElement(pmmSettingsPage.fields.metricsResolutionLabel, 30);
-  I.see('Metrics resolution, sec', pmmSettingsPage.fields.metricsResolutionLabel);
+  I.see('Metrics resolution', pmmSettingsPage.fields.metricsResolutionLabel);
   I.seeElement(pmmSettingsPage.fields.metricsResolutionRadio);
   I.seeElement(pmmSettingsPage.fields.lowInput);
   I.seeElement(pmmSettingsPage.fields.mediumInput);
@@ -57,7 +57,7 @@ Scenario('Verify Advanced Section Elements @settings @grafana-pr', async ({ I, p
   I.see('Data retention', pmmSettingsPage.fields.advancedLabel);
   I.see('Telemetry', pmmSettingsPage.fields.telemetryLabel);
   I.see('Check for updates', pmmSettingsPage.fields.checkForUpdatesLabel);
-  I.see('Advisor', pmmSettingsPage.fields.sttLabel);
+  I.see('Advisors', pmmSettingsPage.fields.sttLabel);
   I.seeElement(pmmSettingsPage.fields.telemetrySwitchSelectorInput);
   I.seeElement(pmmSettingsPage.fields.telemetryLabel);
   I.seeElement(pmmSettingsPage.fields.checkForUpdatesSwitch);
@@ -93,7 +93,7 @@ Scenario('PMM-T1866 - Verify if public address has an port assigned and followin
 
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   I.waitForElement(pmmSettingsPage.fields.publicAddressLabel);
-  I.see('Public Address', pmmSettingsPage.fields.publicAddressLabel);
+  I.see('Public address', pmmSettingsPage.fields.publicAddressLabel);
   // Set a public IP with port
   adminPage.customClearField(pmmSettingsPage.fields.publicAddressInput);
   I.fillField(pmmSettingsPage.fields.publicAddressInput, '192.168.1.1:8433');
@@ -103,7 +103,7 @@ Scenario('PMM-T1866 - Verify if public address has an port assigned and followin
   I.wait(5);
   // clearField and customClearField methods doesn't work for this field
   I.usePlaywrightTo('clear field', async ({ page }) => {
-    await page.locator(I.useDataQA('retention-number-input')).fill('');
+    await page.locator('input[name="retention"]').fill('');
   });
   I.fillField(pmmSettingsPage.fields.dataRetentionInput, '1');
   I.click(pmmSettingsPage.fields.applyButton);

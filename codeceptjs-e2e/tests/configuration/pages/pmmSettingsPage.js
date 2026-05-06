@@ -8,11 +8,11 @@ const {
 const locateLabel = (selector) => locate(I.useDataQA(selector)).find('span');
 
 module.exports = {
-  url: 'graph/settings',
+  url: '/pmm-ui/settings',
   publicAddress: process.env.VM_IP ? process.env.VM_IP : process.env.SERVER_IP || '127.0.0.1',
-  metricsResolutionUrl: 'graph/settings/metrics-resolution',
-  advancedSettingsUrl: 'graph/settings/advanced-settings',
-  sshKeyUrl: 'graph/settings/ssh-key',
+  metricsResolutionUrl: '/pmm-ui/settings/metrics-resolution',
+  advancedSettingsUrl: '/pmm-ui/settings/advanced-settings',
+  sshKeyUrl: '/pmm-ui/settings/ssh-key',
   alertManagerIntegrationUrl: 'graph/settings/am-integration',
   communicationSettingsUrl: 'graph/settings/communication',
   prometheusAlertUrl: '/prometheus/rules',
@@ -238,8 +238,8 @@ module.exports = {
     submitSlackButton: '$slack-settings--submit-button',
   },
   fields: {
-    advancedLabel: '$advanced-label',
-    advancedButton: '$advanced-button',
+    advancedLabel: '//div[contains(normalize-space(), "Data retention")]',
+    advancedButton: I.useDataQA('advanced-button'),
     addAlertRuleButton: '//span[text()="Apply Alertmanager settings"]/parent::span',
     alertRulesInput: '$alertmanager-rules',
     alertURLInput: '$alertmanager-url',
@@ -249,42 +249,55 @@ module.exports = {
     alertmanagerButton: '$alertmanager-button',
     amUrlLabel: locateLabel('form-field-am-url'),
     applyButton: 'button[type="submit"]',
-    backupManagementSwitch: locate('$advanced-backup').find('label'),
-    backupManagementSwitchInput: locate('$advanced-backup').find('input'),
+    backupManagementSwitch: I.useDataQA('switch-input-backup'),
+    backupManagementSwitchInput: locate(I.useDataQA('switch-input-backup')).find('input'),
     callHomeSwitch: '//button[@class="toggle-field ant-switch ant-switch-checked"]',
-    checkForUpdatesLabel: locate('$advanced-updates').find('span'),
-    checkForUpdatesSwitch: locate('$advanced-updates').find('label'),
-    dataRetentionInput: '$retention-number-input',
+    checkForUpdatesLabel: I.useDataQA('switch-input-updates-label'),
+    checkForUpdatesSwitch: I.useDataQA('switch-input-updates'),
+    dataRetentionInput: 'input[name="retention"]',
     dataRetentionLabel: locateLabel('form-field-data-retention'),
     retentionValidation: '$retention-field-error-message',
     errorPopUpElement: I.useDataQA('data-testid Alert error'),
     iframe: '//div[@class="panel-content"]//iframe',
-    metricsResolutionButton: '$metrics-resolution-button',
-    metricsResolutionByText: (text) => locate('label').withText(text),
-    metricsResolutionLabel: '$metrics-resolution-label',
-    metricsResolutionRadio: '$resolutions-radio-button',
-    microsoftAzureMonitoringSwitch: locate('$advanced-azure-discover').find('//div[2]//label'),
-    microsoftAzureMonitoringSwitchInput: locate('$advanced-azure-discover').find('//div[2]//input'),
-    accessControlInput: locate('[name="accessControl"]'),
-    accessControlSwitch: locate('$access-control').find('label'),
+    metricsResolutionButton: I.useDataQA('metrics-resolution-button'),
+    metricsResolutionByText: (text) => {
+      switch (text.toLowerCase()) {
+        case 'rare':
+          return I.useDataQA('radio-option-rare');
+        case 'standard':
+          return I.useDataQA('radio-option-standard');
+        case 'frequent':
+          return I.useDataQA('radio-option-frequent');
+        case 'custom':
+          return I.useDataQA('radio-option-custom');
+        default:
+          return locate('label').withText(text);
+      }
+    },
+    metricsResolutionLabel: '//div[contains(normalize-space(), "Metrics resolution")]',
+    metricsResolutionRadio: I.useDataQA('radio-option-standard'),
+    microsoftAzureMonitoringSwitch: I.useDataQA('switch-input-azure-discover'),
+    microsoftAzureMonitoringSwitchInput: locate(I.useDataQA('switch-input-azure-discover')).find('input'),
+    accessControlInput: locate(I.useDataQA('switch-input-access-control')).find('input'),
+    accessControlSwitch: I.useDataQA('switch-input-access-control'),
     loginButton: '$sign-in-submit-button',
     lowInput: '$lr-number-input',
     mediumInput: '$mr-number-input',
     highInput: '$hr-number-input',
     privacyPolicy: '//span[contains(text(), "Privacy Policy")]',
-    publicAddressLabel: locate('$public-address-label').find('span'),
-    publicAddressInput: '$publicAddress-text-input',
-    publicAddressButton: '$public-address-button',
+    publicAddressLabel: '//div[contains(normalize-space(), "Public address")]',
+    publicAddressInput: I.useDataQA('text-input-public-address'),
+    publicAddressButton: locate('button').withText('Get from browser'),
     sectionHeader: '//div[@class="ant-collapse-header"]',
     selectedResolution: 'span.ant-slider-mark-text-active',
     signInEmail: '$email-text-input',
     signInPassword: '$email-text-input',
-    sshKeyInput: '$ssh-key',
-    sshKeyLabel: locateLabel('ssh-key-label'),
-    sshKeyButton: '$ssh-key-button',
-    sttLabel: locate('$advanced-advisors').find('span'),
-    sttSwitchSelectorInput: locate('$advanced-advisors').find('input'),
-    sttSwitchSelector: locate('$advanced-advisors').find('label'),
+    sshKeyInput: I.useDataQA('text-input-ssh-key'),
+    sshKeyLabel: '//div[contains(normalize-space(), "SSH key")]',
+    sshKeyButton: I.useDataQA('ssh-key-button'),
+    sttLabel: I.useDataQA('switch-input-stt-label'),
+    sttSwitchSelectorInput: locate(I.useDataQA('switch-input-stt')).find('input'),
+    sttSwitchSelector: I.useDataQA('switch-input-stt'),
     subSectionHeader: '//following-sibling::div//div[@class="ant-collapse-header"]',
     signUpEmail: '$email-text-input',
     signUpPassword: '$password-password-input',
@@ -292,22 +305,22 @@ module.exports = {
     signUpButton: '$sign-up-submit-button',
     singInToSignUpButton: '$sign-in-to-sign-up-button',
     signUpBackToLogin: '$sign-up-to-sign-in-button',
-    telemetrySwitchSelectorInput: locate('$advanced-telemetry').find('input'),
-    telemetrySwitchSelector: locate('$advanced-telemetry').find('label'),
-    perconaAlertingSwitchInput: locate('$advanced-alerting').find('input'),
-    perconaAlertingSwitch: locate('$advanced-alerting').find('label'),
-    telemetryLabel: locate('$advanced-telemetry').find('span'),
+    telemetrySwitchSelectorInput: locate(I.useDataQA('switch-input-telemetry')).find('input'),
+    telemetrySwitchSelector: I.useDataQA('switch-input-telemetry'),
+    perconaAlertingSwitchInput: locate(I.useDataQA('switch-input-alerting')).find('input'),
+    perconaAlertingSwitch: I.useDataQA('switch-input-alerting'),
+    telemetryLabel: I.useDataQA('switch-input-telemetry-label'),
     tooltipText: locate('$info-tooltip').find('./*[self::span or self::div]'),
     tooltipReadMoreLink: locate('$info-tooltip').find('a'),
-    tabsSection: '$settings-tabs',
-    tabContent: '$settings-tab-content',
+    tabsSection: I.useDataQA('settings-tabs'),
+    tabContent: I.useDataQA('settings-tab-content'),
     termsOfService: '//span[contains(text(), "Terms of Service")]',
     validationMessage: 'span.error-message',
-    rareIntervalInput: '$rareInterval-number-input',
+    rareIntervalInput: 'input[name="rareInterval"]',
     rareIntervalValidation: '$rareInterval-field-error-message',
-    standartIntervalInput: '$standardInterval-number-input',
+    standartIntervalInput: 'input[name="standardInterval"]',
     standartIntervalValidation: '$standardInterval-field-error-message',
-    frequentIntervalInput: '$frequentInterval-number-input',
+    frequentIntervalInput: 'input[name="frequentInterval"]',
     frequentIntervalValidation: '$frequentInterval-field-error-message',
     pmmServerNameInput: '$pmmServerName-text-input',
     perconaAccountEmailInput: '$email-text-input',
@@ -337,7 +350,21 @@ module.exports = {
   },
 
   async expandSection(sectionName, expectedContentLocator) {
-    const sectionExpandLocator = locate(`[aria-label="Tab ${sectionName}"]`);
+    let sectionExpandLocator;
+
+    switch (sectionName.toLowerCase()) {
+      case 'metrics resolution':
+        sectionExpandLocator = I.useDataQA('settings-tab-metrics');
+        break;
+      case 'advanced settings':
+        sectionExpandLocator = I.useDataQA('settings-tab-advanced');
+        break;
+      case 'ssh key':
+        sectionExpandLocator = I.useDataQA('settings-tab-ssh');
+        break;
+      default:
+        sectionExpandLocator = locate(`[aria-label="Tab ${sectionName}"]`);
+    }
 
     I.click(sectionExpandLocator);
     I.waitForVisible(expectedContentLocator, 30);
@@ -419,12 +446,12 @@ module.exports = {
   },
 
   async verifySelectedResolution(resolution) {
-    const selector = '$resolutions-radio-state';
+    const selector = this.fields.metricsResolutionByText(resolution);
 
     I.waitForElement(selector, 30);
-    const value = await I.grabAttributeFrom(selector, 'value');
+    const value = await I.grabAttributeFrom(selector, 'checked');
 
-    assert.equal(value.includes(resolution.toLowerCase()), true, 'Metric resolution should be selected');
+    assert.notEqual(value, null, 'Metric resolution should be selected');
   },
 
   customClearField(field) {
