@@ -16,7 +16,7 @@ Before(async ({ I, queryAnalyticsPage }) => {
 });
 
 Scenario(
-  'Verify Details section tabs @qan',
+  'Verify Details section tabs @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -30,7 +30,7 @@ Scenario(
 ).retry(1);
 
 Scenario(
-  'PMM-T223 - Verify time metrics are AVG per query (not per second) @qan',
+  'PMM-T223 - Verify time metrics are AVG per query (not per second) @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -59,7 +59,7 @@ if (isJenkinsGssapiJob) {
 }
 
 Data(databaseEnvironments).Scenario(
-  'PMM-T13 - Check Example, Explain, Plan and Table tabs for supported DBs @qan @gssapi-nightly',
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for supported DBs @qan @nightly-qan @gssapi-nightly',
   async ({
     I, queryAnalyticsPage, current, inventoryAPI,
   }) => {
@@ -104,7 +104,7 @@ Data(databaseEnvironments).Scenario(
 );
 
 Scenario(
-  'PMM-T1790 - Verify that there is any no error on Explains after switching between queries from different DB servers @qan',
+  'PMM-T1790 - Verify that there is any no error on Explains after switching between queries from different DB servers @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -136,7 +136,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T245 - Verify that user is able to close the Details section @qan',
+  'PMM-T245 - Verify that user is able to close the Details section @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -151,7 +151,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T144 - Verify that Details tab is the only one available when total row is selected @qan',
+  'PMM-T144 - Verify that Details tab is the only one available when total row is selected @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -167,7 +167,7 @@ Scenario(
 
 // Skip until https://jira.percona.com/browse/PMM-12218 is fixed
 // Data(querySources).Scenario(
-//   'PMM-T1667 - Verify that SQL injection is filtered in placeholders on QAN tab @qan',
+//   'PMM-T1667 - Verify that SQL injection is filtered in placeholders on QAN tab @qan @nightly-qan',
 //   async ({
 //     I, adminPage, current,
 //   }) => {
