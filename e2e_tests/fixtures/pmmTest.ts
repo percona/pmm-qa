@@ -7,7 +7,6 @@ import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
-import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 import Mocks from '@helpers/mocks.helper';
 import LeftNavigation from '@pages/navigation.page';
@@ -35,7 +34,6 @@ const pmmTest = base.extend<{
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;
-  themePage: ThemePage;
   tour: TourPage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
@@ -103,11 +101,7 @@ const pmmTest = base.extend<{
 
     await use(helpPage);
   },
-  leftNavigation: async ({ page }, use) => {
-    const leftNavigation = new LeftNavigation(page);
-
-    await use(leftNavigation);
-  },
+  leftNavigation: async ({ page }, use) => await use(new LeftNavigation(page)),
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
 
@@ -142,11 +136,6 @@ const pmmTest = base.extend<{
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
-  themePage: async ({ page }, use) => {
-    const themePage = new ThemePage(page);
-
-    await use(themePage);
-  },
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 
