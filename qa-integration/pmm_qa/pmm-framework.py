@@ -8,7 +8,7 @@ import shutil
 import yaml
 from scripts.get_env_value import get_value
 from scripts.database_options import database_options as database_configs
-from scripts.run_ansible_playbook import run_ansible_playbook
+from scripts.run_ansible_playbook import run_ansible_playbook, apply_shard_namespace
 
 LATEST_TARBALL_URL = "https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz"
 
@@ -397,6 +397,8 @@ def setup_mlaunch_modb(db_type, db_version=None, db_config=None, args=None):
 
 
 def execute_shell_scripts(shell_scripts, project_relative_scripts_dir, env_vars, args):
+    env_vars = apply_shard_namespace(env_vars)
+
     # Get script directory
     current_directory = os.getcwd()
     shell_scripts_path = os.path.abspath(os.path.join(current_directory, os.pardir, project_relative_scripts_dir))

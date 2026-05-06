@@ -50,7 +50,9 @@ apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-
 wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb
 dpkg -i percona-release_latest.$(lsb_release -sc)_all.deb
 apt-get update
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
+if [ -z "${PMM_AGENT_SETUP_NODE_NAME}" ]; then
+    export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
+fi
 mv -v /artifacts/* .
 
 if [[ "$client_version" == "3-dev-latest" ]]; then
