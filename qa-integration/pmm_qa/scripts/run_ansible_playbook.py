@@ -1,34 +1,9 @@
 import os
-import re
 import ansible_runner
 import sys
 import subprocess
 
-
-def resolve_shard_namespace():
-    raw = os.getenv('SHARD_NAMESPACE') or ''
-    sanitized = re.sub(r'[^A-Za-z0-9_-]', '', raw)
-    return sanitized.lower()
-
-
-def apply_shard_namespace(env_vars):
-    ns = resolve_shard_namespace()
-    if not ns:
-        return env_vars
-
-    suffix = f'_{ns}'
-    for key, value in list(env_vars.items()):
-        if key.endswith('_CONTAINER') and isinstance(value, str) and value:
-            if not value.endswith(suffix):
-                env_vars[key] = f'{value}{suffix}'
-
-    env_vars['SHARD_NAMESPACE'] = ns
-    return env_vars
-
-
 def run_ansible_playbook(playbook_filename, env_vars, args):
-    env_vars = apply_shard_namespace(env_vars)
-
     # Get Script Dir
     script_path = os.path.abspath(sys.argv[0])
     script_dir = os.path.dirname(script_path)
