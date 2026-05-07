@@ -47,8 +47,11 @@ const clientCredentialsFlags = gssapi.enabled
 Feature('BM: Backup Inventory');
 
 BeforeSuite(async ({
-  I, locationsAPI, settingsAPI, inventoryAPI,
+  I, locationsAPI, settingsAPI, inventoryAPI, codeceptjsConfig
 }) => {
+  console.log('Config file is: ');
+  console.log(codeceptjsConfig);
+  console.log(codeceptjsConfig.config);
   await settingsAPI.changeSettings({ backup: true });
   await locationsAPI.clearAllLocations(true);
   localStorageLocationId = await locationsAPI.createStorageLocation(
