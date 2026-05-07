@@ -1,0 +1,25 @@
+
+[ req ]
+prompt                 = no
+days                   = 365
+distinguished_name     = req_distinguished_name
+req_extensions         = v3_req
+
+
+[ req_distinguished_name ]
+countryName            = AB
+stateOrProvinceName    = CD
+localityName           = EFG_HIJ
+organizationName       = MyOrg
+organizationalUnitName = MyOrgUnit
+commonName             = mycommname.com
+emailAddress           = emailaddress@myemail.com
+
+[ v3_req ]
+basicConstraints       = CA:false
+extendedKeyUsage       = serverAuth
+subjectAltName         = @sans
+
+[ sans ]
+DNS.0 = localhost
+DNS.1 = myexampleserver.com
