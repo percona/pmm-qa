@@ -95,19 +95,24 @@ module.exports = {
     },
     metricsResolution: {
       metricsResolutionSec: {
-        iconLocator: locate('$metrics-resolution-label').find('[class$="-Icon"]').as('Metrics resolution tooltip'),
-        text: 'This setting defines how frequently the data will be collected.',
+        nativeTextLocator: locate('//h6[normalize-space()="Metrics resolution"]/following-sibling::p[1]').as('Metrics resolution tooltip'),
+        nativeLinkLocator: locate('//h6[normalize-space()="Metrics resolution"]/following-sibling::p[1]//a[normalize-space()="Read more"]').as('Metrics resolution tooltip Read more link'),
+        text: 'How often PMM collects metrics, in seconds. Lower values provide more detail but use more resources.',
         link: links.metricsResolutionDocs,
       },
     },
     advancedSettings: {
       dataRetention: {
-        iconLocator: locate('$advanced-label').find('[class$="-Icon"]').as('Advanced settings tooltip'),
-        text: 'This is the value for how long data will be stored.',
+        nativeTextLocator: locate('//h6[normalize-space()="Data retention"]/following-sibling::p[1]').as('Data retention tooltip'),
+        nativeLinkLocator: locate('//h6[normalize-space()="Data retention"]/following-sibling::p[1]//a[normalize-space()="Read more"]').as('Data retention tooltip Read more link'),
+        text: 'How long PMM keeps collected data. Older data is automatically deleted.',
         link: links.dataRetentionDocs,
       },
       telemetry: {
-        iconLocator: locate('$advanced-telemetry').find('[class$="-Icon"]').as('Telemetry tooltip'),
+        nativeTextLocator: locate('//h6[normalize-space()="Telemetry"]/following-sibling::p[1]').as('Telemetry tooltip'),
+        nativeLinkLocator: locate('//h6[normalize-space()="Telemetry"]/following-sibling::p[1]//a[normalize-space()="Read more"]').as('Telemetry tooltip Read more link'),
+        nativeDialogButton: locate('button').withText('What we collect').as('Telemetry details button'),
+        nativeDialogTextLocator: locate('[role="dialog"]').as('Telemetry tooltip dialog'),
         text: '',
         link: links.telemetryDocs,
       },
@@ -117,13 +122,14 @@ module.exports = {
         link: links.checkForUpdates,
       },
       stt: {
-        iconLocator: locate('$advanced-advisors').find('[class$="-Icon"]').as('Advanced advisors tooltip'),
-        text: 'Enable Advisors and get updated checks from Percona.',
+        nativeTextLocator: locate('//h6[normalize-space()="Advisors"]/following-sibling::p[1]').as('Advisors tooltip'),
+        nativeLinkLocator: locate('//h6[normalize-space()="Advisors"]/following-sibling::p[1]//a[normalize-space()="Read more"]').as('Advisors tooltip Read more link'),
+        text: 'Run automated checks to identify potential database performance and configuration issues.',
         link: links.advisorsDocs,
       },
       publicAddress: {
-        iconLocator: locate('$public-address-label').find('[class$="-Icon"]').as('Public Address tooltip'),
-        text: 'Public Address to this PMM server.',
+        nativeTextLocator: locate('//h6[normalize-space()="Public address"]/following-sibling::p[1]').as('Public address tooltip'),
+        text: 'The address or hostname PMM Server will be accessible at.',
         link: false,
       },
       executionIntervals: {
@@ -137,8 +143,8 @@ module.exports = {
         link: links.backupManagementDocs,
       },
       perconaAlerting: {
-        iconLocator: locate('$advanced-alerting').find('[class$="-Icon"]').as('Alerting tooltip'),
-        text: 'Option to enable/disable Percona Alerting features.',
+        nativeTextLocator: locate('//p[normalize-space()="Percona Alerting"]').as('Percona Alerting tooltip'),
+        text: 'Percona Alerting',
         link: links.integratedAlertingDocs,
       },
       microsoftAzureMonitoring: {
@@ -149,8 +155,9 @@ module.exports = {
     },
     ssh: {
       sshKey: {
-        iconLocator: locate('$ssh-key-label').find('[class$="-Icon"]').as('SSH key tooltip'),
-        text: 'Public SSH key to let you login into the server using SSH.',
+        nativeTextLocator: locate('//h6[normalize-space()="SSH key"]/following-sibling::p[1]').as('SSH key tooltip'),
+        nativeLinkLocator: locate('//h6[normalize-space()="SSH key"]/following-sibling::p[1]//a[normalize-space()="Read more"]').as('SSH key tooltip Read more link'),
+        text: 'Paste your public SSH key (ssh-rsa format) to enable SSH access to PMM Server.',
         link: links.sshKeyDocs,
       },
     },
@@ -442,6 +449,7 @@ module.exports = {
   async selectMetricsResolution(resolution) {
     I.waitForElement(this.fields.metricsResolutionByText(resolution), 30);
     I.click(this.fields.metricsResolutionByText(resolution));
+    I.waitForEnabled(this.fields.metricsResolutionButton, 30);
     I.click(this.fields.metricsResolutionButton);
   },
 
@@ -568,6 +576,28 @@ module.exports = {
   },
 
   async verifyTooltip(tooltipObj) {
+    if (tooltipObj.nativeTextLocator) {
+      I.waitForVisible(tooltipObj.nativeTextLocator, 10);
+      I.see(tooltipObj.text, tooltipObj.nativeTextLocator);
+
+      if (tooltipObj.nativeLinkLocator && tooltipObj.link) {
+        I.seeAttributesOnElements(tooltipObj.nativeLinkLocator, { href: tooltipObj.link });
+        const readMoreLink = await I.grabAttributeFrom(tooltipObj.nativeLinkLocator, 'href');
+        const response = await I.sendGetRequest(readMoreLink);
+
+        assert.equal(response.status, 200, 'Read more link should lead to working documentation page. But the GET request response status is not 200');
+      }
+
+      if (tooltipObj.nativeDialogButton && tooltipObj.nativeDialogTextLocator) {
+        I.click(tooltipObj.nativeDialogButton);
+        I.waitForVisible(tooltipObj.nativeDialogTextLocator, 10);
+        I.see(tooltipObj.text, tooltipObj.nativeDialogTextLocator);
+        I.pressKey('Escape');
+      }
+
+      return;
+    }
+
     tooltipObj.tooltipText = this.fields.tooltipText;
     tooltipObj.tooltipReadMoreLink = this.fields.tooltipReadMoreLink;
     await adminPage.verifyTooltip(tooltipObj);
@@ -588,11 +618,8 @@ module.exports = {
   },
 
   async getSubpageTooltips() {
-    const headers = { Authorization: `Basic ${await I.getAuth()}` };
-
     // setting tooltip for telemetry in accordance with API call
-    this.tooltips.advancedSettings.telemetry.text = `${'Option to send usage data back to Percona to let us make our product better.'
-    + 'We gather and send the following information to Percona:'}${(await settingsAPI.getSettings('telemetry_summaries')).join('').replace(/\s{2,}/g, ' ')}`;
+    this.tooltips.advancedSettings.telemetry.text = `${'We gather and send the following information to Percona:'}${(await settingsAPI.getSettings('telemetry_summaries')).join('').replace(/\s{2,}/g, ' ')}`;
 
     return [
       {
@@ -601,7 +628,11 @@ module.exports = {
       },
       {
         subPage: this.advancedSettingsUrl,
-        tooltips: this.tooltips.advancedSettings,
+        tooltips: {
+          dataRetention: this.tooltips.advancedSettings.dataRetention,
+          telemetry: this.tooltips.advancedSettings.telemetry,
+          stt: this.tooltips.advancedSettings.stt,
+        },
       },
       {
         subPage: this.sshKeyUrl,

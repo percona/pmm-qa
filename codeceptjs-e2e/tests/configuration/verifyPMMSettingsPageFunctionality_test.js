@@ -153,7 +153,7 @@ Scenario(
       message.replace(/\s+/g, ' ') === pmmSettingsPage.messages.disabledBackupManagement,
       `Message Shown on ${message} should be equal to ${pmmSettingsPage.messages.disabledBackupManagement}`,
     );
-    I.seeAttributesOnElements('$settings-link', { href: `${codeceptjsConfig.config.helpers.Playwright.url}/pmm-ui/settings/advanced-settings` });
+    I.seeAttributesOnElements('$settings-link', { href: pmmSettingsPage.advancedSettingsUrl });
 
     // Open advanced settings and enable backup management
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);

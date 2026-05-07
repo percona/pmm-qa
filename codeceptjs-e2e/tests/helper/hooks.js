@@ -92,6 +92,10 @@ module.exports = function pmmGrafanaIframeHook() {
       await resetContext(helper);
       await original.apply(this, args);
 
+      const currentUrl = helper.page && helper.page.url ? helper.page.url() : '';
+
+      if (currentUrl.includes('/pmm-ui/settings')) return;
+
       if (methodName === 'amOnPage' && noIframeUrls.some((url) => args[0].includes(url))) return;
 
       if (noIframeMethods.includes(methodName)) return;
