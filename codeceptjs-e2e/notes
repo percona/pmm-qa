@@ -1,0 +1,19 @@
+
+launchable record build --name build14 \
+  --source grafana=/Users/vasylyurkovych/projects/percona/grafana \
+  --source dashboards=/Users/vasylyurkovych/projects/percona/grafana-dashboards \
+  --source mongodb_exporter=/Users/vasylyurkovych/projects/percona/mongodb_exporter \
+  --source pmm=/Users/vasylyurkovych/projects/percona/pmm \
+  --source test=/Users/vasylyurkovych/projects/percona/pmm-ui-tests
+
+launchable record session --build build14 > session14.txt
+launchable subset --use-case one-commit --session $(cat session14.txt) --get-tests-from-guess file > subset14.txt
+
+
+launchable subset --use-case one-commit --session $(cat session4.txt) --get-tests-from-guess file > subset.txt
+less subset.txt
+
+launchable compare subsets subset11.txt subset14.txt
+
+cat test_list.txt | launchable subset --session $(cat launchable-session.txt) codeceptjs > launchable-subset.json
+
