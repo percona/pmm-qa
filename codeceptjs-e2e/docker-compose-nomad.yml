@@ -1,0 +1,200 @@
+---
+
+volumes:
+  pmm-server-data:
+
+networks:
+  pmm-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.0.0/24
+          gateway: 192.168.0.1
+  pmm-qa:
+    external: true
+
+services:
+  pmm-server:
+    image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
+    container_name: pmm-server
+    ports:
+      - "80:8080"
+      - "443:8443"
+    environment:
+      - PMM_DEBUG=1
+      - PMM_ENABLE_ACCESS_CONTROL=1
+      - GF_AUTH_OAUTH_ALLOW_INSECURE_EMAIL_LOOKUP=1
+      - PMM_DEV_PORTAL_URL=https://portal-dev.percona.com
+      - PMM_DEV_PERCONA_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX
+      - PMM_DEV_PERCONA_PLATFORM_ADDRESS=https://check-dev.percona.com:443
+      - PMM_DEV_TELEMETRY_INTERVAL=10s
+      - PMM_DEV_TELEMETRY_RETRY_BACKOFF=10s
+      - PMM_ENABLE_NOMAD=1
+    volumes:
+      - pmm-server-data:/srv
+    networks:
+      - pmm-network
+      - pmm-qa
+
+  # It is essential to have an extra directory `/slowlogs/` between host and container;
+  # Otherwise, MySQL in Docker for Mac completely locks during/after slowlog rotation tests.
+  mysql:
+    image: ${MYSQL_IMAGE:-percona:5.7.30}
+    container_name: pmm-agent_mysql_5_7
+    command: >
+      --sql-mode="ANSI_QUOTES"
+      --performance-schema --innodb_monitor_enable=all --userstat
+      --slow_query_log --log_slow_rate_limit=1 --log_slow_admin_statements --log_slow_slave_statements --slow_query_log_file=/tmp/mysql/log/ps5_slow_log.log --long_query_time=0
+      --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+    ports:
+      - "3309:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=^O6VrIoC1@9b
+      - MYSQL_USER=pmm-agent
+      - MYSQL_PASSWORD=pmm%*&agent-password
+      - UMASK=0777  # for slowlog file
+    volumes:
+      - /tmp/mysql/log:/tmp/mysql/log:rw
+      - ./testdata/docker-db-setup-scripts/init_ps_5_7.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - pmm-network
+
+  mysql8:
+    image: ${MYSQL_IMAGE:-percona:8.0}
+    container_name: pmm-agent_mysql_8_0
+    command: >
+      --sql-mode="ANSI_QUOTES"
+      --performance-schema --innodb_monitor_enable=all --userstat
+      --slow_query_log --log_slow_rate_limit=1 --log_slow_admin_statements --log_slow_slave_statements --slow_query_log_file=/tmp/mysql/log/ps8_slow_log.log --long_query_time=0
+      --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=^O6VrIoC1@9b
+      - MYSQL_USER=pmm-agent
+      - MYSQL_PASSWORD=pmm%*&agent-password
+      - UMASK=0777  # for slowlog file
+    volumes:
+      - /tmp/mysql/log:/tmp/mysql/log
+      - ./testdata/docker-db-setup-scripts/init_ps_8.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - pmm-network
+
+  mongo:
+    image: ${MONGO_IMAGE:-percona/percona-server-mongodb:4.4.24}
+    container_name: pmm-agent_mongo
+    command: --profile 2
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=root-!@#%^password
+    networks:
+      - pmm-network
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:15.4}
+    container_name: pmm-agent_postgres
+    command: >
+      -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements
+      -c track_activity_query_size=2048
+      -c pg_stat_statements.max=10000
+      -c pg_stat_monitor.pgsm_query_max_len=10000
+      -c pg_stat_monitor.pgsm_normalized_query=0
+      -c pg_stat_statements.track=all
+      -c pg_stat_statements.save=off
+      -c track_io_timing=on
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=pmm-^*&@agent-password
+    networks:
+      - pmm-network
+
+  # it needs for deleting postgres db for test T1087
+  postgresremovedefaultdb:
+    image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:15}
+    command: >
+      psql -Utest -hpostgresnodb -dnot_default_db -c 'DROP DATABASE postgres WITH (FORCE);'
+    depends_on:
+      postgresnodb:
+        condition: service_healthy
+    environment:
+      - PGPASSWORD=50mFC#z7lHZ1
+    networks:
+      - pmm-network
+
+  postgresnodb:
+    image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:15}
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready" ]
+      interval: 1s
+      retries: 120
+    ports:
+      - "6435:5432"
+    environment:
+      - POSTGRES_PASSWORD=50mFC#z7lHZ1
+      - POSTGRES_USER=test
+      - POSTGRES_DB=not_default_db
+    networks:
+      - pmm-network
+
+  proxysql:
+    image: ${PROXYSQL_IMAGE:-proxysql/proxysql:2.1.1}
+    container_name: pmm-agent_proxysql
+    ports:
+      - "6032:6032"
+      - "6033:6033"
+      - "6070:6070"
+    volumes:
+      - ./testdata/proxysql/proxysql.cnf:/etc/proxysql.cnf:rw
+    networks:
+      - pmm-network
+
+  sysbench:
+    image: perconalab/sysbench
+    container_name: pmm-agent_sysbench
+    depends_on:
+      - mysql8
+    networks:
+      - pmm-network
+    command: >
+      bash -c "
+          set -o xtrace
+          sleep 20
+          mysql \
+              --host=mysql \
+              --port=3306 \
+              --user=root \
+              --password=^O6VrIoC1@9b \
+              -e 'CREATE DATABASE IF NOT EXISTS sbtest'
+          sysbench \
+              --db-driver=mysql \
+              --mysql-host=mysql \
+              --mysql-port=3306 \
+              --mysql-user=root \
+              --mysql-password=^O6VrIoC1@9b \
+              --mysql-db=sbtest \
+              --mysql-table-engine=innodb \
+              --oltp-table-size=1000000 \
+              /usr/share/sysbench/tests/include/oltp_legacy/oltp.lua \
+              prepare
+          sysbench \
+              --rate=100 \
+              --threads=64 \
+              --report-interval=10 \
+              --time=0 \
+              --events=0 \
+              --rand-type=pareto \
+              --db-driver=mysql \
+              --mysql-host=mysql \
+              --mysql-port=3306 \
+              --mysql-user=root \
+              --mysql-password=^O6VrIoC1@9b \
+              --mysql-db=sbtest \
+              --mysql-table-engine=innodb \
+              --oltp-reconnect \
+              --oltp-table-size=1000000 \
+              /usr/share/sysbench/tests/include/oltp_legacy/select.lua \
+              run
+      "

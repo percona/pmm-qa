@@ -1,0 +1,17 @@
+---
+networks:
+  pmm-network:
+
+services:
+  webhookd:
+    image: ncarlier/webhookd
+    container_name: webhookd
+    restart: always
+    environment:
+      - WHD_SCRIPTS=/var/opt/webhookd/scripts
+      - WHD_PASSWD_FILE=/var/opt/webhookd/scripts/.htpasswd
+    volumes:
+      - ./testdata/ia/certs:/root
+      - ./testdata/ia/scripts:/var/opt/webhookd/scripts
+    networks:
+      - pmm-network
