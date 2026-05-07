@@ -49,7 +49,8 @@ Feature('BM: Backup Inventory');
 BeforeSuite(async ({
   I, locationsAPI, settingsAPI, inventoryAPI, codeceptjsConfig
 }) => {
-  console.log(codeceptjsConfig.config)
+  console.log('Config file is: ')
+  console.log(codeceptjsConfig)
   await settingsAPI.changeSettings({ backup: true });
   await locationsAPI.clearAllLocations(true);
   localStorageLocationId = await locationsAPI.createStorageLocation(
