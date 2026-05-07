@@ -5,7 +5,7 @@ Before(async ({ I }) => {
 });
 
 Scenario(
-  'PMM-T305 - Open the MongoDB Instance Summary Dashboard and verify Metrics are present and graphs are displayed @dashboard-psmdb @dashboards @gssapi-nightly',
+  'PMM-T305 - Open the MongoDB Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboard-psmdb @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mongodbOverviewDashboard.url, {
       from: 'now-5m',
@@ -21,7 +21,7 @@ Scenario(
 );
 
 Scenario(
-  'Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @dashboard-psmdb-sharded @dashboards',
+  'Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboard-psmdb-sharded @dashboards',
   async ({ I, dashboardPage }) => {
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
       cluster: 'sharded',
@@ -36,7 +36,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1698 - Verify that Disk I/O and Swap Activity and Network Traffic panels have graphs if Node name contains dot symbol @dashboard-psmdb @dashboards @gssapi-nightly',
+  'PMM-T1698 - Verify that Disk I/O and Swap Activity and Network Traffic panels have graphs if Node name contains dot symbol @nightly @dashboard-psmdb @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, {
       from: 'now-5m',
@@ -52,7 +52,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1333 - Verify MongoDB - MongoDB Collections Overview @mongodb-exporter @dashboard-psmdb @gssapi-nightly',
+  'PMM-T1333 - Verify MongoDB - MongoDB Collections Overview @mongodb-exporter @nightly @dashboard-psmdb @gssapi-nightly',
   async ({
     I, dashboardPage, inventoryAPI, adminPage,
   }) => {
@@ -71,7 +71,7 @@ Scenario(
 ).retry(2);
 
 Scenario(
-  'PMM-T2035 - Verify MongoDB ReplSet dashboard has FCV panel @dashboard-psmdb @dashboards @gssapi-nightly',
+  'PMM-T2035 - Verify MongoDB ReplSet dashboard has FCV panel @nightly @dashboard-psmdb @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, {
       from: 'now-5m',
@@ -92,7 +92,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2035 - Verify MongoDB Cluster dashboard has FCV panel @dashboard-psmdb-sharded @dashboards',
+  'PMM-T2035 - Verify MongoDB Cluster dashboard has FCV panel @nightly @dashboard-psmdb-sharded @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
       from: 'now-5m',
@@ -112,7 +112,7 @@ Scenario(
   },
 );
 
-Scenario('PMM-T2003 - Verify that MongoDB Compare dashboard has Cluster, Replication, Node filters @dashboard-psmdb', async ({
+Scenario('PMM-T2003 - Verify that MongoDB Compare dashboard has Cluster, Replication, Node filters @nightly @dashboard-psmdb', async ({
   I, dashboardPage, inventoryAPI,
 }) => {
   const newClusterName = 'replicaset';

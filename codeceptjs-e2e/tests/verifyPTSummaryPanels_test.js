@@ -6,7 +6,7 @@ Before(async ({ I }) => {
 });
 
 Scenario(
-  'PMM-T672 - Verify summary for MongoDB is displayed on Instance Summary dashboard @dashboards @dashboard-psmdb',
+  'PMM-T672 - Verify summary for MongoDB is displayed on Instance Summary dashboard @dashboards @nightly @dashboard-psmdb',
   async ({ I, dashboardPage, inventoryAPI }) => {
     const psmdb_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, 'rs101');
     const url = I.buildUrlWithParams(dashboardPage.mongoDbInstanceSummaryDashboard.url, {
@@ -23,7 +23,7 @@ Scenario(
 ).retry(1);
 
 Scenario(
-  'PMM-T671 + PMM-T666 + PMM-T672 - Verify summary for PS is displayed on Instance Summary dashboard @dashboards @dashboard-percona-server',
+  'PMM-T671 + PMM-T666 + PMM-T672 - Verify summary for PS is displayed on Instance Summary dashboard @dashboards @nightly @dashboard-percona-server',
   async ({ I, dashboardPage, inventoryAPI }) => {
     const ps_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm');
     const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, {
@@ -40,7 +40,7 @@ Scenario(
 ).retry(1);
 
 Scenario(
-  'PMM-T666 - Verify summary for PGSQL is displayed on Instance Summary dashboard @dashboards @dashboard-pgsql',
+  'PMM-T666 - Verify summary for PGSQL is displayed on Instance Summary dashboard @dashboards @nightly @dashboard-pgsql',
   async ({
     I, dashboardPage, inventoryAPI, adminPage,
   }) => {
@@ -60,7 +60,7 @@ Scenario(
 ).retry(1);
 
 Scenario(
-  'PMM-T666 - Verify summary for PDPGSQL is displayed on Instance Summary dashboard @dashboards @dashboard-pdpgsql',
+  'PMM-T666 - Verify summary for PDPGSQL is displayed on Instance Summary dashboard @dashboards @nightly @dashboard-pdpgsql',
   async ({
     I, dashboardPage, inventoryAPI, adminPage,
   }) => {
