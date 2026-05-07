@@ -6,7 +6,7 @@ Before(async ({ I }) => {
 });
 
 Scenario(
-  'PMM-T672 - Verify summary for MongoDB is displayed on Instance Summary dashboard @dashboards @nightly',
+  'PMM-T672 - Verify summary for MongoDB is displayed on Instance Summary dashboard @dashboards @nightly @nightly-myrocks-mongo-replica',
   async ({
     I, dashboardPage, inventoryAPI,
   }) => {
@@ -25,7 +25,7 @@ Scenario(
 ).retry(1);
 
 Scenario(
-  'PMM-T671 + PMM-T666 + PMM-T672 - Verify summary for PS is displayed on Instance Summary dashboard @dashboards @nightly',
+  'PMM-T671 + PMM-T666 + PMM-T672 - Verify summary for PS is displayed on Instance Summary dashboard @dashboards @nightly @nightly-pxc-ps-replication',
   async ({
     I, dashboardPage, inventoryAPI,
   }) => {
@@ -44,7 +44,7 @@ Scenario(
 ).retry(1);
 
 Scenario(
-  'PMM-T666 - Verify summary for PG is displayed on Instance Summary dashboard @dashboards @nightly',
+  'PMM-T666 - Verify summary for PG is displayed on Instance Summary dashboard @dashboards @nightly @nightly-pg',
   async ({
     I, dashboardPage, inventoryAPI, adminPage,
   }) => {

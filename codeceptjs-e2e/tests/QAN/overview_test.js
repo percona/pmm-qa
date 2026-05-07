@@ -11,7 +11,7 @@ Before(async ({
 });
 
 Scenario(
-  'PMM-T207 - Verify hovering over query in overview table  @qan',
+  'PMM-T207 - Verify hovering over query in overview table  @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     I.waitForVisible(queryAnalyticsPage.data.elements.queryRowValue(1), 30);
@@ -28,7 +28,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1061 - Verify Plan and PlanID with pg_stat_monitor @qan',
+  'PMM-T1061 - Verify Plan and PlanID with pg_stat_monitor @qan @nightly-qan',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {
@@ -67,7 +67,7 @@ Scenario(
 ).retry(2);
 
 Scenario(
-  'PMM-T146 - Verify user is able to see  chart tooltip for time related metric  @qan',
+  'PMM-T146 - Verify user is able to see  chart tooltip for time related metric  @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.showTooltip(1, 3);
@@ -76,7 +76,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T151 - Verify that hovering over a non-time metric displays a tooltip without a graph @qan',
+  'PMM-T151 - Verify that hovering over a non-time metric displays a tooltip without a graph @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.showTooltip(1, 2);
@@ -85,7 +85,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T171 - Verify that changing the time range doesnt reset sorting, Open the QAN Dashboard and check that sorting works correctly after sorting by another column. @qan',
+  'PMM-T171 - Verify that changing the time range doesnt reset sorting, Open the QAN Dashboard and check that sorting works correctly after sorting by another column. @qan @nightly-qan',
   async ({ adminPage, queryAnalyticsPage }) => {
     queryAnalyticsPage.changeSorting(2);
     queryAnalyticsPage.data.verifySorting(2, 'asc');
@@ -102,7 +102,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T156 - Verify that by default, queries are sorted by Load, from max to min @qan',
+  'PMM-T156 - Verify that by default, queries are sorted by Load, from max to min @qan @nightly-qan',
   async ({ queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.verifySorting(1, 'asc');
@@ -110,7 +110,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T183 - Verify that "Group by" in the overview table can be changed @qan',
+  'PMM-T183 - Verify that "Group by" in the overview table can be changed @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     I.waitForText('Query', 30, queryAnalyticsPage.data.elements.selectedMainMetric());
     queryAnalyticsPage.waitForLoaded();
@@ -120,7 +120,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T187 - Verify that the selected row in the overview table is highlighted @qan',
+  'PMM-T187 - Verify that the selected row in the overview table is highlighted @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const expectedColor = 'rgb(35, 70, 130)';
 
@@ -132,7 +132,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T133 + PMM-T132 + PMM-T100 - Check Changing Main Metric, PMM-T203 Verify user is able to search for columns by typing @qan @gssapi-nightly',
+  'PMM-T133 + PMM-T132 + PMM-T100 - Check Changing Main Metric, PMM-T203 Verify user is able to search for columns by typing @qan @nightly-qan @gssapi-nightly',
   async ({ I, queryAnalyticsPage }) => {
     const metricName = 'Query Count with errors';
 
@@ -149,7 +149,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T99 - Verify User is able to add new metric, PMM-T222 Verify `Add column` dropdown works @qan',
+  'PMM-T99 - Verify User is able to add new metric, PMM-T222 Verify `Add column` dropdown works @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const metricName = 'Query Count with errors';
     const urlString = 'num_queries_with_errors';
@@ -174,7 +174,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T135 - Verify user is not able to add duplicate metric to the overview column @qan',
+  'PMM-T135 - Verify user is not able to add duplicate metric to the overview column @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const columnName = 'Load';
     const column = queryAnalyticsPage.data.fields.columnHeader(columnName);
@@ -188,7 +188,7 @@ Scenario(
 );
 
 xScenario(
-  'PMM-T219 - Verify that user is able to scroll up/down and resize the overview table @qan',
+  'PMM-T219 - Verify that user is able to scroll up/down and resize the overview table @qan @nightly-qan',
   async ({ I }) => {
     const columnsToAdd = [
       'Bytes Sent',
@@ -218,7 +218,7 @@ xScenario(
 );
 
 Scenario(
-  'PMM-T156 - Verify Queries are sorted by Load by Default Sorting from Max to Min, verify Sorting for Metrics works @qan',
+  'PMM-T156 - Verify Queries are sorted by Load by Default Sorting from Max to Min, verify Sorting for Metrics works @qan @nightly-qan',
   async ({ queryAnalyticsPage }) => {
     queryAnalyticsPage.data.verifySorting(1, 'asc');
     await queryAnalyticsPage.data.verifyMetricsSorted('Load', 3, 'down');
@@ -241,7 +241,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T179 - Verify user is able to hover sparkline buckets and see correct Query Count Value @qan',
+  'PMM-T179 - Verify user is able to hover sparkline buckets and see correct Query Count Value @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     const firstCell = queryAnalyticsPage.data.elements.queryValue(3, 2);
@@ -255,7 +255,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T179 - Verify user is able to hover sparkline buckets and see correct Query Time Value @qan',
+  'PMM-T179 - Verify user is able to hover sparkline buckets and see correct Query Time Value @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     const secondCell = queryAnalyticsPage.data.elements.queryValue(3, 3);
@@ -270,7 +270,7 @@ Scenario(
 
 // TODO: Un-skip and refactor after https://perconadev.atlassian.net/browse/PMM-14002 is fixed
 Scenario.skip(
-  'PMM-T204 - Verify small and N/A values on sparkline @qan',
+  'PMM-T204 - Verify small and N/A values on sparkline @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const secondCell = queryAnalyticsPage.data.elements.queryValue(3, 3);
 
@@ -289,7 +289,7 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T412 - Verify user is able to search by part of query @qan',
+  'PMM-T412 - Verify user is able to search by part of query @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -306,7 +306,7 @@ Scenario(
 ).retry(2);
 
 Scenario(
-  'PMM-T417 - Verify user is able to search by Database @qan',
+  'PMM-T417 - Verify user is able to search by Database @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const groupBy = 'Database';
     const query = 'postgres';
@@ -325,7 +325,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T127 - Verify user is able to Group By overview table results @qan',
+  'PMM-T127 - Verify user is able to Group By overview table results @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     I.waitForText('Query', 30, queryAnalyticsPage.data.elements.selectedMainMetric());
     queryAnalyticsPage.waitForLoaded();
@@ -345,7 +345,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T411 + PMM-T400 + PMM-T414 - Verify search filed is displayed, Verify user is able to search the query id specified time range, Verify searching by Query ID @qan',
+  'PMM-T411 + PMM-T400 + PMM-T414 - Verify search filed is displayed, Verify user is able to search the query id specified time range, Verify searching by Query ID @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     I.waitForVisible(queryAnalyticsPage.data.elements.queryRows, 30);
@@ -368,7 +368,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T134 - Verify user is able to remove metric from the overview table @qan',
+  'PMM-T134 - Verify user is able to remove metric from the overview table @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -389,7 +389,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T220 - Verify that last column can\'t be removed from Overview table @qan',
+  'PMM-T220 - Verify that last column can\'t be removed from Overview table @qan @nightly-qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -408,7 +408,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1699 - Verify that query time is shown in UTC timezone after hovering Load graph for query if user selected UTC timezone @qan @gssapi-nightly',
+  'PMM-T1699 - Verify that query time is shown in UTC timezone after hovering Load graph for query if user selected UTC timezone @qan @nightly-qan @gssapi-nightly',
   async ({ I, adminPage, queryAnalyticsPage }) => {
     I.waitForVisible(queryAnalyticsPage.data.elements.loadColumn('2'));
     I.moveCursorTo(queryAnalyticsPage.data.elements.loadColumn('2'));
