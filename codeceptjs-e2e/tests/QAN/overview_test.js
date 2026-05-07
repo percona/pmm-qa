@@ -6,12 +6,12 @@ Before(async ({
   I, queryAnalyticsPage,
 }) => {
   await I.Authorize();
-  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m' }));
+  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m' }));
   queryAnalyticsPage.waitForLoaded();
 });
 
 Scenario(
-  'PMM-T207 - Verify hovering over query in overview table  @qan @nightly-qan',
+  'PMM-T207 - Verify hovering over query in overview table  @qan @nightly-pgsql',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     I.waitForVisible(queryAnalyticsPage.data.elements.queryRowValue(1), 30);
@@ -28,7 +28,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1061 - Verify Plan and PlanID with pg_stat_monitor @qan @nightly-qan',
+  'PMM-T1061 - Verify Plan and PlanID with pg_stat_monitor @qan @nightly-pgsql',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {

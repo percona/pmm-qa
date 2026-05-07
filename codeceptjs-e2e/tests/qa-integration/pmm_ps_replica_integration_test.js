@@ -15,7 +15,7 @@ BeforeSuite(async ({ inventoryAPI }) => {
 });
 
 Data(serviceList).Scenario(
-  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly @nightly-pxc-ps-replication',
+  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @dashboard-percona-server',
   async ({
     I, dashboardPage, adminPage, current,
   }) => {
