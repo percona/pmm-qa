@@ -68,7 +68,7 @@ module.exports = {
   },
   messages: {
     successPopUpMessage: 'Settings updated',
-    invalidDataDurationMessage: 'Value should be in the range from 1 to 3650',
+    invalidDataDurationMessage: 'Value must be less than or equal to 3650.',
     invalidDataDurationPopUpMessage: 'data_retention: should be a natural number of days',
     requiredFieldMessage: 'Required field',
     invalidSSHKeyMessage: 'Invalid SSH key.',
@@ -288,9 +288,9 @@ module.exports = {
     accessControlInput: locate(I.useDataQA('switch-input-access-control')).find('input'),
     accessControlSwitch: I.useDataQA('switch-input-access-control'),
     loginButton: '$sign-in-submit-button',
-    lowInput: '$lr-number-input',
-    mediumInput: '$mr-number-input',
-    highInput: '$hr-number-input',
+    lowInput: 'input[name="lr"]',
+    mediumInput: 'input[name="mr"]',
+    highInput: 'input[name="hr"]',
     privacyPolicy: '//span[contains(text(), "Privacy Policy")]',
     publicAddressLabel: '//div[contains(normalize-space(), "Public address")]',
     publicAddressInput: I.useDataQA('text-input-public-address'),
@@ -474,12 +474,21 @@ module.exports = {
     I.click(this.fields.advancedButton);
   },
 
-  checkDataRetentionInput(value, message) {
-    const messageField = `//div[contains(text(), '${message}')]`;
-
+  async checkDataRetentionInput(value, message) {
     I.clearField(this.fields.dataRetentionInput);
     I.fillField(this.fields.dataRetentionInput, value);
-    I.seeElement(messageField);
+    I.pressKey('Tab');
+    I.waitForElement(this.fields.dataRetentionInput, 30);
+    const actualMessage = await I.executeScript(
+      (selector) => document.querySelector(selector).validationMessage,
+      this.fields.dataRetentionInput,
+    );
+
+    assert.equal(
+      actualMessage,
+      message,
+      `Expected retention validation message to be "${message}" but found "${actualMessage}"`,
+    );
   },
 
   addSSHKey(keyValue) {

@@ -6,8 +6,8 @@ const path = require('path');
 const axios = require('axios');
 const { locateOption } = require('./helper/locatorHelper');
 
-const systemMessageText = 'div[data-testid^="data-testid Alert"] > div';
-const systemMessageTextSuccess = 'div[data-testid^="data-testid Alert success"] > div';
+const systemMessageText = '[role="alert"]';
+const systemMessageTextSuccess = '[role="alert"]';
 const systemMessageButtonClose = '[aria-label="Close alert"]';
 const warningLocator = '[data-testid="data-testid Alert warning"]';
 

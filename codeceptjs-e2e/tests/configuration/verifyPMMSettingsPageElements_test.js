@@ -1,13 +1,10 @@
 const page = require('./pages/pmmSettingsPage');
 
-// Value should be in range from 1 to 3650 days, so put a value outside of the range
-const validationValues = ['2147483648', '-1', '0'];
-
 const dataRetentionTable = new DataTable(['value', 'message']);
 
-for (const i in validationValues) {
-  dataRetentionTable.add([validationValues[i], page.messages.invalidDataDurationMessage]);
-}
+dataRetentionTable.add(['2147483648', 'Value must be less than or equal to 3650.']);
+dataRetentionTable.add(['-1', 'Value must be greater than or equal to 1.']);
+dataRetentionTable.add(['0', 'Value must be greater than or equal to 1.']);
 
 // TODO: (lunaticusgreen) Investigate these testcases, looks like codeceptjs bug
 // dataRetentionTable.add([' ', page.messages.requiredFieldMessage]);
@@ -28,7 +25,7 @@ Data(dataRetentionTable).Scenario('PMM-T97 - Verify server diagnostics on PMM Se
   I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
 
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  pmmSettingsPage.checkDataRetentionInput(current.value, current.message);
+  await pmmSettingsPage.checkDataRetentionInput(current.value, current.message);
 });
 
 Scenario('PMM-T84 - Verify Section Tabs and Metrics Section Elements [critical] @settings @grafana-pr', async ({ I, pmmSettingsPage }) => {
