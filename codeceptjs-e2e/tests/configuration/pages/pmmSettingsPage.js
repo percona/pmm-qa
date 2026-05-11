@@ -68,7 +68,7 @@ module.exports = {
   },
   messages: {
     successPopUpMessage: 'Settings updated',
-    invalidDataDurationMessage: 'Value must be less than or equal to 3650.',
+    invalidDataDurationMessage: 'Must be between 1 and 3650',
     invalidDataDurationPopUpMessage: 'data_retention: should be a natural number of days',
     requiredFieldMessage: 'Required field',
     invalidSSHKeyMessage: 'Invalid SSH key.',
@@ -468,9 +468,12 @@ module.exports = {
     I.pressKey('Backspace');
   },
 
-  changeDataRetentionValueTo(days) {
-    I.clearField(this.fields.dataRetentionInput);
-    I.fillField(this.fields.dataRetentionInput, days);
+  async changeDataRetentionValueTo(days) {
+    await I.usePlaywrightTo('set data retention value', async ({ page }) => {
+      await page.locator(this.fields.dataRetentionInput).fill(String(days));
+    });
+    I.waitForValue(this.fields.dataRetentionInput, String(days), 10);
+    I.waitForEnabled(this.fields.advancedButton, 30);
     I.click(this.fields.advancedButton);
   },
 

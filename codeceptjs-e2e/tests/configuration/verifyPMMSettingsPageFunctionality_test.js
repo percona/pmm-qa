@@ -17,8 +17,7 @@ Scenario('PMM-T93 - Open PMM Settings page and verify changing Metrics Resolutio
   I.amOnPage(pmmSettingsPage.url);
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   await pmmSettingsPage.selectMetricsResolution(resolutionToApply);
-  I.waitForElement(pmmSettingsPage.messages.successPopUpMessage, 30);
-  I.see(pmmSettingsPage.messages.successPopUpMessage);
+  I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage, 30);
   I.refreshPage();
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   await pmmSettingsPage.verifySelectedResolution(resolutionToApply);
@@ -35,9 +34,8 @@ Scenario('PMM-T94 - Open PMM Settings page and verify changing Data Retention [c
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
-  I.waitForElement(pmmSettingsPage.messages.successPopUpMessage, 30);
-  I.see(pmmSettingsPage.messages.successPopUpMessage);
+  await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
+  I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage, 30);
   I.refreshPage();
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
@@ -343,7 +341,7 @@ Scenario(
 
     I.clearField(pmmSettingsPage.fields.dataRetentionInput);
     I.fillField(pmmSettingsPage.fields.dataRetentionInput, 3651);
-    I.seeTextEquals(pmmSettingsPage.messages.invalidDataDurationMessage);
+    I.see(pmmSettingsPage.messages.invalidDataDurationMessage);
     // await pmmSettingsPage.checkDataRetentionInput('3651', 'Value must be less than or equal to 3650.');
     I.assertNotEqual(
       await I.grabAttributeFrom(pmmSettingsPage.fields.advancedButton, 'disabled'),
