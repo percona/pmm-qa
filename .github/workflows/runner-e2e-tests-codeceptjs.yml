@@ -86,7 +86,7 @@ jobs:
     name: "e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
 #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -107,7 +107,7 @@ jobs:
 
     steps:
       - name: Create status check
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
         with:
@@ -275,7 +275,7 @@ jobs:
             pmm-qa/codeceptjs-e2e/logs
 
       - name: Create status check
-        if: ${{ github.event_name != 'pull_request' && always() }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
         with:

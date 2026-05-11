@@ -10,11 +10,6 @@ on:
         default: 'main'
         required: false
         type: string
-      package_testing_branch:
-        description: 'package-testing repository branch(for setup)'
-        default: 'v3'
-        required: false
-        type: string
       pmm_server_image:
         description: 'PMM Server docker image'
         default: 'perconalab/pmm-server:3-dev-latest'
@@ -63,6 +58,15 @@ on:
         required: true
         type: string
       pmm_client_image:
+        required: false
+        type: string
+      pmm_client_version_ol8:
+        required: false
+        type: string
+      pmm_client_version_ol9:
+        required: false
+        type: string
+      repository:
         required: false
         type: string
       expected_version:
@@ -176,6 +180,7 @@ jobs:
     secrets: inherit
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
@@ -189,6 +194,7 @@ jobs:
     secrets: inherit
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
@@ -202,6 +208,7 @@ jobs:
     secrets: inherit
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
@@ -215,6 +222,7 @@ jobs:
     secrets: inherit
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
@@ -228,6 +236,7 @@ jobs:
     secrets: inherit
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
@@ -241,6 +250,7 @@ jobs:
     secrets: inherit
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
@@ -255,7 +265,6 @@ jobs:
     with:
       pmm_client_tarball: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
       playbook: 'pmm3-client_integration_tarball_gssapi'
-      package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
       expected_version: ${{ inputs.expected_version || '3-dev-latest' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       repository: ${{ inputs.repository || 'release'}}
@@ -270,7 +279,6 @@ jobs:
     with:
       pmm_client_tarball: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
       playbook: 'pmm3-client_integration_tarball_gssapi'
-      package_testing_branch: ${{ inputs.package_testing_branch || 'v3' }}
       expected_version: ${{ inputs.expected_version || '3-dev-latest' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       repository: ${{ inputs.repository || 'release'}}

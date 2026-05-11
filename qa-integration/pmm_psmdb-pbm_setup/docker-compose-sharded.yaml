@@ -6,9 +6,9 @@ services:
       dockerfile: ./Dockerfile
       context: .
       args:
-        - REPO=${REPO:-testing}
+        - REPO=${REPO:-release}
         - PMM_REPO=${PMM_REPO:-experimental}
-        - PBM_VERSION=${PBM_VERSION:-latest}
+        - PBM_VERSION=${PBM_VERSION:-2.9.1-1}
         - PSMDB_VERSION=${PSMDB_VERSION:-latest}
         - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
     command: /bin/bash

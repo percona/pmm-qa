@@ -7,9 +7,9 @@ services:
       dockerfile: ./Dockerfile
       context: .
       args:
-        - REPO=${REPO:-testing}
+        - REPO=${REPO:-release}
         - PMM_REPO=${PMM_REPO:-experimental}
-        - PBM_VERSION=${PBM_VERSION:-latest}
+        - PBM_VERSION=${PBM_VERSION:-2.9.1-1}
         - PSMDB_VERSION=${PSMDB_VERSION:-latest}
         - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
         - OL_VERSION=${OL_VERSION:-9}
@@ -33,7 +33,7 @@ services:
       - pmm-ui-tests2
     volumes:
       - ./conf/pbm:/etc/pbm
-      - ./conf/mongod-rs:/etc/mongod
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
       - ./conf/datagen:/etc/datagen:ro
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /tmp/backup_data:/tmp/backup_data:rw
@@ -66,7 +66,7 @@ services:
       - pmm-ui-tests3
     volumes:
       - ./conf/pbm:/etc/pbm
-      - ./conf/mongod-rs:/etc/mongod
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /tmp/backup_data:/tmp/backup_data:rw
       - keytabs:/keytabs
@@ -98,7 +98,7 @@ services:
       - pmm-ui-tests3
     volumes:
       - ./conf/pbm:/etc/pbm
-      - ./conf/mongod-rs:/etc/mongod
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /tmp/backup_data:/tmp/backup_data:rw
       - keytabs:/keytabs
@@ -132,7 +132,7 @@ services:
       - pmm-ui-tests2
     volumes:
       - ./conf/pbm:/etc/pbm
-      - ./conf/mongod-rs:/etc/mongod
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /tmp/backup_data:/tmp/backup_data:rw
       - keytabs:/keytabs
@@ -164,7 +164,7 @@ services:
       - pmm-ui-tests3
     volumes:
       - ./conf/pbm:/etc/pbm
-      - ./conf/mongod-rs:/etc/mongod
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /tmp/backup_data:/tmp/backup_data:rw
       - keytabs:/keytabs
@@ -196,7 +196,7 @@ services:
       - pmm-ui-tests3
     volumes:
       - ./conf/pbm:/etc/pbm
-      - ./conf/mongod-rs:/etc/mongod
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /tmp/backup_data:/tmp/backup_data:rw
       - keytabs:/keytabs

@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await page.goto('');
@@ -48,7 +49,9 @@ pmmTest(
         const buttonText = await themePage.buttons.changeThemeButton.innerText();
         const expectedComboboxValue = buttonText === 'Switch to light mode' ? 'Dark' : 'Light';
 
-        await expect(themePage.getThemeCombobox()).toHaveValue(expectedComboboxValue, { timeout: 10_000 });
+        await expect(themePage.getThemeCombobox()).toHaveValue(expectedComboboxValue, {
+          timeout: Timeouts.TEN_SECONDS,
+        });
       });
     }
   },
