@@ -154,9 +154,6 @@ module.exports = {
           case 'backup':
             body.enable_backup_management = value;
             break;
-          case 'backup_management_enabled':
-            body.enable_backup_management = value;
-            break;
           case 'updates':
             body.enable_updates = value;
             break;
