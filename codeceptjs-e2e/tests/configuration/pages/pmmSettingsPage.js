@@ -112,8 +112,8 @@ module.exports = {
         nativeTextLocator: locate('//h6[normalize-space()="Telemetry"]/following-sibling::p[1]').as('Telemetry tooltip'),
         nativeLinkLocator: locate('//h6[normalize-space()="Telemetry"]/following-sibling::p[1]//a[normalize-space()="Read more"]').as('Telemetry tooltip Read more link'),
         nativeDialogButton: locate('button').withText('What we collect').as('Telemetry details button'),
-        nativeDialogTextLocator: locate('[role="dialog"]').as('Telemetry tooltip dialog'),
-        text: '',
+        nativeDialogTextLocator: locate('[role="dialog"]').find('[class*="MuiDialogContent-root"]').as('Telemetry tooltip dialog'),
+        text: 'Sends anonymous usage statistics to help improve PMM. No personal or database content is collected.',
         link: links.telemetryDocs,
       },
       checkForUpdates: {
@@ -603,7 +603,13 @@ module.exports = {
       if (tooltipObj.nativeDialogButton && tooltipObj.nativeDialogTextLocator) {
         I.click(tooltipObj.nativeDialogButton);
         I.waitForVisible(tooltipObj.nativeDialogTextLocator, 10);
-        I.see(tooltipObj.text, tooltipObj.nativeDialogTextLocator);
+        const actualDialogText = await I.grabTextFrom(tooltipObj.nativeDialogTextLocator);
+        const normalizeText = (text) => text.replace(/\s+/g, ' ').trim();
+
+        assert.ok(
+          normalizeText(actualDialogText).includes(normalizeText(tooltipObj.dialogText)),
+          `Expected dialog text to include "${tooltipObj.dialogText}" but found "${actualDialogText}"`,
+        );
         I.pressKey('Escape');
       }
 
@@ -631,7 +637,7 @@ module.exports = {
 
   async getSubpageTooltips() {
     // setting tooltip for telemetry in accordance with API call
-    this.tooltips.advancedSettings.telemetry.text = `${'We gather and send the following information to Percona:'}${(await settingsAPI.getSettings('telemetry_summaries')).join('').replace(/\s{2,}/g, ' ')}`;
+    this.tooltips.advancedSettings.telemetry.dialogText = `${'We gather and send the following information to Percona:'}${(await settingsAPI.getSettings('telemetry_summaries')).join('').replace(/\s{2,}/g, ' ')}`;
 
     return [
       {
