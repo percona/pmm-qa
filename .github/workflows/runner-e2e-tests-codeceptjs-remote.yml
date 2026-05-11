@@ -249,7 +249,7 @@ jobs:
           sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
           sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
 
-          ./node_modules/.bin/codeceptjs run \
+          ./node_modules/.bin/codeceptjs run-workers 4 \
             -c pr.codecept.js \
             --grep "${{ env.TAGS_FOR_TESTS }}" \
             --reporter mocha-multi \
