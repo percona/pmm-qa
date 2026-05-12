@@ -28,9 +28,16 @@ for (const configuration of folderConfiguration) {
   pmmTest(
     `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials using ${configuration.testName} @docker-configuration`,
     async ({ cliHelper, dashboard, page, urlHelper, grafanaHelper }) => {
-      cliHelper.execSilent(configuration.command);
+      const runnServer = cliHelper.execSilent(configuration.command);
+
+      console.log(runnServer.stdout);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for server to start
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
       const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
+
+      console.log(logs);
 
       expect(logs).not.toContain(
         'Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass"',
