@@ -276,11 +276,11 @@ jobs:
       #     launchable gate --session "$(cat launchable-session.txt)"
 
       # - name: Record launchable logs on failure
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        continue-on-error: true
-        run: |
-          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
+      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
+      #   working-directory: pmm-qa/codeceptjs-e2e
+      #   continue-on-error: true
+      #   run: |
+      #     launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
