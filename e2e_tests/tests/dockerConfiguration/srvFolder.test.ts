@@ -49,6 +49,9 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
           .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
         await grafanaHelper.unAuthorize();
 
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for un-authorization
+        await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+
         await grafanaHelper.authorize(newUser, newPassword, basePmmUrl);
         await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
         await dashboard.home.elements.headerLocator.waitFor({
