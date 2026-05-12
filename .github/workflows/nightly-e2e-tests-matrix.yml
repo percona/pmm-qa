@@ -122,7 +122,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: '--database ps,QUERY_SOURCE=slowlog,MY_ROCKS=true'
-      tags_for_tests: '@dashboard-percona-server-myrocks'
+      tags_for_tests: '@dashboard-ps-myrocks'
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
 

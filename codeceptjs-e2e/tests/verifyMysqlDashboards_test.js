@@ -16,7 +16,7 @@ Before(async ({ I }) => {
 Scenario(
   'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify PS Metrics are present and graphs are displayed @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage }) => {
-    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_8');
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_replication');
     const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name, from: 'now-15m' });
 
     I.amOnPage(url);
@@ -61,7 +61,7 @@ Scenario(
 Scenario(
   'PMM-T319 - Open the MySQL Instances Overview dashboard and verify PS Metrics are present and graphs are displayed @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage }) => {
-    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_8');
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_replication');
     const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name, from: 'now-15m' });
 
     I.amOnPage(url);
@@ -226,7 +226,7 @@ Scenario.skip(
 Scenario(
   'PMM-T324 - Verify MySQL - MySQL User Details dashboard @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage }) => {
-    const { service_name: serviceName } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_8');
+    const { service_name: serviceName } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_replication');
     const url = I.buildUrlWithParams(dashboardPage.mysqlUserDetailsDashboard.clearUrl, { service_name: serviceName, from: 'now-5m' });
 
     I.amOnPage(url);
@@ -311,7 +311,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2079 - Verify metrics on MySQL MyRocks Details Dashboard @dashboards @nightly @dashboard-percona-server-myrocks',
+  'PMM-T2079 - Verify metrics on MySQL MyRocks Details Dashboard @dashboards @nightly @dashboard-ps-myrocks',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mySQLMyRocksDetailsDashboard.url, { from: 'now-5m' });
 
