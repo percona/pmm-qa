@@ -6,7 +6,9 @@ const path = require('path');
 const axios = require('axios');
 const { locateOption } = require('./helper/locatorHelper');
 
-const systemMessageText = 'div[data-testid^="data-testid Alert"] > div';
+const systemMessageTextIframe = 'div[data-testid^="data-testid Alert"] > div';
+const systemMessageTextPMMUI = '.notistack-Snackbar';
+const systemMessageTextAny = `${systemMessageTextIframe}, ${systemMessageTextPMMUI}`;
 const systemMessageTextSuccess = 'div[data-testid^="data-testid Alert success"] > div';
 const systemMessageButtonClose = '[aria-label="Close alert"]';
 const warningLocator = '[data-testid="data-testid Alert warning"]';
@@ -14,9 +16,9 @@ const warningLocator = '[data-testid="data-testid Alert warning"]';
 module.exports = () => actor({
 
   verifyPopUpMessage(message, timeout = 30) {
-    this.waitForElement(systemMessageText, timeout);
-    this.see(message, systemMessageText);
-    this.click(systemMessageButtonClose);
+    this.waitForElement(systemMessageTextAny, timeout);
+    this.see(message, systemMessageTextAny);
+    this.tryTo(() => this.click(systemMessageButtonClose));
   },
 
   verifyWarning(message, timeout = 10) {
@@ -43,7 +45,7 @@ module.exports = () => actor({
   useDataQA: (selector) => `[data-testid="${selector}"]`,
   getSingleSelectOptionLocator: (optionName) => locateOption(optionName),
   getClosePopUpButtonLocator: () => systemMessageButtonClose,
-  getPopUpLocator: () => systemMessageText,
+  getPopUpLocator: () => systemMessageTextAny,
   getSuccessPopUpLocator: () => systemMessageTextSuccess,
 
   seeElementsDisabled(locator) {

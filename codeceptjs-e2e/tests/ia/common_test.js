@@ -19,7 +19,8 @@ Scenario(
 
     const link = await I.grabAttributeFrom(iaCommon.elements.settingsLink, 'href');
 
-    I.assertContain(link, pmmSettingsPage.advancedSettingsUrl, 'Settings link does not contain expected link.');
+    // uses legacy URL due to being in an iframe
+    I.assertContain(link, pmmSettingsPage.legacyAdvancedSettingsUrl, 'Settings link does not contain expected link.');
   },
 );
 

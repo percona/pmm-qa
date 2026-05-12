@@ -201,7 +201,7 @@ Scenario(
     await settingsAPI.changeSettings({ publicAddress: '' });
     I.wait(3);
     await pmmSettingsPage.openAdvancedSettings();
-    await pmmSettingsPage.verifyTooltip(pmmSettingsPage.tooltips.advancedSettings.publicAddress);
+    await I.seeElement(pmmSettingsPage.fields.publicAddressLabel);
 
     await I.waitForVisible(pmmSettingsPage.fields.publicAddressInput, 30);
 

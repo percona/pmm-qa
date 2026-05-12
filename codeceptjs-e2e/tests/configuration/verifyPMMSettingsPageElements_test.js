@@ -36,8 +36,13 @@ Scenario('PMM-T84 - Verify Section Tabs and Metrics Section Elements [critical] 
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
 
   I.waitForElement(pmmSettingsPage.fields.metricsResolutionLabel, 30);
-  I.see('Metrics resolution, sec', pmmSettingsPage.fields.metricsResolutionLabel);
-  I.seeElement(pmmSettingsPage.fields.metricsResolutionRadio);
+  I.see('How often PMM collects metrics, in seconds. Lower values provide more detail but use more resources.', pmmSettingsPage.fields.metricsResolutionLabel);
+  
+  I.seeElement(pmmSettingsPage.fields.metricsResolutionRadioRare);
+  I.seeElement(pmmSettingsPage.fields.metricsResolutionRadioStandard);
+  I.seeElement(pmmSettingsPage.fields.metricsResolutionRadioFrequent);
+  I.seeElement(pmmSettingsPage.fields.metricsResolutionRadioCustom);
+
   I.seeElement(pmmSettingsPage.fields.lowInput);
   I.seeElement(pmmSettingsPage.fields.mediumInput);
   I.seeElement(pmmSettingsPage.fields.highInput);
@@ -93,7 +98,7 @@ Scenario('PMM-T1866 - Verify if public address has an port assigned and followin
 
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   I.waitForElement(pmmSettingsPage.fields.publicAddressLabel);
-  I.see('Public Address', pmmSettingsPage.fields.publicAddressLabel);
+  I.see('Public address', pmmSettingsPage.fields.publicAddressLabel);
   // Set a public IP with port
   adminPage.customClearField(pmmSettingsPage.fields.publicAddressInput);
   I.fillField(pmmSettingsPage.fields.publicAddressInput, '192.168.1.1:8433');

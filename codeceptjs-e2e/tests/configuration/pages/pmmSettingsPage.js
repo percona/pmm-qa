@@ -8,20 +8,23 @@ const {
 const locateLabel = (selector) => locate(I.useDataQA(selector)).find('span');
 
 module.exports = {
-  url: 'graph/settings',
+  url: 'pmm-ui/settings',
+  legacyUrl: 'graph/settings',
   publicAddress: process.env.VM_IP ? process.env.VM_IP : process.env.SERVER_IP || '127.0.0.1',
-  metricsResolutionUrl: 'graph/settings/metrics-resolution',
-  advancedSettingsUrl: 'graph/settings/advanced-settings',
-  sshKeyUrl: 'graph/settings/ssh-key',
+  metricsResolutionUrl: 'pmm-ui/settings/metrics-resolution',
+  legacyMetricsResolutionUrl: 'graph/settings/metrics-resolution',
+  advancedSettingsUrl: 'pmm-ui/settings/advanced-settings',
+  legacyAdvancedSettingsUrl: 'graph/settings/advanced-settings',
+  sshKeyUrl: 'pmm-ui/settings/ssh-key',
+  legacySshKeyUrl: 'graph/settings/ssh-key',
   alertManagerIntegrationUrl: 'graph/settings/am-integration',
   communicationSettingsUrl: 'graph/settings/communication',
   prometheusAlertUrl: '/prometheus/rules',
   stateOfAlertsUrl: '/prometheus/alerts',
   diagnosticsText:
-    'You can download server logs to make the problem detection simpler. '
-    + 'Please include this file if you are submitting a bug report.',
-  agreementText:
-    'Check here to indicate that you have read and agree to the \nTerms of Service\n and \nPrivacy Policy',
+    'You can download server logs to make the problem detection simpler. ' +
+    'Please include this file if you are submitting a bug report.',
+  agreementText: 'Check here to indicate that you have read and agree to the \nTerms of Service\n and \nPrivacy Policy',
   alertManager: {
     ip: codeceptjsConfig.config.helpers.Playwright.url,
     service: ':9093/#/alerts',
@@ -85,7 +88,9 @@ module.exports = {
     ssh: 'SSH Key',
   },
   sectionButtonText: {
-    applyChanges: 'Apply changes', applySSHKey: 'Apply SSH key', applyAlertmanager: 'Apply Alertmanager settings',
+    applyChanges: 'Apply changes',
+    applySSHKey: 'Apply SSH key',
+    applyAlertmanager: 'Apply Alertmanager settings',
   },
   tooltips: {
     diagnostics: {
@@ -93,65 +98,28 @@ module.exports = {
       text: 'You can download server logs to make the problem detection simpler. Please include this file if you are submitting a bug report.',
       link: false,
     },
-    metricsResolution: {
-      metricsResolutionSec: {
-        iconLocator: locate('$metrics-resolution-label').find('[class$="-Icon"]').as('Metrics resolution tooltip'),
-        text: 'This setting defines how frequently the data will be collected.',
-        link: links.metricsResolutionDocs,
-      },
-    },
     advancedSettings: {
-      dataRetention: {
-        iconLocator: locate('$advanced-label').find('[class$="-Icon"]').as('Advanced settings tooltip'),
-        text: 'This is the value for how long data will be stored.',
-        link: links.dataRetentionDocs,
-      },
-      telemetry: {
-        iconLocator: locate('$advanced-telemetry').find('[class$="-Icon"]').as('Telemetry tooltip'),
-        text: '',
-        link: links.telemetryDocs,
-      },
       checkForUpdates: {
-        iconLocator: locate('$advanced-updates').find('[class$="-Icon"]').as('Check for updates tooltip'),
+        iconLocator: locate('$advanced-updates').find('[data-testid="info-icon"]').as('Check for updates tooltip'),
         text: 'Option to check new versions and ability to update PMM from UI.',
         link: links.checkForUpdates,
       },
-      stt: {
-        iconLocator: locate('$advanced-advisors').find('[class$="-Icon"]').as('Advanced advisors tooltip'),
-        text: 'Enable Advisors and get updated checks from Percona.',
-        link: links.advisorsDocs,
-      },
-      publicAddress: {
-        iconLocator: locate('$public-address-label').find('[class$="-Icon"]').as('Public Address tooltip'),
-        text: 'Public Address to this PMM server.',
-        link: false,
-      },
-      executionIntervals: {
-        iconLocator: locate('$check-intervals-label').find('[class$="-Icon"]').as('Execution intervals tooltip'),
-        text: 'Interval between check runs',
-        link: false,
-      },
-      backupManagement: {
-        iconLocator: locate('$advanced-backup').find('[class$="-Icon"]').as('Backup management tooltip'),
-        text: 'Option to enable/disable Backup Management features.',
-        link: links.backupManagementDocs,
-      },
       perconaAlerting: {
-        iconLocator: locate('$advanced-alerting').find('[class$="-Icon"]').as('Alerting tooltip'),
+        iconLocator: locate('$advanced-alerting').find('[data-testid="info-icon"]').as('Alerting tooltip'),
         text: 'Option to enable/disable Percona Alerting features.',
         link: links.integratedAlertingDocs,
       },
       microsoftAzureMonitoring: {
-        iconLocator: locate('$advanced-azure-discover').find('[class$="-Icon"]').as('Microsoft Azure monitoring tooltip'),
-        text: 'Option to enable/disable Microsoft Azure DB instanced  discovery and monitoring',
+        iconLocator: locate('$advanced-azure-discover')
+          .find('[data-testid="info-icon"]')
+          .as('Microsoft Azure monitoring tooltip'),
+        text: 'Option to enable/disable Microsoft Azure DB instances discovery and monitoring',
         link: links.microsoftAzureMonitoringDocs,
       },
-    },
-    ssh: {
-      sshKey: {
-        iconLocator: locate('$ssh-key-label').find('[class$="-Icon"]').as('SSH key tooltip'),
-        text: 'Public SSH key to let you login into the server using SSH.',
-        link: links.sshKeyDocs,
+      enableInternalPgQan: {
+        iconLocator: locate('$enable-internal-pg-qan').find('[data-testid="info-icon"]').as('QAN for PMM Server tooltip'),
+        text: "Displays queries from PMM Server's internal PostgreSQL database in Query Analytics (QAN). Enable to troubleshoot PMM Server's database performance alongside your monitored instances.",
+        link: links.qanForPmmServerDocs,
       },
     },
     communication: {
@@ -256,15 +224,18 @@ module.exports = {
     checkForUpdatesSwitch: locate('$advanced-updates').find('label'),
     dataRetentionInput: '$retention-number-input',
     dataRetentionLabel: locateLabel('form-field-data-retention'),
-    retentionValidation: '$retention-field-error-message',
+    retentionValidation: '[data-testid="retention-field-error-message"], .MuiFormHelperText-root.Mui-error',
     errorPopUpElement: I.useDataQA('data-testid Alert error'),
     iframe: '//div[@class="panel-content"]//iframe',
     metricsResolutionButton: '$metrics-resolution-button',
     metricsResolutionByText: (text) => locate('label').withText(text),
     metricsResolutionLabel: '$metrics-resolution-label',
-    metricsResolutionRadio: '$resolutions-radio-button',
-    microsoftAzureMonitoringSwitch: locate('$advanced-azure-discover').find('//div[2]//label'),
-    microsoftAzureMonitoringSwitchInput: locate('$advanced-azure-discover').find('//div[2]//input'),
+    metricsResolutionRadioRare: '$radio-option-rare',
+    metricsResolutionRadioStandard: '$radio-option-standard',
+    metricsResolutionRadioFrequent: '$radio-option-frequent',
+    metricsResolutionRadioCustom: '$radio-option-custom',
+    microsoftAzureMonitoringSwitch: locate('$advanced-azure-discover').find('label'),
+    microsoftAzureMonitoringSwitchInput: locate('$advanced-azure-discover').find('input'),
     accessControlInput: locate('[name="accessControl"]'),
     accessControlSwitch: locate('$access-control').find('label'),
     loginButton: '$sign-in-submit-button',
@@ -272,7 +243,7 @@ module.exports = {
     mediumInput: '$mr-number-input',
     highInput: '$hr-number-input',
     privacyPolicy: '//span[contains(text(), "Privacy Policy")]',
-    publicAddressLabel: locate('$public-address-label').find('span'),
+    publicAddressLabel: locate('$public-address-label').find('h6'),
     publicAddressInput: '$publicAddress-text-input',
     publicAddressButton: '$public-address-button',
     sectionHeader: '//div[@class="ant-collapse-header"]',
@@ -280,7 +251,7 @@ module.exports = {
     signInEmail: '$email-text-input',
     signInPassword: '$email-text-input',
     sshKeyInput: '$ssh-key',
-    sshKeyLabel: locateLabel('ssh-key-label'),
+    sshKeyLabel: locate('$ssh-key-label').find('h6'),
     sshKeyButton: '$ssh-key-button',
     sttLabel: locate('$advanced-advisors').find('span'),
     sttSwitchSelectorInput: locate('$advanced-advisors').find('input'),
@@ -297,8 +268,8 @@ module.exports = {
     perconaAlertingSwitchInput: locate('$advanced-alerting').find('input'),
     perconaAlertingSwitch: locate('$advanced-alerting').find('label'),
     telemetryLabel: locate('$advanced-telemetry').find('span'),
-    tooltipText: locate('$info-tooltip').find('./*[self::span or self::div]'),
-    tooltipReadMoreLink: locate('$info-tooltip').find('a'),
+    tooltipText: locate('[data-testid="info-tooltip"] span, .MuiTooltip-tooltip span'),
+    tooltipReadMoreLink: locate('[data-testid="info-tooltip"] a, .MuiTooltip-tooltip a'),
     tabsSection: '$settings-tabs',
     tabContent: '$settings-tab-content',
     termsOfService: '//span[contains(text(), "Terms of Service")]',
@@ -337,7 +308,12 @@ module.exports = {
   },
 
   async expandSection(sectionName, expectedContentLocator) {
-    const sectionExpandLocator = locate(`[aria-label="Tab ${sectionName}"]`);
+    const tabTestIds = {
+      'Metrics Resolution': '$settings-tab-metrics',
+      'Advanced Settings': '$settings-tab-advanced',
+      'SSH Key': '$settings-tab-ssh',
+    };
+    const sectionExpandLocator = tabTestIds[sectionName] || locate(`[aria-label="Tab ${sectionName}"]`);
 
     I.click(sectionExpandLocator);
     I.waitForVisible(expectedContentLocator, 30);
@@ -419,12 +395,10 @@ module.exports = {
   },
 
   async verifySelectedResolution(resolution) {
-    const selector = '$resolutions-radio-state';
+    const selector = `input[type="radio"][value="${resolution.toLowerCase()}"]`;
 
     I.waitForElement(selector, 30);
-    const value = await I.grabAttributeFrom(selector, 'value');
-
-    assert.equal(value.includes(resolution.toLowerCase()), true, 'Metric resolution should be selected');
+    I.seeCheckboxIsChecked(selector);
   },
 
   customClearField(field) {
@@ -440,7 +414,7 @@ module.exports = {
   },
 
   checkDataRetentionInput(value, message) {
-    const messageField = `//div[contains(text(), '${message}')]`;
+    const messageField = `//p[contains(text(), '${message}')]`;
 
     I.clearField(this.fields.dataRetentionInput);
     I.fillField(this.fields.dataRetentionInput, value);
@@ -541,11 +515,32 @@ module.exports = {
   },
 
   async verifyTooltip(tooltipObj) {
-    tooltipObj.tooltipText = this.fields.tooltipText;
-    tooltipObj.tooltipReadMoreLink = this.fields.tooltipReadMoreLink;
-    await adminPage.verifyTooltip(tooltipObj);
+    const tooltipIcon = tooltipObj.iconLocator;
+    const tooltipText = locate('.MuiTooltip-tooltip:visible').as('Tooltip text');
 
-    I.moveCursorTo(locate('[aria-label="Breadcrumbs"]'));
+    I.waitForVisible(tooltipIcon, 5);
+    I.moveCursorTo(tooltipIcon);
+    I.waitForVisible(tooltipText, 5);
+
+    I.see(tooltipObj.text, tooltipText);
+
+    if (tooltipObj.link) {
+      const tooltipReadMoreLink = locate('.MuiTooltip-tooltip:visible a').as(`Tooltip "Read more" link for ${tooltipObj.iconLocator}`);
+
+      I.waitForVisible(tooltipReadMoreLink, 5);
+      I.seeAttributesOnElements(tooltipReadMoreLink, { href: tooltipObj.link });
+      const readMoreLink = await I.grabAttributeFrom(tooltipReadMoreLink, 'href');
+      const response = await I.sendGetRequest(readMoreLink);
+
+      assert.equal(
+        response.status,
+        200,
+        'Read more link should lead to working documentation page. But the GET request response status is not 200',
+      );
+    }
+
+    I.moveCursorTo(locate('h2'));
+    I.wait(1);
   },
 
   verifySwitch(switchSelector, expectedSwitchState = 'on') {
@@ -561,24 +556,10 @@ module.exports = {
   },
 
   async getSubpageTooltips() {
-    const headers = { Authorization: `Basic ${await I.getAuth()}` };
-
-    // setting tooltip for telemetry in accordance with API call
-    this.tooltips.advancedSettings.telemetry.text = `${'Option to send usage data back to Percona to let us make our product better.'
-    + 'We gather and send the following information to Percona:'}${(await settingsAPI.getSettings('telemetry_summaries')).join('').replace(/\s{2,}/g, ' ')}`;
-
     return [
-      {
-        subPage: this.metricsResolutionUrl,
-        tooltips: this.tooltips.metricsResolution,
-      },
       {
         subPage: this.advancedSettingsUrl,
         tooltips: this.tooltips.advancedSettings,
-      },
-      {
-        subPage: this.sshKeyUrl,
-        tooltips: this.tooltips.ssh,
       },
     ];
   },
