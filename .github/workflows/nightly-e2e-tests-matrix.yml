@@ -136,8 +136,8 @@ jobs:
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
-      setup_services: '--database psmdb,SETUP_TYPE=pss --database pxc'
-      tags_for_tests: '@dashboard-psmdb|@dashboard-pxc'
+      setup_services: '--database psmdb,SETUP_TYPE=pss'
+      tags_for_tests: '@dashboard-psmdb'
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
 
@@ -152,7 +152,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: '--database psmdb,SETUP_TYPE=sharding'
-      tags_for_tests: '@dashboard-psmdb-sharded'
+      tags_for_tests: '@dashboard-sharded-psmdb'
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
 

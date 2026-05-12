@@ -21,7 +21,7 @@ Scenario(
 );
 
 Scenario(
-  'Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboard-psmdb-sharded @dashboards',
+  'Open the MongoDB Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboard-sharded-psmdb @dashboards',
   async ({ I, dashboardPage }) => {
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
       cluster: 'sharded',
@@ -92,7 +92,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2035 - Verify MongoDB Cluster dashboard has FCV panel @nightly @dashboard-psmdb-sharded @dashboards',
+  'PMM-T2035 - Verify MongoDB Cluster dashboard has FCV panel @nightly @dashboard-sharded-psmdb @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
       from: 'now-5m',
