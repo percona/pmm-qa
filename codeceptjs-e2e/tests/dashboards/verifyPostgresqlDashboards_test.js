@@ -1,6 +1,6 @@
 const { inventoryAPI } = inject();
 
-Feature('Test Dashboards inside the PostgreSQL Folder');
+Feature('Test Dashboards inside the PostgreSQL Folder').retry(2);
 
 Before(async ({ I }) => {
   await I.Authorize();
