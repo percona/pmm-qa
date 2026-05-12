@@ -15,7 +15,7 @@ BeforeSuite(async ({ inventoryAPI }) => {
 });
 
 Scenario(
-  'PMM-T2028 - Verify metrics from PS Replica instance on PMM-Server @pmm-ps-replica-integration @not-ui-pipeline @nightly',
+  'PMM-T2028 - Verify metrics from PS Replica instance on PMM-Server @pmm-ps-replica-integration @not-ui-pipeline @nightly @nightly-pxc-ps-replication',
   async ({
     I, grafanaAPI,
   }) => {
@@ -30,7 +30,7 @@ Scenario(
 );
 
 Data(serviceList).Scenario(
-  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly',
+  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly @nightly-pxc-ps-replication',
   async ({
     I, dashboardPage, adminPage, current,
   }) => {
@@ -51,7 +51,7 @@ Data(serviceList).Scenario(
 );
 
 Scenario(
-  'PMM-T2030 - Verify QAN for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly',
+  'PMM-T2030 - Verify QAN for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly @nightly-pxc-ps-replication',
   async ({
     I, queryAnalyticsPage,
   }) => {
