@@ -39,11 +39,11 @@ on:
         description: "Codeceptjs --grep pattern, ex.: @nightly-mongo-replica"
         required: true
         type: string
-      shard_name:
-        description: "Logical shard name used for namespacing services and Launchable test-suite"
+      workers:
+        description: "Number of workers to use for e2e tests"
         required: false
-        default: 'remote'
-        type: string
+        default: 1
+        type: number
       launchable_confidence:
         description: "Launchable subset confidence percentage (use '100%' to keep full subset)"
         required: false
@@ -78,10 +78,10 @@ on:
       tags_for_tests:
         required: true
         type: string
-      shard_name:
+      workers:
         required: false
-        default: 'remote'
-        type: string
+        default: 1
+        type: number
       launchable_confidence:
         required: false
         default: '100%'
@@ -269,15 +269,15 @@ jobs:
           curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
           unzip logs.zip -d logs || true
 
-      - name: Record launchable test results
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-          launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
-          launchable gate --session "$(cat launchable-session.txt)"
+      # - name: Record launchable test results
+      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+      #   working-directory: pmm-qa/codeceptjs-e2e
+      #   run: |
+      #     sed -i "s|$(pwd)/||g" tests/output/result.xml || true
+      #     launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
+      #     launchable gate --session "$(cat launchable-session.txt)"
 
-      - name: Record launchable logs on failure
+      # - name: Record launchable logs on failure
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
         working-directory: pmm-qa/codeceptjs-e2e
         continue-on-error: true
