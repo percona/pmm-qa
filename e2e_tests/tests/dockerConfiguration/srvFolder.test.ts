@@ -16,10 +16,6 @@ const folderConfiguration = [
   },
 ];
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
-  await grafanaHelper.authorize('admin', 'admin', basePmmUrl);
-});
-
 pmmTest.afterEach(({ cliHelper }) => {
   cliHelper.execSilent(`docker stop pmm-server-srv && docker rm -fr pmm-server-srv`);
 });
@@ -43,6 +39,7 @@ for (const configuration of folderConfiguration) {
         'Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass"',
       );
 
+      await grafanaHelper.authorize('admin', 'admin', basePmmUrl);
       await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
       await page
         .locator('//h1[text()="Percona Monitoring and Management"]')
