@@ -7,7 +7,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
 
   const newUser = 'newuser';
   const newPassword = 'newpass';
-  const basePmmUrl = 'http://127.0.0.1:81/';
+  const basePmmUrl = 'http://127.0.0.1:81/pmm-ui/';
   const folderConfiguration = [
     {
       command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume "$HOME/srv":/srv --name pmm-server-srv perconalab/pmm-server-fb:PR-4295-ff823af`,
@@ -43,7 +43,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         );
 
         await grafanaHelper.authorize('admin', 'admin', basePmmUrl);
-        await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+        await page.goto(urlHelper.buildUrlWithParameters(basePmmUrl + dashboard.home.url, {}));
         await page
           .locator('//h1[text()="Percona Monitoring and Management"]')
           .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
@@ -53,7 +53,10 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         await page.waitForTimeout(Timeouts.FIVE_SECONDS);
 
         await grafanaHelper.authorize(newUser, newPassword, basePmmUrl);
-        await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for authorization
+        await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+        await page.goto(urlHelper.buildUrlWithParameters(basePmmUrl + dashboard.home.url, {}));
         await dashboard.home.elements.headerLocator.waitFor({
           state: 'visible',
           timeout: Timeouts.TEN_SECONDS,
@@ -65,7 +68,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for password change
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
         await grafanaHelper.authorize(newUser, 'anotherpass', basePmmUrl);
-        await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+        await page.goto(urlHelper.buildUrlWithParameters(basePmmUrl + dashboard.home.url, {}));
         await dashboard.home.elements.headerLocator.waitFor({
           state: 'visible',
           timeout: Timeouts.TEN_SECONDS,
