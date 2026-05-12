@@ -62,6 +62,7 @@ export default class GrafanaHelper {
 
   unAuthorize = async () => {
     await this.page.setExtraHTTPHeaders({});
+    await this.page.goto('');
     await this.page.reload();
   };
 }
