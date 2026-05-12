@@ -36,8 +36,8 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T394 - PostgreSQL Instance Compare Dashboard metrics @nightly @dashboard-pdpgsql @dashboard-pgsql @dashboards',
-  async ({ I, dashboardPage, adminPage }) => {
+  'PMM-T394 - PostgreSQL Instance Compare Dashboard metrics @nightly @dashboard-pgsql @dashboards',
+  async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.postgresqlInstanceCompareDashboard.cleanUrl, {
       from: 'now-5m',
     });
