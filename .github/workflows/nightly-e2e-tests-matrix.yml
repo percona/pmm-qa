@@ -64,8 +64,6 @@ on:
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
-      ZEPHYR_PMM_API_KEY:
-        required: false
 
 jobs:
   ps:
@@ -139,7 +137,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss --database pxc'
-      tags_for_tests: '@dashboard-psmdb'
+      tags_for_tests: '@dashboard-psmdb|@dashboard-pxc'
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
 
