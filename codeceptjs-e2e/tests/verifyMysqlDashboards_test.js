@@ -16,7 +16,7 @@ Before(async ({ I }) => {
 Scenario(
   'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify PS Metrics are present and graphs are displayed @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage }) => {
-    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps');
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_8');
     const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name, from: 'now-15m' });
 
     I.amOnPage(url);
@@ -61,7 +61,7 @@ Scenario(
 Scenario(
   'PMM-T319 - Open the MySQL Instances Overview dashboard and verify PS Metrics are present and graphs are displayed @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage }) => {
-    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps');
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_8');
     const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name, from: 'now-15m' });
 
     I.amOnPage(url);
@@ -226,7 +226,7 @@ Scenario.skip(
 Scenario(
   'PMM-T324 - Verify MySQL - MySQL User Details dashboard @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage }) => {
-    const { service_name: serviceName } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm');
+    const { service_name: serviceName } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_8');
     const url = I.buildUrlWithParams(dashboardPage.mysqlUserDetailsDashboard.clearUrl, { service_name: serviceName, from: 'now-5m' });
 
     I.amOnPage(url);
@@ -241,7 +241,7 @@ Scenario(
 xScenario(
   'PMM-T396 - Verify that parameters are passed from MySQL User Details dashboard to QAN @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage, queryAnalyticsPage }) => {
-    const { service_name: serviceName } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm');
+    const { service_name: serviceName } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_8');
     const filters = [serviceName, 'root'];
     const timeRange = 'Last 12 hours';
 

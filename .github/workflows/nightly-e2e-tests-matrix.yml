@@ -263,7 +263,7 @@ jobs:
   #     pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
   #     setup_services: '--database haproxy'
   #     tags_for_tests: '@dashboard-haproxy'
-  #     shard_name: 'haproxy'
+  #     workers: 1
   #     launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
 
   # external:
@@ -277,7 +277,7 @@ jobs:
   #     pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
   #     pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
   #     setup_services: '--database external'
-  #     tags_for_tests: '@nightly-external|@nightly-all-workers'
-  #     shard_name: 'external'
+  #     tags_for_tests: '@nightly-external'
+  #     workers: 1
   #     launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
 

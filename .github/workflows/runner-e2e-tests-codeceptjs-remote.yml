@@ -214,7 +214,7 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/qa-integration/pmm_qa
         env:
-          PMM_AGENT_SETUP_NODE_NAME: "gh-${{ github.run_id }}-${{ env.SHARD_NAME }}"
+          PMM_AGENT_SETUP_NODE_NAME: "gh-${{ github.run_id }}-${{ steps.tags_processed.outputs.result }}"
         run: |
           sudo PMM_AGENT_SETUP_NODE_NAME="${{ env.PMM_AGENT_SETUP_NODE_NAME }}" \
             bash -x pmm3-client-setup.sh \
@@ -226,8 +226,6 @@ jobs:
       - name: Run setup for E2E tests (start client services on this runner)
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && env.WIZARD_ARGS != '' }}
         working-directory: pmm-qa/qa-integration/pmm_qa
-        env:
-          SHARD_NAMESPACE: "gh-${{ github.run_id }}-${{ env.SHARD_NAME }}"
         run: |
           mkdir -m 777 -p /tmp/backup_data
           python3 -m venv virtenv
@@ -288,7 +286,7 @@ jobs:
         if: ${{ failure() }}
         continue-on-error: true
         with:
-          name: "artifacts_${{ env.SHARD_NAME }}_${{ steps.tags_processed.outputs.result }}"
+          name: "artifacts_${{ steps.tags_processed.outputs.result }}"
           path: |
             pmm-qa/codeceptjs-e2e/tests/output/*.png
             pmm-qa/codeceptjs-e2e/tests/output/trace/*.zip
@@ -298,5 +296,5 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         continue-on-error: true
         with:
-          name: "junit_${{ env.SHARD_NAME }}_${{ steps.tags_processed.outputs.result }}"
+          name: "junit_${{ steps.tags_processed.outputs.result }}"
           path: pmm-qa/codeceptjs-e2e/tests/output/result.xml
