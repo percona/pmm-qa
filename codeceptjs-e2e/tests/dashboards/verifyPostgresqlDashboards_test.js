@@ -82,11 +82,9 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2052 - Verify PostgreSQL Checkpoints, Buffers and WAL Usage dashboard @nightly @dashboard-pdpgsql-patroni @dashboards',
+  'PMM-T2052 - Verify PostgreSQL Checkpoints, Buffers and WAL Usage dashboard @nightly @dashboard-patroni-pdpgsql @dashboards',
   async ({ I, dashboardPage }) => {
-    const details = (await inventoryAPI.getNodeByServiceName('patroni_service_1')).services.find((service) =>
-      service.service_name.includes('pdpgsql_pmm_patroni'),
-    );
+    const details = (await inventoryAPI.getNodeByServiceName('patroni_service_1')).services.find((service) => service.service_name.includes('pdpgsql_pmm_patroni'));
     const url = I.buildUrlWithParams(dashboardPage.postgresqlCheckpointDashboard.url, {
       from: 'now-5m',
       service_name: details.service_name,
@@ -114,7 +112,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2053 - Verify PostgreSQL Patroni Details dashboard @nightly @dashboard-pdpgsql-patroni @dashboards',
+  'PMM-T2053 - Verify PostgreSQL Patroni Details dashboard @nightly @dashboard-patroni-pdpgsql @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.postgresqlPatroniDashboard.url, { from: 'now-5m' });
 
