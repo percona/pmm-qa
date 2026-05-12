@@ -266,7 +266,6 @@ jobs:
       - name: Record launchable test results
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/codeceptjs-e2e
-        continue-on-error: true
         run: |
           sed -i "s|$(pwd)/||g" tests/output/result.xml || true
           launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
