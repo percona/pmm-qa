@@ -66,7 +66,7 @@ xScenario(
 );
 
 Scenario(
-  'PMM-T1830 - Verify downloading server diagnostics logs @menu',
+  'PMM-T1830 - Verify downloading server diagnostics logs @menu @nightly-generic',
   async ({ I, homePage, serverApi }) => {
     I.amOnPage('pmm-ui/help');
     const path = await I.downloadFile(homePage.buttons.pmmLogs);

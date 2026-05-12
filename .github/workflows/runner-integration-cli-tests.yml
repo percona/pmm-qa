@@ -78,7 +78,7 @@ jobs:
 
     steps:
       - name: Create status check
-        if: ${{ env.SHA != 'null' }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:
@@ -227,7 +227,7 @@ jobs:
             pmm-qa/cli/client-logs
 
       - name: Create status check
-        if: ${{ env.SHA != 'null' && always() }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:

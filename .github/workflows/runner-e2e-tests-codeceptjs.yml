@@ -107,7 +107,7 @@ jobs:
 
     steps:
       - name: Create status check
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
         with:
@@ -275,7 +275,7 @@ jobs:
             pmm-qa/codeceptjs-e2e/logs
 
       - name: Create status check
-        if: ${{ github.event_name != 'pull_request' && always() }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
         with:
