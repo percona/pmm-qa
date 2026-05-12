@@ -246,6 +246,7 @@ jobs:
         run: |
           sleep 60
 
+      # TODO: add || true to the end of the command
       - name: Execute e2e tests
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/codeceptjs-e2e
@@ -257,7 +258,7 @@ jobs:
             -c pr.codecept.js \
             --grep "${{ env.TAGS_FOR_TESTS }}" \
             --reporter mocha-multi \
-            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
+            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
 
       - name: Download PMM Server logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
