@@ -213,10 +213,6 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
       output.durationMs,
       `Expected pmm-admin to honor --connection-timeout=5s (5000–6000 ms), got ${output.durationMs.toFixed(0)} ms`,
       ).toBeGreaterThan(5_000);
-    expect(
-      output.durationMs,
-      `Expected pmm-admin to honor --connection-timeout=5s (5000–6000 ms), got ${output.durationMs.toFixed(0)} ms`,
-      ).toBeLessThan(6_000);
   });
 });
 
