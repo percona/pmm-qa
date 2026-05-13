@@ -174,7 +174,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await output.outContains('Socket and port cannot be specified together.');
   });
 
-  test("PMM-T9999 User can use connection timeout while using pmm-admin add mysql", async ({ }) => {
+  test("PMM-T9999 User can use connection timeout while using pmm-admin add mysql @connectionTimeout", async ({ }) => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
@@ -185,7 +185,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     console.log(outputAgents.stdout);
   });
 
-  test("PMM-T9998 User can change connection timeout while using pmm-admin inventory change agent mysqld-exporter", async ({ }) => {
+  test("PMM-T9998 User can change connection timeout while using pmm-admin inventory change agent mysqld-exporter @connectionTimeout", async ({ }) => {
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep mysql_connection_timeout_service | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -199,7 +199,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     console.log(chaneAgent.stdout);
   });
 
-  test("PMM-T9997 User can clear connection timeout while using pmm-admin inventory change agent mysqld-exporter", async ({ }) => {
+  test("PMM-T9997 User can clear connection timeout while using pmm-admin inventory change agent mysqld-exporter @connectionTimeout", async ({ }) => {
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep mysql_connection_timeout_service | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
