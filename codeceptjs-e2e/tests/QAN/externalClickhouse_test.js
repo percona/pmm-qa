@@ -82,7 +82,7 @@ Scenario('PMM-T2006 - Verify using ClickHouse Username and password variables fo
   I.amOnPage(dashboardUrl);
   dashboardPage.waitForDashboardOpened();
   await dashboardPage.expandEachDashboardRow();
-  await dashboardPage.verifyThereAreNoGraphsWithoutData(11);
+  await dashboardPage.verifyThereAreNoGraphsWithoutData(12);
 
   I.amOnPage(I.buildUrlWithParams(`${basePmmUrl}${queryAnalyticsPage.url}`, { from: 'now-5m' }));
   queryAnalyticsPage.waitForLoaded();

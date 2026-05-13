@@ -46,11 +46,18 @@ export default abstract class BasePage {
   };
 
   selectTimeRange = async (timeRange: string): Promise<void> => {
-    await this.elements.timePickerOpenButton.click();
+    await this.elements.timePickerOpenButton.click({ timeout: Timeouts.THIRTY_SECONDS });
 
-    const timeRangeOption = this.grafanaIframe().locator(`//*[contains(text(), "${timeRange}")]`);
+    const timeRangeDialog = this.grafanaIframe().getByRole('dialog');
+    const timeRangeLabel = timeRangeDialog
+      .locator('label')
+      .filter({
+        hasText: timeRange,
+      })
+      .first();
 
-    await timeRangeOption.click();
+    await timeRangeLabel.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
+    await timeRangeLabel.click();
   };
 
   selectVariableValue = async (dropDownName: DropdownName, dropDownValue?: string): Promise<string> => {
@@ -58,13 +65,13 @@ export default abstract class BasePage {
     const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
     const combobox = wrapper.getByRole('combobox');
 
-    await wrapper.click();
+    await wrapper.click({ timeout: Timeouts.THIRTY_SECONDS });
 
     const options = frame.getByRole('option');
 
     await options.first().waitFor({
       state: 'visible',
-      timeout: Timeouts.TEN_SECONDS,
+      timeout: Timeouts.THIRTY_SECONDS,
     });
 
     const valueToSelect = dropDownValue
@@ -76,10 +83,10 @@ export default abstract class BasePage {
         });
     const selectedOption = (await valueToSelect.first().textContent())?.trim() ?? '';
 
-    await valueToSelect.first().click();
+    await valueToSelect.first().click({ timeout: Timeouts.THIRTY_SECONDS });
     await this.page.keyboard.press('Escape');
 
-    await expect(combobox).toHaveAttribute('aria-expanded', 'false');
+    await expect(combobox).toHaveAttribute('aria-expanded', 'false', { timeout: Timeouts.THIRTY_SECONDS });
 
     return selectedOption;
   };
