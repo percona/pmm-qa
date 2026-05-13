@@ -180,9 +180,11 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
 
-    const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout}`);
+    const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout} | grep connect_timeout=5`);
+    await dataSourceName.assertSuccess();
     console.log(dataSourceName.stdout);
-    // await dataSourceName.outContains('connect_timeout=5');
+
+    // docker exec pdpgsql_pmm_17_1 cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep 20df1bb1-bc1d-483e-abcc-c8cc49dec9d3 | grep connect_timeout=5
   });
 
 
