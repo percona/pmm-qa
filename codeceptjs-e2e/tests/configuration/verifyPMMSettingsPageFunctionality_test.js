@@ -153,8 +153,8 @@ Scenario(
       message.replace(/\s+/g, ' ') === pmmSettingsPage.messages.disabledBackupManagement,
       `Message Shown on ${message} should be equal to ${pmmSettingsPage.messages.disabledBackupManagement}`,
     );
-    I.seeAttributesOnElements('$settings-link', { href: pmmSettingsPage.advancedSettingsUrl });
-
+    I.click('$settings-link');
+    I.waitInUrl(pmmSettingsPage.advancedSettingsUrl, 30);
     // Open advanced settings and enable backup management
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.backupManagementSwitch, 30);
