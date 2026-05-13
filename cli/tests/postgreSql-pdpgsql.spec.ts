@@ -5,6 +5,7 @@ import { removePGService } from '@helpers/pmm-admin';
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = '127.0.0.1:5432';
+const connectionTimeoutServiceName = 'pgsql_connection_timeout_service';
 
 let containerName: string;
 
@@ -169,5 +170,23 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const output = await cli.exec('ps aux |grep postgres_exporter');
     await output.assertSuccess();
     await output.outContains('postgres_exporter --auto-discover-databases ');
+  });
+
+
+  test("PMM-T8888 User can use connection timeout while using pmm-admin add mysql @connectionTimeoutPGSQL", async ({ }) => {
+    const output = await cli.exec(` docker exec ${containerName} pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
+    await output.exitCodeEquals(0);
+
+    // const tempDir = await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`);
+
+    // const tempDir = await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`);
+    // const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep mysql_connection_timeout_service | awk -F' ' '{print $4}'`);
+    // const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
+    // const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
+
+    // console.log(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`)
+    // console.log(tempDir.stdout);
+    // console.log(myCnf.stdout);
+    // await myCnf.outContains('connect_timeout=5');
   });
 });
