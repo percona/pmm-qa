@@ -1,9 +1,7 @@
 import { PlaywrightTestConfig } from '@playwright/test';
-import * as path from 'path';
 import baseConfig from './playwright.config';
 import { Timeouts } from './helpers/timeouts';
 
-const STORAGE_STATE_PATH = path.resolve(__dirname, '.auth/screenshots.json');
 const config: PlaywrightTestConfig = {
   ...baseConfig,
   projects: [
@@ -26,7 +24,6 @@ const config: PlaywrightTestConfig = {
         actionTimeout: Timeouts.TEN_SECONDS,
         launchOptions: { args: ['--window-size=1920,1080'] },
         navigationTimeout: Timeouts.THIRTY_SECONDS,
-        storageState: STORAGE_STATE_PATH,
       },
     },
   ],

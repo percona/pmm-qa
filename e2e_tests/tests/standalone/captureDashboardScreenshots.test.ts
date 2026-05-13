@@ -7,6 +7,10 @@ import { DASHBOARDS, nameFromUrl, resolveServiceName } from '../../testdata/dash
 const outRoot = path.resolve(process.cwd(), path.join('screenshots', 'dashboards'));
 
 pmmTest.describe('Capture dashboard screenshots @standalone', () => {
+  pmmTest.beforeEach(async ({ grafanaHelper }) => {
+    await grafanaHelper.authorize();
+  });
+
   for (const dashboardEntry of DASHBOARDS) {
     const name = nameFromUrl(dashboardEntry.url);
 
