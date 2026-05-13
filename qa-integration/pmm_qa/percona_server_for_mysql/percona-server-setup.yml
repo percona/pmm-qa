@@ -25,9 +25,12 @@
     random_service_name_value: ""
     my_rocks: "{{ lookup('env', 'MY_ROCKS') | default(false, true) }}"
     container_prefix: "ps_pmm{{ (setup_type|default('')) and '_' ~ setup_type }}_{{ ps_version }}_"
-    encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}" 
+    encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
+    debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
+    - debug: msg="Debug client value is {{ debug_client }}"
+
     - name: Modify the node count for group replication
       set_fact:
         nodes_count: 3
