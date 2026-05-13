@@ -182,9 +182,6 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
 
     const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout} | grep connect_timeout=5`);
     await dataSourceName.assertSuccess();
-    console.log(dataSourceName.stdout);
-
-    // docker exec pdpgsql_pmm_17_1 cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep 20df1bb1-bc1d-483e-abcc-c8cc49dec9d3 | grep connect_timeout=5
   });
 
 
@@ -204,5 +201,15 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${agentId.stdout} --connection-timeout=0s`);
     await chaneAgent.exitCodeEquals(0);
+  });
+
+  test("PMM-T8885 User can use connection timeout while using pmm-admin add pgsql @connectionTimeoutPGSQL", async ({ }) => {
+    const output = await cli.exec(`sudo tc qdisc add dev lo root netem delay 11000ms && time pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort} && sudo tc qdisc del dev lo root`);
+    await output.exitCodeEquals(1)
+
+    expect(
+      output.durationMs,
+      `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
+    ).toBeGreaterThan(5_000);
   });
 });
