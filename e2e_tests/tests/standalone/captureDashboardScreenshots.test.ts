@@ -2,13 +2,19 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
+import GrafanaHelper from '@helpers/grafana.helper';
 import { DASHBOARDS, nameFromUrl, resolveServiceName } from '../../testdata/dashboards.registry';
 
 const outRoot = path.resolve(process.cwd(), path.join('screenshots', 'dashboards'));
 
 pmmTest.describe('Capture dashboard screenshots @standalone', () => {
-  pmmTest.beforeEach(async ({ grafanaHelper }) => {
-    await grafanaHelper.authorize();
+  pmmTest.beforeEach(async ({ page }) => {
+    const authToken = GrafanaHelper.getToken();
+
+    await page.setExtraHTTPHeaders({ Authorization: `Basic ${authToken}` });
+    await page.request.post('graph/login', {
+      data: { password: process.env.ADMIN_PASSWORD || 'admin', user: 'admin' },
+    });
   });
 
   for (const dashboardEntry of DASHBOARDS) {
@@ -19,13 +25,16 @@ pmmTest.describe('Capture dashboard screenshots @standalone', () => {
       const dir = path.join(outRoot, dashboardEntry.folder);
       const regularFile = path.join(dir, `${name}.png`);
       const extendedFile = path.join(dir, `${name}-extended.png`);
-      const fullUrl = urlHelper.buildUrlWithParameters(`${process.env.PMM_UI_URL}${dashboardEntry.url}`, {
-        cluster: dashboardEntry.cluster,
-        from: 'now-15m',
-        replicationSet: dashboardEntry.replicationSet,
-        serviceName,
-        to: 'now',
-      });
+      const fullUrl = urlHelper.buildUrlWithParameters(
+        `${process.env.PMM_UI_URL}pmm-ui/${dashboardEntry.url}`,
+        {
+          cluster: dashboardEntry.cluster,
+          from: 'now-15m',
+          replicationSet: dashboardEntry.replicationSet,
+          serviceName,
+          to: 'now',
+        },
+      );
       const frame = page.frameLocator('#grafana-iframe');
 
       fs.mkdirSync(dir, { recursive: true });

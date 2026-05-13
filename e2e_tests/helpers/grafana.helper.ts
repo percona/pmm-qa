@@ -13,7 +13,7 @@ export default class GrafanaHelper {
     });
     await this.page.goto('');
     await this.page.reload();
-    await this.page.waitForURL(/pmm-ui/);
+    await this.page.waitForURL('pmm-ui/help');
 
     return this.page;
   };
