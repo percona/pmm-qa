@@ -111,7 +111,7 @@ Scenario('PMM-T188 - Verify dashboard refresh @qan', async ({ dashboardPage, adm
 });
 
 Scenario(
-  'PMM-T2016 - Verify QAN query: MAX_EXECUTION_TIME does replace numbers values @qan @fb-pmm-ps-integration @nightly-percona-server @nightly-qan',
+  'PMM-T2016 - Verify QAN query: MAX_EXECUTION_TIME does replace numbers values @fb-pmm-ps-integration @nightly-percona-server',
   async ({ I, queryAnalyticsPage, credentials }) => {
     const { root } = credentials.perconaServer;
     const { username, password } = credentials.perconaServer.msandbox;

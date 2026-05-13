@@ -31,7 +31,7 @@ Before(async ({ I, queryAnalyticsPage, codeceptjsConfig }) => {
   });
 
   await I.Authorize();
-  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-60m' }));
+  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m' }));
   queryAnalyticsPage.waitForLoaded();
 });
 
