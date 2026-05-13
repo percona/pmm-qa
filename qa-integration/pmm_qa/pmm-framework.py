@@ -128,6 +128,7 @@ def setup_mysql(db_type, db_version=None, db_config=None, args=None):
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
         'ENCRYPTED_CLIENT_CONFIG': get_value('ENCRYPTED_CLIENT_CONFIG', db_type, args, db_config),
+        'CLIENT_DEBUG': args.client_debug,
     }
 
     run_ansible_playbook('mysql/mysql-setup.yml', env_vars, args)
@@ -154,7 +155,8 @@ def setup_ssl_mysql(db_type, db_version=None, db_config=None, args=None):
         'MYSQL_SSL_CONTAINER': 'mysql_ssl_' + str(ms_version),
         'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
-        'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
+        'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
+        'CLIENT_DEBUG': args.client_debug,
     }
 
     # Ansible playbook filename
@@ -192,6 +194,7 @@ def setup_pdpgsql(db_type, db_version=None, db_config=None, args=None):
         'SETUP_TYPE': setup_type_value,
         'PGSM_BRANCH': pgsm_branch,
         'ENCRYPTED_CLIENT_CONFIG': get_value('ENCRYPTED_CLIENT_CONFIG', db_type, args, db_config),
+        'CLIENT_DEBUG': args.client_debug,
     }
 
     # Ansible playbook filename
@@ -221,7 +224,8 @@ def setup_ssl_pdpgsql(db_type, db_version=None, db_config=None, args=None):
         'CLIENT_VERSION': client_version,
         'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
-        'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
+        'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
+        'CLIENT_DEBUG': args.client_debug,
     }
 
     # Ansible playbook filename
@@ -258,6 +262,7 @@ def setup_pgsql(db_type, db_version=None, db_config=None, args=None):
             'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
             'SETUP_TYPE': setup_type_value,
             'ENCRYPTED_CLIENT_CONFIG': get_value('ENCRYPTED_CLIENT_CONFIG', db_type, args, db_config),
+            'CLIENT_DEBUG': args.client_debug,
         }
 
         # Ansible playbook filename
@@ -272,7 +277,8 @@ def setup_pgsql(db_type, db_version=None, db_config=None, args=None):
             'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
             'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
             'PGSQL_PGSS_PORT': 5448,
-            'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
+            'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
+            'CLIENT_DEBUG': args.client_debug,
         }
 
         # Ansible playbook filename
@@ -296,7 +302,8 @@ def setup_haproxy(db_type, db_version=None, db_config=None, args=None):
         'HAPROXY_CONTAINER': 'haproxy_pmm',
         'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
-        'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3'
+        'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
+        'CLIENT_DEBUG': args.client_debug,
     }
 
     # Ansible playbook filename
@@ -796,6 +803,7 @@ def setup_valkey(db_type, db_version=None, db_config=None, args=None):
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
         'SETUP_TYPE': setup_type_value,
         'ENCRYPTED_CLIENT_CONFIG': get_value('ENCRYPTED_CLIENT_CONFIG', db_type, args, db_config),
+        'CLIENT_DEBUG': args.client_debug,
     }
 
     # Choose playbook based on SETUP_TYPE (cluster is default; sentinel only when explicitly requested)
