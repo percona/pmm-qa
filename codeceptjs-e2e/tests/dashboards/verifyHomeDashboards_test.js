@@ -18,7 +18,7 @@ Before(async ({ I }) => {
 });
 
 Data(panels).Scenario(
-  'PMM-T1565 - Verify ability to access OS dashboards with correct filter setup from Home Dashboard @nightly @dashboards',
+  'PMM-T1565 - Verify ability to access OS dashboards with correct filter setup from Home Dashboard @nightly @nightly-generic @dashboards',
   async ({
     I, current, dashboardPage, homePage,
   }) => {
@@ -71,7 +71,7 @@ Data(panels).Scenario(
 ).retry(1);
 
 Scenario(
-  'PMM-T2007 - Verify Monitored DB Services panel on home dashboard @nightly @dashboards @gssapi-nightly',
+  'PMM-T2007 - Verify Monitored DB Services panel on home dashboard @nightly @nightly-generic @dashboards @gssapi-nightly',
   async ({ I, inventoryAPI, dashboardPage }) => {
     const mysql = (await inventoryAPI.getServicesByType(SERVICE_TYPE.MYSQL)).data.mysql.length;
     const mongodb = (await inventoryAPI.getServicesByType(SERVICE_TYPE.MONGODB)).data.mongodb.length;

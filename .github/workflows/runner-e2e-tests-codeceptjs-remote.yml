@@ -1,0 +1,297 @@
+name: _runner-e2e-tests-codeceptjs-remote
+# Sibling of runner-e2e-tests-codeceptjs.yml. Skips the local PMM Server setup
+# and instead points the client + tests at an externally-managed PMM Server
+# Used by nightly-e2e-tests-matrix.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_server_address:
+        description: "Hostname/IP of the externally-managed PMM Server (no scheme). Example: 12.34.56.78"
+        required: true
+        type: string
+      admin_password:
+        description: "Admin password configured on the remote PMM Server"
+        required: false
+        default: 'admin'
+        type: string
+      pmm_qa_branch:
+        description: "Branch for pmm-qa repository to checkout"
+        required: false
+        default: 'main'
+        type: string
+      pmm_client_version:
+        description: "PMM Client version (latest-tarball|pmm3-rc|x.xx.x|https://...)"
+        required: false
+        default: 'latest-tarball'
+        type: string
+      setup_services:
+        description: "pmm-framework arguments, ex.: --database=ps --database=psmdb,SETUP_TYPE=pss"
+        required: false
+        default: ''
+        type: string
+      tags_for_tests:
+        description: "Codeceptjs --grep pattern, ex.: @nightly-mongo-replica"
+        required: true
+        type: string
+      shard_name:
+        description: "Logical shard name used for namespacing services and Launchable test-suite"
+        required: false
+        default: 'remote'
+        type: string
+      launchable_confidence:
+        description: "Launchable subset confidence percentage (use '100%' to keep full subset)"
+        required: false
+        default: '100%'
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_server_address:
+        required: true
+        type: string
+      admin_password:
+        required: false
+        default: 'admin'
+        type: string
+      pmm_qa_branch:
+        required: false
+        default: 'main'
+        type: string
+      pmm_client_version:
+        required: false
+        default: 'latest-tarball'
+        type: string
+      setup_services:
+        required: false
+        default: ''
+        type: string
+      tags_for_tests:
+        required: true
+        type: string
+      shard_name:
+        required: false
+        default: 'remote'
+        type: string
+      launchable_confidence:
+        required: false
+        default: '100%'
+        type: string
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
+
+jobs:
+  ui-tests-e2e-remote:
+    name: "remote e2e tests: ${{ inputs.tags_for_tests }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      ADMIN_PASSWORD: ${{ inputs.admin_password || 'admin' }}
+      PMM_SERVER_ADDRESS: ${{ inputs.pmm_server_address }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      WIZARD_ARGS: ${{ inputs.setup_services || '' }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests }}
+      SHARD_NAME: ${{ inputs.shard_name || 'remote' }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
+      ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      SUBSET_FILE_NAME: 'launchable-subset.json'
+
+    steps:
+      - name: Checkout pmm-qa repo
+        uses: actions/checkout@v4
+        with:
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: ./pmm-qa
+
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: Resolve PMM Server URLs
+        id: pmm_urls
+        run: |
+          # Strip any scheme the caller may have accidentally included. These
+          # vars (SERVER_IP, PMM_UI_URL, PMM_URL) are populated dynamically via
+          # $GITHUB_ENV and therefore have to be read as shell env vars
+          # downstream (e.g. "$SERVER_IP") - the GH Actions env context only
+          # resolves vars that exist statically at job parse time.
+          ADDR="${{ env.PMM_SERVER_ADDRESS }}"
+          ADDR_NO_SCHEME=${ADDR#http://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
+          echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/" >> "$GITHUB_ENV"
+          echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
+          echo "SERVER_IP=${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
+
+      - name: Sanity check remote PMM Server reachability
+        run: |
+          set -eux
+          for i in $(seq 1 30); do
+            code=$(curl -ksS -o /dev/null -w "%{http_code}" "https://${SERVER_IP}/v1/server/readyz" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "Remote PMM Server is ready"
+              exit 0
+            fi
+            echo "Attempt $i: PMM Server not ready (http=$code), sleeping 5s"
+            sleep 5
+          done
+          echo "Remote PMM Server did not become ready in time" >&2
+          exit 1
+
+      - name: Setup npm modules for e2e tests
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          envsubst < env.list > env.generated.list
+
+      - uses: actions/github-script@v7
+        if: ${{ always() }}
+        id: tags_processed
+        with:
+          script: |
+            return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
+          result-encoding: string
+
+      - name: Prepare launchable
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          pip3 install --user --upgrade launchable~=1.0
+          launchable verify || true
+
+          # Build a deterministic Launchable build id per shard. We don't have a
+          # docker image to inspect (server is remote), so use run id + shard.
+          echo "Launchable build: ${{ github.run_id }}-${{ env.SHARD_NAME }}"
+          echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
+
+          launchable record session \
+            --build "${{ github.run_id }}-${{ env.SHARD_NAME }}" \
+            --test-suite "nightly-${{ env.SHARD_NAME }}" \
+            --flavor pmm-server-address="${SERVER_IP}" \
+            --flavor pmm-client-version="${{ env.CLIENT_VERSION }}" \
+            --flavor shard="${{ env.SHARD_NAME }}" \
+            > launchable-session.txt || true
+          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}" || true
+          cat test_list.txt | launchable subset \
+            --session "$(cat launchable-session.txt)" \
+            --confidence "${{ env.LAUNCHABLE_CONFIDENCE }}" \
+            --use-case feature-branch \
+            codeceptjs > "${{ env.SUBSET_FILE_NAME }}" || true
+          cat "${{ env.SUBSET_FILE_NAME }}" || true
+
+      - name: Check if launchable subset is empty
+        id: check_launchable_subset
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with setup and tests."
+          else
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Downstream setup and tests will be skipped."
+          fi
+
+      - name: Skip notice
+        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
+        run: echo "No tests selected by Launchable subset. Skipping setup and test execution."
+
+      - name: Export path to qa-integration repo
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/qa-integration
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+
+      - name: Setup PMM-Client against remote PMM Server
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        env:
+          PMM_AGENT_SETUP_NODE_NAME: "gh-${{ github.run_id }}-${{ env.SHARD_NAME }}"
+        run: |
+          sudo PMM_AGENT_SETUP_NODE_NAME="${{ env.PMM_AGENT_SETUP_NODE_NAME }}" \
+            bash -x pmm3-client-setup.sh \
+              --pmm_server_ip "${SERVER_IP}" \
+              --client_version "${{ env.PMM_CLIENT_VERSION }}" \
+              --admin_password "${{ env.ADMIN_PASSWORD }}" \
+              --use_metrics_mode no
+
+      - name: Run setup for E2E tests (start client services on this runner)
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && env.WIZARD_ARGS != '' }}
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        env:
+          SHARD_NAMESPACE: "gh-${{ github.run_id }}-${{ env.SHARD_NAME }}"
+        run: |
+          mkdir -m 777 -p /tmp/backup_data
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install setuptools
+          python pmm-framework.py \
+            --pmm-server-ip "${SERVER_IP}" \
+            --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
+            --client-version "${{ env.PMM_CLIENT_VERSION }}" \
+            --verbose \
+            ${{ env.WIZARD_ARGS }}
+
+      - name: Execute e2e tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
+          sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
+
+          ./node_modules/.bin/codeceptjs run \
+            -c pr.codecept.js \
+            --grep "${{ env.TAGS_FOR_TESTS }}" \
+            --reporter mocha-multi \
+            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
+
+      - name: Download PMM Server logs
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        continue-on-error: true
+        run: |
+          curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
+          unzip logs.zip -d logs || true
+
+      - name: Record launchable test results
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        continue-on-error: true
+        run: |
+          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
+          launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
+          launchable gate --session "$(cat launchable-session.txt)" || true
+
+      - name: Record launchable logs on failure
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        continue-on-error: true
+        run: |
+          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        continue-on-error: true
+        with:
+          name: "artifacts_${{ env.SHARD_NAME }}_${{ steps.tags_processed.outputs.result }}"
+          path: |
+            pmm-qa/codeceptjs-e2e/tests/output/*.png
+            pmm-qa/codeceptjs-e2e/tests/output/trace/*.zip
+            pmm-qa/codeceptjs-e2e/logs
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        continue-on-error: true
+        with:
+          name: "junit_${{ env.SHARD_NAME }}_${{ steps.tags_processed.outputs.result }}"
+          path: pmm-qa/codeceptjs-e2e/tests/output/result.xml

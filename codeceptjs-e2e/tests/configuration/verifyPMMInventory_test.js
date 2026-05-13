@@ -68,7 +68,7 @@ Before(async ({ I }) => {
 
 // Skipping temporarily because sorting is not yet implemented in new Inventory page (PMM 2.37.0)
 Scenario.skip(
-  'PMM-T371 - Verify sorting in Inventory page(Services tab) @inventory @nightly',
+  'PMM-T371 - Verify sorting in Inventory page(Services tab) @inventory @nightly @nightly-generic',
   async ({ I, pmmInventoryPage }) => {
     I.amOnPage(pmmInventoryPage.url);
     await pmmInventoryPage.checkSort(4);
@@ -76,7 +76,7 @@ Scenario.skip(
 );
 
 Scenario.skip(
-  'PMM-T371 - Verify sorting in Inventory page(Nodes tab) @inventory @nightly',
+  'PMM-T371 - Verify sorting in Inventory page(Nodes tab) @inventory @nightly @nightly-generic',
   async ({ I, pmmInventoryPage }) => {
     I.amOnPage(pmmInventoryPage.url);
     I.waitForVisible(pmmInventoryPage.fields.nodesLink, 20);
@@ -235,7 +235,7 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade @pmm-migration',
+  'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @nightly-generic @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade @pmm-migration',
   async ({ I, pmmInventoryPage, inventoryAPI }) => {
     await I.amOnPage(pmmInventoryPage.url);
     await I.waitForVisible(pmmInventoryPage.fields.showRowDetails, 10);
@@ -278,7 +278,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1226 - Verify Agents has process_exec_path option on Inventory page @inventory @nightly @gssapi-nightly @exporters',
+  'PMM-T1226 - Verify Agents has process_exec_path option on Inventory page @inventory @nightly @nightly-generic @gssapi-nightly @exporters',
   async ({ I, pmmInventoryPage, inventoryAPI }) => {
     I.amOnPage(pmmInventoryPage.url);
     const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pmm-server-postgresql');
@@ -586,7 +586,7 @@ Data(aws_instances).Scenario(
   },
 ).retry(1);
 
-Scenario('PMM-T2024 - Verify services list does not refresh to first page @inventory-fb @nightly @gssapi-nightly', async ({ I, pmmInventoryPage }) => {
+Scenario('PMM-T2024 - Verify services list does not refresh to first page @inventory-fb @nightly @nightly-generic @gssapi-nightly', async ({ I, pmmInventoryPage }) => {
   I.usePlaywrightTo('Mock Services List', async ({ page }) => {
     const mockedServices = { services: [] };
 
@@ -635,7 +635,7 @@ Scenario('PMM-T2024 - Verify services list does not refresh to first page @inven
 const tabs = [pmmInventoryPage.servicesTab.url, pmmInventoryPage.nodesTab.url];
 
 Data(tabs).Scenario(
-  'PMM-T2146 - Verify that all services/nodes have correct monitoring status @nightly',
+  'PMM-T2146 - Verify that all services/nodes have correct monitoring status @nightly @nightly-generic',
   async ({ I, pmmInventoryPage, current }) => {
     I.amOnPage(current);
     await pmmInventoryPage.pagination.selectRowsPerPage('100');

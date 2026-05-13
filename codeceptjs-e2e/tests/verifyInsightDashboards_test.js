@@ -5,7 +5,7 @@ Before(async ({ I }) => {
 });
 
 Scenario(
-  'Open Advanced Exploration Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards @gssapi-nightly',
+  'Open Advanced Exploration Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-generic @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     I.amOnPage(dashboardPage.advancedDataExplorationDashboard.url);
     dashboardPage.waitForDashboardOpened();
@@ -15,7 +15,7 @@ Scenario(
 );
 
 Scenario(
-  'Open the Prometheus Exporters Status Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards @gssapi-nightly',
+  'Open the Prometheus Exporters Status Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-generic @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     I.amOnPage(I.buildUrlWithParams(dashboardPage.prometheusExporterStatusDashboard.cleanUrl, {
       node_name: 'pmm-server',
@@ -29,7 +29,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T300 - Open the Prometheus Exporters Overview Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards @gssapi-nightly',
+  'PMM-T300 - Open the Prometheus Exporters Overview Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-generic @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     I.amOnPage(I.buildUrlWithParams(dashboardPage.prometheusExporterOverviewDashboard.cleanUrl, {
       node_name: 'pmm-server',
