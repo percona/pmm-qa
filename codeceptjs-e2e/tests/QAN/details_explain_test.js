@@ -58,7 +58,7 @@ async function verifySupportedDBTabs({
 }
 
 Scenario(
-  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PS @qan @nightly-percona-server',
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PS @qan',
   async ({ I, queryAnalyticsPage, inventoryAPI }) => {
     await verifySupportedDBTabs({
       I,
@@ -86,7 +86,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PSMDB @qan @gssapi-nightly @nightly-psmdb',
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PSMDB @qan @gssapi-nightly',
   async ({ I, queryAnalyticsPage, inventoryAPI }) => {
     await verifySupportedDBTabs({
       I,
