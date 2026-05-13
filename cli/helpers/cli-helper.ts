@@ -3,8 +3,6 @@ import ExecReturn from '@support/types/exec-return.class';
 import shell from 'shelljs';
 import { performance } from "node:perf_hooks";
 
-const formatDuration = (ms: number) => (ms < 1_000 ? `${ms.toFixed(0)}ms` : `${(ms / 1_000).toFixed(2)}s`);
-
 /**
  * Shell(sh) echo().to() wrapper to use in tests with handy logs creation
  *

@@ -175,14 +175,13 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
   });
 
   test("PMM-T9999 User can use connection timeout while using pmm-admin add mysql @connectionTimeout", async ({ }) => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD}-wrong ${connectionTimeoutServiceName} ${ipPort}`);
-    // await output.exitCodeEquals(0);
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
+    await output.exitCodeEquals(0);
 
     const outputLog = await cli.exec(`docker exec ${containerName} cat /var/log/pmm-agent.log`);
     const outputAgents = await cli.exec(`docker exec ${containerName} pmm-admin list`);
 
     console.log(outputLog);
-    console.log(`Command took: ${output.durationMs} Ms`);
   });
 
   test("PMM-T9998 User can change connection timeout while using pmm-admin inventory change agent mysqld-exporter @connectionTimeout", async ({ }) => {
@@ -201,6 +200,11 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId.stdout} --connection-timeout=0s`);
     await chaneAgent.exitCodeEquals(0);
+  });
+
+  test("PMM-T9996 User can use connection timeout while using pmm-admin add mysql @connectionTimeout", async ({ }) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} 195.15.25.15:3306`);
+    console.log(`PMM-T9996 Command took: ${output.durationMs} Ms`);
   });
 });
 
