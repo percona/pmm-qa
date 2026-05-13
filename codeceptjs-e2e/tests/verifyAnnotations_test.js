@@ -46,14 +46,14 @@ Data(annotation).Scenario(
     if (annotationName === 'mysql-node-name') {
       I.amOnPage(I.buildUrlWithParams(current.dashboard, {
         node_name: nodeName,
-        from: 'now-5m',
+        from: 'now-1h',
       }));
       dashboardPage.waitForDashboardOpened();
       dashboardPage.verifyAnnotationsLoaded(annotationName, 2);
     } else {
       I.amOnPage(I.buildUrlWithParams(current.dashboard, {
         service_name: serviceName,
-        from: 'now-5m',
+        from: 'now-1h',
       }));
       dashboardPage.waitForDashboardOpened();
       dashboardPage.verifyAnnotationsLoaded(annotationName, 1);

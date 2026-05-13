@@ -28,7 +28,11 @@ Scenario(
 Scenario(
   'Open the Nodes Compare Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-generic @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
-    I.amOnPage(dashboardPage.nodesCompareDashboard.url);
+    const url = I.buildUrlWithParams(dashboardPage.nodesCompareDashboard.url, {
+      from: 'now-1h',
+    });
+
+    I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     await dashboardPage.verifyMetricsExistencePartialMatch(dashboardPage.nodesCompareDashboard.metrics);

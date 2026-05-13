@@ -58,7 +58,7 @@ async function verifySupportedDBTabs({
 }
 
 Scenario(
-  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PS @qan @nightly-percona-server @nightly-qan',
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PS @qan @nightly-percona-server',
   async ({ I, queryAnalyticsPage, inventoryAPI }) => {
     await verifySupportedDBTabs({
       I,
@@ -72,7 +72,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PDPGSQL @qan @nightly-pdpgsql @nightly-qan',
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PDPGSQL @qan @nightly-pdpgsql',
   async ({ I, queryAnalyticsPage, inventoryAPI }) => {
     await verifySupportedDBTabs({
       I,
@@ -86,7 +86,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PSMDB @qan @nightly-psmdb @gssapi-nightly @nightly-qan',
+  'PMM-T13 - Check Example, Explain, Plan and Table tabs for PSMDB @qan @gssapi-nightly @nightly-psmdb',
   async ({ I, queryAnalyticsPage, inventoryAPI }) => {
     await verifySupportedDBTabs({
       I,
@@ -100,7 +100,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1790 - Verify that there is any no error on Explains after switching between queries from different DB servers @qan @nightly-psmdb @nightly-qan',
+  'PMM-T1790 - Verify that there is any no error on Explains after switching between queries from different DB servers @qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.filters.selectContainFilter('ps-dev');
     queryAnalyticsPage.data.searchByValue('SELECT');

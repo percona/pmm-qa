@@ -2,7 +2,7 @@ Feature('QAN pagination');
 
 Before(async ({ I, queryAnalyticsPage }) => {
   await I.Authorize();
-  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m' }));
+  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-60m' }));
   queryAnalyticsPage.waitForLoaded();
 });
 

@@ -16,7 +16,7 @@ Before(async ({ I, queryAnalyticsPage }) => {
 });
 
 Scenario(
-  'Verify Details section tabs @qan @nightly-psmdb',
+  'Verify Details section tabs @qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -30,7 +30,7 @@ Scenario(
 ).retry(1);
 
 Scenario(
-  'PMM-T223 - Verify time metrics are AVG per query (not per second) @qan @nightly-psmdb',
+  'PMM-T223 - Verify time metrics are AVG per query (not per second) @qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -45,7 +45,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T245 - Verify that user is able to close the Details section @qan @nightly-pdpgsql',
+  'PMM-T245 - Verify that user is able to close the Details section @qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -60,7 +60,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T144 - Verify that Details tab is the only one available when total row is selected @qan @nightly-pdpgsql',
+  'PMM-T144 - Verify that Details tab is the only one available when total row is selected @qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -115,8 +115,9 @@ Scenario(
 //   },
 // );
 
+// TODO: Define which jobs are needed to run this test
 Scenario(
-  'PMM-T2014 - Verify explain tab in query analytics for query with explain in the name @fb-pmm-ps-integration @nightly-percona-server',
+  'PMM-T2014 - Verify explain tab in query analytics for query with explain in the name @fb-pmm-ps-integration',
   async ({
     I, queryAnalyticsPage, credentials,
   }) => {

@@ -7,7 +7,7 @@ Before(async ({ I, queryAnalyticsPage }) => {
   I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m' }));
 });
 
-Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan @nightly-psmdb', async ({ I, queryAnalyticsPage }) => {
+Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, queryAnalyticsPage }) => {
   queryAnalyticsPage.waitForLoaded();
   I.waitForVisible(queryAnalyticsPage.buttons.addColumnButton, 30);
   await queryAnalyticsPage.data.verifyRowCount(26);
@@ -41,7 +41,7 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan @nightly-psmdb', 
 });
 
 Scenario(
-  'PMM-T186 - Verify values in overview and in details match @qan @nightly-psmdb @nightly-qan',
+  'PMM-T186 - Verify values in overview and in details match @qan',
   async ({ I, adminPage, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     await adminPage.applyTimeRange('Last 1 hour');
@@ -89,7 +89,7 @@ Scenario(
   },
 );
 
-Scenario('PMM-T188 - Verify dashboard refresh @qan @nightly-pdpgsql @nightly-qan', async ({ dashboardPage, adminPage, queryAnalyticsPage }) => {
+Scenario('PMM-T188 - Verify dashboard refresh @qan', async ({ dashboardPage, adminPage, queryAnalyticsPage }) => {
   queryAnalyticsPage.waitForLoaded();
   await queryAnalyticsPage.data.changeMainMetric('Database');
   queryAnalyticsPage.changeSorting(2);
