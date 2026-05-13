@@ -21,9 +21,10 @@ const config: PlaywrightTestConfig = {
       testDir: './tests/standalone',
       testMatch: /captureDashboardScreenshots\.test\.ts/,
       use: {
-        actionTimeout: Timeouts.TEN_SECONDS,
+        actionTimeout: Timeouts.THIRTY_SECONDS,
         launchOptions: { args: ['--window-size=1920,1080'] },
-        navigationTimeout: Timeouts.THIRTY_SECONDS,
+        navigationTimeout: Timeouts.ONE_MINUTE,
+        trace: 'off',
       },
     },
   ],
