@@ -240,11 +240,11 @@ jobs:
             --verbose \
             ${{ env.WIZARD_ARGS }}
 
-      - name: Wait for metrics to be collected
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          sleep 300
+      # - name: Wait for metrics to be collected
+      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+      #   working-directory: pmm-qa/codeceptjs-e2e
+      #   run: |
+      #     sleep 300
 
       # TODO: add || true to the end of the command
       - name: Execute e2e tests
