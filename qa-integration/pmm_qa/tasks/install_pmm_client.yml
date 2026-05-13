@@ -161,7 +161,7 @@
         --server-insecure-tls \
         --metrics-mode={{ metrics_mode }} \
         --server-username=admin \
-        --server-password={{ admin_password }} \
+        --server-password={{ admin_password }} {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
   when:
     - metrics_mode | length > 0
@@ -175,7 +175,7 @@
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
         --server-insecure-tls \
         --server-username=admin \
-        --server-password={{ admin_password }} \
+        --server-password={{ admin_password }} {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
   when:
     - metrics_mode | length == 0
@@ -192,7 +192,7 @@
         --server-username=admin \
         --server-password={{ admin_password }} \
         --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" \
-        --config-file-key-password="testpass" \
+        --config-file-key-password="testpass" {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
   when:
     - metrics_mode | length == 0
@@ -210,7 +210,7 @@
         --server-username=admin \
         --server-password={{ admin_password }} \
         --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" \
-        --config-file-key-password="testpass" \
+        --config-file-key-password="testpass" {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
   when:
     - metrics_mode | length > 0
@@ -223,13 +223,13 @@
 - name: Start pmm client without encrypted client config
   shell: |
     docker exec --user root {{ container_name }} \
-      sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} > /var/log/pmm-agent.log 2>&1 &'
+      sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml > /var/log/pmm-agent.log 2>&1 &'
   when: not (encrypted_client_config | default(false) | bool)
 
 - name: Start pmm client with encrypted client config
   shell: |
     docker exec --user root {{ container_name }} \
-      sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" --config-file-key-password="testpass" {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} > /var/log/pmm-agent.log 2>&1 &'
+      sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" --config-file-key-password="testpass" > /var/log/pmm-agent.log 2>&1 &'
   when: encrypted_client_config | default(false) | bool
 
 - name: Wait 5 seconds for start to complete
