@@ -68,6 +68,10 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         await grafanaHelper.authorize(newUser, 'anotherpass');
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth
         await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+
+        const newLogs = cliHelper.execSilent('docker logs pmm-server-srv');
+
+        console.log(newLogs.stdout);
         await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
         await dashboard.home.elements.headerLocator.waitFor({
           state: 'visible',
