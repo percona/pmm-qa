@@ -1,23 +1,25 @@
 #!/bin/bash
-set -ex
-pmm_user=${PMM_USER:-pmm}
-pmm_pass=${PMM_PASS:-pmmpass}
+set -e
+
+pmm_mongo_user=${PMM_MONGO_USER:-${PMM_USER:-pmm}}
+pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-${PMM_PASS:-pmmpass}}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
+
+docker network create qa-integration || true
+docker network create pmm-qa || true
+docker network create pmm-ui-tests_pmm-network || true
+docker network create pmm2-upgrade-tests_pmm-network || true
+docker network create pmm2-ui-tests_pmm-network || true
 
 docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded.yaml build
 docker compose -f docker-compose-sharded.yaml up -d
 
-echo "waiting 30 seconds for pmm-server to start"
-sleep 30
-echo "configuring pmm-server"
-docker compose -f docker-compose-sharded.yaml exec -T pmm-server change-admin-password password
-echo "restarting pmm-server"
-docker compose -f docker-compose-sharded.yaml restart pmm-server
-echo "waiting 30 seconds for pmm-server to start"
-sleep 30
-
+echo
+echo "waiting 60 seconds for replica set members to start"
+sleep 60
+echo
 nodes="rs101 rs201"
 for node in $nodes
 do
@@ -101,8 +103,8 @@ EOF
     echo "creating pmm user for replicaset ${rs}"
     docker compose -f docker-compose-sharded.yaml exec -T $node mongo "mongodb://root:root@localhost/?replicaSet=${rs}" --quiet << EOF
     db.getSiblingDB("admin").createUser({
-        user: "${pmm_user}",
-        pwd: "${pmm_pass}",
+        user: "${pmm_mongo_user}",
+        pwd: "${pmm_mongo_user_pass}",
         roles: [
             { role: "explainRole", db: "admin" },
             { role: "clusterMonitor", db: "admin" },
@@ -202,8 +204,8 @@ echo
 echo "creating pmm user"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mongo "mongodb://root:root@localhost" --quiet << EOF
 db.getSiblingDB("admin").createUser({
-    user: "${pmm_user}",
-    pwd: "${pmm_pass}",
+    user: "${pmm_mongo_user}",
+    pwd: "${pmm_mongo_user_pass}",
     roles: [
         { role: "explainRole", db: "admin" },
         { role: "clusterMonitor", db: "admin" },
@@ -234,13 +236,13 @@ random_number=$RANDOM
 nodes="rs101 rs102 rs103 rs201 rs202 rs203 rscfg01 rscfg02 rscfg03"
 for node in $nodes
 do
-    echo "congiguring pmm agent on $node"
+    echo "configuring pmm agent on $node"
     rs=$(echo $node | awk -F "0" '{print $1}')
-    docker compose -f docker-compose-sharded.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}_${random_number} $node pmm-agent setup
-    docker compose -f docker-compose-sharded.yaml exec -T $node pmm-admin add mongodb --agent-password=mypass --cluster=sharded --environment=mongo-sharded-dev --username=${pmm_user} --password=${pmm_pass} ${node}_${random_number} 127.0.0.1:27017
+    docker compose -f docker-compose-sharded.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}._${random_number} $node pmm-agent setup
+    docker compose -f docker-compose-sharded.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --replication-set=${rs} --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} --host=${node} --port=27017 ${node}_${random_number}
 done
 echo "configuring pmm-agent on primary rscfg01 for mongos instance"
-docker compose -f docker-compose-sharded.yaml exec -T rscfg01 pmm-admin add mongodb --agent-password=mypass --cluster=sharded --environment=mongo-sharded-dev --username=${pmm_user} --password=${pmm_pass} mongos_${random_number} mongos:27017
+docker compose -f docker-compose-sharded.yaml exec -T rscfg01 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} --host=mongos --port=27017 mongos_${random_number}
 
 echo "adding some data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017

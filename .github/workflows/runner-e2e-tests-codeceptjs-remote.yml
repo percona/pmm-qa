@@ -25,6 +25,11 @@ on:
         required: false
         default: 'latest-tarball'
         type: string
+      pmm_server_image:
+        description: "PMM Server docker container version (image-name:version-tag)"
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
       setup_services:
         description: "pmm-framework arguments, ex.: --database=ps --database=psmdb,SETUP_TYPE=pss"
         required: false
@@ -34,11 +39,11 @@ on:
         description: "Codeceptjs --grep pattern, ex.: @nightly-mongo-replica"
         required: true
         type: string
-      shard_name:
-        description: "Logical shard name used for namespacing services and Launchable test-suite"
+      workers:
+        description: "Number of workers to use for e2e tests"
         required: false
-        default: 'remote'
-        type: string
+        default: 1
+        type: number
       launchable_confidence:
         description: "Launchable subset confidence percentage (use '100%' to keep full subset)"
         required: false
@@ -62,6 +67,10 @@ on:
         required: false
         default: 'latest-tarball'
         type: string
+      pmm_server_image:
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
       setup_services:
         required: false
         default: ''
@@ -69,10 +78,10 @@ on:
       tags_for_tests:
         required: true
         type: string
-      shard_name:
+      workers:
         required: false
-        default: 'remote'
-        type: string
+        default: 1
+        type: number
       launchable_confidence:
         required: false
         default: '100%'
@@ -94,9 +103,10 @@ jobs:
       PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       WIZARD_ARGS: ${{ inputs.setup_services || '' }}
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests }}
-      SHARD_NAME: ${{ inputs.shard_name || 'remote' }}
+      WORKERS: ${{ inputs.workers || 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -168,26 +178,16 @@ jobs:
         run: |
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
-
-          # Build a deterministic Launchable build id per shard. We don't have a
-          # docker image to inspect (server is remote), so use run id + shard.
-          echo "Launchable build: ${{ github.run_id }}-${{ env.SHARD_NAME }}"
+          
+          docker pull ${{ env.DOCKER_VERSION }} || true
+          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
-
-          launchable record session \
-            --build "${{ github.run_id }}-${{ env.SHARD_NAME }}" \
-            --test-suite "nightly-${{ env.SHARD_NAME }}" \
-            --flavor pmm-server-address="${SERVER_IP}" \
-            --flavor pmm-client-version="${{ env.CLIENT_VERSION }}" \
-            --flavor shard="${{ env.SHARD_NAME }}" \
-            > launchable-session.txt || true
-          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}" || true
-          cat test_list.txt | launchable subset \
-            --session "$(cat launchable-session.txt)" \
-            --confidence "${{ env.LAUNCHABLE_CONFIDENCE }}" \
-            --use-case feature-branch \
-            codeceptjs > "${{ env.SUBSET_FILE_NAME }}" || true
-          cat "${{ env.SUBSET_FILE_NAME }}" || true
+          
+          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
+          echo "$(cat launchable-subset.json)" || true
 
       - name: Check if launchable subset is empty
         id: check_launchable_subset
@@ -214,7 +214,7 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/qa-integration/pmm_qa
         env:
-          PMM_AGENT_SETUP_NODE_NAME: "gh-${{ github.run_id }}-${{ env.SHARD_NAME }}"
+          PMM_AGENT_SETUP_NODE_NAME: "gh-${{ github.run_id }}-${{ steps.tags_processed.outputs.result }}"
         run: |
           sudo PMM_AGENT_SETUP_NODE_NAME="${{ env.PMM_AGENT_SETUP_NODE_NAME }}" \
             bash -x pmm3-client-setup.sh \
@@ -226,8 +226,6 @@ jobs:
       - name: Run setup for E2E tests (start client services on this runner)
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && env.WIZARD_ARGS != '' }}
         working-directory: pmm-qa/qa-integration/pmm_qa
-        env:
-          SHARD_NAMESPACE: "gh-${{ github.run_id }}-${{ env.SHARD_NAME }}"
         run: |
           mkdir -m 777 -p /tmp/backup_data
           python3 -m venv virtenv
@@ -242,6 +240,13 @@ jobs:
             --verbose \
             ${{ env.WIZARD_ARGS }}
 
+      - name: Wait for metrics to be collected
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          sleep 300
+
+      # TODO: add || true to the end of the command
       - name: Execute e2e tests
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/codeceptjs-e2e
@@ -249,11 +254,11 @@ jobs:
           sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
           sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
 
-          ./node_modules/.bin/codeceptjs run \
+          ./node_modules/.bin/codeceptjs run-workers ${{ env.WORKERS }} \
             -c pr.codecept.js \
             --grep "${{ env.TAGS_FOR_TESTS }}" \
             --reporter mocha-multi \
-            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
+            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
 
       - name: Download PMM Server logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
@@ -263,27 +268,26 @@ jobs:
           curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
           unzip logs.zip -d logs || true
 
-      - name: Record launchable test results
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        continue-on-error: true
-        run: |
-          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-          launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
-          launchable gate --session "$(cat launchable-session.txt)" || true
+      # - name: Record launchable test results
+      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+      #   working-directory: pmm-qa/codeceptjs-e2e
+      #   run: |
+      #     sed -i "s|$(pwd)/||g" tests/output/result.xml || true
+      #     launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
+      #     launchable gate --session "$(cat launchable-session.txt)"
 
-      - name: Record launchable logs on failure
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        continue-on-error: true
-        run: |
-          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
+      # - name: Record launchable logs on failure
+      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
+      #   working-directory: pmm-qa/codeceptjs-e2e
+      #   continue-on-error: true
+      #   run: |
+      #     launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}
         continue-on-error: true
         with:
-          name: "artifacts_${{ env.SHARD_NAME }}_${{ steps.tags_processed.outputs.result }}"
+          name: "artifacts_${{ steps.tags_processed.outputs.result }}"
           path: |
             pmm-qa/codeceptjs-e2e/tests/output/*.png
             pmm-qa/codeceptjs-e2e/tests/output/trace/*.zip
@@ -293,5 +297,5 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         continue-on-error: true
         with:
-          name: "junit_${{ env.SHARD_NAME }}_${{ steps.tags_processed.outputs.result }}"
+          name: "junit_${{ steps.tags_processed.outputs.result }}"
           path: pmm-qa/codeceptjs-e2e/tests/output/result.xml

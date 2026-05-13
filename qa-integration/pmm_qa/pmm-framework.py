@@ -397,6 +397,7 @@ def setup_mlaunch_modb(db_type, db_version=None, db_config=None, args=None):
 
 
 def execute_shell_scripts(shell_scripts, project_relative_scripts_dir, env_vars, args):
+
     # Get script directory
     current_directory = os.getcwd()
     shell_scripts_path = os.path.abspath(os.path.join(current_directory, os.pardir, project_relative_scripts_dir))
@@ -433,52 +434,6 @@ def execute_shell_scripts(shell_scripts, project_relative_scripts_dir, env_vars,
         finally:
             # Return to the original working directory
             os.chdir(original_dir)
-
-
-# Temporary method for Sharding Setup.
-def mongo_sharding_setup(script_filename, args):
-    # Get script directory
-    script_path = os.path.abspath(sys.argv[0])
-    script_dir = os.path.dirname(script_path)
-    scripts_path = script_dir + "/../pmm_psmdb-pbm_setup/"
-
-    # Temporary shell script filename
-    shell_file_path = scripts_path + script_filename
-
-    # Temporary docker compose filename
-    compose_filename = f'docker-compose-sharded-no-server.yaml'
-    compose_file_path = scripts_path + compose_filename
-
-    # Create pmm-qa n/w used in workaround
-    result = subprocess.run(['docker', 'network', 'inspect', 'pmm-qa'], capture_output=True)
-    if not result:
-        subprocess.run(['docker', 'network', 'create', 'pmm-qa'])
-
-    no_server = True
-    # Add workaround (copy files) till sharding only support is ready.
-    try:
-        if no_server:
-            # Search & Replace content in the temporary compose files
-            subprocess.run(
-                ['cp', f'{scripts_path}docker-compose-sharded.yaml', f'{compose_file_path}'])
-            admin_password = os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin'
-            subprocess.run(['sed', '-i', f's/password/{admin_password}/g', f'{compose_file_path}'])
-            subprocess.run(['sed', '-i', '/- test-network/a\\      - pmm-qa', f'{compose_file_path}'])
-            subprocess.run(['sed', '-i', '/driver: bridge/a\\  pmm-qa:\\n    name: pmm-qa\\n    external: true',
-                            f'{compose_file_path}'])
-            subprocess.run(
-                ['sed', '-i', '/^  pmm-server:/,/^$/{/^  test:/!d}', f'{compose_file_path}'])
-            with open(f'{compose_file_path}', 'a') as f:
-                subprocess.run(['echo', '   backups: null'], stdout=f, text=True, check=True)
-
-            # Search replace content in the temporary shell files
-            subprocess.run(['cp', f'{scripts_path}start-sharded.sh', f'{shell_file_path}'])
-            subprocess.run(['sed', '-i', '/echo "configuring pmm-server/,/sleep 30/d',
-                            f'{shell_file_path}'])
-            subprocess.run(['sed', '-i', f's/docker-compose-sharded.yaml/{compose_filename}/g',
-                            f'{shell_file_path}'])
-    except subprocess.CalledProcessError as e:
-        print(f"Error occurred: {e}")
 
 
 def get_latest_psmdb_version(psmdb_version):
@@ -555,8 +510,7 @@ def setup_psmdb(db_type, db_version=None, db_config=None, args=None):
     if setup_type in ("pss", "psa"):
         shell_scripts = ['start-rs-only.sh']
     elif setup_type in ("shards", "sharding"):
-        shell_scripts = ['start-sharded-no-server.sh']
-        mongo_sharding_setup(shell_scripts[0], args)
+        shell_scripts = ['start-sharded.sh']
 
     # Execute shell scripts
     if not shell_scripts == []:

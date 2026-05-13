@@ -21,7 +21,6 @@ services:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-rs1:/etc/mongod
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
-      - /tmp/mongodb:/tmp
     privileged: true
     cgroup: host
     environment:
@@ -35,7 +34,11 @@ services:
     ports:
       - "27027:27017"
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   rs102:
     depends_on:
@@ -56,7 +59,11 @@ services:
     container_name: rs102
     hostname: rs102
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   rs103:
     depends_on:
@@ -77,7 +84,11 @@ services:
     container_name: rs103
     hostname: rs103
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   rs201:
     depends_on:
@@ -98,7 +109,11 @@ services:
     container_name: rs201
     hostname: rs201
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   rs202:
     depends_on:
@@ -119,7 +134,11 @@ services:
     container_name: rs202
     hostname: rs202
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   rs203:
     depends_on:
@@ -140,7 +159,11 @@ services:
     container_name: rs203
     hostname: rs203
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   rscfg01:
     depends_on:
@@ -161,7 +184,11 @@ services:
     container_name: rscfg01
     hostname: rscfg01
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   rscfg02:
     depends_on:
@@ -182,7 +209,11 @@ services:
     container_name: rscfg02
     hostname: rscfg02
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   rscfg03:
     depends_on:
@@ -203,7 +234,11 @@ services:
     container_name: rscfg03
     hostname: rscfg03
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
   mongos:
     image: replica_member/local
@@ -218,7 +253,11 @@ services:
     cgroup: host
     command: "mongos --keyFile=/etc/keyfile --configdb rscfg/rscfg01:27017,rscfg02:27017,rscfg03:27017 --port 27017 --bind_ip 0.0.0.0"
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
     depends_on:
       - build_member
       - rscfg01
@@ -231,7 +270,11 @@ services:
     ports:
       - "9001:9000"
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
     volumes:
       - backups:/backups
     environment:
@@ -243,25 +286,15 @@ services:
     container_name: createbucket
     image: minio/mc
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
     depends_on:
       - minio
     entrypoint: >
       /bin/sh -c " sleep 5; /usr/bin/mc alias set myminio http://minio:9000 minio1234 minio1234; /usr/bin/mc mb myminio/bcp; exit 0; "
-
-  pmm-server:
-    image: ${PMM_IMAGE:-perconalab/pmm-server:3-dev-latest}
-    container_name: pmm-server
-    environment:
-      - "PMM_DEBUG=1"
-      - "ENABLE_BACKUP_MANAGEMENT=1"
-    ports:
-      - "443:8443"
-      - "8081:8080"
-    networks:
-      - test-network
-    volumes:
-      - pmm-server:/srv
 
   test:
     build:
@@ -275,12 +308,27 @@ services:
     container_name: test
     hostname: test
     networks:
-      - test-network
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
 networks:
-  test-network:
-    driver: bridge
+  qa-integration:
+    external: true
+  pmm-ui-tests1:
+    external: true
+    name: pmm-ui-tests_pmm-network
+  pmm-ui-tests2:
+    external: true
+    name: pmm2-upgrade-tests_pmm-network
+  pmm-ui-tests3:
+    external: true
+    name: pmm2-ui-tests_pmm-network
+  pmm-qa:
+    name: pmm-qa
+    external: true
 
 volumes:
-  pmm-server: null
   backups: null

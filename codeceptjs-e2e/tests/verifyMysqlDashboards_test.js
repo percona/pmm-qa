@@ -6,33 +6,18 @@ const { locateOptions } = require('./helper/locatorHelper');
 const {
   inventoryAPI,
 } = inject();
-let services;
-
-const urlsAndMetrics = new DataTable(['metricName', 'startUrl']);
-const serviceList = [{ serviceType: 'ps_service', name: '' }, { serviceType: 'pxc_service', name: '' }];
-
-urlsAndMetrics.add(['Client Connections (All Host Groups)', `${dashboardPage.proxysqlInstanceSummaryDashboard.url}?from=now-5m&to=now`]);
-urlsAndMetrics.add(['PMM Upgrade', homePage.url]);
 
 Feature('Test Dashboards inside the MySQL Folder').retry(1);
-
-BeforeSuite(async () => {
-  const ps_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps');
-  const pxc_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'pxc');
-
-  serviceList[0].name = ps_service_response.service_name;
-  serviceList[1].name = pxc_service_response.service_name;
-});
 
 Before(async ({ I }) => {
   await I.Authorize();
 });
 
-Data(serviceList).Scenario(
-  'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
-  async ({ I, dashboardPage, current }) => {
-    await I.say(current.serviceName);
-    const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name: current.serviceName, from: 'now-15m' });
+Scenario(
+  'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify PS Metrics are present and graphs are displayed @nightly @dashboard-percona-server @dashboards',
+  async ({ I, dashboardPage }) => {
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_replication');
+    const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name, from: 'now-15m' });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
@@ -43,11 +28,41 @@ Data(serviceList).Scenario(
   },
 );
 
-Data(serviceList).Scenario(
-  'PMM-T319 - Open the MySQL Instances Overview dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
-  async ({ I, dashboardPage, current }) => {
-    await I.say(current.serviceName);
-    const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name: current.serviceName, from: 'now-15m' });
+Scenario(
+  'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify MySQL Metrics are present and graphs are displayed @nightly @dashboard-mysql @dashboards',
+  async ({ I, dashboardPage }) => {
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'mysql');
+    const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name, from: 'now-15m' });
+
+    I.amOnPage(url);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.expandEachDashboardRow();
+    await dashboardPage.verifyMetricsExistence(dashboardPage.mysqlInstanceSummaryDashboard.metrics);
+    // FIXME: 5 N/As once https://jira.percona.com/browse/PMM-10308 is fixed
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(6);
+  },
+);
+
+Scenario(
+  'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify PXC Metrics are present and graphs are displayed @nightly @dashboard-pxc @dashboards',
+  async ({ I, dashboardPage }) => {
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'pxc');
+    const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name, from: 'now-15m' });
+
+    I.amOnPage(url);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.expandEachDashboardRow();
+    await dashboardPage.verifyMetricsExistence(dashboardPage.mysqlInstanceSummaryDashboard.metrics);
+    // FIXME: 5 N/As once https://jira.percona.com/browse/PMM-10308 is fixed
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(6);
+  },
+);
+
+Scenario(
+  'PMM-T319 - Open the MySQL Instances Overview dashboard and verify PS Metrics are present and graphs are displayed @nightly @dashboard-percona-server @dashboards',
+  async ({ I, dashboardPage }) => {
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_replication');
+    const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name, from: 'now-15m' });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
@@ -58,7 +73,35 @@ Data(serviceList).Scenario(
 );
 
 Scenario(
-  'PMM-T318 - Open the MySQL Instances Compare dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
+  'PMM-T319 - Open the MySQL Instances Overview dashboard and verify MySQL Metrics are present and graphs are displayed @nightly @dashboard-mysql @dashboards',
+  async ({ I, dashboardPage }) => {
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'mysql');
+    const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name, from: 'now-15m' });
+
+    I.amOnPage(url);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.expandEachDashboardRow();
+    await dashboardPage.verifyMetricsExistence(dashboardPage.mySQLInstanceOverview.metrics);
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+  },
+);
+
+Scenario(
+  'PMM-T319 - Open the MySQL Instances Overview dashboard and verify PXC Metrics are present and graphs are displayed @nightly @dashboard-pxc @dashboards',
+  async ({ I, dashboardPage }) => {
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'pxc');
+    const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name, from: 'now-15m' });
+
+    I.amOnPage(url);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.expandEachDashboardRow();
+    await dashboardPage.verifyMetricsExistence(dashboardPage.mySQLInstanceOverview.metrics);
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+  },
+);
+
+Scenario(
+  'PMM-T318 - Open the MySQL Instances Compare dashboard and verify Metrics are present and graphs are displayed @nightly @dashboard-percona-server @dashboard-mysql @dashboard-pxc @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mysqlInstancesCompareDashboard.clearUrl, { from: 'now-5m' });
 
@@ -70,14 +113,14 @@ Scenario(
   },
 );
 
-Data(urlsAndMetrics).Scenario(
-  'PMM-T1070 + PMM-T449 - Verify link to instructions for enabling rendering images @nightly @nightly-pxc-ps-replication @dashboards',
+Scenario(
+  'PMM-T1070 + PMM-T449 - Verify link to instructions for enabling rendering images from ProxySQL @nightly @dashboard-pxc @dashboards',
   async ({
-    I, dashboardPage, links, current,
+    I, dashboardPage, links,
   }) => {
-    I.amOnPage(current.startUrl);
+    I.amOnPage(`${dashboardPage.proxysqlInstanceSummaryDashboard.url}?from=now-5m&to=now`);
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.panelMenu(current.metricName)
+    await dashboardPage.panelMenu('Client Connections (All Host Groups)')
       .showMenu()
       .share()
       .shareLink();
@@ -101,7 +144,37 @@ Data(urlsAndMetrics).Scenario(
 );
 
 Scenario(
-  'PMM-T68 + PMM-T2038 - Open the ProxySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
+  'PMM-T1070 + PMM-T449 - Verify link to instructions for enabling rendering images from Home dashboard @nightly @nightly-generic @dashboards',
+  async ({
+    I, dashboardPage, links,
+  }) => {
+    I.amOnPage(homePage.url);
+    dashboardPage.waitForDashboardOpened();
+    await dashboardPage.panelMenu('PMM Upgrade')
+      .showMenu()
+      .share()
+      .shareLink();
+    I.waitForVisible(dashboardPage.sharePanel.elements.imageRendererPluginLink, 20);
+    I.seeAttributesOnElements(
+      dashboardPage.sharePanel.elements.imageRendererPluginLink,
+      {
+        href: links.imageRendererPlugin,
+        target: '_blank',
+      },
+    );
+    I.seeTextEquals('Image Renderer plugin', dashboardPage.sharePanel.elements.imageRendererPluginLink);
+    let textPlugin = await I.grabTextFrom(dashboardPage.sharePanel.elements.imageRendererPluginInfoText);
+
+    textPlugin = textPlugin.replace(/\u00a0/g, ' ');
+    assert.ok(
+      textPlugin.includes(dashboardPage.sharePanel.messages.imageRendererPlugin),
+      `Expected the share panel text: ${textPlugin} to include ${dashboardPage.sharePanel.messages.imageRendererPlugin}`,
+    );
+  },
+);
+
+Scenario(
+  'PMM-T68 + PMM-T2038 - Open the ProxySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboard-pxc @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.proxysqlInstanceSummaryDashboard.url, { from: 'now-5m' });
 
@@ -124,7 +197,7 @@ Scenario(
 
 // TODO: https://perconadev.atlassian.net/browse/PMM-12956
 Scenario.skip(
-  'PMM-T67 - Open the PXCGalera Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
+  'PMM-T67 - Open the PXCGalera Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboard-pxc @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.pxcGaleraClusterSummaryDashboard.url, { from: 'now-5m' });
 
@@ -138,7 +211,7 @@ Scenario.skip(
 
 // TODO: https://perconadev.atlassian.net/browse/PMM-12956
 Scenario.skip(
-  'PMM-T1743 - verify PXCGalera Cluster Summary Dashboard (Experimental) metrics @nightly @nightly-pxc-ps-replication @dashboards',
+  'PMM-T1743 - verify PXCGalera Cluster Summary Dashboard (Experimental) metrics @nightly @dashboard-pxc @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.pxcGaleraClusterSummaryExperimentalDashboard.url, { from: 'now-5m' });
 
@@ -151,9 +224,9 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T324 - Verify MySQL - MySQL User Details dashboard @nightly @nightly-pxc-ps-replication @dashboards',
+  'PMM-T324 - Verify MySQL - MySQL User Details dashboard @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage }) => {
-    const serviceName = serviceList.find((service) => service.name.includes('ps_pmm')).name;
+    const { service_name: serviceName } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_replication');
     const url = I.buildUrlWithParams(dashboardPage.mysqlUserDetailsDashboard.clearUrl, { service_name: serviceName, from: 'now-5m' });
 
     I.amOnPage(url);
@@ -166,9 +239,9 @@ Scenario(
 
 // Need to Skip due to wait issue on locator
 xScenario(
-  'PMM-T396 - Verify that parameters are passed from MySQL User Details dashboard to QAN @nightly @nightly-pxc-ps-replication @dashboards',
+  'PMM-T396 - Verify that parameters are passed from MySQL User Details dashboard to QAN @nightly @dashboard-percona-server @dashboards',
   async ({ I, dashboardPage, queryAnalyticsPage }) => {
-    const serviceName = serviceList.find((service) => service.includes('ps-'));
+    const { service_name: serviceName } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm_8');
     const filters = [serviceName, 'root'];
     const timeRange = 'Last 12 hours';
 
@@ -200,7 +273,7 @@ xScenario(
 );
 
 Scenario(
-  'PMM-T348 - PXC/Galera Node Summary dashboard @dashboards @nightly @nightly-pxc-ps-replication',
+  'PMM-T348 - PXC/Galera Node Summary dashboard @dashboards @nightly @dashboard-pxc',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mysqlPXCGaleraNodeSummaryDashboard.clearUrl, { from: 'now-15m' });
 
@@ -212,7 +285,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T349 - PXC/Galera Nodes Compare dashboard @dashboards @nightly @nightly-pxc-ps-replication',
+  'PMM-T349 - PXC/Galera Nodes Compare dashboard @dashboards @nightly @dashboard-pxc',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mysqlPXCGaleraNodesCompareDashboard.clearUrl, { from: 'now-15m', service_name: 'All' });
 
@@ -225,7 +298,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T430 - Verify metrics on MySQL Group Replication Summary Dashboard @dashboards @nightly @nightly-ps-gr-mysql',
+  'PMM-T430 - Verify metrics on MySQL Group Replication Summary Dashboard @dashboards @nightly @dashboard-percona-server',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.groupReplicationDashboard.clearUrl, { from: 'now-5m' });
 
@@ -238,7 +311,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2079 - Verify metrics on MySQL MyRocks Details Dashboard @dashboards @nightly @nightly-myrocks-mongo-replica',
+  'PMM-T2079 - Verify metrics on MySQL MyRocks Details Dashboard @dashboards @nightly @dashboard-ps-myrocks',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mySQLMyRocksDetailsDashboard.url, { from: 'now-5m' });
 

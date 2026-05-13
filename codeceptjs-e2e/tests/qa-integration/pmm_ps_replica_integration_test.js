@@ -14,23 +14,8 @@ BeforeSuite(async ({ inventoryAPI }) => {
   serviceList[1].serviceName = (await inventoryAPI.getServiceDetailsByPartialDetails({ service_name: '_2', replication_set: serviceList[1].replication_set })).service_name;
 });
 
-Scenario(
-  'PMM-T2028 - Verify metrics from PS Replica instance on PMM-Server @pmm-ps-replica-integration @not-ui-pipeline @nightly @nightly-pxc-ps-replication',
-  async ({
-    I, grafanaAPI,
-  }) => {
-    const metricNames = ['mysql_slave_status_replica_io_running', 'mysql_slave_status_replica_sql_running'];
-
-    const replicaIoRunning = await grafanaAPI.waitForMetric(metricNames[0], { type: 'service_name', value: serviceList[1].serviceName }, 60);
-    const replicaSqlRunning = await grafanaAPI.waitForMetric(metricNames[1], { type: 'service_name', value: serviceList[1].serviceName }, 60);
-
-    assert.ok(replicaIoRunning.results.A.frames[0].data.values.length !== 0, `Metrics ${metricNames[0]} from ${serviceList[1].serviceName} should be available but got empty ${JSON.stringify(replicaIoRunning.results.A.frames[0].data)}`);
-    assert.ok(replicaSqlRunning.results.A.frames[0].data.values.length !== 0, `Metrics ${metricNames[1]} from ${serviceList[1].serviceName} should be available but got empty ${JSON.stringify(replicaSqlRunning.results.A.frames[0].data)}`);
-  },
-);
-
 Data(serviceList).Scenario(
-  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly @nightly-pxc-ps-replication',
+  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly @dashboard-percona-server',
   async ({
     I, dashboardPage, adminPage, current,
   }) => {

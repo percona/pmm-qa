@@ -31,12 +31,12 @@ Before(async ({ I, queryAnalyticsPage, codeceptjsConfig }) => {
   });
 
   await I.Authorize();
-  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m' }));
+  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-60m' }));
   queryAnalyticsPage.waitForLoaded();
 });
 
 Scenario(
-  'Open the QAN Dashboard and check that changing the time range resets current page to the first. @qan @nightly-qan',
+  'Open the QAN Dashboard and check that changing the time range resets current page to the first. @qan',
   async ({ adminPage, queryAnalyticsPage }) => {
     queryAnalyticsPage.data.selectPage('2');
     await adminPage.applyTimeRange('Last 3 hours');
@@ -46,7 +46,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T167 Open the QAN Dashboard and check that changing the time range updates the overview table, URL @qan @nightly-qan',
+  'PMM-T167 Open the QAN Dashboard and check that changing the time range updates the overview table, URL @qan',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {
@@ -65,7 +65,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T432 Open the QAN Dashboard and check that changing absolute time range updates the overview table, URL @qan @nightly-qan',
+  'PMM-T432 Open the QAN Dashboard and check that changing absolute time range updates the overview table, URL @qan',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {
@@ -87,7 +87,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T170 Open the QAN Dashboard and check that changing the time range doesn\'t clear "Group by". @qan @nightly-qan',
+  'PMM-T170 Open the QAN Dashboard and check that changing the time range doesn\'t clear "Group by". @qan',
   async ({ I, adminPage, queryAnalyticsPage }) => {
     const group = 'Client Host';
 
@@ -106,7 +106,7 @@ Scenario(
 );
 
 Scenario(
-  'Open the QAN Dashboard and check that changing the time range doesn\'t reset sorting. @qan @nightly-qan',
+  'Open the QAN Dashboard and check that changing the time range doesn\'t reset sorting. @qan',
   async ({ adminPage, queryAnalyticsPage }) => {
     queryAnalyticsPage.changeSorting(1);
     await adminPage.applyTimeRange('Last 24 hours');
@@ -116,7 +116,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1138 - Verify QAN Copy Button for URL @qan @nightly-qan',
+  'PMM-T1138 - Verify QAN Copy Button for URL @qan',
   async ({ I, queryAnalyticsPage }) => {
     I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-12h' }));
     queryAnalyticsPage.waitForLoaded();
@@ -156,7 +156,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1140 - Verify relative time range copy URL from browser @qan @nightly-qan',
+  'PMM-T1140 - Verify relative time range copy URL from browser @qan',
   async ({ I, queryAnalyticsPage }) => {
     const url = new URL(await I.grabCurrentUrl());
     const fromString1 = url.searchParams.get('from');
@@ -177,7 +177,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1141 - Verify specific time range by new button to copy QAN URL @qan @nightly-qan',
+  'PMM-T1141 - Verify specific time range by new button to copy QAN URL @qan',
   async ({ I, adminPage, queryAnalyticsPage }) => {
     const dateTime = moment();
     const to = dateTime.format('YYYY-MM-DD HH:mm:ss');
@@ -207,7 +207,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1142 - Verify that the table page and selected query are still the same when we go on copied link by new QAN CopyButton @qan @nightly-qan',
+  'PMM-T1142 - Verify that the table page and selected query are still the same when we go on copied link by new QAN CopyButton @qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -236,7 +236,7 @@ Scenario(
 ).retry(2);
 
 Scenario(
-  'PMM-T1143 - Verify columns and filters when we go on copied link by new QAN CopyButton @qan @nightly-qan',
+  'PMM-T1143 - Verify columns and filters when we go on copied link by new QAN CopyButton @qan',
   async ({
     I, queryAnalyticsPage,
   }) => {

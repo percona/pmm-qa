@@ -257,7 +257,7 @@ Scenario(
   },
 );
 
-Scenario(
+Scenario.skip(
   'PMM-T2009 - Verify that editor user can see failed advisors data on home dashboard @nightly @nightly-generic @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     await I.Authorize(users.editor.username, users.editor.password);

@@ -17,7 +17,7 @@ After(async ({ scheduledAPI, locationsAPI }) => {
   await locationsAPI.clearAllLocations();
 });
 
-Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @nightly @nightly-myrocks-mongo-replica @gssapi-nightly', async ({
+Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @nightly @dashboard-psmdb @dashboards @gssapi-nightly', async ({
   I, current, dashboardPage, inventoryAPI, scheduledAPI, backupAPI,
 }) => {
   // Preparation
@@ -36,7 +36,7 @@ Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @nightly @n
   // Test
   const url = I.buildUrlWithParams(dashboardPage.mongodbBackupDetailsDashboard.url, {
     from: 'now-5m',
-    cluster: current.cluster,
+    cluster: 'replicaset',
   });
 
   I.amOnPage(url);
