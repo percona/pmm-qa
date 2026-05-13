@@ -1,0 +1,206 @@
+name: "Nightly E2E tests Matrix (remote PMM Server)"
+# Triggered by Jenkins (pmm3-ui-tests-nightly-gha.groovy) once the PMM Server
+# is up. Fans out one job per (client setup, tag) pair so each worker only
+# runs the tests it has data for.
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_server_address:
+        description: "Hostname/IP of the externally-managed PMM Server (no scheme). Example: 12.34.56.78"
+        required: true
+        type: string
+      admin_password:
+        description: "Admin password configured on the remote PMM Server"
+        required: false
+        default: 'admin'
+        type: string
+      pmm_qa_branch:
+        description: "Branch for pmm-qa repository to checkout"
+        required: false
+        default: 'main'
+        type: string
+      pmm_client_version:
+        description: "PMM Client version (latest-tarball|pmm3-rc|x.xx.x|https://...)"
+        required: false
+        default: 'latest-tarball'
+        type: string
+      launchable_confidence:
+        description: "Launchable subset confidence percentage"
+        required: false
+        default: '100%'
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_server_address:
+        required: true
+        type: string
+      admin_password:
+        required: false
+        default: 'admin'
+        type: string
+      pmm_qa_branch:
+        required: false
+        default: 'main'
+        type: string
+      pmm_client_version:
+        required: false
+        default: 'latest-tarball'
+        type: string
+      launchable_confidence:
+        required: false
+        default: '100%'
+        type: string
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
+      ZEPHYR_PMM_API_KEY:
+        required: false
+
+jobs:
+  # MySQL: ps in replication mode + pxc + (proxysql comes with pxc setup).
+  pxc_ps_replication:
+    name: "PXC + PS replication"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database ps,SETUP_TYPE=replication --database pxc'
+      tags_for_tests: '@nightly-pxc-ps-replication'
+      shard_name: 'pxc-ps-replication'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+
+  # MySQL: ps in group replication mode + community mysql.
+  ps_gr_mysql:
+    name: "PS group replication + MySQL"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database ps,SETUP_TYPE=gr --database mysql'
+      tags_for_tests: '@nightly-ps-gr-mysql'
+      shard_name: 'ps-gr-mysql'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+
+  # MySQL+MyRocks + MongoDB PSS replicaset.
+  myrocks_mongo_replica:
+    name: "PS MyRocks + MongoDB PSS"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database ps,QUERY_SOURCE=slowlog,MY_ROCKS=true --database psmdb,SETUP_TYPE=pss'
+      tags_for_tests: '@nightly-myrocks-mongo-replica'
+      shard_name: 'myrocks-mongo-replica'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+
+  # PostgreSQL: pdpgsql + community pgsql + pdpgsql in patroni.
+  pg_patroni:
+    name: "PostgreSQL + Patroni"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database pdpgsql --database pgsql --database pdpgsql,SETUP_TYPE=patroni'
+      tags_for_tests: '@nightly-pg'
+      shard_name: 'pg-patroni'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+
+  # MongoDB sharded cluster only. Tests that need a replicaset (e.g. the
+  # replicaset variant of PMM-T2035) live under @nightly-myrocks-mongo-replica
+  # which already deploys a PSS replicaset; we can't co-deploy both setups on a
+  # single worker because pmm-framework doesn't chain the two PSMDB playbooks
+  # cleanly.
+  mongo_sharded:
+    name: "MongoDB sharded"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database psmdb,SETUP_TYPE=sharding'
+      tags_for_tests: '@nightly-mongo-sharded'
+      shard_name: 'mongo-sharded'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+
+  # Valkey only.
+  valkey:
+    name: "Valkey"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database valkey'
+      tags_for_tests: '@nightly-valkey'
+      shard_name: 'valkey'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+
+  # External + HAProxy. Currently no @nightly-haproxy-external tagged tests
+  # exist — kept in the matrix so the shard is wired up the moment such tests
+  # are tagged. Skipped automatically when the launchable subset is empty.
+  haproxy_external:
+    name: "HAProxy + external"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database external --database haproxy'
+      tags_for_tests: '@nightly-haproxy-external'
+      shard_name: 'haproxy-external'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+
+  # Mixed setup for the whole QAN suite. Several QAN tests (PMM-T2063 in
+  # particular) iterate over services across multiple DB flavours, so the qan
+  # shard has to deploy PS, PXC, community MySQL, PSMDB replicaset, PDPGSQL,
+  # and community PGSQL together. Keep the list in sync with the services
+  # hardcoded in codeceptjs-e2e/tests/QAN/query_test.js.
+  qan:
+    name: "QAN suite"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database ps,QUERY_SOURCE=slowlog --database pxc --database mysql --database psmdb,SETUP_TYPE=pss --database pdpgsql --database pgsql'
+      tags_for_tests: '@nightly-qan'
+      shard_name: 'qan'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+
+  # DB-agnostic shard for inventory, settings, permissions, OS/VM/insight
+  # dashboards, search/home, annotations, pt-summary, pmm-health, leftnav.
+  generic:
+    name: "Generic (inventory/settings/permissions/OS/VM/...)"
+    uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote.yml
+    secrets: inherit
+    with:
+      pmm_server_address: ${{ inputs.pmm_server_address }}
+      admin_password: ${{ inputs.admin_password || 'admin' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      setup_services: '--database ps --database psmdb,SETUP_TYPE=pss'
+      tags_for_tests: '@nightly-generic'
+      shard_name: 'generic'
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}

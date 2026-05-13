@@ -29,7 +29,7 @@ Before(async ({ I }) => {
 });
 
 Data(serviceList).Scenario(
-  'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
+  'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
   async ({ I, dashboardPage, current }) => {
     await I.say(current.serviceName);
     const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name: current.serviceName, from: 'now-15m' });
@@ -44,7 +44,7 @@ Data(serviceList).Scenario(
 );
 
 Data(serviceList).Scenario(
-  'PMM-T319 - Open the MySQL Instances Overview dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
+  'PMM-T319 - Open the MySQL Instances Overview dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
   async ({ I, dashboardPage, current }) => {
     await I.say(current.serviceName);
     const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name: current.serviceName, from: 'now-15m' });
@@ -58,7 +58,7 @@ Data(serviceList).Scenario(
 );
 
 Scenario(
-  'PMM-T318 - Open the MySQL Instances Compare dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
+  'PMM-T318 - Open the MySQL Instances Compare dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mysqlInstancesCompareDashboard.clearUrl, { from: 'now-5m' });
 
@@ -71,7 +71,7 @@ Scenario(
 );
 
 Data(urlsAndMetrics).Scenario(
-  'PMM-T1070 + PMM-T449 - Verify link to instructions for enabling rendering images @nightly @dashboards',
+  'PMM-T1070 + PMM-T449 - Verify link to instructions for enabling rendering images @nightly @nightly-pxc-ps-replication @dashboards',
   async ({
     I, dashboardPage, links, current,
   }) => {
@@ -101,7 +101,7 @@ Data(urlsAndMetrics).Scenario(
 );
 
 Scenario(
-  'PMM-T68 + PMM-T2038 - Open the ProxySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
+  'PMM-T68 + PMM-T2038 - Open the ProxySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.proxysqlInstanceSummaryDashboard.url, { from: 'now-5m' });
 
@@ -124,7 +124,7 @@ Scenario(
 
 // TODO: https://perconadev.atlassian.net/browse/PMM-12956
 Scenario.skip(
-  'PMM-T67 - Open the PXCGalera Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
+  'PMM-T67 - Open the PXCGalera Cluster Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-pxc-ps-replication @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.pxcGaleraClusterSummaryDashboard.url, { from: 'now-5m' });
 
@@ -138,7 +138,7 @@ Scenario.skip(
 
 // TODO: https://perconadev.atlassian.net/browse/PMM-12956
 Scenario.skip(
-  'PMM-T1743 - verify PXCGalera Cluster Summary Dashboard (Experimental) metrics @nightly @dashboards',
+  'PMM-T1743 - verify PXCGalera Cluster Summary Dashboard (Experimental) metrics @nightly @nightly-pxc-ps-replication @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.pxcGaleraClusterSummaryExperimentalDashboard.url, { from: 'now-5m' });
 
@@ -151,7 +151,7 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T324 - Verify MySQL - MySQL User Details dashboard @nightly @dashboards',
+  'PMM-T324 - Verify MySQL - MySQL User Details dashboard @nightly @nightly-pxc-ps-replication @dashboards',
   async ({ I, dashboardPage }) => {
     const serviceName = serviceList.find((service) => service.name.includes('ps_pmm')).name;
     const url = I.buildUrlWithParams(dashboardPage.mysqlUserDetailsDashboard.clearUrl, { service_name: serviceName, from: 'now-5m' });
@@ -166,7 +166,7 @@ Scenario(
 
 // Need to Skip due to wait issue on locator
 xScenario(
-  'PMM-T396 - Verify that parameters are passed from MySQL User Details dashboard to QAN @nightly @dashboards',
+  'PMM-T396 - Verify that parameters are passed from MySQL User Details dashboard to QAN @nightly @nightly-pxc-ps-replication @dashboards',
   async ({ I, dashboardPage, queryAnalyticsPage }) => {
     const serviceName = serviceList.find((service) => service.includes('ps-'));
     const filters = [serviceName, 'root'];
@@ -200,7 +200,7 @@ xScenario(
 );
 
 Scenario(
-  'PMM-T348 - PXC/Galera Node Summary dashboard @dashboards @nightly',
+  'PMM-T348 - PXC/Galera Node Summary dashboard @dashboards @nightly @nightly-pxc-ps-replication',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mysqlPXCGaleraNodeSummaryDashboard.clearUrl, { from: 'now-15m' });
 
@@ -212,7 +212,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T349 - PXC/Galera Nodes Compare dashboard @dashboards @nightly',
+  'PMM-T349 - PXC/Galera Nodes Compare dashboard @dashboards @nightly @nightly-pxc-ps-replication',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mysqlPXCGaleraNodesCompareDashboard.clearUrl, { from: 'now-15m', service_name: 'All' });
 
@@ -225,7 +225,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T430 - Verify metrics on MySQL Group Replication Summary Dashboard @dashboards @nightly',
+  'PMM-T430 - Verify metrics on MySQL Group Replication Summary Dashboard @dashboards @nightly @nightly-ps-gr-mysql',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.groupReplicationDashboard.clearUrl, { from: 'now-5m' });
 
@@ -238,7 +238,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2079 - Verify metrics on MySQL MyRocks Details Dashboard @dashboards @nightly',
+  'PMM-T2079 - Verify metrics on MySQL MyRocks Details Dashboard @dashboards @nightly @nightly-myrocks-mongo-replica',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.mySQLMyRocksDetailsDashboard.url, { from: 'now-5m' });
 
