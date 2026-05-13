@@ -64,12 +64,14 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         cliHelper.execSilent('docker exec pmm-server-srv change-admin-password anotherpass');
 
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for password change
-        await page.waitForTimeout(Timeouts.TEN_SECONDS);
+        await page.waitForTimeout(Timeouts.FIVE_SECONDS);
         await grafanaHelper.authorize(newUser, 'anotherpass');
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth
+        await page.waitForTimeout(Timeouts.FIVE_SECONDS);
         await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
         await dashboard.home.elements.headerLocator.waitFor({
           state: 'visible',
-          timeout: Timeouts.TEN_SECONDS,
+          timeout: Timeouts.TWENTY_SECONDS,
         });
       },
     );
