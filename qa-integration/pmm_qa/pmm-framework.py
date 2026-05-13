@@ -56,7 +56,6 @@ def get_running_container_name():
 
 def setup_ps(db_type, db_version=None, db_config=None, args=None):
     # Check if PMM server is running
-    print(f'Args in PS setup are: ' + args.client_debug)
     container_name = get_running_container_name()
     if container_name is None and args.pmm_server_ip is None:
         print(f"Check if PMM Server is Up and Running..Exiting")
