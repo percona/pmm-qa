@@ -890,7 +890,7 @@ if __name__ == "__main__":
     parser.add_argument("--client-version", nargs='?', help='PMM Client version/tarball')
     parser.add_argument("--verbose", "--v", action='store_true', help='Display verbose information')
     parser.add_argument("--verbosity-level", nargs='?', help='Display verbose information level')
-    parser.add_argument("--client-debug", nargs='?', help='Start PMM client with debug option')
+    parser.add_argument("--client-debug", action='store_true', help='Start PMM client with debug option')
     args = parser.parse_args()
 
     print(f'Args are: ${args}')
