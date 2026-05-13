@@ -180,19 +180,8 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
 
-    const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId}`);
+    const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout}`);
     console.log(dataSourceName.stdout);
-
-    // const tempDir = await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`);
-
-    // const tempDir = await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`);
-    // const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep mysql_connection_timeout_service | awk -F' ' '{print $4}'`);
-    // const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
-    // const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
-
-    // console.log(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`)
-    // console.log(tempDir.stdout);
-    // console.log(myCnf.stdout);
-    // await myCnf.outContains('connect_timeout=5');
+    // await dataSourceName.outContains('connect_timeout=5');
   });
 });
