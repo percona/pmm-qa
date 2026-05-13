@@ -3,7 +3,7 @@ import BackupsApi from '@api/backups.api';
 import InventoryApi from '@api/inventory.api';
 import SettingsApi from '@api/settings.api';
 
-setup('seed backup data for dashboard screenshots', async ({ request }) => {
+setup('seed data for dashboard screenshots', async ({ request }) => {
   const settingsApi = new SettingsApi(request);
   const inventoryApi = new InventoryApi(request);
   const backupsApi = new BackupsApi(request);

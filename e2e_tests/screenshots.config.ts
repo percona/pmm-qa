@@ -24,11 +24,10 @@ const config: PlaywrightTestConfig = {
         actionTimeout: Timeouts.THIRTY_SECONDS,
         launchOptions: { args: ['--window-size=1920,1080'] },
         navigationTimeout: Timeouts.ONE_MINUTE,
-        trace: 'off',
       },
     },
   ],
-  workers: 4,
+  workers: 2,
 };
 
 export default config;
