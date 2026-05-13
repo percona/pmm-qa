@@ -4,14 +4,16 @@ import PipeAssertions from '@support/types/pipe-assertions.class';
 class ExecReturn {
   command: string;
   code: number;
+  durationMs: number;
   stdout: string;
   stderr: PipeAssertions;
 
-  constructor(command: string, exitCode: number, stdOut: string, stdErr: string) {
+  constructor(command: string, exitCode: number, stdOut: string, stdErr: string, durationMs = 0) {
     this.command = command;
     this.code = exitCode;
     this.stdout = stdOut;
     this.stderr = new PipeAssertions(command, 'Stderr', stdErr);
+    this.durationMs = durationMs;
   }
 
   getStdOutLines(): string[] {
