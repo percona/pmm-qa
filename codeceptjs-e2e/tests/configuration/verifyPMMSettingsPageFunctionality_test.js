@@ -317,12 +317,6 @@ Scenario(
       'Apply Changes button should be disabled when there are no changes.',
     );
 
-    if (await I.grabValueFrom(pmmSettingsPage.fields.dataRetentionInput) === '1') {
-      I.clearField(pmmSettingsPage.fields.dataRetentionInput);
-      I.fillField(pmmSettingsPage.fields.dataRetentionInput, 30);
-      I.click(pmmSettingsPage.fields.advancedButton);
-    }
-
     I.clearField(pmmSettingsPage.fields.dataRetentionInput);
     I.fillField(pmmSettingsPage.fields.dataRetentionInput, 1);
     I.assertEqual(
