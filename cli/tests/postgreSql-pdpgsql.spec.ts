@@ -224,7 +224,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root'`);
 
     console.log(`Output is: ${output.stdout}`)
-    console.log(`Error is: ${output.stderr}`)
+    console.log(`Error is: ${output.stderr.text}`)
 
     await output.outContains('Connection check failed: dial tcp 127.0.0.1:5432: i/o timeout.')
     expect(
