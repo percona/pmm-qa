@@ -59,13 +59,11 @@ retry_apt_install() {
     local n=3
     local i
     for i in $(seq 1 $n); do
-        apt-get -y install "$@" && return 0
-        echo "apt-get install failed (attempt $i/$n); retrying in 30s..." >&2
-        [ "$i" -lt "$n" ] || break
+        apt-get -y install "$@" && break
+        echo "apt-get install failed (attempt $i/$n); retrying in 30s..."
         sleep 30
         apt-get update
     done
-    echo "apt-get install failed after $n attempts" >&2
     return 1
 }
 
