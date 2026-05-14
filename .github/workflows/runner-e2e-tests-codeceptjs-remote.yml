@@ -225,26 +225,36 @@ jobs:
 
       - name: Run setup for E2E tests (start client services on this runner)
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && env.WIZARD_ARGS != '' }}
-        working-directory: pmm-qa/qa-integration/pmm_qa
-        run: |
-          mkdir -m 777 -p /tmp/backup_data
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py \
-            --pmm-server-ip "${SERVER_IP}" \
-            --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
-            --client-version "${{ env.PMM_CLIENT_VERSION }}" \
-            --verbose \
-            ${{ env.WIZARD_ARGS }}
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 30
+          retry_wait_seconds: '10'
+          max_attempts: 2
+          retry_on: 'error'
+          command: | 
+            cd pmm-qa/qa-integration/pmm_qa
+            mkdir -m 777 -p /tmp/backup_data || true
+            python3 -m venv virtenv
+            . virtenv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install setuptools
+            python pmm-framework.py \
+              --pmm-server-ip "${SERVER_IP}" \
+              --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
+              --client-version "${{ env.PMM_CLIENT_VERSION }}" \
+              --verbose \
+              ${{ env.WIZARD_ARGS }}
+          on_retry_command: |
+            docker rm -f $(docker ps -q) || true
+            docker volume rm $(docker volume ls -q) || true
+            docker network rm $(docker network ls -q) || true
 
-      # - name: Wait for metrics to be collected
-      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
-      #   working-directory: pmm-qa/codeceptjs-e2e
-      #   run: |
-      #     sleep 300
+      - name: Wait for metrics to be collected
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          sleep 60
 
       # TODO: add || true to the end of the command
       - name: Execute e2e tests
