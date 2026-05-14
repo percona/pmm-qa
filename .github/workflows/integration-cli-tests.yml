@@ -508,4 +508,20 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@valkey'
       services_list: '--database valkey=7'
-      test_name: 'Valkey'
+      test_name: 'Valkey 7.x'
+
+  valkey-8-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@valkey'
+      services_list: '--database valkey=8'
+      test_name: 'Valkey 8.x'
