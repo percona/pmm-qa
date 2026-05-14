@@ -40,6 +40,11 @@ if [ ! -z "$upgrade" ]; then
      upgrade="-u"
 fi
 
+DEBUG_FLAG=""
+if [ ! -z "$debug" ]; then
+    DEBUG_FLAG="--debug"
+fi
+
 port=8443
 if [[  "$pmm_server_ip" =~ \. ]]; then
   port=443
@@ -112,10 +117,10 @@ fi
 if [[ -z "$upgrade" ]]; then
     if [[ "$use_metrics_mode" == "yes" ]]; then
         echo "setup pmm-agent"
-        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
+        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
     else
         echo "setup pmm-agent"
-        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls --server-username=admin --server-password=${admin_password}
+        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password}
     fi
     sleep 10
     pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
