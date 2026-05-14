@@ -161,7 +161,7 @@
         --server-insecure-tls \
         --metrics-mode={{ metrics_mode }} \
         --server-username=admin \
-        --server-password={{ admin_password }} {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
+        --server-password={{ admin_password }}{{ (debug_client | default(false) | bool) | ternary(' --debug', '') }}\
         {{ container_name }}
   when:
     - metrics_mode | length > 0

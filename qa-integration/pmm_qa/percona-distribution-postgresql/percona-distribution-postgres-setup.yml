@@ -27,6 +27,14 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
+    - name: Display debug client value
+    - debug:
+    - msg: "{{ debug_client | default(false) | bool }}"
+
+    - name: Display debug client value
+    - debug:
+    - msg: "{{ debug_client }}"
+
     - name: Display setup type selected
       debug:
         msg: "{{ setup_type }}"
