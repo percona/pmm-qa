@@ -207,7 +207,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
   test("PMM-T8885 User can use connection timeout while using pmm-admin add pgsql @connectionTimeoutPGSQL", async ({ }) => {
-    const output = await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc replace dev lo root netem delay 11000ms; time pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName}-timeout ${ipPort}; tc qdisc del dev lo root'`);
+    const output = await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo root handle 1: prio; tc qdisc add dev lo parent 1:3 handle 30: netem delay 11000ms; tc filter add dev lo protocol ip parent 1:0 prio 3 u32 match ip dport 5432 0xffff flowid 1:3; time pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName}-timeout ${ipPort}; tc qdisc del dev lo root'`);
     await output.exitCodeEquals(1)
 
     expect(
