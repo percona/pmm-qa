@@ -28,12 +28,12 @@
 
   tasks:
     - name: Display debug client value
-    - debug:
-    - msg: "{{ debug_client | default(false) | bool }}"
+      debug:
+        msg: "{{ debug_client | default(false) | bool }}"
 
     - name: Display debug client value
-    - debug:
-    - msg: "{{ debug_client }}"
+      debug:
+        msg: "{{ debug_client }}"
 
     - name: Display setup type selected
       debug:
