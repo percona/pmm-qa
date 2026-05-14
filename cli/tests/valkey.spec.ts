@@ -1,7 +1,6 @@
 import {test} from "@playwright/test";
 import * as cli from "@helpers/cli-helper";
 import {getPmmAdminMinorVersion} from "@helpers/pmm-admin";
-import {clientCredentialsFlags} from "@helpers/constants";
 
 const containerName = 'valkey-primary-1';
 let adminVersion: number;
@@ -23,11 +22,11 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
     await output.exitCodeEquals(0);
 
 
-    // const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
-    // const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout.trim()} | grep mongodb_exporter | awk -F' ' '{print $4}'`)
-    // const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep MONGODB_URI | grep ${agentId.stdout.trim()}`);
-    //
-    // console.log(dataSourceName);
-    // await dataSourceName.assertSuccess();
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout.trim()} | grep mongodb_exporter | awk -F' ' '{print $4}'`)
+    const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep ${agentId.stdout.trim()}`);
+
+    console.log(dataSourceName);
+    await dataSourceName.assertSuccess();
   });
 });
