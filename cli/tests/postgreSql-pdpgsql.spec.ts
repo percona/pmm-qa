@@ -223,6 +223,8 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
         tc qdisc del dev lo root
     '`);
 
+    console.log(output.stdout)
+
     await output.outContains('Connection check failed: dial tcp 127.0.0.1:5432: i/o timeout.')
     expect(
       output.durationMs,
