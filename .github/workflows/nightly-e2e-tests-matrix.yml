@@ -213,7 +213,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: '--database valkey'
       tags_for_tests: '@dashboard-valkey'
-      workers: 1
+      workers: 4
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
 
   qan:
