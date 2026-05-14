@@ -4,6 +4,7 @@ import apiEndpoints from '@helpers/apiEndpoints';
 
 interface SettingsResponse {
   settings: {
+    backup_management_enabled: boolean;
     default_role_id?: number | string;
     enable_access_control: boolean;
   };
@@ -19,6 +20,19 @@ export default class SettingsApi {
 
     const response = await this.request.put(apiEndpoints.server.settings, {
       data: { enable_access_control: true },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+  };
+
+  enableBackupManagement = async () => {
+    const settings = await this.getSettings();
+
+    if (settings.settings.backup_management_enabled === true) return;
+
+    const response = await this.request.put(apiEndpoints.server.settings, {
+      data: { enable_backup_management: true },
       headers: GrafanaHelper.getAuthHeader(),
     });
 
