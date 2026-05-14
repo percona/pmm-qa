@@ -28,7 +28,12 @@ services:
         dpkg -i percona-release_latest.jammy_all.deb
         percona-release enable-only original experimental
         apt-get update
-        for i in 1 2 3; do apt-get install pmm-client -y && break || { echo \"apt-get install failed (attempt $$i/3); retrying in 30s...\"; sleep 30; apt-get update; }; done
+        for i in 1 2 3; do
+          apt-get install pmm-client -y && break
+          echo \"apt-get install failed (attempt $$i/3), retrying in 30s...\" >&2
+          sleep 30
+          apt-get update
+        done
         pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=pmm-server-ubuntu:8443 --server-insecure-tls --server-username=admin --server-password=admin
         nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml &
         sleep 10

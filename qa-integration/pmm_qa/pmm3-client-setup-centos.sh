@@ -56,16 +56,13 @@ retry_microdnf_install() {
     local n=3
     local i
     for i in $(seq 1 $n); do
-        if microdnf install -y "$@"; then
-            return 0
-        fi
-        if [ "$i" -lt "$n" ]; then
-            echo "microdnf install failed (attempt $i/$n); retrying in 30s..."
-            sleep 30
-            microdnf clean expire-cache
-        fi
+        microdnf install -y "$@" && return 0
+        echo "microdnf install failed (attempt $i/$n); retrying in 30s..." >&2
+        [ "$i" -lt "$n" ] || break
+        sleep 30
+        microdnf clean expire-cache
     done
-    echo "microdnf install failed after $n attempts"
+    echo "microdnf install failed after $n attempts" >&2
     return 1
 }
 
