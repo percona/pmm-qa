@@ -219,9 +219,9 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
           --username=${PGSQL_USER} \\
           --password="${PGSQL_PASSWORD}" \\
           ${connectionTimeoutServiceName}-timeout ${ipPort}
-
-        tc qdisc del dev lo root
     '`);
+
+    await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root'`);
 
     console.log(output.stdout)
     console.log(output.stderr)
