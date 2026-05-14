@@ -47,6 +47,8 @@ on:
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
+      GH_TOKEN:
+        required: false
 
 permissions:
   actions: read
@@ -58,7 +60,7 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     env:
-      GITHUB_TOKEN: ${{ github.token }}
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       ADMIN_PASSWORD: ${{ inputs.admin_password || 'admin' }}
       PMM_SERVER_ADDRESS: ${{ inputs.pmm_server_address }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}

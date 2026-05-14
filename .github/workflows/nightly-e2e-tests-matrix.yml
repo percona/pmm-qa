@@ -64,9 +64,8 @@ on:
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
-permissions:
-  actions: read
-  contents: read
+      GH_TOKEN:
+        required: false
 
 jobs:
   setup:
@@ -105,7 +104,8 @@ jobs:
             setup_services: '--database valkey'
     
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-setup.yml
-    secrets: inherit
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     with:
       pmm_server_address: ${{ inputs.pmm_server_address }}
       admin_password: ${{ inputs.admin_password || 'admin' }}
@@ -155,6 +155,7 @@ jobs:
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-tests.yml
     secrets: 
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     with:
       pmm_server_address: ${{ inputs.pmm_server_address }}
       admin_password: ${{ inputs.admin_password || 'admin' }}
