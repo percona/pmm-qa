@@ -126,7 +126,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
   });
 
   test("PMM-T2221 - User can use connection timeout while using pmm-admin add @connectionTimeoutPXC", async ({ }) => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add proxysql --connection-timeout=5s --username=${PXC_USER} --password=${PXC_PASSWORD} --port=6032 ${proxysqlServiceName} ${dbHostPort}`);
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add proxysql --connection-timeout=5s --username=${PXC_USER} --password=${PXC_PASSWORD} --port=6032 ${connectionTimeoutServiceName} ${dbHostPort}`);
     await output.exitCodeEquals(0);
 
 

@@ -197,7 +197,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     await chaneAgent.exitCodeEquals(0);
   });
 
-  test("PMM-T8886 User can clear connection timeout while using pmm-admin inventory change agent postgres-exporter @connectionTimeoutPGSQL", async ({ }) => {
+  test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent @connectionTimeoutPGSQL", async ({ }) => {
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
