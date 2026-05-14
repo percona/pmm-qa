@@ -210,7 +210,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const output = await cli.exec(`docker exec ${containerName} bash -c '
         tc qdisc del dev lo root 2>/dev/null || true
         tc qdisc add dev lo root handle 1: prio
-        tc qdisc add dev lo parent 1:3 handle 30: netem delay 5000ms
+        tc qdisc add dev lo parent 1:3 handle 30: netem delay 5500ms
         tc filter add dev lo protocol ip parent 1:0 prio 3 u32 match ip dport 5432 0xffff flowid 1:3
 
         time pmm-admin add postgresql \\
@@ -218,7 +218,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
           --query-source=pgstatmonitor \\
           --username=${PGSQL_USER} \\
           --password="${PGSQL_PASSWORD}" \\
-          ${connectionTimeoutServiceName}-timeout ${ipPort}
+          ${connectionTimeoutServiceName}_timeout ${ipPort}
     '`);
 
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root'`);
