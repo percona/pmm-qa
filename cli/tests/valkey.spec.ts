@@ -1,4 +1,4 @@
-import {test} from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import * as cli from "@helpers/cli-helper";
 import {getPmmAdminMinorVersion} from "@helpers/pmm-admin";
 
@@ -37,5 +37,24 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${agentId.stdout} --connection-timeout=4s`);
     await chaneAgent.exitCodeEquals(0);
+  });
+
+  test("PMM-T6664 User can clear connection timeout while using pmm-admin inventory change agent valkey-exporter @connectionTimeoutPGSQL", async ({ }) => {
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep valkey_exporter | awk -F' ' '{print $4}'`)
+    await serviceId.exitCodeEquals(0);
+    await agentId.exitCodeEquals(0);
+    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${agentId.stdout} --connection-timeout=0s`);
+    await chaneAgent.exitCodeEquals(0);
+  });
+
+  test("PMM-T9996 User can use connection timeout while using pmm-admin add mysql @connectionTimeout", async ({ }) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add valkey --connection-timeout=5s --username=${username} --password="${password}" --service-name=${connectionTimeoutServiceName} --host=195.15.25.15 --port=${port}`);
+    await output.exitCodeEquals(1)
+
+    expect(
+      output.durationMs,
+      `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
+    ).toBeGreaterThan(5_000);
   });
 });
