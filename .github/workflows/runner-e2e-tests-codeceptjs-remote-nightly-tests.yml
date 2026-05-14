@@ -1,0 +1,302 @@
+name: _runner-e2e-tests-codeceptjs-remote-nightly-tests
+
+on:
+  workflow_call:
+    inputs:
+      pmm_server_address:
+        required: true
+        type: string
+      admin_password:
+        required: false
+        default: 'admin'
+        type: string
+      pmm_qa_branch:
+        required: false
+        default: 'main'
+        type: string
+      pmm_client_version:
+        required: false
+        default: 'latest-tarball'
+        type: string
+      pmm_server_image:
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
+      tags_for_tests:
+        required: true
+        type: string
+      test_shard:
+        required: false
+        default: ''
+        type: string
+      shard_name:
+        required: true
+        type: string
+      expected_setup_jobs:
+        required: false
+        default: 14
+        type: number
+      workers:
+        required: false
+        default: 1
+        type: number
+      launchable_confidence:
+        required: false
+        default: '100%'
+        type: string
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
+      ZEPHYR_PMM_API_KEY:
+        required: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  tests:
+    name: "test execution / ${{ inputs.shard_name }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      ADMIN_PASSWORD: ${{ inputs.admin_password || 'admin' }}
+      PMM_SERVER_ADDRESS: ${{ inputs.pmm_server_address }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests }}
+      TEST_SHARD_INPUT: ${{ inputs.test_shard || '' }}
+      SHARD_NAME: ${{ inputs.shard_name }}
+      WORKERS: ${{ inputs.workers || 1 }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
+      ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      SUBSET_FILE_NAME: 'launchable-subset.json'
+      SETUP_WAIT_STEP: 'Waiting for tests execution'
+      SETUP_JOB_PREFIX: 'setup / '
+      EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 14 }}
+      WAIT_POLL_INTERVAL_SECONDS: 30
+      WAIT_TIMEOUT_SECONDS: 10800
+
+    steps:
+      - name: Checkout pmm-qa repo
+        uses: actions/checkout@v4
+        with:
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: ./pmm-qa
+
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: Resolve PMM Server URLs
+        id: pmm_urls
+        run: |
+          ADDR="${{ env.PMM_SERVER_ADDRESS }}"
+          ADDR_NO_SCHEME=${ADDR#http://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
+          echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/" >> "$GITHUB_ENV"
+          echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
+          echo "SERVER_IP=${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
+
+      - name: Sanity check remote PMM Server reachability
+        run: |
+          set -eux
+          for i in $(seq 1 30); do
+            code=$(curl -ksS -o /dev/null -w "%{http_code}" "https://${SERVER_IP}/v1/server/readyz" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "Remote PMM Server is ready"
+              exit 0
+            fi
+            echo "Attempt $i: PMM Server not ready (http=$code), sleeping 5s"
+            sleep 5
+          done
+          echo "Remote PMM Server did not become ready in time" >&2
+          exit 1
+
+      - name: Setup npm modules for e2e tests
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          envsubst < env.list > env.generated.list
+
+      - uses: actions/github-script@v7
+        id: tags_processed
+        with:
+          script: |
+            return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
+          result-encoding: string
+
+      - name: Prepare launchable
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          pip3 install --user --upgrade launchable~=1.0
+          launchable verify || true
+
+          docker pull ${{ env.DOCKER_VERSION }} || true
+          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
+          echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
+
+          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "nightly-ui-tests-${{env.SHARD_NAME}}-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
+          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
+          echo "$(cat launchable-subset.json)" || true
+
+      - name: Check if launchable subset is empty
+        id: check_launchable_subset
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with tests."
+          else
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Test execution will be skipped."
+          fi
+
+      - name: Skip notice
+        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
+        run: echo "No tests selected by Launchable subset. Skipping setup wait and test execution."
+
+      - name: Wait for all setup jobs to be ready
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const run_id = context.runId;
+            const expectedSetupJobs = Number(process.env.EXPECTED_SETUP_JOBS);
+            const pollIntervalMs = Number(process.env.WAIT_POLL_INTERVAL_SECONDS) * 1000;
+            const timeoutMs = Number(process.env.WAIT_TIMEOUT_SECONDS) * 1000;
+            const setupPrefix = process.env.SETUP_JOB_PREFIX;
+            const setupWaitStep = process.env.SETUP_WAIT_STEP;
+            const startedAt = Date.now();
+
+            async function sleep(ms) {
+              return new Promise((resolve) => setTimeout(resolve, ms));
+            }
+
+            async function listJobs() {
+              return github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner,
+                repo,
+                run_id,
+                filter: 'latest',
+                per_page: 100,
+                headers: {
+                  'X-GitHub-Api-Version': '2026-03-10',
+                },
+              });
+            }
+
+            async function getJob(job) {
+              const response = await github.rest.actions.getJobForWorkflowRun({
+                owner,
+                repo,
+                job_id: job.id,
+                headers: {
+                  'X-GitHub-Api-Version': '2026-03-10',
+                },
+              });
+              return response.data;
+            }
+
+            function findSetupWaitStep(job) {
+              return (job.steps || []).find((step) => step.name === setupWaitStep);
+            }
+
+            while (true) {
+              const jobs = await listJobs();
+              const setupJobs = jobs.filter((job) => job.name.startsWith(setupPrefix) || job.name.includes(setupPrefix));
+              const detailedSetupJobs = await Promise.all(setupJobs.map(getJob));
+              const setupJobsWithWaitStep = detailedSetupJobs.filter(findSetupWaitStep);
+              const readySetupJobs = setupJobsWithWaitStep.filter((job) => findSetupWaitStep(job).status === 'in_progress');
+              const completedWaitStepJobs = setupJobsWithWaitStep.filter((job) => findSetupWaitStep(job).status === 'completed');
+              const completedBeforeReadyJobs = detailedSetupJobs.filter((job) => {
+                const step = findSetupWaitStep(job);
+                return job.status === 'completed' && (!step || step.status !== 'in_progress');
+              });
+
+              core.info(`Setup jobs: discovered=${setupJobsWithWaitStep.length}/${expectedSetupJobs}, ready=${readySetupJobs.length}/${expectedSetupJobs}`);
+              for (const job of setupJobsWithWaitStep) {
+                const step = findSetupWaitStep(job);
+                core.info(`- ${job.name}: job_status=${job.status}, step_status=${step.status}, conclusion=${job.conclusion || 'null'}`);
+              }
+
+              if (completedWaitStepJobs.length > 0) {
+                throw new Error(`Setup wait step completed before this test job started: ${completedWaitStepJobs.map((job) => job.name).join(', ')}`);
+              }
+
+              if (completedBeforeReadyJobs.length > 0) {
+                throw new Error(`Setup jobs completed before reaching an in-progress '${setupWaitStep}' step: ${completedBeforeReadyJobs.map((job) => job.name).join(', ')}`);
+              }
+
+              if (setupJobsWithWaitStep.length >= expectedSetupJobs && readySetupJobs.length >= expectedSetupJobs) {
+                core.info('All setup jobs are waiting for test execution.');
+                return;
+              }
+
+              if (Date.now() - startedAt > timeoutMs) {
+                throw new Error(`Timed out waiting for ${expectedSetupJobs} setup jobs to reach '${setupWaitStep}' with status=in_progress.`);
+              }
+
+              await sleep(pollIntervalMs);
+            }
+
+      - name: Wait for metrics to be collected
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          sleep 60
+
+      - name: Execute e2e tests
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
+          sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
+          TEST_SHARD="${TEST_SHARD_INPUT:-${SHARD_NAME#shard-}/10}"
+
+          npx codeceptjs run \
+            -c pr.codecept.js \
+            --shard "${TEST_SHARD}" \
+            --grep "${{ env.TAGS_FOR_TESTS }}" \
+            --reporter mocha-multi \
+            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
+
+      - name: Download PMM Server logs
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        working-directory: pmm-qa/codeceptjs-e2e
+        continue-on-error: true
+        run: |
+          curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
+          unzip logs.zip -d logs || true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        continue-on-error: true
+        with:
+          name: "artifacts_${{ env.SHARD_NAME }}_${{ steps.tags_processed.outputs.result }}"
+          path: |
+            pmm-qa/codeceptjs-e2e/tests/output/*.png
+            pmm-qa/codeceptjs-e2e/tests/output/trace/*.zip
+            pmm-qa/codeceptjs-e2e/logs
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        continue-on-error: true
+        with:
+          name: "junit_${{ env.SHARD_NAME }}_${{ steps.tags_processed.outputs.result }}"
+          path: pmm-qa/codeceptjs-e2e/tests/output/result.xml
