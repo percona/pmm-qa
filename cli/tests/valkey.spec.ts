@@ -1,0 +1,33 @@
+import {test} from "@playwright/test";
+import * as cli from "@helpers/cli-helper";
+import {getPmmAdminMinorVersion} from "@helpers/pmm-admin";
+import {clientCredentialsFlags} from "@helpers/constants";
+
+const containerName = 'valkey-primary-1';
+let adminVersion: number;
+const port = '6379'
+const username = 'default';
+const password = 'VKvl41568AsE';
+const connectionTimeoutServiceName = 'valkey_connection_timeout_service';
+
+test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
+  test.beforeAll(async ({}) => {
+    const result = await cli.exec(`docker ps | grep ${containerName} | awk '{print $NF}'`);
+    await result.outContains(containerName, 'PSMDB valkey-primary-1 docker container should exist. please run pmm-framework with --database valkey');
+    adminVersion = await getPmmAdminMinorVersion(containerName);
+  });
+
+
+  test("PMM-T6666 User can use connection timeout while using pmm-admin add mysql @connectionTimeoutPSMDB", async ({ }) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add valkey --connection-timeout=5s --username=${username} --password="${password}" --service-name=${connectionTimeoutServiceName} --host=${containerName} --port=${port}`);
+    await output.exitCodeEquals(0);
+
+
+    // const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    // const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout.trim()} | grep mongodb_exporter | awk -F' ' '{print $4}'`)
+    // const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep MONGODB_URI | grep ${agentId.stdout.trim()}`);
+    //
+    // console.log(dataSourceName);
+    // await dataSourceName.assertSuccess();
+  });
+});
