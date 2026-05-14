@@ -83,7 +83,13 @@ module.exports = {
     };
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
 
-    await I.sendPutRequest(endpoint, body, headers);
+    const response = await I.sendPutRequest(endpoint, body, headers);
+
+    if (response.status === 400 && response.data.message && response.data.message.includes('Telemetry is configured via PMM_ENABLE_TELEMETRY')) {
+      delete body.enable_telemetry;
+      delete body.enable_advisor;
+      await I.sendPutRequest(endpoint, body, headers);
+    }
   },
 
   async setCheckIntervals(intervals = defaultCheckIntervals) {

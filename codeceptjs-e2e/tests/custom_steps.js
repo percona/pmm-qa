@@ -6,17 +6,24 @@ const path = require('path');
 const axios = require('axios');
 const { locateOption } = require('./helper/locatorHelper');
 
-const systemMessageText = 'div[data-testid^="data-testid Alert"] > div';
-const systemMessageTextSuccess = 'div[data-testid^="data-testid Alert success"] > div';
+const systemMessageText = '[role="alert"], [role="status"]';
+const systemMessageTextSuccess = '[role="alert"], [role="status"]';
 const systemMessageButtonClose = '[aria-label="Close alert"]';
 const warningLocator = '[data-testid="data-testid Alert warning"]';
 
 module.exports = () => actor({
 
-  verifyPopUpMessage(message, timeout = 30) {
+  async verifyPopUpMessage(message, timeout = 30) {
     this.waitForElement(systemMessageText, timeout);
     this.see(message, systemMessageText);
-    this.click(systemMessageButtonClose);
+
+    await this.usePlaywrightTo('close alert when close button is available', async ({ page }) => {
+      const closeButton = page.locator(systemMessageButtonClose).first();
+
+      if (await closeButton.count()) {
+        await closeButton.click();
+      }
+    });
   },
 
   verifyWarning(message, timeout = 10) {
