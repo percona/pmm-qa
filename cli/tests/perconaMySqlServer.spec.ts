@@ -174,7 +174,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await output.outContains('Socket and port cannot be specified together.');
   });
 
-  test("PMM-T9999 User can use connection timeout while using pmm-admin add mysql @connectionTimeout", async ({ }) => {
+  test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
@@ -182,11 +182,6 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
     const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
-    // docker exec ps_pmm_8_0_1 cat /usr/local/percona/pmm/tmp/9b1bc9b6-17c6-44de-b000-16e57edfa7d1/myCnf
-
-    console.log(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`)
-    console.log(tempDir.stdout);
-    console.log(myCnf.stdout);
     await myCnf.outContains('connect_timeout=5');
   });
 

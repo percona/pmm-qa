@@ -224,7 +224,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, asy
     }).toPass({ intervals: [1_000], timeout: 60_000 });
   });
 
-  test("PMM-T7777 User can use connection timeout while using pmm-admin add mysql @connectionTimeoutPSMDB", async ({ }) => {
+  test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --connection-timeout=5s ${connectionTimeoutServiceName} ${replIpPort}`);
     await output.exitCodeEquals(0);
     await cli.exec('sleep 5');

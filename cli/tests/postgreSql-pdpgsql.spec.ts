@@ -173,7 +173,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
 
-  test("PMM-T8888 User can use connection timeout while using pmm-admin add mysql @connectionTimeoutPGSQL", async ({ }) => {
+  test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
