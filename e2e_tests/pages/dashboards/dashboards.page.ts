@@ -142,10 +142,17 @@ export default class Dashboards extends BasePage {
     }
 
     if (missingMetrics.length > 0) {
-      for (const missingMetric of missingMetrics) {
-        await this.builders.panelByName(missingMetric).screenshot({
-          path: `./screenshots/missing-metric-${missingMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
-        });
+      for (let index = 0; index < noDataPanels.length; index++) {
+        const missingMetric = noDataPanels[index];
+
+        if (noDataMetrics.includes(missingMetric)) continue;
+
+        await this.elements.noDataPanelName
+          .nth(index)
+          .locator('xpath=ancestor::section[1]')
+          .screenshot({
+            path: `./screenshots/missing-metric-${missingMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}-${index}.png`,
+          });
       }
     }
 

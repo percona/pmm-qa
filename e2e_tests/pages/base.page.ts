@@ -28,8 +28,11 @@ export default abstract class BasePage {
     const newPage = await this.page.context().newPage();
 
     await newPage.goto(url);
-    await newPage.locator('#grafana-iframe').waitFor({ state: 'visible' });
+    await newPage.locator('#grafana-iframe').waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
     this.page = newPage;
+    await this.page.waitForLoadState('domcontentloaded', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
+    await this.page.locator('#grafana-iframe').waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
+    await this.elements.timePickerOpenButton.waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
 
     return newPage;
   };
@@ -51,6 +54,9 @@ export default abstract class BasePage {
     const timeRangeOption = this.grafanaIframe().locator(`//*[contains(text(), "${timeRange}")]`);
 
     await timeRangeOption.click();
+    await expect(this.elements.timePickerOpenButton).toContainText(timeRange, {
+      timeout: Timeouts.ONE_MINUTE,
+    });
   };
 
   selectVariableValue = async (dropDownName: DropdownName, dropDownValue?: string): Promise<string> => {
@@ -58,7 +64,7 @@ export default abstract class BasePage {
     const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
     const combobox = wrapper.getByRole('combobox');
 
-    await wrapper.click();
+    await combobox.click();
 
     const options = frame.getByRole('option');
 
@@ -80,6 +86,7 @@ export default abstract class BasePage {
     await this.page.keyboard.press('Escape');
 
     await expect(combobox).toHaveAttribute('aria-expanded', 'false');
+    await expect(wrapper).toContainText(selectedOption, { timeout: Timeouts.ONE_MINUTE });
 
     return selectedOption;
   };
