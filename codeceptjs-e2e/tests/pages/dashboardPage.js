@@ -1335,7 +1335,7 @@ module.exports = {
     I.say(`Number of no data and N/A elements is = ${numberOfNAElements}`);
     if (numberOfNAElements > acceptableNACount) {
       const titles = await this.grabFailedReportTitles(this.fields.reportTitleWithNA);
-      const realFailures = titles.filter((title) => !title.toLowerCase().includes('24') || !title.toLowerCase().includes('hour'));
+      const realFailures = titles.filter((title) => !title.toLowerCase().includes('24') && !title.toLowerCase().includes('hour'));
 
       const url = await I.grabCurrentUrl();
 
