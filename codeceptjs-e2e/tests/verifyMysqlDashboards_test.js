@@ -176,7 +176,7 @@ Scenario(
 Scenario(
   'PMM-T68 + PMM-T2038 - Open the ProxySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboard-pxc @dashboards',
   async ({ I, dashboardPage }) => {
-    const url = I.buildUrlWithParams(dashboardPage.proxysqlInstanceSummaryDashboard.url, { from: 'now-5m', refresh: '5s' });
+    const url = I.buildUrlWithParams(dashboardPage.proxysqlInstanceSummaryDashboard.url, { from: 'now-15m', refresh: '5s' });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
