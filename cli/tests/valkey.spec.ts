@@ -30,7 +30,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
     await dataSourceName.assertSuccess();
   });
 
-  test("PMM-T6665 User can change connection timeout while using pmm-admin inventory change agent valkey-exporter", async ({ }) => {
+  test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep valkey_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
