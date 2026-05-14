@@ -178,10 +178,10 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
-    const tempDir = await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`);
+    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(":")[1].trim();
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
-    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
+    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
     await myCnf.outContains('connect_timeout=5');
   });
 
@@ -194,8 +194,8 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 5');
 
-    const tempDir = await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`);
-    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
+    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(":")[1].trim();
+    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
     await myCnf.outContains('connect_timeout=4');
   });
 
@@ -208,8 +208,8 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await chaneAgent.exitCodeEquals(0);
     await cli.exec('sleep 5');
 
-    const tempDir = await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`);
-    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir.stdout}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
+    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(":")[1].trim();
+    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
     await myCnf.outContains('connect_timeout=2');
   });
 
