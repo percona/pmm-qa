@@ -23,7 +23,7 @@
     "axios": "1.7.2",
     "build-url": "^6.0.1",
     "chai": "^5.1.1",
-    "codeceptjs": "3.6.2",
+    "codeceptjs": "^3.7.9",
     "codeceptjs-chai": "^2.3.5",
     "codeceptjs-dbhelper": "^1.2.2",
     "codeceptjs-mailosaurhelper": "^1.0.5",
