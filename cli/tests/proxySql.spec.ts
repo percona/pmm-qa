@@ -9,6 +9,7 @@ let containerName: string;
 const dbHostPort = '127.0.0.1:6032';
 const proxysqlServiceName = 'proxysql_1';
 let adminVersion: number;
+const connectionTimeoutServiceName = 'proxysql_connection_timeout_service';
 
 test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async () => {
   test.beforeAll(async ({}) => {
@@ -122,5 +123,18 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
     });
 
     await cli.executeAndVerify(`docker exec ${containerName} pmm-admin remove proxysql ${serviceName}`, 'Service removed.');
+  });
+
+  test("PMM-T5555 User can use connection timeout while using pmm-admin add proxysql @connectionTimeoutPXC", async ({ }) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add proxysql --connection-timeout=5s --username=${PXC_USER} --password=${PXC_PASSWORD} --port=6032 ${proxysqlServiceName} ${dbHostPort}`);
+    await output.exitCodeEquals(0);
+
+
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout.trim()} | grep valkey_exporter | awk -F' ' '{print $4}'`)
+    const dataSourceName = await cli.exec(`docker exec ${containerName} cat /var/log/pmm-agent.log | grep ${agentId.stdout.trim()}`);
+
+    console.log(dataSourceName);
+    await dataSourceName.assertSuccess();
   });
 });
