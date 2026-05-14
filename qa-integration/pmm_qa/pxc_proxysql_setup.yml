@@ -17,6 +17,7 @@
     number_of_nodes: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','PXC_NODES') | default('3', true) ) }}"
     pxc_dev_cluster: "{{ lookup('vars', 'extra_pxc_cluster_name', default=lookup('env','PXC_CLUSTER_NAME') | default('pxc-dev-cluster', true) ) }}"
     query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('perfschema', true) ) }}"
+    debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
   - name: cleanup container for client and DB setup
@@ -81,7 +82,7 @@
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ pxc_container }}
-      - docker exec {{ pxc_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+      - docker exec {{ pxc_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}{{ (debug_client | default(false) | bool) | ternary(' --debug', '') }} --use_metrics_mode no
 
   - name: Configure PXC for PMM Client if non-tarball install
     shell: "{{ item }}"
