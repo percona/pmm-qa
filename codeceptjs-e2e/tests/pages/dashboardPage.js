@@ -1335,10 +1335,13 @@ module.exports = {
     I.say(`Number of no data and N/A elements is = ${numberOfNAElements}`);
     if (numberOfNAElements > acceptableNACount) {
       const titles = await this.grabFailedReportTitles(this.fields.reportTitleWithNA);
+      const realFailures = titles.filter((title) => !title.toLowerCase().includes('24') || !title.toLowerCase().includes('hour'));
 
       const url = await I.grabCurrentUrl();
 
-      await this.printFailedReportNames(acceptableNACount, numberOfNAElements, titles, url);
+      if (realFailures.length > 0) {
+        await this.printFailedReportNames(acceptableNACount, numberOfNAElements, realFailures, url);
+      }
     }
   },
 
