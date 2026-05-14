@@ -12,6 +12,7 @@ const mongoPullMetricsServiceName = 'mongo_pull_1';
 const mongoServiceName = 'mongo_service_1';
 const containerName = 'rs101';
 let adminVersion: number;
+const connectionTimeoutServiceName = 'mongo_connection_timeout_service';
 
 test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, async () => {
   test.beforeAll(async ({}) => {
@@ -221,5 +222,17 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, asy
 
       await pmmAdminListOutput.outNotContains('rta_mongodb_agent');
     }).toPass({ intervals: [1_000], timeout: 60_000 });
+  });
+
+  test("PMM-T7777 User can use connection timeout while using pmm-admin add mysql @connectionTimeoutPSMDB", async ({ }) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --connection-timeout=5s ${mongoPushMetricsServiceName} ${replIpPort}`);
+    await output.exitCodeEquals(0);
+
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mongodb_exporter | awk -F' ' '{print $4}'`)
+    const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep MONGODB_URI | grep ${agentId.stdout} | grep connect_timeout=5`);
+
+    console.log(dataSourceName);
+    await dataSourceName.assertSuccess();
   });
 });
