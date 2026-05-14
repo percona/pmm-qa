@@ -10,6 +10,7 @@ Scenario(
     const url = I.buildUrlWithParams(dashboardPage.mongodbOverviewDashboard.url, {
       from: 'now-5m',
       cluster: 'replicaset',
+      refresh: '5s',
     });
 
     I.amOnPage(url);
@@ -26,6 +27,7 @@ Scenario(
     I.amOnPage(I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
       cluster: 'sharded',
       from: 'now-5m',
+      refresh: '5s',
     }));
 
     dashboardPage.waitForDashboardOpened();
@@ -41,6 +43,7 @@ Scenario(
     const url = I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, {
       from: 'now-5m',
       cluster: 'replicaset',
+      refresh: '5s',
     });
 
     I.amOnPage(url);
@@ -76,6 +79,7 @@ Scenario(
     const url = I.buildUrlWithParams(dashboardPage.mongodbReplicaSetSummaryDashboard.cleanUrl, {
       from: 'now-5m',
       cluster: 'replicaset',
+      refresh: '5s',
     });
 
     I.amOnPage(url);
@@ -97,6 +101,7 @@ Scenario(
     const url = I.buildUrlWithParams(dashboardPage.mongoDbShardedClusterSummary.url, {
       from: 'now-5m',
       cluster: 'sharded',
+      refresh: '5s',
     });
 
     I.amOnPage(url);
@@ -120,7 +125,7 @@ Scenario('PMM-T2003 - Verify that MongoDB Compare dashboard has Cluster, Replica
   const mongoServices = (await inventoryAPI.getServiceListDetailsByPartialDetails({ environment: newEnvironmentName }))
     .map((service) => service.service_name);
 
-  I.amOnPage(I.buildUrlWithParams(dashboardPage.mongodbInstancesCompareDashboard.url, { from: 'now-5m' }));
+  I.amOnPage(I.buildUrlWithParams(dashboardPage.mongodbInstancesCompareDashboard.url, { from: 'now-5m', refresh: '5s' }));
 
   dashboardPage.mongodbInstancesCompareDashboard.selectEnvironment(newEnvironmentName);
   dashboardPage.mongodbInstancesCompareDashboard.verifyServicesInfoPanelDisplayed(mongoServices);
