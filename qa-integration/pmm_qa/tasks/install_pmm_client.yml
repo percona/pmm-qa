@@ -78,12 +78,20 @@
     docker exec --user root {{ container_name }} percona-release enable-only pmm3-client experimental
     docker exec --user root {{ container_name }} apt-get update
     docker exec --user root {{ container_name }} apt-get -y install pmm-client
+  register: apt_install_result
+  retries: 3
+  delay: 30
+  until: apt_install_result.rc == 0
   when: distro_family == "debian" and client_version == "3-dev-latest"
 
 - name: Install pmm client experimental on RHEL-family containers
   shell: |
     docker exec --user root {{ container_name }} percona-release enable-only pmm3-client experimental
     docker exec --user root {{ container_name }} microdnf install -y pmm-client
+  register: dnf_install_result
+  retries: 3
+  delay: 30
+  until: dnf_install_result.rc == 0
   when: distro_family == "rhel" and client_version == "3-dev-latest"
 
 - name: Install pmm client testing on Debian-family containers
@@ -91,12 +99,20 @@
     docker exec --user root {{ container_name }} percona-release enable-only pmm3-client testing
     docker exec --user root {{ container_name }} apt-get update
     docker exec --user root {{ container_name }} apt-get -y install pmm-client
+  register: apt_install_result
+  retries: 3
+  delay: 30
+  until: apt_install_result.rc == 0
   when: distro_family == "debian" and client_version == "pmm3-rc"
 
 - name: Install pmm client testing on RHEL-family containers
   shell: |
     docker exec --user root {{ container_name }} percona-release enable-only pmm3-client testing
     docker exec --user root {{ container_name }} microdnf install -y pmm-client
+  register: dnf_install_result
+  retries: 3
+  delay: 30
+  until: dnf_install_result.rc == 0
   when: distro_family == "rhel" and client_version == "pmm3-rc"
 
 - name: Install pmm client release on Debian-family containers
@@ -104,12 +120,20 @@
     docker exec --user root {{ container_name }} percona-release enable-only pmm3-client release
     docker exec --user root {{ container_name }} apt-get update
     docker exec --user root {{ container_name }} apt-get -y install pmm-client
+  register: apt_install_result
+  retries: 3
+  delay: 30
+  until: apt_install_result.rc == 0
   when: distro_family == "debian" and client_version == "pmm3-latest"
 
 - name: Install pmm client release on RHEL-family containers
   shell: |
     docker exec --user root {{ container_name }} percona-release enable-only pmm3-client release
     docker exec --user root {{ container_name }} microdnf install -y pmm-client
+  register: dnf_install_result
+  retries: 3
+  delay: 30
+  until: dnf_install_result.rc == 0
   when: distro_family == "rhel" and client_version == "pmm3-latest"
 
 - name: Install specific PMM client version on Debian-family containers

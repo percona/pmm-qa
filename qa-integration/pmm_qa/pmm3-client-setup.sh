@@ -53,21 +53,35 @@ apt-get update
 export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
 mv -v /artifacts/* .
 
+# Percona's CDN/repo occasionally serves inconsistent metadata during builds,
+# which makes apt-get abort. The mismatch usually clears within a minute, so retry.
+retry_apt_install() {
+    local n=3
+    local i
+    for i in $(seq 1 $n); do
+        apt-get -y install "$@" && break
+        echo "apt-get install failed (attempt $i/$n); retrying in 30s..."
+        sleep 30
+        apt-get update
+    done
+    return 1
+}
+
 if [[ "$client_version" == "3-dev-latest" ]]; then
     percona-release enable-only pmm3-client experimental
     apt-get update
-    apt-get -y install pmm-client
+    retry_apt_install pmm-client
 fi
 
 if [[ "$client_version" == "pmm3-rc" ]]; then
     percona-release enable-only pmm3-client testing
     apt-get update
-    apt-get -y install pmm-client
+    retry_apt_install pmm-client
 fi
 
 if [[ "$client_version" == "pmm3-latest" ]]; then
     percona-release enable-only pmm3-client release
-    apt-get -y install pmm-client
+    retry_apt_install pmm-client
     apt-get -y update
     percona-release enable-only pmm3-client experimental
 fi
