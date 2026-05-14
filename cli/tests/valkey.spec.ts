@@ -24,6 +24,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
 
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout.trim()} | grep valkey_exporter | awk -F' ' '{print $4}'`)
+    await cli.exec('sleep 2');
     const dataSourceName = await cli.exec(`docker exec ${containerName} cat /var/log/pmm-agent.log | grep ${agentId.stdout.trim()}`);
 
     console.log(dataSourceName);
