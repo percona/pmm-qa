@@ -53,7 +53,7 @@ export default class LeftNavigation extends BasePage {
     },
     explore: {
       locator: this.page.getByTestId('navitem-explore'),
-      metrics: { locator: this.page.getByTestId('navitem-explore-metrics') },
+      // metrics: { locator: this.page.getByTestId('navitem-explore-metrics') },
       promSqlBuilder: { locator: this.page.getByTestId('navitem-explore-promql-builder') },
     },
     help: { locator: this.page.getByTestId('navitem-help'), verifyTimeRange: true },
