@@ -223,8 +223,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
         tc qdisc del dev lo root
     '`);
 
-    await output.exitCodeEquals(1)
-
+    await output.outContains('Connection check failed: dial tcp 127.0.0.1:5432: i/o timeout.')
     expect(
       output.durationMs,
       `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
