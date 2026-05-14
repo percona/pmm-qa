@@ -554,7 +554,7 @@ def setup_psmdb(db_type, db_version=None, db_config=None, args=None):
         'GSSAPI': get_value('GSSAPI', db_type, args, db_config),
         'TESTS': 'no',
         'CLEANUP': 'no',
-        'CLIENT_DEBUG': args.client_debug,
+        'CLIENT_DEBUG': f'{args.client_debug}',
     }
 
     shell_scripts = []
