@@ -177,36 +177,36 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
-    console.log((await cli.exec(`docker exec ${containerName} pmm-admin list`)).stdout);
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
-
     const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout} | grep connect_timeout=5`);
-
-    console.log(dataSourceName);
     await dataSourceName.assertSuccess();
   });
 
 
-  test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent @connectionTimeoutPGSQL", async ({ }) => {
+  test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${agentId.stdout} --connection-timeout=4s`);
     await chaneAgent.exitCodeEquals(0);
+    const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout} | grep connect_timeout=4`);
+    await dataSourceName.assertSuccess();
   });
 
-  test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent @connectionTimeoutPGSQL", async ({ }) => {
+  test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent", async ({ }) => {
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${agentId.stdout} --connection-timeout=0s`);
     await chaneAgent.exitCodeEquals(0);
+    const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout} | grep connect_timeout=2`);
+    await dataSourceName.assertSuccess();
   });
 
-  test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add @connectionTimeoutPGSQL", async ({ }) => {
+  test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add", async ({ }) => {
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root 2>/dev/null || true'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo root handle 1: prio'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo parent 1:3 handle 30: netem delay 5500ms'`);
