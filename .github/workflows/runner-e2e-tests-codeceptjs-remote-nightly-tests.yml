@@ -47,8 +47,6 @@ on:
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
-      ZEPHYR_PMM_API_KEY:
-        required: false
 
 permissions:
   actions: read

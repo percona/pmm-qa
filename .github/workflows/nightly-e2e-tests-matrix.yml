@@ -153,7 +153,8 @@ jobs:
             test_shard: '10/10'
             tags_for_tests: '@qan|@nightly|@menu'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-tests.yml
-    secrets: inherit
+    secrets: 
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
     with:
       pmm_server_address: ${{ inputs.pmm_server_address }}
       admin_password: ${{ inputs.admin_password || 'admin' }}
