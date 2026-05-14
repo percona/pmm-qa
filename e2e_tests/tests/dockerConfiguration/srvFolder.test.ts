@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
+import data from '@fixtures/dataTest';
 
 pmmTest.describe('Test for SRV folder in pmm server.', () => {
   // pmmTest.describe.configure({ retries: 0 });
@@ -25,59 +26,57 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
     cliHelper.execSilent(`docker stop pmm-server-srv && docker rm -fr pmm-server-srv`);
   });
 
-  for (const configuration of folderConfiguration) {
-    pmmTest(
-      `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials using ${configuration.testName} @docker-configuration`,
-      async ({ cliHelper, dashboard, grafanaHelper, page, urlHelper }) => {
-        cliHelper.execSilent(configuration.command);
+  data(folderConfiguration).pmmTest(
+    `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials using srv folder or docker volume @docker-configuration`,
+    async (data, { cliHelper, dashboard, grafanaHelper, page, urlHelper }) => {
+      cliHelper.execSilent(data.command);
 
-        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for server to start
-        await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for server to start
+      await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
 
-        const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
+      const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
 
-        expect(logs).not.toContain(
-          'Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass"',
-        );
+      expect(logs).not.toContain(
+        'Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass"',
+      );
 
-        await grafanaHelper.authorize('admin', 'admin');
-        await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
-        await page
-          .locator('//h1[text()="Percona Monitoring and Management"]')
-          .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
-        await grafanaHelper.unAuthorize();
+      await grafanaHelper.authorize('admin', 'admin');
+      await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+      await page
+        .locator('//h1[text()="Percona Monitoring and Management"]')
+        .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+      await grafanaHelper.unAuthorize();
 
-        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for un-authorization
-        await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for un-authorization
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
 
-        await grafanaHelper.authorize(newUser, newPassword);
+      await grafanaHelper.authorize(newUser, newPassword);
 
-        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for authorization
-        await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-        await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
-        await dashboard.home.elements.headerLocator.waitFor({
-          state: 'visible',
-          timeout: Timeouts.TEN_SECONDS,
-        });
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for authorization
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+      await dashboard.home.elements.headerLocator.waitFor({
+        state: 'visible',
+        timeout: Timeouts.TEN_SECONDS,
+      });
 
-        await grafanaHelper.unAuthorize();
-        cliHelper.execSilent('docker exec pmm-server-srv change-admin-password anotherpass');
+      await grafanaHelper.unAuthorize();
+      cliHelper.execSilent('docker exec pmm-server-srv change-admin-password anotherpass');
 
-        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for password change
-        await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-        await grafanaHelper.authorize(newUser, 'anotherpass');
-        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth
-        await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for password change
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await grafanaHelper.authorize(newUser, 'anotherpass');
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
 
-        const newLogs = cliHelper.execSilent('docker logs pmm-server-srv');
+      const newLogs = cliHelper.execSilent('docker logs pmm-server-srv');
 
-        console.log(newLogs.stdout);
-        await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
-        await dashboard.home.elements.headerLocator.waitFor({
-          state: 'visible',
-          timeout: Timeouts.TWENTY_SECONDS,
-        });
-      },
-    );
-  }
+      console.log(newLogs.stdout);
+      await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+      await dashboard.home.elements.headerLocator.waitFor({
+        state: 'visible',
+        timeout: Timeouts.TWENTY_SECONDS,
+      });
+    },
+  );
 });
