@@ -48,6 +48,10 @@
     shell: |
       sudo apt-get update
       sudo apt-get install pmm-client
+    register: apt_install_result
+    retries: 3
+    delay: 30
+    until: apt_install_result.rc == 0
 
   - name: Install PMM client new rpm packages
     when: ansible_os_family == "RedHat"
@@ -56,6 +60,10 @@
     shell: |
       yum -y update
       yum -y install pmm-client
+    register: yum_install_result
+    retries: 3
+    delay: 30
+    until: yum_install_result.rc == 0
 
   - name: Check that PMM Client version is correct
     include_tasks: ./tasks/verify_pmm_client_version.yml
