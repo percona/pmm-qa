@@ -174,7 +174,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await output.outContains('Socket and port cannot be specified together.');
   });
 
-  test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
+  test("PMM-T2221 - User can use connection timeout while using pmm-admin add @connectionTimeout", async ({ }) => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
