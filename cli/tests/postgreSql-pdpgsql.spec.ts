@@ -206,16 +206,13 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     await chaneAgent.exitCodeEquals(0);
   });
 
-  test("PMM-T8885 User can use connection timeout while using pmm-admin add pgsql @connectionTimeoutPGSQL", async ({ }) => {
+  test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add @connectionTimeoutPGSQL", async ({ }) => {
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root 2>/dev/null || true'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo root handle 1: prio'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo parent 1:3 handle 30: netem delay 5500ms'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc filter add dev lo protocol ip parent 1:0 prio 3 u32 match ip dport 5432 0xffff flowid 1:3'`);
     const output = await cli.exec(`docker exec ${containerName} bash -c "time pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password='${PGSQL_PASSWORD}' ${connectionTimeoutServiceName}_timeout ${ipPort}"`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root'`);
-
-    console.log(`Output is: ${output.stdout}`)
-    console.log(`Error is: ${output.stderr.text}`)
 
     await output.outContains('Connection check failed: dial tcp 127.0.0.1:5432: i/o timeout.')
     expect(

@@ -255,7 +255,7 @@ test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb' }, asy
     await chaneAgent.exitCodeEquals(0);
   });
 
-  test("PMM-T7774 User can use connection timeout while using pmm-admin add mongodb @connectionTimeoutPSMDB", async ({ }) => {
+  test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add @connectionTimeoutPSMDB", async ({ }) => {
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mongodb ${clientCredentialsFlags} --connection-timeout=5s ${connectionTimeoutServiceName}_timeout 195.15.25.15:27017`);
     await output.exitCodeEquals(1)
 
