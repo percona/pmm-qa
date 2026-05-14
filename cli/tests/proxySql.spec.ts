@@ -129,22 +129,24 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add proxysql --connection-timeout=5s --username=${PXC_USER} --password=${PXC_PASSWORD} --port=6032 ${connectionTimeoutServiceName} ${dbHostPort}`);
     await output.exitCodeEquals(0);
 
-
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout.trim()} | grep proxysql_exporter | awk -F' ' '{print $4}'`)
     await cli.exec('sleep 5');
-    const dataSourceName = await cli.exec(`docker exec ${containerName} cat /pmm-agent.log | grep ${agentId.stdout.trim()}`);
+    const dataSourceName = await cli.exec(`docker exec ${containerName} cat /pmm-agent.log | grep ${agentId.stdout.trim()} | grep connect_timeout=5`);
 
     console.log(dataSourceName);
     await dataSourceName.assertSuccess();
   });
 
-  test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
+  test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent @connectionTimeoutPXC", async ({ }) => {
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep proxysql_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${agentId.stdout} --connection-timeout=4s`);
     await chaneAgent.exitCodeEquals(0);
+    await cli.exec('sleep 5');
+    const dataSourceName = await cli.exec(`docker exec ${containerName} cat /pmm-agent.log | grep ${agentId.stdout.trim()} | grep connect_timeout=4`);
+    await dataSourceName.assertSuccess();
   });
 });
