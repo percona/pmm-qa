@@ -149,4 +149,26 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
     const dataSourceName = await cli.exec(`docker exec ${containerName} cat /pmm-agent.log | grep ${agentId.stdout.trim()} | grep timeout=4`);
     await dataSourceName.assertSuccess();
   });
+
+  test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent @connectionTimeoutPXC", async ({ }) => {
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep proxysql_exporter | awk -F' ' '{print $4}'`)
+    await serviceId.exitCodeEquals(0);
+    await agentId.exitCodeEquals(0);
+    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${agentId.stdout} --connection-timeout=0s`);
+    await chaneAgent.exitCodeEquals(0);
+    await cli.exec('sleep 2');
+    const dataSourceName = await cli.exec(`docker exec ${containerName} cat /pmm-agent.log | grep ${agentId.stdout.trim()} | grep timeout=2`);
+    await dataSourceName.assertSuccess();
+  });
+
+  test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add", async ({ }) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add proxysql --connection-timeout=5s --username=${PXC_USER} --password=${PXC_PASSWORD} --port=6032 ${connectionTimeoutServiceName} 195.15.25.15:6032`);
+    await output.exitCodeEquals(1)
+
+    expect(
+      output.durationMs,
+      `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
+    ).toBeGreaterThan(5_000);
+  });
 });
