@@ -49,7 +49,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
   });
 
   test("PMM-T6663 User can use connection timeout while using pmm-admin add valkey", async ({ }) => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add valkey --connection-timeout=5s --username=${username} --password="${password}" --service-name=${connectionTimeoutServiceName} --host=195.15.25.15 --port=${port}`);
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add valkey --connection-timeout=5s --username=${username} --password="${password}" --service-name=${connectionTimeoutServiceName}_timeout --host=195.15.25.15 --port=${port}`);
     await output.exitCodeEquals(1)
 
     expect(
