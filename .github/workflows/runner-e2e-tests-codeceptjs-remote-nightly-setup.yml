@@ -54,7 +54,7 @@ jobs:
       SHARD_NAME: ${{ inputs.shard_name }}
       TEST_JOB_PREFIX: 'test execution / '
       EXPECTED_TEST_JOBS: ${{ inputs.expected_test_jobs || 10 }}
-      WAIT_POLL_INTERVAL_SECONDS: 60
+      WAIT_POLL_INTERVAL_SECONDS: 600
       WAIT_TIMEOUT_SECONDS: 10800
 
     steps:
