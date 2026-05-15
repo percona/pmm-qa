@@ -269,12 +269,25 @@ jobs:
           sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
           TEST_SHARD="${TEST_SHARD_INPUT:-${SHARD_NAME#shard-}/10}"
 
-          npx codeceptjs run \
+          npx codeceptjs run-workers 4 --by pool \
             -c pr.codecept.js \
-            --shard "${TEST_SHARD}" \
             --grep "${{ env.TAGS_FOR_TESTS }}" \
             --reporter mocha-multi \
             -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
+      # - name: Execute e2e tests
+      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+      #   working-directory: pmm-qa/codeceptjs-e2e
+      #   run: |
+      #     sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
+      #     sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
+      #     TEST_SHARD="${TEST_SHARD_INPUT:-${SHARD_NAME#shard-}/10}"
+
+      #     npx codeceptjs run \
+      #       -c pr.codecept.js \
+      #       --shard "${TEST_SHARD}" \
+      #       --grep "${{ env.TAGS_FOR_TESTS }}" \
+      #       --reporter mocha-multi \
+      #       -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
 
       - name: Download PMM Server logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
