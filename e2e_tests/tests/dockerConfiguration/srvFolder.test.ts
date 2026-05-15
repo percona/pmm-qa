@@ -8,6 +8,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   // This suite spins up a separate PMM server on port 81, so override the
   // global baseURL only for the tests in this describe block.
   pmmTest.use({ baseURL: 'http://127.0.0.1:81/' });
+  pmmTest.describe.configure({ mode: 'serial' });
 
   const newUser = 'newuser';
   const newPassword = 'newpass';
