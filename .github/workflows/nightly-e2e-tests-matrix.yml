@@ -136,6 +136,7 @@ jobs:
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-5
             test_shard: '5/5'
+            tags_for_tests: '@qan|@nightly|@menu'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-tests.yml
     secrets: 
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
