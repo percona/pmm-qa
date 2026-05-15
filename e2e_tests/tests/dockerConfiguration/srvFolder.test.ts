@@ -45,6 +45,11 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         );
 
         console.log(`Running test ${configuration.testName}`);
+
+        if (configuration.testName === 'local folder') {
+          console.log(cliHelper.execSilent('docker logs pmm-server-srv'));
+        }
+
         console.log(cliHelper.execute('docker ps -a'));
         await grafanaHelper.authorize('admin', 'admin');
         await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
