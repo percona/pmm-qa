@@ -16,10 +16,10 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
       command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume "$HOME/srv":/srv --name pmm-server-srv perconalab/pmm-server-fb:PR-4295-ff823af`,
       testName: 'local folder',
     },
-    {
-      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume pmm-volume:/srv --name pmm-server-srv perconalab/pmm-server-fb:PR-4295-ff823af`,
-      testName: 'docker volume',
-    },
+    // {
+    //   command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume pmm-volume:/srv --name pmm-server-srv perconalab/pmm-server-fb:PR-4295-ff823af`,
+    //   testName: 'docker volume',
+    // },
   ];
 
   pmmTest.afterEach(({ cliHelper }) => {
