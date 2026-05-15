@@ -46,7 +46,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
 
         console.log(`Running test ${configuration.testName}`);
 
-        if (configuration.testName === 'local folder') {
+        if (configuration.testName === 'docker volume') {
           console.log(cliHelper.execSilent('docker logs pmm-server-srv'));
         }
 
