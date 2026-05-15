@@ -19,7 +19,7 @@ export default abstract class BasePage {
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;
   abstract inputs: Record<string, Locator>;
-  abstract messages: Record<string, Locator>;
+  abstract messages: Record<string, string>;
 
   constructor(protected page: Page) {}
 

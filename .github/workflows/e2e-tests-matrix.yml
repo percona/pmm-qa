@@ -190,6 +190,18 @@ jobs:
       setup_services: '--database ps=8.4 --database psmdb --database pdpgsql'
       pmm_test_flag: '@LBAC'
 
+  qan:
+    name: Query Analytics stored metrics tests
+    uses: ./.github/workflows/runner-e2e-tests-playwright.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      setup_services: '--database pgsql'
+      pmm_test_flag: '@qan'
+
   fb_tests:
     name: FB E2E tests
     uses: ./.github/workflows/fb-e2e-suite.yml
@@ -200,4 +212,3 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-

@@ -2,11 +2,13 @@ import { expect } from '@playwright/test';
 import { AccessServiceType } from '@interfaces/accessControl';
 import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
+import QueryAnalyticsDetails from '@components/qan/storedMetrics/queryAnalyticsDetails.component';
 
 const serviceTypes: AccessServiceType[] = ['mongodb', 'mysql', 'postgresql'];
 
 export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
+  qanDetails = new QueryAnalyticsDetails(this.page);
   builders = {
     serviceTypeCheckbox: (serviceType: string) =>
       this.grafanaIframe().getByTestId(`filter-checkbox-${serviceType}`),
@@ -60,21 +62,13 @@ export default class StoredMetricsPage extends BasePage {
     expect(queryCount).toEqual(expectedQueryCount);
   };
 
-  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {
+  waitForQanStoredMetricsToHaveData = async (timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.waitUntilQanStoredMetricsLoaded();
-
-    const noDataLocator = this.elements.noData;
-    const timeoutInSeconds = timeout / Timeouts.ONE_SECOND;
-
-    for (let i = 0; i < timeoutInSeconds; i++) {
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: Replace with a better approach
-      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
-
-      if (!(await noDataLocator.isVisible())) return;
-    }
-
-    await expect(noDataLocator).not.toBeVisible({
-      timeout: Timeouts.ONE_SECOND,
+    await expect(
+      this.elements.firstRow,
+      'Query Analytics does not have data for selected parameters!',
+    ).toBeVisible({
+      timeout: timeout,
     });
   };
 
