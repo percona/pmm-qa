@@ -23,6 +23,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   ];
 
   pmmTest.afterEach(({ cliHelper }) => {
+    console.log('Stoping and removing pmm server');
     cliHelper.execSilent(`docker stop pmm-server-srv && docker rm -fr pmm-server-srv`);
   });
 
