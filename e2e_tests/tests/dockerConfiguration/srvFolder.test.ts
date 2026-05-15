@@ -37,7 +37,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         cliHelper.execSilent(configuration.command);
 
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for server to start
-        await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
+        await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
 
