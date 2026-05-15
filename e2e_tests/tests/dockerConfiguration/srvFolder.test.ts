@@ -1,13 +1,8 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import data from '@fixtures/dataTest';
 
 pmmTest.describe('Test for SRV folder in pmm server.', () => {
-  // pmmTest.describe.configure({ retries: 0 });
-  // This suite spins up a separate PMM server on port 81, so override the
-  // global baseURL only for the tests in this describe block.
-  pmmTest.use({ baseURL: 'http://127.0.0.1:81/' });
   pmmTest.describe.configure({ mode: 'serial' });
 
   const newUser = 'newuser';
@@ -15,10 +10,12 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   const folderConfiguration = [
     {
       command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume "$HOME/srv":/srv --name pmm-server-srv perconalab/pmm-server-fb:PR-4295-ff823af`,
+      port: 81,
       testName: 'local folder',
     },
     {
-      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume pmm-volume:/srv --name pmm-server-srv perconalab/pmm-server-fb:PR-4295-ff823af`,
+      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 82:8080 --publish 444:8443 --volume pmm-volume:/srv --name pmm-server-srv perconalab/pmm-server-fb:PR-4295-ff823af`,
+      port: 82,
       testName: 'docker volume',
     },
   ];
@@ -34,6 +31,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
     pmmTest(
       `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials using ${configuration.testName} @docker-configuration`,
       async ({ cliHelper, dashboard, grafanaHelper, page, urlHelper }) => {
+        pmmTest.use({ baseURL: `http://127.0.0.1:${configuration.port}/` });
         cliHelper.execSilent(configuration.command);
 
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for server to start
