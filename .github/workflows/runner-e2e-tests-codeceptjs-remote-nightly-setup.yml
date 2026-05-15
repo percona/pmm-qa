@@ -133,9 +133,9 @@ jobs:
               --verbose \
               ${{ env.WIZARD_ARGS }}
           on_retry_command: |
-            docker rm -f $(docker ps -q) || true
-            docker volume rm $(docker volume ls -q) || true
-            docker network rm $(docker network ls -q) || true
+            docker rm -f $(docker ps -a -q) || true
+            docker volume rm -f $(docker volume ls -q) || true
+            docker network rm -f $(docker network ls -q) || true
 
       - name: Waiting for tests execution
         uses: actions/github-script@v7
