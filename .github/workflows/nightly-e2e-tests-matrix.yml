@@ -123,19 +123,25 @@ jobs:
       matrix:
         include:
           - shard_name: shard-1
-            test_shard: '1/5'
+            test_shard: '1/7'
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-2
-            test_shard: '2/5'
+            test_shard: '2/7'
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-3
-            test_shard: '3/5'
+            test_shard: '3/7'
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-4
-            test_shard: '4/5'
+            test_shard: '4/7'
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-5
-            test_shard: '5/5'
+            test_shard: '5/7'
+            tags_for_tests: '@qan|@nightly|@menu'
+          - shard_name: shard-6
+            test_shard: '6/7'
+            tags_for_tests: '@qan|@nightly|@menu'
+          - shard_name: shard-7
+            test_shard: '7/7'
             tags_for_tests: '@qan|@nightly|@menu'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-tests.yml
     secrets: 
