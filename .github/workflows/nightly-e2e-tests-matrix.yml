@@ -114,7 +114,7 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: ${{ matrix.setup_services }}
       shard_name: ${{ matrix.shard_name }}
-      expected_test_jobs: 10
+      expected_test_jobs: 5
 
   test_execution:
     name: "test execution / ${{ matrix.shard_name }}"
@@ -123,35 +123,19 @@ jobs:
       matrix:
         include:
           - shard_name: shard-1
-            test_shard: '1/10'
+            test_shard: '1/5'
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-2
-            test_shard: '2/10'
+            test_shard: '2/5'
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-3
-            test_shard: '3/10'
+            test_shard: '3/5'
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-4
-            test_shard: '4/10'
+            test_shard: '4/5'
             tags_for_tests: '@qan|@nightly|@menu'
           - shard_name: shard-5
-            test_shard: '5/10'
-            tags_for_tests: '@qan|@nightly|@menu'
-          - shard_name: shard-6
-            test_shard: '6/10'
-            tags_for_tests: '@qan|@nightly|@menu'
-          - shard_name: shard-7
-            test_shard: '7/10'
-            tags_for_tests: '@qan|@nightly|@menu'
-          - shard_name: shard-8
-            test_shard: '8/10'
-            tags_for_tests: '@qan|@nightly|@menu'
-          - shard_name: shard-9
-            test_shard: '9/10'
-            tags_for_tests: '@qan|@nightly|@menu'
-          - shard_name: shard-10
-            test_shard: '10/10'
-            tags_for_tests: '@qan|@nightly|@menu'
+            test_shard: '5/5'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-tests.yml
     secrets: 
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
