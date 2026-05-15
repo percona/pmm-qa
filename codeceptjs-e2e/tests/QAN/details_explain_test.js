@@ -21,7 +21,7 @@ async function verifySupportedDBTabs({
   let service_name;
 
   if (serviceName === 'pdpgsql_') {
-    service_name = (await inventoryAPI.getServiceDetailsByRegex('pdpgsql_pmm_.*_1$')).service_name;
+    service_name = (await inventoryAPI.getServiceDetailsByRegex('pdpgsql_pmm_.*$')).service_name;
   } else {
     service_name = (
       await inventoryAPI.getServiceDetailsByPartialDetails({ cluster, service_name: serviceName })
