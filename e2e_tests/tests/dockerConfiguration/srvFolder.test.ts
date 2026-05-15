@@ -45,6 +45,8 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
           'Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass"',
         );
 
+        console.log(`Running test ${configuration.testName}`);
+        console.log(cliHelper.execute('docker ps -a'));
         await grafanaHelper.authorize('admin', 'admin');
         await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
         await page
