@@ -50,7 +50,6 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for un-authorization
       await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-
       await grafanaHelper.authorize(newUser, newPassword);
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for authorization
