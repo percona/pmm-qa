@@ -54,6 +54,8 @@ export default class Dashboards extends BasePage {
       '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
     ),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
+    qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
     renderedImage: this.grafanaIframe().locator('[alt="panel-preview-img"]'),
     summaryPanelText: this.grafanaIframe().locator(
@@ -89,6 +91,13 @@ export default class Dashboards extends BasePage {
     await test.step('Wait for loading to finish', async () => {
       await expectPanel(this.elements.loadingBar).toHaveCount(0);
     });
+
+    if (this.page.url().includes('/pmm-qan/')) {
+      await test.step('Wait for QAN stats to finish loading', async () => {
+        await expectPanel(this.elements.qanGrid).toBeVisible();
+        await expectPanel(this.elements.qanTableLoading).toHaveCount(0);
+      });
+    }
   };
 
   openPanelMenu = async (panelName: string) => {
