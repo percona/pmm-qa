@@ -21,6 +21,6 @@ export default class MysqlGroupReplicationSummary implements DashboardInterface 
     { name: 'Transactions in the Queue for Checking', type: 'timeSeries' },
     { name: 'Detected Conflicts', type: 'timeSeries' },
   ];
-  noDataMetrics: string[] = ['Replication Group Members'];
+  noDataMetrics: string[] = [];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }

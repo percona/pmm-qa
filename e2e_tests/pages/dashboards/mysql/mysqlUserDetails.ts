@@ -58,6 +58,6 @@ export default class MySQLUserDetails implements DashboardInterface {
     { name: 'Disk I/O and Swap Activity', type: 'timeSeries' },
     { name: 'Network Traffic', type: 'timeSeries' },
   ];
-  noDataMetrics: string[] = ['Rows Fetched'];
+  noDataMetrics: string[] = [];
   metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
 }
