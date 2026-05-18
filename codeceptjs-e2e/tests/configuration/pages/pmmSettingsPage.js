@@ -68,7 +68,7 @@ module.exports = {
   },
   messages: {
     successPopUpMessage: 'Settings updated',
-    invalidDataDurationMessage: 'Value should be in the range from 1 to 3650 days',
+    invalidDataDurationMessage: 'Value should be in the range from 1 to 3650',
     invalidDataDurationPopUpMessage: 'data_retention: should be a natural number of days',
     requiredFieldMessage: 'Required field',
     invalidSSHKeyMessage: 'Invalid SSH key.',
@@ -143,8 +143,9 @@ module.exports = {
         link: links.backupManagementDocs,
       },
       perconaAlerting: {
-        nativeTextLocator: locate('//p[normalize-space()="Percona Alerting"]').as('Percona Alerting tooltip'),
-        text: 'Percona Alerting',
+        iconLocator: locate(I.useDataQA('advanced-alerting')).find(I.useDataQA('info-icon')).as('Alerting tooltip'),
+        openByClick: true,
+        text: 'Option to enable/disable Percona Alerting features. Read more',
         link: links.integratedAlertingDocs,
       },
       microsoftAzureMonitoring: {
@@ -245,8 +246,8 @@ module.exports = {
     submitSlackButton: '$slack-settings--submit-button',
   },
   fields: {
-    advancedLabel: '//div[contains(normalize-space(), "Data retention")]',
-    advancedButton: I.useDataQA('advanced-button'),
+    advancedLabel: '$advanced-label',
+    advancedButton: '$advanced-button',
     addAlertRuleButton: '//span[text()="Apply Alertmanager settings"]/parent::span',
     alertRulesInput: '$alertmanager-rules',
     alertURLInput: '$alertmanager-url',
@@ -256,18 +257,19 @@ module.exports = {
     alertmanagerButton: '$alertmanager-button',
     amUrlLabel: locateLabel('form-field-am-url'),
     applyButton: 'button[type="submit"]',
-    backupManagementSwitch: I.useDataQA('switch-input-backup'),
-    backupManagementSwitchInput: locate(I.useDataQA('switch-input-backup')).find('input'),
+    backupManagementSwitch: locate('$advanced-backup').find('label'),
+    backupManagementSwitchInput: locate('$advanced-backup').find('input'),
     callHomeSwitch: '//button[@class="toggle-field ant-switch ant-switch-checked"]',
-    checkForUpdatesLabel: I.useDataQA('switch-input-updates-label'),
-    checkForUpdatesSwitch: I.useDataQA('switch-input-updates'),
-    dataRetentionInput: 'input[name="retention"]',
+    checkForUpdatesLabel: locate('$advanced-updates').find('span'),
+    checkForUpdatesSwitch: locate('$advanced-updates').find('label'),
+    dataRetentionInput: '$retention-number-input',
     dataRetentionLabel: locateLabel('form-field-data-retention'),
     retentionValidation: '$retention-field-error-message',
     errorPopUpElement: I.useDataQA('data-testid Alert error'),
     iframe: '//div[@class="panel-content"]//iframe',
-    metricsResolutionButton: I.useDataQA('metrics-resolution-button'),
-    metricsResolutionByText: (text) => {
+    metricsResolutionButton: '$metrics-resolution-button',
+    metricsResolutionByText: (text) => locate('label').withText(text),
+    metricsResolutionOption: (text) => {
       switch (text.toLowerCase()) {
         case 'rare':
           return I.useDataQA('radio-option-rare');
@@ -281,30 +283,30 @@ module.exports = {
           return locate('label').withText(text);
       }
     },
-    metricsResolutionLabel: '//div[contains(normalize-space(), "Metrics resolution")]',
+    metricsResolutionLabel: '$metrics-resolution-label',
     metricsResolutionRadio: I.useDataQA('radio-option-standard'),
-    microsoftAzureMonitoringSwitch: I.useDataQA('switch-input-azure-discover'),
-    microsoftAzureMonitoringSwitchInput: locate(I.useDataQA('switch-input-azure-discover')).find('input'),
-    accessControlInput: locate(I.useDataQA('switch-input-access-control')).find('input'),
-    accessControlSwitch: I.useDataQA('switch-input-access-control'),
+    microsoftAzureMonitoringSwitch: locate('$advanced-azure-discover').find('//div[2]//label'),
+    microsoftAzureMonitoringSwitchInput: locate('$advanced-azure-discover').find('//div[2]//input'),
+    accessControlInput: locate('[name="accessControl"]'),
+    accessControlSwitch: locate('$access-control').find('label'),
     loginButton: '$sign-in-submit-button',
-    lowInput: 'input[name="lr"]',
-    mediumInput: 'input[name="mr"]',
-    highInput: 'input[name="hr"]',
+    lowInput: '$lr-number-input',
+    mediumInput: '$mr-number-input',
+    highInput: '$hr-number-input',
     privacyPolicy: '//span[contains(text(), "Privacy Policy")]',
-    publicAddressLabel: '//div[contains(normalize-space(), "Public address")]',
-    publicAddressInput: I.useDataQA('publicAddress-text-input'),
-    publicAddressButton: locate('button').withText('Get from browser'),
+    publicAddressLabel: '//h6[normalize-space()="Public address"]',
+    publicAddressInput: '$publicAddress-text-input',
+    publicAddressButton: '$public-address-button',
     sectionHeader: '//div[@class="ant-collapse-header"]',
     selectedResolution: 'span.ant-slider-mark-text-active',
     signInEmail: '$email-text-input',
     signInPassword: '$email-text-input',
-    sshKeyInput: I.useDataQA('ssh-key'),
-    sshKeyLabel: '//div[contains(normalize-space(), "SSH key")]',
-    sshKeyButton: I.useDataQA('ssh-key-button'),
-    sttLabel: I.useDataQA('switch-input-stt-label'),
-    sttSwitchSelectorInput: locate(I.useDataQA('switch-input-stt')).find('input'),
-    sttSwitchSelector: I.useDataQA('switch-input-stt'),
+    sshKeyInput: '$ssh-key',
+    sshKeyLabel: '//h6[normalize-space()="SSH key"]',
+    sshKeyButton: '$ssh-key-button',
+    sttLabel: locate('$advanced-advisors').find('span'),
+    sttSwitchSelectorInput: locate('$advanced-advisors').find('input'),
+    sttSwitchSelector: locate('$advanced-advisors').find('label'),
     subSectionHeader: '//following-sibling::div//div[@class="ant-collapse-header"]',
     signUpEmail: '$email-text-input',
     signUpPassword: '$password-password-input',
@@ -312,22 +314,22 @@ module.exports = {
     signUpButton: '$sign-up-submit-button',
     singInToSignUpButton: '$sign-in-to-sign-up-button',
     signUpBackToLogin: '$sign-up-to-sign-in-button',
-    telemetrySwitchSelectorInput: locate(I.useDataQA('switch-input-telemetry')).find('input'),
-    telemetrySwitchSelector: I.useDataQA('switch-input-telemetry'),
-    perconaAlertingSwitchInput: locate(I.useDataQA('switch-input-alerting')).find('input'),
-    perconaAlertingSwitch: I.useDataQA('switch-input-alerting'),
-    telemetryLabel: I.useDataQA('switch-input-telemetry-label'),
+    telemetrySwitchSelectorInput: locate('$advanced-telemetry').find('input'),
+    telemetrySwitchSelector: locate('$advanced-telemetry').find('label'),
+    perconaAlertingSwitchInput: locate('$advanced-alerting').find('input'),
+    perconaAlertingSwitch: locate('$advanced-alerting').find('label'),
+    telemetryLabel: locate('$advanced-telemetry').find('span'),
     tooltipText: locate('$info-tooltip').find('./*[self::span or self::div]'),
     tooltipReadMoreLink: locate('$info-tooltip').find('a'),
-    tabsSection: I.useDataQA('settings-tabs'),
-    tabContent: I.useDataQA('settings-tab-content'),
+    tabsSection: '$settings-tabs',
+    tabContent: '$settings-tab-content',
     termsOfService: '//span[contains(text(), "Terms of Service")]',
     validationMessage: 'span.error-message',
-    rareIntervalInput: 'input[name="rareInterval"]',
+    rareIntervalInput: '$rareInterval-number-input',
     rareIntervalValidation: '$rareInterval-field-error-message',
-    standartIntervalInput: 'input[name="standardInterval"]',
+    standartIntervalInput: '$standardInterval-number-input',
     standartIntervalValidation: '$standardInterval-field-error-message',
-    frequentIntervalInput: 'input[name="frequentInterval"]',
+    frequentIntervalInput: '$frequentInterval-number-input',
     frequentIntervalValidation: '$frequentInterval-field-error-message',
     pmmServerNameInput: '$pmmServerName-text-input',
     perconaAccountEmailInput: '$email-text-input',
@@ -454,7 +456,7 @@ module.exports = {
   },
 
   async verifySelectedResolution(resolution) {
-    const selector = this.fields.metricsResolutionByText(resolution);
+    const selector = this.fields.metricsResolutionOption(resolution);
 
     I.waitForElement(selector, 30);
     const value = await I.grabAttributeFrom(selector, 'checked');
@@ -468,11 +470,9 @@ module.exports = {
     I.pressKey('Backspace');
   },
 
-  async changeDataRetentionValueTo(days) {
-    await I.usePlaywrightTo('set data retention value', async ({ page }) => {
-      await page.locator(this.fields.dataRetentionInput).fill(String(days));
-    });
-    I.waitForValue(this.fields.dataRetentionInput, String(days), 10);
+  changeDataRetentionValueTo(days) {
+    I.clearField(this.fields.dataRetentionInput);
+    I.fillField(this.fields.dataRetentionInput, days);
     I.waitForEnabled(this.fields.advancedButton, 30);
     I.click(this.fields.advancedButton);
   },
@@ -482,10 +482,9 @@ module.exports = {
     I.fillField(this.fields.dataRetentionInput, value);
     I.pressKey('Tab');
     I.waitForElement(this.fields.dataRetentionInput, 30);
-    const actualMessage = await I.executeScript(
-      (selector) => document.querySelector(selector).validationMessage,
-      this.fields.dataRetentionInput,
-    );
+    const actualMessage = await I.usePlaywrightTo('get retention validation message', async ({ page }) => (
+      page.locator('[data-testid="retention-number-input"]').evaluate((element) => element.validationMessage)
+    ));
 
     assert.equal(
       actualMessage,
@@ -588,16 +587,22 @@ module.exports = {
   },
 
   async verifyTooltip(tooltipObj) {
+    const verifyReadMoreLink = async (linkLocator, expectedLink) => {
+      I.waitForVisible(linkLocator, 5);
+      I.scrollTo(linkLocator);
+      I.seeAttributesOnElements(linkLocator, { href: expectedLink });
+      const readMoreLink = await I.grabAttributeFrom(linkLocator, 'href');
+      const response = await I.sendGetRequest(readMoreLink);
+
+      assert.equal(response.status, 200, 'Read more link should lead to working documentation page. But the GET request response status is not 200');
+    };
+
     if (tooltipObj.nativeTextLocator) {
       I.waitForVisible(tooltipObj.nativeTextLocator, 10);
       I.see(tooltipObj.text, tooltipObj.nativeTextLocator);
 
       if (tooltipObj.nativeLinkLocator && tooltipObj.link) {
-        I.seeAttributesOnElements(tooltipObj.nativeLinkLocator, { href: tooltipObj.link });
-        const readMoreLink = await I.grabAttributeFrom(tooltipObj.nativeLinkLocator, 'href');
-        const response = await I.sendGetRequest(readMoreLink);
-
-        assert.equal(response.status, 200, 'Read more link should lead to working documentation page. But the GET request response status is not 200');
+        await verifyReadMoreLink(tooltipObj.nativeLinkLocator, tooltipObj.link);
       }
 
       if (tooltipObj.nativeDialogButton && tooltipObj.nativeDialogTextLocator) {
@@ -612,6 +617,22 @@ module.exports = {
         );
         I.pressKey('Escape');
       }
+
+      return;
+    }
+
+    if (tooltipObj.openByClick) {
+      I.waitForVisible(tooltipObj.iconLocator, 5);
+      I.wait(1);
+      I.click(tooltipObj.iconLocator);
+      I.waitForVisible(this.fields.tooltipText, 5);
+      I.seeTextEquals(tooltipObj.text, this.fields.tooltipText);
+
+      if (tooltipObj.link) {
+        await verifyReadMoreLink(this.fields.tooltipReadMoreLink, tooltipObj.link);
+      }
+
+      I.pressKey('Escape');
 
       return;
     }
