@@ -114,10 +114,10 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: ${{ matrix.setup_services }}
       shard_name: ${{ matrix.shard_name }}
-      expected_test_jobs: 7
+      expected_test_jobs: 3
 
   test_execution:
-    name: "test execution / ${{ matrix.shard_name }}"
+    name: "test execution / ${{ matrix.tags_for_tests }}"
     strategy:
       fail-fast: false
       matrix:
