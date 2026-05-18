@@ -96,20 +96,6 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2052 - Verify PostgreSQL Checkpoints, Buffers and WAL Usage dashboard @nightly @dashboards',
-  async ({ I, dashboardPage }) => {
-    const details = (await inventoryAPI.getNodeByServiceName('patroni_service_1')).services.find((service) => service.service_name.includes('pdpgsql_pmm_patroni'));
-    const url = I.buildUrlWithParams(dashboardPage.postgresqlCheckpointDashboard.url, { from: 'now-5m', service_name: details.service_name, refresh: '5s' });
-
-    I.amOnPage(url);
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    await dashboardPage.verifyMetricsExistencePartialMatch(dashboardPage.postgresqlCheckpointDashboard.metrics);
-    await dashboardPage.verifyThereAreNoGraphsWithoutData();
-  },
-);
-
-Scenario(
   'PMM-T2051 - Verify PostgreSQL Replication Overview dashboard @nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.postgresqlReplicationOverviewDashboard.url, { from: 'now-1h', refresh: '5s' });

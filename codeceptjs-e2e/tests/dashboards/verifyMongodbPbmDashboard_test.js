@@ -21,7 +21,7 @@ Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @nightly @g
   I, current, dashboardPage, inventoryAPI, scheduledAPI, backupAPI,
 }) => {
   // Preparation
-  const service = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101', refresh: '5s' });
+  const service = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101' });
   const snapshotSchedule = {
     service_id: service.service_id,
     location_id: locationId,

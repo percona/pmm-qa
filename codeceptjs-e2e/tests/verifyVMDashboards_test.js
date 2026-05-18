@@ -18,7 +18,9 @@ Scenario(
 Scenario(
   'PMM-T507 Verify metrics on VM Agents Overview Dashboard @nightly @nightly-generic @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
-    I.amOnPage(dashboardPage.victoriaMetricsAgentsOverviewDashboard.url);
+    const url = I.buildUrlWithParams(dashboardPage.victoriaMetricsAgentsOverviewDashboard.url, { from: 'now-5m', refresh: '5s' });
+
+    I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
 
@@ -26,8 +28,9 @@ Scenario(
     await I.asyncWaitFor(async () => {
       I.pressKey('PageDown');
 
-      return (await I.grabNumberOfVisibleElements(dashboardPage.graphsLocator('Network  Usage')));
+      return (await I.grabNumberOfVisibleElements(dashboardPage.graphsLocator('Network Usage')));
     }, 90);
+
     await dashboardPage.verifyMetricsExistence(dashboardPage.victoriaMetricsAgentsOverviewDashboard.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithoutData(1);
   },
