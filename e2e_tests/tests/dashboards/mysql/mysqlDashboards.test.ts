@@ -129,10 +129,7 @@ pmmTest(
   async ({ dashboard, page, urlHelper }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlGroupReplicationSummary.url, {
-        cluster: 'ps-gr-dev-cluster',
-        environment: 'ps-gr-dev',
         from: 'now-1h',
-        replicationSet: 'ps-gr-replication',
       }),
     );
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlGroupReplicationSummary.metrics);
