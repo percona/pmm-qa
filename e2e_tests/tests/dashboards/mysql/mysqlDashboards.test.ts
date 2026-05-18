@@ -74,7 +74,10 @@ data(services).pmmTest(
 pmmTest(
   'PMM-T324 - Verify MySQL - MySQL User Details dashboard @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm');
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
+      'ps_pmm_replication_.*_1',
+      { replication_set: 'ps-async-replication' },
+    );
 
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlUserDetails.url, {
@@ -126,7 +129,10 @@ pmmTest(
   async ({ dashboard, page, urlHelper }) => {
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlGroupReplicationSummary.url, {
+        cluster: 'ps-gr-dev-cluster',
+        environment: 'ps-gr-dev',
         from: 'now-1h',
+        replicationSet: 'ps-gr-replication',
       }),
     );
     await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlGroupReplicationSummary.metrics);
