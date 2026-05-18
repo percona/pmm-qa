@@ -73,7 +73,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T215 - Verify that buttons in QAN are disabled and visible on the screen @qan @nightly-pdpgsql @nightly-qan',
+  'PMM-T215 - Verify that buttons in QAN are disabled and visible on the screen @qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     I.waitForVisible(queryAnalyticsPage.data.buttons.previousPage, 60);

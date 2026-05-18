@@ -235,7 +235,7 @@ Scenario(
 /** Time Range Bug.
 Data(shortCutTests).Scenario(
   'PMM-T436 PMM-T458 - Verify short-cut navigation from filters to related dashboards, '
-    + 'Verify time interval is passed from QAN to dashboards via shortcut links @qan @nightly-qan @debug',
+    + 'Verify time interval is passed from QAN to dashboards via shortcut links @qan @debug',
   async ({
     I, dashboardPage, current, adminPage, anPage,
   }) => {

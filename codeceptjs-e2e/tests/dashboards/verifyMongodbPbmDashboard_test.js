@@ -17,11 +17,11 @@ After(async ({ scheduledAPI, locationsAPI }) => {
   await locationsAPI.clearAllLocations();
 });
 
-Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @nightly @dashboard-psmdb @dashboards @gssapi-nightly', async ({
+Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @nightly @gssapi-nightly', async ({
   I, current, dashboardPage, inventoryAPI, scheduledAPI, backupAPI,
 }) => {
   // Preparation
-  const service = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101' });
+  const service = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101', refresh: '5s' });
   const snapshotSchedule = {
     service_id: service.service_id,
     location_id: locationId,

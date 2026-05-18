@@ -235,7 +235,7 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T554 - Check that all agents have status "RUNNING" @agents-running @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade @pmm-migration',
+  'PMM-T554 - Check that all agents have status "RUNNING" @inventory @nightly @gssapi-nightly @ami-ovf-pre-upgrade @ami-ovf-post-upgrade @pmm-migration',
   async ({ I, pmmInventoryPage, inventoryAPI }) => {
     await I.amOnPage(pmmInventoryPage.url);
     await I.waitForVisible(pmmInventoryPage.fields.showRowDetails, 10);
@@ -278,7 +278,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1226 - Verify Agents has process_exec_path option on Inventory page @inventory @nightly @nightly-generic @gssapi-nightly @exporters',
+  'PMM-T1226 - Verify Agents has process_exec_path option on Inventory page @inventory @nightly @gssapi-nightly @exporters',
   async ({ I, pmmInventoryPage, inventoryAPI }) => {
     I.amOnPage(pmmInventoryPage.url);
     const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pmm-server-postgresql');

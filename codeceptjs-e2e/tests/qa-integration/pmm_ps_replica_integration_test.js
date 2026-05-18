@@ -15,11 +15,11 @@ BeforeSuite(async ({ inventoryAPI }) => {
 });
 
 Data(serviceList).Scenario(
-  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly @dashboard-percona-server',
+  'PMM-T2029 - Verify dashboard for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly',
   async ({
     I, dashboardPage, adminPage, current,
   }) => {
-    const url = I.buildUrlWithParams(dashboardPage.mysqlReplcationDashboard.clearUrl, { from: 'now-5m', to: 'now', service_name: current.serviceName });
+    const url = I.buildUrlWithParams(dashboardPage.mysqlReplcationDashboard.clearUrl, { from: 'now-5m', to: 'now', service_name: current.serviceName, refresh: '5s' });
 
     I.amOnPage(url);
     await dashboardPage.waitForDashboardOpened();
@@ -36,11 +36,11 @@ Data(serviceList).Scenario(
 );
 
 Scenario(
-  'PMM-T2030 - Verify QAN for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly @nightly-pxc-ps-replication',
+  'PMM-T2030 - Verify QAN for PS Replica Instance @pmm-ps-replica-integration @not-ui-pipeline @nightly',
   async ({
     I, queryAnalyticsPage,
   }) => {
-    I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m' }));
+    I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m', refresh: '5s' }));
     queryAnalyticsPage.waitForLoaded();
     await adminPage.applyTimeRange('Last 12 hours');
     queryAnalyticsPage.waitForLoaded();

@@ -6,7 +6,7 @@ Before(async ({
   I, queryAnalyticsPage,
 }) => {
   await I.Authorize();
-  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m' }));
+  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m' }));
   queryAnalyticsPage.waitForLoaded();
 });
 
@@ -255,7 +255,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T179 - Verify user is able to hover sparkline buckets and see correct Query Time Value @qan @nightly-qan',
+  'PMM-T179 - Verify user is able to hover sparkline buckets and see correct Query Time Value @qan',
   async ({ I, queryAnalyticsPage }) => {
     queryAnalyticsPage.waitForLoaded();
     const secondCell = queryAnalyticsPage.data.elements.queryValue(3, 3);

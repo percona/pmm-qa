@@ -76,7 +76,7 @@ Scenario(
 
 // Skip until https://jira.percona.com/browse/PMM-12218 is fixed
 // Data(querySources).Scenario(
-//   'PMM-T1667 - Verify that SQL injection is filtered in placeholders on QAN tab @qan @nightly-qan',
+//   'PMM-T1667 - Verify that SQL injection is filtered in placeholders on QAN tab @qan',
 //   async ({
 //     I, adminPage, current,
 //   }) => {
