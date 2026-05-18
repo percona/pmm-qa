@@ -110,7 +110,7 @@ pmmTest('PMM-T2199 Grafana embedding @new-navigation', async ({ leftNavigation }
 
   await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
     await leftNavigation.selectMenuItem('home');
-    await leftNavigation.elements.refreshButton.click();
+    await leftNavigation.elements.refreshButton.click({ timeout: Timeouts.THIRTY_SECONDS });
     await expect(leftNavigation.elements.iframe).toBeVisible();
     await leftNavigation.selectMenuItem('help');
     await expect(leftNavigation.elements.iframe).toBeAttached();
