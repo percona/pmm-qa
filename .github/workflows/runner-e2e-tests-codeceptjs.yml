@@ -202,8 +202,7 @@ jobs:
         run: |
           docker network create pmm-qa || true
           PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
-          sleep 60
-          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
+          timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/ping)" = "200" ]; do sleep 5; done'
           bash -x testdata/db_setup.sh
           docker network connect pmm-qa pmm-server || true
 

@@ -9,14 +9,8 @@ docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded.yaml build
 docker compose -f docker-compose-sharded.yaml up -d
 
-echo "waiting 30 seconds for pmm-server to start"
-sleep 30
-echo "configuring pmm-server"
-docker compose -f docker-compose-sharded.yaml exec -T pmm-server change-admin-password password
-echo "restarting pmm-server"
-docker compose -f docker-compose-sharded.yaml restart pmm-server
-echo "waiting 30 seconds for pmm-server to start"
-sleep 30
+echo "waiting for pmm-server to start"
+timeout 120 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD:-password}" https://127.0.0.1/ping)" = "200" ]; do sleep 5; done'
 
 nodes="rs101 rs201"
 for node in $nodes
