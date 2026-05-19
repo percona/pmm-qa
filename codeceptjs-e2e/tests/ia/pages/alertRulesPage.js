@@ -35,8 +35,9 @@ module.exports = {
   buttons: {
     newAlertRule: locate('a').withText('New alert rule'),
     newAlertRuleFromTemplate: locate('a').withText('New alert rule from template'),
-    saveAndExit: I.useDataQA('save-rule'),
-    editAlertRule: '//a[contains(@href, "/edit")]',
+    saveAndExit: locate('//button[.="Save rule and exit"]'),
+    saveEditRule: locate('button').withText('Save'),
+    editAlertRule: '//a[@title="Edit"]',
     editRuleOnView: '//span[text()="Edit"]',
     deleteAlertRule: locate('[role="menuitem"]').withText('Delete'),
     groupCollapseButton: (folderText) => `//button[@data-testid='data-testid group-collapse-toggle'][following::div/h3[contains(., '${folderText}')]]`,
