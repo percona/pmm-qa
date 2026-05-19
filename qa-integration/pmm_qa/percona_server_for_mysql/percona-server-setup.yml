@@ -29,8 +29,6 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
-    - debug: msg="Debug client value is {{ debug_client }}"
-
     - name: Modify the node count for group replication
       set_fact:
         nodes_count: 3
