@@ -44,6 +44,8 @@ if [[ $mongo_setup_type == "psa" ]]; then
 fi
 echo
 echo "configuring pmm agents"
+echo "Client debug value is: $CLIENT_DEBUG"
+
 random_number=$RANDOM
 nodes="rs101 rs102 rs103"
 for node in $nodes
