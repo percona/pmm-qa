@@ -2,8 +2,9 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await grafanaHelper.authorize();
+  await page.goto('pmm-ui/help');
 });
 
 pmmTest(
@@ -47,6 +48,7 @@ pmmTest(
     await expect(leftNavigation.menuItemLocator('accounts')).toBeVisible();
     await leftNavigation.menuItemLocator('accounts').click();
     await expect(leftNavigation.menuItemLocator('accounts.changeTheme')).toBeVisible();
+    await expect(leftNavigation.getThemeCombobox()).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
 
     for (let i = 0; i < 2; i++) {
       await pmmTest.step('Toggle theme and verify combobox value syncs', async () => {

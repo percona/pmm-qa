@@ -198,10 +198,13 @@ export default class LeftNavigation extends BasePage {
       const parts = path.split('.');
       let node = this.buttons as NestedLocators;
 
-      for (const part of parts) {
+      for (const [index, part] of parts.entries()) {
         const item = node[part];
 
         if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
+        if (index < parts.length - 1 && !this.isLocator(item)) {
+          await this.expandMenuItem(item as NestedLocators);
+        }
         if (part === 'ha' || part === 'org') {
           const expandKey = part === 'ha' ? 'highAvailability' : 'orgManagement';
           const expandLocator = this.getLocator(node[expandKey] as NestedLocator);
@@ -314,6 +317,30 @@ export default class LeftNavigation extends BasePage {
         this.collectVerifyTimeRangePaths(value as NestedLocator, path ? `${path}.${key}` : key, paths);
       }
     }
+  }
+
+  private expandMenuItem = async (item: NestedLocators): Promise<void> => {
+    const locator = this.getLocator(item);
+    const firstChildLocator = this.getFirstChildLocator(item);
+
+    if (!locator || !firstChildLocator || (await firstChildLocator.isVisible())) return;
+
+    const expandButton = locator.locator('xpath=..').getByRole('button').first();
+
+    await expandButton.click({ timeout: Timeouts.TEN_SECONDS });
+    await firstChildLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+  };
+
+  private getFirstChildLocator(item: NestedLocators): Locator | undefined {
+    for (const [key, value] of Object.entries(item)) {
+      if (['locator', 'verifyTimeRange', 'elements'].includes(key)) continue;
+
+      const locator = this.getLocator(value as NestedLocator);
+
+      if (locator) return locator;
+    }
+
+    return undefined;
   }
 
   private getLocator(item: NestedLocator | undefined): Locator | undefined {
