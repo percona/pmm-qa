@@ -6,7 +6,7 @@ module.exports = {
   url: 'graph/alerting/admin',
   elements: {},
   buttons: {
-    editConfig: locate('button').withText('Edit configuration'),
+    editConfig: locate('button').withText('View configuration'),
   },
   messages: {
   },
