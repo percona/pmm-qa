@@ -27,7 +27,7 @@ Data(services).Scenario(
     let service_name;
 
     if (current.serviceName === 'pdpgsql_') {
-      service_name = (await inventoryAPI.getServiceDetailsByRegex('pdpgsql_pmm_.*$')).service_name;
+      service_name = (await inventoryAPI.getServiceDetailsByRegex('^pdpgsql_pmm_(?!.*patroni).*$')).service_name;
     } else {
       service_name = (await inventoryAPI.getServiceDetailsByStartsWithName(current.serviceName)).service_name;
     }

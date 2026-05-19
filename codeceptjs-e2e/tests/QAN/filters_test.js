@@ -2,10 +2,30 @@ const assert = require('assert');
 
 const shortCutTests = new DataTable(['type', 'dashboard', 'shortcutLink', 'filter']);
 
-shortCutTests.add(['Cluster', 'MongoDB Cluster Summary', 'graph/d/mongodb-cluster-summary/mongodb-cluster-summary', 'mongodb_node_cluster']);
-shortCutTests.add(['Replication Set', 'MySQL Replication Summary', 'graph/d/mysql-replicaset-summary/mysql-replication-summary', 'ps-repl1']);
-shortCutTests.add(['Node Name', 'Node Summary', 'graph/d/node-instance-summary/node-summary?var-node_name=pmm-server', 'pmm-server']);
-shortCutTests.add(['Service Name', 'MongoDB Instance Summary', 'graph/d/mongodb-instance-summary/mongodb-instance-summary', 'mongodb_rs1_2']);
+shortCutTests.add([
+  'Cluster',
+  'MongoDB Cluster Summary',
+  'graph/d/mongodb-cluster-summary/mongodb-cluster-summary',
+  'mongodb_node_cluster',
+]);
+shortCutTests.add([
+  'Replication Set',
+  'MySQL Replication Summary',
+  'graph/d/mysql-replicaset-summary/mysql-replication-summary',
+  'ps-repl1',
+]);
+shortCutTests.add([
+  'Node Name',
+  'Node Summary',
+  'graph/d/node-instance-summary/node-summary?var-node_name=pmm-server',
+  'pmm-server',
+]);
+shortCutTests.add([
+  'Service Name',
+  'MongoDB Instance Summary',
+  'graph/d/mongodb-instance-summary/mongodb-instance-summary',
+  'mongodb_rs1_2',
+]);
 
 Feature('QAN filters').retry(1);
 
@@ -26,9 +46,7 @@ Before(async ({ I, queryAnalyticsPage }) => {
 
 Data(filters).Scenario(
   'PMM-T1054 + PMM-T1055 - Verify the "Command type" filter for Postgres @qan',
-  async ({
-    I, current, queryAnalyticsPage,
-  }) => {
+  async ({ I, current, queryAnalyticsPage }) => {
     queryAnalyticsPage.filters.selectContainFilter('pdpgsql_');
     I.waitForVisible(queryAnalyticsPage.filters.buttons.showSelected, 30);
     queryAnalyticsPage.filters.selectFilterInGroup(current.filterToApply, 'Command Type');
@@ -38,65 +56,56 @@ Data(filters).Scenario(
   },
 );
 
-Scenario(
-  'PMM-T175 - Verify user is able to apply filter that has dots in label @qan',
-  async ({ I, queryAnalyticsPage }) => {
-    const serviceName = '127.0.0.1';
+Scenario('PMM-T175 - Verify user is able to apply filter that has dots in label @qan', async ({ I, queryAnalyticsPage }) => {
+  const serviceName = '127.0.0.1';
 
-    const countBefore = await queryAnalyticsPage.data.getCountOfItems();
+  const countBefore = await queryAnalyticsPage.data.getCountOfItems();
 
-    queryAnalyticsPage.waitForLoaded();
-    await queryAnalyticsPage.filters.selectContainFilter(serviceName);
-    I.seeInCurrentUrl(`client_host=${serviceName}`);
-    const countAfter = await queryAnalyticsPage.data.getCountOfItems();
+  queryAnalyticsPage.waitForLoaded();
+  await queryAnalyticsPage.filters.selectContainFilter(serviceName);
+  I.seeInCurrentUrl(`client_host=${serviceName}`);
+  const countAfter = await queryAnalyticsPage.data.getCountOfItems();
 
-    assert.ok(countBefore !== countAfter, 'Query count was expected to change');
-  },
-);
+  assert.ok(countBefore !== countAfter, 'Query count was expected to change');
+});
 
-Scenario(
-  'PMM-T172 - Verify that selecting a filter updates the table data and URL @qan',
-  async ({ I, queryAnalyticsPage }) => {
-    const environmentName = 'pxc-dev';
+Scenario('PMM-T172 - Verify that selecting a filter updates the table data and URL @qan', async ({ I, queryAnalyticsPage }) => {
+  const environmentName = 'pxc-dev';
 
-    const countBefore = await queryAnalyticsPage.data.getCountOfItems();
+  const countBefore = await queryAnalyticsPage.data.getCountOfItems();
 
-    await queryAnalyticsPage.filters.selectFilter(environmentName);
-    I.seeInCurrentUrl(`environment=${environmentName}`);
-    const countAfter = await queryAnalyticsPage.data.getCountOfItems();
+  await queryAnalyticsPage.filters.selectFilter(environmentName);
+  I.seeInCurrentUrl(`environment=${environmentName}`);
+  const countAfter = await queryAnalyticsPage.data.getCountOfItems();
 
-    assert.ok(countBefore !== countAfter, 'Query count was expected to change');
-  },
-);
+  assert.ok(countBefore !== countAfter, 'Query count was expected to change');
+});
 
-Scenario(
-  'PMM-T126 - Verify user is able to Reset All filters @qan',
-  async ({ I, queryAnalyticsPage }) => {
-    const environmentName1 = 'pxc-dev';
-    const environmentName2 = 'rs101';
+Scenario('PMM-T126 - Verify user is able to Reset All filters @qan', async ({ I, queryAnalyticsPage }) => {
+  const environmentName1 = 'pxc-dev';
+  const environmentName2 = 'ps-dev';
 
-    const countBefore = await queryAnalyticsPage.data.getCountOfItems();
+  const countBefore = await queryAnalyticsPage.data.getCountOfItems();
 
-    queryAnalyticsPage.filters.selectFilter(environmentName1);
-    queryAnalyticsPage.filters.selectFilter(environmentName2);
-    queryAnalyticsPage.data.waitForNewItemsCount(countBefore);
-    const countAfter = await queryAnalyticsPage.data.getCountOfItems();
+  queryAnalyticsPage.filters.selectFilter(environmentName1);
+  queryAnalyticsPage.filters.selectFilter(environmentName2);
+  queryAnalyticsPage.data.waitForNewItemsCount(countBefore);
+  const countAfter = await queryAnalyticsPage.data.getCountOfItems();
 
-    assert.ok(countAfter !== countBefore, 'Query count was expected to change');
+  assert.ok(countAfter !== countBefore, 'Query count was expected to change');
 
-    queryAnalyticsPage.filters.resetAllFilters();
-    I.seeAttributesOnElements(queryAnalyticsPage.filters.buttons.resetAll, { disabled: true });
-    const countAfterReset = await queryAnalyticsPage.data.getCountOfItems();
+  queryAnalyticsPage.filters.resetAllFilters();
+  I.seeAttributesOnElements(queryAnalyticsPage.filters.buttons.resetAll, { disabled: true });
+  const countAfterReset = await queryAnalyticsPage.data.getCountOfItems();
 
-    assert.ok(countAfterReset >= countBefore, 'Query count wasn\'t expected to change');
-  },
-);
+  assert.ok(countAfterReset >= countBefore, 'Query count wasn\'t expected to change');
+});
 
 Scenario(
   'PMM-T125 - Verify user is able to Show only selected filter values and Show All filter values @qan',
   async ({ I, queryAnalyticsPage }) => {
     const environmentName1 = 'pxc-dev';
-    const environmentName2 = 'rs101';
+    const environmentName2 = 'ps-dev';
 
     queryAnalyticsPage.filters.selectFilter(environmentName1);
     queryAnalyticsPage.filters.selectFilter(environmentName2);
@@ -109,65 +118,59 @@ Scenario(
   },
 );
 
-Scenario(
-  'PMM-T123 - Verify User is able to search for DB types, Env and Cluster @qan',
-  async ({ I, queryAnalyticsPage }) => {
-    const filters = [
-      'Environment',
-      'Cluster',
-      'Replication Set',
-      'Database',
-      'Schema',
-      'Node Name',
-      'Service Name',
-      'Client Host',
-      'User Name',
-      'Service Type',
-      'Application Name',
-      'Command Type',
-    ];
+Scenario('PMM-T123 - Verify User is able to search for DB types, Env and Cluster @qan', async ({ I, queryAnalyticsPage }) => {
+  const filters = [
+    'Environment',
+    'Cluster',
+    'Replication Set',
+    'Database',
+    'Schema',
+    'Node Name',
+    'Service Name',
+    'Client Host',
+    'User Name',
+    'Service Type',
+    'Application Name',
+    'Command Type',
+  ];
 
-    await I.waitForElement(queryAnalyticsPage.filters.fields.filterBy, 30);
-    const countBefore = await queryAnalyticsPage.data.getCountOfItems();
+  await I.waitForElement(queryAnalyticsPage.filters.fields.filterBy, 30);
+  const countBefore = await queryAnalyticsPage.data.getCountOfItems();
 
-    for await (const value of filters) {
-      queryAnalyticsPage.waitForLoaded();
-      const countFilters = await I.grabNumberOfVisibleElements(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(value));
-      const randomFilterValue = Math.floor(Math.random() * countFilters) + 1;
+  for await (const value of filters) {
+    queryAnalyticsPage.waitForLoaded();
+    const countFilters = await I.grabNumberOfVisibleElements(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(value));
+    const randomFilterValue = Math.floor(Math.random() * countFilters) + 1;
 
-      queryAnalyticsPage.filters.selectContainsFilterInGroupAtPosition(value, randomFilterValue);
-      queryAnalyticsPage.waitForLoaded();
-      queryAnalyticsPage.data.waitForNewItemsCount(countBefore);
-      const countAfter = await queryAnalyticsPage.data.getCountOfItems();
+    queryAnalyticsPage.filters.selectContainsFilterInGroupAtPosition(value, randomFilterValue);
+    queryAnalyticsPage.waitForLoaded();
+    queryAnalyticsPage.data.waitForNewItemsCount(countBefore);
+    const countAfter = await queryAnalyticsPage.data.getCountOfItems();
 
-      assert.ok(countBefore !== countAfter, 'Query count was expected to change');
+    assert.ok(countBefore !== countAfter, 'Query count was expected to change');
 
-      I.click(queryAnalyticsPage.filters.buttons.resetAll);
-      queryAnalyticsPage.waitForLoaded();
-    }
-  },
-);
+    I.click(queryAnalyticsPage.filters.buttons.resetAll);
+    queryAnalyticsPage.waitForLoaded();
+  }
+});
 
-Scenario(
-  'PMM-T191 - Verify Reset All and Show Selected filters @qan',
-  async ({ I, queryAnalyticsPage }) => {
-    const environmentName1 = 'pxc-dev';
-    const environmentName2 = 'rs101';
+Scenario('PMM-T191 - Verify Reset All and Show Selected filters @qan', async ({ I, queryAnalyticsPage }) => {
+  const environmentName1 = 'pxc-dev';
+  const environmentName2 = 'ps-dev';
 
-    await queryAnalyticsPage.filters.selectFilter(environmentName1);
-    await queryAnalyticsPage.filters.selectFilter(environmentName2);
-    await queryAnalyticsPage.filters.showSelectedFilters();
-    await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(2, 'equals');
-    await I.click(queryAnalyticsPage.filters.buttons.resetAll);
-    await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(2, 'bigger');
+  await queryAnalyticsPage.filters.selectFilter(environmentName1);
+  await queryAnalyticsPage.filters.selectFilter(environmentName2);
+  await queryAnalyticsPage.filters.showSelectedFilters();
+  await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(2, 'equals');
+  await I.click(queryAnalyticsPage.filters.buttons.resetAll);
+  await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(2, 'bigger');
 
-    await queryAnalyticsPage.filters.selectFilter(environmentName1);
-    await queryAnalyticsPage.filters.showSelectedFilters();
-    await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(1, 'equals');
-    await queryAnalyticsPage.filters.selectFilter(environmentName1);
-    await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(1, 'bigger');
-  },
-);
+  await queryAnalyticsPage.filters.selectFilter(environmentName1);
+  await queryAnalyticsPage.filters.showSelectedFilters();
+  await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(1, 'equals');
+  await queryAnalyticsPage.filters.selectFilter(environmentName1);
+  await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(1, 'bigger');
+});
 
 Scenario('PMM-T190 - Verify user is able to see n/a filter @qan', async ({ I, queryAnalyticsPage }) => {
   await queryAnalyticsPage.waitForLoaded();
@@ -177,9 +180,7 @@ Scenario('PMM-T190 - Verify user is able to see n/a filter @qan', async ({ I, qu
 
 Scenario(
   'PMM-T390 - Verify that we show info message when empty result is returned @qan',
-  async ({
-    I, adminPage, queryAnalyticsPage,
-  }) => {
+  async ({ I, adminPage, queryAnalyticsPage }) => {
     const serviceName = 'ps_pmm_';
     const db1 = 'postgres';
     const db2 = 'n/a';
@@ -204,9 +205,7 @@ Scenario(
 
 Scenario(
   'PMM-T221 - Verify that all filter options are always visible (but some disabled) after selecting an item and % value is changed @qan',
-  async ({
-    I, adminPage, queryAnalyticsPage,
-  }) => {
+  async ({ I, adminPage, queryAnalyticsPage }) => {
     const serviceType = 'mysql';
     const serviceName = 'ps_pmm_';
 
@@ -224,7 +223,11 @@ Scenario(
     I.assertTrue(countQueryAnalyticsAfter !== countQueryAnalyticsBefore, 'Query count was expected to change');
     const countOfFiltersAfter = await I.grabNumberOfVisibleElements(queryAnalyticsPage.filters.fields.filterCheckboxes);
 
-    I.assertEqual(countOfFiltersBefore, countOfFiltersAfter, 'Count of all available filters should not change when filter is selected.');
+    I.assertEqual(
+      countOfFiltersBefore,
+      countOfFiltersAfter,
+      'Count of all available filters should not change when filter is selected.',
+    );
     queryAnalyticsPage.filters.selectContainFilter(serviceName);
     queryAnalyticsPage.waitForLoaded();
     const percentageAfter = await queryAnalyticsPage.filters.getFilterPercentage('Service Type', serviceType);
@@ -272,21 +275,24 @@ Scenario('PMM-T437 - Verify short-cut navigation for n/a items @qan', async ({ I
   queryAnalyticsPage.filters.checkLink('undefined', 'Replication Set', false);
 });
 
-Scenario('PMM-T2032 - Verify there is no name with brackets in Plan Summary in QAN @qan', async ({ I, queryAnalyticsPage, adminPage }) => {
-  queryAnalyticsPage.waitForLoaded();
-  queryAnalyticsPage.filters.filterBy('{');
-  queryAnalyticsPage.waitForLoaded();
+Scenario(
+  'PMM-T2032 - Verify there is no name with brackets in Plan Summary in QAN @qan',
+  async ({ I, queryAnalyticsPage, adminPage }) => {
+    queryAnalyticsPage.waitForLoaded();
+    queryAnalyticsPage.filters.filterBy('{');
+    queryAnalyticsPage.waitForLoaded();
 
-  if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
-    throw new Error('Filter with character "{" displayed');
-  }
+    if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
+      throw new Error('Filter with character "{" displayed');
+    }
 
-  adminPage.customClearField(queryAnalyticsPage.filters.fields.filterBy);
-  queryAnalyticsPage.waitForLoaded();
-  queryAnalyticsPage.filters.filterBy('}');
-  queryAnalyticsPage.waitForLoaded();
+    adminPage.customClearField(queryAnalyticsPage.filters.fields.filterBy);
+    queryAnalyticsPage.waitForLoaded();
+    queryAnalyticsPage.filters.filterBy('}');
+    queryAnalyticsPage.waitForLoaded();
 
-  if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
-    throw new Error('Filter with character "}" displayed');
-  }
-});
+    if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
+      throw new Error('Filter with character "}" displayed');
+    }
+  },
+);
