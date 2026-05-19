@@ -10,14 +10,6 @@ module.exports = {
       items: [
         'DB Cluster Summary',
         'Databases Overview',
-        'Environments Overview (Designed for PMM)',
-        'PMM HA Health Overview',
-        'Patroni Details',
-        'PMM Health',
-        'PostgreSQL Checkpoints, Buffers and WAL Usage',
-        'PostgreSQL Vacuum Monitoring',
-        'PostgreSQL Instance',
-        'PXC Galera Cluster Summary (experimental)',
       ],
     },
     insight: {
@@ -91,6 +83,14 @@ module.exports = {
         'Nodes Overview',
         'NUMA Details',
         'Processes Details',
+      ],
+    },
+    pmmHealth: {
+      name: 'PMM Health',
+      items: [
+        'Environments Overview (Designed for PMM)',
+        'PMM HA Health Overview',
+        'PMM Health',
       ],
     },
     postgreSql: {
