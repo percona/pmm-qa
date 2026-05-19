@@ -18,11 +18,7 @@ module.exports = {
       },
       disableResolveMessage: false,
     };
-    const existingContactPoints = await I.sendGetRequest('graph/api/v1/provisioning/contact-points?name=default', headers);
-    const existingContactPoint = existingContactPoints.data[0];
-    const contactPointResp = existingContactPoint
-      ? await I.sendPutRequest(`graph/api/v1/provisioning/contact-points/${existingContactPoint.uid}`, contactPoint, headers)
-      : await I.sendPostRequest('graph/api/v1/provisioning/contact-points', contactPoint, headers);
+    const contactPointResp = await I.sendPostRequest('graph/api/v1/provisioning/contact-points', contactPoint, headers);
     const policyResp = await I.sendPutRequest('graph/api/v1/provisioning/policies', {
       receiver: 'default',
       group_by: ['grafana_folder', 'alertname'],
