@@ -70,7 +70,7 @@ module.exports = {
   },
   messages: {
     noRulesFound: 'You haven\'t created any rules yet',
-    confirmDelete: 'Deleting this rule will permanently remove it from your alert rule list. Are you sure you want to delete this rule?',
+    confirmDelete: 'Are you sure you want to delete this rule? This rule will be recoverable from the Recently deleted page by a user with an admin role.',
     successRuleCreate: (name) => `Rule "${name}" saved.`,
     successRuleEdit: 'Rule updated successfully',
     successfullyDeleted: 'Rule successfully deleted',
@@ -122,6 +122,7 @@ module.exports = {
     // I.fillField(this.fields.editRuleEvaluate, '10s');
     I.click(this.buttons.saveAndExit);
     I.verifyPopUpMessage(this.messages.successRuleEdit);
+    this.openAlertRulesTab();
   },
 
   openAlertRulesTab() {
