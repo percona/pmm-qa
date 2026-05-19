@@ -35,8 +35,9 @@ module.exports = {
   buttons: {
     newAlertRule: locate('a').withText('New alert rule'),
     newAlertRuleFromTemplate: locate('a').withText('New alert rule from template'),
-    saveAndExit: I.useDataQA('save-rule'),
-    editAlertRule: '//a[contains(@href, "/edit")]',
+    saveAndExit: locate('//button[.="Save rule and exit"]'),
+    saveEditRule: I.useDataQA('save-rule'),
+    editAlertRule: locate('a').withText('Edit'),
     editRuleOnView: '//span[text()="Edit"]',
     deleteAlertRule: locate('[role="menuitem"]').withText('Delete'),
     groupCollapseButton: (folderText) => `//button[@data-testid='data-testid group-collapse-toggle'][following::div/h3[contains(., '${folderText}')]]`,
@@ -120,7 +121,7 @@ module.exports = {
     // I.fillField(this.fields.editRuleSeverity, severity);
     I.fillField(this.fields.editRuleThreshold, duration);
     // I.fillField(this.fields.editRuleEvaluate, '10s');
-    I.click(this.buttons.saveAndExit);
+    I.click(this.buttons.saveEditRule);
     I.verifyPopUpMessage(this.messages.successRuleEdit);
     this.openAlertRulesTab();
   },

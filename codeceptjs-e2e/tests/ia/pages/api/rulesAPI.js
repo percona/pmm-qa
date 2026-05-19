@@ -82,8 +82,10 @@ module.exports = {
     );
   },
 
-  async removeAlertRule(folderId, name) {
+  async removeAlertRule(folderIdOrName, name = 'default-alert-group') {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
+    const folderId = await this.getFolderUID(folderIdOrName) || folderIdOrName;
+
     const resp = await I.sendDeleteRequest(`graph/api/ruler/grafana/api/v1/rules/${folderId}/${name}?subtype=cortex`, headers);
 
     assert.ok(
