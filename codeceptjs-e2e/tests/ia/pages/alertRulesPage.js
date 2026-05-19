@@ -35,7 +35,7 @@ module.exports = {
   buttons: {
     newAlertRule: locate('a').withText('New alert rule'),
     newAlertRuleFromTemplate: locate('a').withText('New alert rule from template'),
-    saveAndExit: locate('//button[.="Save rule and exit"]'),
+    saveAndExit: I.useDataQA('save-rule'),
     editAlertRule: '//a[contains(@href, "/edit")]',
     editRuleOnView: '//span[text()="Edit"]',
     deleteAlertRule: locate('[role="menuitem"]').withText('Delete'),

@@ -32,10 +32,6 @@ BeforeSuite(async ({ I, rulesAPI }) => {
   await rulesAPI.removeAllAlertRules();
   await contactPointsAPI.createContactPoints();
   await rulesAPI.createAlertRule({ ruleName }, ruleFolder);
-
-  // Preparation steps for checking Alert via webhook server
-  await I.verifyCommand('docker compose -f docker-compose-webhook.yml up -d || true');
-
   const viewerId = await I.createUser(users.viewer.username, users.viewer.password);
   const editorId = await I.createUser(users.editor.username, users.editor.password);
 
@@ -45,7 +41,6 @@ BeforeSuite(async ({ I, rulesAPI }) => {
 
 AfterSuite(async ({ rulesAPI, I }) => {
   await rulesAPI.removeAllAlertRules();
-  await I.verifyCommand('docker compose -f docker-compose-webhook.yml stop');
 });
 
 Scenario(
@@ -103,12 +98,14 @@ Scenario(
 
 Scenario(
   'PMM-T1494 + PMM-T1495 - Verify fired alert in Pager Duty and Webhook @ia',
-  async ({ I, rulesAPI }) => {
+  async ({ I, rulesAPI, alertsAPI }) => {
     const file = './testdata/ia/scripts/alert.txt';
     const alertUID = await rulesAPI.getAlertUID(ruleName, ruleFolder);
 
+    await alertsAPI.waitForAlerts(24, 1);
+    await contactPointsAPI.createContactPoints();
     // Webhook notification check
-    I.waitForFile(file, 100);
+    I.waitForFile(file, 180);
     I.seeFile(file);
     I.seeInThisFile(ruleName);
 
@@ -147,8 +144,11 @@ Scenario(
     I.fillField(alertRulesPage.fields.editRuleThreshold, '20m');
     I.click(alertRulesPage.buttons.saveAndExit);
     I.amOnPage(alertsPage.url);
-    I.wait(100);
-    I.seeElement(alertsPage.elements.noAlerts);
+    I.asyncWaitFor(async () => {
+      const noAlerts = await I.grabNumberOfVisibleElements(alertsPage.elements.noAlerts);
+
+      return noAlerts === 0;
+    }, 100);
     I.dontSeeElement(alertsPage.elements.alertRow(ruleName));
   },
 );

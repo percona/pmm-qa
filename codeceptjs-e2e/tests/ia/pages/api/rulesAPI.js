@@ -86,19 +86,20 @@ module.exports = {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
     const resp = await I.sendDeleteRequest(`graph/api/ruler/grafana/api/v1/rules/${folderId}/${name}?subtype=cortex`, headers);
 
-    // assert.ok(
-    //   resp.status === 202,
-    //   `Failed to remove alert rule. Response message is "${resp.data.message}"`,
-    // );
+    assert.ok(
+      resp.status === 202,
+      `Failed to remove alert rule group "${name}". Response message is "${resp.data.message}"`,
+    );
   },
 
   async removeAllAlertRules() {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
-    const resp = await I.sendGetRequest('graph/api/ruler/grafana/api/v1/rules?subtype=cortex', headers);
-    const rules = Object.values(resp.data).flat(Infinity);
-    const allRules = rules.map((r) => {
+    const resp = await I.sendGetRequest('graph/api/prometheus/grafana/api/v1/rules', headers);
+    const rules = resp.data.data.groups;
+
+    const allRules = rules && rules.map((r) => {
       const { name } = r;
-      const folderId = r.rules[0].grafana_alert.namespace_uid;
+      const folderId = r.folderUid || r.rules[0].grafana_alert.namespace_uid;
 
       return { name, folderId };
     });
