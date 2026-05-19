@@ -19,7 +19,9 @@ Data(serviceList).Scenario(
   async ({
     I, dashboardPage, adminPage, current,
   }) => {
-    const url = I.buildUrlWithParams(dashboardPage.mysqlReplcationDashboard.clearUrl, { from: 'now-5m', to: 'now', service_name: current.serviceName, refresh: '5s' });
+    const url = I.buildUrlWithParams(dashboardPage.mysqlReplcationDashboard.clearUrl, {
+      from: 'now-5m', to: 'now', service_name: current.serviceName, refresh: '5s',
+    });
 
     I.amOnPage(url);
     await dashboardPage.waitForDashboardOpened();
@@ -30,7 +32,7 @@ Data(serviceList).Scenario(
     if (current.serviceName === serviceList[0].serviceName) {
       await dashboardPage.verifyThereAreNoGraphsWithoutData(7);
     } else {
-      await dashboardPage.verifyThereAreNoGraphsWithoutData(1);
+      await dashboardPage.verifyThereAreNoGraphsWithoutData(4);
     }
   },
 );
