@@ -119,6 +119,7 @@ Scenario(
     pmmSettingsPage,
   }) => {
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
+    I.switchTo();
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
 
     I.seeInField(pmmSettingsPage.fields.rareIntervalInput, rareInterval);
