@@ -74,39 +74,16 @@ pmmTest(
 
     await pmmTest.step('Verify time range persistence', async () => {
       const dashboards = leftNavigation.dashboardsToVerifyTimeRange();
-      const selectedUrl = new URL(page.url());
-      const selectedFrom = selectedUrl.searchParams.get('from');
-      const selectedTo = selectedUrl.searchParams.get('to');
 
       expect(dashboards.length).toBeGreaterThan(0);
-      expect(selectedFrom).toBeTruthy();
-      expect(selectedTo).toBeTruthy();
 
       testInfo.annotations.push({
         description: dashboards.join(', '),
         type: 'Dashboards to verify time range',
       });
 
-      for (const dashboard of dashboards.filter((dashboard) => dashboard !== 'home')) {
-        const menuItem = leftNavigation.menuItemLocator(dashboard);
-
-        await expect(menuItem).toHaveAttribute('href', /.+/);
-
-        const href = await menuItem.evaluate((element) => element.getAttribute('href'));
-
-        expect(href).toBeTruthy();
-
-        const url = new URL(href ?? '', page.url());
-
-        url.searchParams.set('from', selectedFrom ?? '');
-        url.searchParams.set('to', selectedTo ?? '');
-        url.searchParams.delete('timezone');
-
-        await page.goto(url.toString());
-        await leftNavigation.elements.timePickerOpenButton.waitFor({
-          state: 'visible',
-          timeout: Timeouts.ONE_MINUTE,
-        });
+      for (const dashboard of dashboards) {
+        await leftNavigation.selectMenuItem(dashboard);
         await expect(leftNavigation.elements.timePickerOpenButton).toContainText(selectedTimeRange, {
           timeout: Timeouts.TEN_SECONDS,
         });

@@ -202,8 +202,17 @@ export default class LeftNavigation extends BasePage {
         const item = node[part];
 
         if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
-        if (index < parts.length - 1 && !this.isLocator(item)) {
-          await this.expandMenuItem(item as NestedLocators);
+        if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
+          const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
+
+          if (childLocator && !(await childLocator.isVisible())) {
+            await this.getLocator(item as NestedLocator)
+              ?.locator('xpath=..')
+              .getByRole('button')
+              .first()
+              .click({ timeout: Timeouts.TEN_SECONDS });
+            await childLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+          }
         }
         if (part === 'ha' || part === 'org') {
           const expandKey = part === 'ha' ? 'highAvailability' : 'orgManagement';
@@ -317,30 +326,6 @@ export default class LeftNavigation extends BasePage {
         this.collectVerifyTimeRangePaths(value as NestedLocator, path ? `${path}.${key}` : key, paths);
       }
     }
-  }
-
-  private expandMenuItem = async (item: NestedLocators): Promise<void> => {
-    const locator = this.getLocator(item);
-    const firstChildLocator = this.getFirstChildLocator(item);
-
-    if (!locator || !firstChildLocator || (await firstChildLocator.isVisible())) return;
-
-    const expandButton = locator.locator('xpath=..').getByRole('button').first();
-
-    await expandButton.click({ timeout: Timeouts.TEN_SECONDS });
-    await firstChildLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
-  };
-
-  private getFirstChildLocator(item: NestedLocators): Locator | undefined {
-    for (const [key, value] of Object.entries(item)) {
-      if (['locator', 'verifyTimeRange', 'elements'].includes(key)) continue;
-
-      const locator = this.getLocator(value as NestedLocator);
-
-      if (locator) return locator;
-    }
-
-    return undefined;
   }
 
   private getLocator(item: NestedLocator | undefined): Locator | undefined {
