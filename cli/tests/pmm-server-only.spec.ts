@@ -185,7 +185,6 @@ test.describe(
 
     test(
       'Verify change-admin-password updates and restores admin password',
-      { tag: '@server-only' },
       async ({}) => {
         await (
           await cli.exec(
