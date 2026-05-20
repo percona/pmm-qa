@@ -71,11 +71,11 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThereAreNoGraphsWithoutData(4);
 
-    I.amOnPage(dashboardPage.postgresqlInstanceOverviewDashboard.url);
+    I.amOnPage(dashboardPage.postgresqlInstanceSummaryDashboard.url);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThatAllGraphsNoData(2);
+    await dashboardPage.verifyThatAllGraphsNoData(10);
 
     await I.unAuthorize();
 
@@ -85,9 +85,9 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThatAllGraphsNoData(3);
+    await dashboardPage.verifyThatAllGraphsNoData(10);
 
-    I.amOnPage(dashboardPage.postgresqlInstanceOverviewDashboard.url);
+    I.amOnPage(dashboardPage.postgresqlInstanceSummaryDashboard.url);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
@@ -115,7 +115,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThatAllGraphsNoData(2);
+    await dashboardPage.verifyThatAllGraphsNoData(10);
   },
 );
 
