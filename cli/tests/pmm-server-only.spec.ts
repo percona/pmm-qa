@@ -3,10 +3,9 @@ import * as cli from '@helpers/cli-helper';
 import ExecReturn from '@support/types/exec-return.class';
 import { waitForApiReady } from '@helpers/custom-assertions';
 
-const DOCKER_IMAGE =
-  process.env.DOCKER_VERSION && process.env.DOCKER_VERSION.length > 0
-    ? process.env.DOCKER_VERSION
-    : 'perconalab/pmm-server:3-dev-latest';
+const DOCKER_IMAGE = process.env.DOCKER_VERSION && process.env.DOCKER_VERSION.length > 0
+  ? process.env.DOCKER_VERSION
+  : 'perconalab/pmm-server:3-dev-latest';
 const stopList: string[] = [];
 const removeList: string[] = [];
 
@@ -195,9 +194,7 @@ test.describe(
       ).stdout
         .replace('UID CMD\n', '')
         .split('\n');
-      const rootProcesses = processesUser.filter((processUser) =>
-        processUser.includes('root'),
-      );
+      const rootProcesses = processesUser.filter((processUser) => processUser.includes('root'));
 
       expect(
         rootProcesses,
