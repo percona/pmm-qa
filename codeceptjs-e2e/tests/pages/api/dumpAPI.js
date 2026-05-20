@@ -14,19 +14,19 @@ const buildDumpDownloadUrl = (uid) => {
   return new URL(`dump/${uid}.tar.gz`, baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`).toString();
 };
 const countFilesRecursively = (dir) => {
-  let filesCount = 0;
+  const files = [];
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const fullPath = path.join(dir, entry.name);
 
     if (entry.isDirectory()) {
-      filesCount += countFilesRecursively(fullPath);
+      files.push(...countFilesRecursively(fullPath));
     } else if (entry.isFile()) {
-      filesCount += 1;
+      files.push(fullPath);
     }
   }
 
-  return filesCount;
+  return files;
 };
 
 module.exports = {
@@ -90,10 +90,10 @@ module.exports = {
 
     await I.asyncWaitFor(async () => fs.existsSync(destnDir), 60);
     const contents = readdirSync(destnDir, { withFileTypes: true });
-    const isDir = contents.filter((entry) => entry.isDirectory()).length;
-    const isFile = countFilesRecursively(destnDir);
+    const dirs = contents.filter((entry) => entry.isDirectory());
+    const files = countFilesRecursively(destnDir);
 
-    return { isDir, isFile };
+    return { dirs, files };
   },
 
   async listDumps() {
