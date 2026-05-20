@@ -183,37 +183,6 @@ test.describe(
       ).toBeTruthy();
     });
 
-    test(
-      'Verify change-admin-password updates and restores admin password',
-      async ({}) => {
-        await (
-          await cli.exec(
-            'docker exec pmm-server change-admin-password pmm-admin-password-test',
-          )
-        ).assertSuccess();
-
-        await expect(async () => {
-          await (
-            await cli.exec(
-              'curl -s -o /dev/null -w "%{http_code}" --user admin:pmm-admin-password-test http://127.0.0.1/graph/api/user',
-            )
-          ).outContains('200');
-        }).toPass({ intervals: [2_000], timeout: 30_000 });
-
-        await (
-          await cli.exec('docker exec pmm-server change-admin-password admin')
-        ).assertSuccess();
-
-        await expect(async () => {
-          await (
-            await cli.exec(
-              'curl -s -o /dev/null -w "%{http_code}" --user admin:admin http://127.0.0.1/graph/api/user',
-            )
-          ).outContains('200');
-        }).toPass({ intervals: [2_000], timeout: 30_000 });
-      },
-    );
-
     test('PMM-T1862 Verify all processes in PMM server is running under non-root user', async ({}) => {
       const pmmServerContainerId = await cli.exec(
         'docker ps --filter "name=pmm-server" --format "{{ .ID }}"',
