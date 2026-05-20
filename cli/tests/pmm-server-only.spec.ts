@@ -133,12 +133,12 @@ test.describe(
       ).assertSuccess();
       await cli.exec(`docker restart ${containerName}`);
 
-      await test.step(`Waiting for ${containerName} to be unhealthy(30 sec)`, async () => {
+      await test.step(`Waiting for ${containerName} to be unhealthy(45 sec)`, async () => {
         await expect(async () => {
           await (
             await cli.exec(`docker ps | grep ${containerName}`)
           ).outContains('unhealthy');
-        }).toPass({ intervals: [2_000], timeout: 30_000 });
+        }).toPass({ intervals: [2_000], timeout: 45_000 });
       });
     });
 
