@@ -6,6 +6,7 @@ services:
     environment:
       - "PMM_DEBUG=1"
       - "ENABLE_BACKUP_MANAGEMENT=1"
+      - "GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-password}"
     ports:
       - "443:8443"
       - "8081:8080"
