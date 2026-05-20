@@ -92,7 +92,13 @@ fi
 
 ## Only supported for debian based systems for now
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
-  wget -O pmm-client.deb https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-7.$(lsb_release -sc)_amd64.deb
+  build_number=7
+  minor_version=${client_version#3.}
+  minor_version=${minor_version%%.*}
+  if [[ "$client_version" == "3.7.1" || "$minor_version" -gt 7 ]]; then
+    build_number=8
+  fi
+  wget -O pmm-client.deb https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb
   dpkg -i pmm-client.deb
 fi
 

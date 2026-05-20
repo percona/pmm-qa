@@ -138,7 +138,16 @@
 
 - name: Install specific PMM client version on Debian-family containers
   shell: |
-    docker exec --user root {{ container_name }} bash -c 'wget -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_{{ client_version }}-7.$(lsb_release -sc)_amd64.deb"'
+    docker exec --user root {{ container_name }} bash -c '
+      build_number=7
+      client_version="{{ client_version }}"
+      minor_version=${client_version#3.}
+      minor_version=${minor_version%%.*}
+      if [[ "$client_version" == "3.7.1" || "$minor_version" -gt 7 ]]; then
+        build_number=8
+      fi
+      wget -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
+    '
     docker exec --user root {{ container_name }} dpkg -i /pmm-client.deb
   when:
     - distro_family == 'debian'
@@ -146,7 +155,16 @@
 
 - name: Install specific PMM client version on RHEL-family containers
   shell: |
-    docker exec --user root {{ container_name }} wget -O /pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-{{ client_version }}-7.el9.x86_64.rpm
+    docker exec --user root {{ container_name }} bash -c '
+      build_number=7
+      client_version="{{ client_version }}"
+      minor_version=${client_version#3.}
+      minor_version=${minor_version%%.*}
+      if [[ "$client_version" == "3.7.1" || "$minor_version" -gt 7 ]]; then
+        build_number=8
+      fi
+      wget -O /pmm-client.rpm "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
+    '
     docker exec --user root {{ container_name }} rpm -i /pmm-client.rpm
   when:
     - distro_family == 'rhel'
