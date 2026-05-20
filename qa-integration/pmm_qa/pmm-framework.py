@@ -435,50 +435,6 @@ def execute_shell_scripts(shell_scripts, project_relative_scripts_dir, env_vars,
             os.chdir(original_dir)
 
 
-def pmm_ping_url_for_shell_wait(args):
-    """HTTPS /ping URL reachable from the host that runs the PSMDB setup script."""
-    if args.pmm_server_ip:
-        host = args.pmm_server_ip.strip()
-        for prefix in ('https://', 'http://'):
-            if host.startswith(prefix):
-                host = host[len(prefix):]
-        host = host.split('/')[0]
-        if ':' not in host:
-            host = f'{host}:443'
-        return f'https://{host}/ping'
-    if get_running_container_name():
-        return 'https://127.0.0.1/ping'
-    return 'https://127.0.0.1/ping'
-
-
-def patch_sharded_script_pmm_wait(shell_file_path, ping_url, timeout_sec=180):
-    """Replace or inject PMM /ping wait in generated start-sharded-no-server.sh."""
-    wait_block = (
-        f'echo "waiting for pmm-server to start at {ping_url}"\n'
-        f'timeout {timeout_sec} bash -c \'until [ "$(curl -ks -o /dev/null -w "%{{http_code}}" '
-        f'--user "admin:${{ADMIN_PASSWORD:-password}}" {ping_url})" = "200" ]; do sleep 5; done\'\n'
-    )
-    with open(shell_file_path, 'r', encoding='utf-8') as handle:
-        content = handle.read()
-    pattern = (
-        r'\necho "waiting for pmm-server to start"\n'
-        r'timeout \d+ bash -c \'until \[ "\$\(curl[^\n]+\n'
-    )
-    new_content, replaced = re.subn(
-        pattern, '\n' + wait_block.rstrip('\n') + '\n', content, count=1
-    )
-    if replaced == 0:
-        up_line = re.compile(
-            r'(docker compose -f docker-compose-sharded[^\n]*\nup -d[^\n]*\n)',
-            re.MULTILINE,
-        )
-        new_content, inserted = up_line.subn(r'\1' + wait_block, content, count=1)
-        if inserted == 0:
-            raise RuntimeError(f'Could not inject PMM wait block into {shell_file_path}')
-    with open(shell_file_path, 'w', encoding='utf-8') as handle:
-        handle.write(new_content)
-
-
 # Temporary method for Sharding Setup.
 def mongo_sharding_setup(script_filename, args):
     # Get script directory
@@ -521,14 +477,12 @@ def mongo_sharding_setup(script_filename, args):
                             f'{shell_file_path}'])
             subprocess.run(['sed', '-i', f's/docker-compose-sharded.yaml/{compose_filename}/g',
                             f'{shell_file_path}'])
-            patch_sharded_script_pmm_wait(
-                shell_file_path, pmm_ping_url_for_shell_wait(args)
-            )
+            if args.pmm_server_ip:
+                pmm_host = args.pmm_server_ip.strip().split('/')[0].replace('https://', '').replace('http://', '')
+                subprocess.run(
+                    ['sed', '-i', f's|https://127.0.0.1/ping|https://{pmm_host}/ping|g', f'{shell_file_path}'])
     except subprocess.CalledProcessError as e:
         print(f"Error occurred: {e}")
-    except RuntimeError as e:
-        print(f"Error occurred: {e}")
-        raise
 
 
 def get_latest_psmdb_version(psmdb_version):
