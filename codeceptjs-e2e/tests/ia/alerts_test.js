@@ -142,7 +142,7 @@ Scenario(
     I.click(alertsPage.elements.firedAlertLink(ruleName));
     I.click(alertRulesPage.buttons.editRuleOnView);
     I.fillField(alertRulesPage.fields.editRuleThreshold, '20m');
-    I.click(alertRulesPage.buttons.saveAndExit);
+    I.click(alertRulesPage.buttons.saveEditRule);
     I.amOnPage(alertsPage.url);
     I.asyncWaitFor(async () => {
       const noAlerts = await I.grabNumberOfVisibleElements(alertsPage.elements.noAlerts);
