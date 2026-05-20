@@ -12,7 +12,7 @@ const sftp = {
 };
 
 BeforeSuite(async ({ I, codeceptjsConfig }) => {
-  await I.verifyCommand(`docker run --name sftp-server -v ${hostVolume}:/home/foo${sftp.directory} -p 2222:22 -d atmoz/sftp ${sftp.username}:${sftp.password}`);
+  await I.verifyCommand(`docker run --name sftp-server --network pmm-qa -v ${hostVolume}:/home/foo${sftp.directory} -p 2222:22 -d atmoz/sftp ${sftp.username}:${sftp.password}`);
   await I.wait(30);
   await I.verifyCommand(`sudo chmod 777 ${hostVolume}`);
 });
@@ -133,11 +133,7 @@ Scenario(
     dumpPage.verifySFTPEnabled();
     await I.click(dumpPage.fields.sendSupportButton);
 
-    // Get host ip and add it to know_hosts file on the host.
-    const hostName = await I.verifyCommand('hostname -I | awk -F \' \' \'{print $1}\'');
-
-    await I.verifyCommand(`ssh-keyscan -H ${hostName} >> ~/.ssh/known_hosts || true`);
-    sftp.address = `${hostName}:2222`;
+    sftp.address = 'sftp-server:22';
     dumpPage.verifySFTP(sftp);
     await dumpAPI.extractDump(uid.dump_id, hostVolume);
 
