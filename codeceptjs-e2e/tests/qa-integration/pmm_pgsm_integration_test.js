@@ -711,7 +711,7 @@ Scenario(
     await pmmInventoryPage.openAgents(service_id);
     await pmmInventoryPage.checkAgentOtherDetailsSection(AGENT_NAMES.QAN_PG_STAT_MONITOR, 'query_examples_disabled=true');
 
-    I.wait(120);
+    I.wait(90);
 
     const url = I.buildUrlWithParams(queryAnalyticsPage.url, {
       service_name: pgServiceName,
@@ -720,7 +720,7 @@ Scenario(
 
     I.amOnPage(url);
     queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.data.searchByValue('SELECT version()');
+    queryAnalyticsPage.data.searchByValue('SELECT pg_database_size($1)');
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.selectRow(1);
     queryAnalyticsPage.waitForLoaded();

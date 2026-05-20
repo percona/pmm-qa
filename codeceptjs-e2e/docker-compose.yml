@@ -35,7 +35,19 @@ services:
     networks:
       - pmm-network
       - pmm-qa
-
+  
+  webhookd:
+    image: ncarlier/webhookd
+    container_name: webhookd
+    restart: always
+    environment:
+      - WHD_SCRIPTS=/var/opt/webhookd/scripts
+      - WHD_PASSWD_FILE=/var/opt/webhookd/scripts/.htpasswd
+    volumes:
+      - ./testdata/ia/certs:/root
+      - ./testdata/ia/scripts:/var/opt/webhookd/scripts
+    networks:
+      - pmm-network
   # It is essential to have an extra directory `/slowlogs/` between host and container;
   # Otherwise, MySQL in Docker for Mac completely locks during/after slowlog rotation tests.
   mysql:

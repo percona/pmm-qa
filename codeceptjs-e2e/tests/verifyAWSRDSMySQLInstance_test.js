@@ -28,12 +28,8 @@ function getInstance(key) {
 
 Data(instances).Scenario(
   'PMM-T138 + PMM-T139 - Verify disabling enhanced metrics for RDS, Verify disabling basic metrics for RDS, PMM-T9 Verify adding RDS instances [critical] @instances',
-  async ({
-    I, current, remoteInstancesPage,
-  }) => {
-    const {
-      instance, instanceType,
-    } = current;
+  async ({ I, current, remoteInstancesPage }) => {
+    const { instance, instanceType } = current;
 
     const instanceIdToMonitor = getInstance(instance)['Service Name'];
     const nodeName = 'pmm-server';
@@ -52,24 +48,22 @@ Data(instances).Scenario(
   },
 );
 
-Data(instances).Scenario(
-  'PMM-T138 + PMM-T139 - Verify disabling enhanced metrics for RDS, Verify disabling basic metrics for RDS, PMM-T9 Verify adding RDS instances has Status Running [critical] @instances',
-  async ({
-    I, pmmInventoryPage, current,
-  }) => {
-    const {
-      instance,
-    } = current;
+Data(instances)
+  .Scenario(
+    'PMM-T138 + PMM-T139 - Verify disabling enhanced metrics for RDS, Verify disabling basic metrics for RDS, PMM-T9 Verify adding RDS instances has Status Running [critical] @instances',
+    async ({ I, pmmInventoryPage, current }) => {
+      const { instance } = current;
 
-    const instanceIdToMonitor = getInstance(instance)['Service Name'];
+      const instanceIdToMonitor = getInstance(instance)['Service Name'];
 
-    I.amOnPage(pmmInventoryPage.url);
-    pmmInventoryPage.verifyRemoteServiceIsDisplayed(instanceIdToMonitor);
-    await pmmInventoryPage.verifyAgentHasStatusRunning(instanceIdToMonitor);
-    // Waiting for metrics to start hitting PMM-Server
-    I.wait(20);
-  },
-).retry(2);
+      I.amOnPage(pmmInventoryPage.url);
+      pmmInventoryPage.verifyRemoteServiceIsDisplayed(instanceIdToMonitor);
+      await pmmInventoryPage.verifyAgentHasStatusRunning(instanceIdToMonitor);
+      // Waiting for metrics to start hitting PMM-Server
+      I.wait(20);
+    },
+  )
+  .retry(2);
 
 // PMM-13750 Unable to add RDS instance on multiple nodes
 Scenario.skip(
@@ -95,21 +89,16 @@ Scenario.skip(
 );
 
 // bug about failing error message https://jira.percona.com/browse/PMM-9301
-xScenario(
-  'Verify RDS allows discovery without credentials @instances',
-  async ({ I, remoteInstancesPage }) => {
-    I.amOnPage(remoteInstancesPage.url);
-    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded().openAddAWSRDSMySQLPage();
-    remoteInstancesPage.discoverRDSWithoutCredentials();
-  },
-).retry(1);
+xScenario('Verify RDS allows discovery without credentials @instances', async ({ I, remoteInstancesPage }) => {
+  I.amOnPage(remoteInstancesPage.url);
+  remoteInstancesPage.waitUntilRemoteInstancesPageLoaded().openAddAWSRDSMySQLPage();
+  remoteInstancesPage.discoverRDSWithoutCredentials();
+}).retry(1);
 
 // Skipping the tests because QAN does not get any data right after instance was added for monitoring
 xScenario(
   'Verify QAN Filters contain AWS RDS MySQL 5.6 after it was added for monitoring @instances',
-  async ({
-    I, queryAnalyticsPage, remoteInstancesPage,
-  }) => {
+  async ({ I, queryAnalyticsPage, remoteInstancesPage }) => {
     const filters = remoteInstancesPage.mysql57rds;
 
     I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m' }));
@@ -121,44 +110,41 @@ xScenario(
   },
 );
 
-Data(instances).Scenario(
-  'Verify MySQL Instances Overview Dashboard for AWS RDS MySQL data after it was added for monitoring @instances',
-  async ({ I, current, dashboardPage }) => {
-    const {
-      instance,
-    } = current;
+Data(instances)
+  .Scenario(
+    'Verify MySQL Instances Overview Dashboard for AWS RDS MySQL data after it was added for monitoring @instances',
+    async ({ I, current, dashboardPage }) => {
+      const { instance } = current;
 
-    const instanceIdToMonitor = getInstance(instance);
+      const instanceIdToMonitor = getInstance(instance);
 
-    // Add wait for metrics to appear
-    await I.wait(60);
+      // Add wait for metrics to appear
+      await I.wait(60);
 
-    I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, {
-      cluster: instanceIdToMonitor.Cluster,
-      from: 'now-5m',
-    }));
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(9);
-  },
-).retry(3);
+      I.amOnPage(
+        I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, {
+          cluster: instanceIdToMonitor.Cluster,
+          from: 'now-5m',
+        }),
+      );
+      dashboardPage.waitForDashboardOpened();
+      await dashboardPage.expandEachDashboardRow();
+      await dashboardPage.verifyThereAreNoGraphsWithoutData(9);
+    },
+  )
+  .retry(3);
 
 Data(instances).Scenario(
   'Verify MySQL Instances Overview Dashboard contains AWS RDS MySQL filters @instances',
-  async ({
-    I, current, dashboardPage,
-  }) => {
-    const {
-      instance,
-    } = current;
+  async ({ I, current, dashboardPage }) => {
+    const { instance } = current;
 
     const filters = getInstance(instance);
 
     I.amOnPage(dashboardPage.mySQLInstanceOverview.url);
     dashboardPage.waitForDashboardOpened();
     for (const key of Object.keys(filters)) {
-      dashboardPage.expandFilters(key);
-      I.click(dashboardPage.fields.openFiltersDropdownLocator(key));
+      await dashboardPage.expandFilters(key);
       I.waitForVisible(dashboardPage.fields.filterDropdownValueLocator(filters[key]), 5);
       I.pressKey('Escape');
     }
@@ -167,12 +153,8 @@ Data(instances).Scenario(
 
 Data(instances).Scenario(
   'PMM-T603 - Verify MySQL RDS exporter is running in pull mode @instances',
-  async ({
-    grafanaAPI, inventoryAPI, current,
-  }) => {
-    const {
-      instance,
-    } = current;
+  async ({ grafanaAPI, inventoryAPI, current }) => {
+    const { instance } = current;
 
     const metricNames = ['aws_rds_cpu_credit_usage_average', 'rdsosmetrics_memory_total', 'rdsosmetrics_cpuUtilization_total'];
     const serviceName = getInstance(instance)['Service Name'];
@@ -180,7 +162,10 @@ Data(instances).Scenario(
     const response = await inventoryAPI.apiGetAgentsViaNodeId(node_id);
     const result = response.data.rds_exporter[0];
 
-    assert.ok(!result.push_metrics_enabled, `Push Metrics Enabled Flag Should not be present on response object for AWS RDS but found ${JSON.stringify(result)}`);
+    assert.ok(
+      !result.push_metrics_enabled,
+      `Push Metrics Enabled Flag Should not be present on response object for AWS RDS but found ${JSON.stringify(result)}`,
+    );
     for (const metric of metricNames) {
       await grafanaAPI.waitForMetric(metric, { type: 'node_id', value: node_id });
     }
