@@ -72,6 +72,11 @@
     with_items:
       - docker exec {{ external_container }} nohup bash -c './redis_exporter/redis_exporter -redis.password=oFukiBRg7GujAJXq3tmd -redis.addr=redis_container:6379 -web.listen-address=:42200 > redis.log 2>&1 &'
 
+  - name: Wait for redis exporter metrics endpoint
+    shell: >
+      docker exec {{ external_container }} bash -c
+      'timeout 60 bash -c "until curl -sf http://127.0.0.1:42200/metrics >/dev/null 2>&1; do sleep 2; done"'
+
   - name: Execute Setup script inside the External container for Process Exporter
     shell: "{{ item }}"
     with_items:

@@ -138,7 +138,16 @@
 
 - name: Install specific PMM client version on Debian-family containers
   shell: |
-    docker exec --user root {{ container_name }} bash -c 'wget -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_{{ client_version }}-7.$(lsb_release -sc)_amd64.deb"'
+    docker exec --user root {{ container_name }} bash -c '
+      build_number=7
+      client_version="{{ client_version }}"
+      minor_version=${client_version#3.}
+      minor_version=${minor_version%%.*}
+      if [[ "$client_version" == "3.7.1" || "$minor_version" -gt 7 ]]; then
+        build_number=8
+      fi
+      wget -O /pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
+    '
     docker exec --user root {{ container_name }} dpkg -i /pmm-client.deb
   when:
     - distro_family == 'debian'
@@ -146,7 +155,16 @@
 
 - name: Install specific PMM client version on RHEL-family containers
   shell: |
-    docker exec --user root {{ container_name }} wget -O /pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-{{ client_version }}-7.el9.x86_64.rpm
+    docker exec --user root {{ container_name }} bash -c '
+      build_number=7
+      client_version="{{ client_version }}"
+      minor_version=${client_version#3.}
+      minor_version=${minor_version%%.*}
+      if [[ "$client_version" == "3.7.1" || "$minor_version" -gt 7 ]]; then
+        build_number=8
+      fi
+      wget -O /pmm-client.rpm "https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm"
+    '
     docker exec --user root {{ container_name }} rpm -i /pmm-client.rpm
   when:
     - distro_family == 'rhel'
@@ -171,10 +189,22 @@
   when:
     - client_version | regex_search('^https?://.*\\.tar\\.gz$') is not none
 
+# Config file encryption (--config-file-key-file/password) was added in PMM client 3.7.0 (PMM-14643).
+- name: Determine if encrypted client config is supported for this client version
+  set_fact:
+    use_encrypted_client_config: >-
+      {{
+        (encrypted_client_config | default(false) | bool) and (
+          client_version in ['3-dev-latest', 'pmm3-rc', 'pmm3-latest', 'latest-tarball'] or
+          (client_version is match('^3\\.[0-9]+\\.[0-9]+$') and client_version is version('3.7.0', '>=')) or
+          (client_version | regex_search('^https?://') is not none)
+        )
+      }}
+
 - name: Generate keys for encrypted client config
   shell: |
     docker exec --user root {{ container_name }} openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -aes256 -pass pass:testpass -out "/usr/local/percona/pmm/config/pmm-key.pem"
-  when: encrypted_client_config | default(false) | bool
+  when: use_encrypted_client_config | default(false) | bool
 
 - name: Connect pmm client to pmm server using metrics mode without encrypted client config
   shell: |
@@ -189,7 +219,7 @@
         {{ container_name }}
   when:
     - metrics_mode | length > 0
-    - not (encrypted_client_config | default(false) | bool)
+    - not (use_encrypted_client_config | default(false) | bool)
 
 - name: Connect pmm client to pmm server using default metrics mode without encrypted client config
   shell: |
@@ -203,7 +233,7 @@
         {{ container_name }}
   when:
     - metrics_mode | length == 0
-    - not (encrypted_client_config | default(false) | bool)
+    - not (use_encrypted_client_config | default(false) | bool)
 
 - name: Connect pmm client to pmm server using default metrics mode with encrypted client config
   shell: |
@@ -220,7 +250,7 @@
         {{ container_name }}
   when:
     - metrics_mode | length == 0
-    - encrypted_client_config | default(false) | bool
+    - use_encrypted_client_config | default(false) | bool
 
 - name: Connect pmm client to pmm server using metrics mode with encrypted client config
   shell: |
@@ -238,7 +268,7 @@
         {{ container_name }}
   when:
     - metrics_mode | length > 0
-    - encrypted_client_config | default(false) | bool
+    - use_encrypted_client_config | default(false) | bool
 
 - name: Wait 5 seconds for connection to complete
   pause:
@@ -248,13 +278,13 @@
   shell: |
     docker exec --user root {{ container_name }} \
       sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml > /var/log/pmm-agent.log 2>&1 &'
-  when: not (encrypted_client_config | default(false) | bool)
+  when: not (use_encrypted_client_config | default(false) | bool)
 
 - name: Start pmm client with encrypted client config
   shell: |
     docker exec --user root {{ container_name }} \
       sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" --config-file-key-password="testpass" > /var/log/pmm-agent.log 2>&1 &'
-  when: encrypted_client_config | default(false) | bool
+  when: use_encrypted_client_config | default(false) | bool
 
 - name: Wait 5 seconds for start to complete
   pause:
