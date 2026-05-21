@@ -78,6 +78,12 @@ Scenario(
     const proxysql = (await inventoryAPI.getServicesByType(SERVICE_TYPE.PROXYSQL)).data.proxysql.length;
 
     I.amOnPage(dashboardPage.homeDashboard.url);
+    I.waitForText('MySQL', 10, dashboardPage.graphsLocator('Monitored DB Services'));
+    await I.asyncWaitFor(async () => {
+      const countOfMysql = (await I.grabTextFromAll(dashboardPage.homeDashboard.panels.monitoredServicesPanelLocator))[0];
+
+      return !Number.isNaN(parseInt(countOfMysql, 10));
+    }, 10);
     await dashboardPage.homeDashboard.verifyCountOfServices(mysql, mongodb, pgsql, proxysql);
   },
 );
