@@ -5,7 +5,7 @@
 # PBM_VERSION - PBM version, by default - latest
 # PSMDB_VERSION - PSMDB version, by default - latest
 # PMM_CLIENT_VERSION - PMM client version, by default - latest
-# PMM_SERVER_IMAGE - PMM server docker image, by default - perconalab/pmm-server:3-dev-latest
+# PMM_SERVER_IMAGE / PMM_IMAGE - PMM server docker image (CI uses PMM_SERVER_IMAGE)
 # AWS_USERNAME - username of AWS user whose creds are provided, AWS auth tests are skipped unless creds are provided
 # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY - self-descriptive
 # TESTS - whether to run tests, by default - yes
