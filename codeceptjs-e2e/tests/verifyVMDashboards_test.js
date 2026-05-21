@@ -28,7 +28,7 @@ Scenario(
     await I.asyncWaitFor(async () => {
       I.pressKey('PageDown');
 
-      return (await I.grabNumberOfVisibleElements(dashboardPage.graphsLocator('Network Usage')));
+      return (await I.grabNumberOfVisibleElements(dashboardPage.graphsLocator('Network  Usage')));
     }, 90);
 
     await dashboardPage.verifyMetricsExistence(dashboardPage.victoriaMetricsAgentsOverviewDashboard.metrics);
