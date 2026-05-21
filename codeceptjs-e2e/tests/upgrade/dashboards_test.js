@@ -28,6 +28,9 @@ Scenario(
 
     const resp = await grafanaAPI.createCustomDashboard(grafanaAPI.customDashboardName, folder.id, additionalPanel, []);
 
+    console.log('Dashboard response is: ');
+    console.log(resp);
+
     await grafanaAPI.starDashboard(resp.id);
     await grafanaAPI.setHomeDashboard(resp.id);
 
