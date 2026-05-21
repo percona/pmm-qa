@@ -1163,7 +1163,7 @@ module.exports = {
     allFilterDropdownOptions: '//div[@role="option" and not(.="All")]',
     skipTourButton: '//button[span[text()="Skip"]]',
     closeModal: '//button[@aria-label="Close"]',
-    openFiltersDropdownLocator: (filterName) => locate(`//label[contains(text(), "${filterName}")]/following-sibling::div`),
+    openFiltersDropdownLocator: (filterName) => locate('[data-testid="data-testid template variable"]').withChild(`//label[contains(text(), "${filterName}")]`).find('[data-testid="icon-angle-down"]'),
     filterDropdownOptionsLocator: (filterName) => locateOption(filterName),
     filterDropdownValueLocator: (filterValue) => locate('div').withAttr({ role: 'option' }).withText(filterValue),
     filterSelectedValues: (filterName) => locate(`//label[contains(text(), "${filterName}")]/following-sibling::div/div/div/div[contains(@class, "multi-value-container") or contains(@class, "singleValue")]`),
@@ -1394,12 +1394,8 @@ module.exports = {
   expandFilters(filterName) {
     const dropdownLocator = this.fields.openFiltersDropdownLocator(filterName);
 
-    // This is due to some instances with many services take filter to load
-    // I.wait(1);
     I.waitForElement(dropdownLocator, 30);
     I.click(dropdownLocator);
-    // click one more time to expand the multiselect dropdown
-    I.forceClick(dropdownLocator);
 
     return '[aria-label="Variable options"]';
   },

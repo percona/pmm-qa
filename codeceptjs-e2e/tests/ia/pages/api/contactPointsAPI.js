@@ -3,28 +3,34 @@ const assert = require('assert');
 
 module.exports = {
   async createContactPoints() {
-    const headers = {
-      Authorization: `Basic ${await I.getAuth()}`,
-      'X-Disable-Provenance': 'true',
-    };
-    const contactPoint = {
-      name: 'default',
-      type: 'webhook',
-      settings: {
-        url: 'http://webhookd:8080/alert',
-        username: 'alert',
-        password: 'alert',
-        authorization_credentials: '',
+    const headers = { Authorization: `Basic ${await I.getAuth()}` };
+    const listReceivers = await I.sendGetRequest('graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers', headers);
+    const receiverName = listReceivers.data.items[0].metadata.name;
+    const { resourceVersion } = listReceivers.data.items[0].metadata;
+    const body = {
+      metadata: {
+        name: receiverName,
+        resourceVersion,
       },
-      disableResolveMessage: false,
+      spec: {
+        title: 'empty',
+        integrations: [
+          {
+            settings: {
+              url: 'http://webhookd:8080/alert',
+              username: 'alert',
+              password: 'alert',
+            },
+            secureFields: {},
+            type: 'webhook',
+            name: 'empty',
+            disableResolveMessage: false,
+          },
+        ],
+      },
     };
-    const contactPointResp = await I.sendPostRequest('graph/api/v1/provisioning/contact-points', contactPoint, headers);
-    const policyResp = await I.sendPutRequest('graph/api/v1/provisioning/policies', {
-      receiver: 'default',
-      group_by: ['grafana_folder', 'alertname'],
-    }, headers);
+    const resp = await I.sendPutRequest(`graph/apis/notifications.alerting.grafana.app/v0alpha1/namespaces/default/receivers/${receiverName}`, body, headers);
 
-    assert.strictEqual(contactPointResp.status, 202);
-    assert.strictEqual(policyResp.status, 202);
+    assert.strictEqual(resp.status, 200);
   },
 };
