@@ -45,8 +45,8 @@ Data(serviceList).Scenario(
 Data(serviceList).Scenario(
   'PMM-T319 - Open the MySQL Instances Overview dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
   async ({ I, dashboardPage, current }) => {
-    await I.say(current.serviceName);
-    const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name: current.serviceName, from: 'now-15m', refresh: '5s' });
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, current.namePrefix);
+    const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, { service_name, from: 'now-15m', refresh: '5s' });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
@@ -151,9 +151,9 @@ Scenario.skip(
 
 Scenario(
   'PMM-T324 - Verify MySQL - MySQL User Details dashboard @nightly @dashboards',
-  async ({ I, dashboardPage }) => {
-    const serviceName = serviceList.find((service) => service.name.includes('ps_pmm')).name;
-    const url = I.buildUrlWithParams(dashboardPage.mysqlUserDetailsDashboard.clearUrl, { service_name: serviceName, from: 'now-5m', refresh: '5s' });
+  async ({ I, dashboardPage, inventoryAPI }) => {
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps_pmm');
+    const url = I.buildUrlWithParams(dashboardPage.mysqlUserDetailsDashboard.clearUrl, { service_name, from: 'now-5m', refresh: '5s' });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();

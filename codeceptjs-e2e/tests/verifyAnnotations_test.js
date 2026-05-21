@@ -47,6 +47,7 @@ Data(annotation).Scenario(
       I.amOnPage(I.buildUrlWithParams(current.dashboard, {
         node_name: nodeName,
         from: 'now-1h',
+        refresh: '5s',
       }));
       dashboardPage.waitForDashboardOpened();
       dashboardPage.verifyAnnotationsLoaded(annotationName, 2);
@@ -54,6 +55,7 @@ Data(annotation).Scenario(
       I.amOnPage(I.buildUrlWithParams(current.dashboard, {
         service_name: serviceName,
         from: 'now-1h',
+        refresh: '5s',
       }));
       dashboardPage.waitForDashboardOpened();
       dashboardPage.verifyAnnotationsLoaded(annotationName, 1);
