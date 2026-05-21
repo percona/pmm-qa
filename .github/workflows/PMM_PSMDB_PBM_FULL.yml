@@ -67,7 +67,7 @@ jobs:
           ref: ${{ inputs.pmm_qa_branch || 'main' }}
       - name: Test sharded with PSMDB ${{ matrix.psmdb }}
         run: |
-          PSMDB_VERSION=${{ matrix.psmdb }} ./start-sharded.sh
+          PSMDB_VERSION=${{ matrix.psmdb }} ./start-sharded-with-pmm.sh
         working-directory: ./qa-integration/pmm_psmdb-pbm_setup
 
   test_diff_auth:
