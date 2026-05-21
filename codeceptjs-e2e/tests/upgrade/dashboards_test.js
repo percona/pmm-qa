@@ -28,8 +28,8 @@ Scenario(
 
     const resp = await grafanaAPI.createCustomDashboard(grafanaAPI.customDashboardName, folder.id, additionalPanel, []);
 
-    await grafanaAPI.starDashboard(resp.id);
-    await grafanaAPI.setHomeDashboard(resp.id);
+    await grafanaAPI.starDashboard(resp.uid);
+    await grafanaAPI.setHomeDashboard(resp.uid);
 
     I.amOnPage('pmm-ui/graph/');
     dashboardPage.waitForDashboardOpened();
