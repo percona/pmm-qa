@@ -192,8 +192,11 @@ module.exports = {
 
   async starDashboard(id) {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
-
+    // graph/api/user/stars
     const resp = await I.sendPostRequest(`graph/api/user/stars/dashboard/${id}`, {}, headers);
+
+    console.log('Dashboard response is: ');
+    console.log(resp);
 
     assert.ok(
       resp.status === 200,
