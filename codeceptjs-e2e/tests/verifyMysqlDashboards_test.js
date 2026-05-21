@@ -9,30 +9,30 @@ const {
 let services;
 
 const urlsAndMetrics = new DataTable(['metricName', 'startUrl']);
-const serviceList = [{ serviceType: 'ps_service', name: '' }, { serviceType: 'pxc_service', name: '' }];
+const serviceList = [{
+  serviceType: 'ps_service',
+  namePrefix: 'ps_',
+}, {
+  serviceType: 'pxc_service',
+  namePrefix: 'pxc_',
+}];
 
 urlsAndMetrics.add(['Client Connections (All Host Groups)', `${dashboardPage.proxysqlInstanceSummaryDashboard.url}?from=now-5m&to=now&refresh=5s`]);
 urlsAndMetrics.add(['PMM Upgrade', `${homePage.url}?refresh=5s`]);
 
 Feature('Test Dashboards inside the MySQL Folder').retry(1);
 
-BeforeSuite(async () => {
-  const ps_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'ps');
-  const pxc_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, 'pxc');
-
-  serviceList[0].name = ps_service_response.service_name;
-  serviceList[1].name = pxc_service_response.service_name;
-});
-
 Before(async ({ I }) => {
   await I.Authorize();
 });
 
-Data(serviceList).Scenario(
+Data(serviceList).only.Scenario(
   'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
   async ({ I, dashboardPage, current }) => {
-    await I.say(current.serviceName);
-    const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name: current.serviceName, from: 'now-15m', refresh: '5s' });
+    const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, current.namePrefix);
+
+    await I.say(service_name);
+    const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name, from: 'now-15m', refresh: '5s' });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
