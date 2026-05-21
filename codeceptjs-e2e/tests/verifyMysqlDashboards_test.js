@@ -26,12 +26,11 @@ Before(async ({ I }) => {
   await I.Authorize();
 });
 
-Data(serviceList).only.Scenario(
+Data(serviceList).Scenario(
   'PMM-T317 - Open the MySQL Instance Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @dashboards',
   async ({ I, dashboardPage, current }) => {
     const { service_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, current.namePrefix);
 
-    await I.say(service_name);
     const url = I.buildUrlWithParams(dashboardPage.mysqlInstanceSummaryDashboard.clearUrl, { service_name, from: 'now-15m', refresh: '5s' });
 
     I.amOnPage(url);
