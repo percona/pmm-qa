@@ -82,6 +82,7 @@ services:
       - "443:8443"
       - "8081:8080"
     volumes:
+      - ./certs:/srv/nginx
       - 'pmm-server-data:/srv'
 
   ldap-server:

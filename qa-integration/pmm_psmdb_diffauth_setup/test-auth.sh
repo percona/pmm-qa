@@ -30,11 +30,6 @@ bash -e ./generate-certs.sh
 #Start setup
 docker compose -f docker-compose-pmm-psmdb.yml down -v --remove-orphans
 docker compose -f docker-compose-pmm-psmdb.yml build
-docker compose -f docker-compose-pmm-psmdb.yml up -d --wait pmm-server kerberos ldap-server
-for cert in certificate.crt certificate.key ca-certs.pem dhparam.pem; do
-    docker cp "certs/${cert}" "pmm-server:/srv/nginx/${cert}"
-done
-docker compose -f docker-compose-pmm-psmdb.yml exec -T pmm-server bash -c 'chown pmm:root /srv/nginx/certificate.crt /srv/nginx/certificate.key /srv/nginx/ca-certs.pem /srv/nginx/dhparam.pem && chmod 644 /srv/nginx/certificate.crt /srv/nginx/ca-certs.pem /srv/nginx/dhparam.pem && chmod 600 /srv/nginx/certificate.key && nginx -s reload'
 docker compose -f docker-compose-pmm-psmdb.yml up -d
 
 #Add users
