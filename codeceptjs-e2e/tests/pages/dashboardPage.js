@@ -31,13 +31,12 @@ module.exports = {
   // insert your locators and methods here
   // setting locators
   slowQueriesText: locate('//section[contains(@data-testid, "Panel header Slow")]//div[contains(@data-testid, "panel content")]'),
-  slowQueriesValue: locate('//section[contains(@data-testid, "Panel header Slow")]//div[contains(@data-testid, "panel content")]//span'),
-  serviceNameDropdown:
-    '//label[contains(text(), "Service Name")]/following-sibling::div',
-  serviceName:
-    '//label[contains(text(), "Service Name")]/following-sibling::div',
-  serviceNameInput:
-    '//input[@aria-controls="options-service_name"]',
+  slowQueriesValue: locate(
+    '//section[contains(@data-testid, "Panel header Slow")]//div[contains(@data-testid, "panel content")]//span',
+  ),
+  serviceNameDropdown: '//label[contains(text(), "Service Name")]/following-sibling::div',
+  serviceName: '//label[contains(text(), "Service Name")]/following-sibling::div',
+  serviceNameInput: '//input[@aria-controls="options-service_name"]',
   toggleAllValues: '[aria-label="Toggle all values"]',
   panel: 'div[data-viz-panel-key]',
   systemUptimePanel: (nodeName) => `//div[@class="panel-title"]//h2[text()="${nodeName} - System Uptime"]`,
@@ -71,15 +70,9 @@ module.exports = {
     ],
   },
   advancedDataExplorationDashboard: {
-    url:
-      'graph/d/prometheus-advanced/advanced-data-exploration?orgId=1&refresh=1m&var-metric=go_gc_duration_seconds',
+    url: 'graph/d/prometheus-advanced/advanced-data-exploration?orgId=1&refresh=1m&var-metric=go_gc_duration_seconds',
     cleanUrl: 'graph/d/prometheus-advanced/advanced-data-exploration',
-    metrics: [
-      'View Actual Metric Values (Gauge)',
-      'View Metric Rate of Change (Counter)',
-      'Metric Rates',
-      'Metric Data Table',
-    ],
+    metrics: ['View Actual Metric Values (Gauge)', 'View Metric Rate of Change (Counter)', 'Metric Rates', 'Metric Data Table'],
   },
   prometheusDashboard: {
     url: 'graph/d/prometheus/prometheus',
@@ -210,7 +203,8 @@ module.exports = {
       imageRendererPluginLink: locate(I.useDataQA('data-testid Alert info')).find('.external-link'),
     },
     messages: {
-      imageRendererPlugin: 'Image renderer plugin not installedTo render a panel image, you must install the Image Renderer plugin. Please contact your PMM administrator to install the plugin.',
+      imageRendererPlugin:
+        'Image renderer plugin not installedTo render a panel image, you must install the Image Renderer plugin. Please contact your PMM administrator to install the plugin.',
     },
   },
   proxysqlInstanceSummaryDashboard: {
@@ -336,13 +330,7 @@ module.exports = {
   postgresqlInstanceCompareDashboard: {
     url: 'graph/d/postgresql-instance-compare/postgresql-instances-compare?orgId=1&from=now-5m&to=now',
     cleanUrl: 'graph/d/postgresql-instance-compare/postgresql-instances-compare',
-    metrics: [
-      'Service Info',
-      'PostgreSQL Connections',
-      'Active Connections',
-      'Tuples',
-      'Transactions',
-    ],
+    metrics: ['Service Info', 'PostgreSQL Connections', 'Active Connections', 'Tuples', 'Transactions'],
   },
   postgresqlInstanceOverviewDashboard: PostgresqlInstanceOverviewDashboard,
   mongodbBackupDetailsDashboard: MongodbBackupDetailsDashboard,
@@ -772,14 +760,7 @@ module.exports = {
   mysqlPXCGaleraNodesCompareDashboard: {
     url: 'graph/d/pxc-nodes-compare/pxc-galera-nodes-compare?orgId=1&refresh=1m',
     clearUrl: 'graph/d/pxc-nodes-compare/pxc-galera-nodes-compare',
-    metrics: [
-      'Ready to Accept Queries',
-      'Local State',
-      'Desync Mode',
-      'Cluster Status',
-      'gcache Size',
-      'FC (normal traffic)',
-    ],
+    metrics: ['Ready to Accept Queries', 'Local State', 'Desync Mode', 'Cluster Status', 'gcache Size', 'FC (normal traffic)'],
     tabs: [
       'Galera Replication Latency',
       'Galera Replication Queues',
@@ -1148,14 +1129,16 @@ module.exports = {
     panelLoading: locate('div').withAttr({ class: 'panel-loading' }),
     postgreSQLServiceSummaryContent: locate('$pt-summary-fingerprint').withText('Detected PostgreSQL version:'),
     reportTitle: locate('$header-container').inside(locate('[class*="panel-container"]')),
-    reportTitleWithNA:
-      locate('$header-container')
-        .inside(locate('[class*="panel-container"]')
-          .withDescendant('//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]')),
-    reportTitleWithNoData:
-    locate('$header-container')
-      .inside(locate('[class*="panel-container"]')
-        .withDescendant('//*[contains(text(),"No data") or contains(text(), "NO DATA") or contains(text(),"N/A")) or (text()="-") or (text() = "No Data")]')),
+    reportTitleWithNA: locate('$header-container').inside(
+      locate('[class*="panel-container"]').withDescendant(
+        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
+      ),
+    ),
+    reportTitleWithNoData: locate('$header-container').inside(
+      locate('[class*="panel-container"]').withDescendant(
+        '//*[contains(text(),"No data") or contains(text(), "NO DATA") or contains(text(),"N/A")) or (text()="-") or (text() = "No Data")]',
+      ),
+    ),
     rootUser: '//div[contains(text(), "root")]',
     serviceSummary: I.useDataQA('data-testid dashboard-row-title-Service Summary'),
     timeRangePickerButton: I.useDataQA('data-testid TimePicker Open Button'),
@@ -1164,16 +1147,19 @@ module.exports = {
     skipTourButton: '//button[span[text()="Skip"]]',
     closeModal: '//button[@aria-label="Close"]',
     openFiltersDropdownLocator: (filterName) => locate('[data-testid="data-testid template variable"]').withChild(`//label[contains(text(), "${filterName}")]`).find('[data-testid="icon-angle-down"]'),
-    filterDropdownOptionsLocator: (filterName) => locateOption(filterName),
+    filterDropdownOptionLocator: (filterName) => locateOption(filterName),
     filterDropdownValueLocator: (filterValue) => locate('div').withAttr({ role: 'option' }).withText(filterValue),
-    filterSelectedValues: (filterName) => locate(`//label[contains(text(), "${filterName}")]/following-sibling::div/div/div/div[contains(@class, "multi-value-container") or contains(@class, "singleValue")]`),
+    filterDropDownOptionsLocator: (filterName) => locate('[data-testid="data-testid template variable"]').withChild(`//label[contains(text(), "${filterName}")]`).find('[role="option"]'),
+    filterSelectedValues: (filterName) => locate('[data-testid="data-testid template variable"]').withChild(`//label[contains(text(), "${filterName}")]`).find('[class*="grafana-select-value-container"]').find('//div[contains(@class, "multi-value-container") or contains(@class, "singleValue")]'),
     refreshIntervalPicker: I.useDataQA('data-testid RefreshPicker interval button'),
     refreshIntervalOption: (interval) => locate(`//*[@role="menuitemradio"]//span[text()="${interval}"]`),
     clickablePanel: (name) => locate('$header-container').withText(name).find('a'),
     dashboardTitle: (name) => locate('span').withText(name),
     metricPanelNa: (name) => `//section[@aria-label="${name}"]//span[text()="N/A"]`,
     loadingElement: locate('//div[@aria-label="Panel loading bar"]'),
-    multiSelect: (filterName) => locate(`//label[contains(text(), "${filterName}")]/following-sibling::div//div[contains(@class,"grafana-select-multi-value-container")]`),
+    multiSelect: (filterName) => locate(
+      `//label[contains(text(), "${filterName}")]/following-sibling::div//div[contains(@class,"grafana-select-multi-value-container")]`,
+    ),
   },
 
   async checkNavigationBar(text) {
@@ -1286,13 +1272,19 @@ module.exports = {
 
       while (actualValue < expectedValue) {
         // eslint-disable-next-line no-plusplus
-        if (retries++ > timeout) throw new Error(`Value in panel ${panelTitle} for ${serviceName} was never above ${expectedValue} and is ${actualValue}`);
+        if (retries++ > timeout) {
+          throw new Error(
+            `Value in panel ${panelTitle} for ${serviceName} was never above ${expectedValue} and is ${actualValue}`,
+          );
+        }
 
         if (await valueLocator.isVisible()) {
           actualValue = await valueLocator.textContent();
         }
 
-        await new Promise((resolve) => { setTimeout(resolve, 1000); });
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1000);
+        });
 
         if (actualValue >= expectedValue) return;
       }
@@ -1300,7 +1292,9 @@ module.exports = {
   },
 
   getColumnLegendMaxValue(panelTitle, serviceName) {
-    return locate(this.panelByTitle(panelTitle)).find(`//button[contains(@title, '${serviceName}')]//ancestor::tr//td[position()='3']`);
+    return locate(this.panelByTitle(panelTitle)).find(
+      `//button[contains(@title, '${serviceName}')]//ancestor::tr//td[position()='3']`,
+    );
   },
 
   async waitForAllGraphsToHaveData(timeout = 60) {
@@ -1352,7 +1346,10 @@ module.exports = {
 
     I.say(`Number of no data and N/A elements is = ${numberOfNAElements}`);
     I.say(`Number of all graph elements is = ${allGraphs}`);
-    assert.ok(numberOfNAElements <= acceptableNaDataCount, `Expected ${acceptableNaDataCount} N/A elements but found ${numberOfNAElements} on Dashboard ${await I.grabCurrentUrl()}.`);
+    assert.ok(
+      numberOfNAElements <= acceptableNaDataCount,
+      `Expected ${acceptableNaDataCount} N/A elements but found ${numberOfNAElements} on Dashboard ${await I.grabCurrentUrl()}.`,
+    );
   },
 
   async printFailedReportNames(expectedNumber, actualNumber, titles, dashboardUrl) {
@@ -1377,12 +1374,12 @@ module.exports = {
       I.wait(1);
       collapsedRows = await I.grabNumberOfVisibleElements(this.fields.collapsedDashboardRow);
       // eslint-disable-next-line no-plusplus
-      maxTries--;
+      maxTries--; // eslint-disable-line no-plusplus
     }
   },
 
   async expandDashboardRow(rowName) {
-    const rowLocator = this.fields.collapsedDashboardRowByName(rowName);
+    const rowLocator = this.fields.collapsedDashboardRowByName(rowName)
 
     I.scrollTo(rowLocator);
     I.click(rowLocator);
@@ -1405,10 +1402,10 @@ module.exports = {
 
   async applyFilter(filterName, filterValue) {
     const filterValueLocator = this.fields.filterDropdownValueLocator(filterValue);
-    const filterDropdownOptionsLocator = this.fields.filterDropdownOptionsLocator(filterValue);
+    const filterDropdownOptionsLocator = this.fields.filterDropdownOptionLocator(filterValue);
     const dropdownLocator = this.fields.openFiltersDropdownLocator(filterName);
     const selectedFilterValue = await I.grabTextFrom(dropdownLocator);
-    const isMultiSelect = await I.grabNumberOfVisibleElements(this.fields.multiSelect(filterName)) > 0;
+    const isMultiSelect = (await I.grabNumberOfVisibleElements(this.fields.multiSelect(filterName))) > 0;
 
     // If there is only one value for a filter it is selected by default
     if (selectedFilterValue !== 'All' && selectedFilterValue === filterValue) {
@@ -1491,7 +1488,9 @@ module.exports = {
     }
 
     if (!queryText.includes(timeFrame)) {
-      throw new Error(`Slow queries text (${queryText.replace('\n', '').trim()}) should contains expected time frame: ${timeFrame}`);
+      throw new Error(
+        `Slow queries text (${queryText.replace('\n', '').trim()}) should contains expected time frame: ${timeFrame}`,
+      );
     }
   },
 };

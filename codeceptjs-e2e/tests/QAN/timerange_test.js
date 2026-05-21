@@ -3,6 +3,14 @@ const assert = require('assert');
 
 Feature('QAN timerange').retry(1);
 
+const expectUrlTimeParamToMatch = (url, param, expectedDateTime, message) => {
+  const actualTime = new URL(url).searchParams.get(param);
+  const expectedTime = moment(expectedDateTime).utc().valueOf();
+  const actualTimeMs = moment(actualTime).isValid() ? moment(actualTime).utc().valueOf() : Number(actualTime);
+
+  assert.ok(Math.abs(actualTimeMs - expectedTime) < 1000, message);
+};
+
 Before(async ({ I, queryAnalyticsPage, codeceptjsConfig }) => {
   await I.usePlaywrightTo('Grant Permissions', async ({ browserContext }) => {
     await browserContext.grantPermissions(['clipboard-read', 'clipboard-write'], {
@@ -201,8 +209,8 @@ Scenario(
 
     adminPage.verifySelectedTimeRange(from, to);
 
-    I.assertContain(secondUrl.split('from=')[1].replaceAll('%20', ' '), moment(from).utc().toISOString(), 'Second Url does not contain selected from date time');
-    I.assertContain(secondUrl.split('to=')[1].replaceAll('%20', ' '), moment(to).utc().toISOString(), 'Second Url does not contain selected to date time');
+    expectUrlTimeParamToMatch(secondUrl, 'from', from, 'Second Url does not contain selected from date time');
+    expectUrlTimeParamToMatch(secondUrl, 'to', to, 'Second Url does not contain selected to date time');
   },
 );
 

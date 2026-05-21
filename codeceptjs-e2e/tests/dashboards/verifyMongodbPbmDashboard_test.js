@@ -6,7 +6,7 @@ const backupTypes = ['BACKUP_MODE_PITR', 'BACKUP_MODE_SNAPSHOT'];
 Before(async ({ I, locationsAPI }) => {
   await I.Authorize();
   locationId = await locationsAPI.createStorageLocation(
-    'mongo-location-pbm-dashboard-test',
+    `mongo-location-pbm-dashboard-test-${Date.now()}`,
     locationsAPI.storageType.localClient,
     locationsAPI.localStorageDefaultConfig,
   );
