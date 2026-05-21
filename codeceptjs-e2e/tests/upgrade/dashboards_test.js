@@ -31,7 +31,7 @@ Scenario(
     console.log('Dashboard response is: ');
     console.log(resp);
 
-    await grafanaAPI.starDashboard(resp.id);
+    await grafanaAPI.starDashboard(grafanaAPI.customDashboardName);
     await grafanaAPI.setHomeDashboard(resp.id);
 
     I.amOnPage('pmm-ui/graph/');
