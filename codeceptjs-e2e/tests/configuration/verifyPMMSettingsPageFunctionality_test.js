@@ -192,7 +192,7 @@ Scenario(
 ).retry(2);
 
 Scenario(
-  'PMM-T486 - Verify Public Address in PMM Settings @nightly @nightly-generic',
+  'PMM-T486 - Verify Public Address in PMM Settings @nightly ',
   async ({
     I, pmmSettingsPage, settingsAPI, codeceptjsConfig,
   }) => {
@@ -306,7 +306,7 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T2004 - Verify Data Retention field in advanced settings @settings @nightly @nightly-generic @gssapi-nightly  ',
+  'PMM-T2004 - Verify Data Retention field in advanced settings @settings @nightly  @gssapi-nightly  ',
   async ({
     I, pmmSettingsPage,
   }) => {
