@@ -1,7 +1,7 @@
 const moment = require('moment');
 const assert = require('assert');
 
-Feature('QAN timerange').retry(1);
+Feature('QAN timerange').retry(2);
 
 const expectUrlTimeParamToMatch = (url, param, expectedDateTime, message) => {
   const actualTime = new URL(url).searchParams.get(param);

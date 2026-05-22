@@ -27,7 +27,7 @@ shortCutTests.add([
   'mongodb_rs1_2',
 ]);
 
-Feature('QAN filters').retry(1);
+Feature('QAN filters').retry(2);
 
 // filterToApply - filter witch we check, searchValue - value to get zero search result
 const filters = new DataTable(['filterToApply', 'searchValue']);

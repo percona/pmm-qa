@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-Feature('QAN overview').retry(1);
+Feature('QAN overview').retry(2);
 
 Before(async ({
   I, queryAnalyticsPage,

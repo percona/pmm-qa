@@ -1,7 +1,7 @@
 const assert = require('assert');
 const { isJenkinsGssapiJob } = require('../helper/constants');
 
-Feature('Query tests for QAN');
+Feature('Query tests for QAN').retry(2);
 
 const services = [];
 

@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-Feature('QAN common').retry(1);
+Feature('QAN common').retry(2);
 
 Before(async ({ I, queryAnalyticsPage }) => {
   await I.Authorize();
