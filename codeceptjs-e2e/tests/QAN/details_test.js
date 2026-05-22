@@ -10,6 +10,7 @@ querySources.add(['slowlog']);
 // querySources.add(['perfschema']);
 
 Before(async ({ I, queryAnalyticsPage }) => {
+  await I.Authorize();
   I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m' }));
   queryAnalyticsPage.waitForLoaded();
 });
