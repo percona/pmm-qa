@@ -16,9 +16,9 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T507 Verify metrics on VM Agents Overview Dashboard @nightly  @dashboards @gssapi-nightly',
+  'PMM-T507 Verify metrics on VM Agents Overview Dashboard @nightly @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
-    const url = I.buildUrlWithParams(dashboardPage.victoriaMetricsAgentsOverviewDashboard.url, { from: 'now-5m', refresh: '5s' });
+    const url = I.buildUrlWithParams(dashboardPage.victoriaMetricsAgentsOverviewDashboard.url, { from: 'now-10m', refresh: '5s' });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();

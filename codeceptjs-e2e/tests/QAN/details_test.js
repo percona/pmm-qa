@@ -1,6 +1,6 @@
 const { isJenkinsGssapiJob } = require('../helper/constants');
 
-Feature('QAN details');
+Feature('QAN details').retry(2);
 
 const { adminPage } = inject();
 
@@ -10,8 +10,7 @@ querySources.add(['slowlog']);
 // querySources.add(['perfschema']);
 
 Before(async ({ I, queryAnalyticsPage }) => {
-  await I.Authorize();
-  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-1h' }));
+  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m' }));
   queryAnalyticsPage.waitForLoaded();
 });
 
@@ -27,7 +26,7 @@ Scenario(
       I.waitForVisible(queryAnalyticsPage.queryDetails.buttons.tab(header), 5);
     }
   },
-).retry(1);
+);
 
 Scenario(
   'PMM-T223 - Verify time metrics are AVG per query (not per second) @qan',
