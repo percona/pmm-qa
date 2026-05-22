@@ -1,3 +1,5 @@
+const { SERVICE_TYPE } = require('./helper/constants');
+
 Feature('VictoriaMetrics Dashboards');
 
 Before(async ({ I }) => {
@@ -17,8 +19,10 @@ Scenario(
 
 Scenario(
   'PMM-T507 Verify metrics on VM Agents Overview Dashboard @nightly @dashboards @gssapi-nightly',
-  async ({ I, dashboardPage }) => {
-    const url = I.buildUrlWithParams(dashboardPage.victoriaMetricsAgentsOverviewDashboard.url, { from: 'now-10m' });
+  async ({ I, dashboardPage, inventoryAPI }) => {
+    const { node_name } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, 'rs101');
+
+    const url = I.buildUrlWithParams(dashboardPage.victoriaMetricsAgentsOverviewDashboard.url, { from: 'now-10m', node_name });
 
     I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
