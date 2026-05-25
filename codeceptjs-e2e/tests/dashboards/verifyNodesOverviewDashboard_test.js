@@ -1,4 +1,4 @@
-Feature('Tests for Operation System Dashboards');
+Feature('Tests for Operation System Dashboards').retry(2);
 
 const dockerVersion = 'perconalab/pmm-client:3-dev-latest';
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin';

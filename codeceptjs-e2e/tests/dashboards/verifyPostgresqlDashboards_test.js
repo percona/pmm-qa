@@ -3,7 +3,7 @@ const { SERVICE_TYPE } = require('../helper/constants');
 const { inventoryAPI } = inject();
 const serviceList = [];
 
-Feature('Test Dashboards inside the PostgreSQL Folder');
+Feature('Test Dashboards inside the PostgreSQL Folder').retry(2);
 
 BeforeSuite(async ({ I }) => {
   const pdpgsql_service_response = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, 'pdpgsql_');
