@@ -49,7 +49,7 @@ permissions:
 
 jobs:
   tests:
-    name: "test execution / ${{ inputs.tags_for_tests }}"
+    name: "test execution / ${{ inputs.tags_for_tests }} / client version: ${{ inputs.pmm_client_version }}"
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     env:
