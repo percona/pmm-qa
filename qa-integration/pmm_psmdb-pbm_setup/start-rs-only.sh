@@ -35,7 +35,7 @@ docker compose -f docker-compose-rs.yaml build --no-cache
 docker compose -f docker-compose-rs.yaml up -d
 echo
 echo "waiting 60 seconds for replica set members to start"
-sleep 60
+sleep 90
 echo
 if [ $mongo_setup_type == "pss" ]; then
   bash -e -x ./configure-replset.sh 2>&1 | tee /tmp/replset.trace
