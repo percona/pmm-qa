@@ -1163,7 +1163,7 @@ module.exports = {
     allFilterDropdownOptions: '//div[@role="option" and not(.="All")]',
     skipTourButton: '//button[span[text()="Skip"]]',
     closeModal: '//button[@aria-label="Close"]',
-    openFiltersDropdownLocator: (filterName) => locate(`//label[contains(text(), "${filterName}")]/following-sibling::div`),
+    openFiltersDropdownLocator: (filterName) => locate('[data-testid="data-testid template variable"]').withChild(`//label[contains(text(), "${filterName}")]`).find('[data-testid="icon-angle-down"]'),
     filterDropdownOptionsLocator: (filterName) => locateOption(filterName),
     filterDropdownValueLocator: (filterValue) => locate('div').withAttr({ role: 'option' }).withText(filterValue),
     filterSelectedValues: (filterName) => locate(`//label[contains(text(), "${filterName}")]/following-sibling::div/div/div/div[contains(@class, "multi-value-container") or contains(@class, "singleValue")]`),
@@ -1343,19 +1343,13 @@ module.exports = {
   },
 
   // acceptableDataCount - Defect in testing software, even when all tha tables are without data then condition are not met,
-  async verifyThatAllGraphsNoData(acceptableDataCount = 0) {
+  async verifyThatAllGraphsNoData(acceptableNaDataCount = 0) {
     const numberOfNAElements = await I.grabNumberOfVisibleElements(this.fields.reportTitleWithNA);
     const allGraphs = await I.grabNumberOfVisibleElements(this.fields.reportTitle);
 
     I.say(`Number of no data and N/A elements is = ${numberOfNAElements}`);
     I.say(`Number of all graph elements is = ${allGraphs}`);
-    if ((allGraphs - numberOfNAElements) > acceptableDataCount) {
-      assert.equal(
-        (allGraphs - numberOfNAElements) <= acceptableDataCount,
-        true,
-        `Expected ${allGraphs} Elements without data but found ${numberOfNAElements} on Dashboard ${await I.grabCurrentUrl()}.`,
-      );
-    }
+    assert.ok(numberOfNAElements <= acceptableNaDataCount, `Expected ${acceptableNaDataCount} N/A elements but found ${numberOfNAElements} on Dashboard ${await I.grabCurrentUrl()}.`);
   },
 
   async printFailedReportNames(expectedNumber, actualNumber, titles, dashboardUrl) {
@@ -1400,12 +1394,8 @@ module.exports = {
   expandFilters(filterName) {
     const dropdownLocator = this.fields.openFiltersDropdownLocator(filterName);
 
-    // This is due to some instances with many services take filter to load
-    // I.wait(1);
     I.waitForElement(dropdownLocator, 30);
     I.click(dropdownLocator);
-    // click one more time to expand the multiselect dropdown
-    I.forceClick(dropdownLocator);
 
     return '[aria-label="Variable options"]';
   },

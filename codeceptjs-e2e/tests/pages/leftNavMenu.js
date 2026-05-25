@@ -151,7 +151,7 @@ module.exports = {
       teams: menuOption(co, 'Teams', '/graph/org/teams'),
       dataSources: menuOption(co, 'Data sources', '/graph/datasources'),
       users: menuOption(co, 'Users', '/graph/org/users'),
-      pmmSettings: menuOption(co, 'Settings', '/graph/settings/metrics-resolution'),
+      pmmSettings: menuOption(co, 'Settings', '/pmm-ui/settings'),
       pmmInventory: menuOption(co, 'Inventory', '/graph/inventory/services'),
       addInstance: menuOption(co, 'Add Service', '/graph/add-instance'),
     },

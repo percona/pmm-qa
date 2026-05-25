@@ -12,10 +12,8 @@ Scenario('PMM-T643 - Verify message about disabled IA @fb-alerting', async ({ I,
   I.amOnPage(alertsPage.url);
   I.waitForVisible(iaCommon.elements.disabledIa, 30);
   I.seeTextEquals(iaCommon.messages.disabledIa, iaCommon.elements.disabledIa);
-
-  const link = await I.grabAttributeFrom(iaCommon.elements.settingsLink, 'href');
-
-  I.assertContain(link, pmmSettingsPage.advancedSettingsUrl, 'Settings link does not contain expected link.');
+  I.click(iaCommon.elements.settingsLink);
+  I.waitInUrl(pmmSettingsPage.advancedSettingsUrl, 30);
 });
 
 Scenario(
@@ -40,7 +38,11 @@ Scenario(
     I.wait(10);
     // PMM-T776
     const verifyTitle = (page) => {
-      I.seeTitleEquals(`${page} - Alerting - Percona Monitoring and Management`);
+      const expectedTitles = {
+        'Alert groups': 'Active notifications - Alerting - Percona Monitoring and Management',
+      };
+
+      I.seeTitleEquals(expectedTitles[page] || `${page} - Alerting - Percona Monitoring and Management`);
     };
 
     verifyTitle('Fired alerts');

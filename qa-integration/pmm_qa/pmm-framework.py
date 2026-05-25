@@ -485,6 +485,10 @@ def mongo_sharding_setup(script_filename, args):
                             f'{shell_file_path}'])
             subprocess.run(['sed', '-i', f's/docker-compose-sharded.yaml/{compose_filename}/g',
                             f'{shell_file_path}'])
+            if args.pmm_server_ip:
+                subprocess.run(
+                    ['sed', '-i', f's|https://127.0.0.1/ping|https://{args.pmm_server_ip}/ping|g',
+                     f'{shell_file_path}'])
     except subprocess.CalledProcessError as e:
         print(f"Error occurred: {e}")
 
