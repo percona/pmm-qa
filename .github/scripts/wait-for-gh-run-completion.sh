@@ -47,7 +47,7 @@ while true; do
 
     now_ts=$(date +%s)
     elapsed=$(( now_ts - start_ts ))
-    echo "[${elapsed}s] run ${RUN_ID}: status=${status} conclusion=${conclusion}" >&2
+    echo "[${elapsed}s] run ${RUN_ID}: status=${status} conclusion=${conclusion} url=${html_url}" >&2
 
     if [ "${status}" = "completed" ]; then
         case "${conclusion}" in
