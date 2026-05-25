@@ -45,6 +45,7 @@ fi
 echo
 echo "configuring pmm agents"
 echo "Client debug value is: $CLIENT_DEBUG"
+exit 1
 
 random_number=$RANDOM
 nodes="rs101 rs102 rs103"
