@@ -19,7 +19,7 @@ Before(async ({ I }) => {
 });
 
 Scenario(
-  'PMM-T2087 - Open the Valkey Overview dashboard and verify metrics @nightly @dashboards',
+  'PMM-T2087 - Open the Valkey Overview dashboard and verify metrics @valkey-nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.valkeyOverviewDashboard.url, {
       cluster: valkeyClusterName,
@@ -36,7 +36,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2087 - Open the Valkey Clients dashboard and verify metrics @nightly @dashboards',
+  'PMM-T2087 - Open the Valkey Clients dashboard and verify metrics @valkey-nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.valkeyClientsDashboard.url, {
       cluster: valkeyClusterName,
@@ -53,7 +53,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2087 - Open the Valkey Cluster Details dashboard and verify metrics @nightly @dashboards',
+  'PMM-T2087 - Open the Valkey Cluster Details dashboard and verify metrics @valkey-nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.valkeyClusterDetailsDashboard.url, {
       cluster: valkeyClusterName,
@@ -70,7 +70,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2087 - Open the Valkey Command Detail dashboard and verify metrics @nightly @dashboards',
+  'PMM-T2087 - Open the Valkey Command Detail dashboard and verify metrics @valkey-nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.valkeyCommandDetailDashboard.url, {
       cluster: valkeyClusterName,
@@ -86,7 +86,7 @@ Scenario(
   },
 );
 
-Scenario('PMM-T2087 - Open the Valkey Load dashboard and verify metrics @nightly @dashboards', async ({ I, dashboardPage }) => {
+Scenario('PMM-T2087 - Open the Valkey Load dashboard and verify metrics @valkey-nightly @dashboards', async ({ I, dashboardPage }) => {
   const url = I.buildUrlWithParams(dashboardPage.valkeyLoadDashboard.url, { cluster: valkeyClusterName, from: 'now-5m', refresh: '5s' });
 
   I.amOnPage(url);
@@ -96,7 +96,7 @@ Scenario('PMM-T2087 - Open the Valkey Load dashboard and verify metrics @nightly
   await dashboardPage.verifyThereAreNoGraphsWithoutData(0);
 });
 
-Scenario('PMM-T2087 - Open the Valkey Memory dashboard and verify metrics @nightly @dashboards', async ({ I, dashboardPage }) => {
+Scenario('PMM-T2087 - Open the Valkey Memory dashboard and verify metrics @valkey-nightly @dashboards', async ({ I, dashboardPage }) => {
   const url = I.buildUrlWithParams(dashboardPage.valkeyMemoryDashboard.url, {
     cluster: valkeyClusterName,
     from: 'now-5m',
@@ -111,7 +111,7 @@ Scenario('PMM-T2087 - Open the Valkey Memory dashboard and verify metrics @night
 });
 
 Scenario(
-  'PMM-T2087 - Open the Valkey Network dashboard and verify metrics @nightly @dashboards',
+  'PMM-T2087 - Open the Valkey Network dashboard and verify metrics @valkey-nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.valkeyNetworkDashboard.url, {
       cluster: valkeyClusterName,
@@ -128,7 +128,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2087 - Open the Valkey Persistence Details dashboard and verify metrics @nightly @dashboards',
+  'PMM-T2087 - Open the Valkey Persistence Details dashboard and verify metrics @valkey-nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.valkeyPersistenceDetailsDashboard.url, {
       cluster: valkeyClusterName,
@@ -145,7 +145,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2087 - Open the Valkey Replication dashboard and verify metrics @nightly @dashboards',
+  'PMM-T2087 - Open the Valkey Replication dashboard and verify metrics @valkey-nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.valkeyReplicationDashboard.url, {
       cluster: valkeyClusterName,
@@ -162,7 +162,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T2087 - Open the Valkey Slowlog dashboard and verify metrics @nightly @dashboards',
+  'PMM-T2087 - Open the Valkey Slowlog dashboard and verify metrics @valkey-nightly @dashboards',
   async ({ I, dashboardPage }) => {
     const url = I.buildUrlWithParams(dashboardPage.valkeySlowlogDashboard.url, {
       cluster: valkeyClusterName,
