@@ -28,6 +28,7 @@ default_version=3.0.0
 min_port_listening_version=3.0.0
 port_listening=0
 update_flag=""
+repo="testing"
 
 ############################################################
 # Process the input options.                               #
@@ -49,6 +50,9 @@ while getopts "v:p:hlu" option; do
         ;;
       u) # update mode
         update_flag="-u"
+        ;;
+      r) # update pmm client repo release/testing
+        repo=$OPTARG
         ;;
      \?) # Invalid option
         echo "Error: Invalid option"
@@ -90,11 +94,24 @@ elif [[ "$architecture" == "x86_64" ]]; then
 fi
 
 if [[ "$architecture" == "arm64" ]]; then
-#  https://downloads.percona.com/downloads/pmm3/3.7.1/binary/tarball/pmm-client-3.7.1-aarch64.tar.gz
-#  https://downloads.percona.com/downloads/TESTING/pmm-arm/pmm-client-3.7.1.tar.gz
-    tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/${client_tar}
+  if [[ "$repo" == "testing"]]; then
+    tarball_url=https://downloads.percona.com/downloads/TESTING/pmm-arm/pmm-client-${version}.tar.gz
+  elif [[ "$repo" = "release"]]; then
+    tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/pmm-client-${version}-aarch64.tar.gz
+  else
+    print "Value for repo: $repo is not valid. Valid values are: testing or release"
+    exit 1;
+  fi
 elif [[ "$architecture" == "amd64" ]]; then
-    tarball_url=https://downloads.percona.com/downloads/TESTING/pmm/${client_tar}
+    if [[ "$repo" == "testing"]]; then
+      tarball_url=https://downloads.percona.com/downloads/TESTING/pmm/pmm-client-${version}.tar.gz
+    elif [[ "$repo" = "release"]]; then
+      tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/pmm-client-${version}-x86_64.tar.gz
+    else
+      print "Value for repo: $repo is not valid. Valid values are: testing or release"
+      exit 1;
+    fi
+    ${client_tar}
 fi
 
 if [ -n "${fb}" ]; then
