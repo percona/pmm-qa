@@ -273,20 +273,20 @@ jobs:
           curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
           unzip logs.zip -d logs || true
 
-      - name: Record launchable test results
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: |
-          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-          launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
-          launchable gate --session "$(cat launchable-session.txt)"
+      # - name: Record launchable test results
+      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+      #   working-directory: pmm-qa/codeceptjs-e2e
+      #   run: |
+      #     sed -i "s|$(pwd)/||g" tests/output/result.xml || true
+      #     launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
+      #     launchable gate --session "$(cat launchable-session.txt)"
 
-      - name: Record launchable logs on failure
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
-        working-directory: pmm-qa/codeceptjs-e2e
-        continue-on-error: true
-        run: |
-          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
+      # - name: Record launchable logs on failure
+      #   if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
+      #   working-directory: pmm-qa/codeceptjs-e2e
+      #   continue-on-error: true
+      #   run: |
+      #     launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}

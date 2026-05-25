@@ -136,5 +136,5 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       tags_for_tests: ${{ matrix.tags_for_tests }}
       expected_setup_jobs: 14
-      workers: 2
+      workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
