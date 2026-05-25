@@ -122,8 +122,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tags_for_tests: '@qan|@menu'
-          - tags_for_tests: '@nightly|@valkey-nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+          - tags_for_tests: '@qan|@menu|@valkey-nightly|@permissions-nightly|@pt-summary-nightly|@pbm-nightly'
+          - tags_for_tests: '@nightly'
     uses: ./.github/workflows/runner-e2e-tests-codeceptjs-remote-nightly-tests.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
