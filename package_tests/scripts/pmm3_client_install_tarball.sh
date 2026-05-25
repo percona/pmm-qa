@@ -79,7 +79,7 @@ fi
 if [ -z "${path}" ]; then
   path=$default_path
 fi
-client_tar=pmm-client-${version}.tar.gz
+client_tar=pmm-client-${version}-aarch64.tar.gz
 architecture=$(uname -m)
 echo $architecture
 
@@ -90,7 +90,9 @@ elif [[ "$architecture" == "x86_64" ]]; then
 fi
 
 if [[ "$architecture" == "arm64" ]]; then
-    tarball_url=https://downloads.percona.com/downloads/TESTING/pmm-arm/${client_tar}
+#  https://downloads.percona.com/downloads/pmm3/3.7.1/binary/tarball/pmm-client-3.7.1-aarch64.tar.gz
+#  https://downloads.percona.com/downloads/TESTING/pmm-arm/pmm-client-3.7.1.tar.gz
+    tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/${client_tar}
 elif [[ "$architecture" == "amd64" ]]; then
     tarball_url=https://downloads.percona.com/downloads/TESTING/pmm/${client_tar}
 fi
