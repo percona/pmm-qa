@@ -38,7 +38,7 @@ echo "waiting 60 seconds for replica set members to start"
 sleep 60
 echo
 if [ $mongo_setup_type == "pss" ]; then
-  bash -e ./configure-replset.sh
+  bash -x ./configure-replset.sh 2>&1 | tee /tmp/replset.trace
 else
   bash -e ./configure-psa.sh
 fi
