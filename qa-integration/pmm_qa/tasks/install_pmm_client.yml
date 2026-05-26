@@ -215,7 +215,7 @@
         --server-insecure-tls \
         --metrics-mode={{ metrics_mode }} \
         --server-username=admin \
-        --server-password={{ admin_password }} \
+        --server-password={{ admin_password }}{{ (debug_client | default(false) | bool) | ternary(' --debug', '') }}\
         {{ container_name }}
   when:
     - metrics_mode | length > 0
@@ -229,7 +229,7 @@
         --server-address={{ pmm_server_ip }}:{{ pmm_server_port }} \
         --server-insecure-tls \
         --server-username=admin \
-        --server-password={{ admin_password }} \
+        --server-password={{ admin_password }} {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
   when:
     - metrics_mode | length == 0
@@ -246,7 +246,7 @@
         --server-username=admin \
         --server-password={{ admin_password }} \
         --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" \
-        --config-file-key-password="testpass" \
+        --config-file-key-password="testpass" {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
   when:
     - metrics_mode | length == 0
@@ -264,7 +264,7 @@
         --server-username=admin \
         --server-password={{ admin_password }} \
         --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" \
-        --config-file-key-password="testpass" \
+        --config-file-key-password="testpass" {{ (debug_client | default(false) | bool) | ternary('--debug', '') }} \
         {{ container_name }}
   when:
     - metrics_mode | length > 0
