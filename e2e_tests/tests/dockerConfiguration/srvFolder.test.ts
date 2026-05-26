@@ -39,7 +39,12 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         await grafanaHelper.authorize('admin', 'admin');
         await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
 
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i <= 30; i++) {
+          expect(
+            i,
+            'PMM Server was not started successfully, or default credentials are being used',
+          ).toBeLessThan(30);
+
           await page.reload();
           console.log(cliHelper.execSilent('docker logs pmm-server-srv'));
           console.log(cliHelper.execute('docker ps -a'));
