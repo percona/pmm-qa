@@ -35,33 +35,27 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
     pmmTest(
       `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials using ${configuration.testName} @docker-configuration`,
       async ({ cliHelper, dashboard, grafanaHelper, page, urlHelper }) => {
-        cliHelper.execSilent(configuration.command);
-        await grafanaHelper.authorize('admin', 'admin');
-        await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+        const runner = cliHelper.execSilent(configuration.command);
 
-        for (let i = 0; i <= 30; i++) {
-          expect(
-            i,
-            'PMM Server was not started successfully, or default credentials are being used',
-          ).toBeLessThan(30);
+        console.log(runner);
 
-          await page.reload();
-          console.log(cliHelper.execSilent('docker logs pmm-server-srv'));
-          console.log(cliHelper.execute('docker ps -a'));
-
-          if (await page.locator('//h1[text()="Percona Monitoring and Management"]').isVisible()) {
-            break;
-          }
-
-          // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the pmm server to start
-          await page.waitForTimeout(Timeouts.ONE_SECOND);
-        }
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for server to start
+        await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
 
         const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
 
         expect(logs).not.toContain(
           'Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass"',
         );
+
+        console.log(cliHelper.execute('docker ps -a'));
+        console.log(cliHelper.execSilent('docker logs pmm-server-srv'));
+
+        await grafanaHelper.authorize('admin', 'admin');
+        await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+        await page
+          .locator('//h1[text()="Percona Monitoring and Management"]')
+          .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
 
         await grafanaHelper.unAuthorize();
 
