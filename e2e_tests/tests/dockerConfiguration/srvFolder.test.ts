@@ -9,14 +9,15 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   const newPassword = 'newpass';
   const dockerVolumeName = 'pmm-volume-srv';
   const dockerContainerName = 'pmm-server-srv';
+  const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
   const folderConfiguration = [
     {
-      command: `sudo rm -fr $HOME/srv || true && sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume "$HOME/srv":/srv --name ${dockerContainerName} perconalab/pmm-server:3.8.0-rc`,
+      command: `sudo rm -fr $HOME/srv || true && sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume "$HOME/srv":/srv --name ${dockerContainerName} ${dockerVersion}`,
       port: 444,
       testName: 'local folder',
     },
     {
-      command: `docker volume rm ${dockerVolumeName} || true && docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 82:8080 --publish 445:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} perconalab/pmm-server-fb:PR-4295-ff823af`,
+      command: `docker volume rm ${dockerVolumeName} || true && docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 82:8080 --publish 445:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} ${dockerVersion}`,
       port: 445,
       testName: 'docker volume',
     },
