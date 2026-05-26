@@ -7,4 +7,13 @@ export default class Credentials {
     },
     username: 'root',
   };
+  pgsql = {
+    client: {
+      database: 'postgres',
+      host: '127.0.0.1',
+      password: 'pmm',
+      port: 5_448,
+      user: 'pmm',
+    },
+  };
 }
