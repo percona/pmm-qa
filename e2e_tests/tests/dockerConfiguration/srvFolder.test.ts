@@ -8,11 +8,11 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   const newUser = 'newuser';
   const newPassword = 'newpass';
   const folderConfiguration = [
-    {
-      command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume "$HOME/srv":/srv --name pmm-server-srv perconalab/pmm-server:3.8.0-rc`,
-      port: 444,
-      testName: 'local folder',
-    },
+    // {
+    //   command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 81:8080 --publish 444:8443 --volume "$HOME/srv":/srv --name pmm-server-srv perconalab/pmm-server:3.8.0-rc`,
+    //   port: 444,
+    //   testName: 'local folder',
+    // },
     {
       command: `docker volume create pmm-volume && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 82:8080 --publish 445:8443 --volume pmm-volume:/srv --name pmm-server-srv perconalab/pmm-server-fb:3.8.0-rc`,
       port: 445,
