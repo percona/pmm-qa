@@ -6,6 +6,22 @@ pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
 
+
+echo "waiting for rs101 mongod to accept connections..."
+for i in $(seq 1 60); do
+  if docker compose -f docker-compose-rs.yaml exec -T rs101 \
+       mongo --quiet --eval 'db.runCommand({ ping: 1 }).ok' 2>/dev/null | grep -q '^1$'; then
+    echo "rs101 is up"
+    break
+  fi
+  sleep 2
+  if [ "$i" = "60" ]; then
+    echo "rs101 never became ready" >&2
+    docker compose -f docker-compose-rs.yaml logs --tail=50 rs101 >&2
+    exit 1
+  fi
+done
+
 echo
 echo "configuring replicaset with members priorities"
 docker compose -f docker-compose-rs.yaml exec -T rs101 mongo --quiet << EOF
