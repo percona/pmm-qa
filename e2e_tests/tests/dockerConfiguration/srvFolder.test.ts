@@ -31,6 +31,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   });
 
   for (const configuration of folderConfiguration) {
+    console.log(`https://127.0.0.1:${configuration.port}/`);
     pmmTest.use({ baseURL: `https://127.0.0.1:${configuration.port}/` });
 
     pmmTest(
