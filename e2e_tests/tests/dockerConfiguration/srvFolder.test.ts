@@ -62,6 +62,17 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
 
       await grafanaHelper.unAuthorize();
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for un-authorization
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await grafanaHelper.authorize(newUser, newPassword, baseUrl);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for authorization
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+      await dashboard.home.elements.homeDashboardLocator.waitFor({
+        state: 'visible',
+        timeout: Timeouts.TEN_SECONDS,
+      });
     },
   );
 
@@ -75,17 +86,9 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   //
   //
   //
-  // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for un-authorization
-  // await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-  // await grafanaHelper.authorize(newUser, newPassword);
+
   //
-  // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for authorization
-  // await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-  // await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
-  // await dashboard.home.elements.homeDashboardLocator.waitFor({
-  //   state: 'visible',
-  //   timeout: Timeouts.TEN_SECONDS,
-  // });
+
   //
   // await grafanaHelper.unAuthorize();
   // cliHelper.execSilent('docker exec pmm-server-srv change-admin-password anotherpass');
