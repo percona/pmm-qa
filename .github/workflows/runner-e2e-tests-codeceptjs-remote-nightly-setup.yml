@@ -38,7 +38,7 @@ on:
 
 jobs:
   setup:
-    name: "setup / ${{ inputs.shard_name }} / client version: ${{ inputs.pmm_client_version }}"
+    name: "setup / ${{ inputs.shard_name }}"
     runs-on: ubuntu-22.04
     timeout-minutes: 120
     env:
