@@ -33,7 +33,9 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
     pmmTest(
       `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials using ${configuration.testName} @docker-configuration`,
       async ({ cliHelper, dashboard, grafanaHelper, page, urlHelper }) => {
-        cliHelper.execSilent(configuration.command);
+        const runner = cliHelper.execSilent(configuration.command);
+
+        console.log(runner);
 
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for server to start
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
