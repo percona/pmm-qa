@@ -133,8 +133,6 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout.trim()} | grep proxysql_exporter | awk -F' ' '{print $4}'`)
     await cli.exec('sleep 2');
     const dataSourceName = await cli.exec(`docker exec ${containerName} cat /pmm-agent.log | grep ${agentId.stdout.trim()} | grep timeout=5`);
-
-    console.log(dataSourceName);
     await dataSourceName.assertSuccess();
   });
 
