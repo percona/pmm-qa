@@ -15,18 +15,18 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
       port: 444,
       testName: 'local folder',
     },
-    // {
-    //   command: `docker volume rm ${dockerVolumeName} || true && docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 82:8080 --publish 445:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} perconalab/pmm-server-fb:PR-4295-ff823af`,
-    //   port: 445,
-    //   testName: 'docker volume',
-    // },
+    {
+      command: `docker volume rm ${dockerVolumeName} || true && docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} --publish 82:8080 --publish 445:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} perconalab/pmm-server-fb:PR-4295-ff823af`,
+      port: 445,
+      testName: 'docker volume',
+    },
   ];
 
   pmmTest.afterEach(async ({ cliHelper }) => {
     console.log('Stoping and removing pmm server');
-    // cliHelper.execSilent(
-    //   `docker stop pmm-server-srv && docker rm -fr pmm-server-srv || true && sudo rm -fr $HOME/srv || true && docker volume rm pmm-volume || true`,
-    // );
+    cliHelper.execSilent(
+      `docker stop pmm-server-srv && docker rm -fr pmm-server-srv || true && sudo rm -fr $HOME/srv || true && docker volume rm pmm-volume || true`,
+    );
   });
 
   for (const configuration of folderConfiguration) {
