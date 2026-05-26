@@ -36,9 +36,9 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   });
 
   dataTest(srvConfiguration).pmmTest(
-    'PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials @docker-configuration',
+    'PMM-T9999 PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials @docker-configuration ',
     async (data, { cliHelper, dashboard, grafanaHelper, page, urlHelper }) => {
-      const baseUrl = `https://127.0.0.1:${data.port}/`;
+      const baseUrl = `https://65.108.48.166:${data.port}/`;
       const runner = cliHelper.execSilent(data.command);
 
       console.log(runner);
@@ -55,8 +55,10 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
       console.log(cliHelper.execute('docker ps -a'));
       console.log(cliHelper.execSilent('docker logs pmm-server-srv'));
 
-      await grafanaHelper.authorize('admin', 'admin');
-      await page.goto(urlHelper.buildUrlWithParameters(baseUrl + dashboard.home.url, {}));
+      await grafanaHelper.authorize('admin', 'admin', baseUrl);
+      await page.goto(urlHelper.buildUrlWithParameters(baseUrl + dashboard.home.url, {}), {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
       await page
         .locator('//h1[text()="Percona Monitoring and Management"]')
         .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
@@ -68,42 +70,28 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for authorization
       await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-      await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+      await page.goto(urlHelper.buildUrlWithParameters(baseUrl + dashboard.home.url, {}), {
+        timeout: Timeouts.ONE_MINUTE,
+      });
       await dashboard.home.elements.homeDashboardLocator.waitFor({
         state: 'visible',
-        timeout: Timeouts.TEN_SECONDS,
+        timeout: Timeouts.ONE_MINUTE,
+      });
+
+      await grafanaHelper.unAuthorize();
+      cliHelper.execSilent('docker exec pmm-server-srv change-admin-password anotherpass');
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for password change
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await grafanaHelper.authorize(newUser, 'anotherpass', baseUrl);
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await page.goto(urlHelper.buildUrlWithParameters(baseUrl + dashboard.home.url, {}), {
+        timeout: Timeouts.ONE_MINUTE,
+      });
+      await dashboard.home.elements.homeDashboardLocator.waitFor({
+        state: 'visible',
+        timeout: Timeouts.ONE_MINUTE,
       });
     },
   );
-
-  // for (const configuration of folderConfiguration) {
-  //   console.log(`https://127.0.0.1:${configuration.port}/`);
-  //   pmmTest.use({ baseURL: `https://127.0.0.1:${configuration.port}/` });
-  //
-  //   pmmTest(
-  //     `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials using ${configuration.testName} @docker-configuration`,
-  //     async ({ cliHelper, dashboard, grafanaHelper, page, urlHelper }) => {
-  //
-  //
-  //
-
-  //
-
-  //
-  // await grafanaHelper.unAuthorize();
-  // cliHelper.execSilent('docker exec pmm-server-srv change-admin-password anotherpass');
-  //
-  // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for password change
-  // await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-  // await grafanaHelper.authorize(newUser, 'anotherpass');
-  // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for auth
-  // await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-  // await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
-  // await dashboard.home.elements.homeDashboardLocator.waitFor({
-  //   state: 'visible',
-  //   timeout: Timeouts.TWENTY_SECONDS,
-  // });
-  // },
-  // );
-  // }
 });
