@@ -24,8 +24,6 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
     },
   ];
 
-
-
   pmmTest.afterEach(async ({ cliHelper }) => {
     console.log('Stoping and removing pmm server');
     // cliHelper.execSilent(
@@ -54,7 +52,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
       console.log(cliHelper.execSilent('docker logs pmm-server-srv'));
 
       await grafanaHelper.authorize('admin', 'admin');
-      await page.goto(urlHelper.buildUrlWithParameters(dashboard.home.url, {}));
+      await page.goto(urlHelper.buildUrlWithParameters(baseUrl + dashboard.home.url, {}));
       await page
         .locator('//h1[text()="Percona Monitoring and Management"]')
         .waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
