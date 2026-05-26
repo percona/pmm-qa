@@ -32,7 +32,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   pmmTest.afterEach(async ({ cliHelper }) => {
     console.log('Stoping and removing pmm server');
     console.log(cliHelper.execSilent(`docker stop ${dockerContainerName}`));
-    console.log(cliHelper.execSilent(`docker rm -fr ${dockerContainerName}`));
+    console.log(cliHelper.execSilent(`docker rm -f ${dockerContainerName}`));
   });
 
   dataTest(srvConfiguration).pmmTest(
