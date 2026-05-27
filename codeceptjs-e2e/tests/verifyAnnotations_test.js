@@ -20,7 +20,7 @@ Before(async ({ I }) => {
 });
 
 Data(annotation).Scenario(
-  'PMM-T878 - Verify adding annotation specific dashboard @nightly @dashboards @annotations',
+  'PMM-T878 - Verify adding annotation specific dashboard @nightly @nightly-generic @dashboards @annotations',
   async ({
     I, dashboardPage, pmmInventoryPage, annotationAPI, inventoryAPI, current,
   }) => {
@@ -62,7 +62,7 @@ Data(annotation).Scenario(
 ).retry(2);
 
 Scenario(
-  'PMM-T878 - Verify user is not able to add an annotation for non-existing node name or service name and without service name @nightly @dashboards',
+  'PMM-T878 - Verify user is not able to add an annotation for non-existing node name or service name and without service name @nightly @nightly-generic @dashboards',
   async ({
     I, annotationAPI, pmmInventoryPage, inventoryAPI,
   }) => {

@@ -78,7 +78,7 @@ jobs:
 
     steps:
       - name: Create status check
-        if: ${{ env.SHA != 'null' }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:
@@ -194,7 +194,7 @@ jobs:
           pip install --upgrade pip
           pip install setuptools
           pip install -r requirements.txt
-          python pmm-framework.py ${{ env.WIZARD_ARGS }}
+          python pmm-framework.py --client-debug ${{ env.WIZARD_ARGS }}
 
       - name: 'Run CLI tests: ${{ inputs.cli_tag }}'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
@@ -227,7 +227,7 @@ jobs:
             pmm-qa/cli/client-logs
 
       - name: Create status check
-        if: ${{ env.SHA != 'null' && always() }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         uses: percona/gh-action-github-status-action@master
         continue-on-error: true
         with:

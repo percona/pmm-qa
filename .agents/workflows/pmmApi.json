@@ -1,0 +1,690 @@
+{
+  "base": "/v1",
+  "endpoints": [
+    {
+      "path": "/actions/{action_id}",
+      "method": "GET",
+      "path_params": ["action_id"]
+    },
+    {
+      "path": "/actions:cancelAction",
+      "method": "POST",
+      "body": ["action_id"]
+    },
+    {
+      "path": "/actions:startNodeAction",
+      "method": "POST",
+      "body": ["node_id", "pmm_agent_id"]
+    },
+    {
+      "path": "/actions:startServiceAction",
+      "method": "POST",
+      "body": [
+        "mongodb_explain",
+        "mysql_explain",
+        "mysql_explain_json",
+        "mysql_explain_traditional_json",
+        "mysql_show_create_table",
+        "mysql_show_index",
+        "mysql_show_table_status",
+        "postgres_show_create_table",
+        "postgres_show_index",
+        "pt_mongodb_summary",
+        "pt_mysql_summary",
+        "pt_postgres_summary"
+      ]
+    },
+    {
+      "path": "/advisors",
+      "method": "GET"
+    },
+    {
+      "path": "/advisors/checks",
+      "method": "GET"
+    },
+    {
+      "path": "/advisors/checks/failed",
+      "method": "GET",
+      "query": ["page_index", "page_size", "service_id"]
+    },
+    {
+      "path": "/advisors/checks:batchChange",
+      "method": "POST",
+      "body": ["params"]
+    },
+    {
+      "path": "/advisors/checks:start",
+      "method": "POST",
+      "body": ["names"]
+    },
+    {
+      "path": "/advisors/failedServices",
+      "method": "GET"
+    },
+    {
+      "path": "/alerting/rules",
+      "method": "POST",
+      "body": [
+        "custom_labels",
+        "filters",
+        "folder_uid",
+        "for",
+        "group",
+        "interval",
+        "name",
+        "params",
+        "severity",
+        "template_name"
+      ]
+    },
+    {
+      "path": "/alerting/templates",
+      "method": "GET",
+      "query": ["page_index", "page_size", "reload"]
+    },
+    {
+      "path": "/alerting/templates",
+      "method": "POST",
+      "body": ["yaml"]
+    },
+    {
+      "path": "/alerting/templates/{name}",
+      "method": "PUT",
+      "path_params": ["name"],
+      "body": ["yaml"]
+    },
+    {
+      "path": "/alerting/templates/{name}",
+      "method": "DELETE",
+      "path_params": ["name"]
+    },
+    {
+      "path": "/backups/artifacts",
+      "method": "GET"
+    },
+    {
+      "path": "/backups/artifacts/{artifact_id}",
+      "method": "DELETE",
+      "path_params": ["artifact_id"],
+      "query": ["remove_files"]
+    },
+    {
+      "path": "/backups/artifacts/{artifact_id}/pitr-timeranges",
+      "method": "GET",
+      "path_params": ["artifact_id"]
+    },
+    {
+      "path": "/backups/locations",
+      "method": "GET"
+    },
+    {
+      "path": "/backups/locations",
+      "method": "POST",
+      "body": ["description", "filesystem_config", "name", "s3_config"]
+    },
+    {
+      "path": "/backups/locations/{location_id}",
+      "method": "PUT",
+      "path_params": ["location_id"],
+      "body": ["description", "filesystem_config", "name", "s3_config"]
+    },
+    {
+      "path": "/backups/locations/{location_id}",
+      "method": "DELETE",
+      "path_params": ["location_id"],
+      "query": ["force"]
+    },
+    {
+      "path": "/backups/locations:testConfig",
+      "method": "POST",
+      "body": ["filesystem_config", "s3_config"]
+    },
+    {
+      "path": "/backups/restores",
+      "method": "GET"
+    },
+    {
+      "path": "/backups/restores/{restore_id}/logs",
+      "method": "GET",
+      "path_params": ["restore_id"],
+      "query": ["limit", "offset"]
+    },
+    {
+      "path": "/backups/restores:start",
+      "method": "POST",
+      "body": ["artifact_id", "pitr_timestamp", "service_id"]
+    },
+    {
+      "path": "/backups/scheduled",
+      "method": "GET"
+    },
+    {
+      "path": "/backups/{artifact_id}/compatible-services",
+      "method": "GET",
+      "path_params": ["artifact_id"]
+    },
+    {
+      "path": "/backups/{artifact_id}/logs",
+      "method": "GET",
+      "path_params": ["artifact_id"],
+      "query": ["limit", "offset"]
+    },
+    {
+      "path": "/backups/{scheduled_backup_id}",
+      "method": "DELETE",
+      "path_params": ["scheduled_backup_id"]
+    },
+    {
+      "path": "/backups:changeScheduled",
+      "method": "PUT",
+      "body": [
+        "cron_expression",
+        "description",
+        "enabled",
+        "name",
+        "retention",
+        "retries",
+        "retry_interval",
+        "scheduled_backup_id",
+        "start_time"
+      ]
+    },
+    {
+      "path": "/backups:schedule",
+      "method": "POST",
+      "body": [
+        "cron_expression",
+        "data_model",
+        "description",
+        "enabled",
+        "folder",
+        "location_id",
+        "mode",
+        "name",
+        "retention",
+        "retries",
+        "retry_interval",
+        "service_id",
+        "start_time"
+      ]
+    },
+    {
+      "path": "/backups:start",
+      "method": "POST",
+      "body": [
+        "data_model",
+        "description",
+        "folder",
+        "location_id",
+        "name",
+        "retries",
+        "retry_interval",
+        "service_id"
+      ]
+    },
+    {
+      "path": "/ha/nodes",
+      "method": "GET"
+    },
+    {
+      "path": "/ha/status",
+      "method": "GET"
+    },
+    {
+      "path": "/inventory/agents",
+      "method": "GET",
+      "query": ["agent_type", "node_id", "pmm_agent_id", "service_id"]
+    },
+    {
+      "path": "/inventory/agents",
+      "method": "POST",
+      "body": [
+        "azure_database_exporter",
+        "external_exporter",
+        "mongodb_exporter",
+        "mysqld_exporter",
+        "node_exporter",
+        "pmm_agent",
+        "postgres_exporter",
+        "proxysql_exporter",
+        "qan_mongodb_mongolog_agent",
+        "qan_mongodb_profiler_agent",
+        "qan_mysql_perfschema_agent",
+        "qan_mysql_slowlog_agent",
+        "qan_postgresql_pgstatements_agent",
+        "qan_postgresql_pgstatmonitor_agent",
+        "rds_exporter",
+        "rta_mongodb_agent",
+        "valkey_exporter"
+      ]
+    },
+    {
+      "path": "/inventory/agents/{agent_id}",
+      "method": "GET",
+      "path_params": ["agent_id"]
+    },
+    {
+      "path": "/inventory/agents/{agent_id}",
+      "method": "PUT",
+      "path_params": ["agent_id"],
+      "body": [
+        "azure_database_exporter",
+        "external_exporter",
+        "mongodb_exporter",
+        "mysqld_exporter",
+        "node_exporter",
+        "nomad_agent",
+        "postgres_exporter",
+        "proxysql_exporter",
+        "qan_mongodb_mongolog_agent",
+        "qan_mongodb_profiler_agent",
+        "qan_mysql_perfschema_agent",
+        "qan_mysql_slowlog_agent",
+        "qan_postgresql_pgstatements_agent",
+        "qan_postgresql_pgstatmonitor_agent",
+        "rds_exporter",
+        "rta_mongodb_agent",
+        "valkey_exporter"
+      ]
+    },
+    {
+      "path": "/inventory/agents/{agent_id}",
+      "method": "DELETE",
+      "path_params": ["agent_id"],
+      "query": ["force"]
+    },
+    {
+      "path": "/inventory/agents/{agent_id}/logs",
+      "method": "GET",
+      "path_params": ["agent_id"],
+      "query": ["limit"]
+    },
+    {
+      "path": "/inventory/nodes",
+      "method": "GET",
+      "query": ["node_type"]
+    },
+    {
+      "path": "/inventory/nodes",
+      "method": "POST",
+      "body": ["container", "generic", "remote", "remote_azure", "remote_rds"]
+    },
+    {
+      "path": "/inventory/nodes/{node_id}",
+      "method": "GET",
+      "path_params": ["node_id"]
+    },
+    {
+      "path": "/inventory/nodes/{node_id}",
+      "method": "DELETE",
+      "path_params": ["node_id"],
+      "query": ["force"]
+    },
+    {
+      "path": "/inventory/services",
+      "method": "GET",
+      "query": ["external_group", "node_id", "service_type"]
+    },
+    {
+      "path": "/inventory/services",
+      "method": "POST",
+      "body": [
+        "external",
+        "haproxy",
+        "mongodb",
+        "mysql",
+        "postgresql",
+        "proxysql",
+        "valkey"
+      ]
+    },
+    {
+      "path": "/inventory/services/{service_id}",
+      "method": "GET",
+      "path_params": ["service_id"]
+    },
+    {
+      "path": "/inventory/services/{service_id}",
+      "method": "PUT",
+      "path_params": ["service_id"],
+      "body": [
+        "cluster",
+        "custom_labels",
+        "environment",
+        "external_group",
+        "replication_set"
+      ]
+    },
+    {
+      "path": "/inventory/services/{service_id}",
+      "method": "DELETE",
+      "path_params": ["service_id"],
+      "query": ["force"]
+    },
+    {
+      "path": "/inventory/services:getTypes",
+      "method": "POST"
+    },
+    {
+      "path": "/management/agents",
+      "method": "GET",
+      "query": ["node_id", "service_id"]
+    },
+    {
+      "path": "/management/agents/versions",
+      "method": "GET"
+    },
+    {
+      "path": "/management/annotations",
+      "method": "POST",
+      "body": ["node_name", "service_names", "tags", "text"]
+    },
+    {
+      "path": "/management/nodes",
+      "method": "GET",
+      "query": ["node_type"]
+    },
+    {
+      "path": "/management/nodes",
+      "method": "POST",
+      "body": [
+        "address",
+        "agent_password",
+        "az",
+        "container_id",
+        "container_name",
+        "custom_labels",
+        "disable_collectors",
+        "distro",
+        "expose_exporter",
+        "instance_id",
+        "machine_id",
+        "metrics_mode",
+        "node_model",
+        "node_name",
+        "node_type",
+        "region",
+        "reregister"
+      ]
+    },
+    {
+      "path": "/management/nodes/{node_id}",
+      "method": "GET",
+      "path_params": ["node_id"]
+    },
+    {
+      "path": "/management/nodes/{node_id}",
+      "method": "DELETE",
+      "path_params": ["node_id"],
+      "query": ["force"]
+    },
+    {
+      "path": "/management/services",
+      "method": "GET",
+      "query": ["external_group", "node_id", "service_type"]
+    },
+    {
+      "path": "/management/services",
+      "method": "POST",
+      "body": [
+        "external",
+        "haproxy",
+        "mongodb",
+        "mysql",
+        "postgresql",
+        "proxysql",
+        "rds",
+        "valkey"
+      ]
+    },
+    {
+      "path": "/management/services/azure",
+      "method": "POST",
+      "body": [
+        "address",
+        "az",
+        "azure_client_id",
+        "azure_client_secret",
+        "azure_database_exporter",
+        "azure_resource_group",
+        "azure_subscription_id",
+        "azure_tenant_id",
+        "custom_labels",
+        "disable_query_examples",
+        "environment",
+        "instance_id",
+        "node_model",
+        "node_name",
+        "password",
+        "port",
+        "qan",
+        "region",
+        "service_name",
+        "skip_connection_check",
+        "tablestats_group_table_limit",
+        "tls",
+        "tls_skip_verify",
+        "type",
+        "username"
+      ]
+    },
+    {
+      "path": "/management/services/{service_id}",
+      "method": "DELETE",
+      "path_params": ["service_id"],
+      "query": ["service_type"]
+    },
+    {
+      "path": "/management/services:discoverAzure",
+      "method": "POST",
+      "body": [
+        "azure_client_id",
+        "azure_client_secret",
+        "azure_subscription_id",
+        "azure_tenant_id"
+      ]
+    },
+    {
+      "path": "/management/services:discoverRDS",
+      "method": "POST",
+      "body": ["aws_access_key", "aws_secret_key"]
+    },
+    {
+      "path": "/qan/health",
+      "method": "GET"
+    },
+    {
+      "path": "/qan/metrics:getFilters",
+      "method": "POST",
+      "body": [
+        "labels",
+        "main_metric_name",
+        "period_start_from",
+        "period_start_to"
+      ]
+    },
+    {
+      "path": "/qan/metrics:getNames",
+      "method": "POST"
+    },
+    {
+      "path": "/qan/metrics:getReport",
+      "method": "POST",
+      "body": [
+        "columns",
+        "group_by",
+        "labels",
+        "limit",
+        "main_metric",
+        "offset",
+        "order_by",
+        "period_start_from",
+        "period_start_to",
+        "search"
+      ]
+    },
+    {
+      "path": "/qan/query/{queryid}/plan",
+      "method": "GET",
+      "path_params": ["queryid"]
+    },
+    {
+      "path": "/qan/query:exists",
+      "method": "POST",
+      "body": ["query", "serviceid"]
+    },
+    {
+      "path": "/qan/query:getExample",
+      "method": "POST",
+      "body": [
+        "filter_by",
+        "group_by",
+        "labels",
+        "limit",
+        "period_start_from",
+        "period_start_to"
+      ]
+    },
+    {
+      "path": "/qan/query:getSchema",
+      "method": "POST",
+      "body": ["query_id", "service_id"]
+    },
+    {
+      "path": "/qan:explainFingerprint",
+      "method": "POST",
+      "body": ["query_id", "serviceid"]
+    },
+    {
+      "path": "/qan:getHistogram",
+      "method": "POST",
+      "body": ["labels", "period_start_from", "period_start_to", "queryid"]
+    },
+    {
+      "path": "/qan:getLabels",
+      "method": "POST",
+      "body": ["filter_by", "group_by", "period_start_from", "period_start_to"]
+    },
+    {
+      "path": "/qan:getMetrics",
+      "method": "POST",
+      "body": [
+        "filter_by",
+        "group_by",
+        "include_only_fields",
+        "labels",
+        "period_start_from",
+        "period_start_to",
+        "totals"
+      ]
+    },
+    {
+      "path": "/realtimeanalytics/queries:search",
+      "method": "POST",
+      "body": ["limit", "service_ids"]
+    },
+    {
+      "path": "/realtimeanalytics/services",
+      "method": "GET",
+      "query": ["service_type"]
+    },
+    {
+      "path": "/realtimeanalytics/sessions",
+      "method": "GET",
+      "query": ["cluster_name"]
+    },
+    {
+      "path": "/realtimeanalytics/sessions:start",
+      "method": "POST",
+      "body": ["service_id"]
+    },
+    {
+      "path": "/realtimeanalytics/sessions:stop",
+      "method": "POST",
+      "body": ["service_id"]
+    },
+    {
+      "path": "/server/leaderHealthCheck",
+      "method": "GET"
+    },
+    {
+      "path": "/server/logs.zip",
+      "method": "GET",
+      "query": ["pprof"]
+    },
+    {
+      "path": "/server/readyz",
+      "method": "GET"
+    },
+    {
+      "path": "/server/settings",
+      "method": "GET"
+    },
+    {
+      "path": "/server/settings",
+      "method": "PUT",
+      "body": [
+        "advisor_run_intervals",
+        "aws_partitions",
+        "data_retention",
+        "enable_access_control",
+        "enable_advisor",
+        "enable_alerting",
+        "enable_azurediscover",
+        "enable_backup_management",
+        "enable_internal_pg_qan",
+        "enable_telemetry",
+        "enable_updates",
+        "metrics_resolutions",
+        "pmm_public_address",
+        "ssh_key",
+        "update_snooze_duration"
+      ]
+    },
+    {
+      "path": "/server/settings/readonly",
+      "method": "GET"
+    },
+    {
+      "path": "/server/updates",
+      "method": "GET",
+      "query": ["force", "only_installed_version"]
+    },
+    {
+      "path": "/server/updates/changelogs",
+      "method": "GET"
+    },
+    {
+      "path": "/server/updates:getStatus",
+      "method": "POST",
+      "body": ["auth_token", "log_offset"]
+    },
+    {
+      "path": "/server/updates:start",
+      "method": "POST",
+      "body": ["new_image"]
+    },
+    {
+      "path": "/server/version",
+      "method": "GET",
+      "query": ["dummy"]
+    },
+    {
+      "path": "/users",
+      "method": "GET"
+    },
+    {
+      "path": "/users/me",
+      "method": "GET"
+    },
+    {
+      "path": "/users/me",
+      "method": "PUT",
+      "body": [
+        "alerting_tour_completed",
+        "product_tour_completed",
+        "snoozed_pmm_version"
+      ]
+    }
+  ]
+}

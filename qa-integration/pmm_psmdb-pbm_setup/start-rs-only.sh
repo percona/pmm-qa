@@ -3,17 +3,32 @@ set -e
 
 profile=${COMPOSE_PROFILES:-classic}
 mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
+mongo_setup_type=${mongo_setup_type,,}
+mongo_storage_engine=${MONGO_STORAGE_ENGINE:-wiredTiger}
+mongo_storage_engine=${mongo_storage_engine,,}
 ol_version=${OL_VERSION:-9}
+
+
+export COMPOSE_PROFILES=${profile}
+export MONGO_SETUP_TYPE=${mongo_setup_type}
+export OL_VERSION=${ol_version}
+
+if [ "$mongo_storage_engine" = "inmemory" ]; then
+
+    generated_config_dir="/tmp/pmm-qa-mongod-rs-inmemory"
+    rm -rf "$generated_config_dir"
+    mkdir -p "$generated_config_dir"
+    cp ./conf/mongod-rs-inmemory/mongod.conf "$generated_config_dir/mongod.conf"
+    export MONGOD_RS_CONFIG_DIR="$generated_config_dir"
+else
+    mongo_storage_engine="wiredTiger"
+fi
 
 docker network create qa-integration || true
 docker network create pmm-qa || true
 docker network create pmm-ui-tests_pmm-network || true
 docker network create pmm2-upgrade-tests_pmm-network || true
 docker network create pmm2-ui-tests_pmm-network || true
-
-export COMPOSE_PROFILES=${profile}
-export MONGO_SETUP_TYPE=${mongo_setup_type}
-export OL_VERSION=${ol_version}
 
 docker compose -f docker-compose-rs.yaml down -v --remove-orphans
 docker compose -f docker-compose-rs.yaml build --no-cache

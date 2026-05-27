@@ -1,0 +1,121 @@
+name: PMM_PROXYSQL
+
+on:
+  workflow_dispatch:
+    inputs:
+      pmm_qa_branch:
+        description: 'Branch of PMM QA'
+        default: 'main'
+        required: false
+        type: string
+      pxc_version:
+        description: 'PXC version, example: 8.0.33-25 or VERSIONS URL'
+        default: 'https://github.com/Percona-QA/package-testing/blob/master/VERSIONS'
+        required: true
+        type: string
+      pxc_glibc:
+        description: 'PXC glibc version, example: 2.35'
+        default: '2.35'
+        required: true
+        type: string
+      pmm_server_image:
+        description: 'PMM Server image, example: perconalab/pmm-server:3-dev-latest'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        required: false
+        type: string
+      pmm_client_version:
+        description: 'PMM Client version (3-dev-latest|pmm3-rc|x.xx.x|https...)'
+        default: '3-dev-latest'
+        required: false
+        type: string
+
+  workflow_call:
+    inputs:
+      pmm_qa_branch:
+        required: false
+        type: string
+      pxc_version:
+        required: false
+        type: string
+      pxc_glibc:
+        required: false
+        type: string
+      pmm_server_image:
+        required: false
+        type: string
+      pmm_client_version:
+        required: false
+        type: string
+
+jobs:
+  PMM_PXC_TEST:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    env:
+      ADMIN_PASSWORD: 'admin'
+      PXC_VERSION: ${{ inputs.pxc_version || '8.0' }}
+      PXC_GLIBC: ${{ inputs.pxc_glibc || '2.35' }}
+      PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || '3-dev-latest' }}
+
+    steps:
+      - name: PXC_VERSION ENV Setup
+        run: |
+          if [[ "${PXC_VERSION}" != http* ]]; then
+            PXC_VERSION="${PXC_VERSION}"
+            PXC_VERSION_PATH=$(echo "pxc-$PXC_VERSION")
+            PXC_VERSION_TRIMED=$(echo ${PXC_VERSION%-*})
+          else
+            wget https://raw.githubusercontent.com/Percona-QA/package-testing/master/VERSIONS
+            PXC_VERSION="$(grep 'PXC80_VER' VERSIONS | cut -d = -f 2)"
+            PXC_VERSION_PATH=$(echo "pxc-$PXC_VERSION.1")
+            PXC_VERSION_TRIMED=$(echo ${PXC_VERSION%-*})
+          fi
+          echo "PXC_VERSION=${PXC_VERSION}"  | sed 's/"//g'  >> $GITHUB_ENV
+          echo "PXC_VERSION_TAR=${PXC_VERSION}.1"  | sed 's/"//g' >> $GITHUB_ENV
+          echo "PXC_VERSION_PATH=${PXC_VERSION_PATH}" >> $GITHUB_ENV
+          echo "PXC_VERSION_TRIMED=${PXC_VERSION_TRIMED}" >> $GITHUB_ENV
+
+      - name: Concatenate values to environment file
+        run: |
+          echo "PXC_TARBALL_PATH=https://downloads.percona.com/downloads/TESTING/${PXC_VERSION_PATH}/Percona-XtraDB-Cluster_${PXC_VERSION_TAR}_Linux.x86_64.glibc${PXC_GLIBC}.tar.gz" >> $GITHUB_ENV
+
+      - name: Install Ansible and update the node
+        run: sudo apt-get update -y && sudo apt-get install ansible -y
+
+      - name: Run the PMM Server container
+        run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server ${{ env.PMM_SERVER_IMAGE }}
+
+      - name: Checkout pmm-qa
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.pmm_qa_branch || 'main' }}
+
+      - name: Export path to qa-integration tree
+        working-directory: qa-integration
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+
+      - name: Run Setup for E2E Tests
+        working-directory: qa-integration/pmm_qa
+        run: |
+          mkdir -m 777 -p /tmp/backup_data
+          python3 -m venv virtenv
+          . virtenv/bin/activate
+          pip install --upgrade pip
+          pip install --force-reinstall -U setuptools
+          pip install -r requirements.txt
+          if [[ "${PXC_VERSION}" != http* ]]; then
+            python pmm-framework.py --verbose --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC=${PXC_VERSION}
+          else
+            python pmm-framework.py --verbose --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC,TARBALL=${PXC_TARBALL_PATH}
+          fi
+
+      - name: Install npx dependencies
+        working-directory: codeceptjs-e2e
+        run: npm ci && npx playwright install --with-deps && npx codeceptjs def pr.codecept.js
+
+      - name: Run the Integration tests of PXC
+        working-directory: codeceptjs-e2e
+        run: |
+          export PMM_UI_URL="http://127.0.0.1:8081/"
+          npx codeceptjs run -c pr.codecept.js tests/qa-integration/pmm_pxc_integration_test.js

@@ -24,7 +24,7 @@ pmmTest(
       });
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the query to run for some time
-      await page.waitForTimeout(3_000);
+      await page.waitForTimeout(Timeouts.THREE_SECONDS);
 
       mongoDbHelper.simulateLongRunningQuery({
         delayMs: Timeouts.TWENTY_SECONDS,

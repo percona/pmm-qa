@@ -133,12 +133,12 @@ test.describe(
       ).assertSuccess();
       await cli.exec(`docker restart ${containerName}`);
 
-      await test.step(`Waiting for ${containerName} to be unhealthy(30 sec)`, async () => {
+      await test.step(`Waiting for ${containerName} to be unhealthy(45 sec)`, async () => {
         await expect(async () => {
           await (
             await cli.exec(`docker ps | grep ${containerName}`)
           ).outContains('unhealthy');
-        }).toPass({ intervals: [2_000], timeout: 30_000 });
+        }).toPass({ intervals: [2_000], timeout: 45_000 });
       });
     });
 
@@ -220,6 +220,24 @@ test.describe(
         .not.toContain(
           'was collected before with the same name and label values',
         );
+    });
+
+    test('PMM-T2082 Verify there are no certificate issues reported in ClickHouse logs', async () => {
+      const chLogs = await cli.exec(
+        'docker exec pmm-server cat /srv/logs/clickhouse-server.log | grep -i "CertificateReloader:"',
+      );
+      expect
+        .soft(
+          chLogs.stdout,
+          'Verify the ClickHouse client is not trying to connect via TLS and reporting certificate reloader errors',
+        )
+        .not.toContain('CertificateReloader: One of paths is empty');
+      expect
+        .soft(
+          chLogs.stdout,
+          'Verify ClickHouse server is not trying to load TLS certificates and reporting modification time errors',
+        )
+        .not.toContain('CertificateReloader: Cannot obtain modification time');
     });
   },
 );

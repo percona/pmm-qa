@@ -7,9 +7,7 @@ import CliHelper from '@helpers/cli.helper';
 import Credentials from '@helpers/credentials.helper';
 import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
-import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
-import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import LeftNavigation from '@pages/navigation.page';
 import ServicesPage from '@pages/inventory/services.page';
@@ -19,36 +17,12 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
-
-base.beforeEach(async ({ page }) => {
-  // Mock user details call to prevent the tours from showing
-  await page.route(apiEndpoints.users.me, (route) =>
-    route.fulfill({
-      body: JSON.stringify({
-        alerting_tour_completed: true,
-        product_tour_completed: true,
-        snoozed_pmm_version: '',
-        user_id: 1,
-      }),
-      status: 200,
-    }),
-  );
-  // Mock upgrade call to prevent upgrade modal from showing.
-  await page.route(apiEndpoints.server.updates, (route) =>
-    route.fulfill({
-      body: JSON.stringify({
-        installed: {},
-        last_check: new Date().toISOString(),
-        latest: {},
-        update_available: false,
-      }),
-      status: 200,
-    }),
-  );
-});
+import SettingsPage from '@pages/ha/settings.page';
 
 const pmmTest = base.extend<{
+  settingsPage: SettingsPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -60,15 +34,14 @@ const pmmTest = base.extend<{
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;
-  themePage: ThemePage;
   tour: TourPage;
-  welcomePage: WelcomePage;
   mocks: Mocks;
   leftNavigation: LeftNavigation;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  vacuumDashboardPage: VacuumDashboard;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
@@ -82,7 +55,7 @@ const pmmTest = base.extend<{
     await use(cliHelper);
   },
   context: async ({ context }, use) => {
-    await context.route('**/v1/users/me', (route) =>
+    await context.route(apiEndpoints.users.me, (route) =>
       route.fulfill({
         body: JSON.stringify({
           alerting_tour_completed: true,
@@ -94,8 +67,8 @@ const pmmTest = base.extend<{
         status: 200,
       }),
     );
-    await context.route('**/v1/server/updates**', (route) => {
-      return route.fulfill({
+    await context.route(apiEndpoints.server.updates, (route) =>
+      route.fulfill({
         body: JSON.stringify({
           installed: {},
           last_check: new Date().toISOString(),
@@ -104,8 +77,8 @@ const pmmTest = base.extend<{
         }),
         contentType: 'application/json',
         status: 200,
-      });
-    });
+      }),
+    );
     await use(context);
   },
   credentials: async ({}, use) => {
@@ -128,11 +101,7 @@ const pmmTest = base.extend<{
 
     await use(helpPage);
   },
-  leftNavigation: async ({ page }, use) => {
-    const leftNavigation = new LeftNavigation(page);
-
-    await use(leftNavigation);
-  },
+  leftNavigation: async ({ page }, use) => await use(new LeftNavigation(page)),
   mocks: async ({ page }, use) => {
     const mocks = new Mocks(page);
 
@@ -166,11 +135,7 @@ const pmmTest = base.extend<{
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
-  themePage: async ({ page }, use) => {
-    const themePage = new ThemePage(page);
-
-    await use(themePage);
-  },
+  settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 
@@ -181,11 +146,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
-  welcomePage: async ({ page }, use) => {
-    const welcomePage = new WelcomePage(page);
-
-    await use(welcomePage);
-  },
+  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
 });
 
 export default pmmTest;

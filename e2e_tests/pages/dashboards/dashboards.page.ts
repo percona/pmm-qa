@@ -10,26 +10,32 @@ import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
 
+const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
+const hasKnownNoDataMarker = (panelText: string) =>
+  panelNoDataMarkers.some((marker) => panelText.includes(marker)) ||
+  panelText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .includes('-');
+
 export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard();
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
+    panelByExactName: (panelName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     panelHeaderByName: (panelName: string) =>
-      this.builders.panelByName(panelName).getByTestId('header-container'),
+      this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
   };
   buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally download image button',
-    ),
-    imageRendererGenerateImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally generate image button',
-    ),
+    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
+    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   elements = {
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
@@ -44,8 +50,10 @@ export default class Dashboards extends BasePage {
       '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
     ),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
+    qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
-    renderedImage: this.grafanaIframe().locator('[alt="panel-preview-img"]'),
+    renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
     ),
@@ -79,6 +87,13 @@ export default class Dashboards extends BasePage {
     await test.step('Wait for loading to finish', async () => {
       await expectPanel(this.elements.loadingBar).toHaveCount(0);
     });
+
+    if (this.page.url().includes('/pmm-qan/')) {
+      await test.step('Wait for QAN stats to finish loading', async () => {
+        await expectPanel(this.elements.qanGrid).toBeVisible();
+        await expectPanel(this.elements.qanTableLoading).toHaveCount(0);
+      });
+    }
   };
 
   openPanelMenu = async (panelName: string) => {
@@ -144,6 +159,27 @@ export default class Dashboards extends BasePage {
     const availableMetrics = await this.elements.panelName.allTextContents();
 
     expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
+  };
+
+  verifyNamedPanelsHaveData = async (panelNames: string[]) => {
+    await this.loadAllPanels();
+
+    for (const panelName of panelNames) {
+      const panelText = await this.builders.panelByName(panelName).innerText();
+
+      expect(hasKnownNoDataMarker(panelText), `Panel ${panelName} should contain real data`).toBeFalsy();
+    }
+  };
+
+  verifyPanelsShowNoRealDataMarkers = async (panelNames: string[]) => {
+    await this.loadAllPanels();
+
+    for (const panelName of panelNames) {
+      const panel = this.builders.panelByExactName(panelName);
+      const panelText = await panel.innerText();
+
+      expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
+    }
   };
 
   verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {

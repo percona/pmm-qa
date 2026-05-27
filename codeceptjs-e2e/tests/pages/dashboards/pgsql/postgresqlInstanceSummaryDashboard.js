@@ -4,7 +4,7 @@ class PostgresqlInstanceSummaryDashboard {
     this.metrics = [
       'Service',
       'Connections',
-      'Connections Overview',
+      'Connections',
       'Slow queries',
       'Connections per Database',
       'QPS',

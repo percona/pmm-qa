@@ -1,6 +1,7 @@
 import { test } from '@playwright/test';
 import ExecReturn from '@support/types/exec-return.class';
 import shell from 'shelljs';
+import { performance } from "node:perf_hooks";
 
 /**
  * Shell(sh) echo().to() wrapper to use in tests with handy logs creation
@@ -26,10 +27,12 @@ export async function createFile(pathToFile: string, content: string, stepTitle:
  */
 export function execute(command: string): ExecReturn {
   console.log(`exec: "${command}"`);
+  const start = performance.now();
   const { stdout, stderr, code } = shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
+  const durationMs = performance.now() - start;
   if (stdout.length > 0) console.log(`Out: "${stdout}"`);
   if (stderr.length > 0) console.log(`Error: "${stderr}"`);
-  return new ExecReturn(command, code, stdout, stderr);
+  return new ExecReturn(command, code, stdout, stderr, durationMs);
 }
 
 /**

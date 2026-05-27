@@ -25,7 +25,7 @@ Before(async ({ I, queryAnalyticsPage }) => {
 });
 
 Data(filters).Scenario(
-  'PMM-T1054 + PMM-T1055 - Verify the "Command type" filter for Postgres @qan',
+  'PMM-T1054 + PMM-T1055 - Verify the "Command type" filter for Postgres @qan @nightly-qan',
   async ({
     I, current, queryAnalyticsPage,
   }) => {
@@ -39,7 +39,7 @@ Data(filters).Scenario(
 );
 
 Scenario(
-  'PMM-T175 - Verify user is able to apply filter that has dots in label @qan',
+  'PMM-T175 - Verify user is able to apply filter that has dots in label @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const serviceName = '127.0.0.1';
 
@@ -55,7 +55,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T172 - Verify that selecting a filter updates the table data and URL @qan',
+  'PMM-T172 - Verify that selecting a filter updates the table data and URL @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const environmentName = 'pxc-dev';
 
@@ -70,7 +70,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T126 - Verify user is able to Reset All filters @qan',
+  'PMM-T126 - Verify user is able to Reset All filters @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const environmentName1 = 'pxc-dev';
     const environmentName2 = 'ps-dev';
@@ -93,7 +93,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T125 - Verify user is able to Show only selected filter values and Show All filter values @qan',
+  'PMM-T125 - Verify user is able to Show only selected filter values and Show All filter values @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const environmentName1 = 'pxc-dev';
     const environmentName2 = 'ps-dev';
@@ -110,7 +110,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T123 - Verify User is able to search for DB types, Env and Cluster @qan',
+  'PMM-T123 - Verify User is able to search for DB types, Env and Cluster @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const filters = [
       'Environment',
@@ -149,7 +149,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T191 - Verify Reset All and Show Selected filters @qan',
+  'PMM-T191 - Verify Reset All and Show Selected filters @qan @nightly-qan',
   async ({ I, queryAnalyticsPage }) => {
     const environmentName1 = 'pxc-dev';
     const environmentName2 = 'ps-dev';
@@ -169,14 +169,14 @@ Scenario(
   },
 );
 
-Scenario('PMM-T190 - Verify user is able to see n/a filter @qan', async ({ I, queryAnalyticsPage }) => {
+Scenario('PMM-T190 - Verify user is able to see n/a filter @qan @nightly-qan', async ({ I, queryAnalyticsPage }) => {
   await queryAnalyticsPage.waitForLoaded();
   await queryAnalyticsPage.filters.filterBy('n/a');
   await queryAnalyticsPage.filters.verifyCountOfFiltersDisplayed(0, 'bigger');
 });
 
 Scenario(
-  'PMM-T390 - Verify that we show info message when empty result is returned @qan',
+  'PMM-T390 - Verify that we show info message when empty result is returned @qan @nightly-qan',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {
@@ -203,7 +203,7 @@ Scenario(
 ).retry(2);
 
 Scenario(
-  'PMM-T221 - Verify that all filter options are always visible (but some disabled) after selecting an item and % value is changed @qan',
+  'PMM-T221 - Verify that all filter options are always visible (but some disabled) after selecting an item and % value is changed @qan @nightly-qan',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {
@@ -235,7 +235,7 @@ Scenario(
 /** Time Range Bug.
 Data(shortCutTests).Scenario(
   'PMM-T436 PMM-T458 - Verify short-cut navigation from filters to related dashboards, '
-    + 'Verify time interval is passed from QAN to dashboards via shortcut links @qan @debug',
+    + 'Verify time interval is passed from QAN to dashboards via shortcut links @qan @nightly-qan @debug',
   async ({
     I, dashboardPage, current, adminPage, anPage,
   }) => {
@@ -264,7 +264,7 @@ Data(shortCutTests).Scenario(
   },
 );
 */
-Scenario('PMM-T437 - Verify short-cut navigation for n/a items @qan', async ({ I, queryAnalyticsPage }) => {
+Scenario('PMM-T437 - Verify short-cut navigation for n/a items @qan @nightly-qan', async ({ I, queryAnalyticsPage }) => {
   queryAnalyticsPage.waitForLoaded();
   queryAnalyticsPage.filters.checkLink('pxc-dev-cluster', 'Cluster', true);
   queryAnalyticsPage.filters.filterBy('n/a');
@@ -272,7 +272,7 @@ Scenario('PMM-T437 - Verify short-cut navigation for n/a items @qan', async ({ I
   queryAnalyticsPage.filters.checkLink('undefined', 'Replication Set', false);
 });
 
-Scenario('PMM-T2032 - Verify there is no name with brackets in Plan Summary in QAN @qan', async ({ I, queryAnalyticsPage, adminPage }) => {
+Scenario('PMM-T2032 - Verify there is no name with brackets in Plan Summary in QAN @qan @nightly-qan', async ({ I, queryAnalyticsPage, adminPage }) => {
   queryAnalyticsPage.waitForLoaded();
   queryAnalyticsPage.filters.filterBy('{');
   queryAnalyticsPage.waitForLoaded();

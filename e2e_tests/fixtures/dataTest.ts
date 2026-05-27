@@ -9,13 +9,12 @@ import pmmTest from './pmmTest';
 import AgentsPage from '@pages/inventory/agents.page';
 import HelpPage from '@pages/helpCenter.page';
 import ServicesPage from '@pages/inventory/services.page';
-import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
-import WelcomePage from '@pages/welcome.page';
 import Mocks from '@helpers/mocks.helper';
 import PortalRemoval from '@pages/portalRemoval.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import QueryAnalyticsPage from '@pages/qan/queryAnalytics.page';
+import LeftNavigation from '@pages/navigation.page';
 
 interface pmmTestDataType {
   page: Page;
@@ -29,12 +28,11 @@ interface pmmTestDataType {
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;
-  themePage: ThemePage;
   tour: TourPage;
-  welcomePage: WelcomePage;
   mocks: Mocks;
   portalRemoval: PortalRemoval;
   nodesPage: NodesPage;
+  leftNavigation: LeftNavigation;
 }
 
 const data = <T>(rows: T[]) => ({
@@ -54,16 +52,15 @@ const data = <T>(rows: T[]) => ({
             dashboard,
             grafanaHelper,
             helpPage,
+            leftNavigation,
             mocks,
             nodesPage,
             page,
             portalRemoval,
             queryAnalytics,
             servicesPage,
-            themePage,
             tour,
             urlHelper,
-            welcomePage,
           },
           testInfo,
         ) => {
@@ -77,16 +74,15 @@ const data = <T>(rows: T[]) => ({
               dashboard,
               grafanaHelper,
               helpPage,
+              leftNavigation,
               mocks,
               nodesPage,
               page,
               portalRemoval,
               queryAnalytics,
               servicesPage,
-              themePage,
               tour,
               urlHelper,
-              welcomePage,
             },
             testInfo,
           );

@@ -9,7 +9,7 @@
 ## Percona Server for MySQL
       - "{{ (ansible_distribution == 'Debian' and ansible_distribution_major_version|int == 11) | ternary('ps-8.4','') }}"
       - "{{ (ansible_distribution == 'Debian' and ansible_distribution_major_version|int == 12) | ternary('ps-8.4','') }}"
-      - "{{ (ansible_distribution == 'Debian' and ansible_distribution_major_version|int == 13) | ternary('ps-8.0','') }}"
+      - "{{ (ansible_distribution == 'Debian' and ansible_distribution_major_version|int == 13) | ternary('ps-8.4','') }}"
 ## Percona Server for MongoDB
       - "{{ (ansible_distribution == 'Debian' and ansible_distribution_major_version|int == 11) | ternary('psmdb-70','') }}"
       - "{{ (ansible_distribution == 'Debian' and ansible_distribution_major_version|int == 12) | ternary('psmdb-80','') }}"

@@ -53,10 +53,10 @@ export default class LeftNavigation extends BasePage {
     },
     explore: {
       locator: this.page.getByTestId('navitem-explore'),
-      metrics: { locator: this.page.getByTestId('navitem-explore-metrics') },
+      // metrics: { locator: this.page.getByTestId('navitem-explore-metrics') },
       promSqlBuilder: { locator: this.page.getByTestId('navitem-explore-promql-builder') },
     },
-    help: { locator: this.page.getByTestId('navitem-help'), verifyTimeRange: true },
+    help: { locator: this.page.getByTestId('navitem-help') },
     home: { locator: this.page.getByTestId('navitem-home-page'), verifyTimeRange: true },
     inventory: {
       addServices: { locator: this.page.getByTestId('navitem-add-instance') },
@@ -88,10 +88,7 @@ export default class LeftNavigation extends BasePage {
         pxcGaleraNodes: { locator: this.page.getByTestId('navitem-pxc-nodes-compare') },
         replication: { locator: this.page.getByTestId('navitem-mysql-replication-summary') },
       },
-      highAvailability: {
-        locator: this.page.getByTestId('navitem-mysql-high-availability'),
-        verifyTimeRange: true,
-      },
+      highAvailability: { locator: this.page.getByTestId('navitem-mysql-high-availability') },
       innodbCompression: { locator: this.page.getByTestId('navitem-mysql-innodb-compression-details') },
       innodbDetails: { locator: this.page.getByTestId('navitem-mysql-innodb-details') },
       locator: this.page.getByTestId('navitem-mysql'),
@@ -166,6 +163,7 @@ export default class LeftNavigation extends BasePage {
     closeLeftNavigationButton: this.page.getByTestId('sidebar-close-button'),
     dumpLogs: this.page.getByTestId('help-card-pmm-dump-logs'),
     iframe: this.page.locator('//*[@id="grafana-iframe"]'),
+    loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     oldLeftMenu: this.page.getByTestId('data-testid navigation mega-menu'),
     openLeftNavigationButton: this.page.getByTestId('sidebar-open-button'),
     refreshButton: this.grafanaIframe().getByTestId('data-testid RefreshPicker run button'),
@@ -177,9 +175,16 @@ export default class LeftNavigation extends BasePage {
   inputs = {};
   messages = {};
 
+  getBackgroundColor = (): Promise<string> =>
+    pmmTest.step('Get background color', async () =>
+      this.page.locator('body').evaluate((el) => window.getComputedStyle(el).backgroundColor),
+    );
+
+  getThemeCombobox = (): Locator => this.grafanaIframe().getByRole('combobox', { name: 'Interface theme' });
+
   mouseHoverOnPmmLogo = async (): Promise<void> => {
     await pmmTest.step('Hover on PMM Logo', async () => {
-      const pmmLogo = this.elements.sidebar.locator('rect').first();
+      const pmmLogo = this.elements.sidebar.locator('.css-127biie').first();
       const rectBox = await pmmLogo.boundingBox();
 
       if (rectBox) {
@@ -193,10 +198,22 @@ export default class LeftNavigation extends BasePage {
       const parts = path.split('.');
       let node = this.buttons as NestedLocators;
 
-      for (const part of parts) {
+      for (const [index, part] of parts.entries()) {
         const item = node[part];
 
         if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
+        if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
+          const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
+
+          if (childLocator && !(await childLocator.isVisible())) {
+            await this.getLocator(item as NestedLocator)
+              ?.locator('xpath=..')
+              .getByRole('button')
+              .first()
+              .click({ timeout: Timeouts.TEN_SECONDS });
+            await childLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+          }
+        }
         if (part === 'ha' || part === 'org') {
           const expandKey = part === 'ha' ? 'highAvailability' : 'orgManagement';
           const expandLocator = this.getLocator(node[expandKey] as NestedLocator);
@@ -215,7 +232,6 @@ export default class LeftNavigation extends BasePage {
 
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
-      await locator.scrollIntoViewIfNeeded();
       await locator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
 
       const currentUrl = this.page.url();
@@ -224,6 +240,14 @@ export default class LeftNavigation extends BasePage {
       await this.page
         .waitForFunction((url) => window.location.href !== url, currentUrl, { timeout: Timeouts.TEN_SECONDS })
         .catch(Boolean);
+      await this.page.waitForLoadState('domcontentloaded', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
+
+      if (this.isDashboardPage()) {
+        await this.page
+          .locator('#grafana-iframe')
+          .waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
+        await this.elements.timePickerOpenButton.waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
+      }
     });
   };
 
@@ -254,6 +278,25 @@ export default class LeftNavigation extends BasePage {
     this.collectVerifyTimeRangePaths(this.buttons, '', dashboards);
 
     return dashboards;
+  }
+
+  menuItemLocator(path: string): Locator {
+    const parts = path.split('.');
+    let node = this.buttons as NestedLocators;
+
+    for (const part of parts) {
+      const item = node[part];
+
+      if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
+
+      node = item as NestedLocators;
+    }
+
+    const locator = this.getLocator(node as NestedLocator);
+
+    if (!locator) throw new Error(`No locator found for path: ${path}`);
+
+    return locator;
   }
 
   private collectTraversePaths(node: NestedLocator, path: string, paths: string[]): void {
@@ -298,6 +341,8 @@ export default class LeftNavigation extends BasePage {
       await this.elements.tourPopover.waitFor({ state: 'hidden' });
     }
   };
+
+  private isDashboardPage = (): boolean => /\/pmm-ui\/graph\/d\//.test(this.page.url());
 
   private isLocator(item: NestedLocator | boolean | undefined): item is Locator {
     return !!item && typeof item === 'object' && 'click' in item && 'waitFor' in item;

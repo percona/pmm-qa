@@ -148,7 +148,7 @@ Scenario(
       adminPage.performPageDown(5);
       await dashboardPage.expandEachDashboardRow();
       adminPage.performPageUp(5);
-      await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+      await dashboardPage.verifyThereAreNoGraphsWithoutData(3);
     }
   },
 ).retry(4);

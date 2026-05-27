@@ -6,9 +6,9 @@ services:
       dockerfile: ./Dockerfile
       context: .
       args:
-        - REPO=${REPO:-testing}
+        - REPO=${REPO:-release}
         - PMM_REPO=${PMM_REPO:-experimental}
-        - PBM_VERSION=${PBM_VERSION:-latest}
+        - PBM_VERSION=${PBM_VERSION:-2.9.1-1}
         - PSMDB_VERSION=${PSMDB_VERSION:-latest}
         - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
     command: /bin/bash
@@ -255,6 +255,7 @@ services:
     environment:
       - "PMM_DEBUG=1"
       - "ENABLE_BACKUP_MANAGEMENT=1"
+      - "GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-password}"
     ports:
       - "443:8443"
       - "8081:8080"

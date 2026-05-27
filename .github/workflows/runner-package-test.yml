@@ -4,11 +4,6 @@ name: runner-package-test
 on:
   workflow_dispatch:
     inputs:
-      package_testing_branch:
-        description: "Target branch for package-testing repository"
-        type: string
-        default: "master"
-        required: true
       pmm_server_image:
         description: "pmm-server docker image(auto detected if empty)"
         required: false
@@ -75,10 +70,6 @@ on:
 
   workflow_call:
     inputs:
-      package_testing_branch:
-        type: string
-        default: "master"
-        required: true
       pmm_server_image:
         required: false
         type: string
@@ -124,7 +115,6 @@ jobs:
     timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
-      PACKAGE_TESTING_BRANCH: ${{ inputs.package_testing_branch || 'master' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}
       TARBALL_LINK: ${{ inputs.pmm_client_tarball || 'null' }}
       EXPECTED_VERSION: ${{ inputs.expected_version }}
@@ -137,7 +127,7 @@ jobs:
 
     steps:
       - name: "Create status check"
-        if: ${{ env.SHA != 'null' }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' }}
         uses: percona/gh-action-github-status-action@v1
         continue-on-error: true
         with:
@@ -149,11 +139,8 @@ jobs:
           target_url: "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           sha: ${{ env.SHA }}
 
-      - name: 'Checkout package-testing: "${{ inputs.package_testing_branch }}"'
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          repository: Percona-QA/package-testing
-          ref: ${{ inputs.package_testing_branch }}
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |
@@ -283,7 +270,7 @@ jobs:
             config.vm.define :CLIENT_TEST do |t|
             end
 
-            config.vm.synced_folder "${{ github.workspace }}/", "/pmm/package-testing/"
+            config.vm.synced_folder "${{ github.workspace }}/", "/pmm/pmm-qa/"
             config.vm.provision "shell", privileged: true, inline: <<-SHELL
               ## Set environment variables...
               export PMM_SERVER_IP=192.168.122.1:443
@@ -331,7 +318,7 @@ jobs:
                 sudo dnf update -y
                 sudo dnf install -y ansible-core git wget
               fi
-              cd /pmm/package-testing/playbooks
+              cd /pmm/pmm-qa/package_tests
               ANSIBLE_CALLBACK_RESULT_FORMAT=yaml ansible-playbook -vv --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 ${{ env.PLAYBOOK }}.yml
               SHELL
           end
@@ -351,7 +338,7 @@ jobs:
 
       - name: "Create status check"
         uses: percona/gh-action-github-status-action@v1
-        if: ${{ env.SHA != 'null' && always() }}
+        if: ${{ github.event_name != 'pull_request' && env.SHA != 'null' && always() }}
         continue-on-error: true
         with:
           authToken: ${{ secrets.GITHUB_TOKEN }}
