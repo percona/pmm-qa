@@ -71,7 +71,7 @@ jobs:
   setup:
     name: "setup / ${{ matrix.shard_name }}"
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         include:
           - shard_name: external
