@@ -21,6 +21,7 @@
     sentinel_quorum: 2
     encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
     pmm_server_name: "pmm-server"
+    debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
     - name: Set Random Number Fact
