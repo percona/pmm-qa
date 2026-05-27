@@ -565,7 +565,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     }).toPass({ intervals: [2_000], timeout: 30_000 });
   });
 
-  test('PMM-T9999 @generic', async ({}) => {
+  test('PMM-T2227 - Verify tarball upgrade @generic', async ({}) => {
     const containerName = 'tarball_client'
     await cli.exec('docker network create pmm-qa || true');
     await cli.exec('docker network connect pmm-server pmm-qa');
