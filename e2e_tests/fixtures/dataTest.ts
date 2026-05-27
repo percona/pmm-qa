@@ -15,24 +15,36 @@ import PortalRemoval from '@pages/portalRemoval.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import QueryAnalyticsPage from '@pages/qan/queryAnalytics.page';
 import LeftNavigation from '@pages/navigation.page';
+import AdvancedSettingsPage from '@pages/ha/advancedSettings.page';
+import MongoDBHelper from '@helpers/mongodb.helper';
+import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
+import LeftNavigation from '@pages/navigation.page';
+import QueryAnalytics from '@pages/qan/queryAnalytics.page';
+import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 
 interface pmmTestDataType {
-  page: Page;
+  advancedSettingsPage: AdvancedSettingsPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
+  mongoDbHelper: MongoDBHelper;
   api: Api;
-  queryAnalytics: QueryAnalyticsPage;
+  qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;
   tour: TourPage;
   mocks: Mocks;
   portalRemoval: PortalRemoval;
+  queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   leftNavigation: LeftNavigation;
+  realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  vacuumDashboardPage: VacuumDashboard;
+  page: Page;
 }
 
 const data = <T>(rows: T[]) => ({
@@ -45,6 +57,7 @@ const data = <T>(rows: T[]) => ({
         `${title} | Data: ${JSON.stringify(row)}`,
         async (
           {
+            advancedSettingsPage,
             agentsPage,
             api,
             cliHelper,
@@ -54,19 +67,24 @@ const data = <T>(rows: T[]) => ({
             helpPage,
             leftNavigation,
             mocks,
+            mongoDbHelper,
             nodesPage,
             page,
             portalRemoval,
+            qanStoredMetrics,
             queryAnalytics,
+            realTimeAnalyticsPage,
             servicesPage,
             tour,
             urlHelper,
+            vacuumDashboardPage,
           },
           testInfo,
         ) => {
           await fn(
             row,
             {
+              advancedSettingsPage,
               agentsPage,
               api,
               cliHelper,
@@ -76,13 +94,17 @@ const data = <T>(rows: T[]) => ({
               helpPage,
               leftNavigation,
               mocks,
+              mongoDbHelper,
               nodesPage,
               page,
               portalRemoval,
+              qanStoredMetrics,
               queryAnalytics,
+              realTimeAnalyticsPage,
               servicesPage,
               tour,
               urlHelper,
+              vacuumDashboardPage,
             },
             testInfo,
           );
