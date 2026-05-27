@@ -6,6 +6,7 @@ const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev
 const contanerName = 'pmm-server-public-address';
 const publicIPs = new DataTable(['testCase', 'publicAddress']);
 const basePmmUrl = 'http://127.0.0.1:8085/';
+const buildUrl = (base, path) => `${base.replace(/\/$/, '')}${path}`;
 
 publicIPs.add(['PMM-T1173', '127.0.0.1']);
 publicIPs.add(['PMM-T1173', '127.0.0.1:8443']);
@@ -42,7 +43,7 @@ Data(publicIPs).Scenario(
     await runContainerWithPublicAddressVariable(I, publicAddress);
     await I.Authorize('admin', 'admin', basePmmUrl);
 
-    await I.amOnPage(basePmmUrl + pmmSettingsPage.advancedSettingsUrl);
+    await I.amOnPage(buildUrl(basePmmUrl, pmmSettingsPage.advancedSettingsUrl));
     await I.waitForVisible(pmmSettingsPage.fields.publicAddressInput, 30);
     const setPublicAddress = await I.grabValueFrom(pmmSettingsPage.fields.publicAddressInput);
 
@@ -65,7 +66,7 @@ Scenario.skip(
 
     await homePage.upgradePMM(versionMinor, contanerName);
 
-    await I.amOnPage(basePmmUrl + pmmSettingsPage.advancedSettingsUrl);
+    await I.amOnPage(buildUrl(basePmmUrl, pmmSettingsPage.advancedSettingsUrl));
     await I.waitForVisible(pmmSettingsPage.fields.publicAddressInput, 30);
     const setPublicAddress = await I.grabValueFrom(pmmSettingsPage.fields.publicAddressInput);
 
@@ -84,7 +85,7 @@ Scenario(
     await runContainerWithPublicAddressVariable(I, '127.0.0.5');
     await I.wait(30);
     await I.Authorize('admin', 'admin', basePmmUrl);
-    await I.amOnPage(basePmmUrl + pmmSettingsPage.advancedSettingsUrl);
+    await I.amOnPage(buildUrl(basePmmUrl, pmmSettingsPage.advancedSettingsUrl));
     await I.waitForVisible(pmmSettingsPage.fields.publicAddressInput, 30);
     await pmmSettingsPage.clearPublicAddress();
     await I.wait(10);

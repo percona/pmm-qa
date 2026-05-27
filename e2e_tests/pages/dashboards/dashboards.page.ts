@@ -34,12 +34,8 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
   };
   buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally download image button',
-    ),
-    imageRendererGenerateImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally generate image button',
-    ),
+    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
+    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   elements = {
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
@@ -57,7 +53,7 @@ export default class Dashboards extends BasePage {
     qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
-    renderedImage: this.grafanaIframe().locator('[alt="panel-preview-img"]'),
+    renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
     ),

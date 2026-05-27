@@ -9,11 +9,12 @@ import pmmTest from './pmmTest';
 import AgentsPage from '@pages/inventory/agents.page';
 import HelpPage from '@pages/helpCenter.page';
 import ServicesPage from '@pages/inventory/services.page';
-import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
 import Mocks from '@helpers/mocks.helper';
 import PortalRemoval from '@pages/portalRemoval.page';
 import NodesPage from '@pages/inventory/nodes.page';
+import QueryAnalyticsPage from '@pages/qan/queryAnalytics.page';
+import LeftNavigation from '@pages/navigation.page';
 import AdvancedSettingsPage from '@pages/ha/advancedSettings.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
@@ -35,13 +36,12 @@ interface pmmTestDataType {
   urlHelper: UrlHelper;
   helpPage: HelpPage;
   servicesPage: ServicesPage;
-  themePage: ThemePage;
   tour: TourPage;
   mocks: Mocks;
-  leftNavigation: LeftNavigation;
   portalRemoval: PortalRemoval;
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
+  leftNavigation: LeftNavigation;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   vacuumDashboardPage: VacuumDashboard;
   page: Page;
@@ -75,7 +75,6 @@ const data = <T>(rows: T[]) => ({
             queryAnalytics,
             realTimeAnalyticsPage,
             servicesPage,
-            themePage,
             tour,
             urlHelper,
             vacuumDashboardPage,
@@ -103,7 +102,6 @@ const data = <T>(rows: T[]) => ({
               queryAnalytics,
               realTimeAnalyticsPage,
               servicesPage,
-              themePage,
               tour,
               urlHelper,
               vacuumDashboardPage,

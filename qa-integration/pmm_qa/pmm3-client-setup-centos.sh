@@ -50,26 +50,46 @@ wget https://repo.percona.com/yum/percona-release-latest.noarch.rpm
 rpm -i ./percona-release-latest.noarch.rpm
 export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
 
+# Percona's CDN/repo occasionally serves inconsistent metadata during builds,
+# which makes microdnf abort. The mismatch usually clears within a minute, so retry.
+retry_microdnf_install() {
+    local n=3
+    local i
+    for i in $(seq 1 $n); do
+        microdnf install -y "$@" && break
+        echo "microdnf install failed (attempt $i/$n); retrying in 30s..."
+        sleep 30
+        microdnf clean expire-cache
+    done
+    return 1
+}
+
 if [[ "$client_version" == "3-dev-latest" ]]; then
     echo "Installing 3-dev-latest pmm client"
     percona-release enable-only pmm3-client experimental
-    microdnf install -y pmm-client
+    retry_microdnf_install pmm-client
 fi
 
 if [[ "$client_version" == "pmm3-rc" ]]; then
     echo "Installing testing pmm client"
     percona-release enable-only pmm3-client testing
-    microdnf install -y pmm-client
+    retry_microdnf_install pmm-client
 fi
 
 if [[ "$client_version" == "pmm3-latest" ]]; then
     echo "Installing release pmm client"
-    microdnf -y install pmm-client
+    retry_microdnf_install pmm-client
 fi
 
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
-  wget -O pmm-client.deb https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-7.el9.x86_64.rpm
-  rpm -i pmm-client.deb
+  build_number=7
+  minor_version=${client_version#3.}
+  minor_version=${minor_version%%.*}
+  if [[ "$client_version" == "3.7.1" || "$minor_version" -gt 7 ]]; then
+    build_number=8
+  fi
+  wget -O pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm
+  rpm -i pmm-client.rpm
 fi
 
 ## Default Binary path

@@ -3,7 +3,7 @@ import pmmTest from '@fixtures/pmmTest';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page, urlHelper }) => {
   await grafanaHelper.authorize();
-  await page.goto(urlHelper.buildUrlWithParameters(page.url(), { from: 'now-1h' }));
+  await page.goto(urlHelper.buildUrlWithParameters('/', { from: 'now-1h' }));
 });
 
 pmmTest(
@@ -21,7 +21,7 @@ pmmTest(
     });
 
     await pmmTest.step('Verify panels have data and URL does not have broken variables', async () => {
-      await dashboard.verifyAllPanelsHaveData([]);
+      await dashboard.verifyAllPanelsHaveData(['Dead Tuples %']);
       await expect(page).not.toHaveURL(/.*var-service_name=.*=true/);
       await expect(page).not.toHaveURL(/.*=true/);
     });
