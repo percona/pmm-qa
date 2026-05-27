@@ -26,7 +26,7 @@ export default class Dashboards extends BasePage {
     panelByExactName: (panelName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
-      this.grafanaIframe().locator(`//section[@data-testid="data-testid Panel header ${panelName}"]`),
+      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     panelHeaderByName: (panelName: string) =>
       this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
@@ -47,7 +47,7 @@ export default class Dashboards extends BasePage {
       '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
     ),
     noDataPanelName: this.grafanaIframe().locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section[1]//h2',
+      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
     ),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
