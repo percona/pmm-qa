@@ -359,7 +359,7 @@ jobs:
       tags_for_tests: '@docker-configuration'
 
   docker_configuration_playwright:
-    name: Docker configuration tests with playwright
+    name: Docker configuration tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
