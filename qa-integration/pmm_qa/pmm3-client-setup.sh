@@ -98,9 +98,12 @@ fi
 ## Only supported for debian based systems for now
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   build_number=7
+  minor=${client_version#3.}
+  minor=${minor%%.*}
+  patch=${client_version##*.}
   if [[ "$client_version" == "3.7.1" || "$client_version" == "3.8.0" ]]; then
     build_number=8
-  elif [[ "$(printf '%s\n' '3.8.0' "$client_version" | sort -V | tail -n1)" == "$client_version" && "$client_version" != "3.8.0" ]]; then
+  elif [[ "$minor" -gt 8 || ( "$minor" -eq 8 && "$patch" -gt 0 ) ]]; then
     build_number=1
   fi
   wget -O pmm-client.deb https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb

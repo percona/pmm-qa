@@ -83,9 +83,12 @@ fi
 
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   build_number=7
+  minor=${client_version#3.}
+  minor=${minor%%.*}
+  patch=${client_version##*.}
   if [[ "$client_version" == "3.7.1" || "$client_version" == "3.8.0" ]]; then
     build_number=8
-  elif [[ "$(printf '%s\n' '3.8.0' "$client_version" | sort -V | tail -n1)" == "$client_version" && "$client_version" != "3.8.0" ]]; then
+  elif [[ "$minor" -gt 8 || ( "$minor" -eq 8 && "$patch" -gt 0 ) ]]; then
     build_number=1
   fi
   wget -O pmm-client.rpm https://repo.percona.com/pmm3-client/yum/release/9/RPMS/x86_64/pmm-client-${client_version}-${build_number}.el9.x86_64.rpm
