@@ -194,7 +194,7 @@ jobs:
           pip install --upgrade pip
           pip install setuptools
           pip install -r requirements.txt
-          python pmm-framework.py ${{ env.WIZARD_ARGS }}
+          python pmm-framework.py --client-debug ${{ env.WIZARD_ARGS }}
 
       - name: 'Run CLI tests: ${{ inputs.cli_tag }}'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
