@@ -19,7 +19,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
     .includes('-');
 
 export default class Dashboards extends BasePage {
-  readonly home = new HomeDashboard();
+  readonly home = new HomeDashboard(this.page);
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
