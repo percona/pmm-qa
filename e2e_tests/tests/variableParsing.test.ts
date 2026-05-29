@@ -1,9 +1,10 @@
 import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page, urlHelper }) => {
+pmmTest.beforeEach(async ({ grafanaHelper, leftNavigation, page }) => {
   await grafanaHelper.authorize();
-  await page.goto(urlHelper.buildUrlWithParameters('/', { from: 'now-1h' }));
+  await page.goto('pmm-ui/graph/d/pmm-home');
+  await leftNavigation.selectTimeRange('Last 1 hour');
 });
 
 pmmTest(
