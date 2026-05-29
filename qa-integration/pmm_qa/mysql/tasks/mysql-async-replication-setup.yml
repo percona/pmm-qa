@@ -69,14 +69,14 @@
       INSERT INTO testdb VALUES (1, 'Initial data from node mysql1');
     "
 - name: Check replication status on replica nodes
-  shell: docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SHOW REPLICA STATUS\G"
+  shell: docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SHOW REPLICA STATUS"
   register: replication_status
   loop: "{{ range(2, nodes_count | int + 1) | list }}"
   changed_when: false
   when: mysql_version | replace('_', '') | int >= 80
 
 - name: Check replication status on replica nodes
-  shell: docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SHOW SLAVE STATUS\G"
+  shell: docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SHOW SLAVE STATUS"
   register: replication_status
   loop: "{{ range(2, nodes_count | int + 1) | list }}"
   changed_when: false
