@@ -22,9 +22,10 @@ pmmTest(
     });
 
     await pmmTest.step('Verify panels have data and URL does not have broken variables', async () => {
-      await dashboard.verifyAllPanelsHaveData(['Dead Tuples %']);
       await expect(page).not.toHaveURL(/.*var-service_name=.*=true/);
       await expect(page).not.toHaveURL(/.*=true/);
+      await dashboard.waitForDashboardToLoad();
+      await dashboard.verifyAllPanelsHaveData(['Dead Tuples %']);
     });
   },
 );
