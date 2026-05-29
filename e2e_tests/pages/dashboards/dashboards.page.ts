@@ -126,10 +126,14 @@ export default class Dashboards extends BasePage {
 
     let noDataPanels: string[] = [];
     let missingMetrics: string[] = [];
+    let missingMetricIndexes: number[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
       noDataPanels = await this.elements.noDataPanelName.allTextContents();
-      missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
+      missingMetricIndexes = noDataPanels.flatMap((name, index) =>
+        noDataMetrics.includes(name) ? [] : [index],
+      );
+      missingMetrics = missingMetricIndexes.map((index) => noDataPanels[index]);
 
       if (missingMetrics.length == 0) break;
 
@@ -138,10 +142,13 @@ export default class Dashboards extends BasePage {
     }
 
     if (missingMetrics.length > 0) {
-      for (const missingMetric of missingMetrics) {
-        await this.builders.panelByName(missingMetric).screenshot({
-          path: `./screenshots/missing-metric-${missingMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
-        });
+      for (const [position, index] of missingMetricIndexes.entries()) {
+        await this.elements.noDataPanelName
+          .nth(index)
+          .locator('xpath=ancestor::section[1]')
+          .screenshot({
+            path: `./screenshots/missing-metric-${missingMetrics[position].toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}-${index}.png`,
+          });
       }
     }
 
