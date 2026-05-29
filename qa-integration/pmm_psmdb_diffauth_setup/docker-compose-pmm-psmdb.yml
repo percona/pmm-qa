@@ -72,7 +72,7 @@ services:
     hostname: pmm-server
     image: ${PMM_SERVER_IMAGE:-${PMM_IMAGE:-perconalab/pmm-server:3-dev-latest}}
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/ping" ]
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/v1/server/readyz" ]
       interval: 3s
       timeout: 2s
       retries: 20

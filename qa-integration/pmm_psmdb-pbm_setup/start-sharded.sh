@@ -10,7 +10,7 @@ docker compose -f docker-compose-sharded.yaml build
 docker compose -f docker-compose-sharded.yaml up -d
 
 echo "waiting for pmm-server to start"
-timeout 120 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD:-password}" https://127.0.0.1/ping)" = "200" ]; do sleep 5; done'
+timeout 120 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD:-password}" https://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
 
 echo "waiting 30 seconds for mongodb to start"
 sleep 30
