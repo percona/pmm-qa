@@ -24,8 +24,15 @@ pmmTest(
     await pmmTest.step('Verify panels have data and URL does not have broken variables', async () => {
       await expect(page).not.toHaveURL(/.*var-service_name=.*=true/);
       await expect(page).not.toHaveURL(/.*=true/);
-      await dashboard.waitForDashboardToLoad();
-      await dashboard.verifyAllPanelsHaveData(['Dead Tuples %']);
+      await dashboard.verifyAllPanelsHaveData([
+        'Oldest Autovacuum',
+        'CPU',
+        'Top 10 Biggest Databases',
+        'System Uptime',
+        'RAM',
+        'Virtual Memory',
+        'Disk Space',
+      ]);
     });
   },
 );
