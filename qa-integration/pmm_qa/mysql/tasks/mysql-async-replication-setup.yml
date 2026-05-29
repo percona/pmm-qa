@@ -1,13 +1,13 @@
 - name: Generate my.cnf for each node for mysql 5.7
   template:
-    src: ./data/my-group-replication-57.cnf.j2
+    src: ./data/my-async-replication-57.cnf.j2
     dest: "{{ data_dir }}/node{{ item }}/my.cnf"
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
   when: mysql_version | replace('_', '') | int <= 80
 
 - name: Generate my.cnf for each node for mysql 8
   template:
-    src: ./data/my-group-replication-80.cnf.j2
+    src: ./data/my-async-replication-80.cnf.j2
     dest: "{{ data_dir }}/node{{ item }}/my.cnf"
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
   when: mysql_version | replace('_', '') | int >= 80 and mysql_version | replace('_', '') | int <= 90
