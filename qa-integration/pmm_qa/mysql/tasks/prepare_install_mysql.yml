@@ -61,6 +61,10 @@
   set_fact:
     mysql_exact_version: "{{ mysql_tags_response.json.results | map(attribute='name') | list | select('match', '^[0-9]+\\.[0-9]+\\.[0-9]+$') | first }}"
 
+- name: Show MySQL available versions
+  debug:
+    var: mysql_exact_version
+
 - name: Install MySQL 8.0+
   shell: |
     docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.xz https://dev.mysql.com/get/Downloads/MySQL-{{ mysql_version | replace('_', '.') }}/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64.tar.xz
