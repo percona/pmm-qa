@@ -81,19 +81,24 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 ## Available Tags
 
+<!-- E2E-TAGS-START -->
+
 - `@dashboards`
-- `@experimental`
+- `@docker-configuration`
+- `@ha-settings`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
 - `@new-navigation`
 - `@nightly`
-- `@pmm-pgsql-integration`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-valkey-integration`
 - `@rta`
 - `@settings`
+- `@standalone`
+
+<!-- E2E-TAGS-END -->
 
 ## Related Workspaces
 

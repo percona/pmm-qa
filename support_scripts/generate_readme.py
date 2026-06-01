@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate qa-integration README database setup sections."""
+"""Generate README sections maintained from repository source files."""
 
 from __future__ import annotations
 
@@ -13,11 +13,16 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "qa-integration" / "README.md"
 DATABASE_OPTIONS = ROOT / "qa-integration" / "pmm_qa" / "scripts" / "database_options.py"
+E2E_README = ROOT / "e2e_tests" / "README.md"
+E2E_TESTS = ROOT / "e2e_tests" / "tests"
 
 SETUPS_START = "<!-- DB-SETUPS-START -->"
 SETUPS_END = "<!-- DB-SETUPS-END -->"
 VARIANTS_START = "<!-- DB-VARIANTS-START -->"
 VARIANTS_END = "<!-- DB-VARIANTS-END -->"
+E2E_TAGS_START = "<!-- E2E-TAGS-START -->"
+E2E_TAGS_END = "<!-- E2E-TAGS-END -->"
+TAG_PATTERN = re.compile(r"(?<!@)@[A-Za-z0-9][A-Za-z0-9_-]*\b(?!/)")
 
 TOPOLOGY = {
     "MYSQL": {"default_topology": "single node", "setup_type": {"replication": "async replication", "gr": "group replication"}},
@@ -99,6 +104,23 @@ def build_variants_table(database_options: dict) -> str:
     return "\n".join(rows)
 
 
+def discover_e2e_tags() -> list[str]:
+    tags = set()
+    for test_file in E2E_TESTS.rglob("*.ts"):
+        for line in test_file.read_text(encoding="utf-8").splitlines():
+            if line.lstrip().startswith(("import ", "export ")):
+                continue
+            tags.update(TAG_PATTERN.findall(line))
+    return sorted(tags, key=str.lower)
+
+
+def build_e2e_tags() -> str:
+    tags = discover_e2e_tags()
+    if not tags:
+        raise RuntimeError(f"Cannot find e2e tags in {E2E_TESTS}")
+    return "\n".join(f"- `{tag}`" for tag in tags)
+
+
 def replace_section(content: str, start_marker: str, end_marker: str, replacement: str) -> str:
     pattern = re.compile(rf"{re.escape(start_marker)}.*?{re.escape(end_marker)}", re.S)
     updated, count = pattern.subn(f"{start_marker}\n\n{replacement}\n\n{end_marker}", content)
@@ -113,7 +135,11 @@ def generate() -> None:
     content = replace_section(content, SETUPS_START, SETUPS_END, build_setups(database_options))
     content = replace_section(content, VARIANTS_START, VARIANTS_END, build_variants_table(database_options))
     README.write_text(content, encoding="utf-8")
-    print("qa-integration/README.md updated")
+
+    e2e_content = E2E_README.read_text(encoding="utf-8")
+    e2e_content = replace_section(e2e_content, E2E_TAGS_START, E2E_TAGS_END, build_e2e_tags())
+    E2E_README.write_text(e2e_content, encoding="utf-8")
+    print("README generated sections updated")
 
 
 if __name__ == "__main__":
