@@ -11,9 +11,6 @@ export default class GrafanaHelper {
     await this.page.request.post(`${baseUrl}graph/login`, {
       data: { password, user: username },
     });
-    await this.page.goto('');
-    await this.page.reload();
-    await this.page.waitForURL('pmm-ui/help');
 
     return this.page;
   };
@@ -63,6 +60,9 @@ export default class GrafanaHelper {
 
   unAuthorize = async () => {
     await this.page.setExtraHTTPHeaders({});
-    await this.page.reload();
+    await this.page.context().clearCookies();
+    await this.page.goto('', { waitUntil: 'domcontentloaded' }).catch(() => {
+      /* PMM may redirect mid-load; we don't care about the cancel */
+    });
   };
 }

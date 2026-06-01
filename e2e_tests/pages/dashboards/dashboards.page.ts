@@ -19,7 +19,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
     .includes('-');
 
 export default class Dashboards extends BasePage {
-  readonly home = new HomeDashboard();
+  readonly home = new HomeDashboard(this.page);
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
@@ -34,12 +34,8 @@ export default class Dashboards extends BasePage {
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
   };
   buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally download image button',
-    ),
-    imageRendererGenerateImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally generate image button',
-    ),
+    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
+    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   elements = {
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
@@ -54,8 +50,10 @@ export default class Dashboards extends BasePage {
       '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
     ),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
+    qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
-    renderedImage: this.grafanaIframe().locator('[alt="panel-preview-img"]'),
+    renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
     ),
@@ -89,6 +87,13 @@ export default class Dashboards extends BasePage {
     await test.step('Wait for loading to finish', async () => {
       await expectPanel(this.elements.loadingBar).toHaveCount(0);
     });
+
+    if (this.page.url().includes('/pmm-qan/')) {
+      await test.step('Wait for QAN stats to finish loading', async () => {
+        await expectPanel(this.elements.qanGrid).toBeVisible();
+        await expectPanel(this.elements.qanTableLoading).toHaveCount(0);
+      });
+    }
   };
 
   openPanelMenu = async (panelName: string) => {

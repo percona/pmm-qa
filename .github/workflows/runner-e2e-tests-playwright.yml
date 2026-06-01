@@ -182,9 +182,7 @@ jobs:
           docker volume create pmm-volume
 
           PWD=$(pwd) docker compose -f docker-compose.yml up -d
-          
-          sleep 15
-          docker exec pmm-server change-admin-password ${{ env.ADMIN_PASSWORD }}
+          timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
 
       - name: Setup PMM-Client
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}

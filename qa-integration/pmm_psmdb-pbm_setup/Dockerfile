@@ -71,8 +71,13 @@ RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
         dnf -y install pmm-client ; \
     else \
         percona-release enable pmm3-client release && \
-        if [[ "$PMM_CLIENT_VERSION" =~ ^([3-9])\.([1-9][0-9]*)\.([0-9]+)$ ]]; then \
-            dnf -y install pmm-client-${PMM_CLIENT_VERSION}-7.el${OL_VERSION} ; \
+        if [[ "$PMM_CLIENT_VERSION" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then \
+            BUILD_NUMBER=7; \
+            MINOR_VERSION=${PMM_CLIENT_VERSION#3.}; \
+            MINOR_VERSION=${MINOR_VERSION%%.*}; \
+            if [ "$PMM_CLIENT_VERSION" = "3.7.1" ] || [ "$PMM_CLIENT_VERSION" = "3.8.0" ]; then BUILD_NUMBER=8; \
+            elif [ "$PMM_CLIENT_VERSION" = "3.8.1" ] || [ "$MINOR_VERSION" -gt 8 ]; then BUILD_NUMBER=1; fi; \
+            dnf -y install pmm-client-${PMM_CLIENT_VERSION}-${BUILD_NUMBER}.el${OL_VERSION} ; \
         else \
             dnf -y install pmm-client-${PMM_CLIENT_VERSION}-6.el${OL_VERSION} ; \
         fi \

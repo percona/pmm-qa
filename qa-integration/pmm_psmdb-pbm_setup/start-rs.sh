@@ -20,14 +20,8 @@ docker compose -f docker-compose-rs.yaml -f docker-compose-pmm.yaml down -v --re
 docker compose -f docker-compose-rs.yaml -f docker-compose-pmm.yaml build
 docker compose -f docker-compose-pmm.yaml -f docker-compose-rs.yaml up -d
 echo
-echo "waiting 30 seconds for pmm-server to start"
-sleep 30
-echo "configuring pmm-server"
-docker compose -f docker-compose-pmm.yaml exec -T pmm-server change-admin-password $pmm_server_admin_pass
-echo "restarting pmm-server"
-docker compose -f docker-compose-pmm.yaml restart pmm-server
-echo "waiting 30 seconds for pmm-server to start"
-sleep 30
+echo "waiting for pmm-server to start"
+timeout 120 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:'"$pmm_server_admin_pass"'" https://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
 if [ $mongo_setup_type == "pss" ]; then
   bash -e ./configure-replset.sh
 else

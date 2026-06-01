@@ -12,13 +12,6 @@ const runContainerWithoutDataContainer = async (I) => {
   await I.verifyCommand(`docker run -v $HOME/srvNoData:/srv -d -e PMM_ENABLE_INTERNAL_PG_QAN=1 --restart always --publish 8081:8080 --name pmm-server-srv ${dockerVersion}`);
 };
 
-const runContainerWithPasswordVariable = async (I) => {
-  await I.verifyCommand('rm -fr $HOME/srvPassword/ || true');
-  await I.verifyCommand('mkdir $HOME/srvPassword/ || true');
-  await I.verifyCommand('chmod -R 777 $HOME/srvPassword/ || true');
-  await I.verifyCommand(`docker run -v $HOME/srvPassword:/srv -d -e GF_SECURITY_ADMIN_PASSWORD=newpass -e PMM_ENABLE_INTERNAL_PG_QAN=1 --restart always --publish 8082:8080 --name pmm-server-password ${dockerVersion}`);
-};
-
 const runContainerWithPasswordVariableUpgrade = async (I) => {
   await I.verifyCommand('mkdir $HOME/srvPasswordUpgrade || true');
   await I.verifyCommand('chmod -R 777 $HOME/srvPasswordUpgrade/ || true');
@@ -58,8 +51,6 @@ After(async ({ I }) => {
   } else if (testCaseName === 'PMM-T1244') {
     await stopAndRemoveContainerWithDataContainer(I);
     await I.verifyCommand('docker volume rm srvFolder || true');
-  } else if (testCaseName === 'PMM-T1255') {
-    await stopAndRemoveContainerWithPasswordVariable(I);
   }
 });
 
@@ -149,41 +140,6 @@ Scenario(
     await dashboardPage.waitForAllGraphsToHaveData(180);
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
     I.say(await I.verifyCommand('docker logs pmm-server-empty-data-container'));
-  },
-);
-
-Scenario(
-  'PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin password @docker-configuration',
-  async ({
-    I, homePage, loginPage,
-  }) => {
-    const basePmmUrl = 'http://127.0.0.1:8082/';
-
-    await runContainerWithPasswordVariable(I);
-    await I.wait(30);
-    testCaseName = 'PMM-T1255';
-    const logs = await I.verifyCommand('docker logs pmm-server-password');
-
-    assert.ok(!logs.includes('Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass".'));
-    await I.Authorize('admin', 'admin', basePmmUrl);
-    await I.usePlaywrightTo('Navigate to Dashboard expecting Login redirect', async ({ page }) => {
-      await page.goto(basePmmUrl + homePage.url);
-    });
-    await I.waitForVisible('//h1[text()="Percona Monitoring and Management"]');
-    await I.unAuthorize();
-    await I.amOnPage(basePmmUrl + loginPage.url);
-    await I.Authorize('admin', 'newpass', basePmmUrl);
-    await I.wait(1);
-    await I.amOnPage(basePmmUrl + homePage.url);
-    await I.waitForElement(homePage.fields.dashboardHeaderLocator, 60);
-    await I.unAuthorize();
-    await I.amOnPage(basePmmUrl + loginPage.url);
-    await I.verifyCommand('docker exec -t pmm-server-password change-admin-password anotherpass');
-    await I.wait(10);
-    await I.Authorize('admin', 'anotherpass', basePmmUrl);
-    await I.wait(10);
-    await I.amOnPage(basePmmUrl + homePage.url);
-    await I.waitForElement(homePage.fields.dashboardHeaderLocator, 60);
   },
 );
 

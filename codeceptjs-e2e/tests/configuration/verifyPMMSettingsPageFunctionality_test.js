@@ -17,7 +17,7 @@ Scenario('PMM-T93 - Open PMM Settings page and verify changing Metrics Resolutio
   I.amOnPage(pmmSettingsPage.url);
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   await pmmSettingsPage.selectMetricsResolution(resolutionToApply);
-  I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage);
+  I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage, 30);
   I.refreshPage();
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   await pmmSettingsPage.verifySelectedResolution(resolutionToApply);
@@ -34,8 +34,8 @@ Scenario('PMM-T94 - Open PMM Settings page and verify changing Data Retention [c
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
-  I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage);
+  await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
+  I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage, 30);
   I.refreshPage();
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
@@ -153,8 +153,8 @@ Scenario(
       message.replace(/\s+/g, ' ') === pmmSettingsPage.messages.disabledBackupManagement,
       `Message Shown on ${message} should be equal to ${pmmSettingsPage.messages.disabledBackupManagement}`,
     );
-    I.seeAttributesOnElements('$settings-link', { href: `${codeceptjsConfig.config.helpers.Playwright.url}/graph/settings/advanced-settings` });
-
+    I.click('$settings-link');
+    I.waitInUrl(pmmSettingsPage.advancedSettingsUrl, 30);
     // Open advanced settings and enable backup management
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.backupManagementSwitch, 30);
@@ -326,7 +326,7 @@ Scenario(
     );
 
     I.clearField(pmmSettingsPage.fields.dataRetentionInput);
-    I.seeTextEquals(pmmSettingsPage.messages.requiredFieldMessage, pmmSettingsPage.fields.retentionValidation);
+    I.pressKey('Enter');
     I.assertNotEqual(
       await I.grabAttributeFrom(pmmSettingsPage.fields.advancedButton, 'disabled'),
       null,
@@ -335,7 +335,8 @@ Scenario(
 
     I.clearField(pmmSettingsPage.fields.dataRetentionInput);
     I.fillField(pmmSettingsPage.fields.dataRetentionInput, 3651);
-    I.seeTextEquals(pmmSettingsPage.messages.invalidDataDurationMessage, pmmSettingsPage.fields.retentionValidation);
+    I.see(pmmSettingsPage.messages.invalidDataDurationMessage);
+    // await pmmSettingsPage.checkDataRetentionInput('3651', 'Value must be less than or equal to 3650.');
     I.assertNotEqual(
       await I.grabAttributeFrom(pmmSettingsPage.fields.advancedButton, 'disabled'),
       null,

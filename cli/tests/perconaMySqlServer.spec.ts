@@ -6,6 +6,7 @@ const MYSQL_USER = 'root';
 const MYSQL_PASSWORD = 'GRgrO9301RuF';
 const ipPort = '127.0.0.1:3306';
 let containerName: string;
+const connectionTimeoutServiceName = 'mysql_connection_timeout_service';
 
 test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@percona-server' }, async () => {
   test.beforeAll(async ({}) => {
@@ -172,4 +173,55 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await output.exitCodeEquals(1);
     await output.outContains('Socket and port cannot be specified together.');
   });
+
+  test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
+    await output.exitCodeEquals(0);
+    await cli.exec('sleep 2');
+
+    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(":")[1].trim();
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
+    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
+    await myCnf.outContains('connect_timeout=5');
+  });
+
+  test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
+    await serviceId.exitCodeEquals(0);
+    await agentId.exitCodeEquals(0);
+    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId.stdout} --connection-timeout=4s`);
+    await chaneAgent.exitCodeEquals(0);
+    await cli.exec('sleep 5');
+
+    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(":")[1].trim();
+    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
+    await myCnf.outContains('connect_timeout=4');
+  });
+
+  test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent", async ({ }) => {
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
+    await serviceId.exitCodeEquals(0);
+    await agentId.exitCodeEquals(0);
+    const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId.stdout} --connection-timeout=0s`);
+    await chaneAgent.exitCodeEquals(0);
+    await cli.exec('sleep 5');
+
+    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(":")[1].trim();
+    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/agent_type_mysqld_exporter/${agentId.stdout}/myCnf`);
+    await myCnf.outContains('connect_timeout=2');
+  });
+
+  test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add", async ({ }) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName}-timeout-check 195.15.25.15:3306`);
+    await output.exitCodeEquals(1)
+
+    expect(
+      output.durationMs,
+      `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
+      ).toBeGreaterThan(5_000);
+  });
 });
+

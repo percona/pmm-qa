@@ -33,6 +33,7 @@ Scenario(
 Scenario(
   'PMM-T262 Open PMM Settings page and verify DATA_RETENTION value is set to 2 days, Custom Resolution is still preserved after upgrade @post-settings-metrics-upgrade @post-upgrade',
   async ({ I, pmmSettingsPage }) => {
+    I.switchTo();
     const advancedSection = pmmSettingsPage.sectionTabsList.advanced;
     const metricResolutionSection = pmmSettingsPage.sectionTabsList.metrics;
 

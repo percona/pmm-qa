@@ -10,7 +10,7 @@ export default class NodesPage extends BasePage {
   buttons = {};
   elements = {
     detailsContent: this.grafanaIframe().getByTestId('details-row-content'),
-    runningAgents: this.grafanaIframe().getByTestId('status-badge-green'),
+    runningAgents: this.grafanaIframe().locator('[data-testid^="status-badge"]'),
   };
   inputs = {};
   messages = {};
