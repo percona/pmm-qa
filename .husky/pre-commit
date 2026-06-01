@@ -1,1 +1,8 @@
-cd e2e_tests && npx lint-staged
+ROOT=$(git rev-parse --show-toplevel)
+
+if git diff --cached --name-only | grep -qx "qa-integration/pmm_qa/scripts/database_options.py"; then
+    python "$ROOT/support_scripts/generate_readme.py"
+    git add "$ROOT/qa-integration/README.md"
+fi
+
+cd "$ROOT/e2e_tests" && npx lint-staged

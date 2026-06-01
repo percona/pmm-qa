@@ -10,10 +10,12 @@ This workspace contains environment setup assets for PMM. It is used to provisio
 
 The setups below are the QA integration environments implemented in `pmm_qa/scripts/database_options.py`. They do not represent every PMM-supported monitoring target; they are the local provisioning flows this workspace can create for test coverage. Version lists below match that file because the framework uses the configured order when it falls back to a default version.
 
+<!-- DB-SETUPS-START -->
+
 ```json
 {
   "MYSQL": {
-    "versions": ["5.7", "8.0", "8.4"],
+    "versions": ["5.7", "8.0", "8.4", "9.7"],
     "default_topology": "single node",
     "setup_type": {
       "replication": "async replication",
@@ -86,7 +88,11 @@ The setups below are the QA integration environments implemented in `pmm_qa/scri
 }
 ```
 
+<!-- DB-SETUPS-END -->
+
 ## Supporting Variants
+
+<!-- DB-VARIANTS-START -->
 
 | Setup key       | Purpose                                                          | Versions                                    |
 | --------------- | ---------------------------------------------------------------- | ------------------------------------------- |
@@ -99,9 +105,10 @@ The setups below are the QA integration environments implemented in `pmm_qa/scri
 | `DOCKERCLIENTS` | Docker client image setup helper.                                | n/a                                         |
 | `BUCKET`        | MinIO bucket setup helper for backup/object-storage scenarios.   | n/a                                         |
 
+<!-- DB-VARIANTS-END -->
+
 ## Related Workspaces
 
 - [CLI Tests](../cli/README.md) - Playwright-based `pmm-admin` CLI tests.
 - [Playwright E2E Tests](../e2e_tests/README.md) - Playwright web UI and API-assisted E2E tests.
 - [CodeceptJS E2E Tests](../codeceptjs-e2e/README.md) - existing CodeceptJS tests.
-- [Package Tests](../package_tests/README.md) - PMM client package install and upgrade validation.
