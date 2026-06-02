@@ -1,4 +1,4 @@
-Feature('PMM Server Role Based Access Control (RBAC)').retry(2);
+Feature('PMM Server Role Based Access Control (RBAC)');
 
 const newPsUser = { username: 'rbac_ps_test_user', password: 'Test1234!' };
 const newPgUser = { username: 'rbac_pg_test_user', password: 'Test1234!' };

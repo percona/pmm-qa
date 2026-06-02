@@ -170,7 +170,7 @@ Data(instances).Scenario(
       await dashboardPage.verifyThereAreNoGraphsWithoutData(1);
     }
   },
-).retry(2);
+);
 
 Data(instances).Scenario(
   'Verify QAN after PGSQL SSL Instances is added @ssl @ssl-remote @ssl-postgres @not-ui-pipeline',

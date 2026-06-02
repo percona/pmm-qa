@@ -20,7 +20,7 @@ Before(async ({ I }) => {
 });
 
 Data(annotation).Scenario(
-  'PMM-T878 - Verify adding annotation specific dashboard @nightly @nightly-generic @dashboards @annotations',
+  'PMM-T878 - Verify adding annotation specific dashboard @nightly  @dashboards @annotations',
   async ({
     I, dashboardPage, pmmInventoryPage, annotationAPI, inventoryAPI, current,
   }) => {
@@ -46,23 +46,25 @@ Data(annotation).Scenario(
     if (annotationName === 'mysql-node-name') {
       I.amOnPage(I.buildUrlWithParams(current.dashboard, {
         node_name: nodeName,
-        from: 'now-5m',
+        from: 'now-1h',
+        refresh: '5s',
       }));
       dashboardPage.waitForDashboardOpened();
       dashboardPage.verifyAnnotationsLoaded(annotationName, 2);
     } else {
       I.amOnPage(I.buildUrlWithParams(current.dashboard, {
         service_name: serviceName,
-        from: 'now-5m',
+        from: 'now-1h',
+        refresh: '5s',
       }));
       dashboardPage.waitForDashboardOpened();
       dashboardPage.verifyAnnotationsLoaded(annotationName, 1);
     }
   },
-).retry(2);
+);
 
 Scenario(
-  'PMM-T878 - Verify user is not able to add an annotation for non-existing node name or service name and without service name @nightly @nightly-generic @dashboards',
+  'PMM-T878 - Verify user is not able to add an annotation for non-existing node name or service name and without service name @nightly  @dashboards',
   async ({
     I, annotationAPI, pmmInventoryPage, inventoryAPI,
   }) => {

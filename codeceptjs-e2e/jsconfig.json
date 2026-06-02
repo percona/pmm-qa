@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2022",
+    "types": [
+      "codeceptjs",
+      "node"
+    ]
+  },
+  "include": [
+    "steps.d.ts",
+    "*.js",
+    "tests/**/*.js"
+  ],
+  "exclude": [
+    "node_modules",
+    "tests/output"
+  ]
+}
