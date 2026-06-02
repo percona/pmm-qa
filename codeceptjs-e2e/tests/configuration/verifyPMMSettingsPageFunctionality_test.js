@@ -72,7 +72,7 @@ Scenario.skip(
     pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.sttSwitchSelectorInput, 'on');
     pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.telemetrySwitchSelectorInput, 'off');
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T532 + PMM-T533 + PMM-T536 - Verify user can disable/enable IA in Settings @fb-alerting @settings',
@@ -100,7 +100,7 @@ Scenario(
     I.dontSeeElementInDOM(adminPage.sideMenu.integratedAlerting);
     I.dontSeeElement(pmmSettingsPage.communication.communicationSection);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T747 - Verify enabling Azure flag @fb-settings',
@@ -192,7 +192,7 @@ Scenario(
       I.say('Skipping this test PMM-T1658, because PMM Server version is lower then Feature fix version');
     }
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T486 - Verify Public Address in PMM Settings @nomad',

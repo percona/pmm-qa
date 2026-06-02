@@ -283,4 +283,4 @@ Scenario.skip(
 
     await I.dontSee(dashboardPage.homeDashboard.panelData.failedAdvisors.insufficientPrivilege);
   },
-).retry(2);
+);

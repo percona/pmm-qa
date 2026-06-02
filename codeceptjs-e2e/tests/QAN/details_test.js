@@ -1,6 +1,6 @@
 const { isJenkinsGssapiJob } = require('../helper/constants');
 
-Feature('QAN details').retry(2);
+Feature('QAN details');
 
 const { adminPage } = inject();
 

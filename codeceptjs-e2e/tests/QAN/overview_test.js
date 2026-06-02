@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-Feature('QAN overview').retry(2);
+Feature('QAN overview');
 
 Before(async ({
   I, queryAnalyticsPage,
@@ -64,7 +64,7 @@ Scenario(
     queryAnalyticsPage.queryDetails.checkTab('Plan');
     await queryAnalyticsPage.queryDetails.checkPlanTabIsNotEmpty();
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T146 - Verify user is able to see  chart tooltip for time related metric  @qan',
@@ -303,7 +303,7 @@ Scenario(
 
     assert.ok(firstQueryText.startsWith(query), `The Searched Query text was: "${query}", don't match the result text in overview for 1st result: "${firstQueryText}"`);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T417 - Verify user is able to search by Database @qan',

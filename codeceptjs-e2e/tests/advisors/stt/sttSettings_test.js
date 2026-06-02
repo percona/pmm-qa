@@ -3,7 +3,7 @@ const inputs = new DataTable(['input']);
 inputs.add(['0']);
 inputs.add(['-1']);
 
-Feature('Security Checks: Settings').retry(2);
+Feature('Security Checks: Settings');
 
 Before(async ({
   I, settingsAPI,

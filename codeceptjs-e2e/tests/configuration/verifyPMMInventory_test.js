@@ -565,7 +565,7 @@ Data(qanFilters).Scenario(
 
     assert.ok(count > 0, `The queries for filter ${current.filterName} instance do NOT exist`);
   },
-).retry(2);
+);
 
 Data(aws_instances).Scenario(
   'PMM-T2340 Verify QAN after Aurora instance is added and edited @inventory @inventory-fb',

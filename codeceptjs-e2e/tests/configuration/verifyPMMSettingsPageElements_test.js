@@ -10,7 +10,7 @@ dataRetentionTable.add(['0', 'Value must be greater than or equal to 1.']);
 // dataRetentionTable.add([' ', page.messages.requiredFieldMessage]);
 // dataRetentionTable.add(['e', page.messages.requiredFieldMessage]);
 
-Feature('PMM Settings Elements').retry(2);
+Feature('PMM Settings Elements');
 
 Before(async ({ I, settingsAPI }) => {
   await I.Authorize();
@@ -107,4 +107,4 @@ Scenario('PMM-T1866 - Verify if public address has an port assigned and followin
   I.waitForValue(pmmSettingsPage.fields.dataRetentionInput, '1', 10);
   I.dontSeeElement(pmmSettingsPage.fields.errorPopUpElement);
   await pmmSettingsPage.verifySettingsValue(pmmSettingsPage.fields.dataRetentionInput, '1');
-}).retry(2);
+});

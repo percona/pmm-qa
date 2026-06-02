@@ -27,7 +27,7 @@ shortCutTests.add([
   'mongodb_rs1_2',
 ]);
 
-Feature('QAN filters').retry(2);
+Feature('QAN filters');
 
 // filterToApply - filter witch we check, searchValue - value to get zero search result
 const filters = new DataTable(['filterToApply', 'searchValue']);
@@ -201,7 +201,7 @@ Scenario(
     queryAnalyticsPage.filters.selectFilterInGroup(db2, section);
     I.waitForText('No queries available for this combination of filters', 30);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T221 - Verify that all filter options are always visible (but some disabled) after selecting an item and % value is changed @qan',

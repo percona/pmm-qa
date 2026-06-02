@@ -1,4 +1,4 @@
-Feature('Tests for: "MongoDB PBM Details" dashboard').retry(2);
+Feature('Tests for: "MongoDB PBM Details" dashboard');
 
 let locationId;
 const backupTypes = ['BACKUP_MODE_PITR', 'BACKUP_MODE_SNAPSHOT'];

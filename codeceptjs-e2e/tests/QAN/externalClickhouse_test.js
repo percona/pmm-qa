@@ -90,4 +90,4 @@ Scenario('PMM-T2006 - Verify using ClickHouse Username and password variables fo
   const qanRows = await I.grabNumberOfVisibleElements(queryAnalyticsPage.data.elements.queryRows);
 
   I.assertTrue(qanRows > 0, 'Query Analytics is empty');
-}).retry(2);
+});

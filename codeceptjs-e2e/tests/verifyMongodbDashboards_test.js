@@ -1,4 +1,4 @@
-Feature('Test Dashboards inside the MongoDB Folder').retry(2);
+Feature('Test Dashboards inside the MongoDB Folder');
 
 Before(async ({ I }) => {
   await I.Authorize();
@@ -75,7 +75,7 @@ Scenario(
     await dashboardPage.verifyMetricsExistence(dashboardPage.mongoDbCollectionsOverview.metrics);
     await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T2035 - Verify MongoDB ReplSet dashboard has FCV panel @nightly @dashboards @gssapi-nightly',

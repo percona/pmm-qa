@@ -10,4 +10,4 @@ Scenario(
     pmmServerAdminSettingsPage.open();
     await pmmServerAdminSettingsPage.verifyDatabaseType('postgres');
   },
-).retry(2);
+);

@@ -1,4 +1,4 @@
-Feature('QAN pagination').retry(2);
+Feature('QAN pagination');
 
 Before(async ({ I, queryAnalyticsPage }) => {
   await I.Authorize();

@@ -61,7 +61,7 @@ Data(annotation).Scenario(
       dashboardPage.verifyAnnotationsLoaded(annotationName, 1);
     }
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T878 - Verify user is not able to add an annotation for non-existing node name or service name and without service name @nightly  @dashboards',

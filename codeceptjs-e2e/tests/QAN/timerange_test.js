@@ -1,7 +1,7 @@
 const moment = require('moment');
 const assert = require('assert');
 
-Feature('QAN timerange').retry(2);
+Feature('QAN timerange');
 
 const expectUrlTimeParamToMatch = (url, param, expectedDateTime, message) => {
   const actualTime = new URL(url).searchParams.get(param);
@@ -241,7 +241,7 @@ Scenario(
     assert.equal(queryText, queryTextAfter, 'Selected row query text is not the same after reload');
     await I.waitForElement(queryAnalyticsPage.data.buttons.close, 30);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T1143 - Verify columns and filters when we go on copied link by new QAN CopyButton @qan',

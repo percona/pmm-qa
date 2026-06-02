@@ -166,7 +166,7 @@ Scenario.skip(
 
     I.assertEqual(numberOfVisibleElements, 1, 'No of ARBITER elements for ReplicatSet are not as expected');
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T1775 + PMM-T1888 - Verify Wrong Replication Lag by Set values if RS is PSA -( MongoDB Cluster Summary) @pmm-psmdb-arbiter-integration @not-ui-pipeline',
