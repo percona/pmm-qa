@@ -249,7 +249,7 @@ test.describe(
         );
         await output.assertSuccess();
         expect(
-          output.getStdOutLines()[0],
+          output.stdout.trim(),
           'Verify ClickHouse "system" database has exactly 5 "*log*" tables',
         ).toEqual('5');
       }).toPass({
