@@ -36,7 +36,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
 
   dataTest(srvConfiguration).pmmTest(
     'PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials @docker-configuration ',
-    async (data, { cliHelper, dashboard, grafanaHelper, page, urlHelper }) => {
+    async (data, { cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
       const baseUrl = `https://127.0.0.1:${data.port}/`;
 
       cliHelper.execSilent(data.command);
@@ -48,6 +48,10 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
 
       expect(logs).not.toContain(
         'Configuration warning: unknown environment variable "GF_SECURITY_ADMIN_PASSWORD=newpass"',
+      );
+
+      expect(logs).not.toContain(
+        'Error: The directory named as part of the path /srv/logs/supervisord.log does not exist',
       );
 
       await grafanaHelper.authorize('admin', 'admin', baseUrl);
@@ -81,6 +85,17 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         state: 'visible',
         timeout: Timeouts.TWENTY_SECONDS,
       });
+
+      await page.goto(urlHelper.buildUrlWithParameters(baseUrl + qanStoredMetrics.url, { refresh: '10s' }));
+      await qanStoredMetrics.waitForQanStoredMetricsToHaveData(Timeouts.ONE_MINUTE);
+
+      await page.goto(
+        urlHelper.buildUrlWithParameters(baseUrl + dashboard.os.nodeSummary.url, { from: 'now-1h' }),
+      );
+
+      await dashboard.verifyMetricsPresent(dashboard.os.nodeSummary.metrics);
+      await dashboard.verifyAllPanelsHaveData(dashboard.os.nodeSummary.noDataMetrics);
+      await dashboard.verifyPanelValues(dashboard.os.nodeSummary.metricsWithData);
     },
   );
 });
