@@ -94,7 +94,13 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
       );
 
       await dashboard.verifyMetricsPresent(dashboard.os.nodeSummary.metrics);
-      await dashboard.verifyAllPanelsHaveData(dashboard.os.nodeSummary.noDataMetrics);
+      await dashboard.verifyAllPanelsHaveData([
+        'System Uptime',
+        'Virtual CPUs',
+        'Disk Space',
+        'RAM',
+        'Virtual Memory',
+      ]);
       await dashboard.verifyPanelValues(dashboard.os.nodeSummary.metricsWithData);
     },
   );
