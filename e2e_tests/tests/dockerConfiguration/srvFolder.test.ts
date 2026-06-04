@@ -100,6 +100,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         'Disk Space',
         'RAM',
         'Virtual Memory',
+        'Network Utilization Hourly',
       ]);
       await dashboard.verifyPanelValues(dashboard.os.nodeSummary.metricsWithData);
     },
