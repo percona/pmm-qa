@@ -245,12 +245,12 @@ test.describe(
 
       await expect(async () => {
         const output = await cli.exec(
-          `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database='system' AND name LIKE '%log%';"`,
+          'docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database=\'system\' AND name LIKE \'%log%\';"',
         );
         await output.assertSuccess();
         expect(
           output.stdout.trim(),
-          'Verify ClickHouse "system" database has exactly 5 "*log*" tables',
+          `Verify ClickHouse "system" database has exactly 5 "*log*" tables. Output: ${output.stdout}`,
         ).toEqual('5');
       }).toPass({
         intervals: [2_000, 2_000, 2_000],

@@ -16,6 +16,9 @@ export default class RealTimeAnalyticsPage extends BasePage {
     elapsedTimeForQueryByText: (queryText: string) =>
       this.builders.rowByQueryText(queryText).locator('//td[position()=4]'),
     elapsedTimeForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=4]'),
+    hostForLastRow: () =>
+      this.page.getByTestId(realTimeTableTestId).locator('tbody tr').last().locator('td').nth(1),
+    hostForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=2]'),
     operationIdForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=3]'),
     queryByRowIndex: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=1]'),
     rowByIndex: (rowIndex: string) =>
@@ -41,8 +44,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
     detailsOperationId: this.page.getByTestId('operation-id-value'),
     detailsPane: this.page.getByTestId('query-details-pane'),
     elapsedTimeColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Elapsed time'),
+    hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Host', { exact: true }),
     mongoDbQuery: this.page.locator('.language-mongodb'),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
+    queryTextColumnHeader: this.page
+      .getByTestId(realTimeTableTestId)
+      .getByTitle('Query text', { exact: true }),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tr'),
   };
@@ -55,6 +62,14 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   clickElapsedTimeHeader = async () => {
     await this.elements.elapsedTimeColumnHeader.click();
+  };
+
+  clickHostHeader = async () => {
+    await this.elements.hostColumnHeader.click();
+  };
+
+  clickQueryTextHeader = async () => {
+    await this.elements.queryTextColumnHeader.click();
   };
 
   filterQueriesByText = async (queryText: string) => {

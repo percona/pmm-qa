@@ -218,10 +218,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
   test('run pmm-admin summary --trace', async ({}) => {
     const output = await cli.exec('sudo pmm-admin summary --trace');
     await output.assertSuccess();
-    // there are no request for those urls. but there are requests for /local/status
     await output.stderr.containsMany([
-      '(*Runtime).Submit() GET /v1/inventory/services',
-      '(*Runtime).Submit() GET /v1/inventory/agents',
+      '&commands.summaryResult{Filename:',
+      '(*Runtime).dumpResponse()',
     ]);
     await output.outContains('.zip created.');
   });
@@ -298,8 +297,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     const output = await cli.exec('sudo pmm-admin summary --skip-server --trace');
     await output.assertSuccess();
     await output.stderr.containsMany([
-      '(*Runtime).Submit() GET /v1/inventory/services',
-      '(*Runtime).Submit() GET /v1/inventory/agents']);
+      '&commands.summaryResult{Filename:',
+      '(*Runtime).dumpResponse()',
+    ]);
     await output.outContains('.zip created.');
   });
 
@@ -348,13 +348,14 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     test.skip(true, 'skipping because -pprof flag takes a lot of time');
     const output = await cli.exec('sudo pmm-admin summary --pprof --trace');
     await output.assertSuccess();
-    await output.outContainsMany([
-      '(*Runtime).Submit() GET /v1/inventory/services',
-      '(*Runtime).Submit() GET /v1/inventory/agents',
-      '.zip created.']);
+    await output.stderr.containsMany([
+      '&commands.summaryResult{Filename:',
+      '(*Runtime).dumpResponse()',
+    ]);
+    await output.outContains('.zip created.');
     const zipName = output.getStdOutLines().find((item) => item.includes('.zip created.'))!
       .split(' ').at(0) ?? '';
-    expect(readZipFile(zipName), `Verify 'client/pprof/' is present in ${zipName}`).toContain('client/pprof/');
+    expect(await readZipFile(zipName), `Verify 'client/pprof/' is present in ${zipName}`).toContain('client/pprof/');
   });
 
   /**

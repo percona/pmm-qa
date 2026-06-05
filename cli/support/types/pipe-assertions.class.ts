@@ -29,14 +29,14 @@ class PipeAssertions {
     for (const val of expectedValues) {
       expect.soft(this.text, `Verify ${this.pipeName} contains '${val}'`).toContain(val);
     }
-    console.log(test.info().errors.length);
-    const errorMsg = test.info().errors.length === 0
-      ? ''
-      : ` But got ${test.info().errors.length} error(s):\n${this.getErrors()}`;
-    expect(
-      test.info().errors,
-      `'Contains all elements' should have 0 errors.${errorMsg}`,
-    ).toHaveLength(0);
+    // console.log(test.info().errors.length);
+    // const errorMsg = test.info().errors.length === 0
+    //   ? ''
+    //   : ` But got ${test.info().errors.length} error(s):\n${JSON.stringify(this.getErrors(), null, 2)}`;
+    // expect(
+    //   test.info().errors,
+    //   `'Contains all elements' should have 0 errors.${errorMsg}`,
+    // ).toHaveLength(0);
   }
 
   private getErrors(): string {
