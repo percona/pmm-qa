@@ -35,7 +35,7 @@ pmmTest(
 );
 
 pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api, page, queryAnalytics }) => {
-  await api.realTimeAnalyticsApi.startRealTimeAnalytics(serviceId);
+  await api.realTimeAnalyticsApi.startRealTimeAnalytics(rs101ServiceId);
 
   await pmmTest.step('Navigate directly to overview', async () => {
     await page.goto(queryAnalytics.rta.url);
