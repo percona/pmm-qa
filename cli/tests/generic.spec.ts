@@ -15,7 +15,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
   });
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
-  if (/3-dev-latest|pmm3-rc|https:/.test(PMM_VERSION)) {
+  if (/latest-tarball|3-dev-latest|pmm3-rc|https:/.test(PMM_VERSION)) {
     // TODO: refactor to use docker hub API to remove file-update dependency
     // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
     PMM_VERSION = cli.execute('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')
@@ -547,7 +547,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     await expect(async () => {
       const metrics = await cli.getMetrics(serviceName, 'pmm', agent, container);
       const expectedValue = 'mysql_up 1';
-      expect(metrics, `Metrics for percona server for MySQL with encrypted pmm client config are not present!`).toContain(expectedValue);
+      expect(metrics, 'Metrics for percona server for MySQL with encrypted pmm client config are not present!').toContain(expectedValue);
     }).toPass({ intervals: [2_000], timeout: 30_000 });
   });
 
@@ -562,17 +562,17 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     await expect(async () => {
       const metrics = await cli.getMetrics(serviceName, 'pmm', agent, container);
       const expectedValue = 'pg_up{collector="custom_query.hr"} 1';
-      expect(metrics, `Metrics for Percona Distribution for PgSQL with non-encrypted pmm client config are not present!`).toContain(expectedValue);
+      expect(metrics, 'Metrics for Percona Distribution for PgSQL with non-encrypted pmm client config are not present!').toContain(expectedValue);
     }).toPass({ intervals: [2_000], timeout: 30_000 });
   });
 
   test('PMM-T2227 - Verify tarball upgrade @generic', async ({}) => {
-    const containerName = 'tarball_client'
+    const containerName = 'tarball_client';
     await cli.exec('docker network create pmm-qa || true');
     await cli.exec('docker network connect pmm-server pmm-qa');
     await cli.exec(`docker run --rm -d --name="${containerName}" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`);
     const latestReleasedVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout;
-    await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`)
+    await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`);
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
     await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestReleasedVersion}`);
     await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`);
@@ -581,9 +581,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     const oldVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
     const oldPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
 
-    await adminStatus.outContains("Connected");
-    await oldVersion.outContains(latestReleasedVersion)
-    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes("http") ? process.env.PMM_CLIENT_VERSION : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
+    await adminStatus.outContains('Connected');
+    await oldVersion.outContains(latestReleasedVersion);
+    const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http') ? process.env.PMM_CLIENT_VERSION : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
 
     await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
     await cli.exec(`docker exec ${containerName} pkill -f pmm-agent`);
@@ -595,7 +595,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
     await newPid.outNotContains(oldPid.stdout);
-    await newAdminStatus.outContains("Connected");
-    await newVersion.outContains(latestVersion)
-  })
+    await newAdminStatus.outContains('Connected');
+    await newVersion.outContains(latestVersion);
+  });
 });
