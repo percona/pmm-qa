@@ -156,7 +156,7 @@ Data(instances).Scenario(
     await dashboardPage.expandEachDashboardRow();
     await dashboardPage.verifyThereAreNoGraphsWithoutData();
   },
-).retry(2);
+);
 
 // Skip due to PGSQL instance setup on AWS
 xScenario(
@@ -172,4 +172,4 @@ xScenario(
 
     assert.ok(count > 0, 'The queries for added RDS Postgres do NOT exist');
   },
-).retry(2);
+);

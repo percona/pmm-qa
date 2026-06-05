@@ -28,7 +28,7 @@ Scenario(
       service: 'mysql',
     }, clientServiceName);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T1983 - Verify QAN have data for Percona Server after PMM migration to V3 @not-ui-pipeline @pmm-migration',

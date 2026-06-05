@@ -11,6 +11,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   builders = {
+    detailsPaneCodeByText: (queryText: string) =>
+      this.elements.detailsPane.locator('code.language-mongodb', { hasText: queryText }),
     elapsedTimeForQueryByText: (queryText: string) =>
       this.builders.rowByQueryText(queryText).locator('//td[position()=4]'),
     elapsedTimeForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=4]'),
@@ -23,6 +25,9 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
   buttons = {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),
+    closeDetailsPane: this.page.getByTestId('details-pane-close-button'),
+    detailsNextQuery: this.page.getByTestId('details-pane-next-button'),
+    detailsPreviousQuery: this.page.getByTestId('details-pane-prev-button'),
     filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
     openNewSessionModal: this.page.getByTestId('open-new-modal'),
     pauseRealTimeAnalytics: this.page.getByTestId('overview-table-pause-button'),
@@ -33,6 +38,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
     stopAllSessions: this.page.getByTestId('open-stop-all-modal'),
   };
   elements = {
+    detailsOperationId: this.page.getByTestId('operation-id-value'),
+    detailsPane: this.page.getByTestId('query-details-pane'),
     elapsedTimeColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Elapsed time'),
     mongoDbQuery: this.page.locator('.language-mongodb'),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
@@ -96,6 +103,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
     return Number(seconds);
   };
 
+  getOperationIdByRow = async (rowIndex: string) => {
+    await this.builders.operationIdForRow(rowIndex).waitFor({ state: 'visible' });
+
+    return (await this.builders.operationIdForRow(rowIndex).textContent()) || '';
+  };
+
   getUrlWithServices = (services: string[]) => {
     let parsedUrl = this.url;
 
@@ -108,6 +121,11 @@ export default class RealTimeAnalyticsPage extends BasePage {
     }
 
     return parsedUrl;
+  };
+
+  openDetailsForRow = async (rowIndex: string) => {
+    await this.builders.rowByIndex(rowIndex).click();
+    await expect(this.elements.detailsPane).toBeVisible();
   };
 
   openFilters = async () => {

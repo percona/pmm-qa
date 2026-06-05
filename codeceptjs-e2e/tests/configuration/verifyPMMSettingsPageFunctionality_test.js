@@ -8,40 +8,40 @@ Before(async ({ I, settingsAPI }) => {
   await settingsAPI.restoreSettingsDefaults();
 });
 
-Scenario('PMM-T93 - Open PMM Settings page and verify changing Metrics Resolution [critical] @settings @grafana-pr', async ({
-  I,
-  pmmSettingsPage,
-}) => {
-  const resolutionToApply = 'Rare';
+Scenario(
+  'PMM-T93 - Open PMM Settings page and verify changing Metrics Resolution [critical] @settings @grafana-pr',
+  async ({ I, pmmSettingsPage }) => {
+    const resolutionToApply = 'Rare';
 
-  I.amOnPage(pmmSettingsPage.url);
-  await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  await pmmSettingsPage.selectMetricsResolution(resolutionToApply);
-  I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage, 30);
-  I.refreshPage();
-  await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  await pmmSettingsPage.verifySelectedResolution(resolutionToApply);
-});
+    I.amOnPage(pmmSettingsPage.url);
+    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.selectMetricsResolution(resolutionToApply);
+    I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage, 30);
+    I.refreshPage();
+    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.verifySelectedResolution(resolutionToApply);
+  },
+);
 
-Scenario('PMM-T94 - Open PMM Settings page and verify changing Data Retention [critical] @settings', async ({
-  I,
-  pmmSettingsPage,
-}) => {
-  const dataRetentionValue = '1';
-  const sectionNameToExpand = pmmSettingsPage.sectionTabsList.advanced;
+Scenario(
+  'PMM-T94 - Open PMM Settings page and verify changing Data Retention [critical] @settings',
+  async ({ I, pmmSettingsPage }) => {
+    const dataRetentionValue = '1';
+    const sectionNameToExpand = pmmSettingsPage.sectionTabsList.advanced;
 
-  I.amOnPage(pmmSettingsPage.url);
-  await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
-  await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
-  I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage, 30);
-  I.refreshPage();
-  await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
-  await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-  I.waitForValue(pmmSettingsPage.fields.dataRetentionInput, dataRetentionValue, 30);
-});
+    I.amOnPage(pmmSettingsPage.url);
+    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
+    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.changeDataRetentionValueTo(dataRetentionValue);
+    I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage, 30);
+    I.refreshPage();
+    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
+    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    I.waitForValue(pmmSettingsPage.fields.dataRetentionInput, dataRetentionValue, 30);
+  },
+);
 
 Scenario.skip(
   'PMM-T253 - Verify user can see correct tooltip for STT [trivial] @settings @stt @grafana-pr',
@@ -72,7 +72,7 @@ Scenario.skip(
     pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.sttSwitchSelectorInput, 'on');
     pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.telemetrySwitchSelectorInput, 'off');
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T532 + PMM-T533 + PMM-T536 - Verify user can disable/enable IA in Settings @fb-alerting @settings',
@@ -100,7 +100,7 @@ Scenario(
     I.dontSeeElementInDOM(adminPage.sideMenu.integratedAlerting);
     I.dontSeeElement(pmmSettingsPage.communication.communicationSection);
   },
-).retry(2);
+);
 
 Scenario(
   'PMM-T747 - Verify enabling Azure flag @fb-settings',
@@ -184,15 +184,18 @@ Scenario(
       I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
       I.waitForVisible(pmmSettingsPage.fields.backupManagementSwitch, 30);
       await pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.backupManagementSwitchInput, 'on');
-      assert.ok(settingEndpointResponse, `Backup managment should be turned on by default from 2.36.0 release but found ${settingEndpointResponse}`);
+      assert.ok(
+        settingEndpointResponse,
+        `Backup managment should be turned on by default from 2.36.0 release but found ${settingEndpointResponse}`,
+      );
     } else {
       I.say('Skipping this test PMM-T1658, because PMM Server version is lower then Feature fix version');
     }
   },
-).retry(2);
+);
 
 Scenario(
-  'PMM-T486 - Verify Public Address in PMM Settings @nightly @nightly-generic',
+  'PMM-T486 - Verify Public Address in PMM Settings @nomad',
   async ({
     I, pmmSettingsPage, settingsAPI, codeceptjsConfig,
   }) => {
@@ -230,18 +233,15 @@ Scenario(
   },
 ).retry(5);
 
-Scenario(
-  'PMM-T254 - Ensure Advisors are on by default @fb-instances',
-  async ({ settingsAPI }) => {
-    const resp = await settingsAPI.getSettings('advisor_enabled');
+Scenario('PMM-T254 - Ensure Advisors are on by default @fb-instances', async ({ settingsAPI }) => {
+  const resp = await settingsAPI.getSettings('advisor_enabled');
 
-    assert.ok(resp, `Advisors should be turned on by default from 2.28.0 release but found ${resp}`);
-  },
-);
+  assert.ok(resp, `Advisors should be turned on by default from 2.28.0 release but found ${resp}`);
+});
 
 Scenario(
   'PMM-T1227 + PMM-T1338 - Verify tooltip "Read more" links on PMM Settings page redirect to working pages '
-  + 'Verify that all the metrics from config are displayed on Telemetry tooltip in Settings > Advanced @fb-settings',
+    + 'Verify that all the metrics from config are displayed on Telemetry tooltip in Settings > Advanced @fb-settings',
   async ({ I, pmmSettingsPage, settingsAPI }) => {
     await settingsAPI.changeSettings({ alerting: true });
     I.wait(10);
@@ -262,10 +262,7 @@ Scenario(
   },
 ).retry(3);
 
-Scenario('PMM-T1401 - Verify Percona Alerting wording in Settings @max-length @settings', async ({
-  I,
-  pmmSettingsPage,
-}) => {
+Scenario('PMM-T1401 - Verify Percona Alerting wording in Settings @max-length @settings', async ({ I, pmmSettingsPage }) => {
   I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
   await pmmSettingsPage.waitForPmmSettingsPageLoaded();
   pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.perconaAlertingSwitchInput, 'on');
@@ -306,10 +303,8 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T2004 - Verify Data Retention field in advanced settings @settings @nightly @nightly-generic @gssapi-nightly  ',
-  async ({
-    I, pmmSettingsPage,
-  }) => {
+  'PMM-T2004 - Verify Data Retention field in advanced settings @settings @nightly  @gssapi-nightly  ',
+  async ({ I, pmmSettingsPage }) => {
     await pmmSettingsPage.openAdvancedSettings();
     I.assertNotEqual(
       await I.grabAttributeFrom(pmmSettingsPage.fields.advancedButton, 'disabled'),

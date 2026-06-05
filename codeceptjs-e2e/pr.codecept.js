@@ -18,6 +18,7 @@ exports.config = {
       restart: true,
       show: false,
       trace: true,
+      retry: 2,
       keepTraceForPassedTests: false,
       browser: 'chromium',
       windowSize: '1920x1080',

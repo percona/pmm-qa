@@ -160,7 +160,7 @@ Data(instances).Scenario(
     pmmInventoryPage.verifyRemoteServiceIsDisplayed(serviceName);
     await pmmInventoryPage.verifyAgentHasStatusRunning(serviceName);
   },
-).retry(2);
+);
 
 Scenario(
   'TableStats UI Default table Options for Remote MySQL & AWS-RDS Instance @fb-instances',
@@ -305,7 +305,7 @@ Data(dashboardCheck).Scenario(
     adminPage.performPageUp(5);
     await dashboardPage.verifyThereAreNoGraphsWithoutData(1);
   },
-).retry(2);
+);
 
 Data(qanFilters).Scenario(
   'PMM-T854 - Verify QAN after remote instance is added @fb-instances',
@@ -323,7 +323,7 @@ Data(qanFilters).Scenario(
 
     assert.ok(count > 0, `The queries for filter ${current.filterName} instance do NOT exist`);
   },
-).retry(2);
+);
 
 Data(metrics).Scenario(
   'PMM-T743 - Check metrics from exporters are hitting PMM Server @fb-instances',

@@ -20,14 +20,14 @@ Before(async ({ I }) => {
 });
 
 Data(services).Scenario(
-  'PMM-T2063 - Verify QAN has data for all services @qan @nightly-qan @gssapi-nightly',
+  'PMM-T2063 - Verify QAN has data for all services @qan @gssapi-nightly',
   async ({
     I, queryAnalyticsPage, inventoryAPI, current,
   }) => {
     let service_name;
 
     if (current.serviceName === 'pdpgsql_') {
-      service_name = (await inventoryAPI.getServiceDetailsByRegex('pdpgsql_pmm_.*_1$')).service_name;
+      service_name = (await inventoryAPI.getServiceDetailsByRegex('^pdpgsql_pmm_(?!.*patroni).*$')).service_name;
     } else {
       service_name = (await inventoryAPI.getServiceDetailsByStartsWithName(current.serviceName)).service_name;
     }

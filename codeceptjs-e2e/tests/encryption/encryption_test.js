@@ -93,4 +93,4 @@ Scenario(
 
     assert.ok(pgRespBeforeRotation !== pgRespAfterRotation, 'The DB was not re-encrypted');
   },
-).retry(2);
+);
