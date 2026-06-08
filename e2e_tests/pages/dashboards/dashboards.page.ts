@@ -79,7 +79,10 @@ export default class Dashboards extends BasePage {
 
         const expandButton = item.getByLabel('Expand row');
 
-        if (await expandButton.isVisible()) await expandButton.click();
+        if (await expandButton.isVisible()) {
+          await expandButton.click();
+          await expectPanel(expandButton).toBeHidden();
+        }
 
         await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
       }
@@ -139,17 +142,6 @@ export default class Dashboards extends BasePage {
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
     }
 
-    if (missingMetrics.length > 0) {
-      for (const missingMetric of missingMetrics) {
-        await this.builders
-          .panelByName(missingMetric)
-          .first()
-          .screenshot({
-            path: `./screenshots/missing-metric-${missingMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
-          });
-      }
-    }
-
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
   };
 
@@ -163,12 +155,7 @@ export default class Dashboards extends BasePage {
     // eslint-disable-next-line playwright/prefer-web-first-assertions -- the order might be different
     const availableMetrics = await this.elements.panelName.allTextContents();
 
-    expect
-      .soft(
-        availableMetrics,
-        `Missing metrics are: ${expectedMetricsNames.filter((metric) => availableMetrics.includes(metric)).toString()}`,
-      )
-      .toEqual(expect.arrayContaining(expectedMetricsNames));
+    expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
   };
 
   verifyNamedPanelsHaveData = async (panelNames: string[]) => {
