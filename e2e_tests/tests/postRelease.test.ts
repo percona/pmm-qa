@@ -8,6 +8,8 @@ const expectedVersion = process.env.PMM_SERVER_LATEST?.trim() as string;
 pmmTest.beforeEach(async ({ context, page }) => {
   await page.unroute(apiEndpoints.server.updates);
   await context.unroute(apiEndpoints.server.updates);
+  await page.unroute(apiEndpoints.users.me);
+  await context.unroute(apiEndpoints.users.me);
 });
 
 pmmTest(
@@ -30,7 +32,8 @@ pmmTest(
     await pmmTest.step('Verify available version is displayed on the Updates page', async () => {
       await updatesPage.open();
       await expect(updatesPage.elements.availableSection).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-      await expect(updatesPage.elements.availableVersion).toContainText(expectedVersion);
+      await expect(updatesPage.elements.availableSection).toContainText(expectedVersion);
+      await expect(updatesPage.elements.newVersionLine).toContainText(expectedVersion);
     });
   },
 );
@@ -39,18 +42,30 @@ pmmTest(
   "PMM-T2201 - Verify What's new link and release notes @post-release",
   async ({ grafanaHelper, updatesPage }) => {
     await grafanaHelper.authorize();
-    await updatesPage.open();
+    await updatesPage.openHomeForUpdateModal();
 
-    await pmmTest.step("Verify What's new link is displayed", async () => {
-      await expect(updatesPage.buttons.whatsNew).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    await pmmTest.step('Verify Release Notes link is displayed in the update modal', async () => {
+      await expect(updatesPage.elements.updateModalTitle).toContainText(expectedVersion);
+      await expect(updatesPage.buttons.releaseNotes).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+      await expect(updatesPage.buttons.releaseNotes).toHaveAttribute(
+        'href',
+        new RegExp(`per\\.co\\.na/pmm/${expectedVersion.replaceAll('.', '\\.')}`),
+      );
     });
 
     await pmmTest.step('Open release notes and verify the released version', async () => {
-      const { href, newTab } = await updatesPage.clickWhatsNew(updatesPage.buttons.whatsNew);
+      const { href, newTab } = await updatesPage.clickReleaseNotes(updatesPage.buttons.releaseNotes);
 
-      expect(href, "What's new link should have an href").toBeTruthy();
+      expect(href, 'Release Notes link should point to the GA release notes URL').toMatch(
+        new RegExp(`per\\.co\\.na/pmm/${expectedVersion.replaceAll('.', '\\.')}`),
+      );
       await newTab.waitForLoadState();
-      expect(newTab.url(), 'Release notes should open an external page').toMatch(/per\.co\.na|percona\.com/);
+      expect(newTab.url(), 'Release notes should open Percona documentation').toMatch(
+        /per\.co\.na|percona\.com|docs\.percona\.com/,
+      );
+      expect(newTab.url(), 'Release notes page should reference the released version').toContain(
+        expectedVersion,
+      );
     });
   },
 );
@@ -62,7 +77,7 @@ pmmTest(
     await downloadsPage.selectPmmProduct();
 
     await pmmTest.step('Verify the new version is displayed', async () => {
-      await expect(downloadsPage.versionLocator(expectedVersion)).toBeVisible({
+      await expect(downloadsPage.elements.versionSelect).toHaveValue(expectedVersion, {
         timeout: Timeouts.THIRTY_SECONDS,
       });
     });
