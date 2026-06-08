@@ -9,6 +9,28 @@ const DOCKER_IMAGE = process.env.DOCKER_VERSION && process.env.DOCKER_VERSION.le
 const stopList: string[] = [];
 const removeList: string[] = [];
 
+/** Kept after PMM-15054 ClickHouse log optimization (percona/pmm#5423). */
+const CLICKHOUSE_CORE_LOG_TABLES = [
+  'crash_log',
+  'part_log',
+  'query_log',
+  'query_thread_log',
+  'query_views_log',
+];
+
+/** Present on servers built before PMM-15054; dropped once optimization is applied. */
+const CLICKHOUSE_PRE_OPTIMIZATION_EXTRA_LOG_TABLES = ['trace_log'];
+
+const CLICKHOUSE_REMOVED_LOG_TABLES = [
+  'asynchronous_insert_log',
+  'asynchronous_metric_log',
+  'metric_log',
+  'opentelemetry_span_log',
+  'processors_profile_log',
+  'text_log',
+  ...CLICKHOUSE_PRE_OPTIMIZATION_EXTRA_LOG_TABLES,
+];
+
 test.describe(
   'PMM Server CLI tests for Docker Environment Variables',
   { tag: '@server-only' },
@@ -245,13 +267,29 @@ test.describe(
 
       await expect(async () => {
         const output = await cli.exec(
-          'docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database=\'system\' AND name LIKE \'%log%\';"',
+          `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT name FROM system.tables WHERE database='system' AND name LIKE '%log%' ORDER BY name"`,
         );
         await output.assertSuccess();
+        const tables = output.stdout.trim().split('\n').filter(Boolean);
+        const hasOptimization = !tables.some((table) =>
+          CLICKHOUSE_PRE_OPTIMIZATION_EXTRA_LOG_TABLES.includes(table),
+        );
+        const expected = hasOptimization
+          ? CLICKHOUSE_CORE_LOG_TABLES
+          : [...CLICKHOUSE_CORE_LOG_TABLES, ...CLICKHOUSE_PRE_OPTIMIZATION_EXTRA_LOG_TABLES];
+
         expect(
-          output.stdout.trim(),
-          `Verify ClickHouse "system" database has exactly 5 "*log*" tables. Output: ${output.stdout}`,
-        ).toEqual('5');
+          tables,
+          hasOptimization
+            ? 'PMM-15054 ClickHouse log optimization is active'
+            : 'Pre-PMM-15054 server still exposes trace_log',
+        ).toEqual(expected);
+
+        if (hasOptimization) {
+          for (const removed of CLICKHOUSE_REMOVED_LOG_TABLES) {
+            expect(tables, `unexpected system log table ${removed}`).not.toContain(removed);
+          }
+        }
       }).toPass({
         intervals: [2_000, 2_000, 2_000],
         timeout: 30_000,
