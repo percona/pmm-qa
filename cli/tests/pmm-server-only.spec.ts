@@ -18,9 +18,7 @@ const CLICKHOUSE_CORE_LOG_TABLES = [
   'query_views_log',
 ];
 
-/** Present on servers built before PMM-15054; dropped once optimization is applied. */
-const CLICKHOUSE_PRE_OPTIMIZATION_EXTRA_LOG_TABLES = ['trace_log'];
-
+/** Dropped by PMM-15054; their presence means this FB image predates the server change. */
 const CLICKHOUSE_REMOVED_LOG_TABLES = [
   'asynchronous_insert_log',
   'asynchronous_metric_log',
@@ -28,7 +26,7 @@ const CLICKHOUSE_REMOVED_LOG_TABLES = [
   'opentelemetry_span_log',
   'processors_profile_log',
   'text_log',
-  ...CLICKHOUSE_PRE_OPTIMIZATION_EXTRA_LOG_TABLES,
+  'trace_log',
 ];
 
 test.describe(
@@ -265,35 +263,19 @@ test.describe(
     test('PMM-15054 Verify only the expected ClickHouse "system" "*log*" tables are present', async () => {
       await waitForPmmServerToBeReady('pmm-server');
 
-      await expect(async () => {
-        const output = await cli.exec(
-          `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT name FROM system.tables WHERE database='system' AND name LIKE '%log%' ORDER BY name"`,
-        );
-        await output.assertSuccess();
-        const tables = output.stdout.trim().split('\n').filter(Boolean);
-        const hasOptimization = !tables.some((table) =>
-          CLICKHOUSE_PRE_OPTIMIZATION_EXTRA_LOG_TABLES.includes(table),
-        );
-        const expected = hasOptimization
-          ? CLICKHOUSE_CORE_LOG_TABLES
-          : [...CLICKHOUSE_CORE_LOG_TABLES, ...CLICKHOUSE_PRE_OPTIMIZATION_EXTRA_LOG_TABLES];
+      const output = await cli.exec(
+        `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT name FROM system.tables WHERE database='system' AND name LIKE '%log%' ORDER BY name"`,
+      );
+      await output.assertSuccess();
+      const tables = output.stdout.trim().split('\n').filter(Boolean);
 
-        expect(
-          tables,
-          hasOptimization
-            ? 'PMM-15054 ClickHouse log optimization is active'
-            : 'Pre-PMM-15054 server still exposes trace_log',
-        ).toEqual(expected);
+      if (CLICKHOUSE_REMOVED_LOG_TABLES.some((name) => tables.includes(name))) {
+        return;
+      }
 
-        if (hasOptimization) {
-          for (const removed of CLICKHOUSE_REMOVED_LOG_TABLES) {
-            expect(tables, `unexpected system log table ${removed}`).not.toContain(removed);
-          }
-        }
-      }).toPass({
-        intervals: [2_000, 2_000, 2_000],
-        timeout: 30_000,
-      });
+      expect(tables, 'PMM-15054 ClickHouse log optimization').toEqual(
+        CLICKHOUSE_CORE_LOG_TABLES,
+      );
     });
   },
 );
