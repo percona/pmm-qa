@@ -18,16 +18,7 @@ const CLICKHOUSE_CORE_LOG_TABLES = [
   'query_views_log',
 ];
 
-/** Dropped by PMM-15054; their presence means this FB image predates the server change. */
-const CLICKHOUSE_REMOVED_LOG_TABLES = [
-  'asynchronous_insert_log',
-  'asynchronous_metric_log',
-  'metric_log',
-  'opentelemetry_span_log',
-  'processors_profile_log',
-  'text_log',
-  'trace_log',
-];
+const CLICKHOUSE_PMM_15054_MARKER = 'PMM-15054: drop ClickHouse system log tables';
 
 test.describe(
   'PMM Server CLI tests for Docker Environment Variables',
@@ -263,17 +254,21 @@ test.describe(
     test('PMM-15054 Verify only the expected ClickHouse "system" "*log*" tables are present', async () => {
       await waitForPmmServerToBeReady('pmm-server');
 
+      const optimizationCheck = await cli.exec(
+        `docker exec pmm-server grep -c '${CLICKHOUSE_PMM_15054_MARKER}' /etc/clickhouse-server/default-config.xml`,
+      );
+      await optimizationCheck.assertSuccess();
+      test.skip(
+        optimizationCheck.stdout.trim() === '0',
+        'Server image does not include PMM-15054 ClickHouse log optimization (percona/pmm#5423)',
+      );
+
       const output = await cli.exec(
         `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT name FROM system.tables WHERE database='system' AND name LIKE '%log%' ORDER BY name"`,
       );
       await output.assertSuccess();
-      const tables = output.stdout.trim().split('\n').filter(Boolean);
 
-      if (CLICKHOUSE_REMOVED_LOG_TABLES.some((name) => tables.includes(name))) {
-        return;
-      }
-
-      expect(tables, 'PMM-15054 ClickHouse log optimization').toEqual(
+      expect(output.stdout.trim().split('\n').filter(Boolean)).toEqual(
         CLICKHOUSE_CORE_LOG_TABLES,
       );
     });
