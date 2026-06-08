@@ -1,4 +1,3 @@
-import { Page, Locator } from '@playwright/test';
 import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 import GrafanaHelper from '@helpers/grafana.helper';
@@ -14,22 +13,17 @@ export default class UpdatesPage extends BasePage {
   url = '/pmm-ui/updates';
   builders = {};
   buttons = {
-    whatsNew: this.page.getByTestId('update-news-link'),
+    updateNow: this.page.getByRole('button', { name: 'Update now' }),
   };
   elements = {
-    availableSection: this.page.getByTestId('update-latest-section'),
-    availableVersion: this.page.getByTestId('update-latest-version'),
+    availableSection: this.page.getByRole('heading', { name: /New update available/i }),
+    newVersionLine: this.page.locator('p').filter({ hasText: 'New version:' }),
+    pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
+    releaseHighlights: this.page.getByRole('heading', { name: 'Release highlights' }),
+    releaseSummary: this.page.getByRole('heading', { name: 'Release summary' }),
   };
   inputs = {};
   messages = {};
-
-  clickWhatsNew = async (button: Locator): Promise<{ href: string | null; newTab: Page }> =>
-    await pmmTest.step("Click What's new link", async () => {
-      const href = await button.getAttribute('href');
-      const [newTab] = await Promise.all([this.page.waitForEvent('popup'), button.click()]);
-
-      return { href, newTab };
-    });
 
   getUpdateInfo = async (): Promise<UpdateInfo> =>
     await pmmTest.step('Fetch update info from version service', async () => {
@@ -43,5 +37,6 @@ export default class UpdatesPage extends BasePage {
   open = async (): Promise<void> =>
     await pmmTest.step('Open Updates page', async () => {
       await this.page.goto(this.url);
+      await this.elements.pageTitle.waitFor({ state: 'visible' });
     });
 }

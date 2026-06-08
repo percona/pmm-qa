@@ -30,7 +30,8 @@ pmmTest(
     await pmmTest.step('Verify available version is displayed on the Updates page', async () => {
       await updatesPage.open();
       await expect(updatesPage.elements.availableSection).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-      await expect(updatesPage.elements.availableVersion).toContainText(expectedVersion);
+      await expect(updatesPage.elements.availableSection).toContainText(expectedVersion);
+      await expect(updatesPage.elements.newVersionLine).toContainText(expectedVersion);
     });
   },
 );
@@ -41,16 +42,10 @@ pmmTest(
     await grafanaHelper.authorize();
     await updatesPage.open();
 
-    await pmmTest.step("Verify What's new link is displayed", async () => {
-      await expect(updatesPage.buttons.whatsNew).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-    });
-
-    await pmmTest.step('Open release notes and verify the released version', async () => {
-      const { href, newTab } = await updatesPage.clickWhatsNew(updatesPage.buttons.whatsNew);
-
-      expect(href, "What's new link should have an href").toBeTruthy();
-      await newTab.waitForLoadState();
-      expect(newTab.url(), 'Release notes should open an external page').toMatch(/per\.co\.na|percona\.com/);
+    await pmmTest.step('Verify release notes are displayed on the Updates page', async () => {
+      await expect(updatesPage.elements.releaseSummary).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+      await expect(updatesPage.elements.releaseHighlights).toBeVisible();
+      await expect(updatesPage.elements.availableSection).toContainText(expectedVersion);
     });
   },
 );
