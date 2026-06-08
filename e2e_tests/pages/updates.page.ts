@@ -14,11 +14,11 @@ export default class UpdatesPage extends BasePage {
   url = '/pmm-ui/updates';
   builders = {};
   buttons = {
-    whatsNew: this.grafanaIframe().getByTestId('update-news-link'),
+    whatsNew: this.page.getByTestId('update-news-link'),
   };
   elements = {
-    availableSection: this.grafanaIframe().getByTestId('update-latest-section'),
-    availableVersion: this.grafanaIframe().getByTestId('update-latest-version'),
+    availableSection: this.page.getByTestId('update-latest-section'),
+    availableVersion: this.page.getByTestId('update-latest-version'),
   };
   inputs = {};
   messages = {};
@@ -43,6 +43,5 @@ export default class UpdatesPage extends BasePage {
   open = async (): Promise<void> =>
     await pmmTest.step('Open Updates page', async () => {
       await this.page.goto(this.url);
-      await this.page.locator('#grafana-iframe').waitFor({ state: 'visible' });
     });
 }
