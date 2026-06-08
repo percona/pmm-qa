@@ -20,6 +20,8 @@ import MongoDBHelper from '@helpers/mongodb.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
+import UpdatesPage from '@pages/updates.page';
+import DownloadsPage from '@pages/downloads.page';
 
 const pmmTest = base.extend<{
   settingsPage: SettingsPage;
@@ -42,6 +44,8 @@ const pmmTest = base.extend<{
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   vacuumDashboardPage: VacuumDashboard;
+  updatesPage: UpdatesPage;
+  downloadsPage: DownloadsPage;
 }>({
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
@@ -91,6 +95,7 @@ const pmmTest = base.extend<{
 
     await use(dashboardPage);
   },
+  downloadsPage: async ({ page }, use) => await use(new DownloadsPage(page)),
   grafanaHelper: async ({ page }, use) => {
     const grafanaHelper = new GrafanaHelper(page);
 
@@ -141,6 +146,7 @@ const pmmTest = base.extend<{
 
     await use(tour);
   },
+  updatesPage: async ({ page }, use) => await use(new UpdatesPage(page)),
   urlHelper: async ({}, use) => {
     const urlHelper = new UrlHelper();
 
