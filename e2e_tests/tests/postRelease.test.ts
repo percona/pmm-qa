@@ -77,7 +77,7 @@ pmmTest(
     await downloadsPage.selectPmmProduct();
 
     await pmmTest.step('Verify the new version is displayed', async () => {
-      await expect(downloadsPage.versionLocator(expectedVersion)).toBeVisible({
+      await expect(downloadsPage.elements.versionSelect).toHaveValue(expectedVersion, {
         timeout: Timeouts.THIRTY_SECONDS,
       });
     });
