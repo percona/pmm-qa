@@ -9,19 +9,6 @@ const DOCKER_IMAGE = process.env.DOCKER_VERSION && process.env.DOCKER_VERSION.le
 const stopList: string[] = [];
 const removeList: string[] = [];
 
-/** PMM-15054 ClickHouse log optimization ships in 3.8.1+ (percona/pmm#5423). */
-const expectedClickHouseLogTableCount = (version: string): string => {
-  const [major, minor, patch] = version
-    .split('-')[0]
-    .split('.')
-    .map((part) => Number(part) || 0);
-  const atLeast381 =
-    major > 3 ||
-    (major === 3 && minor > 8) ||
-    (major === 3 && minor === 8 && patch >= 1);
-  return atLeast381 ? '5' : '6';
-};
-
 test.describe(
   'PMM Server CLI tests for Docker Environment Variables',
   { tag: '@server-only' },
@@ -256,13 +243,6 @@ test.describe(
     test('PMM-15054 Verify only the expected ClickHouse "system" "*log*" tables are present', async () => {
       await waitForPmmServerToBeReady('pmm-server');
 
-      const versionOutput = await cli.exec(
-        'docker exec pmm-server pmm-admin --version --json',
-      );
-      await versionOutput.assertSuccess();
-      const { Version: pmmVersion } = JSON.parse(versionOutput.stdout);
-      const expectedCount = expectedClickHouseLogTableCount(pmmVersion);
-
       await expect(async () => {
         const output = await cli.exec(
           `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database='system' AND name LIKE '%log%';"`,
@@ -270,8 +250,8 @@ test.describe(
         await output.assertSuccess();
         expect(
           output.stdout.trim(),
-          `Verify ClickHouse "system" database has exactly ${expectedCount} "*log*" tables (PMM ${pmmVersion})`,
-        ).toEqual(expectedCount);
+          'Verify ClickHouse "system" database has exactly 5 "*log*" tables',
+        ).toEqual('5');
       }).toPass({
         intervals: [2_000, 2_000, 2_000],
         timeout: 30_000,
