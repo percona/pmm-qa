@@ -1,8 +1,14 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
 const expectedVersion = process.env.PMM_SERVER_LATEST?.trim() as string;
+
+pmmTest.beforeEach(async ({ context, page }) => {
+  await page.unroute(apiEndpoints.server.updates);
+  await context.unroute(apiEndpoints.server.updates);
+});
 
 pmmTest(
   'PMM-T2200 - Verify new release is available for upgrade @post-release',
