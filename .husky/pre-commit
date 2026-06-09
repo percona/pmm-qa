@@ -1,1 +1,16 @@
-cd e2e_tests && npx lint-staged
+ROOT=$(git rev-parse --show-toplevel)
+STAGED_FILES=$(git diff --cached --name-only)
+
+if echo "$STAGED_FILES" | grep -Eqx "qa-integration/pmm_qa/scripts/database_options.py|e2e_tests/tests/.*\.ts"; then
+    python "$ROOT/support_scripts/generate_readme.py"
+fi
+
+if echo "$STAGED_FILES" | grep -qx "qa-integration/pmm_qa/scripts/database_options.py"; then
+    git add "$ROOT/qa-integration/README.md"
+fi
+
+if echo "$STAGED_FILES" | grep -Eqx "e2e_tests/tests/.*\.ts"; then
+    git add "$ROOT/e2e_tests/README.md"
+fi
+
+cd "$ROOT/e2e_tests" && npx lint-staged
