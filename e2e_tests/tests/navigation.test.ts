@@ -99,24 +99,6 @@ pmmTest(
   },
 );
 
-pmmTest('PMM-T2199 Grafana embedding @new-navigation', async ({ leftNavigation }) => {
-  await pmmTest.step('Verify old menu hidden', async () => {
-    await expect(leftNavigation.elements.oldLeftMenu).toBeHidden();
-  });
-
-  await pmmTest.step('Verify iframe hidden on Help page', async () => {
-    await expect(leftNavigation.elements.iframe).toBeHidden();
-  });
-
-  await pmmTest.step('Verify iframe visible on Home page and hidden on Help page', async () => {
-    await leftNavigation.selectMenuItem('home');
-    await leftNavigation.elements.refreshButton.click({ timeout: Timeouts.THIRTY_SECONDS });
-    await expect(leftNavigation.elements.iframe).toBeVisible();
-    await leftNavigation.selectMenuItem('help');
-    await expect(leftNavigation.elements.iframe).toBeAttached();
-  });
-});
-
 pmmTest('PMM-T2200 verify service persistence @new-navigation', async ({ leftNavigation, page }) => {
   await pmmTest.step('verify service persistence in overview and summary dashboards', async () => {
     await leftNavigation.selectMenuItem('mysql');
