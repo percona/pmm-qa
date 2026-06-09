@@ -1,7 +1,8 @@
-import { Page, Locator } from '@playwright/test';
+import { Locator, Page } from '@playwright/test';
 import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 import GrafanaHelper from '@helpers/grafana.helper';
+import { Timeouts } from '@helpers/timeouts';
 
 export interface UpdateInfo {
   installed?: { full_version?: string; version?: string };
@@ -12,21 +13,26 @@ export interface UpdateInfo {
 
 export default class UpdatesPage extends BasePage {
   url = '/pmm-ui/updates';
+  homeUrl = '/pmm-ui/graph/';
   builders = {};
   buttons = {
-    whatsNew: this.page.getByTestId('update-news-link'),
+    goToUpdates: this.page.getByTestId('update-modal-go-to-updates-button'),
+    releaseNotes: this.page.getByTestId('update-modal-release-notes-link'),
+    updateNow: this.page.getByRole('button', { name: 'Update now' }),
   };
   elements = {
-    availableSection: this.page.getByTestId('update-latest-section'),
-    availableVersion: this.page.getByTestId('update-latest-version'),
+    availableSection: this.page.getByRole('heading', { name: /New update available/i }),
+    newVersionLine: this.page.locator('p').filter({ hasText: 'New version:' }),
+    pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
+    updateModalTitle: this.page.getByTestId('modal-title'),
   };
   inputs = {};
   messages = {};
 
-  clickWhatsNew = async (button: Locator): Promise<{ href: string | null; newTab: Page }> =>
-    await pmmTest.step("Click What's new link", async () => {
-      const href = await button.getAttribute('href');
-      const [newTab] = await Promise.all([this.page.waitForEvent('popup'), button.click()]);
+  clickReleaseNotes = async (link: Locator): Promise<{ href: string | null; newTab: Page }> =>
+    await pmmTest.step('Click Release Notes link in update modal', async () => {
+      const href = await link.getAttribute('href');
+      const [newTab] = await Promise.all([this.page.waitForEvent('popup'), link.click()]);
 
       return { href, newTab };
     });
@@ -43,5 +49,12 @@ export default class UpdatesPage extends BasePage {
   open = async (): Promise<void> =>
     await pmmTest.step('Open Updates page', async () => {
       await this.page.goto(this.url);
+      await this.elements.pageTitle.waitFor({ state: 'visible' });
+    });
+
+  openHomeForUpdateModal = async (): Promise<void> =>
+    await pmmTest.step('Open home page to show update modal', async () => {
+      await this.page.goto(this.homeUrl);
+      await this.buttons.releaseNotes.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
     });
 }
