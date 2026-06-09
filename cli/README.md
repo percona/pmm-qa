@@ -33,7 +33,7 @@ Playwright `--grep` syntax reference: [Playwright CLI](https://playwright.dev/do
 - `@mysql-conf-file`
 - `@pdpgsql`
 - `@psmdb`
-- `@psmdb-shard`
+- `@shard-psmdb`
 - `@haproxy`
 - `@proxysql`
 - `@mongoDb`
