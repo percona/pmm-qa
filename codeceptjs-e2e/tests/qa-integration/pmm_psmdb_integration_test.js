@@ -216,7 +216,7 @@ Scenario(
 Scenario('PMM-T1889 - Verify Mongo replication lag graph shows correct info @pmm-psmdb-replica-integration', async ({ I, dashboardPage, adminPage }) => {
   const lagValue = 10;
   const testConfigFile = `c = rs.conf(); c.members[2].secondaryDelaySecs = ${lagValue}; c.members[2].priority = 0; c.members[2].hidden = true; rs.reconfig(c);`;
-  const serviceName = 'rs103';
+  const serviceName = 'rs10';
   const graphName = 'Replication Lag';
 
   await I.verifyCommand(`sudo docker exec rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --eval "${testConfigFile}"`);
