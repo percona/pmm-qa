@@ -22,7 +22,7 @@
     "cli:mysql-conf": "npx playwright test --grep @mysql-conf-file",
     "cli:pgsql": "npx playwright test --grep @pdpgsql",
     "cli:psmdb": "npx playwright test --grep @psmdb",
-    "cli:psmdb-shard": "npx playwright test --grep @psmdb-shard",
+    "cli:psmdb-shard": "npx playwright test --grep @shard-psmdb",
     "cli:haproxy": "npx playwright test --grep @haproxy",
     "cli:proxysql": "npx playwright test --grep @proxysql",
     "cli:mongo": "npx playwright test --grep @mongoDb",
