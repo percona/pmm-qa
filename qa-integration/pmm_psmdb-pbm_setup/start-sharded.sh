@@ -16,12 +16,6 @@ docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded.yaml build
 docker compose -f docker-compose-sharded.yaml up -d
 
-pmm_server_host=${PMM_SERVER_CONTAINER_ADDRESS:-127.0.0.1:443}
-pmm_server_admin_pass=${ADMIN_PASSWORD:-password}
-
-echo "waiting for pmm-server to start at ${pmm_server_host}"
-timeout 120 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:'"$pmm_server_admin_pass"'" https://'"${pmm_server_host}"'/v1/server/readyz)" = "200" ]; do sleep 5; done'
-
 echo
 echo "waiting 60 seconds for replica set members to start"
 sleep 60
