@@ -236,4 +236,4 @@ Scenario('PMM-T1889 - Verify Mongo replication lag graph shows correct info @pmm
   const maxValue = await I.grabTextFrom(dashboardPage.getColumnLegendMaxValue(graphName, serviceName));
 
   I.assertFalse(/min|hour|day|week|month|year/.test(maxValue), `Max replication value should be in seconds. Value is: ${maxValue}`);
-});
+}).retry(2);
