@@ -188,8 +188,13 @@ jobs:
             echo "has_subset=true" >> "$GITHUB_OUTPUT"
             echo "Launchable subset is not empty. Continue with setup and tests."
           else
-            echo "has_subset=false" >> "$GITHUB_OUTPUT"
-            echo "Launchable subset is empty. Downstream setup and tests will be skipped."
+            if [ "${LAUNCHABLE_CONFIDENCE}" = "100%" ]; then
+              echo "has_subset=true" >> "$GITHUB_OUTPUT"
+              echo "LAUNCHABLE_CONFIDENCE is 100%. Downstream setup and tests will be ran."
+            else
+              echo "has_subset=false" >> "$GITHUB_OUTPUT"
+              echo "Launchable subset is empty. Downstream setup and tests will be skipped."
+            fi
           fi
 
       - name: Skip notice
