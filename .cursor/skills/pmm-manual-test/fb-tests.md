@@ -117,54 +117,23 @@ Save screenshots to a temp path the user can find (e.g. workspace root or `%TEMP
 | **FB test screenshots** | `customfield_10492` | FB test analysis summary + screenshot reference |
 | **How to test** | `customfield_10083` | Manual test steps (adapt using FB failures + PR diff) |
 
-### Update with Atlassian MCP
+### How to update `customfield_10492` (verified on PMM-15074)
 
-**All checks passed** — attach screenshot and update fields in one call:
+**Do not use:** Jira web UI / Playwright (agent browser is not logged in). **Do not** send wiki markdown (`!image.png|width=900!`) or plain text — Jira returns *Operation value must be an Atlassian Document*.
 
+**Use:** Jira REST API v3, or Atlassian MCP only if it sends **ADF** for this field. Credentials: `JIRA_USERNAME`, `JIRA_API_TOKEN`, `JIRA_URL` (or `mcp-atlassian` env in `~/.cursor/mcp.json`).
 
-```json
-jira_update_issue(
-  issue_key: "PMM-14915",
-  fields: "{\"customfield_10492\": \"## FB Tests — PR-4376 (all green)\\n\\n**Run:** https://github.com/Percona-Lab/pmm-submodules/actions/runs/27009345670\\n\\n!fb-test-PMM-14915-checks.png|width=900!\"}",
-  attachments: "/path/to/fb-test-PMM-14915-checks.png"
-)
+1. Upload the screenshot:
+
+```bash
+curl -sS -u "$JIRA_USERNAME:$JIRA_API_TOKEN" \
+  -H "X-Atlassian-Token: no-check" \
+  -F "file=@fb-test-PMM-XXXX-checks.png" \
+  "$JIRA_URL/rest/api/3/issue/PMM-XXXX/attachments"
 ```
 
-After attachment upload, Jira may render images inline: `!fb-test-PMM-14915-checks.png|width=900!`
+Note the numeric `id` from the response.
 
-**Any check failed** — text only, no attachment:
+2. `PUT $JIRA_URL/rest/api/3/issue/PMM-XXXX` with `customfield_10492` as ADF (`type: doc`). Embed the image with `mediaSingle` → `media` → `type: external` → `url` = `$JIRA_URL/rest/api/3/attachment/content/<id>`.
 
-```json
-jira_update_issue(
-  issue_key: "PMM-14915",
-  fields: "{\"customfield_10492\": \"## FB Tests — PR-4376 (failures — no screenshot)\\n\\n**Run:** https://github.com/Percona-Lab/pmm-submodules/actions/runs/27009345670\\n\\n**Failed:** @rta UI tests, @pmm-ps-integration UI tests, CLI tests pmm-server container\\n\\n**Relevant to ticket:** none (flaky / out of scope)\\n\\n_Screenshot pending — waiting for all-green FB build._\"}"
-)
-```
-
-Update **How to test** separately when manual steps are finalized:
-
-```json
-jira_update_issue(
-  issue_key: "PMM-14915",
-  fields: "{\"customfield_10083\": \"1. Provision FB staging (link in comment)...\\n2. DevTools: no /v1/ui-events/Store calls...\"}"
-)
-```
-
-**Ask the user before writing to Jira** if they did not explicitly request the update in this session.
-
-### FB test screenshots field template
-
-```markdown
-## FB Tests — PR-<submodules_pr>
-
-**FB Tests run:** https://github.com/Percona-Lab/pmm-submodules/actions/runs/<run_id>
-
-### Failures (latest)
-- `@suite` — [relevant|flaky|out of scope]: <one-line reason>
-
-### Passed (ticket-relevant)
-- list suites that cover the change area
-
-### Screenshot
-!fb-test-<TICKET>-checks.png|width=900!
-```
+**Ask the user before writing to Jira** unless they explicitly requested the update in this session.
