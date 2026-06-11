@@ -67,6 +67,7 @@
     state: latest
     disablerepo: "epel"
     update_cache: yes
+    exclude: "{{ 'mariadb*' if ansible_distribution_major_version == '10' else omit }}"
   vars:
     packages_base:
     - percona-server-server{{ pro_suf | default('') }}
