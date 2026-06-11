@@ -54,8 +54,10 @@
   command: yum module disable mariadb -y
   when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "8"
 
-- name: disable the mariadb module on RHEL/CentOS 10
-  command: yum module disable mariadb -y
+- name: Remove conflicting mariadb packages on RHEL/CentOS 10
+  dnf:
+    name: "mariadb*"
+    state: absent
   when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "10"
 
 - name: install Percona Server rpm packages
