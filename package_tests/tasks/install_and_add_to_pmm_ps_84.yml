@@ -61,22 +61,22 @@
   when: ansible_os_family == "RedHat" and ansible_distribution_major_version == "10"
 
 - name: install Percona Server rpm packages
-  yum:
+  dnf:
     allowerasing: "{{ allowerasing_value | default (false) }}"
     name: "{{ packages }}"
     state: latest
     disablerepo: "epel"
     update_cache: yes
-    exclude: "{{ 'mariadb*' if ansible_distribution_major_version == '10' else omit }}"
+    exclude: "{{ ['mariadb*', 'mysql*'] if ansible_distribution_major_version | int >= 10 else omit }}"
   vars:
     packages_base:
-    - percona-server-server{{ pro_suf | default('') }}
-    - percona-mysql-router{{ pro_suf | default('') }}
-    - percona-server-client{{ pro_suf | default('') }}
-    - percona-server-test{{ pro_suf | default('') }}
-    - percona-server{{ pro_suf | default('') }}-debuginfo
-    - percona-server-devel{{ pro_suf | default('') }}
-    - percona-server-rocksdb{{ pro_suf | default('') }}
+      - percona-server-server{{ pro_suf | default('') }}
+      - percona-mysql-router{{ pro_suf | default('') }}
+      - percona-server-client{{ pro_suf | default('') }}
+      - percona-server-test{{ pro_suf | default('') }}
+      - percona-server{{ pro_suf | default('') }}-debuginfo
+      - percona-server-devel{{ pro_suf | default('') }}
+      - percona-server-rocksdb{{ pro_suf | default('') }}
     percona_server_js_pkg: "percona-server-js{{ pro_suf | default('') }}"
     packages: "{{ packages_base + (install_percona_server_js | default(true) | bool | ternary([percona_server_js_pkg], [])) }}"
   when: ansible_os_family == "RedHat"
