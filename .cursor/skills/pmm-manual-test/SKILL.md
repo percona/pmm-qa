@@ -13,12 +13,12 @@ Start when the user asks for help with **manual testing**. **Always ask for the 
 
 PMM repos are expected as **siblings** under one parent directory (repos root). This skill ships in **pmm-qa**; resolve paths from the pmm-qa clone.
 
-| Repo | Directory (under repos root) | Remote |
-|------|------------------------------|--------|
-| pmm-qa | `pmm-qa` | `percona/pmm-qa` |
-| pmm | `pmm` | `percona/pmm` |
-| grafana | `grafana` | `percona/grafana` |
-| jenkins-pipelines | `jenkins-pipelines` | `Percona-Lab/jenkins-pipelines` |
+| Repo              | Directory (under repos root) | Remote                          |
+| ----------------- | ---------------------------- | ------------------------------- |
+| pmm-qa            | `pmm-qa`                     | `percona/pmm-qa`                |
+| pmm               | `pmm`                        | `percona/pmm`                   |
+| grafana           | `grafana`                    | `percona/grafana`               |
+| jenkins-pipelines | `jenkins-pipelines`          | `Percona-Lab/jenkins-pipelines` |
 
 **pmm-submodules** — read PR comments and checks via `gh` only, never clone.
 
@@ -36,13 +36,13 @@ PMM_QA_ROOT="$(git -C pmm-qa rev-parse --show-toplevel)"
 REPOS_ROOT="$(dirname "$PMM_QA_ROOT")"
 ```
 
-| Variable | Example path |
-|----------|----------------|
-| `$ReposRoot` / `$REPOS_ROOT` | `~/vscodeProjects/PMM` |
-| pmm | `$ReposRoot/pmm` |
-| grafana | `$ReposRoot/grafana` |
-| jenkins-pipelines | `$ReposRoot/jenkins-pipelines` |
-| pmm-qa | `$ReposRoot/pmm-qa` |
+| Variable                     | Example path                   |
+| ---------------------------- | ------------------------------ |
+| `$ReposRoot` / `$REPOS_ROOT` | `~/vscodeProjects/PMM`         |
+| pmm                          | `$ReposRoot/pmm`               |
+| grafana                      | `$ReposRoot/grafana`           |
+| jenkins-pipelines            | `$ReposRoot/jenkins-pipelines` |
+| pmm-qa                       | `$ReposRoot/pmm-qa`            |
 
 ### Clone if missing
 
@@ -74,18 +74,20 @@ Then `git fetch` / `git pull --ff-only` in each repo that exists.
 
 ```
 - [ ] 1. Get Jira ticket key from user
-- [ ] 2. Read ticket via Atlassian MCP (summary, description, linked PRs, acceptance criteria)
-- [ ] 3. Identify affected repos (pmm, grafana, or both)
+- [ ] 2. Read ticket via Atlassian MCP (summary, description, comments, linked PRs, acceptance criteria)
+- [ ] 3. Identify affected repos (pmm, grafana, or both) and read PR body, diff, issue comments, review summaries, and inline review comments
 - [ ] 4. Resolve repos root; clone missing siblings; update local repos (git pull)
 - [ ] 5. Find pmm-submodules PR and latest JNKPercona build comment — older comments are not valid
 - [ ] 6. Analyze FB Tests from latest FB build (`gh pr checks` on pmm-submodules PR)
+- [ ] 6a. Compare ticket context vs PR context; if mismatch exists, inform the user before Jenkins setup
 - [ ] 7. Choose Jenkins job (pmm3-aws-staging-start vs pmm3-deploy-services)
 - [ ] 8. Determine required job parameters to setup instance based on ticket scope and PR diffs
 - [ ] 9. Build complete parambuild URL (all relevant params, not just DOCKER_VERSION + CLIENT_VERSION)
 - [ ] 10. Review PR diffs — do not trust "How to test" blindly
 - [ ] 11. Write test instructions in chat (adapt using FB test failures where relevant)
 - [ ] 12. Screenshot FB Tests Actions run (playwright-cli) and update Jira FB test screenshots field
-- [ ] 13. Open Jenkins parambuild URL in browser
+- [ ] 13. Open Jenkins parambuild URL in browser, then immediately ask the user to provide the PMM instance URL once Jenkins finishes provisioning
+- [ ] 14. When the user provides the PMM instance URL, execute the generated manual test steps through MCP
 ```
 
 ## Step 1: Get Jira ticket key
@@ -97,9 +99,12 @@ Ask if missing. Proceed once you have the key (e.g. `PMM-14915`).
 Use **Atlassian MCP** (`jira_get_issue`, `jira_get_issue_development_info`):
 
 - Summary, description, QA notes, acceptance criteria
+- Ticket comments, newest first when possible
 - Existing **How to test** (`customfield_10083`) and **FB test screenshots** (`customfield_10492`)
 - Development panel: linked GitHub PRs/branches
 - Environment or setup hints
+
+Treat ticket comments as first-class testing input. Newer ticket comments may supersede stale description text, acceptance criteria, or existing **How to test** content. Extract late scope changes, retest requests, QA clarifications, feature flags, setup hints, known limitations, related links, and readiness/blocker notes.
 
 **Setup is ticket-specific.** Pay attention to:
 
@@ -108,7 +113,7 @@ Use **Atlassian MCP** (`jira_get_issue`, `jira_get_issue_development_info`):
 - Required **PMM server environment variables** (`DOCKER_ENV_VARIABLE`) — job defaults are often wrong for the test (e.g. default `PMM_ENABLE_TELEMETRY=0`)
 - PMM Settings changes the user must apply after provisioning
 
-## Step 3: Identify affected repos
+## Step 3: Identify affected repos and read PR discussion
 
 | Change area | Repo |
 |-------------|------|
@@ -117,6 +122,29 @@ Use **Atlassian MCP** (`jira_get_issue`, `jira_get_issue_development_info`):
 | Both | Check both PRs |
 
 Grafana-only tickets still need an FB **server** image from pmm-submodules.
+
+For every linked or discovered PR in `percona/pmm`, `percona/grafana`, and `Percona-Lab/pmm-submodules`, read the PR body, implementation diff, issue comments, review summaries, and inline review comments.
+
+```powershell
+gh pr view <n> -R owner/repo --json title,body,url,state,mergeStateStatus,comments,reviews,reviewDecision,files
+gh pr diff <n> -R owner/repo
+```
+
+Use GitHub CLI for all PR context. Start with `gh pr view` and `gh pr diff`.
+Use `gh api` only when `gh pr view` does not expose enough detail, especially for inline review comments with file path and line context or when complete discussion details are needed:
+
+```powershell
+gh api repos/OWNER/REPO/issues/<PR_NUMBER>/comments `
+  --jq '[.[] | {created_at, author: .user.login, body}]'
+
+gh api repos/OWNER/REPO/pulls/<PR_NUMBER>/comments `
+  --jq '[.[] | {created_at, author: .user.login, path, line, body}]'
+
+gh api repos/OWNER/REPO/pulls/<PR_NUMBER>/reviews `
+  --jq '[.[] | {submitted_at, author: .user.login, state, body}]'
+```
+
+Use review comments to understand implementation constraints, unresolved concerns, setup requirements, and reviewer-requested behavior changes.
 
 ## Step 4: Update local repos
 
@@ -191,6 +219,28 @@ gh pr checks <SUBMODULES_PR> -R Percona-Lab/pmm-submodules
 
 Full reference: [fb-tests.md](fb-tests.md)
 
+## Pre-Jenkins mismatch gate
+
+Before choosing, generating, or opening any Jenkins job, compare ticket context against PR context:
+
+- Ticket context: summary, description, acceptance criteria, QA notes, existing **How to test**, and ticket comments
+- PR context: PR body, implementation diff, issue comments, review summaries, inline review comments, and review state
+
+Check for mismatches in implemented behavior, setup needs, PMM server env vars, DB topology, feature flags, PMM Settings, readiness, and test scope.
+
+If any mismatch can affect setup or testing, stop and inform the user before proceeding:
+
+```markdown
+Blocked before setup: ticket/PR mismatch
+
+- Ticket says: <short fact>
+- PR/review says or implements: <short fact>
+- Impact: <setup/test risk>
+- Need: <specific decision or confirmation>
+```
+
+If no mismatch exists, continue with Jenkins job selection and parameter planning.
+
 ## Step 7: Choose Jenkins job
 
 | Scenario | Job |
@@ -212,7 +262,7 @@ See [jenkins-jobs.md](jenkins-jobs.md) for all parameters. Groovy source: `$Repo
 
 ## Step 8: Determine required job parameters
 
-Derive **every** param that differs from defaults. The user should not need to edit the Jenkins form.
+Derive **every** param that differs from defaults. The user should not need to edit the Jenkins form. Use ticket comments and PR review comments as inputs, not just the ticket description and PR diff.
 
 Include **all** params in the `parambuild` URL for the chosen job — not only `DOCKER_VERSION` + `CLIENT_VERSION`. Walk through the full list below; keep defaults only when they are correct for this ticket.
 
@@ -318,7 +368,7 @@ Do **not** trust PR "How to test" or Jira QA bullets without verifying code.
 
 1. Read diffs in `percona/pmm` and/or `percona/grafana`
 2. Map changes to concrete UI/API/network steps
-3. Cross-check with FB test failures marked **relevant**
+3. Cross-check with ticket comments, PR comments/reviews, and FB test failures marked **relevant**
 4. Note post-provision steps (PMM Settings toggles, etc.)
 
 ## Step 11: Write test instructions
@@ -327,9 +377,10 @@ Post in chat **before** Jira update and browser:
 
 1. Job chosen and why
 2. Params set and why
-3. FB test summary (failures relevant to this ticket)
-4. Provision → configure → exercise → expected result
-5. DevTools / logs / PMM Settings checks
+3. Ticket/PR mismatch result: either `No ticket/PR mismatch found` or the mismatch resolution used before setup
+4. FB test summary (failures relevant to this ticket)
+5. Provision → configure → exercise → expected result
+6. DevTools / logs / PMM Settings checks
 
 ## Step 12: Screenshot FB Tests run → Jira
 
@@ -365,6 +416,35 @@ Details: [fb-tests.md](fb-tests.md)
 Start-Process "<full-parambuild-url>"
 ```
 
+## Step 14: Execute generated manual test steps through MCP
+
+Do **not** wait for or poll Jenkins after opening the parambuild URL. Immediately ask the user:
+
+```text
+Please provide the PMM instance URL once Jenkins finishes provisioning.
+```
+
+When the user provides the PMM instance URL, execute the generated manual test steps. Use default credentials:
+
+- Username: `admin`
+- Password: `pmm3admin!`
+
+Do **not** generate an `Execution Handoff`. Execute the already generated manual test steps exactly as the test scope; do not invent or expand coverage beyond those steps unless the user explicitly asks.
+
+Before MCP execution, read and follow these workflow files. Do this quietly; do not narrate workflow-file reads, auth setup, or browser setup:
+
+1. Read/use `.agents/workflows/pmmLogin.md` first and immediately log in with Basic Auth using the user-provided PMM instance URL and default credentials.
+2. After login, read/use `.agents/workflows/mcpRules.md` for execution behavior.
+3. Use `.agents/workflows/apiIndex.md` only if API setup or API checks are needed.
+
+Prefer API setup first when possible, and use UI only for verification. When navigating between pages, verify the actual expected page content, route, or page-specific controls. Do not treat HTTP `200` as proof that the correct page loaded.
+
+Final MCP result must be short and use one of these formats:
+
+- `Fixed: <one-sentence evidence>` when expected behavior passes.
+- `Not fixed: <one-sentence evidence>` when the issue reproduces.
+- `Blocked: <short reason>` when execution cannot complete.
+
 ## gh CLI quick reference
 
 | Task | Command |
@@ -377,13 +457,16 @@ Start-Process "<full-parambuild-url>"
 
 ## Done criteria
 
-1. Jira read; scope understood
-2. Latest JNKPercona build comment used
-3. FB Tests analyzed; relevant failures reflected in manual plan
-4. Correct job + **complete** parambuild URL
-5. Test instructions posted in chat
-6. Jira `FB test screenshots` updated — screenshot only if all checks passed (when user approves)
-7. Browser opened to parambuild URL
+1. Jira read, including ticket comments; scope understood
+2. PR body, diff, issue comments, review summaries, and inline review comments read
+3. Ticket/PR mismatch gate completed before Jenkins setup; user informed if any mismatch exists
+4. Latest JNKPercona build comment used
+5. FB Tests analyzed; relevant failures reflected in manual plan
+6. Correct job + **complete** parambuild URL
+7. Test instructions posted in chat
+8. Jira `FB test screenshots` updated — screenshot only if all checks passed (when user approves)
+9. Browser opened to parambuild URL, then user asked to provide the PMM instance URL once Jenkins finishes provisioning
+10. User-provided PMM instance URL collected, generated manual test steps executed through `.agents/workflows`, and final result reported as `Fixed:`, `Not fixed:`, or `Blocked:`
 
 ## Additional resources
 

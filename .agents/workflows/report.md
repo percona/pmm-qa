@@ -2,60 +2,52 @@
 description: Playwright handoff report
 ---
 
-# Core Rules
+# Rules
 
-- Output ONLY a structured exploration report using a template.
-- NO speculative plans, raw DOM dumps, reasoning, or Playwright code generation.
-- If blocked execution: Stop immediately, report blocker.
-- PREFER `[API]` for state creation. Use `[Auth]` only for session state. Use `[Nav]` for URL routing. Use `[UI]` inside pages.
+- Output ONLY a structured report using the template below.
+- No speculative plans, raw DOM dumps, reasoning, or Playwright code generation.
+- If blocked: stop immediately, report blocker.
+- Prefer `[API]` for state creation. Use `[Auth]` for session state. `[Nav]` for URL routing. `[UI]` inside pages.
 
-# Output Format
+# Output Template
 
 ## Steps
 
-- Ordered execution trace (e.g. `1. [API] Stop session`, `2. [Nav] Admin path`).
+Ordered execution trace — e.g. `1. [API] Stop session`, `2. [Nav] /pmm-ui/inventory`
 
 ## Key Locators
 
-- Element | Purpose | Locator
+| Element | Purpose | Locator |
 
 ## State (Before & After)
 
 - URL
-- Values/Selections
-- Visible Errors/Messages
-- _(Log changed/relevant fields ONLY)_
+- Values / Selections
+- Visible Errors / Messages
+  _(changed or relevant fields only)_
 
 ## Assertions
 
-- `Verify:` Behavior that happened.
-- `Assert:` Playwright check needed.
+- `Verify:` behavior that happened
+- `Assert:` Playwright check needed
 
-## Stability notes
+## Stability Notes
 
-- Log: dynamic IDs, long waits, flake risk, useful traces.
+Dynamic IDs, long waits, flake risk, useful traces.
 
 ---
 
-# Templates (Pick One)
+# Templates
 
 ## POM Discovery
 
-- **Steps:** `[Nav]`, `[UI]`
-- **Locators:** New elements.
-- **State:** Before/After visual limits.
-- **Stability:** Selectors, loads.
+Steps: `[Nav]`, `[UI]` · Locators: new elements · Stability: selectors, loads
 
 ## API Setup
 
-- **Steps:** `[API]`, then `[UI]/[Nav]` checks.
-- **Locators:** Verification elements.
-- **Assertion:** End-state expectation.
-- **Stability:** Race conditions.
+Steps: `[API]` then `[UI]/[Nav]` checks · Locators: verification elements · Assertion: end-state · Stability: race conditions
 
 ## Bug Investigation
 
-- **Steps:** `[Auth]`, `[Nav]`, `[UI]`
-- **State:** Before/After (highlight explicit error!).
-- **Stability:** Intermittent triggers.
-- **IMPORTANT:** If a bug is confirmed, use `bugReport.md` (`/bugReport`) to format the report.
+Steps: `[Auth]`, `[Nav]`, `[UI]` · State: before/after (highlight error) · Stability: intermittent triggers
+→ If bug confirmed: use `bugReport.md` (`/bugReport`) to format the report.
