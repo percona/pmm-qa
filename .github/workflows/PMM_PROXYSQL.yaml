@@ -87,7 +87,7 @@ jobs:
         run: docker run --detach --restart always -p 443:8443 -p 8081:8080 --name pmm-server ${{ env.PMM_SERVER_IMAGE }}
 
       - name: Checkout pmm-qa
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ inputs.pmm_qa_branch || 'main' }}
 
