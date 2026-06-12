@@ -8,7 +8,7 @@ Help()
    echo "Custom PMM 3 Client installation script. To handle custom installations path and"
    echo "To handle custom installation path and port listening tests"
    echo
-   echo "Syntax: pmm3_client_install_tarball.sh [-v X.XX.X] [-p /my/path] [-h|l]"
+   echo "Syntax: pmm3_client_install_tarball.sh [-v X.XX.X] [-p /my/path] [-r testing|release] [-h|l|u]"
    echo "options:"
    echo "h     Print this Help."
    echo "v     Installing specified version 3.XX.X or feature build, ex: PR-2734-6fe2553"
@@ -18,6 +18,7 @@ Help()
    echo "l     listening custom port mode. Sets default version to 3.0.0 if no version specified"
    echo "u     PMM-Agent can be updated from tarball: run ./install_tarball script with the “-u” flag."
    echo "      The configuration file will not be overwritten with “-u” flag while the pmm-agent is updated."
+   echo "r     Repo to download tarball from. Valid values: testing (default) or release."
 }
 
 ### Defaults
@@ -33,7 +34,7 @@ repo="testing"
 ############################################################
 # Process the input options.                               #
 ############################################################
-while getopts "v:p:hlu" option; do
+while getopts "v:p:r:hlu" option; do
    case $option in
       h) # display Help
         Help
@@ -94,24 +95,23 @@ elif [[ "$architecture" == "x86_64" ]]; then
 fi
 
 if [[ "$architecture" == "arm64" ]]; then
-  if [[ "$repo" == "testing"]]; then
+  if [[ "$repo" == "testing" ]]; then
     tarball_url=https://downloads.percona.com/downloads/TESTING/pmm-arm/pmm-client-${version}.tar.gz
-  elif [[ "$repo" = "release"]]; then
+  elif [[ "$repo" == "release" ]]; then
     tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/pmm-client-${version}-aarch64.tar.gz
   else
-    print "Value for repo: $repo is not valid. Valid values are: testing or release"
-    exit 1;
+    echo "Value for repo: '$repo' is not valid. Valid values are: testing or release"
+    exit 1
   fi
 elif [[ "$architecture" == "amd64" ]]; then
-    if [[ "$repo" == "testing"]]; then
-      tarball_url=https://downloads.percona.com/downloads/TESTING/pmm/pmm-client-${version}.tar.gz
-    elif [[ "$repo" = "release"]]; then
-      tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/pmm-client-${version}-x86_64.tar.gz
-    else
-      print "Value for repo: $repo is not valid. Valid values are: testing or release"
-      exit 1;
-    fi
-    ${client_tar}
+  if [[ "$repo" == "testing" ]]; then
+    tarball_url=https://downloads.percona.com/downloads/TESTING/pmm/pmm-client-${version}.tar.gz
+  elif [[ "$repo" == "release" ]]; then
+    tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/pmm-client-${version}-x86_64.tar.gz
+  else
+    echo "Value for repo: '$repo' is not valid. Valid values are: testing or release"
+    exit 1
+  fi
 fi
 
 if [ -n "${fb}" ]; then
