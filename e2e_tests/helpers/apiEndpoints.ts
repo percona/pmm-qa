@@ -3,6 +3,10 @@ const apiEndpoints = {
     roles: '/v1/accesscontrol/roles',
     rolesAssign: '/v1/accesscontrol/roles:assign',
   },
+  alerting: {
+    rules: '/v1/alerting/rules',
+    templates: '/v1/alerting/templates',
+  },
   backups: {
     artifacts: '/v1/backups/artifacts',
     locations: '/v1/backups/locations',
