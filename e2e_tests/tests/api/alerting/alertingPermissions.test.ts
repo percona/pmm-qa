@@ -19,7 +19,7 @@ pmmTest.afterEach(async ({ request }) => {
 // denies a forbidden write with HTTP 403 / code 7 (PermissionDenied) before the request
 // reaches the backend, so the request body is irrelevant for the Viewer assertions.
 pmmTest(
-  'PMM-15138 - Viewer cannot create/update/delete alert templates or rules; Editor can @alerting',
+  'PMM-15138 - Viewer cannot create/update/delete alert templates or rules; Editor can @alerting-api',
   async ({ request }) => {
     const suffix = Date.now();
     const viewer = { login: `viewer-${suffix}`, password: 'Viewer-pw-12345' };
