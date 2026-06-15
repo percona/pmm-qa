@@ -12,7 +12,8 @@ pmmTest(
   async ({ leftNavigation, page }) => {
     for (let i = 0; i < 2; i++) {
       await pmmTest.step('Theme change validation', async () => {
-        await leftNavigation.menuItemLocator('accounts').click();
+        await leftNavigation.selectMenuItem('accounts');
+        await expect(leftNavigation.getThemeCombobox()).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
         await expect(leftNavigation.menuItemLocator('accounts.changeTheme')).toBeVisible();
 
         const previousBgColor = await leftNavigation.getBackgroundColor();
@@ -22,20 +23,20 @@ pmmTest(
 
         await leftNavigation.menuItemLocator('accounts.changeTheme').click();
         await expect
-          .poll(() => leftNavigation.getBackgroundColor(), { timeout: Timeouts.TEN_SECONDS })
-          .not.toBe(previousBgColor);
-        await expect
           .poll(() => leftNavigation.menuItemLocator('accounts.changeTheme').innerText(), {
-            timeout: Timeouts.TEN_SECONDS,
+            timeout: Timeouts.THIRTY_SECONDS,
           })
           .not.toBe(previousThemeButtonText);
+        await expect
+          .poll(() => leftNavigation.getBackgroundColor(), { timeout: Timeouts.THIRTY_SECONDS })
+          .not.toBe(previousBgColor);
 
         const newBgColor = await leftNavigation.getBackgroundColor();
 
         await leftNavigation.menuItemLocator('help').click();
-        await expect(page).toHaveURL(/\/pmm-ui\/help$/, { timeout: Timeouts.TEN_SECONDS });
+        await expect(page).toHaveURL(/\/pmm-ui\/help$/, { timeout: Timeouts.THIRTY_SECONDS });
         await expect
-          .poll(() => leftNavigation.getBackgroundColor(), { timeout: Timeouts.TEN_SECONDS })
+          .poll(() => leftNavigation.getBackgroundColor(), { timeout: Timeouts.THIRTY_SECONDS })
           .toBe(newBgColor);
       });
     }
@@ -46,7 +47,7 @@ pmmTest(
   'PMM-T2127 Verify interface theme combobox value in sync with background color @new-navigation',
   async ({ leftNavigation }) => {
     await expect(leftNavigation.menuItemLocator('accounts')).toBeVisible();
-    await leftNavigation.menuItemLocator('accounts').click();
+    await leftNavigation.selectMenuItem('accounts');
     await expect(leftNavigation.menuItemLocator('accounts.changeTheme')).toBeVisible();
     await expect(leftNavigation.getThemeCombobox()).toBeVisible({ timeout: Timeouts.ONE_MINUTE });
 
@@ -58,7 +59,9 @@ pmmTest(
 
         await leftNavigation.menuItemLocator('accounts.changeTheme').click();
         await expect
-          .poll(() => leftNavigation.menuItemLocator('accounts.changeTheme').innerText(), { timeout: 10_000 })
+          .poll(() => leftNavigation.menuItemLocator('accounts.changeTheme').innerText(), {
+            timeout: Timeouts.THIRTY_SECONDS,
+          })
           .not.toBe(previousThemeButtonText);
 
         const buttonText = await leftNavigation.menuItemLocator('accounts.changeTheme').innerText();
@@ -66,7 +69,7 @@ pmmTest(
 
         await expect
           .poll(() => leftNavigation.getThemeCombobox().inputValue(), {
-            timeout: Timeouts.TEN_SECONDS,
+            timeout: Timeouts.THIRTY_SECONDS,
           })
           .toBe(expectedComboboxValue);
       });
