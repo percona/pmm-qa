@@ -140,7 +140,7 @@ jobs:
           sha: ${{ env.SHA }}
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
       - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
         run: |

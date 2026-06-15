@@ -133,7 +133,7 @@ jobs:
           result-encoding: string
 
       - name: Checkout pmm-qa repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
