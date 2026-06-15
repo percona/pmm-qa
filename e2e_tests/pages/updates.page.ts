@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 import GrafanaHelper from '@helpers/grafana.helper';
@@ -16,15 +16,13 @@ export default class UpdatesPage extends BasePage {
   homeUrl = '/pmm-ui/graph/';
   builders = {};
   buttons = {
-    goToUpdates: this.page.getByTestId('update-modal-go-to-updates-button'),
-    releaseNotes: this.page.getByTestId('update-modal-release-notes-link'),
     updateNow: this.page.getByRole('button', { name: 'Update now' }),
+    whatsNew: this.grafanaIframe().getByRole('link', { name: "What's new" }),
   };
   elements = {
     availableSection: this.page.getByRole('heading', { name: /New update available/i }),
     newVersionLine: this.page.locator('p').filter({ hasText: 'New version:' }),
     pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
-    updateModalTitle: this.page.getByTestId('modal-title'),
   };
   inputs = {};
   messages = {};
@@ -52,9 +50,9 @@ export default class UpdatesPage extends BasePage {
       await this.elements.pageTitle.waitFor({ state: 'visible' });
     });
 
-  openHomeForUpdateModal = async (): Promise<void> =>
-    await pmmTest.step('Open home page to show update modal', async () => {
+  openHomeForWhatsNew = async (): Promise<void> =>
+    await pmmTest.step('Open home page', async () => {
       await this.page.goto(this.homeUrl);
-      await this.buttons.releaseNotes.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
+      await expect(this.buttons.whatsNew).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     });
 }

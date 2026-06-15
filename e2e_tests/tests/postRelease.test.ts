@@ -3,7 +3,11 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
-const expectedVersion = process.env.PMM_SERVER_LATEST?.trim() as string;
+if (!process.env.PMM_SERVER_LATEST?.trim()) {
+  throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
+}
+
+const expectedVersion = process.env.PMM_SERVER_LATEST.trim();
 
 pmmTest.beforeEach(async ({ context, page }) => {
   await page.unroute(apiEndpoints.server.updates);
@@ -42,29 +46,21 @@ pmmTest(
   "PMM-T2201 - Verify What's new link and release notes @post-release",
   async ({ grafanaHelper, updatesPage }) => {
     await grafanaHelper.authorize();
-    await updatesPage.openHomeForUpdateModal();
+    await updatesPage.openHomeForWhatsNew();
 
-    await pmmTest.step('Verify Release Notes link is displayed in the update modal', async () => {
-      await expect(updatesPage.elements.updateModalTitle).toContainText(expectedVersion);
-      await expect(updatesPage.buttons.releaseNotes).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-      await expect(updatesPage.buttons.releaseNotes).toHaveAttribute(
+    await pmmTest.step("Verify What's new link on home page", async () => {
+      await expect(updatesPage.buttons.whatsNew).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+      await expect(updatesPage.buttons.whatsNew).toHaveAttribute(
         'href',
         new RegExp(`per\\.co\\.na/pmm/${expectedVersion.replaceAll('.', '\\.')}`),
       );
     });
 
     await pmmTest.step('Open release notes and verify the released version', async () => {
-      const { href, newTab } = await updatesPage.clickReleaseNotes(updatesPage.buttons.releaseNotes);
+      const { newTab } = await updatesPage.clickReleaseNotes(updatesPage.buttons.whatsNew);
 
-      expect(href, 'Release Notes link should point to the GA release notes URL').toMatch(
-        new RegExp(`per\\.co\\.na/pmm/${expectedVersion.replaceAll('.', '\\.')}`),
-      );
-      await newTab.waitForLoadState();
-      expect(newTab.url(), 'Release notes should open Percona documentation').toMatch(
-        /per\.co\.na|percona\.com|docs\.percona\.com/,
-      );
-      expect(newTab.url(), 'Release notes page should reference the released version').toContain(
-        expectedVersion,
+      await expect(newTab).toHaveURL(
+        `https://docs.percona.com/percona-monitoring-and-management/3/release-notes/${expectedVersion}.html`,
       );
     });
   },
