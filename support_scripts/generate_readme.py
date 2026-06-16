@@ -15,6 +15,8 @@ README = ROOT / "qa-integration" / "README.md"
 DATABASE_OPTIONS = ROOT / "qa-integration" / "pmm_qa" / "scripts" / "database_options.py"
 E2E_README = ROOT / "e2e_tests" / "README.md"
 E2E_TESTS = ROOT / "e2e_tests" / "tests"
+CLI_README = ROOT / "cli" / "README.md"
+CLI_TESTS = ROOT / "cli" / "tests"
 
 SETUPS_START = "<!-- DB-SETUPS-START -->"
 SETUPS_END = "<!-- DB-SETUPS-END -->"
@@ -22,7 +24,13 @@ VARIANTS_START = "<!-- DB-VARIANTS-START -->"
 VARIANTS_END = "<!-- DB-VARIANTS-END -->"
 E2E_TAGS_START = "<!-- E2E-TAGS-START -->"
 E2E_TAGS_END = "<!-- E2E-TAGS-END -->"
+CLI_TAGS_START = "<!-- CLI-TAGS-START -->"
+CLI_TAGS_END = "<!-- CLI-TAGS-END -->"
 TAG_PATTERN = re.compile(r"(?<!@)@[A-Za-z0-9][A-Za-z0-9_-]*\b(?!/)")
+PLAYWRIGHT_TAG_PATTERN = re.compile(
+    r"tag\s*:\s*(?:'(?P<single>@[A-Za-z0-9][A-Za-z0-9_-]*)'|\"(?P<double>@[A-Za-z0-9][A-Za-z0-9_-]*)\"|\[(?P<array>.*?)\])",
+    re.S,
+)
 
 TOPOLOGY = {
     "MYSQL": {"default_topology": "single node", "setup_type": {"replication": "async replication", "gr": "group replication"}},
@@ -121,6 +129,27 @@ def build_e2e_tags() -> str:
     return "\n".join(f"- `{tag}`" for tag in tags)
 
 
+def discover_cli_tags() -> list[str]:
+    tags = set()
+    for test_file in CLI_TESTS.rglob("*.ts"):
+        content = test_file.read_text(encoding="utf-8")
+        for match in PLAYWRIGHT_TAG_PATTERN.finditer(content):
+            if match.group("single"):
+                tags.add(match.group("single"))
+            elif match.group("double"):
+                tags.add(match.group("double"))
+            elif match.group("array"):
+                tags.update(TAG_PATTERN.findall(match.group("array")))
+    return sorted(tags, key=str.lower)
+
+
+def build_cli_tags() -> str:
+    tags = discover_cli_tags()
+    if not tags:
+        raise RuntimeError(f"Cannot find CLI tags in {CLI_TESTS}")
+    return "\n".join(f"- `{tag}`" for tag in tags)
+
+
 def replace_section(content: str, start_marker: str, end_marker: str, replacement: str) -> str:
     pattern = re.compile(rf"{re.escape(start_marker)}.*?{re.escape(end_marker)}", re.S)
     updated, count = pattern.subn(f"{start_marker}\n\n{replacement}\n\n{end_marker}", content)
@@ -129,22 +158,51 @@ def replace_section(content: str, start_marker: str, end_marker: str, replacemen
     return updated
 
 
-def generate() -> None:
+def build_generated_readmes() -> dict[Path, str]:
     database_options = load_database_options()
     content = README.read_text(encoding="utf-8")
     content = replace_section(content, SETUPS_START, SETUPS_END, build_setups(database_options))
     content = replace_section(content, VARIANTS_START, VARIANTS_END, build_variants_table(database_options))
-    README.write_text(content, encoding="utf-8")
 
     e2e_content = E2E_README.read_text(encoding="utf-8")
     e2e_content = replace_section(e2e_content, E2E_TAGS_START, E2E_TAGS_END, build_e2e_tags())
-    E2E_README.write_text(e2e_content, encoding="utf-8")
+
+    cli_content = CLI_README.read_text(encoding="utf-8")
+    cli_content = replace_section(cli_content, CLI_TAGS_START, CLI_TAGS_END, build_cli_tags())
+    return {
+        README: content,
+        E2E_README: e2e_content,
+        CLI_README: cli_content,
+    }
+
+
+def check_generated_readmes(generated_readmes: dict[Path, str]) -> None:
+    stale_readmes = [
+        readme.relative_to(ROOT).as_posix()
+        for readme, generated_content in generated_readmes.items()
+        if readme.read_text(encoding="utf-8") != generated_content
+    ]
+    if stale_readmes:
+        readme_list = "\n".join(f"- {readme}" for readme in stale_readmes)
+        raise RuntimeError(f"Generated README sections are stale. Run support_scripts/generate_readme.py.\n{readme_list}")
+
+
+def generate() -> None:
+    generated_readmes = build_generated_readmes()
+    for readme, generated_content in generated_readmes.items():
+        readme.write_text(generated_content, encoding="utf-8")
     print("README generated sections updated")
 
 
 if __name__ == "__main__":
     try:
-        generate()
+        if len(sys.argv) > 2 or (len(sys.argv) == 2 and sys.argv[1] != "--check"):
+            raise RuntimeError("Usage: support_scripts/generate_readme.py [--check]")
+        if len(sys.argv) == 2:
+            check_generated_readmes(build_generated_readmes())
+            print("README generated sections are up to date")
+        else:
+            generate()
     except Exception as error:
         print(error, file=sys.stderr)
         raise SystemExit(1)

@@ -85,6 +85,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 - `@dashboards`
 - `@docker-configuration`
+- `@downloads`
 - `@ha-settings`
 - `@image-renderer`
 - `@inventory`
@@ -94,6 +95,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-valkey-integration`
+- `@post-release`
 - `@rta`
 - `@settings`
 - `@standalone`

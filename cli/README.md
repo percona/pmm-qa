@@ -38,12 +38,12 @@ Run commands from `cli/`.
 
 ## Tags
 
+<!-- CLI-TAGS-START -->
+
 - `@client-docker`
-- `@client-generic`
 - `@generic`
 - `@haproxy`
-- `@help`
-- `@mongo`
+- `@help-cli`
 - `@mongoDb`
 - `@mysql`
 - `@mysql-conf-file`
@@ -52,15 +52,14 @@ Run commands from `cli/`.
 - `@pgsql`
 - `@proxysql`
 - `@psmdb`
-- `@psmdb-shard`
 - `@server-docker-generic`
 - `@server-only`
 - `@service-removal`
-- `@unregister`
 - `@shard-psmdb`
-- `@haproxy`
-- `@proxysql`
-- `@mongoDb`
+- `@unregister`
+- `@valkey`
+
+<!-- CLI-TAGS-END -->
 
 ## Related Workspaces
 
