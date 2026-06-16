@@ -57,6 +57,10 @@ Run commands from `cli/`.
 - `@server-only`
 - `@service-removal`
 - `@unregister`
+- `@shard-psmdb`
+- `@haproxy`
+- `@proxysql`
+- `@mongoDb`
 
 ## Related Workspaces
 

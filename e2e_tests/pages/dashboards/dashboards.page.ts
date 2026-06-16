@@ -9,6 +9,7 @@ import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
+import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
 
 const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
 const hasKnownNoDataMarker = (panelText: string) =>
@@ -21,6 +22,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
 export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard(this.page);
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
+  readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
     panelByExactName: (panelName: string) =>
@@ -55,7 +57,7 @@ export default class Dashboards extends BasePage {
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
     renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
     summaryPanelText: this.grafanaIframe().locator(
-      '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
+      '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
   };
   inputs = {};
@@ -77,7 +79,10 @@ export default class Dashboards extends BasePage {
 
         const expandButton = item.getByLabel('Expand row');
 
-        if (await expandButton.isVisible()) await expandButton.click();
+        if (await expandButton.isVisible()) {
+          await expandButton.click();
+          await expectPanel(expandButton).toBeHidden();
+        }
 
         await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
       }
@@ -135,14 +140,6 @@ export default class Dashboards extends BasePage {
 
       //eslint-disable-next-line playwright/no-wait-for-timeout -- TODO: improve with better wait
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
-    }
-
-    if (missingMetrics.length > 0) {
-      for (const missingMetric of missingMetrics) {
-        await this.builders.panelByName(missingMetric).screenshot({
-          path: `./screenshots/missing-metric-${missingMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
-        });
-      }
     }
 
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);

@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 import ExecReturn from '@support/types/exec-return.class';
-import { waitForApiReady } from '@helpers/custom-assertions';
+import { waitForApiReady, waitForPmmServerToBeReady } from '@helpers/custom-assertions';
 
 const DOCKER_IMAGE = process.env.DOCKER_VERSION && process.env.DOCKER_VERSION.length > 0
   ? process.env.DOCKER_VERSION
@@ -238,6 +238,24 @@ test.describe(
           'Verify ClickHouse server is not trying to load TLS certificates and reporting modification time errors',
         )
         .not.toContain('CertificateReloader: Cannot obtain modification time');
+    });
+
+    test('PMM-15054 Verify only the expected ClickHouse "system" "*log*" tables are present', async () => {
+      await waitForPmmServerToBeReady('pmm-server');
+
+      await expect(async () => {
+        const output = await cli.exec(
+          `docker exec pmm-server clickhouse client --password=clickhouse -q "SELECT COUNT(*) FROM system.tables WHERE database='system' AND name LIKE '%log%';"`,
+        );
+        await output.assertSuccess();
+        expect(
+          output.stdout.trim(),
+          'Verify ClickHouse "system" database has exactly 5 "*log*" tables',
+        ).toEqual('5');
+      }).toPass({
+        intervals: [2_000, 2_000, 2_000],
+        timeout: 30_000,
+      });
     });
   },
 );

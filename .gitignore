@@ -138,3 +138,11 @@ dist
 # Pytest cache
 **/__pycache__
 **/.pytest_cache
+
+# Local-only QA artifacts/inventory
+/qa-integration/pmm_qa/artifacts/
+/qa-integration/pmm_qa/inventory/
+
+# Local-only k8s helper libs
+/k8s/lib/bats-assert/
+/k8s/lib/bats-support/

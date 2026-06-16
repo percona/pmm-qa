@@ -12,7 +12,7 @@ Before(async ({ I }) => {
 });
 
 Scenario(
-  'PMM-T2039 - Open the Node Summary Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-generic @dashboards @gssapi-nightly',
+  'PMM-T2039 - Open the Node Summary Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
     I.amOnPage(I.buildUrlWithParams(dashboardPage.nodeSummaryDashboard.url, {
       node_name: 'pmm-server',
@@ -26,9 +26,13 @@ Scenario(
 );
 
 Scenario(
-  'Open the Nodes Compare Dashboard and verify Metrics are present and graphs are displayed @nightly @nightly-generic @dashboards @gssapi-nightly',
+  'Open the Nodes Compare Dashboard and verify Metrics are present and graphs are displayed @nightly  @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
-    I.amOnPage(dashboardPage.nodesCompareDashboard.url);
+    const url = I.buildUrlWithParams(dashboardPage.nodesCompareDashboard.url, {
+      from: 'now-1h',
+    });
+
+    I.amOnPage(url);
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     await dashboardPage.verifyMetricsExistencePartialMatch(dashboardPage.nodesCompareDashboard.metrics);
@@ -37,7 +41,7 @@ Scenario(
 );
 
 Data(nodes).Scenario(
-  'PMM-T418 + PMM-T419 - Verify the pt-summary on Node Summary dashboard @nightly @nightly-generic @dashboards @gssapi-nightly',
+  'PMM-T418 + PMM-T419 - Verify the pt-summary on Node Summary dashboard @nightly  @dashboards @gssapi-nightly',
   async ({ I, dashboardPage, adminPage }) => {
     I.amOnPage(dashboardPage.nodeSummaryDashboard.url);
     dashboardPage.waitForDashboardOpened();
@@ -50,7 +54,7 @@ Data(nodes).Scenario(
 
 // TODO: unskip after https://perconadev.atlassian.net/browse/PMM-14748 is fixed
 Scenario.skip(
-  'PMM-T1090 - Verify time zones and navigation between dashboards @nightly @nightly-generic @dashboards @gssapi-nightly',
+  'PMM-T1090 - Verify time zones and navigation between dashboards @nightly  @dashboards @gssapi-nightly',
   async ({
     I, dashboardPage, adminPage, homePage,
   }) => {
@@ -72,7 +76,7 @@ Scenario.skip(
 );
 
 Scenario(
-  'PMM-T1695 - Verify that user is able to filter OS / Node Compare dashboard by Node Name @nightly @nightly-generic @dashboards @gssapi-nightly',
+  'PMM-T1695 - Verify that user is able to filter OS / Node Compare dashboard by Node Name @nightly  @dashboards @gssapi-nightly',
   async ({
     I, dashboardPage, inventoryAPI,
   }) => {

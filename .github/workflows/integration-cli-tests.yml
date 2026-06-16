@@ -65,7 +65,7 @@ jobs:
   # Canonical CLI tag mapping (defined in cli/tests/*.spec.ts):
   # @help, @server-only, @client-docker, @generic, @unregister,
   # @service-removal, @ps, @mysql, @mysql-conf-file, @pdpgsql,
-  # @psmdb, @psmdb-shard, @haproxy, @proxysql, @mongoDb
+  # @psmdb, @shard-psmdb, @haproxy, @proxysql, @mongoDb
   help-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -78,7 +78,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@help'
+      cli_tag: '@help-cli'
       test_name: 'help tests'
 
   pmm-server-tests:
@@ -426,8 +426,8 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@psmdb-shard'
-      services_list: '--database psmdb=7.0,SETUP_TYPE=shards --verbose'
+      cli_tag: '@shard-psmdb'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=sharding --verbose'
       test_name: 'PSMDB Shard 7.x'
 
   psmdb-8-shard-tests:
@@ -442,8 +442,8 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
-      cli_tag: '@psmdb-shard'
-      services_list: '--database psmdb=8.0,SETUP_TYPE=shards --verbose'
+      cli_tag: '@shard-psmdb'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=sharding --verbose'
       test_name: 'PSMDB Shard 8.x'
 
   haproxy-tests:

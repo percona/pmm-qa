@@ -1,7 +1,15 @@
 const moment = require('moment');
 const assert = require('assert');
 
-Feature('QAN timerange').retry(1);
+Feature('QAN timerange');
+
+const expectUrlTimeParamToMatch = (url, param, expectedDateTime, message) => {
+  const actualTime = new URL(url).searchParams.get(param);
+  const expectedTime = moment(expectedDateTime).utc().valueOf();
+  const actualTimeMs = moment(actualTime).isValid() ? moment(actualTime).utc().valueOf() : Number(actualTime);
+
+  assert.ok(Math.abs(actualTimeMs - expectedTime) < 1000, message);
+};
 
 Before(async ({ I, queryAnalyticsPage, codeceptjsConfig }) => {
   await I.usePlaywrightTo('Grant Permissions', async ({ browserContext }) => {
@@ -36,7 +44,7 @@ Before(async ({ I, queryAnalyticsPage, codeceptjsConfig }) => {
 });
 
 Scenario(
-  'Open the QAN Dashboard and check that changing the time range resets current page to the first. @qan @nightly-qan',
+  'Open the QAN Dashboard and check that changing the time range resets current page to the first. @qan',
   async ({ adminPage, queryAnalyticsPage }) => {
     queryAnalyticsPage.data.selectPage('2');
     await adminPage.applyTimeRange('Last 3 hours');
@@ -46,7 +54,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T167 Open the QAN Dashboard and check that changing the time range updates the overview table, URL @qan @nightly-qan',
+  'PMM-T167 Open the QAN Dashboard and check that changing the time range updates the overview table, URL @qan',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {
@@ -65,7 +73,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T432 Open the QAN Dashboard and check that changing absolute time range updates the overview table, URL @qan @nightly-qan',
+  'PMM-T432 Open the QAN Dashboard and check that changing absolute time range updates the overview table, URL @qan',
   async ({
     I, adminPage, queryAnalyticsPage,
   }) => {
@@ -87,7 +95,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T170 Open the QAN Dashboard and check that changing the time range doesn\'t clear "Group by". @qan @nightly-qan',
+  'PMM-T170 Open the QAN Dashboard and check that changing the time range doesn\'t clear "Group by". @qan',
   async ({ I, adminPage, queryAnalyticsPage }) => {
     const group = 'Client Host';
 
@@ -106,7 +114,7 @@ Scenario(
 );
 
 Scenario(
-  'Open the QAN Dashboard and check that changing the time range doesn\'t reset sorting. @qan @nightly-qan',
+  'Open the QAN Dashboard and check that changing the time range doesn\'t reset sorting. @qan',
   async ({ adminPage, queryAnalyticsPage }) => {
     queryAnalyticsPage.changeSorting(1);
     await adminPage.applyTimeRange('Last 24 hours');
@@ -116,7 +124,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1138 - Verify QAN Copy Button for URL @qan @nightly-qan',
+  'PMM-T1138 - Verify QAN Copy Button for URL @qan',
   async ({ I, queryAnalyticsPage }) => {
     I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-12h' }));
     queryAnalyticsPage.waitForLoaded();
@@ -156,7 +164,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1140 - Verify relative time range copy URL from browser @qan @nightly-qan',
+  'PMM-T1140 - Verify relative time range copy URL from browser @qan',
   async ({ I, queryAnalyticsPage }) => {
     const url = new URL(await I.grabCurrentUrl());
     const fromString1 = url.searchParams.get('from');
@@ -177,7 +185,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1141 - Verify specific time range by new button to copy QAN URL @qan @nightly-qan',
+  'PMM-T1141 - Verify specific time range by new button to copy QAN URL @qan',
   async ({ I, adminPage, queryAnalyticsPage }) => {
     const dateTime = moment();
     const to = dateTime.format('YYYY-MM-DD HH:mm:ss');
@@ -201,13 +209,13 @@ Scenario(
 
     adminPage.verifySelectedTimeRange(from, to);
 
-    I.assertContain(secondUrl.split('from=')[1].replaceAll('%20', ' '), moment(from).utc().toISOString(), 'Second Url does not contain selected from date time');
-    I.assertContain(secondUrl.split('to=')[1].replaceAll('%20', ' '), moment(to).utc().toISOString(), 'Second Url does not contain selected to date time');
+    expectUrlTimeParamToMatch(secondUrl, 'from', from, 'Second Url does not contain selected from date time');
+    expectUrlTimeParamToMatch(secondUrl, 'to', to, 'Second Url does not contain selected to date time');
   },
 );
 
 Scenario(
-  'PMM-T1142 - Verify that the table page and selected query are still the same when we go on copied link by new QAN CopyButton @qan @nightly-qan',
+  'PMM-T1142 - Verify that the table page and selected query are still the same when we go on copied link by new QAN CopyButton @qan',
   async ({
     I, queryAnalyticsPage,
   }) => {
@@ -233,10 +241,10 @@ Scenario(
     assert.equal(queryText, queryTextAfter, 'Selected row query text is not the same after reload');
     await I.waitForElement(queryAnalyticsPage.data.buttons.close, 30);
   },
-).retry(2);
+);
 
 Scenario(
-  'PMM-T1143 - Verify columns and filters when we go on copied link by new QAN CopyButton @qan @nightly-qan',
+  'PMM-T1143 - Verify columns and filters when we go on copied link by new QAN CopyButton @qan',
   async ({
     I, queryAnalyticsPage,
   }) => {

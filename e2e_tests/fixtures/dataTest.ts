@@ -13,18 +13,16 @@ import TourPage from '@pages/tour.page';
 import Mocks from '@helpers/mocks.helper';
 import PortalRemoval from '@pages/portalRemoval.page';
 import NodesPage from '@pages/inventory/nodes.page';
-import QueryAnalyticsPage from '@pages/qan/queryAnalytics.page';
 import LeftNavigation from '@pages/navigation.page';
-import AdvancedSettingsPage from '@pages/ha/advancedSettings.page';
+import SettingsPage from '@pages/ha/settings.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
-import LeftNavigation from '@pages/navigation.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 
 interface pmmTestDataType {
-  advancedSettingsPage: AdvancedSettingsPage;
+  settingsPage: SettingsPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -57,7 +55,6 @@ const data = <T>(rows: T[]) => ({
         `${title} | Data: ${JSON.stringify(row)}`,
         async (
           {
-            advancedSettingsPage,
             agentsPage,
             api,
             cliHelper,
@@ -75,6 +72,7 @@ const data = <T>(rows: T[]) => ({
             queryAnalytics,
             realTimeAnalyticsPage,
             servicesPage,
+            settingsPage,
             tour,
             urlHelper,
             vacuumDashboardPage,
@@ -84,7 +82,6 @@ const data = <T>(rows: T[]) => ({
           await fn(
             row,
             {
-              advancedSettingsPage,
               agentsPage,
               api,
               cliHelper,
@@ -102,6 +99,7 @@ const data = <T>(rows: T[]) => ({
               queryAnalytics,
               realTimeAnalyticsPage,
               servicesPage,
+              settingsPage,
               tour,
               urlHelper,
               vacuumDashboardPage,

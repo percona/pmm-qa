@@ -115,7 +115,7 @@ Scenario(
       }
     }
   },
-).retry(2);
+);
 
 Scenario(
   'Verify QAN after PS Instances is added @pmm-ps-integration @not-ui-pipeline',

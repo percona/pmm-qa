@@ -2,13 +2,19 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
+let sortedHostNames: string[];
+
 pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
 
-  const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+  const service1 = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+  const service2 = await api.inventoryApi.getServiceDetailsByPartialName('rs102');
 
-  await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
-  await page.goto(queryAnalytics.rta.getUrlWithServices([service.service_id]));
+  sortedHostNames = [service1.service_name, service2.service_name].sort();
+
+  await api.realTimeAnalyticsApi.startRealTimeAnalytics(service1.service_id);
+  await api.realTimeAnalyticsApi.startRealTimeAnalytics(service2.service_id);
+  await page.goto(queryAnalytics.rta.getUrlWithServices([service1.service_id, service2.service_id]));
 });
 
 pmmTest(
@@ -88,3 +94,93 @@ pmmTest(
     });
   },
 );
+
+pmmTest(
+  'PMM-T2184 Verify RTA overview sorting by query text @rta',
+  async ({ mongoDbHelper, page, queryAnalytics }) => {
+    const queryLabels = ['rta-sort-alpha', 'rta-sort-bravo', 'rta-sort-charlie'];
+
+    await pmmTest.step('Simulate long running queries', async () => {
+      for (const queryLabel of queryLabels) {
+        void mongoDbHelper.simulateLongRunningQuery({
+          delayMs: Timeouts.TEN_SECONDS,
+          queryLabel,
+        });
+
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- stagger query start time for predictable rows
+        await page.waitForTimeout(500);
+      }
+
+      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-sort')).toHaveCount(3, {
+        timeout: Timeouts.TEN_SECONDS,
+      });
+    });
+
+    await pmmTest.step('Pause RTA and filter sorting queries', async () => {
+      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+      await queryAnalytics.rta.filterQueriesByText('rta-sort');
+
+      await expect(queryAnalytics.rta.builders.rowByQueryText('rta-sort')).toHaveCount(3);
+    });
+
+    await pmmTest.step('Verify ascending sorting by query text', async () => {
+      await queryAnalytics.rta.clickQueryTextHeader();
+
+      await expect(queryAnalytics.rta.builders.queryByRowIndex('1')).toContainText('rta-sort-alpha');
+      await expect(queryAnalytics.rta.builders.queryByRowIndex('2')).toContainText('rta-sort-bravo');
+      await expect(queryAnalytics.rta.builders.queryByRowIndex('3')).toContainText('rta-sort-charlie');
+    });
+
+    await pmmTest.step('Verify descending sorting by query text', async () => {
+      await queryAnalytics.rta.clickQueryTextHeader();
+
+      await expect(queryAnalytics.rta.builders.queryByRowIndex('1')).toContainText('rta-sort-charlie');
+      await expect(queryAnalytics.rta.builders.queryByRowIndex('2')).toContainText('rta-sort-bravo');
+      await expect(queryAnalytics.rta.builders.queryByRowIndex('3')).toContainText('rta-sort-alpha');
+    });
+  },
+);
+
+pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnalytics }) => {
+  await pmmTest.step('Wait for queries from both services', async () => {
+    await expect
+      .poll(
+        async () =>
+          await queryAnalytics.rta.builders
+            .rowByQueryText('hello')
+            .filter({ hasText: sortedHostNames[0] })
+            .count(),
+        { timeout: Timeouts.TEN_SECONDS },
+      )
+      .toBeGreaterThan(0);
+    await expect
+      .poll(
+        async () =>
+          await queryAnalytics.rta.builders
+            .rowByQueryText('hello')
+            .filter({ hasText: sortedHostNames[1] })
+            .count(),
+        { timeout: Timeouts.TEN_SECONDS },
+      )
+      .toBeGreaterThan(0);
+  });
+
+  await pmmTest.step('Pause RTA and filter common queries', async () => {
+    await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+    await queryAnalytics.rta.filterQueriesByText('hello');
+  });
+
+  await pmmTest.step('Verify ascending sorting by Host', async () => {
+    await queryAnalytics.rta.clickHostHeader();
+
+    await expect(queryAnalytics.rta.builders.hostForRow('1')).toContainText(sortedHostNames[0]);
+    await expect(queryAnalytics.rta.builders.hostForLastRow()).toContainText(sortedHostNames[1]);
+  });
+
+  await pmmTest.step('Verify descending sorting by Host', async () => {
+    await queryAnalytics.rta.clickHostHeader();
+
+    await expect(queryAnalytics.rta.builders.hostForRow('1')).toContainText(sortedHostNames[1]);
+    await expect(queryAnalytics.rta.builders.hostForLastRow()).toContainText(sortedHostNames[0]);
+  });
+});

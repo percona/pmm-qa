@@ -48,22 +48,20 @@ Data(instances).Scenario(
   },
 );
 
-Data(instances)
-  .Scenario(
-    'PMM-T138 + PMM-T139 - Verify disabling enhanced metrics for RDS, Verify disabling basic metrics for RDS, PMM-T9 Verify adding RDS instances has Status Running [critical] @instances',
-    async ({ I, pmmInventoryPage, current }) => {
-      const { instance } = current;
+Data(instances).Scenario(
+  'PMM-T138 + PMM-T139 - Verify disabling enhanced metrics for RDS, Verify disabling basic metrics for RDS, PMM-T9 Verify adding RDS instances has Status Running [critical] @instances',
+  async ({ I, pmmInventoryPage, current }) => {
+    const { instance } = current;
 
-      const instanceIdToMonitor = getInstance(instance)['Service Name'];
+    const instanceIdToMonitor = getInstance(instance)['Service Name'];
 
-      I.amOnPage(pmmInventoryPage.url);
-      pmmInventoryPage.verifyRemoteServiceIsDisplayed(instanceIdToMonitor);
-      await pmmInventoryPage.verifyAgentHasStatusRunning(instanceIdToMonitor);
-      // Waiting for metrics to start hitting PMM-Server
-      I.wait(20);
-    },
-  )
-  .retry(2);
+    I.amOnPage(pmmInventoryPage.url);
+    pmmInventoryPage.verifyRemoteServiceIsDisplayed(instanceIdToMonitor);
+    await pmmInventoryPage.verifyAgentHasStatusRunning(instanceIdToMonitor);
+    // Waiting for metrics to start hitting PMM-Server
+    I.wait(20);
+  },
+);
 
 // PMM-13750 Unable to add RDS instance on multiple nodes
 Scenario.skip(

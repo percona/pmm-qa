@@ -72,7 +72,7 @@ Scenario(
       return targets.health === 'up';
     }, 60, 'Active Target for external service Post Upgrade health value is not up!');
   },
-).retry(2);
+);
 
 Data(remoteUpgradeInstances).Scenario(
   'PMM-T2073 - Verify Agents are RUNNING after Upgrade (API) [critical] @post-external-upgrade @post-client-upgrade',

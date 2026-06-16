@@ -2,12 +2,12 @@ Feature('QAN pagination');
 
 Before(async ({ I, queryAnalyticsPage }) => {
   await I.Authorize();
-  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m' }));
+  I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-60m' }));
   queryAnalyticsPage.waitForLoaded();
 });
 
 Scenario(
-  'PMM-T128 - Verify qanPagination works correctly @qan @nightly-qan',
+  'PMM-T128 - Verify qanPagination works correctly @qan',
   async ({ I, queryAnalyticsPage }) => {
     await queryAnalyticsPage.data.verifySelectedCountPerPage('25 / page');
     const countOfItems = await queryAnalyticsPage.data.getCountOfItems();
@@ -48,7 +48,7 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T193 - Verify user is able to change per page elements display and qanPagination is updated according to this value, PMM-T256 - Verify that switching view from 25 to 50/100 pages works correctly @qan @nightly-qan',
+  'PMM-T193 - Verify user is able to change per page elements display and qanPagination is updated according to this value, PMM-T256 - Verify that switching view from 25 to 50/100 pages works correctly @qan',
   async ({ queryAnalyticsPage }) => {
     const countOfItems = await queryAnalyticsPage.data.getCountOfItems();
 

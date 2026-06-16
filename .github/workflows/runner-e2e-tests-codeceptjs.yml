@@ -133,7 +133,7 @@ jobs:
           result-encoding: string
 
       - name: Checkout pmm-qa repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
@@ -230,6 +230,7 @@ jobs:
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        id: execute_tests
         working-directory: pmm-qa/codeceptjs-e2e
         env:
           SERVER_IP : "127.0.0.1"
@@ -239,7 +240,16 @@ jobs:
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
 
-          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "${{ env.SUBSET_FILE_NAME }}")" || true
+          set +e
+          ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}" --reporter mocha-multi -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
+          CODECEPT_EXIT=$?
+          set -e
+          echo "codecept_exit_code=${CODECEPT_EXIT}" >> "$GITHUB_OUTPUT"
+          if [ "${CODECEPT_EXIT}" -ne 0 ]; then
+            echo "codecept_failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "codecept_failed=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Download logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
@@ -264,7 +274,7 @@ jobs:
           launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ always() && (failure() || steps.execute_tests.outputs.codecept_failed == 'true') }}
         continue-on-error: true
         with:
           name: "artifacts_for_${{ steps.tags_processed.outputs.result }}"

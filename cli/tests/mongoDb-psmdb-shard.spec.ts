@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 
-test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@psmdb-shard' }, async () => {
+test.describe('Percona Server MongoDB (PSMDB) CLI tests', { tag: '@shard-psmdb' }, async () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep rscfg01 | awk \'{print $NF}\'');
     await result.outContains('rscfg01', 'PSMDB rscfg01 docker container should exist. please run pmm-framework with --database psmdb,SETUP_TYPE=shards');

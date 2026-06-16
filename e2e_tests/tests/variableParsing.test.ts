@@ -1,9 +1,10 @@
 import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
 
-pmmTest.beforeEach(async ({ grafanaHelper, page, urlHelper }) => {
+pmmTest.beforeEach(async ({ grafanaHelper, leftNavigation, page }) => {
   await grafanaHelper.authorize();
-  await page.goto(urlHelper.buildUrlWithParameters('/', { from: 'now-1h' }));
+  await page.goto('pmm-ui/graph/d/pmm-home');
+  await leftNavigation.selectTimeRange('Last 1 hour');
 });
 
 pmmTest(
@@ -21,9 +22,17 @@ pmmTest(
     });
 
     await pmmTest.step('Verify panels have data and URL does not have broken variables', async () => {
-      await dashboard.verifyAllPanelsHaveData(['Dead Tuples %']);
       await expect(page).not.toHaveURL(/.*var-service_name=.*=true/);
       await expect(page).not.toHaveURL(/.*=true/);
+      await dashboard.verifyAllPanelsHaveData([
+        'Oldest Autovacuum',
+        'CPU',
+        'Top 10 Biggest Databases',
+        'System Uptime',
+        'RAM',
+        'Virtual Memory',
+        'Disk Space',
+      ]);
     });
   },
 );

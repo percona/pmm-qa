@@ -19,7 +19,7 @@
     query_source: "{{ lookup('env', 'QUERY_SOURCE') | default('pgstatements', true) }}"
     metrics_mode: "auto"
     setup_type: "{{ lookup('env', 'SETUP_TYPE') }}"
-    random_service_name_value: ""
+    random_service_name_value: "_{{ 9999 | random + 1 }}"
     docker_repo: "percona/percona-distribution-postgresql"
     container_prefix: "pdpgsql_pmm{{ (setup_type|default('')) and '_' ~ setup_type }}_{{ pdpgsql_version }}_"
     pgsm_branch: "{{ lookup('env', 'PGSM_BRANCH') }}"

@@ -2,20 +2,24 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-let serviceId: string;
+let rs101ServiceId: string;
+let rs102ServiceId: string;
 
 pmmTest.beforeEach(async ({ api, grafanaHelper }) => {
   await grafanaHelper.authorize();
 
-  const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+  const service1 = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+  const service2 = await api.inventoryApi.getServiceDetailsByPartialName('rs102');
 
-  serviceId = service.service_id;
+  rs101ServiceId = service1.service_id;
+  rs102ServiceId = service2.service_id;
 });
 
 pmmTest(
   'PMM-T2181 Verify redirect to selection page when no session exists @rta',
   async ({ api, page, queryAnalytics }) => {
-    await api.realTimeAnalyticsApi.stopRealTimeAnalytics(serviceId);
+    await api.realTimeAnalyticsApi.stopRealTimeAnalytics(rs101ServiceId);
+    await api.realTimeAnalyticsApi.stopRealTimeAnalytics(rs102ServiceId);
 
     await pmmTest.step('Navigate directly to /rta/overview', async () => {
       await page.goto(queryAnalytics.rta.url);
@@ -31,7 +35,7 @@ pmmTest(
 );
 
 pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api, page, queryAnalytics }) => {
-  await api.realTimeAnalyticsApi.startRealTimeAnalytics(serviceId);
+  await api.realTimeAnalyticsApi.startRealTimeAnalytics(rs101ServiceId);
 
   await pmmTest.step('Navigate directly to overview', async () => {
     await page.goto(queryAnalytics.rta.url);
