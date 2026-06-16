@@ -166,7 +166,6 @@ jobs:
       setup_services: '--database mysql'
       tags_for_tests: '@fb-alerting|@fb-settings'
  
-  # TODO: this section can accomodate the tests migrated from CodeceptJS to Playwright.
   alerting:
     name: Alerting tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
