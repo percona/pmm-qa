@@ -167,8 +167,8 @@ jobs:
       tags_for_tests: '@fb-alerting|@fb-settings'
  
   # TODO: this section can accomodate the tests migrated from CodeceptJS to Playwright.
-  alerting_api:
-    name: Alerting permissions API tests
+  alerting:
+    name: Alerting tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
@@ -178,7 +178,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
       setup_services: '-h'
-      pmm_test_flag: '@alerting-api'
+      pmm_test_flag: '@alerting'
 
   user_and_password:
     name: User with changed password UI tests
