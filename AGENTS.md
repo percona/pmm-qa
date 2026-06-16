@@ -90,6 +90,8 @@ To find the entry workflow for a suite, search `runner-<suite>*.yml` in [.github
 
 Full Release-Candidate testing is **not** driven from this repo. The orchestrator is the Jenkins pipeline [`Percona-Lab/jenkins-pipelines` › `pmm/v3/pmm3-rc-testing.groovy`](https://github.com/Percona-Lab/jenkins-pipelines/blob/master/pmm/v3/pmm3-rc-testing.groovy). For a given `RC_VERSION` it runs three parallel lanes:
 
-- **Lane 1**: `pmm3-ui-tests-nightly` against the AMI plus the last 5 GA `percona/pmm-client` tags (backward-compatibility).
-- **Lane 2**: `pmm3-ui-tests-nightly` for OVF / Docker / Helm / HA, `pmm3-ui-tests-nightly-gssapi`, `openshift-helm-tests`.
+- **Lane 1**: `pmm3-ui-tests-nightly-gha` against the AMI plus the last 5 GA `percona/pmm-client` tags (backward-compatibility; compat lanes skipped on patch RCs).
+- **Lane 2**: `pmm3-ui-tests-nightly-gha` for OVF / Docker / Helm / HA, `pmm3-ui-tests-nightly-gssapi`, `openshift-helm-tests`.
 - **Lane 3**: `pmm3-migration-tests`, `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`rc-testing-suite.yml`](.github/workflows/rc-testing-suite.yml).
+
+**Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `rc-testing-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.

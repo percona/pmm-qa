@@ -35,6 +35,11 @@ on:
         required: false
         default: '17'
         type: string
+      skip_compatibility:
+        description: 'Skip backward-compatibility CLI matrix (patch RCs)'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   get_compat_versions:
@@ -83,6 +88,7 @@ jobs:
       pmm_client_version: pmm3-rc
 
   compatibility_integration_tests:
+    if: ${{ !inputs.skip_compatibility }}
     name: Compatibility CLI (${{ matrix.version }})
     needs: plan
     strategy:
