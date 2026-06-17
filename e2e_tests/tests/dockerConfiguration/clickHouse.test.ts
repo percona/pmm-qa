@@ -7,9 +7,6 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
   const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
-    // Note: cliHelper.execSilent strips newlines before running, so the multi-line
-    // template literal below is collapsed into a single command — the indentation on
-    // each continuation line provides the whitespace between args after the strip.
     cliHelper.execSilent(
       `docker run -d
         --name pmm-clickhouse
@@ -36,11 +33,12 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         ${dockerVersion}`,
     );
     console.log(cliHelper.execSilent('docker ps'));
+    console.log(cliHelper.execSilent(`docker logs ${dockerContainerName}`));
   });
 
   pmmTest(
     'PMM-T9997 - Verify that ClickHouse configuration can be controlled using environment variables @docker-configuration',
-    async ({ api, cliHelper, page }) => {
+    async ({ api, cliHelper }) => {
       const baseUrl = `https://127.0.0.1:449`;
 
       await api.serverApi.waitForReady(baseUrl);
