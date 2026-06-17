@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe('PMM Tests to verify external clickhouse', () => {
   const dockerContainerName = 'pmm-server-external-clickhouse';
@@ -24,12 +25,8 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
 
   pmmTest(
     'PMM-T9997 - Verify that ClickHouse configuration can be controlled using environment variables @docker-configuration',
-    async ({ api, cliHelper }) => {
-      console.log('Test');
-
-      const baseUrl = `https://127.0.0.1:449`;
-
-      await api.serverApi.waitForReady(baseUrl);
+    async ({ api, cliHelper, page }) => {
+      await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
 
       const logs = cliHelper.execSilent(
         `docker exec ${dockerContainerName} cat /srv/logs/victoriametrics.log | grep clickhouse`,
@@ -37,6 +34,15 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
 
       console.log('Logs are:');
       console.log(logs);
+
+      const baseUrl = `https://127.0.0.1:449`;
+
+      await api.serverApi.waitForReady(baseUrl);
+
+
+      expect(logs.stdout, 'victoriametrics should be configured against the external ClickHouse').toContain(
+        'clickhouse',
+      );
     },
   );
 });
