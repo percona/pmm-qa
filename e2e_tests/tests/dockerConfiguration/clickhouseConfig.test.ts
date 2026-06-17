@@ -2,6 +2,8 @@ import pmmTest from '@fixtures/pmmTest';
 import dataTest from '@fixtures/dataTest';
 
 pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
+  pmmTest.describe.configure({ mode: 'serial' });
+
   const dockerContainerName = 'pmm-server-clickhouse-config';
   const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
   const configuration = [
