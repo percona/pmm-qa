@@ -42,8 +42,6 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
         `docker exec ${dockerContainerName} cat /srv/logs/clickhouse-server.log | grep "config"`,
       );
 
-      console.log(configName);
-
       expect(
         configName.stdout,
         `Config name should be: ${data.configName} but actual value is: ${configName}`,
