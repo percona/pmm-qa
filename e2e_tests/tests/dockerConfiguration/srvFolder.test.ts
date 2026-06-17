@@ -40,7 +40,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
       const baseUrl = `https://127.0.0.1:${data.port}/`;
 
       cliHelper.execSilent(data.command);
-      await api.serverApi.waitForReady();
+      await api.serverApi.waitForReady(baseUrl);
 
       const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
 

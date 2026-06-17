@@ -10,18 +10,20 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
     {
       command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 --publish 83:8080 --publish 446:8443 --name ${dockerContainerName} ${dockerVersion}`,
       configName: 'default-config',
-      port: 444,
+      port: 446,
     },
     {
       command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 --publish 84:8080 --publish 447:8443 --name ${dockerContainerName} ${dockerVersion}`,
       configName: 'docker volume',
-      port: 445,
+      port: 447,
     },
   ];
 
   dataTest(configuration).pmmTest('PMM-T9999 @docker-configuration', async (data, { api, cliHelper }) => {
+    const baseUrl = `https://127.0.0.1:${data.port}/`;
+
     cliHelper.execSilent(data.command);
-    await api.serverApi.waitForReady();
+    await api.serverApi.waitForReady(baseUrl);
 
     const configName = cliHelper.execSilent(
       `docker exec ${dockerContainerName} cat /srv/logs/clickhouse-server.log | grep "config"`,

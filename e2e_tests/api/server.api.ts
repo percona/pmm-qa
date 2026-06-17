@@ -5,8 +5,10 @@ import { pmmUrl } from '../playwright.config';
 export default class ServerApi {
   constructor(private request: APIRequestContext) {}
 
-  waitForReady = async (overallTimeoutMs: Timeouts = Timeouts.ONE_MINUTE): Promise<void> => {
-    const url = `${pmmUrl}/v1/server/readyz`;
+  waitForReady = async (
+    serverUrl = `${pmmUrl}/v1/server/readyz`,
+    overallTimeoutMs: Timeouts = Timeouts.ONE_MINUTE,
+  ): Promise<void> => {
     const pollIntervalMs = Timeouts.FIVE_SECONDS;
     const deadline = Date.now() + overallTimeoutMs;
     let lastError: unknown;
@@ -14,7 +16,7 @@ export default class ServerApi {
 
     while (Date.now() < deadline) {
       try {
-        const res = await this.request.get(url, { ignoreHTTPSErrors: true });
+        const res = await this.request.get(serverUrl, { ignoreHTTPSErrors: true });
 
         if (res.status() === 200) {
           console.log(`PMM Server returned status: ${res.status()}`);
