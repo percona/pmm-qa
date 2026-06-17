@@ -10,6 +10,7 @@ export default class GrafanaHelper {
     await this.page.setExtraHTTPHeaders({ Authorization: `Basic ${authToken}` });
     await this.page.request.post(`${baseUrl}graph/login`, {
       data: { password, user: username },
+      ignoreHTTPSErrors: true,
     });
 
     return this.page;
