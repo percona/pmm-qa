@@ -58,6 +58,12 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
 
       console.log('Logs are:');
       console.log(logs);
+      expect(logs.stdout, `Stdout for clickhouse logs should be empty but is: ${logs.stdout}`).toHaveLength(
+        0,
+      );
+      expect(logs.stderr, `Stderr for clickhouse logs should be empty but is: ${logs.stderr}`).toHaveLength(
+        0,
+      );
     },
   );
 });
