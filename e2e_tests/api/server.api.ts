@@ -9,6 +9,8 @@ export default class ServerApi {
     const url = `${pmmUrl}/v1/server/readyz`;
     const pollIntervalMs = Timeouts.FIVE_SECONDS;
     const deadline = Date.now() + overallTimeoutMs;
+    let lastError: unknown;
+    let lastStatus: number | undefined;
 
     while (Date.now() < deadline) {
       try {
@@ -18,13 +20,16 @@ export default class ServerApi {
           // ready — resolve normally
           return;
         }
-      } catch {
-        /* ignored */
+      } catch (err) {
+        lastError = err;
       }
 
       await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
     }
 
-    throw new Error(`PMM Server was not ready in expected timeout: ${overallTimeoutMs}`);
+    const reason = lastError
+      ? `last error: ${(lastError as Error).message}`
+      : `last status: ${lastStatus ?? 'no response'}`;
+    throw new Error(`PMM Server was not ready in expected timeout: ${overallTimeoutMs}ms (${reason})`);
   };
 }
