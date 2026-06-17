@@ -32,7 +32,8 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         --name ${dockerContainerName}
         ${dockerVersion}`,
     );
-    await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
+
+    new Promise<void>((resolve) => setTimeout(resolve, 20000));
     console.log(cliHelper.execSilent('docker ps'));
     console.log(cliHelper.execSilent(`docker logs ${dockerContainerName}`));
   });
