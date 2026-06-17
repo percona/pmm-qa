@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import dataTest from '@fixtures/dataTest';
+import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
   pmmTest.describe.configure({ mode: 'serial' });
@@ -14,7 +15,7 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
     },
     {
       command: `docker run --detach --restart always --network="pmm-qa" -e PMM_CLICKHOUSE_CONFIG=low-memory -e PMM_ENABLE_TELEMETRY=0 --publish 84:8080 --publish 447:8443 --name ${dockerContainerName} ${dockerVersion}`,
-      configName: 'docker volume',
+      configName: 'low-memory-config',
       port: 447,
     },
     {
@@ -39,6 +40,9 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
       `docker exec ${dockerContainerName} cat /srv/logs/clickhouse-server.log | grep "config"`,
     );
 
-    console.log(configName);
+    expect(
+      configName,
+      `Config name should be: ${data.configName} but actual value is: ${configName}`,
+    ).toContain(data.configName);
   });
 });
