@@ -36,13 +36,11 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
 
   dataTest(srvConfiguration).pmmTest(
     'PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials @docker-configuration ',
-    async (data, { cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
+    async (data, { api, cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
       const baseUrl = `https://127.0.0.1:${data.port}/`;
 
       cliHelper.execSilent(data.command);
-
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for server to start
-      await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
+      await api.serverApi.waitForReady();
 
       const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
 
