@@ -17,7 +17,7 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
       --ulimit nofile=262144:262144 \\
         clickhouse/clickhouse-server:25.3`);
     cliHelper.execSilent(
-      `docker run --detach --restart always --network="pmm-qa"     -e PMM_CLICKHOUSE_ADDR=pmm-clickhouse:9000 -e PMM_CLICKHOUSE_DATABASE=pmm -e PMM_CLICKHOUSE_USER=pmm -e PMM_CLICKHOUSE_PASSWORD=pmm-clickhouse-pass -e PMM_DISABLE_BUILTIN_CLICKHOUSE=1 -e PMM_ENABLE_TELEMETRY=0 --publish 83:8080 --publish 446:8443 --name ${dockerContainerName} ${dockerVersion}`,
+      `docker run --detach --restart always --network="pmm-qa"     -e PMM_CLICKHOUSE_ADDR=pmm-clickhouse:9000 -e PMM_CLICKHOUSE_DATABASE=pmm -e PMM_CLICKHOUSE_USER=pmm -e PMM_CLICKHOUSE_PASSWORD=pmm-clickhouse-pass -e PMM_DISABLE_BUILTIN_CLICKHOUSE=1 -e PMM_ENABLE_TELEMETRY=0 --publish 83:8080 --publish 449:8443 --name ${dockerContainerName} ${dockerVersion}`,
     );
     console.log(cliHelper.execSilent('docker ps'));
   });
@@ -26,7 +26,9 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
     'PMM-T2237 - Verify that ClickHouse configuration can be controlled using environment variables @docker-configuration',
     async ({ api, cliHelper }) => {
       console.log('Test');
-      // const baseUrl = `https://127.0.0.1:${data.port}/`;
+
+      const baseUrl = `https://127.0.0.1:449`;
+      //docker exec pmm-server cat /srv/logs/victoriametrics.log | grep clickhouse
       //
       // cliHelper.execSilent(data.command);
       // await api.serverApi.waitForReady(baseUrl);
