@@ -37,6 +37,11 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
     console.log(cliHelper.execSilent(`docker logs ${dockerContainerName}`));
   });
 
+  pmmTest.afterEach(async ({ cliHelper }) => {
+    cliHelper.execSilent(`docker stop ${dockerContainerName}`);
+    cliHelper.execSilent(`docker rm -f ${dockerContainerName}`);
+  });
+
   pmmTest(
     'PMM-T9997 - Verify that ClickHouse configuration can be controlled using environment variables @docker-configuration',
     async ({ api, cliHelper }) => {
