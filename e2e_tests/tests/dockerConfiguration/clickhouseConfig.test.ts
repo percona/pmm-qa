@@ -45,7 +45,7 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
       console.log(configName);
 
       expect(
-        configName,
+        configName.stdout,
         `Config name should be: ${data.configName} but actual value is: ${configName}`,
       ).toContain(`${data.configName}.xml`);
     },
