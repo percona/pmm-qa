@@ -30,19 +30,22 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
     cliHelper.execSilent(`docker rm -f ${dockerContainerName}`);
   });
 
-  dataTest(configuration).pmmTest('PMM-T9999 @docker-configuration', async (data, { api, cliHelper }) => {
-    const baseUrl = `https://127.0.0.1:${data.port}/`;
+  dataTest(configuration).pmmTest(
+    'PMM-T2237 - Verify that ClickHouse configuration can be controlled using environment variables',
+    async (data, { api, cliHelper }) => {
+      const baseUrl = `https://127.0.0.1:${data.port}/`;
 
-    cliHelper.execSilent(data.command);
-    await api.serverApi.waitForReady(baseUrl);
+      cliHelper.execSilent(data.command);
+      await api.serverApi.waitForReady(baseUrl);
 
-    const configName = cliHelper.execSilent(
-      `docker exec ${dockerContainerName} cat /srv/logs/clickhouse-server.log | grep "config"`,
-    );
+      const configName = cliHelper.execSilent(
+        `docker exec ${dockerContainerName} cat /srv/logs/clickhouse-server.log | grep "config"`,
+      );
 
-    expect(
-      configName,
-      `Config name should be: ${data.configName} but actual value is: ${configName}`,
-    ).toContain(data.configName);
-  });
+      expect(
+        configName,
+        `Config name should be: ${data.configName} but actual value is: ${configName}`,
+      ).toContain(`${data.configName}.xml`);
+    },
+  );
 });

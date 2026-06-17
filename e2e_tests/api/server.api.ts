@@ -19,8 +19,6 @@ export default class ServerApi {
         const res = await this.request.get(serverUrl, { ignoreHTTPSErrors: true });
 
         if (res.status() === 200) {
-          console.log(`PMM Server returned status: ${res.status()}`);
-
           // ready — resolve normally
           return;
         }
