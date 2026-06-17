@@ -19,6 +19,11 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
     },
   ];
 
+  pmmTest.afterEach(async ({ cliHelper }) => {
+    cliHelper.execSilent(`docker stop ${dockerContainerName}`);
+    cliHelper.execSilent(`docker rm -f ${dockerContainerName}`);
+  });
+
   dataTest(configuration).pmmTest('PMM-T9999 @docker-configuration', async (data, { api, cliHelper }) => {
     const baseUrl = `https://127.0.0.1:${data.port}/`;
 
