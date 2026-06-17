@@ -19,7 +19,7 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
     },
   ];
 
-  dataTest(configuration).pmmTest('PMM-T9999', async (data, { api, cliHelper }) => {
+  dataTest(configuration).pmmTest('PMM-T9999 @docker-configuration', async (data, { api, cliHelper }) => {
     cliHelper.execSilent(data.command);
     await api.serverApi.waitForReady();
 
