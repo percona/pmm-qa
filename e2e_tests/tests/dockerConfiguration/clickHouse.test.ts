@@ -35,8 +35,7 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         ${dockerVersion}`,
     );
 
-    new Promise<void>((resolve) => setTimeout(resolve, 20_000));
-    console.log(cliHelper.execSilent('docker ps'));
+    // new Promise<void>((resolve) => setTimeout(resolve, 20_000));
   });
 
   pmmTest.afterEach(async ({ cliHelper }) => {
@@ -50,7 +49,6 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
       const baseUrl = `https://127.0.0.1:449`;
 
       await api.serverApi.waitForReady(baseUrl);
-      console.log(await cliHelper.execSilent(`docker logs ${dockerContainerName}`));
 
       const logs = cliHelper.execSilent(
         `docker exec ${dockerContainerName} cat /srv/logs/victoriametrics.log | grep clickhouse`,
