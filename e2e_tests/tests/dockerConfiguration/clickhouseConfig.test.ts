@@ -26,7 +26,7 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
     },
   ];
 
-  pmmTest.afterEach(async ({ cliHelper }) => {
+  pmmTest.afterAll(async ({ cliHelper }) => {
     cliHelper.execSilent(`docker stop ${configuration[0].containerName} || true`);
     cliHelper.execSilent(`docker rm -f ${configuration[0].containerName}  || true`);
     cliHelper.execSilent(`docker stop ${configuration[1].containerName} || true`);
