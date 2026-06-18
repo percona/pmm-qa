@@ -12,6 +12,12 @@ If any apply, update the relevant section of this file. Do **not** update for ro
 
 This file is the **single authoritative entry point** for AI agents working with pmm-qa. It owns the product overview, repository map, and a consolidated per-suite quick-reference. Detailed suite docs live next to the suite's code (`README.md` / config file) — links are in the [Repository Map](#repository-map).
 
+## Chat Output Preference
+
+- Keep routine execution quiet to save tokens: do not narrate file reads, env parsing, token generation, browser setup, or command prep.
+- For clear execution requests, run the task and reply only with the result, for example `Done`, `Blocked: <short reason>`, or a compact summary when files changed.
+- Speak up only for approval requests, blockers, destructive-risk warnings, or when the user explicitly asks for status/explanation.
+
 ---
 
 ## Repository Overview

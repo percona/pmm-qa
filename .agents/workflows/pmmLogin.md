@@ -2,27 +2,36 @@
 description: PMM Login using basic Auth headers
 ---
 
-- NEVER use UI login form.
-- Use Basic Auth header via `mcp_playwright_browser_run_code`.
-- DO NOT pass plain credentials in the URL string.
+**Resolve credentials by context:**
+- From `pmm-manual-test`: use user-provided PMM instance URL, `ADMIN_USERNAME=admin`, `ADMIN_PASSWORD=pmm3admin!`
+- Standalone: use root `.env` — `PMM_UI_URL`, `ADMIN_USERNAME` (default `admin`), `ADMIN_PASSWORD`
+
+**`<PRECOMPUTED_AUTH>`** = base64 of `ADMIN_USERNAME:ADMIN_PASSWORD` computed outside MCP (no `Buffer`, no `btoa`, no credentials in URL).
 
 ```javascript
 async (page) => {
-  const base = "https://127.0.0.1";
-  const auth = Buffer.from("admin:admin").toString("base64");
+  const base = "<PMM_UI_URL>";
+  const auth = "<PRECOMPUTED_AUTH>";
 
   await page.context().setExtraHTTPHeaders({ Authorization: `Basic ${auth}` });
-
-  await page.route("**/api/user/auth-tokens/rotate", async (route) => {
-    await route.fulfill({
-      body: "{}",
+  await page.route("**/api/user/auth-tokens/rotate", (route) =>
+    route.fulfill({ body: "{}", contentType: "application/json", status: 200 }),
+  );
+  await page.route("**/v1/users/me", (route) =>
+    route.fulfill({
+      body: JSON.stringify({
+        alerting_tour_completed: true,
+        product_tour_completed: true,
+        snoozed_pmm_version: "",
+        user_id: 1,
+      }),
       contentType: "application/json",
       status: 200,
-    });
-  });
+    }),
+  );
 
   await page.goto(`${base}/pmm-ui/help`);
 };
 ```
 
-- Reply `Done` immediately after logging in. NO extra info.
+Reply `Done`.
