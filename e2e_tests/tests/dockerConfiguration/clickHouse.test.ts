@@ -1,6 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe('PMM Tests to verify external clickhouse', () => {
   pmmTest.describe.configure({ retries: 0 });
@@ -34,8 +33,6 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         --name ${dockerContainerName}
         ${dockerVersion}`,
     );
-
-    // new Promise<void>((resolve) => setTimeout(resolve, 20_000));
   });
 
   pmmTest.afterEach(async ({ cliHelper }) => {
@@ -54,8 +51,6 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         `docker exec ${dockerContainerName} cat /srv/logs/victoriametrics.log | grep clickhouse`,
       );
 
-      console.log('Logs are:');
-      console.log(logs);
       expect(logs.stdout, `Stdout for clickhouse logs should be empty but is: ${logs.stdout}`).toHaveLength(
         0,
       );
