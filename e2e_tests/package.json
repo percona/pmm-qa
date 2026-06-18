@@ -18,6 +18,7 @@
     "@types/shelljs": "^0.8.17",
     "@typescript-eslint/eslint-plugin": "^8.46.1",
     "@typescript-eslint/parser": "^8.46.1",
+    "adm-zip": "^0.5.17",
     "build-url-ts": "^6.2.0",
     "dotenv": "^17.2.3",
     "eslint": "^9.37.0",

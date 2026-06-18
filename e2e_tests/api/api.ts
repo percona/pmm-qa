@@ -5,9 +5,11 @@ import GrafanaApi from '@api/grafana.api';
 import RealTimeAnalyticsApi from '@api/realtimeanalytics.api';
 import SettingsApi from '@api/settings.api';
 import AccessControlApi from '@api/accessControl.api';
+import AlertingApi from '@api/alerting.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
+  readonly alertingApi: AlertingApi;
   readonly backupsApi: BackupsApi;
   readonly grafanaApi: GrafanaApi;
   readonly inventoryApi: InventoryApi;
@@ -16,6 +18,7 @@ export default class Api {
 
   constructor(page: Page, request: APIRequestContext) {
     this.accessControlApi = new AccessControlApi(request);
+    this.alertingApi = new AlertingApi(request);
     this.backupsApi = new BackupsApi(request);
     this.inventoryApi = new InventoryApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
