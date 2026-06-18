@@ -77,6 +77,10 @@
 
     - name: Install Percona XtraBackup for MySQL backups
       include_tasks: tasks/backup_setup.yml
+      vars:
+        container_name: "{{ container_prefix }}{{ item }}"
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+      when: backup | default(false) | bool
 
     - name: Create slowlog configuration for mysql nodes
       shell: |
