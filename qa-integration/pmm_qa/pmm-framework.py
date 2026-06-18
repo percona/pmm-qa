@@ -90,7 +90,7 @@ def setup_ps(db_type, db_version=None, db_config=None, args=None):
         'MY_ROCKS': get_value('MY_ROCKS', db_type, args, db_config),
         'ENCRYPTED_CLIENT_CONFIG': get_value('ENCRYPTED_CLIENT_CONFIG', db_type, args, db_config),
         'CLIENT_DEBUG': args.client_debug,
-        'BACKUP': args.client_debug,
+        'BACKUP': args.backup,
     }
 
     run_ansible_playbook('percona_server_for_mysql/percona-server-setup.yml', env_vars, args)
