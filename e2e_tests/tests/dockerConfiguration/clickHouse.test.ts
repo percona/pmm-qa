@@ -20,7 +20,7 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         --ulimit nofile=262144:262144
         clickhouse/clickhouse-server:latest`,
     );
-    cliHelper.execSilent(
+    const response = cliHelper.execSilent(
       `docker run --detach --restart always --network="pmm-qa"
         -e PMM_CLICKHOUSE_ADDR=pmm-clickhouse:9000
         -e PMM_CLICKHOUSE_DATABASE=pmm
@@ -33,6 +33,7 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         --name ${dockerContainerName}
         ${dockerVersion}`,
     );
+    console.log(response);
   });
 
   pmmTest.afterEach(async ({ cliHelper }) => {
