@@ -1343,12 +1343,13 @@ module.exports = {
   async verifyThatAllGraphsNoData(acceptableNaDataCount = 0) {
     const numberOfNAElements = await I.grabNumberOfVisibleElements(this.fields.reportTitleWithNA);
     const allGraphs = await I.grabNumberOfVisibleElements(this.fields.reportTitle);
+    const panelsWithData = allGraphs - numberOfNAElements;
 
     I.say(`Number of no data and N/A elements is = ${numberOfNAElements}`);
     I.say(`Number of all graph elements is = ${allGraphs}`);
     assert.ok(
-      numberOfNAElements <= acceptableNaDataCount,
-      `Expected ${acceptableNaDataCount} N/A elements but found ${numberOfNAElements} on Dashboard ${await I.grabCurrentUrl()}.`,
+      panelsWithData <= acceptableNaDataCount,
+      `Expected ${acceptableNaDataCount} panels with data but found ${panelsWithData} on Dashboard ${await I.grabCurrentUrl()}.`,
     );
   },
 
@@ -1379,7 +1380,7 @@ module.exports = {
   },
 
   async expandDashboardRow(rowName) {
-    const rowLocator = this.fields.collapsedDashboardRowByName(rowName)
+    const rowLocator = this.fields.collapsedDashboardRowByName(rowName);
 
     I.scrollTo(rowLocator);
     I.click(rowLocator);
