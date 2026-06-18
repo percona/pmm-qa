@@ -36,7 +36,7 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
   });
 
   dataTest(configuration).pmmTest(
-    'PMM-T2237 - Verify that ClickHouse configuration can be controlled using environment variables',
+    'PMM-T2237 - Verify that ClickHouse configuration can be controlled using environment variables @docker-configuration',
     async (data, { api, cliHelper }) => {
       const baseUrl = `https://127.0.0.1:${data.port}/`;
 
