@@ -1,3 +1,7 @@
+- name: Debug variable backup
+  debug:
+    var: backup
+
 - name: Install percona xtrabackup 8.4
   shell: |
     docker exec --user root {{ container_name }} percona-release enable-only tools release
