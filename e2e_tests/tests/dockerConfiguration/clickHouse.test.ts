@@ -28,7 +28,6 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         -e PMM_CLICKHOUSE_PASSWORD=pmm-clickhouse-pass
         -e PMM_DISABLE_BUILTIN_CLICKHOUSE=1
         -e PMM_ENABLE_TELEMETRY=0
-        --publish 83:8080
         --publish 449:8443
         --name ${dockerContainerName}
         ${dockerVersion}`,
