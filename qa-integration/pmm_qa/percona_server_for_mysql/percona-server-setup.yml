@@ -74,6 +74,9 @@
       pause:
         seconds: 10
 
+    - name: Install Percona XtraBackup for MySQL backups
+      include_tasks: tasks/backup_setup.yml
+
     - name: Create slowlog configuration for mysql nodes
       shell: |
         docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SET GLOBAL slow_query_log='ON'; SET GLOBAL long_query_time=0; SET GLOBAL log_slow_rate_limit=1;"

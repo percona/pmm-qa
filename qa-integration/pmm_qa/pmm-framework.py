@@ -61,6 +61,8 @@ def setup_ps(db_type, db_version=None, db_config=None, args=None):
         print(f"Check if PMM Server is Up and Running..Exiting")
         exit()
 
+    print('Args are: ')
+    print(args)
     # Check Setup Types
     setup_type = ''
     no_of_nodes = 1

@@ -30,7 +30,7 @@ database_options = {
     "PS": {
         "versions": ["5.7", "8.4", "8.0"],
         "configurations": {"QUERY_SOURCE": "perfschema", "SETUP_TYPE": "", "CLIENT_VERSION": "3-dev-latest",
-                           "TARBALL": "", "NODES_COUNT": 1, "MY_ROCKS": "false", "ENCRYPTED_CLIENT_CONFIG": "false"}
+                           "TARBALL": "", "NODES_COUNT": 1, "MY_ROCKS": "false", "ENCRYPTED_CLIENT_CONFIG": "false", "BACKUP": "true"}
     },
     "SSL_MYSQL": {
         "versions": ["5.7", "8.4", "8.0"],
