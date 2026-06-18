@@ -35,7 +35,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   });
 
   dataTest(srvConfiguration).pmmTest(
-    'PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials',
+    'PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials @docker-configuration',
     async (data, { api, cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
       const baseUrl = `https://127.0.0.1:${data.port}/`;
 
