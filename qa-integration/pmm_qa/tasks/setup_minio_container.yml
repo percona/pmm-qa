@@ -61,4 +61,4 @@
       /bin/sh -c "
       /usr/bin/mc mb myminio/{{ item }} || echo 'Bucket {{ item }} already exists';
       exit 0;"
-  loop: "{{ buckets }}"
+  loop: "{{ buckets | split(',') if buckets is string else buckets }}"
