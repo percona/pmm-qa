@@ -12,7 +12,7 @@
 
 - name: Install percona xtrabackup 8.0
   shell: |
-    docker exec --user root {{ container_name }} percona-release enable-only tools release
+    docker exec --user root {{ container_name }} percona-release enable-only tools testing
     docker exec --user root {{ container_name }} apt-get update
     docker exec --user root {{ container_name }} apt-get install -y percona-xtrabackup-84 qpress
   when: ps_version | replace('_', '') | int == 80
