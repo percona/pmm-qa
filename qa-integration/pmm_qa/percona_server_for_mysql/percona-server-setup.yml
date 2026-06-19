@@ -28,6 +28,13 @@
     encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
     backup: "{{ lookup('env', 'BACKUP') | default(false, true) | bool }}"
+    buckets: "{{ lookup('env', 'BUCKETS') | default('bcp', true) }}"
+    minio_access_key: minio1234
+    minio_secret_key: minio1234
+    minio_volume_name: minio_backups
+    minio_ports:
+      - "9010:9000"
+      - "9001:9001"
 
   tasks:
     - name: Modify the node count for group replication
