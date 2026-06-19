@@ -6,7 +6,7 @@
   shell: |
     docker exec --user root {{ container_name }} percona-release enable-only tools release
     docker exec --user root {{ container_name }} apt-get update
-    docker exec --user root {{ container_name }} apt-get install -y percona-xtrabackup-84
+    docker exec --user root {{ container_name }} apt-get install -y percona-xtrabackup-84 qpress
   when: ps_version | replace('_', '') | int == 84
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
@@ -14,7 +14,7 @@
   shell: |
     docker exec --user root {{ container_name }} percona-release enable-only tools release
     docker exec --user root {{ container_name }} apt-get update
-    docker exec --user root {{ container_name }} apt-get install -y percona-xtrabackup-84
+    docker exec --user root {{ container_name }} apt-get install -y percona-xtrabackup-84 qpress
   when: ps_version | replace('_', '') | int == 80
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
