@@ -8,7 +8,7 @@ class ValkeyReplicationDashboard {
       'valkey-replica-4-svc-*',
       'valkey-replica-5-svc-*',
       'valkey-replica-6-svc-*',
-      'All - Replica vs Master Offsets',
+      'All - Replica vs Primary offsets',
       'Replicas',
       'Connected Replicas',
       'Full Resyncs',
