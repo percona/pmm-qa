@@ -19,4 +19,4 @@
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Install minio for S3 compatible buckets
-  include_task: ../tasks/create_minio_container.yml
+  include_tasks: ../tasks/create_minio_container.yml
