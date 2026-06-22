@@ -28,7 +28,7 @@ export default class ServerApi {
     }
 
     throw new Error(
-      `PMM Server was not ready in expected timeout: ${overallTimeoutMs}ms (last error: ${(lastError as Error).message})`,
+      `PMM Server was not ready in expected timeout: ${overallTimeoutMs}ms (last error: ${lastError})`,
     );
   };
 }
