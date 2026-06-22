@@ -41,18 +41,18 @@ for (const configuration of configurations) {
 
         expect(
           configName.stdout,
-          `Config name should be: ${configuration.configName} but actual value is: ${configName}`,
+          `Config name should be: ${configuration.configName} but actual value is: ${configName.stdout}`,
         ).toContain(`${configuration.configName}.xml`);
       },
     );
   });
-}
 
-pmmTest.afterAll(async ({ cliHelper }) => {
-  cliHelper.execSilent(`docker stop ${configurations[0].containerName} || true`);
-  cliHelper.execSilent(`docker rm -f ${configurations[0].containerName}  || true`);
-  cliHelper.execSilent(`docker stop ${configurations[1].containerName} || true`);
-  cliHelper.execSilent(`docker rm -f ${configurations[1].containerName}  || true`);
-  cliHelper.execSilent(`docker stop ${configurations[2].containerName} || true`);
-  cliHelper.execSilent(`docker rm -f ${configurations[2].containerName}  || true`);
-});
+  pmmTest.afterEach(async ({ cliHelper }) => {
+    cliHelper.execSilent(`docker stop ${configurations[0].containerName} || true`);
+    cliHelper.execSilent(`docker rm -f ${configurations[0].containerName}  || true`);
+    cliHelper.execSilent(`docker stop ${configurations[1].containerName} || true`);
+    cliHelper.execSilent(`docker rm -f ${configurations[1].containerName}  || true`);
+    cliHelper.execSilent(`docker stop ${configurations[2].containerName} || true`);
+    cliHelper.execSilent(`docker rm -f ${configurations[2].containerName}  || true`);
+  });
+}
