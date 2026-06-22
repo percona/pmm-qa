@@ -3,7 +3,6 @@ import dataTest from '@fixtures/dataTest';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
-
   const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
   const configuration = [
     {
