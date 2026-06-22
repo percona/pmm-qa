@@ -17,7 +17,7 @@ const configurations = [
   },
   {
     command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 --publish 83:8080 --publish 448:8443 --name pmm-server-no-flag-clickhouse-config ${dockerVersion}`,
-    configName: 'default-config',
+    configName: 'default-config-no-flag',
     containerName: 'pmm-server-no-flag-clickhouse-config',
     port: 448,
   },
