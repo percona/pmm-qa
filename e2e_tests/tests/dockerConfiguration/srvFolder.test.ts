@@ -4,7 +4,7 @@ import { Timeouts } from '@helpers/timeouts';
 import dataTest from '@fixtures/dataTest';
 
 pmmTest.describe('Test for SRV folder in pmm server.', () => {
-  const baseUrl = `https://127.0.0.1:444`;
+  const baseUrl = `https://127.0.0.1:444/`;
   const newUser = 'newuser';
   const newPassword = 'newpass';
   const dockerVolumeName = 'pmm-volume-srv';
