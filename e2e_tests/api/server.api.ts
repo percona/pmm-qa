@@ -16,6 +16,8 @@ export default class ServerApi {
 
         const res = await this.request.get(apiEndpoints.server.readyz, { ignoreHTTPSErrors: true });
 
+        console.log(`Status is: ${res.status()}`);
+
         if (res.status() === 200) {
           return;
         }
