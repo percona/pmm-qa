@@ -79,11 +79,12 @@ export default class StoredMetricsPage extends BasePage {
   };
 
   waitUntilQanStoredMetricsLoaded = async (timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {
-    await expect(this.elements.spinner.first()).toBeHidden({ timeout: timeout });
-
-    if (await this.elements.noData.isVisible()) {
-      await this.page.reload();
+    for (let attempt = 0; attempt < 3 && !(await this.elements.firstRow.isVisible()); attempt++) {
       await expect(this.elements.spinner.first()).toBeHidden({ timeout: timeout });
+
+      if (!(await this.elements.noData.isVisible())) break;
+
+      await this.page.reload();
     }
 
     await expect(this.elements.noData).toBeHidden({ timeout: timeout });
