@@ -1,6 +1,7 @@
 import { APIRequestContext } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
+import CliHelper from '@helpers/cli.helper';
 
 export default class ServerApi {
   constructor(private request: APIRequestContext) {}
@@ -18,6 +19,7 @@ export default class ServerApi {
 
         console.log(`URL is: ${res.url()}`);
         console.log(`Status is: ${res.status()}`);
+        console.log(new CliHelper().execSilent('docker logs pmm-server-srv').stdout);
 
         if (res.status() === 200) {
           return;
