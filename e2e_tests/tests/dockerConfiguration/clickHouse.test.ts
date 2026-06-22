@@ -7,6 +7,7 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
   const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
 
   pmmTest.describe.configure({ retries: 0 });
+  pmmTest.use({ baseURL: baseUrl });
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     cliHelper.execSilent(
@@ -43,7 +44,6 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
   pmmTest(
     'PMM-T2239 - Verify that metrics are not collected from internal ClickHouse when external ClickHouse is available @docker-configuration',
     async ({ api, cliHelper }) => {
-      pmmTest.use({ baseURL: baseUrl });
       await api.serverApi.waitForReady();
 
       const logs = cliHelper.execSilent(
