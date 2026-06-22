@@ -4,22 +4,23 @@ import { Timeouts } from '@helpers/timeouts';
 import dataTest from '@fixtures/dataTest';
 
 pmmTest.describe('Test for SRV folder in pmm server.', () => {
-  pmmTest.describe.configure({ mode: 'serial' });
-
+  const baseUrl = `https://127.0.0.1:444`;
   const newUser = 'newuser';
   const newPassword = 'newpass';
   const dockerVolumeName = 'pmm-volume-srv';
   const dockerContainerName = 'pmm-server-srv';
   const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+
+  pmmTest.describe.configure({ mode: 'serial' });
+  pmmTest.use({ baseURL: baseUrl });
+
   const srvConfiguration = [
     {
       command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 444:8443 --volume "$HOME/srv":/srv --name ${dockerContainerName} ${dockerVersion}`,
-      port: 444,
       testName: 'local folder',
     },
     {
       command: `docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 445:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} ${dockerVersion}`,
-      port: 445,
       testName: 'docker volume',
     },
   ];
@@ -37,10 +38,8 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
   dataTest(srvConfiguration).pmmTest(
     'PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials @docker-configuration',
     async (data, { api, cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
-      const baseUrl = `https://127.0.0.1:${data.port}/`;
-
       cliHelper.execSilent(data.command);
-      await api.serverApi.waitForReady(baseUrl);
+      await api.serverApi.waitForReady();
 
       const logs = cliHelper.execSilent('docker logs pmm-server-srv').stdout;
 
