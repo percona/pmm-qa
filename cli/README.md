@@ -2,6 +2,17 @@
 
 Percona Monitoring and Management CLI automated tests.
 
+## Folder Map
+
+| Path                   | Purpose                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------- |
+| `tests/`               | Test entrypoints grouped by CLI or service area.                                          |
+| `helpers/`             | Shared helpers for shell execution, `pmm-admin`, constants, assertions, and ZIP handling. |
+| `support/`             | Shared support types for command results and pipe assertions.                             |
+| `test-setup/`          | Docker Compose files used by CLI scenarios.                                               |
+| `test-data/`           | Static files used by CLI tests.                                                           |
+| `playwright.config.ts` | Playwright runtime configuration.                                                         |
+
 ## Getting Started
 
 - Open the `cli` folder in terminal.
@@ -9,36 +20,50 @@ Percona Monitoring and Management CLI automated tests.
 - Install dependencies: `npm ci`.
 - Install Playwright browsers: `npx playwright install`.
 
-## Running tests
+## Running Tests
 
-Run commands from the `cli` folder.
+Run commands from `cli/`.
 
-- Run all tests: `npx playwright test`
-- Run by a single tag: `npx playwright test --grep @client-docker`
-- Run by multiple tags: `npx playwright test --grep "@generic|@unregister"`
-- Show report: `npx playwright show-report`
+| Goal                  | Command                                                |
+| --------------------- | ------------------------------------------------------ |
+| Run all tests         | `npx playwright test`                                  |
+| Run one file          | `npx playwright test tests/<filename>.spec.ts`         |
+| Run by test title     | `npx playwright test --grep "<test-title-or-id>"`      |
+| Run by tag            | `npx playwright test --grep "@<tag>"`                  |
+| Run by multiple tags  | `npx playwright test --grep "@<tag-1>\|@<tag-2>"`      |
+| Exclude a tag         | `npx playwright test --grep-invert "@<tag>"`           |
+| Run previous failures | `npx playwright test --last-failed`                    |
+| Debug one file        | `npx playwright test tests/<filename>.spec.ts --debug` |
+| Open HTML report      | `npx playwright show-report <report-folder>`           |
 
-Playwright `--grep` syntax reference: [Playwright CLI](https://playwright.dev/docs/test-cli)
+## Tags
 
-## Available tags
+<!-- CLI-TAGS-START -->
 
-- `@help`
-- `@server-only`
 - `@client-docker`
 - `@generic`
-- `@unregister`
-- `@service-removal`
-- `@ps`
+- `@haproxy`
+- `@help-cli`
+- `@mongoDb`
 - `@mysql`
 - `@mysql-conf-file`
 - `@pdpgsql`
-- `@psmdb`
-- `@shard-psmdb`
-- `@haproxy`
+- `@percona-server`
+- `@pgsql`
 - `@proxysql`
-- `@mongoDb`
+- `@psmdb`
+- `@server-docker-generic`
+- `@server-only`
+- `@service-removal`
+- `@shard-psmdb`
+- `@unregister`
+- `@valkey`
 
-## Contributing
+<!-- CLI-TAGS-END -->
 
-_coming soon_
+## Related Workspaces
 
+- [Playwright E2E Tests](../e2e_tests/README.md) - Playwright web UI and API-assisted E2E tests.
+- [CodeceptJS E2E Tests](../codeceptjs-e2e/README.md) - existing CodeceptJS tests.
+- [Package Tests](../package_tests/README.md) - PMM client package install and upgrade validation.
+- [QA Integration](../qa-integration/README.md) - database and PMM integration environment setup.

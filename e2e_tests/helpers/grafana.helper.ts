@@ -28,6 +28,17 @@ export default class GrafanaHelper {
       headers: { Authorization: `Basic ${authToken}` },
     });
 
+    expect(response.status(), `Create user ${username}`).toEqual(200);
+
+    return (await response.json()).id as number;
+  };
+
+  deleteUser = async (userId: number) => {
+    const authToken = GrafanaHelper.getToken();
+    const response = await this.page.request.delete(`graph/api/admin/users/${userId}`, {
+      headers: { Authorization: `Basic ${authToken}` },
+    });
+
     return response;
   };
 
@@ -57,6 +68,15 @@ export default class GrafanaHelper {
     expect(response.status()).toEqual(200);
 
     return (await response.json()) as GrafanaUserSearchResponse;
+  };
+
+  promoteToEditor = async (userId: number) => {
+    const response = await this.page.request.patch(`graph/api/org/users/${userId}`, {
+      data: { role: 'Editor' },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), 'Promote user to Editor').toEqual(200);
   };
 
   unAuthorize = async () => {
