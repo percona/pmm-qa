@@ -1,7 +1,6 @@
 import { APIRequestContext } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
-import CliHelper from '@helpers/cli.helper';
 
 export default class ServerApi {
   constructor(private request: APIRequestContext) {}
@@ -13,20 +12,12 @@ export default class ServerApi {
 
     while (Date.now() < deadline) {
       try {
-        console.log(`Retrying! ${Date.now()}`);
-        console.log(new CliHelper().execSilent('docker logs pmm-server-srv').stdout);
-
         const res = await this.request.get(apiEndpoints.server.readyz, { ignoreHTTPSErrors: true });
-
-        console.log(`URL is: ${res.url()}`);
-        console.log(`Status is: ${res.status()}`);
-
 
         if (res.status() === 200) {
           return;
         }
       } catch (err) {
-        console.error(`Error is: ${err}`);
         lastError = err;
       }
 
