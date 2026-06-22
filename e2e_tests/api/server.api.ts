@@ -14,6 +14,8 @@ export default class ServerApi {
       try {
         const res = await this.request.get(apiEndpoints.server.readyz, { ignoreHTTPSErrors: true });
 
+        console.log(`API call url is: ${res.url()}`);
+
         if (res.status() === 200) {
           // ready — resolve normally
           return;
