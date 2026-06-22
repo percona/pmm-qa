@@ -41,7 +41,7 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
   });
 
   pmmTest(
-    'PMM-T9997 - Verify that ClickHouse configuration can be controlled using environment variables @docker-configuration',
+    'PMM-T2239 - Verify that metrics are not collected from internal ClickHouse when external ClickHouse is available @docker-configuration',
     async ({ api, cliHelper }) => {
       pmmTest.use({ baseURL: baseUrl });
       await api.serverApi.waitForReady();
