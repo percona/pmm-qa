@@ -20,7 +20,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
       testName: 'local folder',
     },
     {
-      command: `docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 445:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} ${dockerVersion}`,
+      command: `docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 444:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} ${dockerVersion}`,
       testName: 'docker volume',
     },
   ];
