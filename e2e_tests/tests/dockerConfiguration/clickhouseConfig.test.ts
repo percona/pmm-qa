@@ -30,7 +30,7 @@ for (const configuration of configurations) {
     pmmTest.use({ baseURL: baseUrl });
 
     pmmTest(
-      'PMM-T2237 - Verify that ClickHouse configuration can be controlled using environment variables @docker-configuration',
+      `PMM-T2237 - Verify that ClickHouse configuration can be controlled using environment variables, for config ${configuration.configName} @docker-configuration`,
       async ({ api, cliHelper }) => {
         cliHelper.execSilent(configuration.command);
         await api.serverApi.waitForReady();
