@@ -7,19 +7,19 @@ pmmTest.describe('PMM Tests to verify clickhouse configuration file', () => {
   const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
   const configuration = [
     {
-      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_CLICKHOUSE_CONFIG=default -e PMM_ENABLE_TELEMETRY=0 --publish 446:8443 --name pmm-server-default-clickhouse-config ${dockerVersion}`,
+      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_CLICKHOUSE_CONFIG=default -e PMM_ENABLE_TELEMETRY=0 --publish 83:8080 --publish 446:8443 --name pmm-server-default-clickhouse-config ${dockerVersion}`,
       configName: 'default-config',
       containerName: 'pmm-server-default-clickhouse-config',
       port: 446,
     },
     {
-      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_CLICKHOUSE_CONFIG=low-memory -e PMM_ENABLE_TELEMETRY=0 --publish 447:8443 --name pmm-server-low-memory-clickhouse-config ${dockerVersion}`,
+      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_CLICKHOUSE_CONFIG=low-memory -e PMM_ENABLE_TELEMETRY=0 --publish 84:8080 --publish 447:8443 --name pmm-server-low-memory-clickhouse-config ${dockerVersion}`,
       configName: 'low-memory-config',
       containerName: 'pmm-server-low-memory-clickhouse-config',
       port: 447,
     },
     {
-      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 --publish 448:8443 --name pmm-server-no-flag-clickhouse-config ${dockerVersion}`,
+      command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 --publish 83:8080 --publish 448:8443 --name pmm-server-no-flag-clickhouse-config ${dockerVersion}`,
       configName: 'default-config',
       containerName: 'pmm-server-no-flag-clickhouse-config',
       port: 448,

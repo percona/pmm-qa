@@ -244,7 +244,7 @@ Data(settingsReadOnly).Scenario(
       Cookie: `pmm_session=${cookie.value}`,
     });
 
-    assert.ok(r.status === 401);
+    assert.ok(r.status === 403);
   },
 );
 
