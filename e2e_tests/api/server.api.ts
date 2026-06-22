@@ -12,15 +12,15 @@ export default class ServerApi {
 
     while (Date.now() < deadline) {
       try {
+        console.log(`Retrying! ${Date.now()}`);
+
         const res = await this.request.get(apiEndpoints.server.readyz, { ignoreHTTPSErrors: true });
 
-        console.log(`API call url is: ${res.url()}`);
-
         if (res.status() === 200) {
-          // ready — resolve normally
           return;
         }
       } catch (err) {
+        console.error(`Error is: ${err}`);
         lastError = err;
       }
 
