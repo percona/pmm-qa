@@ -14,12 +14,13 @@ export default class ServerApi {
     while (Date.now() < deadline) {
       try {
         console.log(`Retrying! ${Date.now()}`);
+        console.log(new CliHelper().execSilent('docker logs pmm-server-srv').stdout);
 
         const res = await this.request.get(apiEndpoints.server.readyz, { ignoreHTTPSErrors: true });
 
         console.log(`URL is: ${res.url()}`);
         console.log(`Status is: ${res.status()}`);
-        console.log(new CliHelper().execSilent('docker logs pmm-server-srv').stdout);
+
 
         if (res.status() === 200) {
           return;
