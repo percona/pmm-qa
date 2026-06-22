@@ -2,10 +2,12 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM Tests to verify external clickhouse', () => {
-  pmmTest.describe.configure({ retries: 0 });
-
+  const baseUrl = `https://127.0.0.1:449`;
   const dockerContainerName = 'pmm-server-external-clickhouse';
   const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+
+  pmmTest.describe.configure({ retries: 0 });
+  pmmTest.use({ baseURL: baseUrl });
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     cliHelper.execSilent(
@@ -20,7 +22,7 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         --ulimit nofile=262144:262144
         clickhouse/clickhouse-server:latest`,
     );
-    const response = cliHelper.execSilent(
+    cliHelper.execSilent(
       `docker run --detach --restart always --network="pmm-qa"
         -e PMM_CLICKHOUSE_ADDR=pmm-clickhouse:9000
         -e PMM_CLICKHOUSE_DATABASE=pmm
@@ -32,7 +34,6 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
         --name ${dockerContainerName}
         ${dockerVersion}`,
     );
-    console.log(response);
   });
 
   pmmTest.afterEach(async ({ cliHelper }) => {
@@ -43,9 +44,7 @@ pmmTest.describe('PMM Tests to verify external clickhouse', () => {
   pmmTest(
     'PMM-T9997 - Verify that ClickHouse configuration can be controlled using environment variables @docker-configuration',
     async ({ api, cliHelper }) => {
-      const baseUrl = `https://127.0.0.1:449`;
-
-      await api.serverApi.waitForReady(baseUrl);
+      await api.serverApi.waitForReady();
 
       const logs = cliHelper.execSilent(
         `docker exec ${dockerContainerName} cat /srv/logs/victoriametrics.log | grep clickhouse`,
