@@ -1,7 +1,6 @@
 import { APIRequestContext } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import { pmmUrl } from '../playwright.config';
-import CliHelper from '@helpers/cli.helper';
 
 export default class ServerApi {
   constructor(private request: APIRequestContext) {}
@@ -13,7 +12,6 @@ export default class ServerApi {
     const pollIntervalMs = Timeouts.FIVE_SECONDS;
     const deadline = Date.now() + overallTimeoutMs;
     let lastError: unknown;
-    let lastStatus: number | undefined;
 
     while (Date.now() < deadline) {
       try {
@@ -30,13 +28,7 @@ export default class ServerApi {
       await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
     }
 
-    const reason = lastError
-      ? `last error: ${(lastError as Error).message}`
-      : `last status: ${lastStatus ?? 'no response'}`;
-
-    console.log(new CliHelper().execSilent('docker ps'));
-    console.log(new CliHelper().execSilent('docker logs pmm-server-external-clickhouse'));
-
+    const reason = `last error: ${(lastError as Error).message}`;
     throw new Error(`PMM Server was not ready in expected timeout: ${overallTimeoutMs}ms (${reason})`);
   };
 }
