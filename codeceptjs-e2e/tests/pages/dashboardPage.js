@@ -837,6 +837,8 @@ module.exports = {
       'Queued Operations',
       'Reads & Writes',
       'Connections',
+      'Total Data Size',
+      'Data Size Over Time',
       'Size of Collections',
       'Number of Collections',
       'Replication Lag',
