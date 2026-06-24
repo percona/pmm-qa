@@ -168,6 +168,10 @@
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type not in ['gr', 'replication'] and (mysql_version | replace('_','') | int) >= 80
 
+    - name: Log MyRocks Variable
+      debug:
+        var: my_rocks
+
     - name: Enable MySQL MyRocks
       shell: docker exec {{ container_prefix }}{{ item }} ps-admin --enable-rocksdb -u root -p{{ root_password }}
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
