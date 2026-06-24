@@ -74,7 +74,6 @@ def setup_ps(db_type, db_version=None, db_config=None, args=None):
 
     # Gather Version details
     ps_version = os.getenv('PS_VERSION') or db_version or database_configs[db_type]["versions"][-1]
-    ps_version_int = int(ps_version.replace(".", ""))
     # Define environment variables for playbook
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
