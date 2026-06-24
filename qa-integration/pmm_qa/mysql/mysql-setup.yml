@@ -176,13 +176,13 @@
       when: my_rocks | bool
 
     - name: Enable Percona Server for MySQL repository
-      shell: docker exec {{ container_prefix }}{{ item }} percona-release enable {{ 'ps-84-lts' if ps_version == '8_4' else 'ps-' + ps_version | replace('_', '') }} release
+      shell: docker exec {{ container_prefix }}{{ item }} percona-release enable {{ 'ps-84-lts' if mysql_version == '8_4' else 'ps-' + mysql_version | replace('_', '') }} release
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: my_rocks | bool
 
     - name: Install MyRocks
       shell: |
-        docker exec {{ container_prefix }}{{ item }} apt install -y percona-server-rocksdb{{ '-5.7' if ps_version | replace('_', '') == '57' else '' }}
+        docker exec {{ container_prefix }}{{ item }} apt install -y percona-server-rocksdb{{ '-5.7' if mysql_version | replace('_', '') == '57' else '' }}
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: my_rocks | bool
 
