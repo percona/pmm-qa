@@ -17,7 +17,7 @@ const configurations = [
   },
   {
     command: `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 --publish 83:8080 --publish 448:8443 --name pmm-server-no-flag-clickhouse-config ${dockerVersion}`,
-    configName: 'default-config-no-flag',
+    configName: 'default-config',
     containerName: 'pmm-server-no-flag-clickhouse-config',
     port: 448,
   },
@@ -30,7 +30,7 @@ for (const configuration of configurations) {
     pmmTest.use({ baseURL: baseUrl });
 
     pmmTest(
-      `PMM-T2237 - Verify that ClickHouse configuration can be controlled using environment variables, for config ${configuration.configName} @docker-configuration`,
+      `PMM-T2237 - Verify that ClickHouse configuration can be controlled using environment variables, for config ${configuration.containerName} @docker-configuration`,
       async ({ api, cliHelper }) => {
         cliHelper.execSilent(configuration.command);
         await api.serverApi.waitForReady();
