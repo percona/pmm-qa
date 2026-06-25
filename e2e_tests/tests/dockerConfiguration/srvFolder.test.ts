@@ -36,7 +36,7 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
 
   for (const configuration of srvConfigurations) {
     pmmTest(
-      'PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials @docker-configuration',
+      `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials ${configuration.testName} @docker-configuration`,
       async ({ api, cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
         cliHelper.execSilent(configuration.command);
         console.log(cliHelper.execSilent('docker logs pmm-server-srv').stdout);
