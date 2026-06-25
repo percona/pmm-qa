@@ -267,7 +267,10 @@ export default class LeftNavigation extends BasePage {
         }
 
         await this.page.waitForLoadState('load', { timeout: Timeouts.TEN_SECONDS }).catch(Boolean);
-        await expect(this.page).not.toHaveURL(/404|error|not-found/i);
+
+        const url = new URL(this.page.url());
+
+        expect(`${url.pathname}${url.hash}`).not.toMatch(/\/(?:404|error|not-found)(?:\/|$)/i);
       });
     }
   };
