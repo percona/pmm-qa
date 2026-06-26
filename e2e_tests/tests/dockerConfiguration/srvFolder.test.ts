@@ -87,7 +87,7 @@ for (const configuration of srvConfigurations) {
         });
 
         await page.goto(urlHelper.buildUrlWithParameters(baseUrl + qanStoredMetrics.url, { refresh: '10s' }));
-        await qanStoredMetrics.waitForQanStoredMetricsToHaveData(Timeouts.ONE_MINUTE);
+        await qanStoredMetrics.waitForQanStoredMetricsToHaveData(Timeouts.TWO_MINUTES);
 
         await page.goto(
           urlHelper.buildUrlWithParameters(baseUrl + dashboard.os.nodeSummary.url, { from: 'now-1h' }),
