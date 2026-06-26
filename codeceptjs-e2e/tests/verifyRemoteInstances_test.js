@@ -404,3 +404,114 @@ Scenario(
     queryAnalyticsPage.queryDetails.verifyNoExamples();
   },
 );
+
+Scenario(
+  'PMM-14618 - Verify disable collectors for MySQL @fb-instances',
+  async ({
+    I, remoteInstancesPage, inventoryAPI, grafanaAPI,
+  }) => {
+    const service = 'mysql';
+    const serviceName = remoteInstancesHelper.services[service];
+    const nodeName = 'pmm-server';
+    const psServiceName = `mysql_disable_collectors_${faker.lorem.word()}`;
+    const collectors = ['global_status', 'perf_schema.eventsstatements'];
+
+    I.amOnPage(remoteInstancesPage.url);
+    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
+    remoteInstancesPage.openAddRemotePage(service);
+    await remoteInstancesPage.fillRemoteFields(serviceName, nodeName, psServiceName);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectors, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsLabel, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsDescription, 30);
+    I.see('Disable collectors', remoteInstancesPage.fields.disableCollectorsLabel);
+
+    await remoteInstancesPage.createRemoteInstance(psServiceName, { disableCollectors: collectors.join(', ') });
+
+    const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, psServiceName);
+
+    await pmmInventoryPage.openAgents(service_id);
+    I.click(pmmInventoryPage.fields.showAgentDetails('MySQL exporter'));
+    I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText('disabled_collectors='), 10);
+    collectors.forEach((collector) => {
+      I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText(collector), 10);
+    });
+
+    await grafanaAPI.checkMetricExist('mysql_exporter_collector_success', { type: 'service_id', value: service_id });
+    await grafanaAPI.checkMetricAbsent('mysql_global_status_connection_errors_total', { type: 'service_id', value: service_id });
+  },
+);
+
+Scenario(
+  'PMM-14618 - Verify disable collectors for PostgreSQL @fb-instances',
+  async ({
+    I, remoteInstancesPage, inventoryAPI, grafanaAPI,
+  }) => {
+    const service = 'postgresql';
+    const serviceName = remoteInstancesHelper.services[service];
+    const nodeName = 'pmm-server';
+    const pgServiceName = `postgresql_disable_collectors_${faker.lorem.word()}`;
+    const collectors = ['stat_database'];
+
+    I.amOnPage(remoteInstancesPage.url);
+    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
+    remoteInstancesPage.openAddRemotePage(service);
+    await remoteInstancesPage.fillRemoteFields(serviceName, nodeName, pgServiceName);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectors, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsLabel, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsDescription, 30);
+    I.see('Disable collectors', remoteInstancesPage.fields.disableCollectorsLabel);
+
+    await remoteInstancesPage.createRemoteInstance(pgServiceName, { disableCollectors: collectors.join(', ') });
+
+    const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, pgServiceName);
+
+    await pmmInventoryPage.openAgents(service_id);
+    I.click(pmmInventoryPage.fields.showAgentDetails(AGENT_NAMES.POSTGRESQL_EXPORTER));
+    I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText('disabled_collectors='), 10);
+    collectors.forEach((collector) => {
+      I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText(collector), 10);
+    });
+
+    await grafanaAPI.checkMetricExist('pg_database_size_bytes', { type: 'service_id', value: service_id });
+    await grafanaAPI.checkMetricAbsent('pg_stat_database_blks_read', { type: 'service_id', value: service_id });
+  },
+);
+
+Scenario(
+  'PMM-14618 - Verify disable collectors for ProxySQL @fb-instances',
+  async ({
+    I, remoteInstancesPage, inventoryAPI, grafanaAPI,
+  }) => {
+    const service = 'proxysql';
+    const serviceName = remoteInstancesHelper.services[service];
+    const nodeName = 'pmm-server';
+    // const collectors = [];
+    const collectors = ['stats_memory_metrics'];
+    // const collectors = ['mysql_status'];
+    const newServiceName = `${service}_disable_collectors_${collectors.join('_')}_${faker.lorem.word()}`;
+    // const collectors = ['mysql_connection_list'];
+
+    I.amOnPage(remoteInstancesPage.url);
+    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
+    remoteInstancesPage.openAddRemotePage(service);
+    await remoteInstancesPage.fillRemoteFields(serviceName, nodeName, newServiceName);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectors, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsLabel, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsDescription, 30);
+    I.see('Disable collectors', remoteInstancesPage.fields.disableCollectorsLabel);
+
+    await remoteInstancesPage.createRemoteInstance(newServiceName, { disableCollectors: collectors.join(', ') });
+
+    const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.PROXYSQL, newServiceName);
+
+    await pmmInventoryPage.openAgents(service_id);
+    I.click(pmmInventoryPage.fields.showAgentDetails(AGENT_NAMES.PROXYSQL_EXPORTER));
+    I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText('disabled_collectors='), 10);
+    collectors.forEach((collector) => {
+      I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText(collector), 10);
+    });
+
+    await grafanaAPI.checkMetricExist('proxysql_up', { type: 'service_id', value: service_id });
+    await grafanaAPI.checkMetricAbsent('proxysql_stats_memory_auth_memory', { type: 'service_id', value: service_id });
+  },
+);

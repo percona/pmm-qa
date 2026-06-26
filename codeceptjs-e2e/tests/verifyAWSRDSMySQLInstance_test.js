@@ -63,6 +63,55 @@ Data(instances).Scenario(
   },
 );
 
+Scenario(
+  'PMM-14618 - Verify disable collectors for AWS RDS MySQL @instances',
+  async ({
+    I, remoteInstancesPage, pmmInventoryPage, inventoryAPI, grafanaAPI,
+  }) => {
+    const serviceName = remoteInstancesPage.mysql80rds['Service Name'];
+    const nodeName = 'pmm-server';
+    const collectors = ['global_status', 'perf_schema.eventsstatements'];
+
+    await inventoryAPI.deleteNodeByServiceName(SERVICE_TYPE.MYSQL, serviceName);
+
+    I.amOnPage(remoteInstancesPage.url);
+    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded().openAddAWSRDSMySQLPage();
+    remoteInstancesPage.discoverRDS();
+    remoteInstancesPage.verifyInstanceIsDiscovered(serviceName);
+    remoteInstancesPage.startMonitoringOfInstance(serviceName);
+    remoteInstancesPage.verifyAddInstancePageOpened();
+    await remoteInstancesPage.fillRemoteRDSFields(serviceName, nodeName);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectors, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsLabel, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsDescription, 30);
+    I.see('Disable collectors', remoteInstancesPage.fields.disableCollectorsLabel);
+    assert.ok(
+      await I.grabAttributeFrom(remoteInstancesPage.fields.disableCollectors, 'placeholder'),
+      'Disable collectors field should have a placeholder',
+    );
+
+    I.fillField(remoteInstancesPage.fields.disableCollectors, 'bad name, collector!');
+    I.click(remoteInstancesPage.fields.addService);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsError, 10);
+
+    I.clearField(remoteInstancesPage.fields.disableCollectors);
+
+    await remoteInstancesPage.createRemoteInstance(serviceName, { disableCollectors: collectors.join(', ') });
+
+    const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MYSQL, serviceName);
+
+    await pmmInventoryPage.openAgents(service_id);
+    I.click(pmmInventoryPage.fields.showAgentDetails('MySQL exporter'));
+    I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText('disabled_collectors='), 10);
+    collectors.forEach((collector) => {
+      I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText(collector), 10);
+    });
+
+    await grafanaAPI.checkMetricExist('mysql_exporter_collector_success', { type: 'service_id', value: service_id });
+    await grafanaAPI.checkMetricAbsent('mysql_global_status_connection_errors_total', { type: 'service_id', value: service_id });
+  },
+);
+
 // PMM-13750 Unable to add RDS instance on multiple nodes
 Scenario.skip(
   'PMM-13166 + PMM-13548 - Verify adding RDS instances (Verify Ability to monitor DBs from a different node) [critical] @instances',
