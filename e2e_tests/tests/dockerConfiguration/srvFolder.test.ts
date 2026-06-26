@@ -5,16 +5,17 @@ import { Timeouts } from '@helpers/timeouts';
 const newUser = 'newuser';
 const newPassword = 'newpass';
 const dockerVolumeName = 'pmm-volume-srv';
-const dockerContainerName = 'pmm-server-srv';
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
 const srvConfigurations = [
   {
-    command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 444:8443 --volume "$HOME/srv":/srv --name ${dockerContainerName} ${dockerVersion}`,
+    command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 444:8443 --volume "$HOME/srv":/srv --name pmm-server-srv-local-folder ${dockerVersion}`,
+    containerName: 'pmm-server-srv-local-folder',
     port: 444,
     testName: 'local folder',
   },
   {
-    command: `docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 445:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} ${dockerVersion}`,
+    command: `docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 445:8443 --volume ${dockerVolumeName}:/srv --name pmm-server-srv-docker-volume ${dockerVersion}`,
+    containerName: 'pmm-server-srv-docker-volume',
     port: 445,
     testName: 'docker volume',
   },
@@ -32,8 +33,8 @@ for (const configuration of srvConfigurations) {
     });
 
     pmmTest.afterEach(async ({ cliHelper }) => {
-      cliHelper.execSilent(`docker stop ${dockerContainerName}`);
-      cliHelper.execSilent(`docker rm -f ${dockerContainerName}`);
+      cliHelper.execSilent(`docker stop ${configuration.containerName}`);
+      cliHelper.execSilent(`docker rm -f ${configuration.containerName}`);
     });
 
     pmmTest(
@@ -73,7 +74,7 @@ for (const configuration of srvConfigurations) {
         });
 
         await grafanaHelper.unAuthorize();
-        cliHelper.execSilent('docker exec pmm-server-srv change-admin-password anotherpass');
+        cliHelper.execSilent(`docker exec ${configuration.containerName} change-admin-password anotherpass`);
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for password change
         await page.waitForTimeout(Timeouts.FIVE_SECONDS);
         await grafanaHelper.authorize(newUser, 'anotherpass', baseUrl);
