@@ -2,39 +2,40 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-pmmTest.describe('Test for SRV folder in pmm server.', () => {
-  const baseUrl = `https://127.0.0.1:444/`;
-  const newUser = 'newuser';
-  const newPassword = 'newpass';
-  const dockerVolumeName = 'pmm-volume-srv';
-  const dockerContainerName = 'pmm-server-srv';
-  const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+const newUser = 'newuser';
+const newPassword = 'newpass';
+const dockerVolumeName = 'pmm-volume-srv';
+const dockerContainerName = 'pmm-server-srv';
+const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
+const srvConfigurations = [
+  {
+    command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 444:8443 --volume "$HOME/srv":/srv --name ${dockerContainerName} ${dockerVersion}`,
+    port: 444,
+    testName: 'local folder',
+  },
+  {
+    command: `docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 444:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} ${dockerVersion}`,
+    port: 445,
+    testName: 'docker volume',
+  },
+];
 
-  pmmTest.describe.configure({ mode: 'serial' });
-  pmmTest.use({ baseURL: baseUrl });
+for (const configuration of srvConfigurations) {
+  pmmTest.describe('Test for SRV folder in pmm server.', () => {
+    const baseUrl = `https://127.0.0.1:${configuration.port}/`;
 
-  const srvConfigurations = [
-    {
-      command: `sudo mkdir -p $HOME/srv && sudo chown -R 1000:0 $HOME/srv && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 444:8443 --volume "$HOME/srv":/srv --name ${dockerContainerName} ${dockerVersion}`,
-      testName: 'local folder',
-    },
-    {
-      command: `docker volume create ${dockerVolumeName} && docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e GF_SECURITY_ADMIN_USER=${newUser} -e GF_SECURITY_ADMIN_PASSWORD=${newPassword} -e PMM_ENABLE_INTERNAL_PG_QAN=1 --publish 444:8443 --volume ${dockerVolumeName}:/srv --name ${dockerContainerName} ${dockerVersion}`,
-      testName: 'docker volume',
-    },
-  ];
+    pmmTest.use({ baseURL: baseUrl });
 
-  pmmTest.beforeEach(async ({ cliHelper }) => {
-    cliHelper.execSilent(`docker volume rm ${dockerVolumeName} || true`);
-    cliHelper.execSilent(`sudo rm -fr $HOME/srv || true`);
-  });
+    pmmTest.beforeEach(async ({ cliHelper }) => {
+      cliHelper.execSilent(`docker volume rm ${dockerVolumeName} || true`);
+      cliHelper.execSilent(`sudo rm -fr $HOME/srv || true`);
+    });
 
-  pmmTest.afterEach(async ({ cliHelper }) => {
-    cliHelper.execSilent(`docker stop ${dockerContainerName}`);
-    cliHelper.execSilent(`docker rm -f ${dockerContainerName}`);
-  });
+    pmmTest.afterEach(async ({ cliHelper }) => {
+      cliHelper.execSilent(`docker stop ${dockerContainerName}`);
+      cliHelper.execSilent(`docker rm -f ${dockerContainerName}`);
+    });
 
-  for (const configuration of srvConfigurations) {
     pmmTest(
       `PMM-T1255 + PMM-T1279 - Verify GF_SECURITY_ADMIN_PASSWORD environment variable also with changed admin credentials ${configuration.testName} @docker-configuration`,
       async ({ api, cliHelper, dashboard, grafanaHelper, page, qanStoredMetrics, urlHelper }) => {
@@ -103,5 +104,5 @@ pmmTest.describe('Test for SRV folder in pmm server.', () => {
         await dashboard.verifyPanelValues(dashboard.os.nodeSummary.metricsWithData);
       },
     );
-  }
-});
+  });
+}
