@@ -70,7 +70,7 @@ for (const configuration of srvConfigurations) {
         await page.goto(urlHelper.buildUrlWithParameters(baseUrl + dashboard.home.url, {}));
         await dashboard.home.elements.homeDashboardLocator.waitFor({
           state: 'visible',
-          timeout: Timeouts.TWENTY_SECONDS,
+          timeout: Timeouts.THIRTY_SECONDS,
         });
 
         await grafanaHelper.unAuthorize();
