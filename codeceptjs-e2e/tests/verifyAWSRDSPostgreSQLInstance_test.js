@@ -85,6 +85,55 @@ Data(instances).Scenario(
   },
 );
 
+Scenario(
+  'PMM-14618 - Verify disable collectors for AWS RDS PostgreSQL @instances',
+  async ({
+    I, remoteInstancesPage, pmmInventoryPage, inventoryAPI, grafanaAPI,
+  }) => {
+    const serviceName = remoteInstancesPage.postgresql16rds['Service Name'];
+    const nodeName = 'pmm-server';
+    const collectors = ['stat_database'];
+
+    await inventoryAPI.deleteNodeByServiceName(SERVICE_TYPE.POSTGRESQL, serviceName);
+
+    I.amOnPage(remoteInstancesPage.url);
+    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded().openAddAWSRDSMySQLPage();
+    remoteInstancesPage.discoverRDS();
+    remoteInstancesPage.verifyInstanceIsDiscovered(serviceName);
+    remoteInstancesPage.startMonitoringOfInstance(serviceName);
+    remoteInstancesPage.verifyAddInstancePageOpened();
+    await remoteInstancesPage.fillRemoteRDSFields(serviceName, nodeName);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectors, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsLabel, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsDescription, 30);
+    I.see('Disable collectors', remoteInstancesPage.fields.disableCollectorsLabel);
+    assert.ok(
+      await I.grabAttributeFrom(remoteInstancesPage.fields.disableCollectors, 'placeholder'),
+      'Disable collectors field should have a placeholder',
+    );
+
+    I.fillField(remoteInstancesPage.fields.disableCollectors, 'bad name, collector!');
+    I.click(remoteInstancesPage.fields.addService);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsError, 10);
+
+    I.clearField(remoteInstancesPage.fields.disableCollectors);
+
+    await remoteInstancesPage.createRemoteInstance(serviceName, { disableCollectors: collectors.join(', ') });
+
+    const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.POSTGRESQL, serviceName);
+
+    await pmmInventoryPage.openAgents(service_id);
+    I.click(pmmInventoryPage.fields.showAgentDetails(AGENT_NAMES.POSTGRESQL_EXPORTER));
+    I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText('disabled_collectors='), 10);
+    collectors.forEach((collector) => {
+      I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText(collector), 10);
+    });
+
+    await grafanaAPI.checkMetricExist('pg_database_size_bytes', { type: 'service_id', value: service_id });
+    await grafanaAPI.checkMetricAbsent('pg_stat_database_blks_read', { type: 'service_id', value: service_id });
+  },
+);
+
 Data(instances).Scenario(
   'PMM-T716 + PMM-T1596 - Verify adding PostgreSQL RDS monitoring to PMM via UI @aws @instances'
   + 'Verify that PostgreSQL exporter ignores connection error to "rdsadmin" database for Amazon RDS instance @aws @instances',

@@ -91,6 +91,7 @@ const REMOTE_INSTANCE_TYPES = {
 
 const AGENT_NAMES = {
   POSTGRESQL_EXPORTER: 'PostgreSQL exporter',
+  PROXYSQL_EXPORTER: 'ProxySQL exporter',
   QAN_PG_STAT_MONITOR: 'QAN PostgreSQL pg_stat_monitor agent',
   QAN_PG_STAT_STATEMENTS: 'QAN PostgreSQL pg_stat_statements agent',
   QAN_MYSQL_PERFSCHEMA_AGENT: 'QAN MySQL Performance Schema agent',
