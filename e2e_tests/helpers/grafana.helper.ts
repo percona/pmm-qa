@@ -8,7 +8,6 @@ export default class GrafanaHelper {
     const authToken = GrafanaHelper.getToken(username, password);
 
     await this.page.setExtraHTTPHeaders({ Authorization: `Basic ${authToken}` });
-
     await this.page.request.post(`${baseUrl}graph/login`, {
       data: { password, user: username },
       ignoreHTTPSErrors: true,

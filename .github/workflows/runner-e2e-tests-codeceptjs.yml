@@ -188,7 +188,7 @@ jobs:
             echo "has_subset=true" >> "$GITHUB_OUTPUT"
             echo "Launchable subset is not empty. Continue with setup and tests."
           else
-            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
             echo "Launchable subset is empty. Downstream setup and tests will be skipped."
           fi
 
