@@ -73,11 +73,13 @@
       pause:
         seconds: 10
 
-    - name: Enable expected configuration
-      shell: |
-        docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SET GLOBAL innodb_monitor_enable = 'trx_commits_insert_update';"
-      loop: "{{ range(1, nodes_count | int + 1) | list }}"
-
+#    - name: Enable expected configuration
+#      shell: |
+#        docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SET GLOBAL innodb_monitor_enable = 'trx_commits_insert_update';"
+#        docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SET GLOBAL innodb_monitor_enable = 'trx_ro_commits';"
+#        docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SET GLOBAL innodb_monitor_enable = 'module_transaction';"
+#      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+#
     - name: Create slowlog configuration for mysql nodes
       shell: |
         docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SET GLOBAL slow_query_log='ON'; SET GLOBAL long_query_time=0;"
