@@ -35,4 +35,9 @@ relay_log_purge=ON
 # Performance and connection settings
 max_connections=1000
 innodb_buffer_pool_size=256M
-innodb_monitor_enable = module_transaction
+innodb_monitor_enable = trx_rw_commits
+innodb_monitor_enable = trx_ro_commits
+innodb_monitor_enable = trx_nl_ro_commits
+innodb_monitor_enable = trx_commits_insert_update
+innodb_monitor_enable = trx_rollbacks
+innodb_monitor_enable = trx_active_transactions

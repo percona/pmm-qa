@@ -1,4 +1,9 @@
 [mysqld]
 plugin-load-add=auth_native_password.so
 bind-address = 0.0.0.0
-innodb_monitor_enable = module_transaction
+innodb_monitor_enable = trx_rw_commits
+innodb_monitor_enable = trx_ro_commits
+innodb_monitor_enable = trx_nl_ro_commits
+innodb_monitor_enable = trx_commits_insert_update
+innodb_monitor_enable = trx_rollbacks
+innodb_monitor_enable = trx_active_transactions
