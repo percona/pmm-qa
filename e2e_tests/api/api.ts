@@ -5,6 +5,7 @@ import GrafanaApi from '@api/grafana.api';
 import RealTimeAnalyticsApi from '@api/realtimeanalytics.api';
 import SettingsApi from '@api/settings.api';
 import AccessControlApi from '@api/accessControl.api';
+import ServerApi from '@api/server.api';
 import AlertingApi from '@api/alerting.api';
 
 export default class Api {
@@ -14,6 +15,7 @@ export default class Api {
   readonly grafanaApi: GrafanaApi;
   readonly inventoryApi: InventoryApi;
   readonly realTimeAnalyticsApi: RealTimeAnalyticsApi;
+  readonly serverApi: ServerApi;
   readonly settingsApi: SettingsApi;
 
   constructor(page: Page, request: APIRequestContext) {
@@ -24,5 +26,6 @@ export default class Api {
     this.grafanaApi = new GrafanaApi(page, request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
     this.settingsApi = new SettingsApi(request);
+    this.serverApi = new ServerApi(request);
   }
 }

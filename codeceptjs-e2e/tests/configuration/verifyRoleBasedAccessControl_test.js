@@ -75,7 +75,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThatAllGraphsNoData(10);
+    await dashboardPage.verifyThatAllGraphsNoData(5);
 
     await I.unAuthorize();
 
@@ -85,7 +85,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThatAllGraphsNoData(10);
+    await dashboardPage.verifyThatAllGraphsNoData(2);
 
     I.amOnPage(dashboardPage.postgresqlInstanceSummaryDashboard.url);
     dashboardPage.waitForDashboardOpened();

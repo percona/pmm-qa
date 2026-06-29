@@ -27,6 +27,14 @@
     container_prefix: "ps_pmm{{ (setup_type|default('')) and '_' ~ setup_type }}_{{ ps_version }}_"
     encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
+    backup: "{{ lookup('env', 'BACKUP') | default(false, true) | bool }}"
+    buckets: "{{ lookup('env', 'BUCKETS') | default('bcp', true) }}"
+    minio_access_key: minio1234
+    minio_secret_key: minio1234
+    minio_volume_name: minio_backups
+    minio_ports:
+      - "9010:9000"
+      - "9001:9001"
 
   tasks:
     - name: Modify the node count for group replication
@@ -73,6 +81,13 @@
     - name: Wait 10 seconds for setup to finish
       pause:
         seconds: 10
+
+    - name: Install Percona XtraBackup for MySQL backups
+      include_tasks: tasks/backup_setup.yml
+      vars:
+        container_name: "{{ container_prefix }}{{ item }}"
+
+      when: backup | default(false) | bool
 
     - name: Create slowlog configuration for mysql nodes
       shell: |

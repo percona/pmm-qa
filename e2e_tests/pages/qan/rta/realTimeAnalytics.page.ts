@@ -43,15 +43,17 @@ export default class RealTimeAnalyticsPage extends BasePage {
   elements = {
     detailsOperationId: this.page.getByTestId('operation-id-value'),
     detailsPane: this.page.getByTestId('query-details-pane'),
-    elapsedTimeColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Elapsed time'),
-    hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByTitle('Host', { exact: true }),
+    elapsedTimeColumnHeader: this.page
+      .getByTestId(realTimeTableTestId)
+      .getByText('Elapsed time', { exact: true }),
+    hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
     mongoDbQuery: this.page.locator('.language-mongodb'),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
-      .getByTitle('Query text', { exact: true }),
+      .getByText('Query text', { exact: true }),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
-    realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tr'),
+    realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tbody tr'),
   };
   inputs = {
     clusterService: this.page.locator('input[name = "service"]'),

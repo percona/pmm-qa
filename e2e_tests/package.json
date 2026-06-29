@@ -2,6 +2,9 @@
   "name": "e2e_tests",
   "version": "1.0.0",
   "main": "index.js",
+  "scripts": {
+    "prepare": "git -C .. config core.hooksPath .husky"
+  },
   "keywords": [],
   "lint-staged": {
     "*.{ts}": "eslint --fix"
