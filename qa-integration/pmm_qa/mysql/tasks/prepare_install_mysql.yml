@@ -128,6 +128,9 @@
 - name: Restart MySQL
   shell: docker exec {{ container_prefix }}{{ index }} systemctl restart mysql
 
+- name: Restart MySQL docker container
+  shell: docker restart {{ container_prefix }}{{ index }}
+
 - name: Wait 5 seconds for MySQL to start
   pause:
     seconds: 5
