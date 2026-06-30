@@ -1,17 +1,22 @@
 import pmmTest from '@fixtures/pmmTest';
-import { sortUnionOrIntersectionTypes } from 'eslint-plugin-perfectionist/dist/rules/sort-union-types';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
-  pmmTest('PMM-T9991 @pgsm-pmm-integration', async ({ page, cliHelper, grafanaHelper, servicesPage }) => {
+  pmmTest('PMM-T9991 @pgsm-pmm-integration', async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
     const newPassword = 'new_password_change_agent';
-    const containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout;
+    const containerName = cliHelper
+      .execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`)
+      .stdout.trim();
     const pgVersion: string = containerName.match(/\d+/)?.[0] ?? '';
-    const serviceName = cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $2}'`,
-    ).stdout;
-    const serviceId = cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
-    ).stdout;
+    const serviceName = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $2}'`,
+      )
+      .stdout.trim();
+    const serviceId = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
+      )
+      .stdout.trim();
 
     console.log(cliHelper.execSilent(`docker exec ${containerName} pmm-admin list'`).stdout);
     console.log(`Container name is: ${containerName}`);
