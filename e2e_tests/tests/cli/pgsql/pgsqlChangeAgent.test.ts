@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
+import { ServiceStatus } from '@pages/inventory/services.page';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest('PMM-T9991 @pgsm-pmm-integration', async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
@@ -34,6 +35,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     console.log(`Restart response: ${restart.stdout}`);
     await grafanaHelper.authorize();
     await page.goto(servicesPage.url);
-    await servicesPage.waitForServiceStatus(serviceName, 'DOWN', Timeouts.ONE_MINUTE);
+    await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
   });
 });
