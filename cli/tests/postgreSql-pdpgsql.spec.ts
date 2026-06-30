@@ -228,6 +228,9 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
 
   test('PMM-T9991 - run pmm-admin remove postgresql added with custom agent password', async ({}) => {
     const newPassword = 'new_password_change_agent';
+    // @ts-ignore
+    const pgVersion: string = containerName.match(/\d+/)[0];
+    console.log(`Pg Version is: ${pgVersion}`);
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --host=127.0.0.1 --port=5432 --service-name=${changeAgentServiceName}`);
     await output.assertSuccess();
 
