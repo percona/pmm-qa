@@ -4,11 +4,7 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe('Test to run after release of new PMM Version', () => {
-  if (!process.env.PMM_SERVER_LATEST?.trim()) {
-    throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
-  }
 
-  const expectedVersion = process.env.PMM_SERVER_LATEST.trim();
 
   pmmTest.beforeEach(async ({ context, page }) => {
     await page.unroute(apiEndpoints.server.updates);
@@ -20,6 +16,12 @@ pmmTest.describe('Test to run after release of new PMM Version', () => {
   pmmTest(
     'PMM-T2200 - Verify new release is available for upgrade @post-release',
     async ({ grafanaHelper, updatesPage }) => {
+      if (!process.env.PMM_SERVER_LATEST?.trim()) {
+        throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
+      }
+
+      const expectedVersion = process.env.PMM_SERVER_LATEST.trim();
+
       await grafanaHelper.authorize();
 
       const updateInfo = await pmmTest.step('Check version service reports an update', async () => {
@@ -46,6 +48,8 @@ pmmTest.describe('Test to run after release of new PMM Version', () => {
   pmmTest(
     "PMM-T2201 - Verify What's new link and release notes @post-release",
     async ({ grafanaHelper, updatesPage }) => {
+      const expectedVersion = process.env.PMM_SERVER_LATEST?.trim();
+
       await grafanaHelper.authorize();
       await updatesPage.openHomeForWhatsNew();
 
@@ -70,6 +74,8 @@ pmmTest.describe('Test to run after release of new PMM Version', () => {
   pmmTest(
     'PMM-T2202 - Verify PMM new version on percona.com/downloads @post-release @downloads',
     async ({ downloadsPage }) => {
+      const expectedVersion = process.env.PMM_SERVER_LATEST?.trim();
+
       await downloadsPage.open();
       await downloadsPage.selectPmmProduct();
 
