@@ -129,7 +129,6 @@ def setup_mysql(db_type, db_version=None, db_config=None, args=None):
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
         'ENCRYPTED_CLIENT_CONFIG': get_value('ENCRYPTED_CLIENT_CONFIG', db_type, args, db_config),
         'CLIENT_DEBUG': args.client_debug,
-        'MY_ROCKS': get_value('MY_ROCKS', db_type, args, db_config),
     }
 
     run_ansible_playbook('mysql/mysql-setup.yml', env_vars, args)

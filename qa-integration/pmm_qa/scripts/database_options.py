@@ -25,7 +25,7 @@ database_options = {
     "MYSQL": {
         "versions": ["5.7", "8.0", "8.4", "9.7"],
         "configurations": {"QUERY_SOURCE": "perfschema", "SETUP_TYPE": "", "CLIENT_VERSION": "3-dev-latest",
-                           "TARBALL": "", "MY_ROCKS": "false", "ENCRYPTED_CLIENT_CONFIG": "false"}
+                           "TARBALL": "", "ENCRYPTED_CLIENT_CONFIG": "false"}
     },
     "PS": {
         "versions": ["5.7", "8.4", "8.0"],
