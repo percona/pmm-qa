@@ -29,6 +29,8 @@ const waitForAgentRunning = async (agentName = PgAgent.PGSTATMONITOR_AGENT) => {
   });
 };
 
+
+
 test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql' }, async () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^pdpgsql_pmm_\'');
@@ -228,7 +230,9 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const newPassword = 'new_password_change_agent';
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --host=127.0.0.1 --port=5432 --service-name=${changeAgentServiceName}`);
     await output.assertSuccess();
+
     const serviceId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${changeAgentServiceName} | awk -F' ' '{print $4}'`)).stdout;
+    await cli.waitForAgentRunning(containerName, serviceId);
 
     const metrics = await cli.getMetrics(changeAgentServiceName, 'pmm', 'mypass', containerName);
     console.log(`Metrics are: ${metrics}`)

@@ -1,7 +1,12 @@
-import { test } from '@playwright/test';
+import { expect, test } from "@playwright/test";
 import ExecReturn from '@support/types/exec-return.class';
 import shell from 'shelljs';
 import { performance } from "node:perf_hooks";
+
+enum Agent {
+  PGSTATMONITOR_AGENT = 'postgresql_pgstatmonitor_agent',
+  PGSTATEMENTS_AGENT = 'postgresql_pgstatements_agent',
+}
 
 /**
  * Shell(sh) echo().to() wrapper to use in tests with handy logs creation
@@ -133,3 +138,23 @@ export async function executeAndVerify(command: string, expectedOutput?: string 
     return output.stdout;
   });
 }
+
+export async function waitForAgentRunning(
+  containerName: string,
+  serviceId: any,
+  agentName = Agent.PGSTATMONITOR_AGENT,
+) {
+  await test.step("Check that pgstatmonitor agent is running", async () => {
+    await expect(async () => {
+      const output = await exec(
+        `docker exec ${containerName} pmm-admin inventory list agents | grep ${serviceId}`,
+      );
+      await output.assertSuccess();
+      await output.outContains("postgres_exporter Running");
+      await output.outContains(`${agentName} Running`);
+    }).toPass({
+      intervals: [2_000],
+      timeout: 30_000,
+    });
+  });
+};
