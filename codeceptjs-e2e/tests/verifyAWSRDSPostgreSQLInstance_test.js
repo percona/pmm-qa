@@ -86,7 +86,7 @@ Data(instances).Scenario(
 );
 
 Scenario(
-  'PMM-14618 - Verify disable collectors for AWS RDS PostgreSQL @instances',
+  'PMM-T2245 - Verify disable collectors for AWS RDS PostgreSQL @instances',
   async ({
     I, remoteInstancesPage, pmmInventoryPage, inventoryAPI, grafanaAPI,
   }) => {

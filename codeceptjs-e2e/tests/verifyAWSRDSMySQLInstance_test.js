@@ -64,7 +64,7 @@ Data(instances).Scenario(
 );
 
 Scenario(
-  'PMM-14618 - Verify disable collectors for AWS RDS MySQL @instances',
+  'PMM-T2244 - Verify disable collectors for AWS RDS MySQL @instances',
   async ({
     I, remoteInstancesPage, pmmInventoryPage, inventoryAPI, grafanaAPI,
   }) => {
