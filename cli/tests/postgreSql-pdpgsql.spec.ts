@@ -6,6 +6,7 @@ const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = '127.0.0.1:5432';
 const connectionTimeoutServiceName = 'pgsql_connection_timeout_service';
+const changeAgentServiceName = 'pgsql_change_agent_service';
 
 let containerName: string;
 
@@ -224,9 +225,9 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
   test('PMM-T9991 - run pmm-admin remove postgresql added with custom agent password', async ({}) => {
-    const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --host=127.0.0.1 --port=5432 --service-name=change_agent_service`);
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --host=127.0.0.1 --port=5432 --service-name=${changeAgentServiceName}`);
     console.log(output);
-    const outputList = await cli.exec(`docker exec ${containerName} pmm-admin list`);
-    console.log(outputList);
+    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${changeAgentServiceName} | awk -F' ' '{print $4}'`);
+    console.log(serviceId);
   });
 });
