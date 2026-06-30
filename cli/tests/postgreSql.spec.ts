@@ -4,7 +4,6 @@ import * as cli from '@helpers/cli-helper';
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
-const containerName = async () => (await cli.exec("docker ps --format '{{.Names}}'")).stdout.split('\n').find(value => value.includes('pdpgsql_pmm_'))
 
 test.describe('PMM Client CLI tests for PostgreSQL Data Base', { tag: '@pgsql' }, async () => {
   test.beforeAll(async ({}) => {
@@ -170,17 +169,5 @@ test.describe('PMM Client CLI tests for PostgreSQL Data Base', { tag: '@pgsql' }
       await output.assertSuccess();
       await output.outContains('Service removed.');
     }
-  });
-
-
-  test('PMM-T9991  run pmm-admin remove postgresql added with custom agent password', async ({}) => {
-    console.log(`Container name is: ${await containerName()}`)
-    // const services = (await cli.exec(`docker exec ${}`))
-    //   .getStdOutLines();
-    // for (const service of services) {
-    //   const output = await cli.exec(`sudo pmm-admin remove postgresql ${service}`);
-    //   await output.assertSuccess();
-    //   await output.outContains('Service removed.');
-    // }
   });
 });

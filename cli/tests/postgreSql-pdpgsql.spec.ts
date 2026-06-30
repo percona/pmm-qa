@@ -222,4 +222,11 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
       `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
     ).toBeGreaterThan(5_000);
   });
+
+  test('PMM-T9991 - run pmm-admin remove postgresql added with custom agent password', async ({}) => {
+    const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --host=127.0.0.1 --port=5432 --service-name=change_agent_service`);
+    console.log(output);
+    const outputList = await cli.exec(`docker exec ${containerName} pmm-admin list`);
+    console.log(outputList);
+  });
 });
