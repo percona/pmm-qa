@@ -241,7 +241,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     console.log(`Metrics are: ${metrics}`)
 
     await cli.exec(`docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD '${newPassword}';"`);
-    const restart = await cli.exec(`docker exec ${containerName} pg_ctlcluster 17 main restart`);
+    const restart = await cli.exec(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
     console.log('Restart output is: ');
     console.log(restart);
     await cli.exec('sleep 60');
