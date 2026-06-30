@@ -663,15 +663,13 @@ module.exports = {
         }
       }
 
-      const [response] = await Promise.all([
+      await Promise.all([
         pageObject.waitForResponse(
           async (response) => {
             if (response.url().includes('v1/management/services')) {
               if (response.status() === 200) {
                 return true;
               }
-
-              console.log(`Expected status 200 but received ${response.status()}. Response: ${await response.text()}`);
 
               throw new Error(`Expected status 200 but received ${response.status()}. Response: ${await response.text()}`);
             }
