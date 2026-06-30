@@ -227,14 +227,19 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   test('PMM-T9991 - run pmm-admin remove postgresql added with custom agent password', async ({}) => {
     const newPassword = 'new_password_change_agent';
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --host=127.0.0.1 --port=5432 --service-name=${changeAgentServiceName}`);
-    console.log(output);
-    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${changeAgentServiceName} | awk -F' ' '{print $4}'`);
-    console.log(serviceId);
+    await output.assertSuccess();
+    const serviceId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${changeAgentServiceName} | awk -F' ' '{print $4}'`)).stdout;
+
     const metrics = await cli.getMetrics(changeAgentServiceName, 'pmm', 'mypass', containerName);
     console.log(`Metrics are: ${metrics}`)
+
     await cli.exec(`docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD '${newPassword}';"`);
     await cli.exec(`docker exec ${containerName} pg_ctlcluster 17 main restart`);
     const newMetrics = await cli.getMetrics(changeAgentServiceName, 'pmm', 'mypass', containerName);
     console.log(`new metrics are: ${newMetrics}`)
+    const pgExporterId  = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print $4}'`);
+    console.log(`pg exporter id is: ${pgExporterId}`);
+    const pgStatMonitorId  = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $4}'`);
+    console.log(`pg exporter id is: ${pgStatMonitorId}`);
   });
 });

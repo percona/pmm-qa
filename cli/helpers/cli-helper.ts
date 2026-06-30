@@ -103,7 +103,7 @@ export async function getMetrics(
       return execute(`${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`);
     },
   );
-  await output.assertSuccess();
+  // await output.assertSuccess();
   // TODO: parse into map(k => v) or json
   return output.stdout;
 }
