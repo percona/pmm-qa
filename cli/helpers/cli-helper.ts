@@ -69,12 +69,14 @@ export async function execSilent(command: string): Promise<ExecReturn> {
  * @param   serviceName         name of the service to search for the exporter
  * @param   agentUser           username to authenticate to exporter
  * @param   agentPassword       password for specified username to authenticate to exporter
+ * @param   exporterName        name of the exporter
  * @param   dockerContainer     Optional! docker container name to scrape metrics from
  */
 export async function getMetrics(
   serviceName: string,
   agentUser: string,
   agentPassword: string,
+  exporterName: string | null = null,
   dockerContainer: string | null = null,
 ): Promise<string> {
   const output = await test.step(
@@ -90,6 +92,10 @@ export async function getMetrics(
       if (!serviceId) {
         throw new Error(`Failed to find '${serviceName}' service is in pmm-admin list output:\n${adminList}`);
       }
+
+      console.log(`Getting metrics for exporter: `)
+      console.log(adminList.filter((item) => item.includes(serviceId))!
+        .find((item: string) => item.includes('_exporter'))!)
 
       const listenPort = adminList.filter((item) => item.includes(serviceId))!
         .find((item: string) => item.includes('_exporter'))!

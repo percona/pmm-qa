@@ -240,7 +240,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const pgExporterId  = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print $4}'`);
     console.log(`pg exporter id is: ${pgExporterId}`);
     const pgStatMonitorId  = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $4}'`);
-    console.log(`pg exporter id is: ${pgStatMonitorId}`);
+    console.log(`pg exporter id is: ${pgStatMonitorId.stdout}`);
     throw new Error("Expected!");
   });
 });
