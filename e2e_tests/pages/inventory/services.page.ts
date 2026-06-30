@@ -33,6 +33,10 @@ export default class ServicesPage extends BasePage {
           `Status was not: ${expectedStatus} for service ${serviceName} in timeout: ${timeout}, last status was ${actualStatus}`,
         );
       }
+
+      console.log(`Actual status is: ${actualStatus}`);
+
+      await super.page.waitForTimeout(Timeouts.ONE_SECOND);
     }
   };
 }
