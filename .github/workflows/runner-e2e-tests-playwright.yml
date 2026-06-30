@@ -170,11 +170,9 @@ jobs:
           fi
 
       - name: Skip notice
-        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
         run: echo "No tests selected by Launchable subset. Skipping setup and test execution."
 
       - name: Setup PMM Server
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/e2e_tests
         run: |
           ls
@@ -185,12 +183,10 @@ jobs:
           timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
 
       - name: Setup PMM-Client
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${{ env.PMM_CLIENT_VERSION }} --admin_password ${{ env.ADMIN_PASSWORD }} --use_metrics_mode no
 
       - name: Run Setup for E2E Tests
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: |
           python3 -m venv virtenv
@@ -201,13 +197,11 @@ jobs:
           python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/e2e_tests/
         run: |
           npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
 
       - name: Download logs
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
           curl --insecure http://admin:${{ env.ADMIN_PASSWORD }}@127.0.0.1/logs.zip --output logs.zip
