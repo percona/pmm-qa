@@ -11,7 +11,7 @@ pmmTest(
     const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
 
     await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
-    await servicesPage.builders.monitoringStatusByServiceName(service.service_name).click();
+    await servicesPage.builders.monitoringByServiceName(service.service_name).click();
     // TODO: Remove reload after story: https://perconadev.atlassian.net/browse/PMM-14828 is fixed.
     await agentsPage.verifyRTAAgentStatus('Running');
 

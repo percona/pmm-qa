@@ -1,7 +1,8 @@
 import pmmTest from '@fixtures/pmmTest';
+import { sortUnionOrIntersectionTypes } from 'eslint-plugin-perfectionist/dist/rules/sort-union-types';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
-  pmmTest('PMM-T9991 @pgsm-pmm-integration', async ({ cliHelper }) => {
+  pmmTest('PMM-T9991 @pgsm-pmm-integration', async ({ page, cliHelper, grafanaHelper, servicesPage }) => {
     const newPassword = 'new_password_change_agent';
     const containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout;
     const pgVersion: string = containerName.match(/\d+/)?.[0] ?? '';
@@ -24,6 +25,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       `docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`,
     );
 
-    console.log(restart.stdout)
+    console.log(`Restart response: ${restart.stdout}`);
+    await grafanaHelper.authorize();
+    await page.goto(servicesPage.url);
+    console.log(
+      `Service status is: ${await servicesPage.builders.monitoringByServiceName(serviceName).textContent()}`,
+    );
   });
 });
