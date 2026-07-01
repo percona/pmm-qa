@@ -38,7 +38,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
     const pgStatMonitorId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $4}'`,
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
 
