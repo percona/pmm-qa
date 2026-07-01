@@ -115,7 +115,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
-    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+    async ({ cliHelper, grafanaHelper, servicesPage }) => {
       cliHelper.createTlsCertificates(containerName);
       console.log('Pki folder content is:');
       console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki`));
@@ -165,24 +165,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} cat /var/log/postgresql/postgresql-${pgVersion}-main.log`,
       );
 
+      await grafanaHelper.authorize();
+      await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
+
       const firstResponse = cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       );
+
+      cliHelper.execSilent('sleep 10');
+
       const secondResponse = cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       );
 
       console.log(firstResponse);
       console.log(secondResponse);
-      // cliHelper.execSilent(`docker exec ${containerName}`);
-      // cliHelper.execSilent(`docker exec ${containerName}`);
-      await grafanaHelper.authorize();
-      await page.goto(agentsPage.url(serviceId));
-      await agentsPage.showRowDetails(pgExporterId);
-      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(pgExporterId);
-      await agentsPage.showRowDetails(pgStatMonitorId);
-      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+      await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.UP, Timeouts.ONE_MINUTE);
     },
   );
 });
