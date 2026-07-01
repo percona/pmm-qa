@@ -37,7 +37,7 @@ export default class ServicesPage extends BasePage {
       console.log(`Actual status is: ${actualStatus}`);
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait between getting the service status
-      await super.page.waitForTimeout(Timeouts.ONE_SECOND);
+      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
     }
   };
 }
