@@ -31,7 +31,7 @@ export default class CliHelper {
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-cn=Percona --batch build-ca nopass`,
     );
     this.execSilent(
-      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:pgsql_pgss_pmm_17 --batch build-server-full pmm-server nopass`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full pmm-server nopass`,
     );
     this.execSilent(
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full ${containerName} nopass`,

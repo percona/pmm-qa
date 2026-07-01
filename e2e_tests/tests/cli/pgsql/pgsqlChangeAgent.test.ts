@@ -117,6 +117,36 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper.createTlsCertificates(containerName);
 
+      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki`));
+
+      cliHelper.execSilent(
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
+      );
+      cliHelper.execSilent(
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
+      );
+      cliHelper.execSilent(
+        `docker exec ${containerName} cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key`,
+      );
+      cliHelper.execSilent(
+        `docker exec ${containerName} cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt`,
+      );
+      cliHelper.execSilent(
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
+      );
+      cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/ ${containerName}.key`);
+      cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/ ${containerName}.crt`);
+      cliHelper.execSilent(`docker exec ${containerName} chown -R postgres:postgres /certs`);
+      cliHelper.execSilent(
+        `docker exec ${containerName} bash -c "printf 'ssl = on\\nssl_cert_file = \\'/certs/pgsql_pgss_pmm_17.crt\\'\\nssl_key_file = \\'/certs/pgsql_pgss_pmm_17.key\\'\\n' >> /etc/postgresql/${pgVersion}/main/postgresql.conf"`,
+      );
+      cliHelper.execSilent(`docker exec ${containerName} cat /etc/postgresql/${pgVersion}/main/postgresql.conf`);
+      // cliHelper.execSilent(`docker exec ${containerName}`);
+      // cliHelper.execSilent(`docker exec ${containerName}`);
+      // cliHelper.execSilent(`docker exec ${containerName}`);
+      // cliHelper.execSilent(`docker exec ${containerName}`);
+      // cliHelper.execSilent(`docker exec ${containerName}`);
+      // cliHelper.execSilent(`docker exec ${containerName}`);
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(pgExporterId);
