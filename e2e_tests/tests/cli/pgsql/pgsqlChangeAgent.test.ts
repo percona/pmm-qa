@@ -168,10 +168,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
 
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${hbaPath}`));
-      // cliHelper.execSilent(`docker exec ${containerName}`);
-      // cliHelper.execSilent(`docker exec ${containerName}`);
-      // cliHelper.execSilent(`docker exec ${containerName}`);
-      // cliHelper.execSilent(`docker exec ${containerName}`);
+      cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
+      cliHelper.execSilent(
+        `docker exec ${containerName} cat /var/log/postgresql/postgresql-${pgVersion}-main.log`,
+      );
+
+      const firstResponse = cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+      );
+      const secondResponse = cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+      );
+
+      console.log(firstResponse);
+      console.log(secondResponse);
       // cliHelper.execSilent(`docker exec ${containerName}`);
       // cliHelper.execSilent(`docker exec ${containerName}`);
       await grafanaHelper.authorize();
