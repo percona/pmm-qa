@@ -150,5 +150,6 @@ dist
 # AI tools
 CLAUDE.md
 .claude
-.cursor
+.cursor/*
+!.cursor/environment.json
 .cursorrules
