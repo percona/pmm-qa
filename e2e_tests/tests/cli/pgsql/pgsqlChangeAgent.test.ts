@@ -3,6 +3,18 @@ import { Timeouts } from '@helpers/timeouts';
 import { ServiceStatus } from '@pages/inventory/services.page';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
+  pmmTest.describe.configure({ retries: 0 });
+
+  pmmTest.afterEach(async ({ cliHelper }) => {
+    const containerName = cliHelper
+      .execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`)
+      .stdout.trim();
+
+    cliHelper.execSilent(
+      `docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD 'GRgrO9301RuF';"`,
+    );
+  });
+
   pmmTest('PMM-T9991 @pgsm-pmm-integration', async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
     const newPassword = 'new_password_change_agent';
     const containerName = cliHelper
@@ -58,6 +70,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     console.log(`change agent password is: ${changeAgentPassword.stdout}`);
     console.log(`change agent password is: ${changePgstatmonitorAgentPassword.stdout}`);
+
+    await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.UP, Timeouts.ONE_MINUTE);
 
     throw new Error('Expected!');
   });

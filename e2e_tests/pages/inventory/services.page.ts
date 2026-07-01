@@ -2,7 +2,7 @@ import BasePage from '../base.page';
 import { Timeouts } from '@helpers/timeouts';
 
 export enum ServiceStatus {
-  OK = 'Ok',
+  UP = 'Up',
   DOWN = 'Down',
 }
 
