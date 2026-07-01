@@ -165,8 +165,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       `;
 
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
-      cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:/tmp/hba.conf`);
-      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/hba.conf >> ${hbaPath}"`);
+      cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
 
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${hbaPath}`));
       // cliHelper.execSilent(`docker exec ${containerName}`);
