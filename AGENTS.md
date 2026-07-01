@@ -95,3 +95,15 @@ Full Release-Candidate testing is **not** driven from this repo. The orchestrato
 - **Lane 3**: `pmm3-migration-tests`, `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`rc-testing-suite.yml`](.github/workflows/rc-testing-suite.yml).
 
 **Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `rc-testing-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.
+
+## Cursor Cloud specific instructions
+
+The VM snapshot has the per-suite test tooling preinstalled and the startup update script keeps it fresh: `npm ci` for `e2e_tests`, `cli`, and `codeceptjs-e2e`; Playwright Chromium for the two UI suites (`e2e_tests` uses PW ~1.56, `codeceptjs-e2e` pins PW 1.45 — each ships its own Chromium build under `~/.cache/ms-playwright`); and a Python venv at `qa-integration/pmm_qa/virtenv` with `requirements.txt`. Node 22 and `gh` are on the host. System notes: `python3-venv` and the Playwright OS libraries (`npx playwright install-deps`) are baked into the snapshot; `@playwright/cli` was not needed for any suite here (the suites use each dir's local `playwright`/`@playwright/test`).
+
+All suites run against a **live PMM Server** (see percona/pmm — bring it up with `make env-up`, reachable at `https://localhost`). Non-obvious caveats:
+
+- **`e2e_tests` (active Playwright UI):** no `.env` ships. Set `PMM_UI_URL=https://localhost/` (config's `ignoreHTTPSErrors` handles the self-signed cert; default login `admin`/`admin`, override via `ADMIN_PASSWORD`). Run with `npx playwright test` (optionally `--grep "@tag"`). Verified working: `PMM_UI_URL=https://localhost/ npx playwright test changeTheme.test.ts` (server-only, no DB provisioning). `postRelease.test.ts` reads `PMM_SERVER_LATEST` at import time, so `--list`/runs abort unless that var is set — set it (e.g. the server version) or `--grep` around it.
+- **`cli` (pmm-admin, no browser):** `npx playwright test` / `npm run cli:<tag>`. No browser install needed.
+- **Most tagged UI/CLI tests need provisioned PMM Client + DB containers** on the `pmm-qa` Docker network via `qa-integration/pmm_qa/pmm-framework.py` (activate the venv: `. virtenv/bin/activate`). That provisioning also requires a host PMM Client and Ansible (`ansible-runner` is in the venv, but `pmm-framework.py`'s Ansible playbooks additionally expect the `ansible` binary and a PMM Client install) — install those on demand for full integration runs; the plain `--help` works out of the box.
+- **Env config vs deps:** the update script only installs dependencies; per-run values like `PMM_UI_URL`, `ADMIN_PASSWORD`, `WORKERS`, `HEADLESS`, `PMM_SERVER_LATEST` are runtime env vars, not part of setup.
+- A committed `.cursor/environment.json` (see open PR that adds one) would become the repo's environment source of truth and take precedence over the snapshot update script; keep the two in sync if that PR merges.
