@@ -19,15 +19,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
-    const pgExporterId = cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print `,
-    );
-    const pgStatMonitorId = cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print `,
-    );
+    const pgExporterId = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print `,
+      )
+      .stdout.trim();
+    const pgStatMonitorId = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print `,
+      )
+      .stdout.trim();
 
-
-      console.log(cliHelper.execSilent(`docker exec ${containerName} pmm-admin list'`).stdout);
+    console.log(cliHelper.execSilent(`docker exec ${containerName} pmm-admin list'`).stdout);
     console.log(`Container name is: ${containerName}`);
     console.log(`Service name is: ${serviceName}`);
     console.log(`Service ID is: ${serviceId}`);
@@ -56,6 +59,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     console.log(`change agent password is: ${changeAgentPassword.stdout}`);
     console.log(`change agent password is: ${changePgstatmonitorAgentPassword.stdout}`);
 
-    throw new Error("Expected!");
+    throw new Error('Expected!');
   });
 });
