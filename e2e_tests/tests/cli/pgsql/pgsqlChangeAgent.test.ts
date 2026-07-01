@@ -116,7 +116,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper.createTlsCertificates(containerName);
-
+      console.log('Pki folder content is:');
       console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki`));
 
       cliHelper.execSilent(
@@ -140,7 +140,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(
         `docker exec ${containerName} bash -c "printf 'ssl = on\\nssl_cert_file = \\'/certs/pgsql_pgss_pmm_17.crt\\'\\nssl_key_file = \\'/certs/pgsql_pgss_pmm_17.key\\'\\n' >> /etc/postgresql/${pgVersion}/main/postgresql.conf"`,
       );
-      cliHelper.execSilent(`docker exec ${containerName} cat /etc/postgresql/${pgVersion}/main/postgresql.conf`);
+      console.log(
+        cliHelper.execSilent(
+          `docker exec ${containerName} cat /etc/postgresql/${pgVersion}/main/postgresql.conf`,
+        ),
+      );
       // cliHelper.execSilent(`docker exec ${containerName}`);
       // cliHelper.execSilent(`docker exec ${containerName}`);
       // cliHelper.execSilent(`docker exec ${containerName}`);
