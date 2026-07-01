@@ -115,7 +115,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
-    async ({ cliHelper, grafanaHelper, servicesPage }) => {
+    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       cliHelper.createTlsCertificates(containerName);
       console.log('Pki folder content is:');
       console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki`));
