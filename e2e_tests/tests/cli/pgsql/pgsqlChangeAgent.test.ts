@@ -166,6 +166,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
 
       const firstResponse = cliHelper.execSilent(
