@@ -137,9 +137,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/ ${containerName}.key`);
       cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/ ${containerName}.crt`);
       cliHelper.execSilent(`docker exec ${containerName} chown -R postgres:postgres /certs`);
-      cliHelper.execSilent(
-        `docker exec ${containerName} bash -c "printf 'ssl = on\\nssl_cert_file = \\'/certs/pgsql_pgss_pmm_17.crt\\'\\nssl_key_file = \\'/certs/pgsql_pgss_pmm_17.key\\'\\n' >> /etc/postgresql/${pgVersion}/main/postgresql.conf"`,
-      );
+
+      const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
+      const lines = `ssl = on\nssl_cert_file = '/certs/pgsql_pgss_pmm_17.crt'\nssl_key_file = '/certs/pgsql_pgss_pmm_17.key'\n`;
+
+      cliHelper.execSilent(`docker exec ${containerName} bash -c "echo '${lines}' >> ${confPath}"`);
+
       console.log(
         cliHelper.execSilent(
           `docker exec ${containerName} cat /etc/postgresql/${pgVersion}/main/postgresql.conf`,
