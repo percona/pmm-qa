@@ -53,8 +53,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --custom-labels=env=qa_testing_pgstatmonitor`,
     );
 
-    console.log(`change agent password is: ${changeAgentPassword}`);
-    console.log(`change agent password is: ${changePgstatmonitorAgentPassword}`);
+    console.log(`change agent password is: ${changeAgentPassword.stdout}`);
+    console.log(`change agent password is: ${changePgstatmonitorAgentPassword.stdout}`);
 
     throw new Error("Expected!");
   });
