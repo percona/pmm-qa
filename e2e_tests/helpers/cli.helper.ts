@@ -20,6 +20,28 @@ export default class CliHelper {
     shell.echo(content).to(pathToFile);
   };
 
+  createTlsCertificates = (containerName: string): void => {
+    const prefix = `docker exec ${containerName}`;
+
+    this.execSilent(`${prefix} rm -rf easy-rsa pki certs && mkdir -p /certs`);
+    this.execSilent(`${prefix} apt install -y git nano`);
+    this.execSilent(`${prefix} git clone https://github.com/OpenVPN/easy-rsa.git`);
+    this.execSilent(`${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki init-pki`);
+    this.execSilent(
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-cn=Percona --batch build-ca nopass`,
+    );
+    this.execSilent(
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:pgsql_pgss_pmm_17 --batch build-server-full pmm-server nopass`,
+    );
+    this.execSilent(
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full ${containerName} nopass`,
+    );
+    this.execSilent(
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=client --batch build-client-full pmm-test nopass`,
+    );
+    this.execSilent(`${prefix} openssl dhparam -out /certs/dhparam.pem 2048`);
+  };
+
   /**
    * Silent Shell(sh) exec() wrapper to return handy {@link ExecReturn} object.
    * Provides no logs to skip huge outputs.

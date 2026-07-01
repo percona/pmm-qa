@@ -4,7 +4,7 @@ import { ServiceStatus } from '@pages/inventory/services.page';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
-  pmmTest.describe.configure({ retries: 0 });
+  pmmTest.describe.configure({ mode: 'serial', retries: 0 });
 
   const newUsername = 'new_pmmm_username';
   const newPassword = 'new_pmm_user_password';
@@ -88,7 +88,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9991 - Verfiy Change agent username and password @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent log level @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --log-level=debug`,
@@ -96,6 +96,21 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --log-level=debug`,
       );
+
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.url(serviceId));
+      await agentsPage.showRowDetails(pgExporterId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+      await agentsPage.hideRowDetails(pgExporterId);
+      await agentsPage.showRowDetails(pgStatMonitorId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+    },
+  );
+
+  pmmTest(
+    'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      cliHelper.createTlsCertificates(containerName);
 
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
