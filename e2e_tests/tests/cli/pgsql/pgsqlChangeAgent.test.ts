@@ -46,13 +46,46 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
 
       cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername} --custom-labels=env=qa_testing_pgexporter`,
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
       );
       cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername} --custom-labels=env=qa_testing_pgstatmonitor`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
       );
 
       await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.UP, Timeouts.ONE_MINUTE);
+    },
+  );
+
+  pmmTest(
+    'PMM-T9992 - Verfiy Change agent custom labels @pgsm-pmm-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      const containerName = cliHelper
+        .execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`)
+        .stdout.trim();
+      const serviceId = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
+        )
+        .stdout.trim();
+      const pgExporterId = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print $4}'`,
+        )
+        .stdout.trim();
+      const pgStatMonitorId = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
+        )
+        .stdout.trim();
+
+      cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --custom-labels=env=qa_testing_pgexporter`,
+      );
+      cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --custom-labels=env=qa_testing_pgstatmonitor`,
+      );
+
+      await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(pgExporterId);
       await expect(agentsPage.builders.property('env=qa_testing_pgexporter')).toBeVisible();
