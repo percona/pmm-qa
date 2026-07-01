@@ -45,16 +45,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         )
         .stdout.trim();
 
-      console.log(cliHelper.execSilent(`docker exec ${containerName} pmm-admin list'`).stdout);
-      console.log(`Container name is: ${containerName}`);
-      console.log(`Service name is: ${serviceName}`);
-      console.log(`Service ID is: ${serviceId}`);
-      console.log(
-        cliHelper.execSilent(`docker exec ${containerName} pmm-admin list | grep ${serviceId}`).stdout.trim(),
-      );
-      console.log(`PG Exporter ID is: ${pgExporterId}`);
-      console.log(`Pg stat monitor id is: ${pgStatMonitorId}`);
-
       cliHelper.execSilent(
         `docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD '${newPassword}';"`,
       );
@@ -64,27 +54,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
 
-      const changeAgentPassword = cliHelper.execSilent(
+      cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --custom-labels=env=qa_testing_pgexporter`,
       );
-      const changePgstatmonitorAgentPassword = cliHelper.execSilent(
+      cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --custom-labels=env=qa_testing_pgstatmonitor`,
       );
 
-      console.log(`change agent password is: ${changeAgentPassword.stdout}`);
-      console.log(`change agent password is: ${changePgstatmonitorAgentPassword.stdout}`);
-
       await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.UP, Timeouts.ONE_MINUTE);
-
-      console.log(`Url is: ${agentsPage.url(serviceId)}`);
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(pgExporterId);
       await expect(agentsPage.builders.property('env=qa_testing_pgexporter')).toBeVisible();
       await agentsPage.hideRowDetails(pgExporterId);
       await agentsPage.showRowDetails(pgStatMonitorId);
       await expect(agentsPage.builders.property('env=qa_testing_pgstatmonitor')).toBeVisible();
-
-      throw new Error('Expected!');
     },
   );
 });
