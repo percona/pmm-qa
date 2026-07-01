@@ -6,20 +6,11 @@ import { expect } from '@playwright/test';
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ retries: 0 });
 
-  pmmTest.afterEach(async ({ cliHelper }) => {
-    const containerName = cliHelper
-      .execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`)
-      .stdout.trim();
-
-    cliHelper.execSilent(
-      `docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD 'GRgrO9301RuF';"`,
-    );
-  });
-
   pmmTest(
-    'PMM-T9991 @pgsm-pmm-integration',
+    'PMM-T9991 - Verfiy Change agent username and password @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page, servicesPage }) => {
-      const newPassword = 'new_password_change_agent';
+      const newUsername = 'new_pmmm_username';
+      const newPassword = 'new_pmm_user_password';
       const containerName = cliHelper
         .execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`)
         .stdout.trim();
@@ -46,7 +37,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .stdout.trim();
 
       cliHelper.execSilent(
-        `docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD '${newPassword}';"`,
+        `docker exec ${containerName} psql -U postgres -c "CREATE ROLE ${newUsername} WITH LOGIN PASSWORD '${newPassword}';"`,
       );
       cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
 
@@ -55,10 +46,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
 
       cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --custom-labels=env=qa_testing_pgexporter`,
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername} --custom-labels=env=qa_testing_pgexporter`,
       );
       cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --custom-labels=env=qa_testing_pgstatmonitor`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername} --custom-labels=env=qa_testing_pgstatmonitor`,
       );
 
       await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.UP, Timeouts.ONE_MINUTE);
