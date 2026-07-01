@@ -156,6 +156,19 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       console.log(cliHelper.execSilent(`cat /tmp/ssl.conf`));
+
+      const hbaPath = `/etc/postgresql/${pgVersion}/main/pg_hba.conf`;
+      const hbaLines = `hostssl      all             all             127.0.0.1/32    scram-sha-256
+        hostssl      all             all             ::1/128         scram-sha-256
+        hostssl      all             all             0.0.0.0/0       scram-sha-256
+        hostssl      all             all             ::/0            scram-sha-256
+      `;
+
+      fs.writeFileSync('/tmp/hba.conf', hbaLines);
+      cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:/tmp/hba.conf`);
+      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/hba.conf >> ${hbaPath}"`);
+
+      console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${hbaPath}`));
       // cliHelper.execSilent(`docker exec ${containerName}`);
       // cliHelper.execSilent(`docker exec ${containerName}`);
       // cliHelper.execSilent(`docker exec ${containerName}`);
