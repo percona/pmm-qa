@@ -162,6 +162,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
       cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
       cliHelper.execSilent(
+        `docker exec ${containerName} ls /var/log/postgresql/`,
+      );
+      cliHelper.execSilent(
         `docker exec ${containerName} cat /var/log/postgresql/postgresql-${pgVersion}-main.log`,
       );
 
