@@ -154,6 +154,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} cat /etc/postgresql/${pgVersion}/main/postgresql.conf`,
         ),
       );
+
+      console.log(cliHelper.execSilent(`cat /tmp/ssl.conf`));
       // cliHelper.execSilent(`docker exec ${containerName}`);
       // cliHelper.execSilent(`docker exec ${containerName}`);
       // cliHelper.execSilent(`docker exec ${containerName}`);
