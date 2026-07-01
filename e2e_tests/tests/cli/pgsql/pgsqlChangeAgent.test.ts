@@ -161,6 +161,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
       cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
       cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
+      console.log(`Content of pgsql folder is: `)
       cliHelper.execSilent(
         `docker exec ${containerName} ls /var/log/postgresql/`,
       );
