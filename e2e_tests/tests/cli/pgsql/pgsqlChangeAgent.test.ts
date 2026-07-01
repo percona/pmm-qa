@@ -149,13 +149,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
       cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
 
-      console.log(
-        cliHelper.execSilent(
-          `docker exec ${containerName} cat /etc/postgresql/${pgVersion}/main/postgresql.conf`,
-        ),
-      );
-
-      console.log(cliHelper.execSilent(`cat /tmp/ssl.conf`));
+      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /certs/`));
 
       const hbaPath = `/etc/postgresql/${pgVersion}/main/pg_hba.conf`;
       const hbaLines = `hostssl      all             all             127.0.0.1/32    scram-sha-256
@@ -166,8 +160,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
       cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
-
-      console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${hbaPath}`));
       cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
       cliHelper.execSilent(
         `docker exec ${containerName} cat /var/log/postgresql/postgresql-${pgVersion}-main.log`,
