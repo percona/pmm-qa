@@ -86,4 +86,24 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await expect(agentsPage.builders.property('env=qa_testing_pgstatmonitor')).toBeVisible();
     },
   );
+
+  pmmTest(
+    'PMM-T9991 - Verfiy Change agent username and password @pgsm-pmm-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --log-level=debug`,
+      );
+      cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --log-level=debug`,
+      );
+
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.url(serviceId));
+      await agentsPage.showRowDetails(pgExporterId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+      await agentsPage.hideRowDetails(pgExporterId);
+      await agentsPage.showRowDetails(pgStatMonitorId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+    },
+  );
 });
