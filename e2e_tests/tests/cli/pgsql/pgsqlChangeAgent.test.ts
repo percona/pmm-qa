@@ -127,10 +127,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
       );
       cliHelper.execSilent(
-        `docker exec ${containerName} cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
       );
       cliHelper.execSilent(
-        `docker exec ${containerName} cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
       );
       cliHelper.execSilent(
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
