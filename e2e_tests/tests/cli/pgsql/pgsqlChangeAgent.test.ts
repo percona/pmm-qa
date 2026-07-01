@@ -19,11 +19,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
+    const pgExporterId = cliHelper.execSilent(
+      `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print `,
+    );
+    const pgStatMonitorId = cliHelper.execSilent(
+      `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print `,
+    );
 
-    console.log(cliHelper.execSilent(`docker exec ${containerName} pmm-admin list'`).stdout);
+
+      console.log(cliHelper.execSilent(`docker exec ${containerName} pmm-admin list'`).stdout);
     console.log(`Container name is: ${containerName}`);
     console.log(`Service name is: ${serviceName}`);
     console.log(`Service ID is: ${serviceId}`);
+    console.log(`PG Exporter ID is: ${pgExporterId}`);
+    console.log(`Pg stat monitor id is: ${pgStatMonitorId}`);
     cliHelper.execSilent(
       `docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD '${newPassword}';"`,
     );
@@ -36,5 +45,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     await grafanaHelper.authorize();
     await page.goto(servicesPage.url);
     await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
+
+    const changeAgentPassword = cliHelper.execSilent(
+      `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --custom-labels=env=qa_testing_pgexporter`,
+    );
+    const changePgstatmonitorAgentPassword = cliHelper.execSilent(
+      `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --custom-labels=env=qa_testing_pgstatmonitor`,
+    );
+
+    console.log(`change agent password is: ${changeAgentPassword}`);
+    console.log(`change agent password is: ${changePgstatmonitorAgentPassword}`);
+
+    throw new Error("Expected!");
   });
 });
