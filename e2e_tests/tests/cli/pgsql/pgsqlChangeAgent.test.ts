@@ -21,12 +21,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
     const pgExporterId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print `,
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
     const pgStatMonitorId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print `,
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
 
@@ -34,17 +34,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     console.log(`Container name is: ${containerName}`);
     console.log(`Service name is: ${serviceName}`);
     console.log(`Service ID is: ${serviceId}`);
+    console.log(
+      cliHelper.execSilent(`docker exec ${containerName} pmm-admin list | grep ${serviceId}`).stdout.trim(),
+    );
     console.log(`PG Exporter ID is: ${pgExporterId}`);
     console.log(`Pg stat monitor id is: ${pgStatMonitorId}`);
+
     cliHelper.execSilent(
       `docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD '${newPassword}';"`,
     );
+    cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
 
-    const restart = cliHelper.execSilent(
-      `docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`,
-    );
-
-    console.log(`Restart response: ${restart.stdout}`);
     await grafanaHelper.authorize();
     await page.goto(servicesPage.url);
     await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
