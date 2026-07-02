@@ -181,4 +181,38 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
     },
   );
+
+  pmmTest(
+    'PMM-T9995 - Verify Change agent enable true/false @pgsm-pmm-integration',
+    async ({ cliHelper }) => {
+      const enableCommands = [
+        { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
+        { command: '--enable=true', response: '- enabled agent', status: 'Running' },
+        { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
+        { command: '--enable', response: '- enabled agent', status: 'Running' },
+      ];
+
+      for (const enableCommand of enableCommands) {
+        const commands = [
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} ${enableCommand}`,
+          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} ${enableCommand}`,
+        ];
+
+        for (const command of commands) {
+          await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
+        }
+
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin list | grep postgres_exporter | grep ${serviceId}`,
+          )
+          .outContains(enableCommand.status);
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin list | grep postgresql_pgstatmonitor_agent | grep ${serviceId}`,
+          )
+          .outContains(enableCommand.status);
+      }
+    },
+  );
 });
