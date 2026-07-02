@@ -19,6 +19,28 @@ export default class ServicesPage extends BasePage {
   inputs = {};
   messages = {};
 
+  waitForServiceMonitoring = async (
+    serviceName: string,
+    expectedStatus: 'Ok' | 'Failed',
+    timeout = Timeouts.THIRTY_SECONDS,
+  ) => {
+    for (let i = 0; i <= timeout; i += 1_000) {
+      const actualStatus = await this.builders.monitoringByServiceName(serviceName).textContent();
+
+      if (actualStatus === expectedStatus) return;
+      if (i == timeout) {
+        throw new Error(
+          `Status was not: ${expectedStatus} for service ${serviceName} in timeout: ${timeout}, last status was ${actualStatus}`,
+        );
+      }
+
+      console.log(`Actual status is: ${actualStatus}`);
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait between getting the service status
+      await this.page.waitForTimeout(Timeouts.ONE_SECOND);
+    }
+  };
+
   waitForServiceStatus = async (
     serviceName: string,
     expectedStatus: ServiceStatus,
