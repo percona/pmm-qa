@@ -232,15 +232,15 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
-      console.log(
-        cliHelper
-          .getMetrics({
-            agentPassword: password,
-            dockerContainer: containerName,
-            serviceName: serviceName,
-          })
-          .includes('pg_up'),
-      );
+      const areMetricsPresent = cliHelper
+        .getMetrics({
+          agentPassword: password,
+          dockerContainer: containerName,
+          serviceName: serviceName,
+        })
+        .includes('pg_up');
+
+      console.log(`Are metrics present? ${areMetricsPresent}`);
     },
   );
 });
