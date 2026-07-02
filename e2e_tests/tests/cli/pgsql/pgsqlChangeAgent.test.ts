@@ -167,7 +167,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
-        `ssl = on\nssl_cert_file = '/certs/pgsql_pgss_pmm_17.crt'\nssl_key_file = '/certs/pgsql_pgss_pmm_17.key'\n`,
+        `ssl = on\nssl_cert_file = '/certs/${containerName}.crt'\nssl_key_file = '/certs/${containerName}.key'\n`,
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
