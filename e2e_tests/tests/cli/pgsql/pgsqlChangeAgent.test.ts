@@ -184,7 +184,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T9995 - Verify Change agent enable true/false @pgsm-pmm-integration',
-    async ({ cliHelper }) => {
+    async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
         { command: '--enable=true', response: '- enabled agent', status: 'Running' },
@@ -201,6 +201,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         for (const command of commands) {
           await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
         }
+
+        await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
 
         await cliHelper
           .execSilent(
