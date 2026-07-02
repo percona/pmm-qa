@@ -37,7 +37,7 @@ playwright-cli -s=pmm-PMM-14576 snapshot
 playwright-cli -s=pmm-PMM-14576 click e21
 ```
 
-Headed by default (screen recordings). Repo-wide default: `.playwright/cli.config.json` (`headless: false`). Opt out: `PMM_UI_HEADED=0 qa-integration/scripts/pmm-ui-login.sh <TICKET>`.
+Headed + maximized by default (screen recordings). Repo config: `.playwright/cli.config.json` (`headless: false`, `--start-maximized`, `viewport: null`). Opt out of headed: `PMM_UI_HEADED=0`. Override window size: `PMM_UI_WIDTH` / `PMM_UI_HEIGHT`.
 
 Manual equivalent (if you cannot run the script):
 

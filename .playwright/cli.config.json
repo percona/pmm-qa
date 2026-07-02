@@ -1,7 +1,11 @@
 {
   "browser": {
     "launchOptions": {
-      "headless": false
+      "headless": false,
+      "args": ["--start-maximized"]
+    },
+    "contextOptions": {
+      "viewport": null
     }
   }
 }

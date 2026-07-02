@@ -8,7 +8,7 @@
 #   qa-integration/scripts/pmm-ui-login.sh PMM-14576
 #
 # Session name: pmm-<SESSION_ID> (reuse the same id for follow-up UI commands).
-# Opens headed by default (better for screen recordings). Set PMM_UI_HEADED=0 for headless.
+# Opens headed + maximized by default (better for screen recordings). Set PMM_UI_HEADED=0 for headless.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -37,6 +37,10 @@ if [ "${PMM_UI_HEADED:-1}" = "0" ]; then
 fi
 
 "${PW_CLI[@]}" "${OPEN_ARGS[@]}"
+
+PMM_UI_WIDTH="${PMM_UI_WIDTH:-1920}"
+PMM_UI_HEIGHT="${PMM_UI_HEIGHT:-1200}"
+"${PW_CLI[@]}" -s="$PLAYWRIGHT_SESSION" resize "$PMM_UI_WIDTH" "$PMM_UI_HEIGHT" >/dev/null 2>&1 || true
 
 # shellcheck disable=SC2016
 "${PW_CLI[@]}" -s="$PLAYWRIGHT_SESSION" run-code "async page => {

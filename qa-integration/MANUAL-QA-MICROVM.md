@@ -56,7 +56,7 @@ export ADMIN_PASSWORD='pmm3admin!'   # same as step 1
 qa-integration/scripts/pmm-ui-login.sh PMM-<TICKET>
 ```
 
-Opens a **headed** browser by default (visible on `:1` for screen recordings). Opt out: `PMM_UI_HEADED=0`. Repo config: `.playwright/cli.config.json`.
+Opens a **headed, maximized** browser by default (visible on `:1` for screen recordings). Opt out of headed: `PMM_UI_HEADED=0`. Override size: `PMM_UI_WIDTH` / `PMM_UI_HEIGHT` (default 1920×1200). Repo config: `.playwright/cli.config.json`.
 
 Reuse session `pmm-PMM-<TICKET>` for snapshots/clicks. Full details: [.agents/workflows/pmmLogin.md](../.agents/workflows/pmmLogin.md).
 
