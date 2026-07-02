@@ -133,7 +133,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       cliHelper.createTlsCertificates(containerName);
 
-      const commands = [
+      let commands = [
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
@@ -172,19 +172,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceMonitoring(serviceName, 'Failed', Timeouts.ONE_MINUTE);
 
-      const firstResponse = cliHelper.execSilent(
+      commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-      );
-
-      // await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
-
-      const secondResponse = cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-      );
+      ];
 
-      console.log(firstResponse);
-      console.log(secondResponse);
-      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.ONE_MINUTE);
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
     },
   );
 });
