@@ -77,10 +77,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.ONE_MINUTE);
 
-      cliHelper.execSilent(
+      commands = [
         `docker exec ${containerName} psql -U postgres -c "ALTER USER ${newUsername} WITH PASSWORD '${newPassword}';"`,
-      );
-      cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
+        `docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
     },
