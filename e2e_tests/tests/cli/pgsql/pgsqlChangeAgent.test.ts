@@ -218,4 +218,27 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
     },
   );
+
+  pmmTest(
+    'PMM-T9995 - Verify Change agent enable true/false @pgsm-pmm-integration',
+    async ({ cliHelper, page }) => {
+      const password = 'newAgentPassword';
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${password}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --agent-password=${password}`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command));
+
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
+      console.log(
+        cliHelper.getMetrics({
+          agentPassword: password,
+          dockerContainer: containerName,
+          serviceName: serviceName,
+        }),
+      );
+    },
+  );
 });
