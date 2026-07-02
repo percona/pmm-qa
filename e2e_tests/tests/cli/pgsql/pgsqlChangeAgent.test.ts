@@ -1,6 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
-import { ServiceStatus } from '@pages/inventory/services.page';
 import { expect } from '@playwright/test';
 import * as fs from 'node:fs';
 
@@ -59,7 +58,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
   });
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9991 - Verfiy Change agent username and password @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
@@ -88,7 +87,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9992 - Verfiy Change agent custom labels @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
@@ -107,7 +106,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9993 - Verify Change agent log level @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
