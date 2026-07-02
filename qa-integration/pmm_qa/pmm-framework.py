@@ -517,7 +517,10 @@ def setup_psmdb(db_type, db_version=None, db_config=None, args=None):
     setup_type = get_value('SETUP_TYPE', db_type, args, db_config).lower()
 
     if setup_type in ("pss", "psa"):
-        shell_scripts = ['start-rs-only.sh']
+        if os.getenv('PMM_QA_NO_SYSTEMD', '').lower() in ('1', 'true', 'yes'):
+            shell_scripts = ['start-rs-only-microvm.sh']
+        else:
+            shell_scripts = ['start-rs-only.sh']
     elif setup_type in ("shards", "sharding"):
         shell_scripts = ['start-sharded.sh']
 

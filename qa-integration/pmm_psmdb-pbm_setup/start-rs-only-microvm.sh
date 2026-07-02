@@ -1,0 +1,59 @@
+#!/bin/bash
+set -euo pipefail
+
+profile=${COMPOSE_PROFILES:-classic}
+mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
+mongo_setup_type=${mongo_setup_type,,}
+mongo_storage_engine=${MONGO_STORAGE_ENGINE:-wiredTiger}
+mongo_storage_engine=${mongo_storage_engine,,}
+ol_version=${OL_VERSION:-9}
+
+export COMPOSE_PROFILES=${profile}
+export MONGO_SETUP_TYPE=${mongo_setup_type}
+export OL_VERSION=${ol_version}
+export PMM_QA_NO_SYSTEMD=1
+
+compose_args=(-f docker-compose-rs.yaml -f docker-compose-rs.microvm.yaml)
+
+if [ "$mongo_storage_engine" = "inmemory" ]; then
+  generated_config_dir="/tmp/pmm-qa-mongod-rs-inmemory"
+  rm -rf "$generated_config_dir"
+  mkdir -p "$generated_config_dir"
+  cp ./conf/mongod-rs-inmemory/mongod.conf "$generated_config_dir/mongod.conf"
+  export MONGOD_RS_CONFIG_DIR="$generated_config_dir"
+else
+  mongo_storage_engine="wiredTiger"
+fi
+
+docker network create qa-integration 2>/dev/null || true
+docker network create pmm-qa 2>/dev/null || true
+docker network create pmm-ui-tests_pmm-network 2>/dev/null || true
+docker network create pmm2-upgrade-tests_pmm-network 2>/dev/null || true
+docker network create pmm2-ui-tests_pmm-network 2>/dev/null || true
+
+docker compose "${compose_args[@]}" down -v --remove-orphans
+docker compose "${compose_args[@]}" build
+docker compose "${compose_args[@]}" up -d
+
+echo
+echo "waiting 30 seconds for replica set members to start (no-systemd mode)"
+sleep 30
+echo
+
+if [ "$mongo_setup_type" == "pss" ]; then
+  bash -e ./configure-replset.sh
+else
+  bash -e ./configure-psa.sh
+fi
+
+# configure-agents uses systemctl; shim is mounted at /usr/local/bin/systemctl in containers.
+bash -x ./configure-agents.sh
+
+if [ "$profile" = "extra" ]; then
+  if [ "$mongo_setup_type" == "pss" ]; then
+    bash -x ./configure-extra-replset.sh
+  else
+    bash -x ./configure-extra-psa.sh
+  fi
+  bash -x ./configure-extra-agents.sh
+fi
