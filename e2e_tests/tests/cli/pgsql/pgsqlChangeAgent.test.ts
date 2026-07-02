@@ -220,7 +220,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9995 - Verify Change agent enable true/false @pgsm-pmm-integration',
+    'PMM-T9996 - Verify Change agent agent password @pgsm-pmm-integration',
     async ({ cliHelper, page }) => {
       const password = 'newAgentPassword';
       const commands = [
