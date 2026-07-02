@@ -88,17 +88,15 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-
   pmmTest(
     'PMM-T9992 - Verfiy Change agent custom labels @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
-      cliHelper.execSilent(
+      const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --custom-labels=env=qa_testing_pgexporter`,
-      );
-      cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --custom-labels=env=qa_testing_pgstatmonitor`,
-      );
+      ];
 
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(pgExporterId);
@@ -112,13 +110,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9993 - Verify Change agent log level @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
-      cliHelper.execSilent(
+      const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --log-level=debug`,
-      );
-      cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --log-level=debug`,
-      );
+      ];
 
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(pgExporterId);
@@ -132,30 +129,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      cliHelper.createTlsCertificates(containerName);
-      console.log('Pki folder content is:');
-      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki`));
-
-      cliHelper.execSilent(
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
-      );
-      cliHelper.execSilent(
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
-      );
-      cliHelper.execSilent(
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
-      );
-      cliHelper.execSilent(
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
-      );
-      cliHelper.execSilent(
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
-      );
-      cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/${containerName}.key`);
-      cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/${containerName}.crt`);
-      cliHelper.execSilent(`docker exec ${containerName} chown -R postgres:postgres /certs`);
-
       const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
+
+      cliHelper.createTlsCertificates(containerName);
+
+      const commands = [
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
+        `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
+        `docker exec ${containerName} chmod 600 /certs/${containerName}.crt`,
+        `docker exec ${containerName} chown -R postgres:postgres /certs`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
@@ -164,8 +153,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
       cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
-
-      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /certs/`));
 
       const hbaPath = `/etc/postgresql/${pgVersion}/main/pg_hba.conf`;
       const hbaLines = `hostssl      all             all             127.0.0.1/32    scram-sha-256
@@ -177,8 +164,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
       cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
       cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
-      console.log(`Content of pgsql folder is: `);
-      cliHelper.execSilent(`docker exec ${containerName} ls /var/log/postgresql/`);
       cliHelper.execSilent(
         `docker exec ${containerName} cat /var/log/postgresql/postgresql-${pgVersion}-main.log`,
       );
@@ -191,7 +176,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       );
 
-      await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
+      // await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
 
       const secondResponse = cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
