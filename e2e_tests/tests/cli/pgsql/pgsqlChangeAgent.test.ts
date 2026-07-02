@@ -86,14 +86,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.DOWN, Timeouts.ONE_MINUTE);
+      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.ONE_MINUTE);
 
       cliHelper.execSilent(
         `docker exec ${containerName} psql -U postgres -c "ALTER USER ${newUsername} WITH PASSWORD '${newPassword}';"`,
       );
       cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
 
-      await servicesPage.waitForServiceStatus(serviceName, ServiceStatus.UP, Timeouts.ONE_MINUTE);
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
     },
   );
 
@@ -209,7 +209,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       console.log(firstResponse);
       console.log(secondResponse);
-      await servicesPage.waitForServiceMonitoring(serviceName, 'Ok', Timeouts.ONE_MINUTE);
+      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.ONE_MINUTE);
     },
   );
 });

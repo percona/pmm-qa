@@ -1,11 +1,6 @@
 import BasePage from '../base.page';
 import { Timeouts } from '@helpers/timeouts';
 
-export enum ServiceStatus {
-  UP = 'Up',
-  DOWN = 'Down',
-}
-
 export default class ServicesPage extends BasePage {
   readonly url = 'graph/inventory/services';
   builders = {
@@ -21,7 +16,7 @@ export default class ServicesPage extends BasePage {
 
   waitForServiceMonitoring = async (
     serviceName: string,
-    expectedStatus: 'Ok' | 'Failed',
+    expectedStatus: 'OK' | 'Failed',
     timeout = Timeouts.THIRTY_SECONDS,
   ) => {
     for (let i = 0; i <= timeout; i += 1_000) {
@@ -43,7 +38,7 @@ export default class ServicesPage extends BasePage {
 
   waitForServiceStatus = async (
     serviceName: string,
-    expectedStatus: ServiceStatus,
+    expectedStatus: 'Up' | 'Down',
     timeout = Timeouts.THIRTY_SECONDS,
   ) => {
     for (let i = 0; i <= timeout; i += 1_000) {
