@@ -194,8 +194,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       for (const enableCommand of enableCommands) {
         const commands = [
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} ${enableCommand}`,
-          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} ${enableCommand}`,
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} ${enableCommand.command}`,
+          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} ${enableCommand.command}`,
         ];
 
         for (const command of commands) {
