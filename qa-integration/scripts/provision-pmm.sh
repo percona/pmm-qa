@@ -113,6 +113,13 @@ if [ "$SKIP_WATCHTOWER" = "0" ]; then
     -e "PMM_WATCHTOWER_TOKEN=${WATCHTOWER_TOKEN}"
   )
 fi
+# Ticket-specific server env (Jenkins DOCKER_ENV_VARIABLE), e.g.:
+#   export DOCKER_ENV_VARIABLE='-e PMM_DEBUG=1 -e PMM_ENABLE_TELEMETRY=0'
+if [ -n "${DOCKER_ENV_VARIABLE:-}" ]; then
+  # shellcheck disable=SC2206
+  extra_env=( ${DOCKER_ENV_VARIABLE} )
+  run_args+=( "${extra_env[@]}" )
+fi
 # shellcheck disable=SC2068
 docker run ${run_args[@]} "$DOCKER_VERSION"
 
