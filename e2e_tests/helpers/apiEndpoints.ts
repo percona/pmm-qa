@@ -31,6 +31,7 @@ const apiEndpoints = {
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
+    readyz: '/v1/server/readyz',
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
   },
