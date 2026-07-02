@@ -62,27 +62,16 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9991 - Verfiy Change agent username and password @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const user = cliHelper.execSilent(
+      let commands = [
         `docker exec ${containerName} psql -U postgres -c "CREATE ROLE ${newUsername} WITH LOGIN PASSWORD '${newPassword}-Wrong';"`,
-      );
-
-      console.log(user.stdout);
-      cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
-
-      const changeUser = cliHelper.execSilent(
+        `docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`,
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
-      );
-
-      console.log(changeUser.stdout);
-      cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
-      );
-      cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterSocketId} --password=${newPassword} --username=${newUsername}`,
-      );
-      cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorSocketId} --password=${newPassword} --username=${newUsername}`,
-      );
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
@@ -96,6 +85,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
     },
   );
+
 
   pmmTest(
     'PMM-T9992 - Verfiy Change agent custom labels @pgsm-pmm-integration',
@@ -185,10 +175,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
       cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
       cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
-      console.log(`Content of pgsql folder is: `)
-      cliHelper.execSilent(
-        `docker exec ${containerName} ls /var/log/postgresql/`,
-      );
+      console.log(`Content of pgsql folder is: `);
+      cliHelper.execSilent(`docker exec ${containerName} ls /var/log/postgresql/`);
       cliHelper.execSilent(
         `docker exec ${containerName} cat /var/log/postgresql/postgresql-${pgVersion}-main.log`,
       );
