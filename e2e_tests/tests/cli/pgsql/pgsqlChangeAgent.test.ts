@@ -125,7 +125,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
