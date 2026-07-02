@@ -27,11 +27,13 @@ start_mongod() {
 }
 
 start_pbm_agent() {
-  if [[ -f /var/run/pbm-agent.pid ]] && kill -0 "$(cat /var/run/pbm-agent.pid)" 2>/dev/null; then
+  if pgrep -u mongod -x pbm-agent >/dev/null 2>&1; then
+    pgrep -u mongod -x pbm-agent >/var/run/pbm-agent.pid
     return 0
   fi
-  su -s /bin/bash mongod -c "/usr/bin/pbm-agent" &
-  echo $! >/var/run/pbm-agent.pid
+  nohup runuser -u mongod -- /usr/bin/pbm-agent >>/var/log/pbm-agent.log 2>&1 &
+  sleep 1
+  pgrep -u mongod -x pbm-agent >/var/run/pbm-agent.pid || true
 }
 
 stop_pbm_agent() {
