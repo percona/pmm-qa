@@ -37,7 +37,7 @@ playwright-cli -s=pmm-PMM-14576 snapshot
 playwright-cli -s=pmm-PMM-14576 click e21
 ```
 
-Headed by default (screen recordings). Opt out: `PMM_UI_HEADED=0 qa-integration/scripts/pmm-ui-login.sh <TICKET>`.
+Headed by default (screen recordings). Repo-wide default: `.playwright/cli.config.json` (`headless: false`). Opt out: `PMM_UI_HEADED=0 qa-integration/scripts/pmm-ui-login.sh <TICKET>`.
 
 Manual equivalent (if you cannot run the script):
 
