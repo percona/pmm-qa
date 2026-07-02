@@ -159,8 +159,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
       );
-      cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/ ${containerName}.key`);
-      cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/ ${containerName}.crt`);
+      cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/${containerName}.key`);
+      cliHelper.execSilent(`docker exec ${containerName} chmod 600 /certs/${containerName}.crt`);
       cliHelper.execSilent(`docker exec ${containerName} chown -R postgres:postgres /certs`);
 
       const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
