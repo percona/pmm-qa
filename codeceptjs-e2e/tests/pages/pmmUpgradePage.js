@@ -2,8 +2,9 @@ class PmmUpgradePage {
   constructor() {
     this.url = 'pmm-ui/updates';
     this.elements = {
-      updateNowButton: locate('button').withText('Update now'),
-      checkUpdatesNow: locate('button').withText('Check Updates Now'),
+      checkUpdatesNow: locate('button').withText(/Check updates now/i),
+      howToUpdateDocsLink: locate('a').withText('How to update docs'),
+      updateNowButton: locate('button').withText(/Update now/i),
       updateSuccess: locate('p').withText('PMM Server installation complete!'),
     };
   }
