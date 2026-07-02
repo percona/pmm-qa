@@ -8,6 +8,7 @@
 #   qa-integration/scripts/pmm-ui-login.sh PMM-14576
 #
 # Session name: pmm-<SESSION_ID> (reuse the same id for follow-up UI commands).
+# Opens headed by default (better for screen recordings). Set PMM_UI_HEADED=0 for headless.
 set -euo pipefail
 
 SESSION_ID="${1:?usage: $0 <SESSION_ID>  e.g. PMM-14576}"
@@ -24,9 +25,9 @@ fi
 
 AUTH_TOKEN="$(printf 'admin:%s' "$ADMIN_PASSWORD" | base64 -w0 2>/dev/null || printf 'admin:%s' "$ADMIN_PASSWORD" | base64)"
 
-OPEN_ARGS=(-s="$PLAYWRIGHT_SESSION" open "$PMM_URL")
-if [ "${PMM_UI_HEADED:-0}" = "1" ]; then
-  OPEN_ARGS=(-s="$PLAYWRIGHT_SESSION" open --headed "$PMM_URL")
+OPEN_ARGS=(-s="$PLAYWRIGHT_SESSION" open --headed "$PMM_URL")
+if [ "${PMM_UI_HEADED:-1}" = "0" ]; then
+  OPEN_ARGS=(-s="$PLAYWRIGHT_SESSION" open "$PMM_URL")
 fi
 
 playwright-cli "${OPEN_ARGS[@]}"

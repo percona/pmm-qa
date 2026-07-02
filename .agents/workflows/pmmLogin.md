@@ -37,6 +37,8 @@ playwright-cli -s=pmm-PMM-14576 snapshot
 playwright-cli -s=pmm-PMM-14576 click e21
 ```
 
+Headed by default (screen recordings). Opt out: `PMM_UI_HEADED=0 qa-integration/scripts/pmm-ui-login.sh <TICKET>`.
+
 Manual equivalent (if you cannot run the script):
 
 ```bash
@@ -46,7 +48,7 @@ PMM_URL="${PMM_URL:-https://127.0.0.1}"
 PASSWORD="${ADMIN_PASSWORD:-pmm3admin!}"
 AUTH="$(printf 'admin:%s' "$PASSWORD" | base64 -w0 2>/dev/null || printf 'admin:%s' "$PASSWORD" | base64)"
 
-playwright-cli -s="pmm-${TICKET}" open "$PMM_URL"
+playwright-cli -s="pmm-${TICKET}" open --headed "$PMM_URL"
 playwright-cli -s="pmm-${TICKET}" run-code "async page => {
   const base = page.url().match(/^https?:\\/\\/[^/]+/)[0];
   await page.setExtraHTTPHeaders({ Authorization: 'Basic ${AUTH}' });
