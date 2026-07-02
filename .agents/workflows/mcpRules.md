@@ -12,9 +12,9 @@ description: Execution, browser, and locator strategy rules for PMM Playwright t
 - Check `apiIndex.md` first for routes. Open `pmmApi.json` ONLY for precise schema definitions.
 
 # Login
-- Follow `pmmLogin.md`.
-- Basic Auth headers ONLY.
-- NEVER use the UI login form or `/graph/login` (except when debugging auth).
+- Follow `pmmLogin.md` — pick **playwright-cli** (Cloud Agent / MicroVM) vs **Playwright MCP** (local IDE).
+- NEVER use the Grafana **UI login form**.
+- Programmatic auth only (Basic header + optional `POST /graph/login` via `pmm-ui-login.sh` on MicroVM).
 
 # Browser interactions
 - Batch multiple actions (fills, clicks, asserts) into one `mcp_playwright_browser_run_code` call.

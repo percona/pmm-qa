@@ -34,6 +34,7 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
 | [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite) | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) |
+| [.agents/](.agents/) | Agent workflows (login, MCP rules, API index, bug reports) for Cursor / IDE automation | [.agents/README.md](.agents/README.md) · start with `/workflowIndex` or `/pmmLogin` |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipeline Map](#ci--pipeline-map) below |
 
 ## Cross-Suite Architecture

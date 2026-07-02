@@ -48,10 +48,15 @@ Pick `--database` from test plan + `pmm_qa/scripts/database_options.py`. Example
 
 ## 3. UI (playwright-cli)
 
+**Do not** open `/graph/login` and type credentials — use the login script or `/pmmLogin` workflow.
+
 ```bash
-export PLAYWRIGHT_MCP_IGNORE_HTTPS_ERRORS=true
-playwright-cli open https://127.0.0.1/graph/login
+export PMM_URL='https://127.0.0.1'
+export ADMIN_PASSWORD='pmm3admin!'   # same as step 1
+qa-integration/scripts/pmm-ui-login.sh PMM-<TICKET>
 ```
+
+Reuse session `pmm-PMM-<TICKET>` for snapshots/clicks. Full details: [.agents/workflows/pmmLogin.md](../.agents/workflows/pmmLogin.md).
 
 ## 4. Reset
 
@@ -73,4 +78,5 @@ If still blocked, report BLOCKED and link Jenkins `pmm3-aws-staging-start` param
 | `scripts/lib/wait-pmm-ready.sh` | readyz waiter |
 | `scripts/cleanup-pmm-microvm.sh` | teardown |
 | `scripts/start-docker-microvm.sh` | dockerd on MicroVM |
+| `scripts/pmm-ui-login.sh` | PMM UI login via playwright-cli (session `pmm-<TICKET>`) |
 | `pmm_psmdb-pbm_setup/start-rs-only-microvm.sh` | called via pmm-framework when `PMM_QA_NO_SYSTEMD=1` |
