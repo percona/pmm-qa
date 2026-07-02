@@ -131,10 +131,14 @@ cat <<EOF
 ================================================================================
 PMM Server provisioning complete (profile: ${PROFILE})
 ================================================================================
-  UI:       https://127.0.0.1/graph/login
+  UI:       https://127.0.0.1  (login: ${SCRIPT_DIR}/pmm-ui-login.sh <TICKET>)
   User:     admin
   Password: ${ADMIN_PASSWORD}
   readyz:   https://127.0.0.1/v1/server/readyz  (expect HTTP 200, body {})
+
+  # UI session (after databases are up):
+  #   export PMM_URL='https://127.0.0.1' ADMIN_PASSWORD='${ADMIN_PASSWORD}'
+  #   ${SCRIPT_DIR}/pmm-ui-login.sh PMM-<TICKET>
 
 Next — provision monitored databases for your ticket (examples):
 
