@@ -10,6 +10,7 @@ INTERVAL_SEC="${PMM_READY_INTERVAL:-5}"
 elapsed=0
 while [ "$elapsed" -lt "$TIMEOUT_SEC" ]; do
   http_code=$(curl -ksS -o /tmp/pmm-readyz-body.txt -w '%{http_code}' "$READYZ_URL" 2>/dev/null || echo "000")
+  touch /tmp/pmm-readyz-body.txt 2>/dev/null || true
   body=$(tr -d '[:space:]' </tmp/pmm-readyz-body.txt 2>/dev/null || true)
 
   if [ "$http_code" = "200" ] && [ "$body" = "{}" ]; then

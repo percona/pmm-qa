@@ -9,7 +9,20 @@
     sudo mkdir -p /tmp/mysql-sockets/{{ item }}
     sudo chmod 0777 /tmp/mysql-sockets/{{ item }}
 
-- name: Prepare Container for MySQL 8.0+
+- name: Prepare Container for MySQL 8.0+ (MicroVM)
+  shell: |
+    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+      --network="pmm-qa" \
+      -v ./ssl:/ssl \
+      -v /tmp/mysql-sockets/{{ item }}:/tmp \
+      -p {{ docker_port|int + item - 1 }}:3306 \
+      ubuntu:24.04 tail -f /dev/null
+  when:
+    - mysql_version | replace('_', '') | int >= 80
+    - pmm_qa_no_systemd | bool
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare Container for MySQL 8.0+ (systemd)
   shell: |
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
       --network="pmm-qa" \
@@ -19,9 +32,25 @@
       -v /tmp/mysql-sockets/{{ item }}:/tmp \
       -p {{ docker_port|int + item - 1 }}:3306 \
       antmelekhin/docker-systemd:ubuntu-24.04
-  when: mysql_version | replace('_', '') | int >= 80
+  when:
+    - mysql_version | replace('_', '') | int >= 80
+    - not (pmm_qa_no_systemd | bool)
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-- name: Prepare Container for MySQL 5.7
+- name: Prepare Container for MySQL 5.7 (MicroVM)
+  shell: |
+    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+      --network="pmm-qa" \
+      -v ./ssl:/ssl \
+      -v /tmp/mysql-sockets/{{ item }}:/var/run/mysqld \
+      -p {{ docker_port|int + item - 1 }}:3306 \
+      ubuntu:22.04 tail -f /dev/null
+  when:
+    - mysql_version | replace('_', '') | int < 80
+    - pmm_qa_no_systemd | bool
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare Container for MySQL 5.7 (systemd)
   shell: |
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
       --network="pmm-qa" \
@@ -31,7 +60,10 @@
       -v /tmp/mysql-sockets/{{ item }}:/var/run/mysqld \
       -p {{ docker_port|int + item - 1 }}:3306 \
       antmelekhin/docker-systemd:ubuntu-22.04
-  when: mysql_version | replace('_', '') | int < 80
+  when:
+    - mysql_version | replace('_', '') | int < 80
+    - not (pmm_qa_no_systemd | bool)
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Install dependencies
   shell: |
@@ -115,17 +147,28 @@
     mysql_root_password: "{{ mysql_57_root_password.stderr | regex_search('root@localhost: (.+)', '\\1') | first }}"
   when: mysql_version | replace('_', '') | int == 57
 
-- name: Start MySQL
+- name: Start MySQL (systemd)
   shell: |
-    docker exec {{ container_prefix }}{{ index }} systemctl enable mysql 
+    docker exec {{ container_prefix }}{{ index }} systemctl enable mysql
     docker exec {{ container_prefix }}{{ index }} systemctl start mysql
+  when: not (pmm_qa_no_systemd | bool)
+
+- name: Start MySQL (MicroVM)
+  shell: docker exec {{ container_prefix }}{{ index }} /etc/init.d/mysql start
+  when: pmm_qa_no_systemd | bool
+
 - name: Copy config file to docker container
   shell: |
     docker exec {{ container_prefix }}{{ item }} mkdir -p /etc/mysql
     docker cp {{ data_dir }}/node{{ index }}/my.cnf {{ container_prefix }}{{ item }}:/etc/mysql/my.cnf
 
-- name: Restart MySQL
+- name: Restart MySQL (systemd)
   shell: docker exec {{ container_prefix }}{{ index }} systemctl restart mysql
+  when: not (pmm_qa_no_systemd | bool)
+
+- name: Restart MySQL (MicroVM)
+  shell: docker exec {{ container_prefix }}{{ index }} /etc/init.d/mysql restart
+  when: pmm_qa_no_systemd | bool
 
 - name: Wait 5 seconds for MySQL to start
   pause:

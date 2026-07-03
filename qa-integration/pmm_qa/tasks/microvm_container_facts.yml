@@ -1,0 +1,19 @@
+---
+# Shared facts for MicroVM-safe Docker base containers (no systemd/cgroup).
+- name: Detect MicroVM no-systemd mode
+  set_fact:
+    pmm_qa_no_systemd: "{{ (lookup('env', 'PMM_QA_NO_SYSTEMD') | default('', true)) in ['1', 'true', 'yes', 'True', 'TRUE'] }}"
+
+- name: Set base container image for MicroVM
+  set_fact:
+    pmm_qa_base_image: "ubuntu:24.04"
+    pmm_qa_container_privileged: ""
+    pmm_qa_container_cmd: "tail -f /dev/null"
+  when: pmm_qa_no_systemd | bool
+
+- name: Set base container image for systemd hosts
+  set_fact:
+    pmm_qa_base_image: "antmelekhin/docker-systemd:ubuntu-24.04"
+    pmm_qa_container_privileged: "--privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd"
+    pmm_qa_container_cmd: ""
+  when: not (pmm_qa_no_systemd | bool)

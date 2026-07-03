@@ -1,0 +1,87 @@
+# Compose override for MicroVM / environments without systemd as PID 1.
+# Usage: docker compose -f docker-compose-sharded.yaml -f docker-compose-sharded.microvm.yaml up -d
+x-microvm-member: &microvm_member
+  privileged: false
+  cgroup: ~
+  entrypoint: bash /entrypoint-no-systemd.sh run
+  volumes: !override
+    - ./conf/pbm:/etc/pbm
+    - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+    - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+services:
+  rs101:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs1:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  rs102:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs1:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  rs103:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs1:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  rs201:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs2:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  rs202:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs2:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  rs203:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-rs2:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  rscfg01:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-cfg:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  rscfg02:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-cfg:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  rscfg03:
+    <<: *microvm_member
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ./conf/mongod-cfg:/etc/mongod
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+
+  mongos:
+    privileged: false
+    cgroup: ~

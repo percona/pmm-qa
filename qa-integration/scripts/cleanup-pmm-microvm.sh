@@ -18,10 +18,13 @@ if [ -f "${QA_ROOT}/pmm_psmdb-pbm_setup/docker-compose-rs.yaml" ]; then
     docker compose -f docker-compose-rs.yaml -f docker-compose-rs.microvm.yaml down -v --remove-orphans 2>/dev/null \
       || docker compose -f docker-compose-rs.yaml down -v --remove-orphans 2>/dev/null \
       || true
+    docker compose -f docker-compose-sharded.yaml -f docker-compose-sharded.microvm.yaml down -v --remove-orphans 2>/dev/null \
+      || docker compose -f docker-compose-sharded.yaml down -v --remove-orphans 2>/dev/null \
+      || true
   )
 fi
 
-for name in rs101 rs102 rs103 rs201 rs202 rs203 rs-test minio createbucket kerberos; do
+for name in rs101 rs102 rs103 rs201 rs202 rs203 rscfg01 rscfg02 rscfg03 mongos rs-test minio createbucket kerberos; do
   docker rm -f "$name" 2>/dev/null || true
 done
 

@@ -11,6 +11,8 @@
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
 
   tasks:
+  - include_tasks: tasks/microvm_container_facts.yml
+
   - name: cleanup container for client and DB setup
     shell: >
       docker ps -a --filter "name={{ haproxy_container }}" | grep -q . && docker stop {{ haproxy_container }} && docker rm -fv {{ haproxy_container }}
@@ -22,16 +24,26 @@
     shell: docker network create pmm-qa
     ignore_errors: true
 
-  - name: Prepare Container for HAPROXY
+  - name: Prepare Container for HAPROXY (MicroVM)
     shell: >
-      docker run -d \
-        -p 42100:42100 \
-        --name={{ haproxy_container }} \
-        --network=pmm-qa \
-        --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        -v /var/lib/containerd \
-        antmelekhin/docker-systemd:ubuntu-24.04
-  
+      docker run -d
+      -p 42100:42100
+      --name={{ haproxy_container }}
+      --network=pmm-qa
+      ubuntu:24.04
+      tail -f /dev/null
+    when: pmm_qa_no_systemd | bool
+
+  - name: Prepare Container for HAPROXY (systemd)
+    shell: >
+      docker run -d
+      -p 42100:42100
+      --name={{ haproxy_container }}
+      --network=pmm-qa
+      --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw
+      -v /var/lib/containerd
+      antmelekhin/docker-systemd:ubuntu-24.04
+    when: not (pmm_qa_no_systemd | bool)
   - name: Copy all required Artifacts to the docker haproxy_container
     shell: "{{ item }}"
     with_items:

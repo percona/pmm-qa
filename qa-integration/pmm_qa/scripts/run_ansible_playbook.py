@@ -9,6 +9,13 @@ def run_ansible_playbook(playbook_filename, env_vars, args):
     script_dir = os.path.dirname(script_path)
     playbook_path = script_dir + "/" + playbook_filename
     verbosity_level = 1
+
+    if os.getenv('PMM_QA_NO_SYSTEMD'):
+        env_vars['PMM_QA_NO_SYSTEMD'] = os.getenv('PMM_QA_NO_SYSTEMD')
+
+    env_vars.setdefault('DOCKER_HOST', 'unix:///var/run/docker.sock')
+    env_vars.setdefault('ANSIBLE_PYTHON_INTERPRETER', sys.executable)
+
     # Install community docker plugin for ansible
     subprocess.run(["ansible-galaxy", "collection", "install", "community.docker"], capture_output=True, text=True)
     if args.verbosity_level is not None:

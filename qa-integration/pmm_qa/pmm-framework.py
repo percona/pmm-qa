@@ -22,34 +22,36 @@ def normalize_client_version(client_version):
 def get_running_container_name():
     container_image_name = "pmm-server"
     container_name = ''
+    fallback_name = ''
     try:
-        # Run 'docker ps' to get a list of running containers
         output = subprocess.check_output(['docker', 'ps', '--format', 'table {{.ID}}\t{{.Image}}\t{{.Names}}'])
-        # Split the output into a list of container
         containers = output.strip().decode('utf-8').split('\n')[1:]
-        # Check each line for the docker image name
         for line in containers:
-            # Extract the image name
             info_parts = line.split('\t')[0]
             image_info = info_parts.split()[1]
-            # Check if the container is in the list of running containers
-            # and establish N/W connection with it.
+            name = info_parts.split()[2]
             if container_image_name in image_info:
-                container_name = info_parts.split()[2]
-                # Check if pmm-qa n/w exists and already connected to running container n/w
-                # if not connect it.
-                result = subprocess.run(['docker', 'network', 'inspect', 'pmm-qa'], capture_output=True, text=True)
-                if result.returncode != 0:
-                    subprocess.run(['docker', 'network', 'create', 'pmm-qa'])
-                    subprocess.run(['docker', 'network', 'connect', 'pmm-qa', container_name])
-                else:
-                    networks = result.stdout
-                    if container_name not in networks:
-                        subprocess.run(['docker', 'network', 'connect', 'pmm-qa', container_name])
-                return container_name
+                if name == 'pmm-server':
+                    container_name = name
+                    break
+                if not fallback_name:
+                    fallback_name = name
+        if not container_name:
+            container_name = fallback_name
+        if not container_name:
+            return None
+
+        result = subprocess.run(['docker', 'network', 'inspect', 'pmm-qa'], capture_output=True, text=True)
+        if result.returncode != 0:
+            subprocess.run(['docker', 'network', 'create', 'pmm-qa'])
+            subprocess.run(['docker', 'network', 'connect', 'pmm-qa', container_name])
+        else:
+            networks = result.stdout
+            if container_name not in networks:
+                subprocess.run(['docker', 'network', 'connect', 'pmm-qa', container_name])
+        return container_name
 
     except subprocess.CalledProcessError:
-        # Handle the case where the 'docker ps' command fails
         return None
 
     return None
@@ -522,7 +524,10 @@ def setup_psmdb(db_type, db_version=None, db_config=None, args=None):
         else:
             shell_scripts = ['start-rs-only.sh']
     elif setup_type in ("shards", "sharding"):
-        shell_scripts = ['start-sharded.sh']
+        if os.getenv('PMM_QA_NO_SYSTEMD', '').lower() in ('1', 'true', 'yes'):
+            shell_scripts = ['start-sharded-microvm.sh']
+        else:
+            shell_scripts = ['start-sharded.sh']
 
     # Execute shell scripts
     if not shell_scripts == []:
