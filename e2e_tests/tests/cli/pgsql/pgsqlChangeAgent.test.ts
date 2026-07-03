@@ -261,7 +261,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent disable collectors @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent expose exporter @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       await cliHelper
         .execSilent(
