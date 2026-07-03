@@ -124,7 +124,7 @@ export default class CliHelper {
       );
     }
 
-    return this.execute(
+    return this.execSilent(
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
   };
