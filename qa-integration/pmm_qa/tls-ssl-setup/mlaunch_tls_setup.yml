@@ -13,28 +13,29 @@
 
   tasks:
   - name: Cleanup Docker container for client and DB setup
-    shell: >
-      docker ps -a --filter "name={{ mongodb_ssl_container }}" | grep -q . && docker stop {{ mongodb_ssl_container }} && docker rm -fv {{ mongodb_ssl_container }}
+    shell: docker rm -f {{ mongodb_ssl_container }} 2>/dev/null || true
     ignore_errors: true
     tags:
       - cleanup
   - name: delete network if exist
-    shell: docker network rm "{{ mongodb_ssl_container }}_network"
+    shell: docker network rm "{{ mongodb_ssl_container }}_network" 2>/dev/null || true
     ignore_errors: true
     tags:
       - cleanup
 
   - name: Create a network
-    shell: docker network create "{{ mongodb_ssl_container }}_network"
+    shell: docker network create "{{ mongodb_ssl_container }}_network" 2>/dev/null || true
+    ignore_errors: true
 
   - name: Create pmm-qa network if not exist
-    shell: docker network create pmm-qa
+    shell: docker network create pmm-qa 2>/dev/null || true
     ignore_errors: true
 
   - name: Prepare Container for mongodb ssl container
     shell: >
       docker run -d --name={{ mongodb_ssl_container }}
       --network "{{ mongodb_ssl_container }}_network"
+      --shm-size=1g
       phusion/baseimage:jammy-1.0.1
 
   - name: Copy all required Artifacts to the docker mongodb_ssl_container
