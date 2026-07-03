@@ -18,6 +18,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let pgStatMonitorId: string;
   let pgExporterSocketId: string;
   let pgStatMonitorSocketId: string;
+  const pgExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
@@ -235,10 +236,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9996 - Verify Change agent agent password @pgsm-pmm-integration',
     async ({ cliHelper, page }) => {
-      const password = 'newAgentPassword';
+
       const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${password}`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --agent-password=${password}`,
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --agent-password=${pgExporterPassword}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
@@ -247,7 +248,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       cliHelper
         .getMetrics({
-          agentPassword: password,
+          agentPassword: pgExporterPassword,
           dockerContainer: containerName,
           serviceName: serviceName,
         })
@@ -277,7 +278,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await cliHelper
         .execSilent(
-          `docker exec pmm-server curl -u pmm:${pgExporterId} http://${containerName}:${pgExporterPort}/metrics`,
+          `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
         )
         .assertSuccess()
         .outContains('pg_up');
