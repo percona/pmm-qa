@@ -45,6 +45,8 @@ class ExecReturn {
         `Stdout does not contain ${expectedValue}, ${customString}!`,
       ).toContain(expectedValue);
     });
+
+    return this;
   };
 
   outContainsMany = async (expectedValues: string[]) => {

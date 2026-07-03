@@ -57,7 +57,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep ${socketServiceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
-
   });
 
   pmmTest.skip(
@@ -263,12 +262,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       )
       .stdout.trim();
 
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --expose-exporter`,
-      )
-      .assertSuccess()
-      .outContains('- enabled expose exporter');
+    console.log(
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --expose-exporter`,
+        )
+        .assertSuccess()
+        .outContains('- enabled expose exporter'),
+    );
 
     await cliHelper
       .execSilent(
