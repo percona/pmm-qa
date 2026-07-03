@@ -43,7 +43,7 @@
     with_items:
       - docker exec {{ mongodb_ssl_container }} mkdir -p artifacts
       - docker cp ./mongodb/mlaunch_ssl_setup.sh {{ mongodb_ssl_container }}:/
-      - docker cp ../pmm-tests/mongodb_user_setup.js {{ mongodb_ssl_container }}:/
+      - docker cp ../pmm-tests/mongodb_user_setup_ssl.js {{ mongodb_ssl_container }}:/
       - docker cp ./create_certs.sh {{ mongodb_ssl_container }}:/
       - docker cp ../pmm3-client-setup.sh {{ mongodb_ssl_container }}:/
 

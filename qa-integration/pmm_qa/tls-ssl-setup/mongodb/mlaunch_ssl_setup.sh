@@ -17,9 +17,10 @@ rm -rf "psmdb_${mongodb_version}" percona-server-mongodb-* mongodb-linux-* \
 mlaunch stop 2>/dev/null || true
 rm -rf data .mlaunch 2>/dev/null || true
 
-if [ ! -f mongodb_user_setup.js ]; then
-  wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/mongodb_user_setup.js
+if [ ! -f mongodb_user_setup_ssl.js ]; then
+  wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/mongodb_user_setup_ssl.js
 fi
+MONGO_TLS_FLAGS="--tls --host localhost --port 27017 --tlsCAFile /certificates/ca.crt --tlsCertificateKeyFile /certificates/client.pem --tlsAllowInvalidHostnames"
 
 resolve_psmdb_tarball() {
   version="$1"
@@ -117,7 +118,7 @@ apt-get install -y libldap-2.5-0 || apt-get install -y libldap-common
 
 mlaunch init --bind_ip 0.0.0.0 --binarypath "./psmdb_${mongodb_version}/bin" --replicaset --name rs1 --nodes 3 --sslMode requireSSL --sslPEMKeyFile /certificates/server.pem --sslCAFile /certificates/ca.crt --sslClientCertificate /certificates/client.pem
 sleep 20
-./psmdb_${mongodb_version}/bin/mongo --tls --host localhost --port 27017 --tlsCAFile /certificates/ca.crt --tlsCertificateKeyFile /certificates/client.pem mongodb_user_setup.js
+./psmdb_${mongodb_version}/bin/mongo ${MONGO_TLS_FLAGS} --file mongodb_user_setup_ssl.js
 cat > add_new_ssl_user.js <<EOF
 db.getSiblingDB("\$external").runCommand(
       {
@@ -142,4 +143,4 @@ print("Added new user ssl");
 db.getSiblingDB("test").test.insert({a:1});
 db.getSiblingDB("test").test.insert({b:2});
 EOF
-./psmdb_${mongodb_version}/bin/mongo --tls --host localhost --port 27017 --tlsCAFile /certificates/ca.crt --tlsCertificateKeyFile /certificates/client.pem add_new_ssl_user.js
+./psmdb_${mongodb_version}/bin/mongo ${MONGO_TLS_FLAGS} --file add_new_ssl_user.js
