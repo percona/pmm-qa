@@ -60,7 +60,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
   });
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9991 - Verfiy Change agent username and password @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
@@ -129,7 +129,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
-    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+    async ({ cliHelper }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --debug --trace --json`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --debug --trace --json`,
@@ -139,7 +139,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
@@ -190,7 +190,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatements-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
-      commands.forEach((command) => console.log(command));
       commands.forEach((command) => cliHelper.execSilent(command));
       await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
     },
