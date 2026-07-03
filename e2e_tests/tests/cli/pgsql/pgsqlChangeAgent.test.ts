@@ -125,6 +125,19 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  pmmTest(
+    'PMM-T9993 - Verify Change agent debug and trace @pgsm-pmm-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --debug --trace`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --log-level=debug`,
+      ];
+
+      commands.forEach((command) => console.log(command));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+    },
+  );
+
   pmmTest.skip(
     'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
