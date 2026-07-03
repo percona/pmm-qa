@@ -91,13 +91,28 @@
       - docker exec {{ pxc_container }} usermod -aG pmm-agent pxc
     when: "'http' not in client_version"
 
-  - name: Execute User & Proxysql Setup inside the PXC pxc_container
+  - name: Install XtraBackup for PXC 5.7
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pxc_container }} percona-release enable-only pxb-24 release
       - docker exec {{ pxc_container }} apt-get update
       - docker exec {{ pxc_container }} apt-get install -y percona-xtrabackup-24
     when: pxc_version == "5.7"
+
+  - name: Install XtraBackup for PXC 8.0
+    shell: |
+      docker exec {{ pxc_container }} bash -c '
+        set -e
+        apt-get update
+        if ! command -v percona-release >/dev/null; then
+          wget -q https://repo.percona.com/apt/percona-release_latest.generic_all.deb
+          dpkg -i percona-release_latest.generic_all.deb
+        fi
+        percona-release enable-only pxb-80 release
+        apt-get update
+        apt-get install -y percona-xtrabackup-80
+      '
+    when: pxc_version == "8.0"
 
   - name: Execute Setup script inside the PXC pxc_container
     shell: "{{ item }}"
