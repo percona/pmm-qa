@@ -49,10 +49,9 @@ Scenario('PMM-T1835 - Verify Edit Buttons are Enabled for Dump @dump', async ({ 
   I.amOnPage(dumpPage.url);
   // Required wait as delete in previous test takes time to reload page content.
   I.wait(5);
-  await I.click(dumpPage.fields.status(uid.dump_id));
-  dumpPage.verifyDownloadEnabled();
-  dumpPage.verifyDeleteEnabled();
-  dumpPage.verifySFTPEnabled();
+  dumpPage.verifyDownloadEnabled(uid.dump_id);
+  dumpPage.verifyDeleteEnabled(uid.dump_id);
+  dumpPage.verifySFTPEnabled(uid.dump_id);
   await dumpAPI.deleteDump(uid.dump_id);
 });
 
@@ -101,8 +100,7 @@ Scenario('PMM-T1835 - Check Dump Archives can be sent to Support in UI @dump', a
   I.amOnPage(dumpPage.url);
   // Required wait as delete in previous test takes time to reload page content.
   I.wait(5);
-  await I.click(dumpPage.fields.status(uid.dump_id));
-  dumpPage.verifySFTPEnabled();
+  dumpPage.verifySFTPEnabled(uid.dump_id);
   await I.click(dumpPage.fields.sendSupportButton);
 
   sftp.address = 'sftp-server:22';
