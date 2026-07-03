@@ -255,29 +255,34 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('PMM-T9993 - Verify Change agent expose exporter @pgsm-pmm-integration', async ({ cliHelper }) => {
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${pgExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
+  pmmTest(
+    'PMM-T9993 - Verify Change agent expose exporter @pgsm-pmm-integration',
+    async ({ cliHelper, page }) => {
+      pgExporterPort = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${pgExporterId} | awk -F' ' '{print $6}'`,
+        )
+        .stdout.trim();
 
-    console.log(
+      console.log(
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --expose-exporter`,
+          )
+          .assertSuccess()
+          .outContains('- enabled expose exporter'),
+      );
+
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --expose-exporter`,
+          `docker exec pmm-server curl -u pmm:${pgExporterId} http://${containerName}:${pgExporterPort}/metrics`,
         )
         .assertSuccess()
-        .outContains('- enabled expose exporter'),
-    );
-
-    await cliHelper
-      .execSilent(
-        `docker exec pmm-server curl -u pmm:${pgExporterId} http://${containerName}:${pgExporterPort}/metrics`,
-      )
-      .assertSuccess()
-      .outContains('pg_up');
-  });
+        .outContains('pg_up');
+    },
+  );
 
   pmmTest(
     'PMM-T9993 - Verify Change agent disable collectors @pgsm-pmm-integration',
