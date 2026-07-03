@@ -105,9 +105,9 @@ if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" || "$mongodb_ve
     rm -f mongosh.tar.gz
 fi
 
-# For mongodb dependency in Debian
-wget http://http.us.debian.org/debian/pool/main/o/openldap/libldap-2.4-2_2.4.47+dfsg-3+deb10u7_amd64.deb
-apt install -y ./libldap-2.4-2_2.4.47+dfsg-3+deb10u7_amd64.deb
+# MongoDB runtime dependency (libldap); use apt on Ubuntu jammy
+apt-get update
+apt-get install -y libldap-2.5-0 || apt-get install -y libldap-common
 
 mlaunch init --bind_ip 0.0.0.0 --binarypath "./psmdb_${mongodb_version}/bin" --replicaset --name rs1 --nodes 3 --sslMode requireSSL --sslPEMKeyFile /certificates/server.pem --sslCAFile /certificates/ca.crt --sslClientCertificate /certificates/client.pem
 sleep 20
