@@ -29,8 +29,16 @@
         state: present
       ignore_errors: yes
 
+    - name: Remove old PostgreSQL containers
+      community.docker.docker_container:
+        name: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+        state: absent
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+      ignore_errors: yes
+
     - name: Remove old data folders
-      shell: 'rm -fr {{ data_dir }}'
+      shell: docker run --rm -v {{ data_dir }}:/data alpine sh -c 'rm -rf /data/* /data/.[!.]*' 2>/dev/null || rm -fr {{ data_dir }}
+      ignore_errors: yes
 
     - name: Create data directories
       file:
