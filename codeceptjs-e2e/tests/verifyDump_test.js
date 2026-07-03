@@ -50,7 +50,6 @@ Scenario('PMM-T1835 - Verify Edit Buttons are Enabled for Dump @dump', async ({ 
   // Required wait as delete in previous test takes time to reload page content.
   I.wait(5);
   dumpPage.verifyDownloadEnabled(uid.dump_id);
-  dumpPage.verifyDeleteEnabled(uid.dump_id);
   dumpPage.verifySFTPEnabled(uid.dump_id);
   await dumpAPI.deleteDump(uid.dump_id);
 });

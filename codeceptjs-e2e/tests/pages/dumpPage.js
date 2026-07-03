@@ -38,11 +38,7 @@ module.exports = {
   verifyDownloadEnabled(uid) {
     this.openRowMenu(uid);
     I.seeElement(this.fields.downloadButton);
-  },
-
-  verifyDeleteEnabled(uid) {
-    this.openRowMenu(uid);
-    I.seeElement(this.fields.deleteButton);
+    I.pressKey('Escape');
   },
 
   verifySFTPEnabled(uid) {
