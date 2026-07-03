@@ -127,6 +127,9 @@
     docker exec -u root {{ container_prefix }}{{ item }} bash -c '
       pkill -9 -u postgres postgres 2>/dev/null || true
       rm -f /var/lib/postgresql/{{ pdpgsql_version }}/main/postmaster.pid
+      rm -rf /var/run/postgresql
+      mkdir -p /var/run/postgresql
+      chown postgres:postgres /var/run/postgresql
     '
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
@@ -148,9 +151,22 @@
     '
   become: true
 
-- name: Start patroni service on replica nodes
-  shell: >
+- name: Start patroni on replica nodes sequentially and wait for each
+  shell: |
+    docker exec -u root {{ container_prefix }}{{ item }} bash -c '
+      rm -rf /var/run/postgresql
+      mkdir -p /var/run/postgresql
+      chown postgres:postgres /var/run/postgresql
+    '
     docker exec -u postgres {{ container_prefix }}{{ item }} /bin/sh -c "nohup patroni /patroni.yml > /data/db/logs/patroni.log 2>&1 &"
+    docker exec {{ container_prefix }}1 bash -c '
+      for i in $(seq 1 60); do
+        patronictl -c /patroni.yml list 2>/dev/null | grep -q "{{ container_prefix }}{{ item }}.*running" && exit 0
+        sleep 5
+      done
+      patronictl -c /patroni.yml list
+      exit 1
+    '
   become: true
   loop: "{{ range(2, nodes_count | int + 1) | list }}"
 
