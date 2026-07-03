@@ -70,7 +70,9 @@ export CLIENT_VERSION='<tarball-url>'
 | `psmdb,SETUP_TYPE=psa` | PASS | same microvm RS path |
 | `psmdb,SETUP_TYPE=sharding` | PASS | `start-sharded-microvm.sh` (new) |
 | `dockerclients` | PASS | |
-| `ps` / `mysql` | WIP | Ubuntu base containers work; fixing PMM server discovery (`pmm-server` vs `pmm-server-1`) |
-| `bucket` / `valkey` | WIP | Ansible `community.docker` + docker-py pin |
-| `haproxy` / `external` | WIP | Container runs; pmm-agent registration |
+| `ps` (single) | PASS | Ubuntu base + `mysqld --daemonize` |
+| `bucket` | PASS | Fixed YAML + docker-py pin |
+| `mysql` / `ps` GR/replication | WIP | Single node next |
+| `valkey` | WIP | Cluster starts; late-stage task still failing |
+| `haproxy` / `external` | WIP | Container + build OK; retest after server discovery fix |
 | `pgsql` / `pdpgsql` / `ssl_*` / `mlaunch_*` / `pxc` | pending | |
