@@ -4,7 +4,7 @@ import { expect } from '@playwright/test';
 import * as fs from 'node:fs';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
-  pmmTest.describe.configure({ mode: 'serial', retries: 0 });
+  pmmTest.describe.configure({ mode: 'serial' });
 
   const newUsername = 'new_pmmm_username';
   const newPassword = 'new_pmm_user_password';
