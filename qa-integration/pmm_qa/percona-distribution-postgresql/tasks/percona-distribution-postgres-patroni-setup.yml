@@ -122,18 +122,52 @@
     target_container: "{{ container_prefix }}{{ item }}"
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-- name: Start patroni service in all nodes
-  shell: >
-    docker exec -u postgres {{ container_prefix }}{{ item }} /bin/sh -c "nohup patroni /patroni.yml > /data/db/logs/patroni.log 2>&1 &"
+- name: Kill lingering PostgreSQL processes before Patroni takes over
+  shell: |
+    docker exec -u root {{ container_prefix }}{{ item }} bash -c '
+      pkill -9 -u postgres postgres 2>/dev/null || true
+      rm -f /var/lib/postgresql/{{ pdpgsql_version }}/main/postmaster.pid
+    '
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-- name: Wait for Patroni cluster members to be running
+- name: Start patroni service on primary node
+  shell: >
+    docker exec -u postgres {{ container_prefix }}1 /bin/sh -c "nohup patroni /patroni.yml > /data/db/logs/patroni.log 2>&1 &"
+  become: true
+
+- name: Wait for Patroni primary to bootstrap
   shell: |
     docker exec {{ container_prefix }}1 bash -c '
+      for i in $(seq 1 60); do
+        patronictl -c /patroni.yml list 2>/dev/null | grep -q "Leader.*running" && exit 0
+        sleep 5
+      done
+      patronictl -c /patroni.yml list
+      exit 1
+    '
+  become: true
+
+- name: Start patroni service on replica nodes
+  shell: >
+    docker exec -u postgres {{ container_prefix }}{{ item }} /bin/sh -c "nohup patroni /patroni.yml > /data/db/logs/patroni.log 2>&1 &"
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Wait for Patroni cluster members to be running and stable
+  shell: |
+    docker exec {{ container_prefix }}1 bash -c '
+      stable=0
       for i in $(seq 1 90); do
-        running=$(patronictl -c /patroni.yml list 2>/dev/null | grep -c running || true)
-        if [ "$running" -ge {{ nodes_count }} ]; then exit 0; fi
+        list=$(patronictl -c /patroni.yml list 2>/dev/null || true)
+        running=$(echo "$list" | awk "NR>2 && /running/ {c++} END {print c+0}")
+        leader=$(echo "$list" | grep -c "Leader.*running" || true)
+        if [ "$running" -ge {{ nodes_count }} ] && [ "$leader" -ge 1 ]; then
+          stable=$((stable + 1))
+          if [ "$stable" -ge 3 ]; then exit 0; fi
+        else
+          stable=0
+        fi
         sleep 5
       done
       patronictl -c /patroni.yml list
@@ -143,7 +177,7 @@
 
 - name: Wait for Patroni PostgreSQL on all nodes
   shell: |
-    docker exec {{ container_prefix }}{{ item }} bash -c 'for i in $(seq 1 30); do pg_isready -U postgres -h 127.0.0.1 -p 5432 && exit 0; sleep 5; done; exit 1'
+    docker exec {{ container_prefix }}{{ item }} bash -c 'for i in $(seq 1 60); do pg_isready -U postgres -h 127.0.0.1 -p 5432 && exit 0; sleep 5; done; exit 1'
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
