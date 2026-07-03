@@ -4,5 +4,5 @@
   when: not (pmm_qa_no_systemd | bool)
 
 - name: Stop PostgreSQL (MicroVM)
-  shell: docker exec -u root {{ target_container }} /etc/init.d/postgresql stop
+  shell: docker exec -u root {{ target_container }} /etc/init.d/postgresql stop || true
   when: pmm_qa_no_systemd | bool
