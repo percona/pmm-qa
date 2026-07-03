@@ -254,6 +254,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  pmmTest(
+    'PMM-T9993 - Verify Change agent disable collectors @pgsm-pmm-integration',
+    async ({ cliHelper }) => {
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --disable-collectors=stat_statements,locks`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --disable-collectors=stat_statements,locks`,
+      ];
+
+      for (const command of commands) {
+        await cliHelper
+          .execSilent(command)
+          .assertSuccess()
+          .outContains('- updated disabled collectors: [stat_statements locks]');
+      }
+    },
+  );
+
   pmmTest.skip(
     'PMM-T9993 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
