@@ -57,11 +57,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep ${socketServiceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${pgExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
+
   });
 
   pmmTest.skip(
@@ -260,24 +256,27 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
-    'PMM-T9993 - Verify Change agent expose exporter @pgsm-pmm-integration',
-    async ({ cliHelper }) => {
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --expose-exporter`,
-        )
-        .assertSuccess()
-        .outContains('- enabled expose exporter');
+  pmmTest('PMM-T9993 - Verify Change agent expose exporter @pgsm-pmm-integration', async ({ cliHelper }) => {
+    pgExporterPort = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${pgExporterId} | awk -F' ' '{print $6}'`,
+      )
+      .stdout.trim();
 
-      await cliHelper
-        .execSilent(
-          `docker exec pmm-server curl -u pmm:${pgExporterId} http://${containerName}:${pgExporterPort}/metrics`,
-        )
-        .assertSuccess()
-        .outContains('pg_up');
-    },
-  );
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --expose-exporter`,
+      )
+      .assertSuccess()
+      .outContains('- enabled expose exporter');
+
+    await cliHelper
+      .execSilent(
+        `docker exec pmm-server curl -u pmm:${pgExporterId} http://${containerName}:${pgExporterPort}/metrics`,
+      )
+      .assertSuccess()
+      .outContains('pg_up');
+  });
 
   pmmTest(
     'PMM-T9993 - Verify Change agent disable collectors @pgsm-pmm-integration',
