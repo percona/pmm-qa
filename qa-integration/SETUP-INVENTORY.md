@@ -67,15 +67,22 @@ export CLIENT_VERSION='<tarball-url>'
 
 ## MicroVM verification status (2026-07-03)
 
+Requires only `IS_CURSOR_VM=1` (set in Cursor automation secrets).
+
 | Setup | Status | Notes |
 |-------|--------|-------|
 | `psmdb,SETUP_TYPE=pss` | PASS | `start-rs-only-microvm.sh` |
 | `psmdb,SETUP_TYPE=psa` | PASS | same microvm RS path |
-| `psmdb,SETUP_TYPE=sharding` | PASS | `start-sharded-microvm.sh` (new) |
+| `psmdb,SETUP_TYPE=sharding` | PASS | `start-sharded-microvm.sh` |
 | `dockerclients` | PASS | |
 | `ps` (single) | PASS | Ubuntu base + `mysqld --daemonize` |
+| `ps,SETUP_TYPE=gr` | PASS | |
+| `ps,SETUP_TYPE=replication` | PASS | |
+| `mysql` (single) | PASS | |
+| `mysql,SETUP_TYPE=gr` | WIP | multi-node prepare_install fix in flight |
+| `mysql,SETUP_TYPE=replication` | WIP | same fix |
 | `bucket` | PASS | Fixed YAML + docker-py pin |
-| `mysql` / `ps` GR/replication | WIP | Single node next |
-| `valkey` | WIP | Cluster starts; late-stage task still failing |
-| `haproxy` / `external` | WIP | Container + build OK; retest after server discovery fix |
+| `haproxy` | PASS | |
+| `external` | PASS | cleanup shell fix |
+| `valkey` | WIP | retest pending |
 | `pgsql` / `pdpgsql` / `ssl_*` / `mlaunch_*` / `pxc` | pending | |
