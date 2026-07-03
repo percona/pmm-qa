@@ -16,10 +16,10 @@
   - include_tasks: tasks/microvm_container_facts.yml
 
   - name: cleanup container for client and DB setup
-    shell: >
-      docker ps -a --filter "name={{ external_container }}" | grep -q . && docker stop {{ external_container }} && docker rm -fv {{ external_container }}
-      docker stop redis_container
-      docker rm -fv redis_container
+    shell: |
+      docker ps -a --filter "name={{ external_container }}" | grep -q . && docker stop {{ external_container }} && docker rm -fv {{ external_container }} || true
+      docker stop redis_container 2>/dev/null || true
+      docker rm -fv redis_container 2>/dev/null || true
     ignore_errors: true
     tags:
       - cleanup

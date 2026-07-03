@@ -3,6 +3,11 @@
   vars:
     port_start: 3306
 
+- name: Remove existing MySQL containers
+  shell: docker rm -f {{ container_prefix }}{{ item }} 2>/dev/null || true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  ignore_errors: true
+
 - name: Prepare socket folders
   shell: |
     sudo rm -fr /tmp/mysql-sockets/{{ item }}
