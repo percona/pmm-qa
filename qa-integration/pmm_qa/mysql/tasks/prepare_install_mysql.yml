@@ -168,6 +168,9 @@
   shell: docker exec {{ container_prefix }}{{ index }} /etc/init.d/mysql restart
   when: pmm_qa_no_systemd | bool
 
+- name: Restart MySQL docker container
+  shell: docker restart {{ container_prefix }}{{ index }}
+
 - name: Wait 5 seconds for MySQL to start
   pause:
     seconds: 5
