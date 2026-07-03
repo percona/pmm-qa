@@ -120,7 +120,6 @@
   include_tasks: ../tasks/postgresql_stop.yml
   vars:
     target_container: "{{ container_prefix }}{{ item }}"
-  become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Start patroni service in all nodes

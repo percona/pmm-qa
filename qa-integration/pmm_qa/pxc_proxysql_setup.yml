@@ -21,20 +21,21 @@
 
   tasks:
   - name: cleanup container for client and DB setup
-    shell: >
-      docker ps -a --filter "name={{ pxc_container }}" | grep -q . && docker stop {{ pxc_container }} && docker rm -fv {{ pxc_container }}
+    shell: docker rm -f {{ pxc_container }} 2>/dev/null || true
     ignore_errors: true
     tags:
       - cleanup
 
   - name: Create pmm-qa network if not exist
-    shell: docker network create pmm-qa
+    shell: docker network create pmm-qa 2>/dev/null || true
     ignore_errors: true
 
   - name: Prepare Container for PXC and Proxysql
     shell: >
       docker run -d --platform linux/amd64 --name={{ pxc_container }}
       -p 6033:6033
+      --shm-size=2g
+      --ulimit nofile=65535:65535
       phusion/baseimage:jammy-1.0.1
   
   - name: Copy all required Artifacts to the docker pxc_container
