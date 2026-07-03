@@ -12,6 +12,11 @@ if [ -z "$mongodb_version" ]; then
   export mongodb_version=4.4
 fi
 
+rm -rf "psmdb_${mongodb_version}" percona-server-mongodb-* mongodb-linux-* \
+  percona_server_mongodb.tar.gz mongosh.tar.gz mongosh 2>/dev/null || true
+mlaunch stop 2>/dev/null || true
+rm -rf data .mlaunch 2>/dev/null || true
+
 if [ ! -f mongodb_user_setup.js ]; then
   wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/mongodb_user_setup.js
 fi
@@ -77,6 +82,7 @@ echo "Downloading ${mongodb_version} from ${psmdb_tarball} ..."
 wget -O percona_server_mongodb.tar.gz "${psmdb_tarball}"
 tar -xvf percona_server_mongodb.tar.gz
 extracted_folder=$(ls -d percona-server-mongodb-* mongodb-linux-* 2>/dev/null | head -1)
+rm -rf "psmdb_${mongodb_version}"
 mv "${extracted_folder}" "psmdb_${mongodb_version}"
 rm -f percona_server_mongodb.tar.gz*
 
