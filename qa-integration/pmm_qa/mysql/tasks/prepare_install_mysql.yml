@@ -2,73 +2,69 @@
   include_tasks: ../tasks/find_first_empty_docker_port.yml
   vars:
     port_start: 3306
+  when: index | int == 1
 
-- name: Remove existing MySQL containers
-  shell: docker rm -f {{ container_prefix }}{{ item }} 2>/dev/null || true
-  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+- name: Remove existing MySQL container
+  shell: docker rm -f {{ container_prefix }}{{ index }} 2>/dev/null || true
   ignore_errors: true
 
-- name: Prepare socket folders
+- name: Prepare socket folder
   shell: |
-    sudo rm -fr /tmp/mysql-sockets/{{ item }}
-    sudo mkdir -p /tmp/mysql-sockets/{{ item }}
-    sudo chmod 0777 /tmp/mysql-sockets/{{ item }}
+    sudo rm -fr /tmp/mysql-sockets/{{ index }}
+    sudo mkdir -p /tmp/mysql-sockets/{{ index }}
+    sudo chmod 1777 /tmp/mysql-sockets/{{ index }}
 
 - name: Prepare Container for MySQL 8.0+ (MicroVM)
   shell: |
-    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+    docker run -d --name="{{ container_prefix }}{{ index }}" \
       --network="pmm-qa" \
       -v ./ssl:/ssl \
-      -v /tmp/mysql-sockets/{{ item }}:/tmp \
-      -p {{ docker_port|int + item - 1 }}:3306 \
+      -v /tmp/mysql-sockets/{{ index }}:/var/run/mysqld \
+      -p {{ docker_port|int + index|int - 1 }}:3306 \
       ubuntu:24.04 tail -f /dev/null
   when:
     - mysql_version | replace('_', '') | int >= 80
     - pmm_qa_no_systemd | bool
-  loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Prepare Container for MySQL 8.0+ (systemd)
   shell: |
-    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+    docker run -d --name="{{ container_prefix }}{{ index }}" \
       --network="pmm-qa" \
       --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
-      -v /tmp/mysql-sockets/{{ item }}:/tmp \
-      -p {{ docker_port|int + item - 1 }}:3306 \
+      -v /tmp/mysql-sockets/{{ index }}:/var/run/mysqld \
+      -p {{ docker_port|int + index|int - 1 }}:3306 \
       antmelekhin/docker-systemd:ubuntu-24.04
   when:
     - mysql_version | replace('_', '') | int >= 80
     - not (pmm_qa_no_systemd | bool)
-  loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Prepare Container for MySQL 5.7 (MicroVM)
   shell: |
-    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+    docker run -d --name="{{ container_prefix }}{{ index }}" \
       --network="pmm-qa" \
       -v ./ssl:/ssl \
-      -v /tmp/mysql-sockets/{{ item }}:/var/run/mysqld \
-      -p {{ docker_port|int + item - 1 }}:3306 \
+      -v /tmp/mysql-sockets/{{ index }}:/var/run/mysqld \
+      -p {{ docker_port|int + index|int - 1 }}:3306 \
       ubuntu:22.04 tail -f /dev/null
   when:
     - mysql_version | replace('_', '') | int < 80
     - pmm_qa_no_systemd | bool
-  loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Prepare Container for MySQL 5.7 (systemd)
   shell: |
-    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+    docker run -d --name="{{ container_prefix }}{{ index }}" \
       --network="pmm-qa" \
       --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
-      -v /tmp/mysql-sockets/{{ item }}:/var/run/mysqld \
-      -p {{ docker_port|int + item - 1 }}:3306 \
+      -v /tmp/mysql-sockets/{{ index }}:/var/run/mysqld \
+      -p {{ docker_port|int + index|int - 1 }}:3306 \
       antmelekhin/docker-systemd:ubuntu-22.04
   when:
     - mysql_version | replace('_', '') | int < 80
     - not (pmm_qa_no_systemd | bool)
-  loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Install dependencies
   shell: |
@@ -93,28 +89,29 @@
     method: GET
     return_content: yes
   register: mysql_tags_response
+  when: index | int == 1
 
 - name: Extract tag names (only versions)
   set_fact:
     mysql_exact_version: "{{ mysql_tags_response.json.results | map(attribute='name') | list | select('match', '^[0-9]+\\.[0-9]+\\.[0-9]+$') | first }}"
+  when: index | int == 1
 
 - name: Install MySQL 8.0+
   shell: |
     docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.xz https://dev.mysql.com/get/Downloads/MySQL-{{ mysql_version | replace('_', '.') }}/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64.tar.xz
     docker exec {{ container_prefix }}{{ index }} tar -xf mysql.tar.xz
-    docker exec {{ container_prefix }}{{ index }} groupadd mysql
-    docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql
+    docker exec {{ container_prefix }}{{ index }} groupadd mysql || true
+    docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql || true
     docker exec {{ container_prefix }}{{ index }} mv mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64 /usr/local/mysql
-    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64 mysql
+    docker exec {{ container_prefix }}{{ index }} ln -sf /usr/local/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64 mysql
     docker exec {{ container_prefix }}{{ index }} chown -R mysql:mysql /usr/local/mysql
-    docker exec {{ container_prefix }}{{ index }} mkdir /usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} mkdir -p /usr/local/mysql/data
     docker exec {{ container_prefix }}{{ index }} chown mysql:mysql /usr/local/mysql/data
-    docker exec {{ container_prefix }}{{ index }} /usr/local/mysql/bin/mysqld --initialize --user=mysql --basedir=/usr/local/mysql --datadir=/usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} /usr/local/mysql/bin/mysqld --initialize --user=mysql --basedir=/usr/local/mysql --datadir=/usr/local/mysql/data 2>&1
     docker exec {{ container_prefix }}{{ index }} cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
     docker exec {{ container_prefix }}{{ index }} chmod +x /etc/init.d/mysql
     docker exec {{ container_prefix }}{{ index }} sh -c "echo 'export PATH=/usr/local/mysql/bin:\$PATH' >> /etc/profile"
-    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql/bin/mysql /usr/bin/mysql
-    docker exec {{ container_prefix }}{{ index }} bash -c 'source ~/.bashrc'
+    docker exec {{ container_prefix }}{{ index }} ln -sf /usr/local/mysql/bin/mysql /usr/bin/mysql
   register: mysql_80_root_password
   when: mysql_version | replace('_', '') | int >= 80
 
@@ -122,34 +119,30 @@
   shell: |
     docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.gz https://downloads.mysql.com/archives/get/p/23/file/mysql-5.7.44-linux-glibc2.12-x86_64.tar.gz
     docker exec {{ container_prefix }}{{ index }} tar zxf mysql.tar.gz
-    docker exec {{ container_prefix }}{{ index }} groupadd mysql
-    docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql
+    docker exec {{ container_prefix }}{{ index }} groupadd mysql || true
+    docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql || true
     docker exec {{ container_prefix }}{{ index }} mv mysql-5.7.44-linux-glibc2.12-x86_64 /usr/local/mysql
-    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql-5.7.44-linux-glibc2.12-x86_64 mysql
+    docker exec {{ container_prefix }}{{ index }} ln -sf /usr/local/mysql-5.7.44-linux-glibc2.12-x86_64 mysql
     docker exec {{ container_prefix }}{{ index }} chown -R mysql:mysql /usr/local/mysql
-    docker exec {{ container_prefix }}{{ index }} mkdir /usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} mkdir -p /usr/local/mysql/data
     docker exec {{ container_prefix }}{{ index }} chown mysql:mysql /usr/local/mysql/data
-    docker exec {{ container_prefix }}{{ index }} /usr/local/mysql/bin/mysqld --initialize --user=mysql --basedir=/usr/local/mysql --datadir=/usr/local/mysql/data
+    docker exec {{ container_prefix }}{{ index }} /usr/local/mysql/bin/mysqld --initialize --user=mysql --basedir=/usr/local/mysql --datadir=/usr/local/mysql/data 2>&1
     docker exec {{ container_prefix }}{{ index }} cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql
     docker exec {{ container_prefix }}{{ index }} chmod +x /etc/init.d/mysql
     docker exec {{ container_prefix }}{{ index }} sh -c "echo 'export PATH=/usr/local/mysql/bin:\$PATH' >> /etc/profile"
-    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql/bin/mysql /usr/bin/mysql
-    docker exec {{ container_prefix }}{{ index }} ln -s /usr/local/mysql/bin/mysqldump /usr/bin/mysqldump
-    docker exec {{ container_prefix }}{{ index }} bash -c 'source ~/.bashrc'
+    docker exec {{ container_prefix }}{{ index }} ln -sf /usr/local/mysql/bin/mysql /usr/bin/mysql
+    docker exec {{ container_prefix }}{{ index }} ln -sf /usr/local/mysql/bin/mysqldump /usr/bin/mysqldump
   register: mysql_57_root_password
   when: mysql_version | replace('_', '') | int == 57
 
-- debug: var=mysql_80_root_password
-  when: mysql_version | replace('_', '') | int >= 80
-
 - name: Store Mysql root password for MySQL 8.0+
   set_fact:
-    mysql_root_password: "{{ mysql_80_root_password.stderr | regex_search('root@localhost: (.+)', '\\1') | first }}"
+    mysql_root_password: "{{ (mysql_80_root_password.stdout | default('') ~ mysql_80_root_password.stderr | default('')) | regex_search('root@localhost: (.+)', '\\1') | first }}"
   when: mysql_version | replace('_', '') | int >= 80
 
 - name: Store Mysql root password for MySQL 5.7
   set_fact:
-    mysql_root_password: "{{ mysql_57_root_password.stderr | regex_search('root@localhost: (.+)', '\\1') | first }}"
+    mysql_root_password: "{{ (mysql_57_root_password.stdout | default('') ~ mysql_57_root_password.stderr | default('')) | regex_search('root@localhost: (.+)', '\\1') | first }}"
   when: mysql_version | replace('_', '') | int == 57
 
 - name: Start MySQL (systemd)
@@ -164,8 +157,8 @@
 
 - name: Copy config file to docker container
   shell: |
-    docker exec {{ container_prefix }}{{ item }} mkdir -p /etc/mysql
-    docker cp {{ data_dir }}/node{{ index }}/my.cnf {{ container_prefix }}{{ item }}:/etc/mysql/my.cnf
+    docker exec {{ container_prefix }}{{ index }} mkdir -p /etc/mysql
+    docker cp {{ data_dir }}/node{{ index }}/my.cnf {{ container_prefix }}{{ index }}:/etc/mysql/my.cnf
 
 - name: Restart MySQL (systemd)
   shell: docker exec {{ container_prefix }}{{ index }} systemctl restart mysql
