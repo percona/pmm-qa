@@ -58,6 +58,7 @@ Format: `python pmm-framework.py --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTI
 
 Set **`IS_CURSOR_VM=1`** in Cursor automation secrets (one variable for the whole MicroVM QA path).
 `PMM_QA_NO_SYSTEMD` and other internal flags are derived automatically.
+Batch runners default `IS_CURSOR_VM=1` when unset.
 
 ```bash
 export IS_CURSOR_VM=1
@@ -79,10 +80,22 @@ Requires only `IS_CURSOR_VM=1` (set in Cursor automation secrets).
 | `ps,SETUP_TYPE=gr` | PASS | |
 | `ps,SETUP_TYPE=replication` | PASS | |
 | `mysql` (single) | PASS | |
-| `mysql,SETUP_TYPE=gr` | WIP | multi-node prepare_install fix in flight |
-| `mysql,SETUP_TYPE=replication` | WIP | same fix |
-| `bucket` | PASS | Fixed YAML + docker-py pin |
+| `mysql,SETUP_TYPE=gr` | PASS | multi-node prepare_install fix |
+| `mysql,SETUP_TYPE=replication` | PASS | |
+| `bucket` | PASS | |
 | `haproxy` | PASS | |
 | `external` | PASS | cleanup shell fix |
-| `valkey` | WIP | retest pending |
-| `pgsql` / `pdpgsql` / `ssl_*` / `mlaunch_*` / `pxc` | pending | |
+| `valkey` | PASS | |
+| `valkey,SETUP_TYPE=sentinel` | PASS | |
+| `pgsql` | PASS | |
+| `pgsql,SETUP_TYPE=replication` | PASS | fixed conf paths + data cleanup |
+| `pdpgsql` | PASS | removed invalid `become` on include_tasks |
+| `pdpgsql,SETUP_TYPE=replication` | PASS | |
+| `pdpgsql,SETUP_TYPE=patroni` | PASS | sequential patroni + socket lock cleanup |
+| `ssl_mysql` | PASS | |
+| `ssl_pdpgsql` | PASS | |
+| `mlaunch_psmdb` | PASS | |
+| `mlaunch_modb` | PASS | |
+| `pxc` | PASS | xtrabackup-80 + umask 022 for node cnf |
+| `ssl_psmdb` | PASS | docker-compose microvm override |
+| `ssl_mlaunch` | PASS | community MongoDB 8.0 tarball + mongosh TLS |
