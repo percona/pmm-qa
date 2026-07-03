@@ -337,7 +337,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T9993 - Verify Change agent max exporter connections @pgsm-pmm-integration',
-    async ({ cliHelper }) => {
+    async ({ cliHelper, page }) => {
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --max-exporter-connections=10`,
