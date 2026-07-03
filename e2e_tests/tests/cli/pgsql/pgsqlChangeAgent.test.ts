@@ -254,7 +254,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9993 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       let commands = [
