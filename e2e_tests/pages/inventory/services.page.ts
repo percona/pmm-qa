@@ -29,8 +29,6 @@ export default class ServicesPage extends BasePage {
         );
       }
 
-      console.log(`Actual status is: ${actualStatus}`);
-
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait between getting the service status
       await this.page.waitForTimeout(Timeouts.ONE_SECOND);
     }
@@ -50,8 +48,6 @@ export default class ServicesPage extends BasePage {
           `Status was not: ${expectedStatus} for service ${serviceName} in timeout: ${timeout}, last status was ${actualStatus}`,
         );
       }
-
-      console.log(`Actual status is: ${actualStatus}`);
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait between getting the service status
       await this.page.waitForTimeout(Timeouts.ONE_SECOND);
