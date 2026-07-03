@@ -55,7 +55,7 @@ nodes="rs101 rs102 rs103"
 for node in $nodes
 do
     echo "configuring pmm agent on $node"
-    if [[ "${PMM_QA_NO_SYSTEMD:-}" == "1" ]]; then
+    if is_cursor_vm; then
       compose_rs exec -T $node /entrypoint-no-systemd.sh start-pmm-agent
       sleep 2
     fi

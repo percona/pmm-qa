@@ -22,6 +22,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 QA_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PMM_QA_DIR="${QA_ROOT}/pmm_qa"
 
+# shellcheck source=lib/cursor-vm.sh
+source "${SCRIPT_DIR}/lib/cursor-vm.sh"
+cursor_vm_apply
+
 PROFILE="fb-staging"
 DO_CLEANUP=0
 FRESH_VOLUME=0
@@ -147,7 +151,7 @@ Next — provision monitored databases for your ticket (examples):
   source virtenv/bin/activate
   pip install -q -r requirements.txt
 
-  export PMM_QA_NO_SYSTEMD=1
+  export IS_CURSOR_VM=1
   export ADMIN_PASSWORD='${ADMIN_PASSWORD}'
   export CLIENT_VERSION='${CLIENT_VERSION}'
 

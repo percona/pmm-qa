@@ -59,7 +59,9 @@
     container_name: "{{ container_prefix }}"
 
 - name: Stop Percona distribution for Postgresql
-  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl stop postgresql
+  include_tasks: ../tasks/postgresql_stop.yml
+  vars:
+    target_container: "{{ container_prefix }}{{ item }}"
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
@@ -70,7 +72,9 @@
   become: true
 
 - name: Start Percona distribution for Postgresql primary node
-  shell: docker exec -u root {{ container_prefix }}1 systemctl start postgresql
+  include_tasks: ../tasks/postgresql_start.yml
+  vars:
+    target_container: "{{ container_prefix }}1"
   become: true
 
 - name: Wait 5 seconds for Percona Distribution for postgresql to start
@@ -135,7 +139,9 @@
   loop: "{{ range(2, nodes_count | int + 1) | list }}"
 
 - name: Start Percona distribution for Postgresql
-  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl start postgresql
+  include_tasks: ../tasks/postgresql_start.yml
+  vars:
+    target_container: "{{ container_prefix }}{{ item }}"
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 

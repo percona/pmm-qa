@@ -1,0 +1,8 @@
+---
+- name: Restart PostgreSQL (systemd)
+  shell: docker exec -u root {{ target_container }} systemctl restart postgresql
+  when: not (pmm_qa_no_systemd | bool)
+
+- name: Restart PostgreSQL (MicroVM)
+  shell: docker exec -u root {{ target_container }} /etc/init.d/postgresql restart
+  when: pmm_qa_no_systemd | bool

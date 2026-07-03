@@ -27,6 +27,8 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
+    - include_tasks: ../tasks/microvm_container_facts.yml
+
     - name: Display setup type selected
       debug:
         msg: "{{ setup_type }}"

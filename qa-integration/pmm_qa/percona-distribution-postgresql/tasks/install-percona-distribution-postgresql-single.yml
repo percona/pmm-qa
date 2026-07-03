@@ -43,7 +43,9 @@
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Restart Percona distribution for Postgresql
-  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl restart postgresql
+  include_tasks: ../tasks/postgresql_restart.yml
+  vars:
+    target_container: "{{ container_prefix }}{{ item }}"
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 

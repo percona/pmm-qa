@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+# shellcheck source=../scripts/lib/cursor-vm.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/lib/cursor-vm.sh"
+cursor_vm_apply
+
 profile=${COMPOSE_PROFILES:-classic}
 mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
 mongo_setup_type=${mongo_setup_type,,}
@@ -11,7 +15,6 @@ ol_version=${OL_VERSION:-9}
 export COMPOSE_PROFILES=${profile}
 export MONGO_SETUP_TYPE=${mongo_setup_type}
 export OL_VERSION=${ol_version}
-export PMM_QA_NO_SYSTEMD=1
 
 compose_args=(-f docker-compose-rs.yaml -f docker-compose-rs.microvm.yaml)
 

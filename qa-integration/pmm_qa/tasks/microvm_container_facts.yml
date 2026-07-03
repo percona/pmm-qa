@@ -1,8 +1,12 @@
 ---
 # Shared facts for MicroVM-safe Docker base containers (no systemd/cgroup).
-- name: Detect MicroVM no-systemd mode
+- name: Detect Cursor MicroVM no-systemd mode
   set_fact:
-    pmm_qa_no_systemd: "{{ (lookup('env', 'PMM_QA_NO_SYSTEMD') | default('', true)) in ['1', 'true', 'yes', 'True', 'TRUE'] }}"
+    pmm_qa_no_systemd: >-
+      {{
+        (lookup('env', 'IS_CURSOR_VM') | default('', true)) in ['1', 'true', 'yes', 'True', 'TRUE']
+        or (lookup('env', 'PMM_QA_NO_SYSTEMD') | default('', true)) in ['1', 'true', 'yes', 'True', 'TRUE']
+      }}
 
 - name: Set base container image for MicroVM
   set_fact:

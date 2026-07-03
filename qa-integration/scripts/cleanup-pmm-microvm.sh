@@ -5,6 +5,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 QA_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# shellcheck source=lib/cursor-vm.sh
+source "${SCRIPT_DIR}/lib/cursor-vm.sh"
+cursor_vm_apply
+
 echo "==> Stopping PMM server stack..."
 for name in pmm-server watchtower; do
   docker rm -f "$name" 2>/dev/null || true
@@ -14,7 +18,6 @@ echo "==> Stopping PSMDB/PBM replica set (if present)..."
 if [ -f "${QA_ROOT}/pmm_psmdb-pbm_setup/docker-compose-rs.yaml" ]; then
   (
     cd "${QA_ROOT}/pmm_psmdb-pbm_setup"
-    export PMM_QA_NO_SYSTEMD=1
     docker compose -f docker-compose-rs.yaml -f docker-compose-rs.microvm.yaml down -v --remove-orphans 2>/dev/null \
       || docker compose -f docker-compose-rs.yaml down -v --remove-orphans 2>/dev/null \
       || true

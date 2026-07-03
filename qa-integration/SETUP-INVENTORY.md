@@ -56,8 +56,11 @@ Format: `python pmm-framework.py --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTI
 
 ## MicroVM env
 
+Set **`IS_CURSOR_VM=1`** in Cursor automation secrets (one variable for the whole MicroVM QA path).
+`PMM_QA_NO_SYSTEMD` and other internal flags are derived automatically.
+
 ```bash
-export PMM_QA_NO_SYSTEMD=1          # required for PSMDB/PBM compose setups
+export IS_CURSOR_VM=1
 export ADMIN_PASSWORD='pmm3admin!'
 export CLIENT_VERSION='<tarball-url>'
 ```

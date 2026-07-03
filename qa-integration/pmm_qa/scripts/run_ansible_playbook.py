@@ -3,15 +3,20 @@ import ansible_runner
 import sys
 import subprocess
 
+from scripts.cursor_vm import apply_cursor_vm_env, is_cursor_vm
+
+
 def run_ansible_playbook(playbook_filename, env_vars, args):
+    apply_cursor_vm_env()
     # Get Script Dir
     script_path = os.path.abspath(sys.argv[0])
     script_dir = os.path.dirname(script_path)
     playbook_path = script_dir + "/" + playbook_filename
     verbosity_level = 1
 
-    if os.getenv('PMM_QA_NO_SYSTEMD'):
-        env_vars['PMM_QA_NO_SYSTEMD'] = os.getenv('PMM_QA_NO_SYSTEMD')
+    if is_cursor_vm():
+        env_vars['IS_CURSOR_VM'] = '1'
+        env_vars['PMM_QA_NO_SYSTEMD'] = '1'
 
     env_vars.setdefault('DOCKER_HOST', 'unix:///var/run/docker.sock')
     env_vars.setdefault('ANSIBLE_PYTHON_INTERPRETER', sys.executable)

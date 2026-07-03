@@ -24,7 +24,7 @@ qa-integration/scripts/provision-pmm.sh --cleanup --fresh-volume
 
 ```bash
 cd qa-integration/pmm_qa && source virtenv/bin/activate
-export PMM_QA_NO_SYSTEMD=1        # required on MicroVM for PSMDB+PBM
+export IS_CURSOR_VM=1               # set in Cursor automation secrets
 export ADMIN_PASSWORD='pmm3admin!'
 export CLIENT_VERSION='...'
 
@@ -69,7 +69,7 @@ qa-integration/scripts/cleanup-pmm-microvm.sh
 
 ## Escalation
 
-If `pmm-framework.py` fails with RS containers exit 255 **before** `PMM_QA_NO_SYSTEMD=1` was set, retry with that env var.
+If `pmm-framework.py` fails with RS containers exit 255, ensure **`IS_CURSOR_VM=1`** is set (Cursor automation secret).
 If still blocked, report BLOCKED and link Jenkins `pmm3-aws-staging-start` parambuild URL.
 
 ## Script map
@@ -81,4 +81,4 @@ If still blocked, report BLOCKED and link Jenkins `pmm3-aws-staging-start` param
 | `scripts/cleanup-pmm-microvm.sh` | teardown |
 | `scripts/start-docker-microvm.sh` | dockerd on MicroVM |
 | `scripts/pmm-ui-login.sh` | PMM UI login via playwright-cli (session `pmm-<TICKET>`) |
-| `pmm_psmdb-pbm_setup/start-rs-only-microvm.sh` | called via pmm-framework when `PMM_QA_NO_SYSTEMD=1` |
+| `pmm_psmdb-pbm_setup/start-rs-only-microvm.sh` | called via pmm-framework when `IS_CURSOR_VM=1` |

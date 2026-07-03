@@ -1,7 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-export PMM_QA_NO_SYSTEMD=1
+# shellcheck source=../scripts/lib/cursor-vm.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../scripts/lib/cursor-vm.sh"
+cursor_vm_apply
 source "$(dirname "$0")/scripts/compose-env.sh"
 
 pmm_mongo_user=${PMM_MONGO_USER:-${PMM_USER:-pmm}}

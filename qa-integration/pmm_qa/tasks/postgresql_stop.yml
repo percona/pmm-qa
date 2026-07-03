@@ -1,0 +1,8 @@
+---
+- name: Stop PostgreSQL (systemd)
+  shell: docker exec -u root {{ target_container }} systemctl stop postgresql
+  when: not (pmm_qa_no_systemd | bool)
+
+- name: Stop PostgreSQL (MicroVM)
+  shell: docker exec -u root {{ target_container }} /etc/init.d/postgresql stop
+  when: pmm_qa_no_systemd | bool
