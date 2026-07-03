@@ -335,6 +335,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  pmmTest(
+    'PMM-T9993 - Verify Change agent max exporter connections @pgsm-pmm-integration',
+    async ({ cliHelper }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --max-exporter-connections=10`,
+        )
+        .assertSuccess()
+        .outContains('- changed max exporter connections to 10');
+
+      await cliHelper
+        .execSilent(`docker exec ${containerName} ps aux | grep postgres_exporter | grep -v grep`)
+        .assertSuccess()
+        .outContains('--max-connections=10');
+    },
+  );
+
   pmmTest.skip(
     'PMM-T9993 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
