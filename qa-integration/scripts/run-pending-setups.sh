@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Rerun MicroVM setups that failed in the last batch.
+# Run pending MicroVM setup verifications sequentially.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PMM_QA_DIR="${SCRIPT_DIR}/../pmm_qa"
-RESULTS_FILE="/tmp/setup-results-rerun-$(date +%Y%m%d-%H%M%S).txt"
+RESULTS_FILE="/tmp/setup-results-$(date +%Y%m%d).txt"
 
 # shellcheck source=lib/cursor-vm.sh
 source "${SCRIPT_DIR}/lib/cursor-vm.sh"
@@ -23,12 +23,11 @@ cleanup_qa_containers() {
     docker rm -f "$name" 2>/dev/null || true
   done
   docker image prune -f >/dev/null 2>&1 || true
-  sudo rm -rf "${HOME}/pgsql_cluster_data" 2>/dev/null || true
 }
 
 run_setup() {
   local db="$1"
-  local log="/tmp/setup-rerun-$(echo "$db" | tr ',=' '_').log"
+  local log="/tmp/setup-$(echo "$db" | tr ',=' '_').log"
   echo ""
   echo "========== TESTING: $db =========="
   cleanup_qa_containers
@@ -41,7 +40,7 @@ run_setup() {
     return 0
   else
     echo "RESULT: $db FAIL" | tee -a "$RESULTS_FILE"
-    rg -n "FAILED!|execution failed|fatal:|ERROR!" "$log" | tail -5 || tail -10 "$log"
+    rg -n "FAILED!|execution failed|fatal:" "$log" | tail -5 || tail -10 "$log"
     return 1
   fi
 }
@@ -49,14 +48,22 @@ run_setup() {
 : >"$RESULTS_FILE"
 
 SETUPS=(
+  'mysql,SETUP_TYPE=gr'
+  'mysql,SETUP_TYPE=replication'
+  'pgsql'
   'pgsql,SETUP_TYPE=replication'
   'pdpgsql'
   'pdpgsql,SETUP_TYPE=replication'
   'pdpgsql,SETUP_TYPE=patroni'
+  'valkey'
+  'valkey,SETUP_TYPE=sentinel'
   'pxc'
+  'ssl_mysql'
+  'ssl_pdpgsql'
   'ssl_psmdb'
   'ssl_mlaunch'
   'mlaunch_psmdb'
+  'mlaunch_modb'
 )
 
 failed=0

@@ -37,7 +37,7 @@
       ignore_errors: yes
 
     - name: Remove old data folders
-      shell: docker run --rm -v {{ data_dir }}:/data alpine sh -c 'rm -rf /data/* /data/.[!.]*' 2>/dev/null || rm -fr {{ data_dir }}
+      shell: sudo rm -fr {{ data_dir }}
       ignore_errors: yes
 
     - name: Create data directories
