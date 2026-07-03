@@ -60,6 +60,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
   });
 
+  pmmTest.afterAll(async ({ cliHelper }) => {
+    cliHelper.execSilent(`docker exec ${containerName} psql -U postgres -c "DROP ROLE ${newUsername};"`);
+  });
+
   pmmTest(
     'PMM-T9991 - Verfiy Change agent username and password @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
