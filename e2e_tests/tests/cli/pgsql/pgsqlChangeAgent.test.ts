@@ -345,6 +345,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .assertSuccess()
         .outContains('- changed max exporter connections to 10');
 
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+
       await cliHelper
         .execSilent(`docker exec ${containerName} ps aux | grep postgres_exporter | grep -v grep`)
         .assertSuccess()
