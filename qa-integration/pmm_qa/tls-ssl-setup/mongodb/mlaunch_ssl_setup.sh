@@ -15,9 +15,20 @@ fi
 if [ ! -f mongodb_user_setup.js ]; then
   wget https://raw.githubusercontent.com/percona/pmm-qa/main/pmm-tests/mongodb_user_setup.js
 fi
-### Detect latest tarball link for specified mongodb_version: 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
-#psmdb_latest=$(wget -q --post-data "version=percona-server-mongodb-${mongodb_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)
-psmdb_tarball=$(wget -q --post-data "version_files=percona-server-mongodb-${mongodb_version}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal)
+### Detect latest tarball link for specified mongodb_version
+psmdb_tarball=$(wget -q --post-data "version_files=percona-server-mongodb-${mongodb_version}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17-minimal | head -1)
+if [ -z "$psmdb_tarball" ]; then
+  psmdb_tarball=$(wget -q --post-data "version_files=percona-server-mongodb-${mongodb_version}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep minimal | head -1)
+fi
+if [ -z "$psmdb_tarball" ]; then
+  echo "No tarball found for mongodb ${mongodb_version}; falling back to 7.0"
+  mongodb_version=7.0
+  psmdb_tarball=$(wget -q --post-data "version_files=percona-server-mongodb-${mongodb_version}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep glibc2\.17 | head -1)
+fi
+if [ -z "$psmdb_tarball" ]; then
+  echo "Failed to resolve PSMDB tarball for version ${mongodb_version}" >&2
+  exit 1
+fi
 
 echo "Downloading ${mongodb_version} ..."
 wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
@@ -26,7 +37,7 @@ mv percona-server-mongodb-${mongodb_version}.* psmdb_${mongodb_version}
 rm percona_server_mongodb.tar.gz*
 
 # TODO: refactor if to match range of versions 6.0+
-if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" ]]; then
+if [[ "$mongodb_version" == "6.0" || "$mongodb_version" == "7.0" || "$mongodb_version" == "8.0" ]]; then
     ### PSMDB 6+ requires "percona-mongodb-mongosh" additionally
     echo "Downloading mongosh ..."
     mongosh_link=$(wget -q --post-data "version_files=percona-server-mongodb-${mongodb_version}&software_files=binary" https://www.percona.com/products-api.php -O - | jq -r '.[] | select(.link | contains("sha") | not) | .link' | grep mongosh)
