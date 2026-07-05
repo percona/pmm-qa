@@ -108,6 +108,8 @@ jobs:
 
       - name: Setup tools
         run: |
+          sudo add-apt-repository -y universe
+          sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates dirmngr ansible libaio1 libaio-dev libnuma-dev libncurses5 socat sysbench
           sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 8919F6BD2B48D754
           echo "deb https://packages.clickhouse.com/deb stable main" | sudo tee \
@@ -118,7 +120,6 @@ jobs:
           curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
           sudo apt-get update
           sudo apt-get -y upgrade
-          sudo apt-get install -y 
           sudo apt-get install -y clickhouse-client podman
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
           ls -la
