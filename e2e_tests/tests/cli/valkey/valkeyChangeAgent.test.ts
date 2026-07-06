@@ -150,7 +150,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki/`));
       console.log(cliHelper.execSilent(`docker exec ${containerName} ls /certs/`));
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
