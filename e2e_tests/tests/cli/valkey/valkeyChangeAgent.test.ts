@@ -116,7 +116,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9995 - Verify Change agent enable true/false @pgsm-pmm-integration',
+    'PMM-T9995 - Verify Change agent enable true/false @valkey-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
@@ -146,7 +146,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9996 - Verify Change agent agent password @pgsm-pmm-integration',
+    'PMM-T9996 - Verify Change agent agent password @valkey-integration',
     async ({ cliHelper, page }) => {
       cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --agent-password=${pgExporterPassword}`,
