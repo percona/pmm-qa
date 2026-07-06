@@ -73,7 +73,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
       commands = [
-        `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} '${newPassword}'`,
+        `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '>${newPassword}' '~*' '&*' +@all`,
       ];
 
       commands.forEach((command) => console.log(cliHelper.execSilent(command)));
@@ -117,6 +117,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.hideRowDetails(valkeyExporterId);
       await agentsPage.showRowDetails(pgStatMonitorId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+    },
+  );
+
+  pmmTest(
+    'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
+    async ({ cliHelper }) => {
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --debug --trace --json`,
+        )
+        .assertSuccess();
     },
   );
 });
