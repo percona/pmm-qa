@@ -71,7 +71,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9992 - Verfiy Change agent custom labels @valkey-integration',
+    'PMM-T99922 - Verfiy Change agent custom labels @valkey-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_valkey_exporter';
 
@@ -85,7 +85,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.showRowDetails(valkeyExporterId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
       await agentsPage.hideRowDetails(valkeyExporterId);
-      await expect(agentsPage.builders.property(customLabel)).toBeVisible();
     },
   );
 

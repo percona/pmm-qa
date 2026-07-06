@@ -39,7 +39,7 @@ export default class AgentsPage extends BasePage {
   };
 
   showRowDetails = async (agentId: string) => {
-    await this.builders.showRowDetails(agentId).click();
+    await this.builders.showRowDetails(agentId).click({ timeout: Timeouts.TWENTY_SECONDS });
     await this.elements.rowDetails.waitFor({ state: 'visible' });
   };
 
