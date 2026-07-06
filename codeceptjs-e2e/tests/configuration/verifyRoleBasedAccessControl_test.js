@@ -4,22 +4,29 @@ const newPsUser = { username: 'rbac_ps_test_user', password: 'Test1234!' };
 const newPgUser = { username: 'rbac_pg_test_user', password: 'Test1234!' };
 let rbacPsUserId;
 let rbacPgUserId;
-let psRole = {
-  name: `psRole_${Date.now()}`,
-  description: 'Test PS Role',
-  label: 'service_type',
-  operator: '=',
-  value: 'mysql',
-};
-const pgRole = {
-  name: `pgRole_${Date.now()}`,
-  description: 'Test PG Role',
-  label: 'service_type',
-  operator: '=',
-  value: 'postgresql',
-};
+let psRole;
+let pgRole;
+
+function resetRoles() {
+  const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  psRole = {
+    name: `psRole_${uniqueSuffix}`,
+    description: 'Test PS Role',
+    label: 'service_type',
+    operator: '=',
+    value: 'mysql',
+  };
+  pgRole = {
+    name: `pgRole_${uniqueSuffix}`,
+    description: 'Test PG Role',
+    label: 'service_type',
+    operator: '=',
+    value: 'postgresql',
+  };
+}
 
 Before(async ({ I, settingsAPI }) => {
+  resetRoles();
   rbacPsUserId = await I.createUser(newPsUser.username, newPsUser.password);
   rbacPgUserId = await I.createUser(newPgUser.username, newPgUser.password);
   await I.Authorize();
@@ -69,7 +76,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(4);
+    await dashboardPage.waitForGraphsToHaveData(4);
 
     I.amOnPage(dashboardPage.postgresqlInstanceSummaryDashboard.url);
     dashboardPage.waitForDashboardOpened();
@@ -91,7 +98,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+    await dashboardPage.waitForGraphsToHaveData(2);
 
     await I.unAuthorize();
 
