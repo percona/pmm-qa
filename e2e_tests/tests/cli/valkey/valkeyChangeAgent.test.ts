@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
+import { expect } from '@playwright/test';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
@@ -13,7 +14,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let serviceName: string;
   let serviceId: string;
   let socketServiceId: string;
-  let pgExporterId: string;
+  let valkeyExporterId: string;
   let pgExporterPort: string;
   let pgStatMonitorId: string;
   let pgExporterSocketId: string;
@@ -36,10 +37,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       `docker exec ${containerName} pmm-admin list | grep valkey | head -1 | awk -F' ' '{print $4}'`,
     ).stdout.trim();
     console.log(`Service ID is: ${serviceId}`);
-    pgExporterId = cliHelper.execSilent(
+    valkeyExporterId = cliHelper.execSilent(
       `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep valkey_exporter | awk -F' ' '{print $4}'`,
     ).stdout.trim();
-    console.log(`Valkey exporter id is: ${pgExporterId}`);
+    console.log(`Valkey exporter id is: ${valkeyExporterId}`);
     // pgStatMonitorId = cliHelper
     //   .execSilent(
     //     `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
@@ -62,7 +63,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
         `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '${newPassword}-wrong' '~*' '&*' +@all`,
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -78,6 +79,44 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands.forEach((command) => console.log(cliHelper.execSilent(command)));
 
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+    },
+  );
+
+  pmmTest(
+    'PMM-T9992 - Verfiy Change agent custom labels @pgsm-pmm-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      const customLabel = 'env=qa_testing_valkey_exporter';
+
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --custom-labels=${customLabel}`,
+        )
+        .assertSuccess();
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.url(serviceId));
+      await agentsPage.showRowDetails(valkeyExporterId);
+      await expect(agentsPage.builders.property(customLabel)).toBeVisible();
+      await agentsPage.hideRowDetails(valkeyExporterId);
+      await agentsPage.showRowDetails(pgStatMonitorId);
+      await expect(agentsPage.builders.property(customLabel)).toBeVisible();
+    },
+  );
+
+  pmmTest(
+    'PMM-T9993 - Verify Change agent log level @pgsm-pmm-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --log-level=debug`,
+        )
+        .assertSuccess();
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.url(serviceId));
+      await agentsPage.showRowDetails(valkeyExporterId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+      await agentsPage.hideRowDetails(valkeyExporterId);
+      await agentsPage.showRowDetails(pgStatMonitorId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
     },
   );
 });
