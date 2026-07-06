@@ -17,8 +17,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let valkeyExporterId: string;
   let pgExporterPort: string;
   let pgStatMonitorId: string;
-  let pgExporterSocketId: string;
-  let pgStatMonitorSocketId: string;
   const pgExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
@@ -44,16 +42,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     // pgStatMonitorId = cliHelper
     //   .execSilent(
     //     `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
-    //   )
-    //   .stdout.trim();
-    // pgExporterSocketId = cliHelper
-    //   .execSilent(
-    //     `docker exec ${containerName} pmm-admin list | grep ${socketServiceId} | grep postgres_exporter | awk -F' ' '{print $4}'`,
-    //   )
-    //   .stdout.trim();
-    // pgStatMonitorSocketId = cliHelper
-    //   .execSilent(
-    //     `docker exec ${containerName} pmm-admin list | grep ${socketServiceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
     //   )
     //   .stdout.trim();
   });
