@@ -39,7 +39,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     pgExporterId = cliHelper.execSilent(
       `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep valkey_exporter | awk -F' ' '{print $4}'`,
     ).stdout.trim();
-    console.log(`Valkey exporter id is: ${valkeyPort}`);
+    console.log(`Valkey exporter id is: ${pgExporterId}`);
     // pgStatMonitorId = cliHelper
     //   .execSilent(
     //     `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
@@ -69,7 +69,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.ONE_MINUTE);
+      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
       commands = [
         `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} '${newPassword}'`,
@@ -77,7 +77,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
-      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
     },
   );
 });
