@@ -8,6 +8,12 @@
 
 - name: Enable Valkey repository
   shell: percona-release enable valkey experimental
+- name: enable ps-84 release repo
+  include_tasks: ./enable_repo.yml
+  vars:
+    only: yes
+    package: valkey_to_test
+    repository: "release"
 
 - name: Install Valkey on Debian based systems
   shell: "{{item}}"
