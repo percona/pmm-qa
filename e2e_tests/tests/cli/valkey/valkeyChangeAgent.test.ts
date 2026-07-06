@@ -83,7 +83,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9992 - Verfiy Change agent custom labels @pgsm-pmm-integration',
+    'PMM-T9992 - Verfiy Change agent custom labels @valkey-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_valkey_exporter';
 
@@ -103,7 +103,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent log level @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent log level @valkey-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper
         .execSilent(
@@ -121,7 +121,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent debug, trace and json @valkey-integration',
     async ({ cliHelper }) => {
       cliHelper
         .execSilent(
