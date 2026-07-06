@@ -65,7 +65,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
       ];
 
-      commands.forEach((command) => console.log(cliHelper.execSilent(command)));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
