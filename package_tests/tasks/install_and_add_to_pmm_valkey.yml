@@ -10,7 +10,7 @@
   include_tasks: ./enable_repo.yml
   vars:
     only: yes
-    package: valkey_to_test
+    package: "{{ valkey_to_test }}"
     repository: "release"
 
 - name: Install Valkey on Debian based systems
