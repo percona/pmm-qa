@@ -147,13 +147,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} chown -R postgres:postgres /certs`,
       ];
 
-      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki/private/`));
+      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki/`));
+      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /certs/`));
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
-        `tls-port 6380\nport 0\ntls-cert-file /etc/valkey/tls/valkey.crt\ntls-key-file /etc/valkey/tls/${containerName}.key\ntls-ca-cert-file /etc/valkey/tls/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
+        `tls-port 6380\nport 0\ntls-cert-file /certs/valkey.crt\ntls-key-file /certs/${containerName}.key\ntls-ca-cert-file /certs/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
