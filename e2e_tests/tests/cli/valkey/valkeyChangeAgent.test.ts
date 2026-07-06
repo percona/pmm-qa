@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
+import fs from 'node:fs';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
@@ -112,6 +113,62 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --debug --trace --json`,
         )
         .assertSuccess();
+    },
+  );
+
+
+  pmmTest(
+    'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
+    async ({ cliHelper }) => {
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --debug --trace --json`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --debug --trace --json`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+    },
+  );
+
+  pmmTest(
+    'PMM-T9994 - Verify Change agent tls @valkey-integration',
+    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
+      const confPath = `/usr/local/etc/valkey/valkey.conf`;
+
+      cliHelper.createTlsCertificates(containerName);
+
+      let commands = [
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
+        `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
+        `docker exec ${containerName} chmod 600 /certs/${containerName}.crt`,
+        `docker exec ${containerName} chown -R postgres:postgres /certs`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+      fs.writeFileSync(
+        '/tmp/ssl.conf',
+        `tls-port 6380\nport 0\ntls-cert-file /etc/valkey/tls/valkey.crt\ntls-key-file /etc/valkey/tls/${containerName}.key\ntls-ca-cert-file /etc/valkey/tls/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
+      );
+
+      cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
+      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
+
+      cliHelper.execSilent(`docker restart ${containerName}`);
+
+      await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
+      await servicesPage.waitForServiceMonitoring(serviceName, 'Failed', Timeouts.ONE_MINUTE);
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command));
+      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
     },
   );
 
