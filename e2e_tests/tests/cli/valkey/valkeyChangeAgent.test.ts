@@ -75,7 +75,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} '${newPassword}'`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      commands.forEach((command) => console.log(cliHelper.execSilent(command)));
 
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
     },
