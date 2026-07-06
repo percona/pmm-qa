@@ -108,4 +108,34 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .assertSuccess();
     },
   );
+
+  pmmTest(
+    'PMM-T9995 - Verify Change agent enable true/false @pgsm-pmm-integration',
+    async ({ cliHelper, page }) => {
+      const enableCommands = [
+        { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
+        { command: '--enable=true', response: '- enabled agent', status: 'Running' },
+        { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
+        { command: '--enable', response: '- enabled agent', status: 'Running' },
+      ];
+
+      for (const enableCommand of enableCommands) {
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${valkeyExporterId} ${enableCommand.command}`,
+          )
+          .assertSuccess()
+          .outContains(enableCommand.response);
+
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the agents to be enabled/disabled
+        await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin list | grep postgres_exporter | grep ${serviceId}`,
+          )
+          .outContains(enableCommand.status);
+      }
+    },
+  );
 });
