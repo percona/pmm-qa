@@ -75,11 +75,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_valkey_exporter';
 
-      cliHelper
+      console.log(cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --custom-labels=${customLabel}`,
         )
-        .assertSuccess();
+        .assertSuccess());
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(valkeyExporterId);
