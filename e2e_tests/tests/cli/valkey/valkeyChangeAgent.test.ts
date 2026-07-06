@@ -30,13 +30,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       )
       .stdout.trim();
     console.log(`Service name is: ${serviceName}`);
-    serviceId = cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin list | grep valkey | head -1 | awk -F' ' '{print $4}'`,
-    ).stdout.trim();
+    serviceId = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep valkey | head -1 | awk -F' ' '{print $4}'`,
+      )
+      .stdout.trim();
     console.log(`Service ID is: ${serviceId}`);
-    valkeyExporterId = cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep valkey_exporter | awk -F' ' '{print $4}'`,
-    ).stdout.trim();
+    valkeyExporterId = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep valkey_exporter | awk -F' ' '{print $4}'`,
+      )
+      .stdout.trim();
     console.log(`Valkey exporter id is: ${valkeyExporterId}`);
   });
 
@@ -69,11 +73,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_valkey_exporter';
 
-      console.log(cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --custom-labels=${customLabel}`,
-        )
-        .assertSuccess());
+      console.log(
+        cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --custom-labels=${customLabel}`,
+          )
+          .assertSuccess(),
+      );
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(valkeyExporterId);
@@ -122,7 +128,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       for (const enableCommand of enableCommands) {
         await cliHelper
           .execSilent(
-            `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${valkeyExporterId} ${enableCommand.command}`,
+            `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} ${enableCommand.command}`,
           )
           .assertSuccess()
           .outContains(enableCommand.response);
@@ -136,6 +142,26 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           )
           .outContains(enableCommand.status);
       }
+    },
+  );
+
+  pmmTest(
+    'PMM-T9996 - Verify Change agent agent password @pgsm-pmm-integration',
+    async ({ cliHelper, page }) => {
+      cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --agent-password=${pgExporterPassword}`,
+      );
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
+      const metrics = cliHelper.getMetrics({
+        agentPassword: pgExporterPassword,
+        dockerContainer: containerName,
+        serviceName: serviceName,
+      });
+
+      expect(metrics).toContain('pg_up');
     },
   );
 });
