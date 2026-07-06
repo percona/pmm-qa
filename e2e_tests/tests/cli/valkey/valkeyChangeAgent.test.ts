@@ -97,7 +97,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.showRowDetails(valkeyExporterId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
       await agentsPage.hideRowDetails(valkeyExporterId);
-      await agentsPage.showRowDetails(pgStatMonitorId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
     },
   );
