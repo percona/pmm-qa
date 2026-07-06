@@ -26,11 +26,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
     console.log(`Container name is: ${containerName}`);
     // pgVersion = containerName.match(/\d+/)?.[0] ?? '';
-    // serviceName = cliHelper
-    //   .execSilent(
-    //     `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $2}'`,
-    //   )
-    //   .stdout.trim();
+    serviceName = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep valkey-primary | head -1 | awk -F' ' '{print $2}'`,
+      )
+      .stdout.trim();
+    console.log(`Service name is: ${serviceName}`);
     serviceId = cliHelper.execSilent(
       `docker exec ${containerName} pmm-admin list | grep valkey | head -1 | awk -F' ' '{print $4}'`,
     ).stdout.trim();
