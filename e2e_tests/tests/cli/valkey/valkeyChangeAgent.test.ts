@@ -138,7 +138,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
         await cliHelper
           .execSilent(
-            `docker exec ${containerName} pmm-admin list | grep postgres_exporter | grep ${serviceId}`,
+            `docker exec ${containerName} pmm-admin list | grep valkey_exporter | grep ${serviceId}`,
           )
           .outContains(enableCommand.status);
       }
@@ -162,6 +162,107 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       });
 
       expect(metrics).toContain('pg_up');
+    },
+  );
+
+  pmmTest(
+    'PMM-T9993 - Verify Change agent expose exporter @valkey-integration',
+    async ({ cliHelper, page }) => {
+      pgExporterPort = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${valkeyExporterId} | awk -F' ' '{print $6}'`,
+        )
+        .stdout.trim();
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --expose-exporter`,
+        )
+        .assertSuccess()
+        .outContains('- enabled expose exporter');
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
+        )
+        .assertSuccess()
+        .outContains('pg_up');
+    },
+  );
+
+  pmmTest('PMM-T9993 - Verify Change agent push metrics @valkey-integration', async ({ cliHelper, page }) => {
+    pgExporterPort = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${valkeyExporterId} | awk -F' ' '{print $6}'`,
+      )
+      .stdout.trim();
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent valkeyvalkey-exporter ${valkeyExporterId} --push-metrics`,
+      )
+      .assertSuccess()
+      .outContains('- enabled push metrics');
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+    await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+    await cliHelper
+      .execSilent(
+        `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
+      )
+      .assertSuccess()
+      .outContains('pg_up');
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
+      )
+      .outEquals('');
+    await cliHelper
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep ${valkeyExporterId}`)
+      .outContains('Running');
+  });
+
+  pmmTest('PMM-T9993 - Verify Change agent disable collectors @valkey-integration', async ({ cliHelper }) => {
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --disable-collectors=stat_statements,locks`,
+      )
+      .assertSuccess()
+      .outContains('- updated disabled collectors: [stat_statements locks]');
+  });
+
+  pmmTest(
+    'PMM-T9993 - Verify Change agent max exporter connections @valkey-integration',
+    async ({ cliHelper, page }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --max-exporter-connections=10`,
+        )
+        .assertSuccess()
+        .outContains('- changed max exporter connections to 10');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+      await cliHelper
+        .execSilent(`docker exec ${containerName} ps aux | grep valkey_exporter | grep -v grep`)
+        .assertSuccess()
+        .outContains('--max-connections=10');
+    },
+  );
+
+  pmmTest(
+    'PMM-T9993 - Verify Change agent pmm agent listen port @valkey-integration',
+    async ({ cliHelper }) => {
+      const commands = [
+        `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
+        `docker restart ${containerName}`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --pmm-agent-listen-port=7778`,
+        )
+        .assertSuccess();
     },
   );
 });
