@@ -17,7 +17,7 @@
   shell: "{{item}}"
   with_items:
     - apt update
-    - apt install -y valkey
+    - apt install -y percona-valkey-server percona-valkey-tools
   become: yes
   when: ansible_os_family == "Debian"
 
