@@ -60,12 +60,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9991 - Verfiy Change agent username and password @valkey-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const commands = [
+      let commands = [
         `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '${newPassword}-wrong' '~*' '&*' +@all`,
         `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
-        // `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
-        // `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${pgExporterSocketId} --password=${newPassword} --username=${newUsername}`,
-        // `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorSocketId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => console.log(cliHelper.execSilent(command)));
@@ -74,14 +71,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.ONE_MINUTE);
 
-      // commands = [
-      //   `docker exec ${containerName} psql -U postgres -c "ALTER USER ${newUsername} WITH PASSWORD '${newPassword}';"`,
-      //   `docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`,
-      // ];
-      //
-      // commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-      //
-      // await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
+      commands = [
+        `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} '${newPassword}'`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
     },
   );
 });
