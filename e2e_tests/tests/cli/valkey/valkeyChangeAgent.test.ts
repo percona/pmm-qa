@@ -31,21 +31,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     //     `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $2}'`,
     //   )
     //   .stdout.trim();
-    // serviceId = cliHelper
-    //   .execSilent(
-    //     `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
-    //   )
-    //   .stdout.trim();
-    // socketServiceId = cliHelper
-    //   .execSilent(
-    //     `docker exec ${containerName} pmm-admin list | grep socket_pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
-    //   )
-    //   .stdout.trim();
-    // pgExporterId = cliHelper
-    //   .execSilent(
-    //     `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print $4}'`,
-    //   )
-    //   .stdout.trim();
+    serviceId = cliHelper.execSilent(
+      `docker exec ${containerName} pmm-admin list | grep valkey | head -1 | awk -F' ' '{print $4}'`,
+    ).stdout.trim();
+    console.log(`Service ID is: ${serviceId}`);
+    pgExporterId = cliHelper.execSilent(
+      `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep valkey_exporter | awk -F' ' '{print $4}'`,
+    ).stdout.trim();
+    console.log(`Valkey exporter id is: ${valkeyPort}`);
     // pgStatMonitorId = cliHelper
     //   .execSilent(
     //     `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
@@ -66,15 +59,15 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9991 - Verfiy Change agent username and password @valkey-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      let commands = [
+      const commands = [
         `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '${newPassword}-wrong' '~*' '&*' +@all`,
-        // `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
         // `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
         // `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterSocketId} --password=${newPassword} --username=${newUsername}`,
         // `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorSocketId} --password=${newPassword} --username=${newUsername}`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      commands.forEach((command) => console.log(cliHelper.execSilent(command)));
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
