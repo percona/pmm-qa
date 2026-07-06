@@ -16,7 +16,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let socketServiceId: string;
   let valkeyExporterId: string;
   let pgExporterPort: string;
-  let pgStatMonitorId: string;
   const pgExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
@@ -39,11 +38,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep valkey_exporter | awk -F' ' '{print $4}'`,
     ).stdout.trim();
     console.log(`Valkey exporter id is: ${valkeyExporterId}`);
-    // pgStatMonitorId = cliHelper
-    //   .execSilent(
-    //     `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
-    //   )
-    //   .stdout.trim();
   });
 
   pmmTest(
@@ -101,8 +95,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.showRowDetails(valkeyExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
       await agentsPage.hideRowDetails(valkeyExporterId);
-      await agentsPage.showRowDetails(pgStatMonitorId);
-      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
     },
   );
 
