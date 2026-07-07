@@ -30,6 +30,7 @@
 ## Percona Server for MongoDB
       - "{{ (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version|int == 22) | ternary('psmdb-80','') }}"
       - "{{ (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version|int == 24) | ternary('psmdb-80','') }}"
+#      - "{{ (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version|int == 26) | ternary('psmdb-80','') }}"
 ## Percona distribution for Postgresql
       - "{{ (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version|int == 22) | ternary('pg-18','') }}"
       - "{{ (ansible_distribution == 'Ubuntu' and ansible_distribution_major_version|int == 24) | ternary('pg-18','') }}"
