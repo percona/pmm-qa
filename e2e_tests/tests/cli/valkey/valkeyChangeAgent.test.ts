@@ -256,7 +256,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
     await cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent valkeyvalkey-exporter ${valkeyExporterId} --push-metrics`,
+        `docker exec ${containerName} pmm-admin inventory change agent valkey valkey-exporter ${valkeyExporterId} --push-metrics`,
       )
       .assertSuccess()
       .outContains('- enabled push metrics');
