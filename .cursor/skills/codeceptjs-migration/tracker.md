@@ -44,7 +44,7 @@ live run failed (root cause in Notes) | `blocked-on-env` -> required infra unava
 
 | # | Status | Bucket | Env | Setup | Source | Target | Tags | Conf% | Date | Notes/PR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | done | B1 | none | | `codeceptjs-e2e/tests/leftNavigation_test.js` | `e2e_tests/tests/leftNavigation.test.ts` | @menu | 98% | 2026-07-07 | PMM-T1830 PASS; https://github.com/percona/pmm-qa/pull/1054 |
+| 1 | done | B1 | none | | `codeceptjs-e2e/tests/leftNavigation_test.js` | `e2e_tests/tests/helpCenter.test.ts` | @menu | 98% | 2026-07-07 | PMM-T1830 in helpCenter; source filename legacy; https://github.com/percona/pmm-qa/pull/1054 |
 | 2 | pending | B1 | none | | `codeceptjs-e2e/tests/serverLogs_test.js` | `e2e_tests/tests/serverLogs.test.ts` | @server-logs | | | logs.zip download |
 | 3 | pending | B1 | none | | `codeceptjs-e2e/tests/verifyAnnotations_test.js` | `e2e_tests/tests/verifyAnnotations.test.ts` | @annotations | | | confirm needs client |
 | 4 | pending | B1 | none | | `codeceptjs-e2e/tests/configuration/verifyPMMSettingsPageElements_test.js` | `e2e_tests/tests/configuration/settingsPageElements.test.ts` | @settings | | | reuse `settingsPage` |
