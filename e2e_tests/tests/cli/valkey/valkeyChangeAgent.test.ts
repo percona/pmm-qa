@@ -84,7 +84,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9993 - Verify Change agent log level @valkey-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper
@@ -97,17 +97,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.showRowDetails(valkeyExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
       await agentsPage.hideRowDetails(valkeyExporterId);
-    },
-  );
-
-  pmmTest.skip(
-    'PMM-T9993 - Verify Change agent debug, trace and json @valkey-integration',
-    async ({ cliHelper }) => {
-      cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --debug --trace --json`,
-        )
-        .assertSuccess();
     },
   );
 
