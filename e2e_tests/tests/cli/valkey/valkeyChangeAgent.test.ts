@@ -191,6 +191,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the agents to be enabled/disabled
         await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
 
+        console.log(enableCommand.command);
+
         await cliHelper
           .execSilent(
             `docker exec ${containerName} pmm-admin list | grep valkey_exporter | grep ${serviceId}`,
