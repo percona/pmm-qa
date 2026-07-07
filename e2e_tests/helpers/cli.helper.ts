@@ -23,6 +23,7 @@ export default class CliHelper {
   createTlsCertificates = (containerName: string): void => {
     const prefix = `docker exec ${containerName}`;
     const commands = [
+      `${prefix} apt install -y git`,
       `${prefix} mkdir -p /certs`,
       `${prefix} git clone https://github.com/OpenVPN/easy-rsa.git /easy-rsa`,
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki init-pki`,
