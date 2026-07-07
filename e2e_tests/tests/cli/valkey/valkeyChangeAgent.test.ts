@@ -161,7 +161,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands.forEach((command) => console.log(cliHelper.execSilent(command)));
       console.log(cliHelper.execSilent('docker logs valkey-primary-1'));
-      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
+      await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.ONE_MINUTE);
     },
   );
 
