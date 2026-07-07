@@ -136,7 +136,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
         `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
-        `docker exec ${containerName} chmod 600 /certs/${containerName}.crt`,
+        `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
