@@ -150,11 +150,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       console.log(cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`));
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
       cliHelper.execSilent(`docker restart ${containerName}`).assertSuccess();
-      cliHelper
+      console.log(cliHelper
         .execSilent(
           `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
         )
-        .assertSuccess();
+        .assertSuccess());
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
