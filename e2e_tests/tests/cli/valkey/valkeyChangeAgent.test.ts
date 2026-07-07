@@ -135,6 +135,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
+        `docker exec ${containerName} chown 999:999 /certs/valkey-primary-1.crt`,
+        `docker exec ${containerName} chown 999:999 /certs/valkey-primary-1.key`,
         `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
         `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
       ];
@@ -147,7 +149,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      // console.log(cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`));
+      console.log(cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`));
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
       cliHelper.execSilent(`docker restart ${containerName}`).assertSuccess();
       console.log(cliHelper
