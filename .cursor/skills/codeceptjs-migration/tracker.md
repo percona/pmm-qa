@@ -15,6 +15,11 @@ it, and updates the row.
   environment can be reused day-to-day; within that, UI-only first, heaviest/integration last.
 - Rows pre-set to `blocked-on-env` need infra the local host cannot create yet (cloud RDS/Aurora/Azure,
   AMI/OVF images, the external pmm-demo server). Move them to `pending` once that infra is available.
+- **Best-fit target:** before migrating, pick the existing Playwright file that matches source
+  *behavior* (page, feature, hooks). Only create a new `*.test.ts` when no fit exists. Update `Target`
+  to the actual file used.
+- **Source rename on done:** after live PASS, `git mv` `*_test.js` → `*_migrated.js` so Codecept CI
+  (`tests/**/*_test.js`) skips it. Update `Source` column to the `_migrated.js` path.
 
 ## Status legend
 
@@ -44,7 +49,7 @@ live run failed (root cause in Notes) | `blocked-on-env` -> required infra unava
 
 | # | Status | Bucket | Env | Setup | Source | Target | Tags | Conf% | Date | Notes/PR |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | done | B1 | none | | `codeceptjs-e2e/tests/leftNavigation_test.js` | `e2e_tests/tests/helpCenter.test.ts` | @menu | 98% | 2026-07-07 | PMM-T1830 in helpCenter; source filename legacy; https://github.com/percona/pmm-qa/pull/1054 |
+| 1 | done | B1 | none | | `codeceptjs-e2e/tests/leftNavigation_migrated.js` | `e2e_tests/tests/helpCenter.test.ts` | @menu | 98% | 2026-07-07 | PMM-T1830; source renamed; https://github.com/percona/pmm-qa/pull/1054 |
 | 2 | pending | B1 | none | | `codeceptjs-e2e/tests/serverLogs_test.js` | `e2e_tests/tests/serverLogs.test.ts` | @server-logs | | | logs.zip download |
 | 3 | pending | B1 | none | | `codeceptjs-e2e/tests/verifyAnnotations_test.js` | `e2e_tests/tests/verifyAnnotations.test.ts` | @annotations | | | confirm needs client |
 | 4 | pending | B1 | none | | `codeceptjs-e2e/tests/configuration/verifyPMMSettingsPageElements_test.js` | `e2e_tests/tests/configuration/settingsPageElements.test.ts` | @settings | | | reuse `settingsPage` |
@@ -145,6 +150,9 @@ live run failed (root cause in Notes) | `blocked-on-env` -> required infra unava
 
 ## Notes on reconciliation
 
+- **Best-fit over filename:** the tracker `Target` column is a hint; always confirm by reading the
+  source scenarios. Place into an existing Playwright file when behavior matches (e.g. help-page tests
+  → `helpCenter.test.ts`, nav → `navigation.test.ts`). Create new files only when no fit exists.
 - Some targets may already partially exist in `e2e_tests/tests/` (e.g. QAN under `tests/qan/rta/`,
   valkey dashboards, docker `srvFolder.test.ts`, `clickHouse.test.ts`). On the migration day, first
   check the target folder; if a test already covers the source, mark the row `done` with a note

@@ -39,9 +39,13 @@ Open `tracker.md`, pick the FIRST row with `status = pending` (top-to-bottom), a
 3. The live-run script uses fixed `DOCKER_VERSION=perconalab/pmm-server:3-dev-latest` and `ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin-password}`. Use that same password for server readiness, PMM client setup, `pmm-framework.py`, and Playwright runtime. Override `ADMIN_PASSWORD=...` only when intentionally testing a different password.
 4. If required infra cannot be created by local Docker/Cursor Cloud (cloud RDS/Aurora/Azure, AMI/OVF, external pmm-demo), set the row to `blocked-on-env`, record the missing infra in Notes, go to Step 8, and STOP.
 
-### Step 3 - Check for an existing target
+### Step 3 - Best-fit target (mandatory before writing code)
 
-Look at the row's target folder. If an existing `e2e_tests` test already covers this source (see the tracker reconciliation notes - QAN/rta, valkey, docker `srvFolder`/`clickHouse`, etc.), mark the row `done` with Notes `already covered by <path>`, go to Step 8, and STOP. Do not duplicate coverage.
+1. Read the source scenarios' **behavior** (page URL, POMs, tags, hooks) — not just the Codecept filename.
+2. Search `context.md` section 4 and the tracker reconciliation notes for an existing Playwright file that already covers the same page/feature/fixtures (e.g. help-page log download → `helpCenter.test.ts`, left-menu traversal → `navigation.test.ts`).
+3. If an existing `e2e_tests` file is the best fit, **append** the migrated scenario(s) there. Do **not** create a new `*.test.ts` when a suitable file exists.
+4. If coverage already exists with no gaps, mark the row `done` with Notes `already covered by <path>` and still rename the source (Step 8a), then STOP.
+5. Only create a new Playwright test file when no best-fit target exists. Record the **actual** target path in the tracker `Target` column (may differ from the tracker's initial guess).
 
 ### Step 4 - Migrate (behavior-preserving)
 
@@ -74,7 +78,7 @@ chmod +x .cursor/scripts/run-migration-single-test.sh
 Examples:
 
 ```bash
-./.cursor/scripts/run-migration-single-test.sh 'tests/leftNavigation.test.ts' '' false
+./.cursor/scripts/run-migration-single-test.sh 'tests/helpCenter.test.ts' '' false
 ./.cursor/scripts/run-migration-single-test.sh 'tests/configuration/pmmInventory.test.ts' '--database pdpgsql' false
 ./.cursor/scripts/run-migration-single-test.sh 'tests/dashboards/nodesOverviewDashboard.test.ts' '' true
 ```
@@ -82,8 +86,8 @@ Examples:
 Retry once only if the failure is clearly transient. For locator / visibility failure, follow Step 7a before marking `failed`. You may loop Step 7 + 7a up to 2 locator-fix attempts.
 
 Then:
-- PASS -> set the row `done`, record confidence %, date, and live-run command.
-- Hard FAIL -> set the row `failed`, record the root cause and failed command in Notes.
+- PASS -> rename the Codecept source (Step 8a), set the row `done`, record confidence %, date, and live-run command.
+- Hard FAIL -> set the row `failed`, record the root cause and failed command in Notes. Do **not** rename the source file.
 
 ### Step 7a - Fix broken locators (trace first, MCP fallback)
 
@@ -99,6 +103,16 @@ Locator rules:
 - Chained `locate().find()` maps to chained `.locator()`; preserve scope.
 
 After a substantial POM fix, re-check confidence % before re-running.
+
+### Step 8a - Rename Codecept source (PASS only)
+
+CodeceptJS CI discovers tests via `tests/**/*_test.js` in `codeceptjs-e2e/pr.codecept.js`. After a **successful** live run, exclude the migrated file from workflows by renaming it in place:
+
+```bash
+git mv codeceptjs-e2e/tests/<path>/<name>_test.js codeceptjs-e2e/tests/<path>/<name>_migrated.js
+```
+
+Example: `leftNavigation_test.js` → `leftNavigation_migrated.js`. Update the tracker `Source` column to the `_migrated.js` path. Keep the file as a migration reference; do not delete it.
 
 ### Step 8 - Tracker + handoff
 

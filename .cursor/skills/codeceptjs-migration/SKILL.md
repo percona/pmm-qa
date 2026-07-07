@@ -25,6 +25,8 @@ DataDriven->TSArray+`for...of`;InjectLoopVarsIntoTitleString.
 Tags->PreserveExactInTitle:`pmmTest('Title @tag',...)`.
 Retries->DoNotMigrate`.retry(N)`;CIHandles.
 MirrorOriginalLogic/Flow/AssertionsStrictly;DoNotInventCoverage.
+BestFitTarget:BeforeCreatingAnyNewPlaywrightTestFile,ReadSourceBehavior+`context.md`§4Inventory;PlaceScenariosInExisting`e2e_tests`FileWhenPage/Feature/Hook/FixtureMatch(e.g.helpPageScenarios→`helpCenter.test.ts`,Nav→`navigation.test.ts`).CreateNew`*.test.ts`OnlyWhenNoSuitableFileExists;RecordActualTargetInTracker.
+SourceRenameOnDone:AfterLiveRunPASS,`git mv``codeceptjs-e2e/tests/<path>/<name>_test.js`→`<name>_migrated.js`(SameDir).CodeceptCIUses`tests/**/*_test.js`(`pr.codecept.js`);`_migrated.js`ExcludedFromWorkflows.KeepOriginalAsReference.
 
 ## File Mutation Rules
 
