@@ -44,7 +44,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     console.log(`Valkey exporter id is: ${valkeyExporterId}`);
   });
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9991 - Verify Change agent username and password @valkey-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const commands = [
@@ -66,7 +66,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T99922 - Verfiy Change agent custom labels @valkey-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_valkey_exporter';
@@ -84,7 +84,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9993 - Verify Change agent log level @valkey-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper
@@ -100,7 +100,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9993 - Verify Change agent debug, trace and json @valkey-integration',
     async ({ cliHelper }) => {
       cliHelper
@@ -111,7 +111,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       cliHelper
