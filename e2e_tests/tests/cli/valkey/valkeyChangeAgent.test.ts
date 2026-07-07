@@ -149,7 +149,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
       cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
 
-      cliHelper.execSilent(`docker restart ${containerName}`);
+      // cliHelper.execSilent(`docker restart ${containerName}`);
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
@@ -159,8 +159,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
-      commands.forEach((command) => console.log(cliHelper.execSilent(command)));
-      console.log(cliHelper.execSilent('docker logs valkey-primary-1'));
+      commands.forEach((command) => cliHelper.execSilent(command));
       await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.ONE_MINUTE);
     },
   );
