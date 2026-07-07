@@ -146,9 +146,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} chmod 600 /certs/${containerName}.crt`,
       ];
 
-      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /easy-rsa/easyrsa3/pki/`));
-      console.log(cliHelper.execSilent(`docker exec ${containerName} ls /certs/`));
-
       commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
 
       fs.writeFileSync(
@@ -169,7 +166,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command));
+      commands.forEach((command) => console.log(cliHelper.execSilent(command)));
+      console.log(cliHelper.execSilent('docker logs valkey-primary-1'));
       await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
     },
   );
