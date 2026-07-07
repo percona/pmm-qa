@@ -64,11 +64,35 @@ framework default):
 
 | CodeceptJS source | Playwright target |
 | --- | --- |
-| `codeceptjs-e2e/tests/<category>/*_test.js` | `e2e_tests/tests/<category>/*.test.ts` |
+| `codeceptjs-e2e/tests/<category>/*_test.js` | best-fit existing `e2e_tests/tests/**/*.test.ts` (see §2a) |
+| `codeceptjs-e2e/tests/<category>/*_migrated.js` | already migrated; reference only — not run by Codecept CI |
 | `codeceptjs-e2e/tests/**/pages/*.js` (POMs) | `e2e_tests/pages/<category>/*.page.ts` |
 | `codeceptjs-e2e/tests/**/pages/api/*.js` (API) | `e2e_tests/api/*.api.ts` |
 | `codeceptjs-e2e/tests/custom_steps.js` | `@helpers/*` or `@components/*` (see section 5) |
 | `codeceptjs-e2e/testdata/` | `e2e_tests/testdata/` |
+
+### 2a. Best-fit placement (prefer existing Playwright files)
+
+Before creating a new `e2e_tests/tests/**/*.test.ts`, match on **behavior**, not the Codecept filename:
+
+| Source behavior | Typical best-fit target |
+| --- | --- |
+| Help page (`pmm-ui/help`), export logs, docs/forum links | `tests/helpCenter.test.ts` |
+| Left menu collapse, menu traversal, time-range persistence | `tests/navigation.test.ts` |
+| QAN RTA flows | `tests/qan/rta/*.test.ts` |
+| Inventory services/agents | `tests/inventory/*.test.ts` |
+| Valkey dashboards | `tests/dashboards/valkey/valkeyDashboards.test.ts` |
+
+Append migrated scenarios to the best-fit file when hooks/fixtures align. Create a new test file only when no suitable target exists. Update the tracker `Target` column to the actual path used.
+
+### 2b. Post-migration source rename
+
+After live run **PASS**, rename the Codecept source so CI no longer picks it up:
+
+- `foo_test.js` → `foo_migrated.js` (same directory; `git mv`)
+- Codecept glob `tests/**/*_test.js` excludes `*_migrated.js`
+
+Pending tracker rows still list `*_test.js` paths. Done rows should list `*_migrated.js`.
 
 Path aliases (from `e2e_tests/tsconfig.json`): `@fixtures/*`, `@interfaces/*`, `@helpers/*`,
 `@components/*`, `@pages/*`, `@api/*`, `@valkey`.
