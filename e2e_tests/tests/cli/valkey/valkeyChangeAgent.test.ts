@@ -189,7 +189,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           .outContains(enableCommand.response);
 
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the agents to be enabled/disabled
-        await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
+        await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
 
         await cliHelper
           .execSilent(
