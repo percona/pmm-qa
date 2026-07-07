@@ -25,10 +25,10 @@ export default class CliHelper {
 
     console.log(this.execSilent(`${prefix} mkdir -p /certs`));
     console.log(this.execSilent(`${prefix} apt install -y git nano`));
-    console.log(this.execSilent(`${prefix} git clone https://github.com/OpenVPN/easy-rsa.git`));
+    console.log(this.execSilent(`${prefix} git clone https://github.com/OpenVPN/easy-rsa.git /easy-rsa`));
     console.log(this.execSilent(`${prefix} ls `));
-    console.log(this.execSilent(`${prefix} ls -d "$PWD"/*`));
     console.log(this.execSilent(`${prefix} ls /`));
+    console.log(this.execSilent(`${prefix} ls /easy-rsa/`));
     console.log(this.execSilent(`${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki init-pki`));
     console.log(this.execSilent(
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-cn=Percona --batch build-ca nopass`,
