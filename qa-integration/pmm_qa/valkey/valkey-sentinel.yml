@@ -97,7 +97,7 @@
           - "{{ valkey_primary_port }}:6379"
         volumes:
           - "valkey-primary-data:/data"
-          - "{{ valkey_config_dir }}/valkey-primary.conf:/usr/local/etc/valkey/valkey.conf:ro"
+          - "{{ valkey_config_dir }}/valkey-primary.conf:/usr/local/etc/valkey/valkey.conf"
         command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
         healthcheck:
           test: ["CMD", "valkey-cli", "-a", "{{ valkey_password }}", "ping"]
@@ -125,7 +125,7 @@
           - "{{ valkey_replica_start_port + item - 1 }}:6379"
         volumes:
           - "valkey-replica-{{ item }}-data:/data"
-          - "{{ valkey_config_dir }}/valkey-replica-{{ item }}.conf:/usr/local/etc/valkey/valkey.conf:ro"
+          - "{{ valkey_config_dir }}/valkey-replica-{{ item }}.conf:/usr/local/etc/valkey/valkey.conf"
         command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
         healthcheck:
           test: ["CMD", "valkey-cli", "-a", "{{ valkey_password }}", "ping"]
