@@ -22,24 +22,18 @@ export default class CliHelper {
 
   createTlsCertificates = (containerName: string): void => {
     const prefix = `docker exec ${containerName}`;
-
-    console.log(this.execSilent(`${prefix} mkdir -p /certs`));
-    console.log(this.execSilent(`${prefix} apt install -y git nano`));
-    console.log(this.execSilent(`${prefix} git clone https://github.com/OpenVPN/easy-rsa.git /easy-rsa`));
-    console.log(this.execSilent(`${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki init-pki`));
-    console.log(this.execSilent(
+    const commands = [
+      `${prefix} mkdir -p /certs`,
+      `${prefix} git clone https://github.com/OpenVPN/easy-rsa.git /easy-rsa`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki init-pki`,
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-cn=Percona --batch build-ca nopass`,
-    ));
-    console.log(this.execSilent(
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full pmm-server nopass`,
-    ));
-    console.log(this.execSilent(
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full ${containerName} nopass`,
-    ));
-    console.log(this.execSilent(
       `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=client --batch build-client-full pmm-test nopass`,
-    ));
-    console.log(this.execSilent(`${prefix} openssl dhparam -out /certs/dhparam.pem 2048`));
+      `${prefix} openssl dhparam -out /certs/dhparam.pem 2048`,
+    ];
+
+    commands.forEach((command) => this.execSilent(command).assertSuccess());
   };
 
   /**
