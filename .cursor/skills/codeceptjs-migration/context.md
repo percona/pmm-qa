@@ -9,48 +9,23 @@ Regenerate the inventory / mapping sections when repo structure or the CI matrix
 
 ## 1. Provisioning (how server + client instances are set up)
 
-The basis for what to provision is the test's tag mapped to a `setup_services` argument set,
-exactly as CI does in `.github/workflows/e2e-tests-matrix.yml` +
-`.github/workflows/runner-e2e-tests-codeceptjs.yml`. Where a test's tag is not in the matrix,
-derive the flags by reading the source test (dashboards/exporters/API/custom steps it exercises)
-and matching a setup key from `qa-integration/README.md`.
+The canonical provisioning path for migration live runs is `.cursor/scripts/run-migration-single-test.sh` from repo root. The script starts Docker, creates the `pmm-qa` network and `pmm-volume`, starts PMM Server with `e2e_tests/docker-compose.yml` and fixed image `perconalab/pmm-server:3-dev-latest`, optionally attaches a standalone PMM Client, optionally runs `pmm-framework.py`, and then runs exactly one Playwright file.
 
-### 1a. PMM server bootstrap (same for every test)
+The script arguments are:
 
 ```bash
-# from repo root
-docker network create pmm-qa || true
-cd codeceptjs-e2e
-PMM_SERVER_IMAGE=perconalab/pmm-server:3-dev-latest docker compose -f docker-compose.yml up -d
-# wait for readiness (200)
-timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:admin" http://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
-bash -x testdata/db_setup.sh          # optional seed, when the test needs it
-docker network connect pmm-qa pmm-server || true
+./.cursor/scripts/run-migration-single-test.sh '<tests/file.test.ts>' '<setup_services>' <setup_client>
 ```
 
-Default server image: `perconalab/pmm-server:3-dev-latest`. Admin password: `admin` locally
-(CI uses `admin-password`). PMM UI base URL for tests: `http://127.0.0.1/`.
+- `<tests/file.test.ts>` is relative to `e2e_tests/`.
+- `<setup_services>` is the tracker `Setup` value, or an empty string when no DB/service provisioning is needed.
+- `<setup_client>` is `true` only for a standalone PMM Client/node outside `pmm-framework.py` provisioning. Use `false` for pure UI tests and for DB/service tests where `pmm-framework.py` creates monitored services.
 
-### 1b. PMM client attach (same for every test)
+Server image is fixed to `perconalab/pmm-server:3-dev-latest`. Default password is `ADMIN_PASSWORD=admin-password`; the script uses it consistently for PMM readiness, PMM Client setup, `pmm-framework.py`, and Playwright. Override `ADMIN_PASSWORD=...` only when intentionally testing a different password. PMM UI base URL is `http://127.0.0.1/`.
 
-```bash
-cd qa-integration/pmm_qa
-sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version latest-tarball --admin_password admin --use_metrics_mode no
-```
+The basis for `setup_services` is the test's tag mapped to the CI setup matrix in `.github/workflows/e2e-tests-matrix.yml` and `.github/workflows/runner-e2e-tests-codeceptjs.yml`. Where a test's tag is not in the matrix, derive the flags by reading the source test and matching a setup key from `qa-integration/README.md`.
 
-### 1c. DB / service instances (per test)
-
-```bash
-cd qa-integration/pmm_qa
-python3 -m venv virtenv && . virtenv/bin/activate
-pip install --upgrade pip && pip install -r requirements.txt setuptools
-python pmm-framework.py --pmm-server-password=admin --verbose <setup_services>
-```
-
-`pmm-framework.py` REQUIRES an already-running PMM server (it finds the `pmm-server` container
-and joins the `pmm-qa` network); it does not start the server itself. Args:
-`--database` (repeatable), `--pmm-server-ip`, `--pmm-server-password`, `--client-version`,
-`--verbose`, `--client-debug`.
+`pmm-framework.py` REQUIRES an already-running PMM server (the script provides this). Args include `--database` (repeatable), `--pmm-server-ip`, `--pmm-server-password`, `--client-version`, `--verbose`, and `--client-debug`.
 
 ### 1d. Tag -> setup_services mapping (from e2e-tests-matrix.yml)
 
@@ -67,8 +42,7 @@ and joins the `pmm-qa` network); it does not start the server itself. Args:
 | `@pmm-valkey-integration` | `--database valkey` |
 | `@disconnect` | none (no DB) |
 
-For tests with no DB dependency (pure UI/navigation/help/tour), no `pmm-framework.py` call is
-needed after server+client are up.
+For tests with no DB dependency (pure UI/navigation/help/tour), pass an empty `setup_services` string. Use `setup_client=true` only when the source test needs a standalone client/node.
 
 ### 1e. Setup key catalog (from qa-integration/README.md + scripts/database_options.py)
 
@@ -157,10 +131,10 @@ Run all from `e2e_tests/`:
 - Install (first time): `npm ci` then `npx playwright install chromium`.
 - TS compile check: `npx tsc --noEmit -p tsconfig.json`.
 - Lint: `npx eslint .` (config: `eslint.config.mjs`; arrow functions only, numeric separators, camelCase filenames, no `.skip()`/commented tests).
-- Run one migrated test: `npx playwright test tests/<category>/<name>.test.ts`.
+- Run one migrated test with provisioning: from repo root, `./.cursor/scripts/run-migration-single-test.sh 'tests/<category>/<name>.test.ts' '<setup_services>' <setup_client>`.
 - Run by tag: `npx playwright test --grep "@<tag>"`.
 - View failure trace: `npx playwright show-trace test-results/<folder>/trace.zip`.
-- Env for a run: create `e2e_tests/.env` with `PMM_UI_URL=http://127.0.0.1/`, `ADMIN_PASSWORD=admin`, `HEADLESS=true`, `WORKERS=1`.
+- The script exports `PMM_UI_URL=http://127.0.0.1/`, `ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin-password}`, `HEADLESS=true`, and `WORKERS=1`.
 
 ## 7. Auth / login
 
@@ -168,7 +142,7 @@ Tests authorize via `grafanaHelper.authorize()` in `pmmTest.beforeEach`. `pmmTes
 `/v1/users/me` (tour completed) and `/v1/server/updates` (no update) at context level. Basic auth
 header helper: `GrafanaHelper.getAuthHeader()`.
 
-For **interactive locator discovery** (browser MCP fallback only), use `.agents/workflows/pmmLogin.md`
+For **interactive locator discovery** (browser MCP fallback only), shared workflow docs remain under `.agents/workflows/`; use `.agents/workflows/pmmLogin.md`
 — not the UI login form. See section 8.
 
 ## 8. Fixing broken locators (trace first, MCP fallback)
@@ -181,6 +155,6 @@ When a live run fails on a locator (timeout, not visible, strict mode violation)
 | 2 | **Browser MCP** | Only if trace is unavailable or target page/iframe not reached. Login per `pmmLogin.md`; navigate to POM `url`; **one** `browser_snapshot`/CDP pass per page; update POM; re-run. Rules: `mcpRules.md`. |
 
 Do not use playwright-cli for migration verification. Do not change test behavior to work around a bad
-locator. Max **2** locator-fix loops per run (see `migrationRun.md` Step 7a).
+locator. Max **2** locator-fix loops per run (see `run.md` Step 7a).
 
 Trace path hint: failures write under `e2e_tests/test-results/`; open the `trace.zip` for the failed test.

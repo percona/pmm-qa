@@ -1,6 +1,6 @@
 ---
-name: codeceptjs-migration-ai
-description: AIOnly CodeceptJS->Playwright migration+post-migration audit. Use original skill as reference.
+name: codeceptjs-migration
+description: AIOnly CodeceptJS->Playwright migration+post-migration audit.
 ---
 
 # CodeceptJS->PlaywrightAI
@@ -57,7 +57,7 @@ LocatorsUse:`getByTestId`,`getByRole`,`locator`;`$foo`->`getByTestId('foo')`.
 UseExisting`e2e_tests`POMShape:`urls`,`elements`,`buttons`,`inputs`,etc.
 RegisterNewPOMFixturesIn`pmmTest.ts`.
 POMsExtend`BasePage`.
-BrokenLocatorFix:TraceOnFailureFirst(`npx playwright show-trace`);MCPFallbackOnlyIfTraceInsufficient(LoginPer`.agents/workflows/pmmLogin.md`,OneDOMPassPer`mcpRules.md`);PreserveSameElementSemantics.
+BrokenLocatorFix:TraceOnFailureFirst(`npx playwright show-trace`);MCPFallbackOnlyIfTraceInsufficient(SharedDocsUnder`.agents/workflows/`:pmmLogin+mcpRules);PreserveSameElementSemantics.
 
 ## API/Waits
 

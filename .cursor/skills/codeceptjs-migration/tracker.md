@@ -1,7 +1,7 @@
 # CodeceptJS -> Playwright Migration Tracker
 
 One row per CodeceptJS source test (98 unique files). The daily automation takes the top row whose
-status is `pending`, migrates it per `.agents/skills/codeceptjs-migration-ai/SKILL.md`, live-verifies
+status is `pending`, migrates it per `.cursor/skills/codeceptjs-migration/SKILL.md`, live-verifies
 it, and updates the row.
 
 ## How to use this tracker (automation contract)
