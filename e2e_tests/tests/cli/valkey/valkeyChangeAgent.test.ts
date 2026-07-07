@@ -115,12 +115,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
     async ({ cliHelper }) => {
-      const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --debug --trace --json`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --debug --trace --json`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${valkeyExporterId} --debug --trace --json`,
+        )
+        .assertSuccess();
     },
   );
 
@@ -145,7 +144,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
-        `tls-port 6380\nport 0\ntls-cert-file /certs/valkey.crt\ntls-key-file /certs/${containerName}.key\ntls-ca-cert-file /certs/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
+        `tls-port 6379\nport 0\ntls-cert-file /certs/valkey.crt\ntls-key-file /certs/${containerName}.key\ntls-ca-cert-file /certs/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
