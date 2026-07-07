@@ -24,8 +24,8 @@
 - name: Install Valkey on Red Hat based systems
   shell: "{{item}}"
   with_items:
-    - dnf install -y valkey
-    - systemctl start valkey
+    - dnf install -y percona-valkey-server percona-valkey-tools
+#    - systemctl start valkey
   become: yes
   when: ansible_os_family == "RedHat"
 
