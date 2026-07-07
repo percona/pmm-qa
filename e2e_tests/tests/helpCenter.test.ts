@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { dontSeeEntriesInZip, seeEntriesInZip } from '@helpers/archive.helper';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
@@ -64,6 +65,22 @@ pmmTest('PMM-T2119 - Verify export logs button @new-navigation', async ({ helpPa
 
     expect(download).toBeTruthy();
   });
+});
+
+/* eslint-disable-next-line playwright/expect-expect -- zip entry assertions live in archive.helper */
+pmmTest('PMM-T1830 - Verify downloading server diagnostics logs @menu', async ({ api, helpPage }) => {
+  const download = await helpPage.exportLogs();
+  const path = await download.path();
+
+  if (!path) {
+    throw new Error('Download path is null');
+  }
+
+  await seeEntriesInZip(path, ['pmm-agent.yaml', 'pmm-managed.log', 'pmm-agent.log']);
+
+  if ((await api.serverApi.getPmmVersion()).minor > 40) {
+    await dontSeeEntriesInZip(path, ['alertmanager.yml', 'alertmanager.base.yml']);
+  }
 });
 
 pmmTest('PMM-T2120 - Verify start pmm tour button @new-navigation', async ({ helpPage }) => {
