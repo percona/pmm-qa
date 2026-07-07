@@ -172,8 +172,9 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     for (const panelName of panelNames) {
-      const panel = this.builders.panelByExactName(panelName);
-      const panelText = await panel.innerText();
+      const panelText = await this.grafanaIframe()
+        .getByRole('region', { exact: true, name: panelName })
+        .innerText();
 
       expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
     }

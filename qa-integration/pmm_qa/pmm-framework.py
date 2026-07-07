@@ -74,7 +74,6 @@ def setup_ps(db_type, db_version=None, db_config=None, args=None):
 
     # Gather Version details
     ps_version = os.getenv('PS_VERSION') or db_version or database_configs[db_type]["versions"][-1]
-    ps_version_int = int(ps_version.replace(".", ""))
     # Define environment variables for playbook
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
@@ -88,6 +87,7 @@ def setup_ps(db_type, db_version=None, db_config=None, args=None):
         'MY_ROCKS': get_value('MY_ROCKS', db_type, args, db_config),
         'ENCRYPTED_CLIENT_CONFIG': get_value('ENCRYPTED_CLIENT_CONFIG', db_type, args, db_config),
         'CLIENT_DEBUG': args.client_debug,
+        'BACKUP': get_value('BACKUP', db_type, args, db_config),
     }
 
     run_ansible_playbook('percona_server_for_mysql/percona-server-setup.yml', env_vars, args)
