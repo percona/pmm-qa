@@ -187,7 +187,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           )
           .assertSuccess()
           .outContains(enableCommand.response);
-
+        // docker exec valkey-primary-1 pmm-admin inventory change agent valkey-exporter d3104b77-2dbe-44d7-823d-86fd37951952 --enable=true
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the agents to be enabled/disabled
         await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
 
@@ -219,7 +219,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         serviceName: serviceName,
       });
 
-      expect(metrics).toContain('pg_up');
+      expect(metrics).toContain('redis_up');
     },
   );
 
@@ -244,7 +244,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
         )
         .assertSuccess()
-        .outContains('pg_up');
+        .outContains('redis_up');
     },
   );
 
@@ -268,7 +268,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
       )
       .assertSuccess()
-      .outContains('pg_up');
+      .outContains('redis_up');
     await cliHelper
       .execSilent(
         `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
