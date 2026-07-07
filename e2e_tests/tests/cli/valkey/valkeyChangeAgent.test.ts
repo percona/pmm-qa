@@ -46,9 +46,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T9991 - Verfiy Change agent username and password @valkey-integration',
+    'PMM-T9991 - Verify Change agent username and password @valkey-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      let commands = [
+      const commands = [
         `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '${newPassword}-wrong' '~*' '&*' +@all`,
         `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --password=${newPassword} --username=${newUsername}`,
       ];
@@ -59,11 +59,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
-      commands = [
+      cliHelper.execSilent(
         `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '>${newPassword}' '~*' '&*' +@all`,
-      ];
-
-      commands.forEach((command) => console.log(cliHelper.execSilent(command)));
+      );
 
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
     },
@@ -74,13 +72,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_valkey_exporter';
 
-      console.log(
-        cliHelper
-          .execSilent(
-            `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --custom-labels=${customLabel}`,
-          )
-          .assertSuccess(),
-      );
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --custom-labels=${customLabel}`,
+        )
+        .assertSuccess();
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(valkeyExporterId);
@@ -115,7 +111,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .assertSuccess();
     },
   );
-
 
   pmmTest(
     'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
