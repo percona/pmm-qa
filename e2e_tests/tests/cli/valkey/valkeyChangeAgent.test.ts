@@ -147,7 +147,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      console.log(cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`));
+      // console.log(cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`));
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
       cliHelper.execSilent(`docker restart ${containerName}`).assertSuccess();
       console.log(cliHelper
