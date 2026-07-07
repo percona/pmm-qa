@@ -29,17 +29,6 @@
   become: yes
   when: ansible_os_family == "RedHat"
 
-- name: Check what valkey put on disk
-  command: rpm -ql percona-valkey
-  when: ansible_os_family == "RedHat"
-
-- name: Install Valkey on Red Hat based systems
-  shell: "{{item}}"
-  with_items:
-    - systemctl start valkey
-  become: yes
-  when: ansible_os_family == "RedHat"
-
 - name: Set password for valkey
   shell: valkey-cli CONFIG SET requirepass '{{ valkey_password }}'
   become: yes
