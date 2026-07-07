@@ -7,25 +7,21 @@
     valkey_password: "UfY9s73Gx~!?@#$%^&*(){}[]<>|/:;,.-_+="
 
 - name: Enable Valkey repository
-  include_tasks: ./enable_repo.yml
-  vars:
-    only: yes
-    package: "{{ valkey_to_test }}"
-    repository: "release"
+  shell: percona-release enable valkey experimental
 
 - name: Install Valkey on Debian based systems
   shell: "{{item}}"
   with_items:
     - apt update
-    - apt install -y percona-valkey-server percona-valkey-tools
+    - apt install -y valkey
   become: yes
   when: ansible_os_family == "Debian"
 
 - name: Install Valkey on Red Hat based systems
   shell: "{{item}}"
   with_items:
-    - dnf install -y percona-valkey-server percona-valkey-tools
-#    - systemctl start valkey
+    - dnf install -y valkey
+    - systemctl start valkey
   become: yes
   when: ansible_os_family == "RedHat"
 
