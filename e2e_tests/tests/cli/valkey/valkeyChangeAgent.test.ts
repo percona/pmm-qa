@@ -149,7 +149,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
       cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
 
-      // cliHelper.execSilent(`docker restart ${containerName}`);
+      cliHelper
+        .execSilent(`docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} SHUTDOWN NOSAVE`)
+        .assertSuccess();
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
