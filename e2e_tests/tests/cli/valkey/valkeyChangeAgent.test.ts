@@ -143,7 +143,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
-        `tls-port 6379\nport 0\ntls-cert-file /certs/valkey.crt\ntls-key-file /certs/${containerName}.key\ntls-ca-cert-file /certs/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
+        `tls-port 6379\nport 0\ntls-cert-file /certs/${containerName}.crt\ntls-key-file /certs/${containerName}.key\ntls-ca-cert-file /certs/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
