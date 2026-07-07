@@ -192,6 +192,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
 
         console.log(enableCommand.command);
+        console.log( `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} ${enableCommand.command}`);
 
         await cliHelper
           .execSilent(
