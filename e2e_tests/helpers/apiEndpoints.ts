@@ -29,6 +29,7 @@ const apiEndpoints = {
   server: {
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
+    version: '/v1/version',
   },
   users: {
     me: '**/v1/users/me',
