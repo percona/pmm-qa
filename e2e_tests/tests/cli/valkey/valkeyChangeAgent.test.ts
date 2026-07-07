@@ -189,7 +189,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           .outContains(enableCommand.response);
         // docker exec valkey-primary-1 pmm-admin inventory change agent valkey-exporter d3104b77-2dbe-44d7-823d-86fd37951952 --enable=true
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the agents to be enabled/disabled
-        await page.waitForTimeout(Timeouts.THIRTY_SECONDS);
+        await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         console.log(enableCommand.command);
         console.log( `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} ${enableCommand.command}`);
