@@ -139,7 +139,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} chmod 600 /certs/${containerName}.crt`,
       ];
 
-      commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
