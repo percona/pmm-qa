@@ -20,6 +20,11 @@ it, and updates the row.
   to the actual file used.
 - **Source rename on done:** after live PASS, `git mv` `*_test.js` → `*_migrated.js` so Codecept CI
   (`tests/**/*_test.js`) skips it. Update `Source` column to the `_migrated.js` path.
+- **Instructions branch:** `PMM-7-codeceptjs-migration` — read tracker/skills here; push tracker and
+  `.cursor/**` doc updates here only.
+- **PR base branch:** `main` — per-test migrate PRs target `main`, not PMM-7.
+- **PR scope:** `e2e_tests/**` and Codecept `*_migrated.js` renames only; never include `.cursor/**`
+  in a test PR. Branch migrate PRs from `main`.
 
 ## Status legend
 

@@ -118,8 +118,40 @@ Example: `leftNavigation_test.js` → `leftNavigation_migrated.js`. Update the t
 
 1. Update the tracker row (status, confidence %, date, notes, and live-run command/result when applicable).
 2. Report the outcome in chat with files changed, validation run, discrepancies, confidence %, and tracker status.
-3. Only if the user explicitly asks: create a branch, commit, push, open a PR, or post Slack updates.
 
 ### Step 9 - Definition of Done output
 
 Output the `SKILL.md` DoD sequence: Audit Checklist -> Verdict (PASS/FAIL) -> Final Report (Files Changed, Validation Run, Discrepancies, Confidence %). Then stop - one test per run.
+
+### Step 10 - Git branches and PR (on PASS only)
+
+See `context.md` §1f. Instructions live on **`PMM-7-codeceptjs-migration`**; test code merges to **`main`**.
+
+1. `git fetch origin main PMM-7-codeceptjs-migration`
+2. Read tracker/skills from `PMM-7-codeceptjs-migration` (instructions source of truth).
+3. `git checkout main && git pull origin main`
+4. `git checkout -b migrate-<category>-<name>`
+5. Commit **only** migration artifacts:
+   - `e2e_tests/**` (tests, pages, helpers, api, package.json if needed)
+   - `codeceptjs-e2e/**` `*_test.js` → `*_migrated.js` rename (Step 8a)
+   - Do **not** commit `.cursor/skills/**` or `.cursor/scripts/**` on this branch.
+6. Push the migrate branch and open a PR with **base `main`**:
+
+```bash
+git push -u origin migrate-<category>-<name>
+gh pr create --base main --head migrate-<category>-<name> \
+  --title "migrate(<category>): <name> codeceptjs -> playwright" \
+  --body "..."
+```
+
+Use `gh pr create --base main` explicitly (`open_git_pr` MCP may not set the base). Put the PR URL in the tracker row notes.
+
+7. Separately, push tracker/docs updates to **`PMM-7-codeceptjs-migration`**:
+
+```bash
+git checkout PMM-7-codeceptjs-migration && git pull origin PMM-7-codeceptjs-migration
+# commit .cursor/skills/codeceptjs-migration/tracker.md (and skill doc edits if any)
+git push origin PMM-7-codeceptjs-migration
+```
+
+8. Post Slack summary (if automation is configured).

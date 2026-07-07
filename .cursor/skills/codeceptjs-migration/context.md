@@ -60,6 +60,23 @@ framework default):
 - `external`: redis_exporter (1.14.0/1.58.0), node_process_exporter (0.7.5/0.7.10)
 - Variants: `ssl_mysql`, `ssl_pdpgsql`, `ssl_psmdb`, `mlaunch_psmdb`, `mlaunch_modb`, `ssl_mlaunch`, `dockerclients`, `bucket`
 
+### 1f. Branch strategy (instructions vs merge)
+
+| Branch | Role | What commits land here |
+| --- | --- | --- |
+| `PMM-7-codeceptjs-migration` | Instructions & tracking | `.cursor/skills/codeceptjs-migration/**`, `.cursor/scripts/**`, tracker row updates |
+| `main` | Production | `e2e_tests/**`, Codecept `*_migrated.js` renames, new helpers/API/POMs |
+
+**Every daily run:**
+
+1. `git fetch origin main PMM-7-codeceptjs-migration`
+2. Read tracker + skills from `PMM-7-codeceptjs-migration` (instructions source of truth).
+3. Branch from **`main`** for test code (`migrate-<category>-<name>`). Do **not** branch migrate PRs from PMM-7.
+4. Open per-test PRs with **base `main`** (`gh pr create --base main ...`). PR scope: `e2e_tests/**` + Codecept renames only — **no** `.cursor/**`.
+5. Push tracker/docs updates to **`PMM-7-codeceptjs-migration`** separately (second commit/push on that branch).
+
+Never use PMM-7 as the PR base for migrated test code.
+
 ## 2. Repo map (source -> target)
 
 | CodeceptJS source | Playwright target |
