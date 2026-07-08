@@ -37,22 +37,26 @@
   shell: systemctl status valkey@default.service --no-pager -l
   become: yes
   register: valkey_status
+  ignore_errors: true
   when: ansible_os_family == "RedHat" and valkey_start is failed
 
 - name: Print systemctl status
   debug:
     var: valkey_status.stdout_lines
+  ignore_errors: yes
   when: ansible_os_family == "RedHat" and valkey_start is failed
 
 - name: Show journalctl for valkey@default if start failed
   shell: journalctl -u valkey@default.service -n 100 --no-pager
   become: yes
   register: valkey_journal
+  ignore_errors: yes
   when: ansible_os_family == "RedHat" and valkey_start is failed
 
 - name: Print journalctl output
   debug:
     var: valkey_journal.stdout_lines
+  ignore_errors: yes
   when: ansible_os_family == "RedHat" and valkey_start is failed
 
 - name: Show valkey's own log file if start failed
