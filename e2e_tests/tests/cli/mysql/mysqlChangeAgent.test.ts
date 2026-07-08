@@ -43,7 +43,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
   });
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9991 - Verify Change agent username and password @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const commands = [
