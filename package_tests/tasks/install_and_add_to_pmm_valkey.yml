@@ -55,6 +55,18 @@
     var: valkey_journal.stdout_lines
   when: ansible_os_family == "RedHat" and valkey_start is failed
 
+- name: Show valkey's own log file if start failed
+  shell: cat /var/log/valkey/default/*.log 2>/dev/null || echo "no log file found"
+  become: yes
+  register: valkey_log
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Print valkey log
+  debug:
+    var: valkey_log.stdout_lines
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
 - name: Fail the play now that diagnostics are captured
   fail:
     msg: "valkey@default failed to start — see systemctl/journalctl output above"
