@@ -190,7 +190,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
         commands = [
           `docker exec ${containerName} pmm-admin list | grep mysqld_exporter | grep ${serviceId}`,
-          `docker exec ${containerName} pmm-admin list | grep mysql-perfschema-agent | grep ${serviceId}`,
+          `docker exec ${containerName} pmm-admin list | grep mysql_perfschema_agent | grep ${serviceId}`,
         ];
 
         for (const command of commands) {
