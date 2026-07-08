@@ -39,7 +39,6 @@ ReadImmediateEdit:AlwaysReadTargetBlockImmediatelyBeforeEditToAvoidNewline/Inden
 UseAnchorStrings:TargetUniqueSingleLines(e.g.PropertyStart)ToMinimizeMatchFailures.
 SafeMergeFallback:IfEditFailsTwice->ReadEntireFile->MergeLogic->WriteEntireFile->ReadVerify.
 
-
 ## Custom Step Resolution
 
 NoInlining:DoNotInlineLogicOf`custom_steps.js`IntoTestFiles.
@@ -72,6 +71,11 @@ PreferAutoWait. Explicit`I.wait()`Only->TimeoutsEnum(e.g.`Timeouts.TEN_SECONDS`)
 Input->`locator.clear()`Then`.fill()`;Never`.evaluate()`ToClear.
 `I.see`->`toContainText`;`I.seeElement`->`toBeVisible`.
 
+## Helpers
+
+HelperEligibility:OnlyMoveLogicInto`@helpers`WhenItIsUsedInMoreThanOneTestFile.AssertionWrappersOrUtilitiesUsedInAnASingleTestMustStayInlineinThatTest;DoNotCreateAHelperJustToOrganiseOneTest.
+NoExpectsInHelpers:`Expect()`CallsMustAlwaysBeVisibleInTheTestBody.NeverWrapExpectInsideAHelperFunctionToSilence`playwright/expect-expect`.InThatRuleFires,TheDesignIsWrong-RestructureTheCodeNotTheRule.AnEslintDisableForExpectExpectIsARedFlag;RefactorInstead.
+
 ## Lint
 
 ArrowFunctionsOnly;NoTraditional`function`.
@@ -79,9 +83,12 @@ NumericSeparators:`30_000`.
 FileNamesCamelCase.
 No`.skip()`;NoCommentedTests.
 ESLintDisableCommentsRequireReason;UseOnlyWhenNeeded.
+NeverUseEslintDisableFor`playwright/expect-expect`;IfTriggered,BringExpectsInlineIntoTest.
 
 ## Workflow
+
 SkepticalPipeline:
+
 1. Analysis:ReadSourceTest->IdentifyAllCalls->ListCustomSteps.
 2. Mapping:Use`references/mappings.md`+`references/examples-test.md`ToMapEveryCallToPlaywrightEquivalent.
 3. Implementation:GenerateCodeUsing`references/examples-pom.md`AsArchitecturalGuide.

@@ -153,12 +153,13 @@ Interfaces (`interfaces/`): `grafana, grafanaPanel, dashboard, inventory, access
 
 ## 5. Custom step -> Playwright mapping (from custom_steps.js + mappings.md)
 
-- `verifyPopUpMessage(message, t=30)` -> `@components/NotificationComponent` (wait `[role="alert"],[role="status"]`, assert text, close via `[aria-label="Close alert"]`).
+- `verifyPopUpMessage(message, t=30)` -> `@components/NotificationComponent`. Keep the component dumb: it should expose the locator (`[role="alert"],[role="status"]`) and a `close()` method (`[aria]`), assert text, close via (`[aria-label="Close alert"]`). The `expect(componet.message).toContainText(message)` MUST be written inline in the test. Do not hide `expect(()` inside the component.
 - `verifyWarning(message, t=10)` -> assert on `[data-testid="data-testid Alert warning"]`.
 - `verifyInvisible(sel, t)` -> `await expect(locator).toBeHidden({ timeout })`.
 - `asyncWaitFor(fn, t)` -> `await expect.poll(async () => ..., { timeout })`.
 - `getPopUpLocator/getSuccessPopUpLocator/getClosePopUpButtonLocator` -> NotificationComponent locators.
-- `downloadZipFile/readZipArchive/seeEntriesInZip/dontSeeEntriesInZip/readFileInZipArchive/getFileLineCount` -> `@helpers/archive.helper.ts` (create if missing; uses `adm-zip`, already a devDependency).
+- `downloadZipFile` -> Do NOT port. Use playwright's `const res = await request.get(url); const buffer = await res.body();` Pass the buffer directly to `AdmZip(buffer)` rather than writing to disk.
+- `readZipArchive/readFileInZipArchive/getFileLineCount` -> `@helpers/archive.helper.ts` (create if missing; uses `adm-zip`). **`readZipArchive` and `getFileLineCount` are reusable utilities** `seeEntriesInZip/dontSeeEntriesInZip` are thin `expect()` wrappers: do NOT put them in the helper. Write the assertion loop inline in the test using `readZipArchive` directly (e.g. `const entries = readZipArchive(pathOrBuffer); expect(entries.tocontain('file.log);`). Hiding `expect` in a helper violates the `NoExpectsInHelpers` rules and triggers the `playwright/expect-expect` lint error - never use `eslint-disable` to supress it; refactor instead.
 - `buildUrlWithParams(url, params)` -> `@helpers/url.helper.ts` (maps env/node_name/cluster/service_name/application_name/database/columns/from/to/search/page_number/page_size/refresh/metric to `var-*`/query params; defaults from=now-5m,to=now).
 - `signOut()` -> `await page.goto('graph/logout')`.
 - `cleanupClickhouse()` -> `@helpers/cli.helper.ts`: `docker exec pmm-server clickhouse-client --database pmm --password clickhouse --query "TRUNCATE TABLE metrics"`.
@@ -181,7 +182,7 @@ Run all from `e2e_tests/`:
 
 Tests authorize via `grafanaHelper.authorize()` in `pmmTest.beforeEach`. `pmmTest` already mocks
 `/v1/users/me` (tour completed) and `/v1/server/updates` (no update) at context level. Basic auth
-header helper: `GrafanaHelper.getAuthHeader()`.
+header helper: `GrafanaHelper.getToken()`.
 
 For **interactive locator discovery** (browser MCP fallback only), shared workflow docs remain under `.agents/workflows/`; use `.agents/workflows/pmmLogin.md`
 — not the UI login form. See section 8.
