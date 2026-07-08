@@ -134,7 +134,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`),
       );
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
-      console.log(cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess());
+      console.log(
+        cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess(),
+      );
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
