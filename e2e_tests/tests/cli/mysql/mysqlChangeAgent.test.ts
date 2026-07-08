@@ -106,7 +106,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9994 - Verify Change agent tls @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const confPath = `/usr/local/etc/valkey/valkey.conf`;
+      const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
 
       cliHelper.createTlsCertificates(containerName);
 
