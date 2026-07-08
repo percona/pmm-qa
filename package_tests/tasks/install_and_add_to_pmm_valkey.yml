@@ -21,6 +21,11 @@
   become: yes
   when: ansible_os_family == "Debian"
 
+- name: Install Valkey on Red Hat based systems
+  shell: dnf install -y valkey
+  become: yes
+  when: ansible_os_family == "RedHat"
+
 - name: Generate SELinux policy module from AVC denials
   shell: |
     journalctl -k --no-pager | grep -i avc | grep -i redis_t | audit2allow -M valkey_local
@@ -37,11 +42,6 @@
   register: valkey_semodule
   ignore_errors: yes
   when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int == 9
-
-- name: Install Valkey on Red Hat based systems
-  shell: dnf install -y valkey
-  become: yes
-  when: ansible_os_family == "RedHat"
 
 - name: Start valkey@default service
   shell: systemctl start valkey@default
