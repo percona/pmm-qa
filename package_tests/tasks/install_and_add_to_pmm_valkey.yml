@@ -71,6 +71,45 @@
     var: valkey_log.stdout_lines
   when: ansible_os_family == "RedHat" and valkey_start is failed
 
+- name: Check ownership/permissions of valkey log dir
+  shell: ls -la /var/log/valkey/ /var/log/valkey/default/ 2>&1
+  become: yes
+  register: valkey_logdir
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Print log dir listing
+  debug:
+    var: valkey_logdir.stdout_lines
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Check SELinux status and denials
+  shell: |
+    getenforce
+    echo "---"
+    ausearch -m avc -ts recent 2>&1 | grep -i valkey || echo "no relevant AVC denials found"
+  become: yes
+  register: valkey_selinux
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Print SELinux diagnostics
+  debug:
+    var: valkey_selinux.stdout_lines
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Check what log path the config actually specifies
+  shell: grep -i '^logfile' /etc/valkey/default.conf /etc/valkey/includes/*.conf 2>/dev/null || echo "no logfile directive found (may log to stdout by default)"
+  become: yes
+  register: valkey_conf_logpath
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Print configured log path
+  debug:
+    var: valkey_conf_logpath.stdout_lines
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
 - name: Fail the play now that diagnostics are captured
   fail:
     msg: "valkey@default failed to start — see systemctl/journalctl output above"
