@@ -204,30 +204,27 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     expect(metrics).toContain('mysql_up');
   });
 
-  pmmTest(
-    'PMM-T9993 - Verify Change agent expose exporter @valkey-integration',
-    async ({ cliHelper, page }) => {
-      pgExporterPort = cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin list | grep ${valkeyExporterId} | awk -F' ' '{print $6}'`,
-        )
-        .stdout.trim();
-      await cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --expose-exporter`,
-        )
-        .assertSuccess()
-        .outContains('- enabled expose exporter');
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-      await cliHelper
-        .execSilent(
-          `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
-        )
-        .assertSuccess()
-        .outContains('mysql_up');
-    },
-  );
+  pmmTest('PMM-T9993 - Verify Change agent expose exporter @ps-integration', async ({ cliHelper, page }) => {
+    pgExporterPort = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${valkeyExporterId} | awk -F' ' '{print $6}'`,
+      )
+      .stdout.trim();
+    await cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --expose-exporter`,
+      )
+      .assertSuccess()
+      .outContains('- enabled expose exporter');
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+    await page.waitForTimeout(Timeouts.FIVE_SECONDS);
+    await cliHelper
+      .execSilent(
+        `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
+      )
+      .assertSuccess()
+      .outContains('mysql_up');
+  });
 
   pmmTest('PMM-T9993 - Verify Change agent push metrics @valkey-integration', async ({ cliHelper, page }) => {
     pgExporterPort = cliHelper
