@@ -22,20 +22,43 @@
   when: ansible_os_family == "Debian"
 
 - name: Install Valkey on Red Hat based systems
-  shell: "{{item}}"
-  with_items:
-    - dnf install -y valkey
-    - systemctl start valkey@default
+  shell: dnf install -y valkey
   become: yes
-  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int != 9
+  when: ansible_os_family == "RedHat"
 
-- name: Install Valkey on Red Hat based systems
-  shell: "{{item}}"
-  with_items:
-    - dnf install -y valkey
-    - systemctl start valkey
+- name: Start valkey@default service
+  shell: systemctl start valkey@default
   become: yes
-  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int == 9
+  register: valkey_start
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Show systemctl status if start failed
+  shell: systemctl status valkey@default.service --no-pager -l
+  become: yes
+  register: valkey_status
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Print systemctl status
+  debug:
+    var: valkey_status.stdout_lines
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Show journalctl for valkey@default if start failed
+  shell: journalctl -u valkey@default.service -n 100 --no-pager
+  become: yes
+  register: valkey_journal
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Print journalctl output
+  debug:
+    var: valkey_journal.stdout_lines
+  when: ansible_os_family == "RedHat" and valkey_start is failed
+
+- name: Fail the play now that diagnostics are captured
+  fail:
+    msg: "valkey@default failed to start — see systemctl/journalctl output above"
+  when: ansible_os_family == "RedHat" and valkey_start is failed
 
 - name: Set password for valkey
   shell: valkey-cli CONFIG SET requirepass '{{ valkey_password }}'
