@@ -160,7 +160,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9995 - Verify Change agent enable true/false @valkey-integration',
+    'PMM-T9995 - Verify Change agent enable true/false @ps-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
