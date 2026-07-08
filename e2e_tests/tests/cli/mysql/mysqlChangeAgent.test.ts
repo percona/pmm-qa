@@ -38,7 +38,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
     mysqldPerfschemaAgentId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysql_perfschema_agent | awk -F' ' '{print $4}'`,
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysql_perfschema_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
   });
@@ -73,7 +73,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --custom-labels=${customLabel}`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --custom-labels=${customLabel}`,
-      ]
+      ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await grafanaHelper.authorize();
