@@ -7,7 +7,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest.describe.configure({ mode: 'serial' });
 
   const valkeyPort = '6379';
-  const valkeyPassword = 'VKvl41568AsE';
+  const mysqlPassword = 'GRgrO9301RuF';
   const newUsername = 'new_pmmm_username';
   const newPassword = 'new_pmm_user_password';
   let containerName: string;
@@ -42,10 +42,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T9991 - Verify Change agent username and password @valkey-integration',
+    'PMM-T9991 - Verify Change agent username and password @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const commands = [
-        `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '${newPassword}-wrong' '~*' '&*' +@all`,
+        `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'localhost'; FLUSH PRIVILEGES;"`,
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --password=${newPassword} --username=${newUsername}`,
       ];
 
@@ -56,7 +56,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
       cliHelper.execSilent(
-        `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '>${newPassword}' '~*' '&*' +@all`,
+        `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "ALTER USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}'; FLUSH PRIVILEGES;"`,
       );
 
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
