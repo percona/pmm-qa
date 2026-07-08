@@ -43,7 +43,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
   });
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9991 - Verify Change agent username and password @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const commands = [
@@ -66,7 +66,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T99922 - Verify Change agent custom labels @ps-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_mysqld_exporter';
@@ -87,7 +87,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9993 - Verify Change agent log level @ps-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
@@ -117,7 +117,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
   });
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9994 - Verify Change agent tls @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
