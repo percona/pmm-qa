@@ -21,7 +21,22 @@
   become: yes
   when: ansible_os_family == "Debian"
 
+- name: Generate SELinux policy module from AVC denials
+  shell: |
+    journalctl -k --no-pager | grep -i avc | grep -i redis_t | audit2allow -M valkey_local
+  become: yes
+  register: valkey_audit2allow
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int == 9
 
+- name: Install the generated policy module
+  shell: semodule -i valkey_local.pp
+  args:
+    chdir: "{{ ansible_env.PWD | default('/root') }}"
+  become: yes
+  register: valkey_semodule
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int == 9
 
 - name: Install Valkey on Red Hat based systems
   shell: dnf install -y valkey
