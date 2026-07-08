@@ -92,7 +92,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --log-level=debug`,
-        `docker exec ${containerName} pmm-admin inventory change agent agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --log-level=debug`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --log-level=debug`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
