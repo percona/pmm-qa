@@ -193,7 +193,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9996 - Verify Change agent agent password @valkey-integration',
+    'PMM-T9996 - Verify Change agent agent password @ps-integration',
     async ({ cliHelper, page }) => {
       cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --agent-password=${pgExporterPassword}`,
