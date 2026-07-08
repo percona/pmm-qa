@@ -105,7 +105,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper }) => {
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${valkeyExporterId} --debug --trace --json`,
+          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --debug --trace --json`,
         )
         .assertSuccess();
     },

@@ -20,28 +20,25 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper
-      .execSilent(`docker ps --format '{{.Names}}' | grep valkey-primary-1`)
+      .execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_`)
       .stdout.trim();
     console.log(`Container name is: ${containerName}`);
     // pgVersion = containerName.match(/\d+/)?.[0] ?? '';
     serviceName = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep valkey-primary | head -1 | awk -F' ' '{print $2}'`,
+        `docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1 | awk -F' ' '{print $2}'`,
       )
       .stdout.trim();
-    console.log(`Service name is: ${serviceName}`);
     serviceId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep valkey | head -1 | awk -F' ' '{print $4}'`,
+        `docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1 | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
-    console.log(`Service ID is: ${serviceId}`);
     valkeyExporterId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep valkey_exporter | awk -F' ' '{print $4}'`,
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
-    console.log(`Valkey exporter id is: ${valkeyExporterId}`);
   });
 
   pmmTest(
@@ -49,7 +46,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const commands = [
         `docker exec ${containerName} valkey-cli -h 127.0.0.1 -p ${valkeyPort} -a ${valkeyPassword} ACL SETUSER ${newUsername} on '${newPassword}-wrong' '~*' '&*' +@all`,
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -67,13 +64,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T99922 - Verfiy Change agent custom labels @valkey-integration',
+    'PMM-T99922 - Verify Change agent custom labels @ps-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_valkey_exporter';
 
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --custom-labels=${customLabel}`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --custom-labels=${customLabel}`,
         )
         .assertSuccess();
       await grafanaHelper.authorize();
@@ -89,7 +86,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --log-level=debug`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --log-level=debug`,
         )
         .assertSuccess();
       await grafanaHelper.authorize();
@@ -105,7 +102,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper }) => {
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${valkeyExporterId} --debug --trace --json`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --debug --trace --json`,
         )
         .assertSuccess();
     },
@@ -154,7 +151,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
@@ -175,22 +172,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       for (const enableCommand of enableCommands) {
         await cliHelper
           .execSilent(
-            `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} ${enableCommand.command}`,
+            `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} ${enableCommand.command}`,
           )
           .assertSuccess()
           .outContains(enableCommand.response);
-        // docker exec valkey-primary-1 pmm-admin inventory change agent valkey-exporter d3104b77-2dbe-44d7-823d-86fd37951952 --enable=true
-        // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the agents to be enabled/disabled
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         console.log(enableCommand.command);
         console.log(
-          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} ${enableCommand.command}`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} ${enableCommand.command}`,
         );
 
         await cliHelper
           .execSilent(
-            `docker exec ${containerName} pmm-admin list | grep valkey_exporter | grep ${serviceId}`,
+            `docker exec ${containerName} pmm-admin list | grep mysqld_exporter | grep ${serviceId}`,
           )
           .outContains(enableCommand.status);
       }
@@ -201,7 +196,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     'PMM-T9996 - Verify Change agent agent password @valkey-integration',
     async ({ cliHelper, page }) => {
       cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --agent-password=${pgExporterPassword}`,
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --agent-password=${pgExporterPassword}`,
       );
 
       // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
@@ -227,7 +222,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .stdout.trim();
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --expose-exporter`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --expose-exporter`,
         )
         .assertSuccess()
         .outContains('- enabled expose exporter');
@@ -238,7 +233,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
         )
         .assertSuccess()
-        .outContains('redis_up');
+        .outContains('mysql_up');
     },
   );
 
@@ -250,7 +245,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
     await cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --push-metrics`,
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --push-metrics`,
       )
       .assertSuccess()
       .outContains('- enabled push metrics');
@@ -276,7 +271,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest('PMM-T9993 - Verify Change agent disable collectors @valkey-integration', async ({ cliHelper }) => {
     await cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --disable-collectors=stat_statements,locks`,
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --disable-collectors=stat_statements,locks`,
       )
       .assertSuccess()
       .outContains('- updated disabled collectors: [stat_statements locks]');
@@ -294,7 +289,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent valkey-exporter ${valkeyExporterId} --pmm-agent-listen-port=7778`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --pmm-agent-listen-port=7778`,
         )
         .assertSuccess();
     },
