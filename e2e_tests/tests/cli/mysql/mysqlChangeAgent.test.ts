@@ -90,25 +90,31 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9993 - Verify Change agent log level @ps-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
-      cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --log-level=debug`,
-        )
-        .assertSuccess();
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --log-level=debug`,
+        `docker exec ${containerName} pmm-admin inventory change agent agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --log-level=debug`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(mysqldExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
       await agentsPage.hideRowDetails(mysqldExporterId);
+      await agentsPage.showRowDetails(mysqldPerfschemaAgentId);
+      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+      await agentsPage.hideRowDetails(mysqldPerfschemaAgentId);
     },
   );
 
   pmmTest('PMM-T9993 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
-    cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --debug --trace --json`,
-      )
-      .assertSuccess();
+    const commands = [
+      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --debug --trace --json`,
+      `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --debug --trace --json`,
+    ];
+
+    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
   });
 
   pmmTest(
@@ -152,6 +158,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command));
