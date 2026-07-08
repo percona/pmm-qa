@@ -19,9 +19,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   const pgExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
-    containerName = cliHelper
-      .execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_`)
-      .stdout.trim();
+    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_`).stdout.trim();
     console.log(`Container name is: ${containerName}`);
     // pgVersion = containerName.match(/\d+/)?.[0] ?? '';
     serviceName = cliHelper
@@ -97,16 +95,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
-    'PMM-T9993 - Verify Change agent debug, trace and json @ps-integration',
-    async ({ cliHelper }) => {
-      cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --debug --trace --json`,
-        )
-        .assertSuccess();
-    },
-  );
+  pmmTest('PMM-T9993 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
+    cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --debug --trace --json`,
+      )
+      .assertSuccess();
+  });
 
   pmmTest.skip(
     'PMM-T9994 - Verify Change agent tls @valkey-integration',
@@ -192,25 +187,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
-    'PMM-T9996 - Verify Change agent agent password @ps-integration',
-    async ({ cliHelper, page }) => {
-      cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --agent-password=${pgExporterPassword}`,
-      );
+  pmmTest('PMM-T9996 - Verify Change agent agent password @ps-integration', async ({ cliHelper, page }) => {
+    cliHelper.execSilent(
+      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --agent-password=${pgExporterPassword}`,
+    );
 
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+    await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
-      const metrics = cliHelper.getMetrics({
-        agentPassword: pgExporterPassword,
-        dockerContainer: containerName,
-        serviceName: serviceName,
-      });
+    const metrics = cliHelper.getMetrics({
+      agentPassword: pgExporterPassword,
+      dockerContainer: containerName,
+      serviceName: serviceName,
+    });
 
-      expect(metrics).toContain('redis_up');
-    },
-  );
+    expect(metrics).toContain('mysql_up');
+  });
 
   pmmTest(
     'PMM-T9993 - Verify Change agent expose exporter @valkey-integration',
