@@ -156,6 +156,18 @@
     var: valkey_selinux_fix.stdout_lines
   when: ansible_os_family == "RedHat" and valkey_start is failed
 
+- name: Check NoNewPrivileges setting in valkey unit
+  shell: grep -i "NoNewPrivileges\|SELinuxContext" /usr/lib/systemd/system/valkey@.service || echo "not set"
+  become: yes
+  register: valkey_unit_nnp
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat"
+
+- name: Print unit NNP setting
+  debug:
+    var: valkey_unit_nnp.stdout_lines
+  when: ansible_os_family == "RedHat"
+
 - name: Fail the play now that diagnostics are captured
   fail:
     msg: "valkey@default failed to start — see systemctl/journalctl output above"
