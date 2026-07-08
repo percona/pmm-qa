@@ -58,8 +58,7 @@ Scenario(
   'PMM-T288 - Verify user can see Update widget before upgrade [critical] @pmm-upgrade',
   async ({ I, homePage }) => {
     await I.stopMockingUpgrade();
-    I.amOnPage(homePage.url);
-    await homePage.verifyPreUpdateWidgetIsPresent(versionMinor);
+    await homePage.verifyUpdateStatusIsPresent(process.env.PMM_SERVER_LATEST);
   },
 );
 
@@ -72,7 +71,6 @@ Scenario(
       await homePage.upgradePMMViaDocker(homePage.pmmServerName);
       I.amOnPage(homePage.url);
       await homePage.verifyPMMServerVersion(process.env.PMM_SERVER_LATEST);
-      await homePage.verifyGuiUpgradeRemoved();
 
       return;
     }

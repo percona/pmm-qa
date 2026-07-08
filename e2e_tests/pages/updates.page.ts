@@ -24,7 +24,7 @@ export default class UpdatesPage extends BasePage {
   elements = {
     availableSection: this.page.getByRole('heading', { name: /New update available/i }),
     checkForUpdates: this.page.getByText('Check for updates'),
-    newVersionLine: this.page.locator('p').filter({ hasText: 'New version:' }),
+    newVersionLine: this.page.locator('strong').filter({ hasText: 'New version:' }),
     pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
     runningVersion: this.page.getByText('Running version:'),
     updateNow: this.page.getByRole('button', { name: /update now/i }),
