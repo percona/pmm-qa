@@ -226,7 +226,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('mysql_up');
   });
 
-  pmmTest('PMM-T9993 - Verify Change agent push metrics @valkey-integration', async ({ cliHelper, page }) => {
+  pmmTest('PMM-T9993 - Verify Change agent push metrics @ps-integration', async ({ cliHelper, page }) => {
     pgExporterPort = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ${valkeyExporterId} | awk -F' ' '{print $6}'`,
