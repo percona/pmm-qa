@@ -66,7 +66,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T99922 - Verify Change agent custom labels @ps-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_mysqld_exporter';
