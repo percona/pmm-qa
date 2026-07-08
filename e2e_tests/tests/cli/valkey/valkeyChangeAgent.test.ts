@@ -84,7 +84,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest.skip(
+  pmmTest(
     'PMM-T9993 - Verify Change agent log level @valkey-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper
