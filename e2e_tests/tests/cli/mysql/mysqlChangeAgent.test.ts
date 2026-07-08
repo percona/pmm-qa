@@ -266,21 +266,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('- updated disabled collectors: [stat_statements locks]');
   });
 
-  pmmTest(
-    'PMM-T9993 - Verify Change agent pmm agent listen port @valkey-integration',
-    async ({ cliHelper }) => {
-      const commands = [
-        `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
-        `docker restart ${containerName}`,
-        `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
-      ];
+  pmmTest('PMM-T9993 - Verify Change agent pmm agent listen port @ps-integration', async ({ cliHelper }) => {
+    const commands = [
+      `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
+      `docker restart ${containerName}`,
+      `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
+    ];
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-      cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --pmm-agent-listen-port=7778`,
-        )
-        .assertSuccess();
-    },
-  );
+    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+    cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --pmm-agent-listen-port=7778`,
+      )
+      .assertSuccess();
+  });
 });

@@ -24,7 +24,7 @@
     "no-case-declarations": "off",
     "indent": ["error", 2, { "SwitchCase": 1 }],
     "max-len": ["error", {
-      "code": 110,
+      "code": 130,
       "ignoreUrls": true,
       "ignoreStrings": true,
       "ignoreTemplateLiterals": true,
