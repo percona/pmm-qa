@@ -117,54 +117,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
   });
 
-  pmmTest.skip(
-    'PMM-T9994 - Verify Change agent tls @ps-integration',
-    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
-      const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
 
-      cliHelper.createTlsCertificates(containerName);
-
-      let commands = [
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
-        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
-        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
-        `docker exec ${containerName} chown 999:999 /certs/${containerName}.crt`,
-        `docker exec ${containerName} chown 999:999 /certs/${containerName}.key`,
-        `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
-        `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
-      ];
-
-      commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
-
-      fs.writeFileSync(
-        '/tmp/ssl.conf',
-        `ssl-ca=/certs/ca-certs.pem\nssl-cert=/certs/${containerName}.crt\nssl-key=/certs/${containerName}.key\nrequire_secure_transport=ON`,
-      );
-
-      cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      console.log(
-        cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`),
-      );
-      console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
-      console.log(
-        cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess(),
-      );
-
-      await grafanaHelper.authorize();
-      await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
-
-      commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command));
-      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
-    },
-  );
 
   pmmTest(
     'PMM-T9995 - Verify Change agent enable true/false @ps-integration',
@@ -278,6 +231,55 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .assertSuccess()
       .outContains('- updated disabled collectors: [stat_statements locks]');
   });
+
+  pmmTest(
+    'PMM-T9994 - Verify Change agent tls @ps-integration',
+    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
+      const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
+
+      cliHelper.createTlsCertificates(containerName);
+
+      let commands = [
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
+        `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/issued/pmm-test.crt > /certs/client.crt"`,
+        `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/ca.crt /certs/ca-certs.pem`,
+        `docker exec ${containerName} chown 999:999 /certs/${containerName}.crt`,
+        `docker exec ${containerName} chown 999:999 /certs/${containerName}.key`,
+        `docker exec ${containerName} chmod 600 /certs/${containerName}.key`,
+        `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
+      ];
+
+      commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
+
+      fs.writeFileSync(
+        '/tmp/ssl.conf',
+        `ssl-ca=/certs/ca-certs.pem\nssl-cert=/certs/${containerName}.crt\nssl-key=/certs/${containerName}.key\nrequire_secure_transport=ON`,
+      );
+
+      cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
+      console.log(
+        cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`),
+      );
+      console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
+      console.log(
+        cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess(),
+      );
+
+      await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
+      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
+
+      commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command));
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+    },
+  );
 
   pmmTest('PMM-T9993 - Verify Change agent pmm agent listen port @ps-integration', async ({ cliHelper }) => {
     const commands = [
