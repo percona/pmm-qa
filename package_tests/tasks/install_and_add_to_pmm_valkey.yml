@@ -37,7 +37,7 @@
   shell: systemctl status valkey@default.service --no-pager -l
   become: yes
   register: valkey_status
-  ignore_errors: true
+  ignore_errors: yes
   when: ansible_os_family == "RedHat" and valkey_start is failed
 
 - name: Print systemctl status
