@@ -246,7 +246,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
       )
       .assertSuccess()
-      .outContains('redis_up');
+      .outContains('mysql_up');
     await cliHelper
       .execSilent(
         `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
