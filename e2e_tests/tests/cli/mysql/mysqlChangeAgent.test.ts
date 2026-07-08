@@ -103,8 +103,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .assertSuccess();
   });
 
-  pmmTest.skip(
-    'PMM-T9994 - Verify Change agent tls @valkey-integration',
+  pmmTest(
+    'PMM-T9994 - Verify Change agent tls @ps-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/usr/local/etc/valkey/valkey.conf`;
 
@@ -126,7 +126,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
-        `tls-port 6379\nport 0\ntls-cert-file /certs/${containerName}.crt\ntls-key-file /certs/${containerName}.key\ntls-ca-cert-file /certs/${containerName}.crt\ntls-auth-clients yes\ntls-replication yes\ntls-cluster yes`,
+        `ssl-ca=/certs/ca-certs.pem\nssl-cert=/certs/${containerName}.crt\nssl-key=/certs/${containerName}.key\nrequire_secure_transport=ON`,
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
@@ -134,7 +134,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`),
       );
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
-      cliHelper.execSilent(`docker restart ${containerName}`).assertSuccess();
+      cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess();
       console.log(
         cliHelper.execSilent(
           `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
