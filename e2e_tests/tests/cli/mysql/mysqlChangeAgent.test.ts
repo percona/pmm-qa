@@ -177,24 +177,25 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       for (const enableCommand of enableCommands) {
-        await cliHelper
-          .execSilent(
-            `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} ${enableCommand.command}`,
-          )
-          .assertSuccess()
-          .outContains(enableCommand.response);
+        let commands = [
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} ${enableCommand.command}`,
+          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} ${enableCommand.command}`,
+        ];
+
+        for (const command of commands) {
+          await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
+        }
+
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
-        console.log(enableCommand.command);
-        console.log(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} ${enableCommand.command}`,
-        );
+        commands = [
+          `docker exec ${containerName} pmm-admin list | grep mysqld_exporter | grep ${serviceId}`,
+          `docker exec ${containerName} pmm-admin list | grep mysql-perfschema-agent | grep ${serviceId}`,
+        ];
 
-        await cliHelper
-          .execSilent(
-            `docker exec ${containerName} pmm-admin list | grep mysqld_exporter | grep ${serviceId}`,
-          )
-          .outContains(enableCommand.status);
+        for (const command of commands) {
+          await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.status);
+        }
       }
     },
   );
