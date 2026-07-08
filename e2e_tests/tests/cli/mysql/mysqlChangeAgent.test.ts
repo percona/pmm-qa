@@ -5,7 +5,7 @@ import fs from 'node:fs';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
-
+// qan-mysql-perfschema-agent
   const mysqlPassword = 'GRgrO9301RuF';
   const newUsername = 'new_pmmm_username';
   const newPassword = 'new_pmm_user_password';
@@ -13,6 +13,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let serviceName: string;
   let serviceId: string;
   let mysqldExporterId: string;
+  let mysqldPerfschemaAgentId: string;
   let pgExporterPort: string;
   const pgExporterPassword = 'newAgentPassword';
 
@@ -35,6 +36,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
+    mysqldPerfschemaAgentId = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysql_perfschema_agent | awk -F' ' '{print $4}'`,
+      )
+      .stdout.trim();
   });
 
   pmmTest(
@@ -43,6 +49,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       const commands = [
         `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "CREATE USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}-wrong'; GRANT ALL PRIVILEGES ON *.* TO '${newUsername}'@'localhost'; FLUSH PRIVILEGES;"`,
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=${newPassword} --username=${newUsername}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --password=${newPassword} --username=${newUsername}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
@@ -63,17 +70,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     'PMM-T99922 - Verify Change agent custom labels @ps-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const customLabel = 'env=qa_testing_mysqld_exporter';
+      const commands = [
+        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --custom-labels=${customLabel}`,
+        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --custom-labels=${customLabel}`,
+      ]
 
-      cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --custom-labels=${customLabel}`,
-        )
-        .assertSuccess();
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
       await agentsPage.showRowDetails(mysqldExporterId);
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
       await agentsPage.hideRowDetails(mysqldExporterId);
+      await agentsPage.showRowDetails(mysqldPerfschemaAgentId);
+      await expect(agentsPage.builders.property(customLabel)).toBeVisible();
+      await agentsPage.hideRowDetails(mysqldPerfschemaAgentId);
     },
   );
 
