@@ -135,11 +135,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
       console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
       cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess();
-      console.log(
-        cliHelper.execSilent(
-          `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
-        ),
-      );
+      // console.log(
+      //   cliHelper.execSilent(
+      //     `docker exec -d ${containerName} pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`,
+      //   ),
+      // );
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
