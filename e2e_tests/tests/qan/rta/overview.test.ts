@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
+import fs from 'node:fs';
 
 let sortedHostNames: string[];
 
@@ -137,6 +138,72 @@ pmmTest(
       await expect(queryAnalytics.rta.builders.queryByRowIndex('1')).toContainText('rta-sort-charlie');
       await expect(queryAnalytics.rta.builders.queryByRowIndex('2')).toContainText('rta-sort-bravo');
       await expect(queryAnalytics.rta.builders.queryByRowIndex('3')).toContainText('rta-sort-alpha');
+    });
+  },
+);
+
+pmmTest(
+  'PMM-14609 Verify RTA overview CSV export after pause @rta',
+  async ({ mongoDbHelper, page, queryAnalytics }) => {
+    await queryAnalytics.rta.elements.realTimeTable.waitFor({ state: 'visible' });
+    await queryAnalytics.rta.builders.operationIdForRow('1').waitFor({ state: 'visible' });
+
+    await pmmTest.step('Simulate long running queries', async () => {
+      mongoDbHelper.simulateLongRunningQuery({
+        delayMs: Timeouts.TWENTY_SECONDS,
+        queryLabel: 'rta-export-1',
+      });
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the query to run for some time
+      await page.waitForTimeout(Timeouts.THREE_SECONDS);
+
+      mongoDbHelper.simulateLongRunningQuery({
+        delayMs: Timeouts.TWENTY_SECONDS,
+        queryLabel: 'rta-export-2',
+      });
+    });
+
+    await pmmTest.step('Verify export is hidden while live updates are running', async () => {
+      await expect(queryAnalytics.rta.buttons.exportCsv).toBeHidden();
+    });
+
+    await pmmTest.step('Pause RTA and filter exported queries', async () => {
+      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+      await queryAnalytics.rta.filterQueriesByText('rta-export');
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2);
+      await expect(queryAnalytics.rta.buttons.exportCsv).toBeVisible();
+      await expect(queryAnalytics.rta.buttons.exportCsv).toBeEnabled();
+    });
+
+    await pmmTest.step('Export CSV and verify filename and headers', async () => {
+      const downloadPromise = page.waitForEvent('download');
+      await queryAnalytics.rta.buttons.exportCsv.click();
+      const download = await downloadPromise;
+      const filename = download.suggestedFilename();
+
+      expect(filename).toMatch(/^mongodb_rta_export_\d{8}_\d{6}\.csv$/);
+
+      const savePath = await download.path();
+
+      if (!savePath) {
+        throw new Error('Download path is not available');
+      }
+
+      const csvContent = fs.readFileSync(savePath, 'utf8');
+      const [headerLine] = csvContent.split('\n');
+
+      for (const column of [
+        'operation_id',
+        'elapsed_exec_time_sec',
+        'service',
+        'plan_summary',
+        'raw_query',
+      ]) {
+        expect(headerLine).toContain(column);
+      }
+
+      expect(csvContent).toContain('rta-export-1');
+      expect(csvContent).toContain('rta-export-2');
     });
   },
 );

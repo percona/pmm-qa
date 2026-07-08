@@ -33,6 +33,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     detailsPreviousQuery: this.page.getByTestId('details-pane-prev-button'),
     filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
     openNewSessionModal: this.page.getByTestId('open-new-modal'),
+    exportCsv: this.page.getByTestId('overview-table-export-button'),
     pauseRealTimeAnalytics: this.page.getByTestId('overview-table-pause-button'),
     refresh: this.page.getByTestId('overview-table-refresh-button'),
     refreshIntervalDropdown: this.page.getByTestId('auto-refresh-button'),
