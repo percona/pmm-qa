@@ -257,7 +257,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('Running');
   });
 
-  pmmTest('PMM-T9993 - Verify Change agent disable collectors @valkey-integration', async ({ cliHelper }) => {
+  pmmTest('PMM-T9993 - Verify Change agent disable collectors @ps-integration', async ({ cliHelper }) => {
     await cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${valkeyExporterId} --disable-collectors=stat_statements,locks`,
