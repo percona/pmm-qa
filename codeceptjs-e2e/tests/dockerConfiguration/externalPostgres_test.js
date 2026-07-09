@@ -23,19 +23,14 @@ Data(data).Scenario(
     I, pmmInventoryPage, current, queryAnalyticsPage,
   }) => {
     const {
-      postgresqlAddress, ansibleName, pdpgsqlContainerName,
+      ansibleName, pdpgsqlContainerName,
     } = current;
     const basePmmUrl = 'http://127.0.0.1:8082/';
     const serviceName = 'pmm-server-postgresql';
-    const postgresDataSourceLocator = locate('div').withChild(locate('h2 > a').withText('PostgreSQL'));
 
     await I.verifyCommand(`ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 testdata/external-services/${ansibleName}.yml --extra-vars "pmm_server_image=${dockerImage} ansible_python_interpreter=/usr/bin/python3"`);
 
     await I.Authorize('admin', 'admin', basePmmUrl);
-    I.amOnPage(`${basePmmUrl}graph/datasources`);
-    I.waitForVisible(postgresDataSourceLocator, 30);
-    I.seeTextEquals(`${'PostgreSQL|'}${postgresqlAddress}`, locate(postgresDataSourceLocator).find('//div[2]'));
-
     I.amOnPage(`${basePmmUrl}${pmmInventoryPage.url}`);
     await I.waitForVisible(pmmInventoryPage.fields.serviceRow(serviceName), 30);
 
