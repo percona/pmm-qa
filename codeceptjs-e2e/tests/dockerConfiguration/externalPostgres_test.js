@@ -8,17 +8,9 @@ const data = new DataTable(['ansibleName', 'postgresqlAddress', 'pdpgsqlContaine
 data.add(['external-pgsql', 'external-postgres:5432', 'external-postgres']);
 data.add(['external-pgsql-ssl', 'external-postgres-ssl:5432', 'external-postgres-ssl']);
 
-async function cleanupExternalPostgresContainers(I) {
+After(async ({ I }) => {
   await I.verifyCommand('docker rm -f external-postgres pmm-server-external-postgres external-postgres-ssl pmm-server-external-postgres-ssl || true');
   await I.verifyCommand('docker volume rm pmm-server-external-pg pmm-server-external-pg-ssl || true');
-}
-
-Before(async ({ I }) => {
-  await cleanupExternalPostgresContainers(I);
-});
-
-After(async ({ I }) => {
-  await cleanupExternalPostgresContainers(I);
 });
 
 Data(data).Scenario(
