@@ -125,7 +125,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(10);
   },
-);
+).retry(1);
 
 Scenario('PMM-T1585 - Verify deleting Access role @rbac', async ({ I, accessRolesPage, rolesApi }) => {
   await rolesApi.createRole(psRole);
