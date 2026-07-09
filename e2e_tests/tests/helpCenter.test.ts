@@ -84,11 +84,13 @@ pmmTest('PMM-T1830 - Verify downloading server diagnostics logs @menu', async ({
     ).toContain(entry);
   }
 
+  /* eslint-disable playwright/no-conditional-expect -- logic matches source */
   if ((await api.serverApi.getPmmVersion()).minor > 40) {
     for (const entry of ['alertmanager.yml', 'alertmanager.base.yml']) {
       expect(entries, `'${entry}' must not be in ${entries}`).not.toContain(entry);
     }
   }
+  /* eslint-enable playwright/no-conditional-expect */
 });
 
 pmmTest('PMM-T2120 - Verify start pmm tour button @new-navigation', async ({ helpPage }) => {
