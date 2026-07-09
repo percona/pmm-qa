@@ -1,7 +1,6 @@
 const { I, dashboardPage, pmmUpgradePage } = inject();
 const assert = require('assert');
 const moment = require('moment');
-const dockerUpgradeHelper = require('../helper/dockerUpgradeHelper');
 const productTourModal = require('./components/productTourComponent');
 const updatesAvailableDialog = require('./components/updatesAvailableModal');
 
@@ -115,23 +114,7 @@ module.exports = {
     I.waitForVisible(I.useDataQA('data-testid Nav menu item'), 20);
   },
 
-  isGuiUpgradeRemoved() {
-    return dockerUpgradeHelper.isGuiUpgradeRemoved();
-  },
-
-  async upgradePMMViaDocker(containerName = this.pmmServerName, recreateFn) {
-    await dockerUpgradeHelper.upgradeContainer(I, containerName, recreateFn);
-
-    // eslint-disable-next-line no-console
-    console.log(`Upgraded ${containerName} to: ${dockerUpgradeHelper.getTargetImage()}`);
-  },
-
-  async upgradePMM(version, containerName = this.pmmServerName) {
-    if (this.isGuiUpgradeRemoved()) {
-      await this.upgradePMMViaDocker(containerName);
-      return;
-    }
-
+  async upgradePMM(version, containerName, skipUpgradeLogs = false) {
     const locators = this.getLocators(version);
 
     I.waitForElement(locators.triggerUpdate, 180);
@@ -154,13 +137,6 @@ module.exports = {
 
     // eslint-disable-next-line no-console
     console.log(`Upgraded to pmm server tag: ${await I.verifyCommand('docker ps -a | grep pmm-server | awk -F "pmm-server:" \'{print $2}\' | awk -F "  " \'{print $1}\'')}`);
-  },
-
-  async verifyGuiUpgradeRemoved() {
-    I.amOnPage(pmmUpgradePage.url);
-    I.switchTo();
-    I.dontSeeElement(pmmUpgradePage.elements.updateNowButton);
-    I.switchTo('#grafana-iframe');
   },
 
   async verifyPreUpdateWidgetIsPresent(version) {

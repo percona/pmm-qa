@@ -12,22 +12,16 @@ export interface UpdateInfo {
 }
 
 export default class UpdatesPage extends BasePage {
-  advancedSettingsUrl = '/pmm-ui/settings/advanced-settings';
-  clientsUrl = '/pmm-ui/updates/clients';
   url = '/pmm-ui/updates';
   homeUrl = '/pmm-ui/graph/';
   builders = {};
   buttons = {
-    howToUpdateDocs: this.page.getByRole('link', { name: 'How to update docs' }),
     whatsNew: this.grafanaIframe().getByRole('link', { name: "What's new" }),
   };
   elements = {
     availableSection: this.page.getByRole('heading', { name: /New update available/i }),
-    checkForUpdates: this.page.getByText('Check for updates'),
     newVersionLine: this.page.locator('strong').filter({ hasText: 'New version:' }),
     pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
-    runningVersion: this.page.getByText('Running version:'),
-    updateNow: this.page.getByRole('button', { name: /update now/i }),
   };
   inputs = {};
   messages = {};

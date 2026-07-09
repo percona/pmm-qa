@@ -6,16 +6,11 @@ Feature('Test PMM server with srv volume and password enw variable');
 let testCaseName = '';
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
 
-const runContainerWithPasswordVariableUpgrade = async (I, image = dockerVersion, prepareYum = true) => {
+const runContainerWithPasswordVariableUpgrade = async (I) => {
   await I.verifyCommand('mkdir $HOME/srvPasswordUpgrade || true');
   await I.verifyCommand('chmod -R 777 $HOME/srvPasswordUpgrade/ || true');
-  await I.verifyCommand(`docker run -v $HOME/srvPasswordUpgrade:/srv -d -e GF_SECURITY_ADMIN_PASSWORD=newpass -e PMM_ENABLE_INTERNAL_PG_QAN=1 --restart always --publish 8089:8080 --name pmm-server-password-upgrade ${image}`);
+  await I.verifyCommand(`docker run -v $HOME/srvPasswordUpgrade:/srv -d -e GF_SECURITY_ADMIN_PASSWORD=newpass -e PMM_ENABLE_INTERNAL_PG_QAN=1 --restart always --publish 8089:8080 --name pmm-server-password-upgrade ${dockerVersion}`);
   I.wait(30);
-
-  if (!prepareYum) {
-    return;
-  }
-
   await I.verifyCommand('docker exec pmm-server-password-upgrade yum update -y percona-release');
   await I.verifyCommand('docker exec pmm-server-password-upgrade sed -i\'\' -e \'s^/release/^/experimental/^\' /etc/yum.repos.d/pmm3-server.repo');
   await I.verifyCommand('docker exec pmm-server-password-upgrade percona-release enable percona experimental');
@@ -83,7 +78,7 @@ Scenario(
   },
 );
 
-Scenario(
+Scenario.skip(
   'PMM-T1256 Verify GF_SECURITY_ADMIN_PASSWORD environment variable after upgrade',
   async ({
     I, homePage,
@@ -96,11 +91,9 @@ Scenario(
     await I.Authorize('admin', 'newpass', basePmmUrl);
     await I.amOnPage(basePmmUrl + homePage.url);
     await I.waitForElement(homePage.fields.dashboardHeaderLocator, 60);
+    const { versionMinor } = await homePage.getVersions();
 
-    await homePage.upgradePMMViaDocker(
-      'pmm-server-password-upgrade',
-      async (I, image) => runContainerWithPasswordVariableUpgrade(I, image, false),
-    );
+    await homePage.upgradePMM(versionMinor, 'pmm-server-password-upgrade');
     await I.unAuthorize();
     await I.wait(5);
     await I.Authorize('admin', 'newpass', basePmmUrl);

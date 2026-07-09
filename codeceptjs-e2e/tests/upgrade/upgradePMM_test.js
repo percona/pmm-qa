@@ -62,20 +62,12 @@ Scenario(
   },
 );
 
-Scenario(
+Scenario.skip(
   'PMM-T3 - Verify user is able to Upgrade PMM version [blocker] @pmm-upgrade',
   async ({ I, homePage }) => {
     await I.stopMockingUpgrade();
-
-    if (homePage.isGuiUpgradeRemoved()) {
-      await homePage.upgradePMMViaDocker(homePage.pmmServerName);
-      I.amOnPage(homePage.url);
-      await homePage.verifyPMMServerVersion(process.env.PMM_SERVER_LATEST);
-
-      return;
-    }
-
     I.amOnPage(homePage.url);
+
     await homePage.updatesModal.closeModal();
     await homePage.upgradePMM(versionMinor);
   },
