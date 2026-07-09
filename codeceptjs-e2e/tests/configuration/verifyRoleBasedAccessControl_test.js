@@ -9,6 +9,7 @@ let pgRole;
 
 function resetRoles() {
   const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
   psRole = {
     name: `psRole_${uniqueSuffix}`,
     description: 'Test PS Role',
@@ -76,7 +77,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.waitForGraphsToHaveData(4);
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(4);
 
     I.amOnPage(dashboardPage.postgresqlInstanceSummaryDashboard.url);
     dashboardPage.waitForDashboardOpened();
@@ -98,7 +99,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.waitForGraphsToHaveData(2);
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
 
     await I.unAuthorize();
 
