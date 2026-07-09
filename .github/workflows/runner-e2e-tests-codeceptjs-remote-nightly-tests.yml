@@ -129,8 +129,15 @@ jobs:
           result-encoding: string
 
       - name: Prepare launchable
+        id: prepare_launchable
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
+          if [[ "${{ env.DOCKER_VERSION }}" == ami-* ]]; then
+            echo "skip_launchable=true" >> "$GITHUB_OUTPUT"
+            echo "AMI server image (${{ env.DOCKER_VERSION }}): skipping Launchable subset."
+            exit 0
+          fi
+
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
 
@@ -148,11 +155,17 @@ jobs:
         id: check_launchable_subset
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
-          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+          if [ "${{ steps.prepare_launchable.outputs.skip_launchable }}" = "true" ]; then
             echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "run_all_tests=true" >> "$GITHUB_OUTPUT"
+            echo "AMI deployment: running all tests matching grep (Launchable skipped)."
+          elif [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "run_all_tests=false" >> "$GITHUB_OUTPUT"
             echo "Launchable subset is not empty. Continue with tests."
           else
             echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "run_all_tests=false" >> "$GITHUB_OUTPUT"
             echo "Launchable subset is empty. Test execution will be skipped."
           fi
 
@@ -259,11 +272,18 @@ jobs:
           sed -i "s+http://localhost/+${PMM_UI_URL}+g" pr.codecept.js
           sed -i "s+https://localhost/+${PMM_UI_URL}+g" pr.codecept.js
 
-          npx codeceptjs run-workers ${{ env.WORKERS }} \
-            -c pr.codecept.js \
-            --grep "${{ env.TAGS_FOR_TESTS }}" \
-            --reporter mocha-multi \
-            -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
+          if [ "${{ steps.check_launchable_subset.outputs.run_all_tests }}" = "true" ]; then
+            npx codeceptjs run-workers ${{ env.WORKERS }} \
+              -c pr.codecept.js \
+              --grep "${{ env.TAGS_FOR_TESTS }}" \
+              --reporter mocha-multi
+          else
+            npx codeceptjs run-workers ${{ env.WORKERS }} \
+              -c pr.codecept.js \
+              --grep "${{ env.TAGS_FOR_TESTS }}" \
+              --reporter mocha-multi \
+              -o "$(cat "${{ env.SUBSET_FILE_NAME }}")"
+          fi
 
       - name: Download PMM Server logs
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
@@ -274,7 +294,7 @@ jobs:
           unzip logs.zip -d logs || true
 
       - name: Record launchable test results
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && steps.check_launchable_subset.outputs.run_all_tests != 'true' && always() }}
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
@@ -282,7 +302,7 @@ jobs:
          launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs on failure
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && steps.check_launchable_subset.outputs.run_all_tests != 'true' && failure() }}
         working-directory: pmm-qa/codeceptjs-e2e
         continue-on-error: true
         run: |
