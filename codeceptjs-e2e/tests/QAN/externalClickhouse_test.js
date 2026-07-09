@@ -8,6 +8,7 @@ const basePmmUrl = `http://127.0.0.1:${pmmServerPort}/`;
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
 
 BeforeSuite(async ({ I }) => {
+  await I.verifyCommand('docker compose -f docker-compose-clickhouse.yml down -v || true');
   await I.verifyCommand(`PMM_SERVER_IMAGE=${dockerVersion} docker compose -f docker-compose-clickhouse.yml up -d`);
   await I.wait(30);
   await I.verifyCommand('docker exec pmm-client-clickhouse pmm-admin add mysql --username=root --password=7B*53@lCdflR --query-source=perfschema ps8 ps8:3306');
@@ -22,9 +23,8 @@ AfterSuite(async ({ I }) => {
   await I.verifyCommand('docker compose -f docker-compose-clickhouse.yml down -v');
 });
 
-// Tag only for adding into matrix job, to be fixed later.
 Scenario(
-  'PMM-T1218 Verify PMM with external Clickhouse @docker-configuration @cli',
+  'PMM-T1218 Verify PMM with external Clickhouse @docker-configuration',
   async ({ I, dataSourcePage, queryAnalyticsPage }) => {
     I.amOnPage(basePmmUrl + dataSourcePage.url);
     I.waitForVisible(dataSourcePage.elements.clickHouseDatasource, 5);
