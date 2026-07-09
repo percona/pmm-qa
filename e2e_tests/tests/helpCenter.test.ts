@@ -1,6 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import { dontSeeEntriesInZip, seeEntriesInZip } from '@helpers/archive.helper';
+import { readZipArchive } from '@helpers/archive.helper';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
@@ -67,7 +67,6 @@ pmmTest('PMM-T2119 - Verify export logs button @new-navigation', async ({ helpPa
   });
 });
 
-/* eslint-disable-next-line playwright/expect-expect -- zip entry assertions live in archive.helper */
 pmmTest('PMM-T1830 - Verify downloading server diagnostics logs @menu', async ({ api, helpPage }) => {
   const download = await helpPage.exportLogs();
   const path = await download.path();
@@ -76,10 +75,19 @@ pmmTest('PMM-T1830 - Verify downloading server diagnostics logs @menu', async ({
     throw new Error('Download path is null');
   }
 
-  await seeEntriesInZip(path, ['pmm-agent.yaml', 'pmm-managed.log', 'pmm-agent.log']);
+  const entries = readZipArchive(path);
+
+  for (const entry of ['pmm-agent.yaml', 'pmm-managed.log', 'pmm-agent.log']) {
+    expect(
+      entries,
+      `Zip file: '${path}' must include: pmm-agent.yaml, pmm-managed.log, pmm-agent.log`,
+    ).toContain(entry);
+  }
 
   if ((await api.serverApi.getPmmVersion()).minor > 40) {
-    await dontSeeEntriesInZip(path, ['alertmanager.yml', 'alertmanager.base.yml']);
+    for (const entry of ['alertmanager.yml', 'alertmanager.base.yml']) {
+      expect(entries, `'${entry}' must not be in ${entries}`).not.toContain(entry);
+    }
   }
 });
 
