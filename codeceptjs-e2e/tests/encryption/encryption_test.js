@@ -17,11 +17,9 @@ Before(async ({ I }) => {
 const verifyEncryptionRotation = async (container) => {
   const r = await I.verifyCommand(`docker exec ${container} pmm-encryption-rotation`, '', 'pass', true);
 
-  assert.ok(r.includes('DB pmm-managed is successfully decrypted'), 'Failed to decrypt DB');
-  assert.ok(r.includes('Rotating encryption key'), 'Failed to rotate encryption key');
-  assert.ok(r.includes('New encryption key generated'), 'Failed to generate new encryption key');
-  assert.ok(r.includes('DB pmm-managed is successfully encrypted'), 'Failed to encrypt DB');
-  assert.ok(r.includes('Starting PMM Server'), 'Failed to start PMM Server after encryption key rotation');
+  assert.ok(r.includes('Added new primary encryption key'), 'Failed to add new primary encryption key');
+  assert.ok(r.includes('Restarting PMM Server'), 'Failed to restart PMM Server');
+  assert.ok(r.includes('All stored secrets are re-encrypted with the new key'), 'Failed to re-encrypt stored secrets');
 };
 
 Scenario(
