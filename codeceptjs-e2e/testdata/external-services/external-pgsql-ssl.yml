@@ -32,8 +32,11 @@
         - "{{ data_dir }}"
     - name: Stop containers if already running
       shell: |
-        docker rm -f external-postgres-ssl 
+        docker rm -f external-postgres
+        docker rm -f pmm-server-external-postgres
+        docker rm -f external-postgres-ssl
         docker rm -f pmm-server-external-postgres-ssl
+        docker volume rm pmm-server-external-pg
         docker volume rm pmm-server-external-pg-ssl
       ignore_errors: true
 
@@ -93,13 +96,13 @@
         path: "{{ item.path }}"
         owner: "{{ item.owner }}"
         group: "{{ item.owner }}"
-        mode: '0600'
+        mode: "{{ item.mode }}"
       loop:
-        - { path: "{{ ssl_dir }}/ca.crt", owner: "1000" }
-        - { path: "{{ ssl_dir }}/server.crt", owner: "26" }
-        - { path: "{{ ssl_dir }}/server.key", owner: "26" }
-        - { path: "{{ ssl_dir }}/client.key", owner: "1000" }
-        - { path: "{{ ssl_dir }}/client.crt", owner: "1000" }
+        - { path: "{{ ssl_dir }}/ca.crt", owner: "26", mode: "0644" }
+        - { path: "{{ ssl_dir }}/server.crt", owner: "26", mode: "0600" }
+        - { path: "{{ ssl_dir }}/server.key", owner: "26", mode: "0600" }
+        - { path: "{{ ssl_dir }}/client.key", owner: "1000", mode: "0600" }
+        - { path: "{{ ssl_dir }}/client.crt", owner: "1000", mode: "0600" }
       become: yes
 
     - name: Start external-postgres-ssl container
@@ -175,5 +178,5 @@
       shell: docker inspect --format='{{ "{{.State.Health.Status}}" }}' pmm-server-external-postgres-ssl
       register: pmm_server_health
       until: "'healthy' in pmm_server_health.stdout"
-      retries: 5
+      retries: 24
       delay: 5
