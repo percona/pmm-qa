@@ -96,13 +96,13 @@
         path: "{{ item.path }}"
         owner: "{{ item.owner }}"
         group: "{{ item.owner }}"
-        mode: '0600'
+        mode: "{{ item.mode }}"
       loop:
-        - { path: "{{ ssl_dir }}/ca.crt", owner: "26" }
-        - { path: "{{ ssl_dir }}/server.crt", owner: "26" }
-        - { path: "{{ ssl_dir }}/server.key", owner: "26" }
-        - { path: "{{ ssl_dir }}/client.key", owner: "1000" }
-        - { path: "{{ ssl_dir }}/client.crt", owner: "1000" }
+        - { path: "{{ ssl_dir }}/ca.crt", owner: "26", mode: "0644" }
+        - { path: "{{ ssl_dir }}/server.crt", owner: "26", mode: "0600" }
+        - { path: "{{ ssl_dir }}/server.key", owner: "26", mode: "0600" }
+        - { path: "{{ ssl_dir }}/client.key", owner: "1000", mode: "0600" }
+        - { path: "{{ ssl_dir }}/client.crt", owner: "1000", mode: "0600" }
       become: yes
 
     - name: Start external-postgres-ssl container
@@ -116,6 +116,7 @@
         -v {{ ssl_dir }}:/var/lib/postgresql/ssl
         {{ postgres_image }}
         postgres -c ssl=on
+        -c ssl_ca_file=/var/lib/postgresql/ssl/ca.crt
         -c ssl_cert_file=/var/lib/postgresql/ssl/server.crt
         -c ssl_key_file=/var/lib/postgresql/ssl/server.key
         -c shared_preload_libraries=pg_stat_statements
