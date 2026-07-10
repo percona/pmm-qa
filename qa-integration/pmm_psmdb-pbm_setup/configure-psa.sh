@@ -57,12 +57,10 @@ db.getSiblingDB("admin").createRole({
             collection: ""
             },
         actions: [
-            "listIndexes",
+            // Negative test case: QAN-required actions removed
+            // (originally: "listIndexes", "listCollections", "dbStats",
+            //  "dbHash", "collStats", "find")
             "listCollections",
-            "dbStats",
-            "dbHash",
-            "collStats",
-            "find"
             ]
         }],
     roles:[]

@@ -42,20 +42,6 @@ if [ $mongo_setup_type == "pss" ]; then
 else
   bash -e ./configure-psa.sh
 fi
-
-# Negative test case: revoke privileges required by QAN from the pmm user.
-# The user can still authenticate and clusterMonitor keeps basic metrics working,
-# but QAN (profiler reads, explain, collStats) fails with authorization errors.
-echo
-echo "revoking QAN-related privileges from pmm user (negative test case)"
-docker compose -f docker-compose-rs.yaml exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
-db.getSiblingDB("admin").revokeRolesFromUser("${PMM_MONGO_USER:-pmm}", [
-    { role: "explainRole", db: "admin" },
-    { role: "read", db: "local" },
-    { role: "readWrite", db: "admin" }
-]);
-EOF
-
 bash -x ./configure-agents.sh
 
 if [ $profile = "extra" ]; then
