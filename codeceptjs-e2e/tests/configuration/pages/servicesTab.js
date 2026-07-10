@@ -30,24 +30,6 @@ module.exports = {
     return (await I.grabTextFrom(this.fields.serviceCellMonitoring(serviceName))).trim();
   },
 
-  async waitForServiceMonitoringStatus(serviceName, expectedStatus = 'OK', timeoutSec = 120) {
-    I.waitForVisible(this.fields.serviceRow(serviceName), 60);
-
-    for (let elapsed = 0; elapsed < timeoutSec; elapsed += 5) {
-      const status = (await I.grabTextFrom(this.fields.serviceCellMonitoring(serviceName))).trim();
-
-      if (status === expectedStatus) {
-        return status;
-      }
-
-      I.wait(5);
-      I.refreshPage();
-      I.waitForVisible(this.fields.serviceRow(serviceName), 30);
-    }
-
-    return (await I.grabTextFrom(this.fields.serviceCellMonitoring(serviceName))).trim();
-  },
-
   async getServiceMonitoringAddress(serviceName) {
     I.waitForVisible(this.fields.serviceRow(serviceName), 60);
 

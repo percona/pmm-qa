@@ -63,8 +63,8 @@ services:
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
       - CLICKHOUSE_PASSWORD=pmm_password
     healthcheck:
-      test: ['CMD', 'clickhouse-client', '--query', 'SELECT 1']
+      test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:8123/ping || exit 1']
       interval: 5s
-      timeout: 5s
-      retries: 24
+      timeout: 3s
+      retries: 10
       start_period: 10s
