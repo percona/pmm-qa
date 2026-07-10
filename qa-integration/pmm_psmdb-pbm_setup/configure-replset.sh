@@ -90,7 +90,6 @@ db.getSiblingDB("admin").createUser({
     pwd: "${pmm_mongo_user_pass}",
     roles: [
         { role: "explainRole", db: "admin" },
-        { role: "clusterMonitor", db: "admin" },
         { role: "read", db: "local" },
         { "db" : "admin", "role" : "readWrite", "collection": "" },
         { "db" : "admin", "role" : "backup" },
