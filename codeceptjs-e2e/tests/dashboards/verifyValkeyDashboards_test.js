@@ -91,7 +91,6 @@ Scenario('PMM-T2087 - Open the Valkey Load dashboard and verify metrics @valkey-
 
   I.amOnPage(url);
   dashboardPage.waitForDashboardOpened();
-  dashboardPage.selectRefreshTimeInterval('Off');
   await dashboardPage.expandEachDashboardRow();
   await dashboardPage.verifyMetricsExistencePartialMatch(dashboardPage.valkeyLoadDashboard.metrics);
   await dashboardPage.verifyThereAreNoGraphsWithoutData(0);
