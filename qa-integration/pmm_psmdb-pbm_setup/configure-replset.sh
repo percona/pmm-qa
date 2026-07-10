@@ -62,7 +62,6 @@ db.getSiblingDB("admin").createRole({
             "dbStats",
             "dbHash",
             "collStats",
-            "find"
             ]
         }],
     roles:[]
