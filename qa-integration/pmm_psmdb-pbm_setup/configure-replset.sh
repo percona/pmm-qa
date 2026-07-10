@@ -57,10 +57,8 @@ db.getSiblingDB("admin").createRole({
             collection: ""
             },
         actions: [
-            "listIndexes",
-            "listCollections",
+            "indexStats",
             "dbStats",
-            "dbHash",
             "collStats",
             ]
         }],
@@ -95,7 +93,6 @@ db.getSiblingDB("admin").createUser({
         { "db" : "admin", "role" : "backup" },
         { "db" : "admin", "role" : "clusterMonitor" },
         { "db" : "admin", "role" : "restore" },
-        { "db" : "admin", "role" : "pbmAnyAction" }
     ]
 });
 EOF
@@ -105,7 +102,6 @@ db.getSiblingDB("\$external").createUser({
     user: "${pmm_mongo_user}@PERCONATEST.COM",
     roles: [
         { role: "explainRole", db: "admin" },
-        { role: "clusterMonitor", db: "admin" },
         { role: "read", db: "local" },
         { "db" : "admin", "role" : "readWrite", "collection": "" },
         { "db" : "admin", "role" : "backup" },
