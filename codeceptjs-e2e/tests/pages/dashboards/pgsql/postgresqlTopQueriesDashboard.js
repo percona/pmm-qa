@@ -9,10 +9,6 @@ class PostgresqlTopQueriesDashboard {
       'Top 10 Queries writing the most',
       'Top 10 Queries Affected the most rows',
       'Top 10 User Executed the most queries',
-      'Top 10 CPU Intensive Queries',
-      'Top 10 Memory Intensive Queries',
-      'Top 10 Queries by I/O Wait',
-      'Top 10 Queries by Shared Block Reads (Sequential Scan Indicator)',
     ];
   }
 }

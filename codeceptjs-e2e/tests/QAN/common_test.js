@@ -24,8 +24,9 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
     await queryAnalyticsPage.filters.selectFilterInGroupAtPosition(filter, randomFilterValue);
   }
 
-  queryAnalyticsPage.filters.selectFilter('pmm-server');
+  queryAnalyticsPage.filters.filterBy('pmm-server');
   I.wait(3);
+  I.waitForElement(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup('Service Name'), 10);
   const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup('Service Name'));
 
   I.assertContain(
@@ -33,6 +34,7 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
     'pmm-server',
     `Displayed filter value: "${displayedServiceName}" does not contain expected value: "pmm-server"`,
   );
+  await queryAnalyticsPage.filters.selectContainFilterInGroup('pmm-server', 'Service Name');
   I.assertTrue((await queryAnalyticsPage.data.getRowCount()) > 0, 'No QAN rows displayed after filtering by pmm-server');
 });
 
