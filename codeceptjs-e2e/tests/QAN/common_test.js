@@ -7,7 +7,7 @@ Before(async ({ I, queryAnalyticsPage }) => {
   I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m' }));
 });
 
-Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, queryAnalyticsPage }) => {
+Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, adminPage, queryAnalyticsPage }) => {
   queryAnalyticsPage.waitForLoaded();
   I.waitForVisible(queryAnalyticsPage.buttons.addColumnButton, 30);
   await queryAnalyticsPage.data.verifyRowCount(26);
@@ -24,16 +24,28 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
     await queryAnalyticsPage.filters.selectFilterInGroupAtPosition(filter, randomFilterValue);
   }
 
-  queryAnalyticsPage.filters.resetAllFilters();
-  queryAnalyticsPage.waitForLoaded();
+  I.click(queryAnalyticsPage.filters.fields.filterBy);
+  adminPage.customClearField(queryAnalyticsPage.filters.fields.filterBy);
   I.fillField(queryAnalyticsPage.filters.fields.filterBy, 'pmm-server');
-  I.waitForVisible(queryAnalyticsPage.filters.fields.filterByName('pmm-server'), 30);
-  const visibleFilters = await I.grabTextFromAll(queryAnalyticsPage.filters.fields.filterCheckboxes);
+  I.wait(5);
+  let matchingGroups = 0;
 
-  I.assertTrue(
-    visibleFilters.some((name) => name.includes('pmm-server')),
-    `Visible filters "${visibleFilters.join(', ')}" do not contain expected value: "pmm-server"`,
-  );
+  for (const filterGroup of queryAnalyticsPage.filters.labels.filterGroups) {
+    await queryAnalyticsPage.filters.applyShowAllLinkIfItIsVisible(filterGroup);
+    const count = await I.grabNumberOfVisibleElements(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(filterGroup));
+
+    if (count === 0) {
+      continue;
+    }
+
+    const displayedFilterValue = await I.grabTextFrom(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(filterGroup));
+
+    if (displayedFilterValue.includes('pmm-server')) {
+      matchingGroups += 1;
+    }
+  }
+
+  I.assertTrue(matchingGroups > 0, 'No filter group contains pmm-server after search');
   await queryAnalyticsPage.filters.selectContainFilter('pmm-server');
   I.assertTrue((await queryAnalyticsPage.data.getRowCount()) > 0, 'No QAN rows displayed after filtering by pmm-server');
 });
