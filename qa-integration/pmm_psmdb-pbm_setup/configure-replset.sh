@@ -63,8 +63,11 @@ db.getSiblingDB("admin").createRole({
             "dbStats",
             "dbHash",
             "collStats",
-            "find",
             ]
+        },
+        {
+        resource: { db: "", collection: "system.profile" },
+        actions: [ "find" ]
         }],
     roles:[]
 });
@@ -73,7 +76,7 @@ db.getSiblingDB("admin").createRole({
 db.getSiblingDB("admin").createRole({
     role: "connectionCheckRole",
     privileges: [{
-        resource: { cluster: true, "collection": "system.profile" },
+        resource: { cluster: true },
         actions: [
             "serverStatus",
             "replSetGetStatus",

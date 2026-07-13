@@ -57,16 +57,17 @@ db.getSiblingDB("admin").createRole({
             collection: ""
             },
         actions: [
-            // Negative test case: all explainRole actions except "find",
-            // so QAN cannot read system.profile
             "listIndexes",
             "listCollections",
             "indexStats",
             "dbStats",
             "dbHash",
             "collStats",
-            "find",
             ]
+        },
+        {
+        resource: { db: "", collection: "system.profile" },
+        actions: [ "find" ]
         }],
     roles:[]
 });
@@ -75,7 +76,7 @@ db.getSiblingDB("admin").createRole({
 db.getSiblingDB("admin").createRole({
     role: "connectionCheckRole",
     privileges: [{
-        resource: { cluster: true, "collection": "system.profile" },
+        resource: { cluster: true },
         actions: [
             "serverStatus",
             "replSetGetStatus",
