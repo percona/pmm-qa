@@ -64,33 +64,6 @@ db.getSiblingDB("admin").createRole({
         }],
     roles:[]
 });
-// Negative test case: clusterMonitor grants find on system.profile in all
-// databases, which is enough for QAN. This role mimics clusterMonitor for
-// the exporter but withholds profiler access.
-db.getSiblingDB("admin").createRole({
-    role: "clusterMonitorNoProfile",
-    privileges: [
-        {
-            resource: { cluster: true },
-            actions: [
-                "serverStatus", "replSetGetStatus", "replSetGetConfig",
-                "getCmdLineOpts", "getLog", "getParameter", "hostInfo",
-                "inprog", "listDatabases", "listSessions", "netstat",
-                "top", "useUUID", "connPoolStats", "getShardMap",
-                "listShards", "shardingState"
-            ]
-        },
-        {
-            resource: { db: "", collection: "" },
-            actions: [ "collStats", "dbStats", "indexStats", "listCollections", "listIndexes" ]
-        },
-        {
-            resource: { db: "local", collection: "" },
-            actions: [ "find", "collStats", "dbStats", "listCollections", "listIndexes" ]
-        }
-    ],
-    roles: []
-});
 EOF
 echo
 echo "creating pbm user"
@@ -120,7 +93,6 @@ db.getSiblingDB("admin").createUser({
         // (originally: explainRole, read@local, readWrite@admin,
         //  backup, clusterMonitor, restore)
         { role: "explainRole", db: "admin" },
-        { role: "clusterMonitorNoProfile", db: "admin" },
     ]
 });
 EOF
