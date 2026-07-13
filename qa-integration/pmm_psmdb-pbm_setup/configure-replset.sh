@@ -96,7 +96,6 @@ db.getSiblingDB("admin").createUser({
         { role: "clusterMonitor", db: "admin" },
         { role: "read", db: "local" },
         { "db" : "admin", "role" : "clusterMonitor" },
-        { "db" : "admin", "role" : "restore" },
     ]
 });
 EOF
@@ -111,7 +110,6 @@ db.getSiblingDB("\$external").createUser({
         { "db" : "admin", "role" : "readWrite", "collection": "" },
         { "db" : "admin", "role" : "backup" },
         { "db" : "admin", "role" : "clusterMonitor" },
-        { "db" : "admin", "role" : "restore" },
     ]
 });
 EOF
