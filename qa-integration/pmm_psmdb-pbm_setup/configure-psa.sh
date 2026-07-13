@@ -67,7 +67,7 @@ db.getSiblingDB("admin").createRole({
         },
         {
         resource: { db: "", collection: "system.profile" },
-        actions: [ "find" ]
+        actions: []
         }],
     roles:[]
 });
