@@ -94,6 +94,7 @@ db.getSiblingDB("admin").createUser({
         // (originally: explainRole, clusterMonitor, read@local,
         //  readWrite@admin, backup, clusterMonitor, restore, pbmAnyAction)
         { role: "explainRole", db: "admin" },
+        { role: "clusterMonitor", db: "admin" },
         { role: "read", db: "local" },
     ]
 });
