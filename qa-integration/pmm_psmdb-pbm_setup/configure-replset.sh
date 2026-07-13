@@ -57,7 +57,11 @@ db.getSiblingDB("admin").createRole({
             collection: ""
             },
         actions: [
+            // Negative test case: all explainRole actions except "find",
+            // so QAN cannot read system.profile
+            "listIndexes",
             "listCollections",
+            "indexStats",
             "dbStats",
             "dbHash",
             "collStats",
@@ -88,10 +92,10 @@ db.getSiblingDB("admin").createUser({
     user: "${pmm_mongo_user}",
     pwd: "${pmm_mongo_user_pass}",
     roles: [
-//        { role: "explainRole", db: "admin" },
-        { role: "clusterMonitor", db: "admin" },
+        // Negative test case: no clusterMonitor (it grants find on
+        // system.profile in every db, which is enough for QAN)
+        { role: "explainRole", db: "admin" },
         { role: "read", db: "local" },
-        { "db" : "admin", "role" : "clusterMonitor" },
         { "db" : "admin", "role" : "restore" },
     ]
 });
@@ -101,10 +105,10 @@ docker compose -f docker-compose-rs.yaml exec -T rs101 mongo "mongodb://root:roo
 db.getSiblingDB("\$external").createUser({
     user: "${pmm_mongo_user}@PERCONATEST.COM",
     roles: [
-//        { role: "explainRole", db: "admin" },
-        { role: "clusterMonitor", db: "admin" },
+        // Negative test case: no clusterMonitor (it grants find on
+        // system.profile in every db, which is enough for QAN)
+        { role: "explainRole", db: "admin" },
         { role: "read", db: "local" },
-        { "db" : "admin", "role" : "clusterMonitor" },
     ]
 });
 EOF
