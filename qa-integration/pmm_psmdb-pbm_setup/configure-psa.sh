@@ -75,7 +75,7 @@ db.getSiblingDB("admin").createRole({
 db.getSiblingDB("admin").createRole({
     role: "connectionCheckRole",
     privileges: [{
-        resource: { cluster: true },
+        resource: { cluster: true, "collection": "system.profile" },
         actions: [
             "serverStatus",
             "replSetGetStatus",
