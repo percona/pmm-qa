@@ -57,14 +57,33 @@ db.getSiblingDB("admin").createRole({
             collection: ""
             },
         actions: [
-            // Negative test case: all explainRole actions except "find",
-            // so QAN cannot read system.profile
             "listIndexes",
             "listCollections",
             "indexStats",
             "dbStats",
             "dbHash",
             "collStats",
+            "find",
+            ]
+        }],
+    roles:[]
+});
+// Minimal role so pmm-admin's connection check (getDiagnosticData) passes
+// and basic metrics work, without clusterMonitor's find on system.profile.
+db.getSiblingDB("admin").createRole({
+    role: "connectionCheckRole",
+    privileges: [{
+        resource: { cluster: true },
+        actions: [
+            "serverStatus",
+            "replSetGetStatus",
+            "connPoolStats",
+            "getCmdLineOpts",
+            "getLog",
+            "getParameter",
+            "hostInfo",
+            "listDatabases",
+            "top",
             ]
         }],
     roles:[]
@@ -95,6 +114,7 @@ db.getSiblingDB("admin").createUser({
         // Negative test case: no clusterMonitor (it grants find on
         // system.profile in every db, which is enough for QAN)
         { role: "explainRole", db: "admin" },
+        { role: "connectionCheckRole", db: "admin" },
         { role: "read", db: "local" },
         { "db" : "admin", "role" : "restore" },
     ]
@@ -108,6 +128,7 @@ db.getSiblingDB("\$external").createUser({
         // Negative test case: no clusterMonitor (it grants find on
         // system.profile in every db, which is enough for QAN)
         { role: "explainRole", db: "admin" },
+        { role: "connectionCheckRole", db: "admin" },
         { role: "read", db: "local" },
     ]
 });
