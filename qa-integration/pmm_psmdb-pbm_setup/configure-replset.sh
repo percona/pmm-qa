@@ -112,7 +112,6 @@ db.getSiblingDB("\$external").createUser({
         { "db" : "admin", "role" : "backup" },
         { "db" : "admin", "role" : "clusterMonitor" },
         { "db" : "admin", "role" : "restore" },
-        { "db" : "admin", "role" : "pbmAnyAction" }
     ]
 });
 EOF
