@@ -57,10 +57,10 @@ db.getSiblingDB("admin").createRole({
             collection: ""
             },
         actions: [
-            // Negative test case: QAN-required actions removed
-            // (originally: "listIndexes", "listCollections", "dbStats",
-            //  "dbHash", "collStats", "find")
             "listCollections",
+            "dbStats",
+            "dbHash",
+            "collStats",
             ]
         }],
     roles:[]
@@ -93,10 +93,11 @@ db.getSiblingDB("admin").createUser({
         // "find" on system.profile, which lets QAN work even without explainRole.
         // (originally: explainRole, clusterMonitor, read@local,
         //  readWrite@admin, backup, clusterMonitor, restore, pbmAnyAction)
-        { role: "explainRole", db: "admin" },
+//        { role: "explainRole", db: "admin" },
         { role: "clusterMonitor", db: "admin" },
         { role: "read", db: "local" },
         { "db" : "admin", "role" : "clusterMonitor" },
+        { "db" : "admin", "role" : "restore" },
     ]
 });
 EOF
