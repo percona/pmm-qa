@@ -88,11 +88,6 @@ db.getSiblingDB("admin").createUser({
     user: "${pmm_mongo_user}",
     pwd: "${pmm_mongo_user_pass}",
     roles: [
-        // Negative test case: QAN-required roles removed.
-        // backup/restore/readWrite/pbmAnyAction AND clusterMonitor all grant
-        // "find" on system.profile, which lets QAN work even without explainRole.
-        // (originally: explainRole, clusterMonitor, read@local,
-        //  readWrite@admin, backup, clusterMonitor, restore, pbmAnyAction)
 //        { role: "explainRole", db: "admin" },
         { role: "clusterMonitor", db: "admin" },
         { role: "read", db: "local" },
