@@ -70,17 +70,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       let commands = [
         `docker exec ${containerName} psql -U postgres -c "CREATE ROLE ${newUsername} WITH LOGIN PASSWORD '${newPassword}-Wrong';"`,
         `docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`,
+      ];
+
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+      commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --username=${newUsername}`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --password=${newPassword} --username=${newUsername}`,
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterSocketId} --password=${newPassword} --username=${newUsername}`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorSocketId} --password=${newPassword} --username=${newUsername}`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-
-      await grafanaHelper.authorize();
-      await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.ONE_MINUTE);
+      commands.forEach((command) =>
+        cliHelper.execSilent(command).outContains('password authentication failed for user'),
+      );
 
       commands = [
         `docker exec ${containerName} psql -U postgres -c "ALTER USER ${newUsername} WITH PASSWORD '${newPassword}';"`,
