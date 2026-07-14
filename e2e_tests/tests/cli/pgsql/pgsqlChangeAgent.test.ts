@@ -92,6 +92,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
+      await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
     },
   );

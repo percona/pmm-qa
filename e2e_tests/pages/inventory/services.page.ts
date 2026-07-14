@@ -7,7 +7,7 @@ export default class ServicesPage extends BasePage {
     monitoringByServiceName: (serviceName: string) =>
       this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
     statusByServiceName: (serviceName: string) =>
-      this.page.locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="2"]//div`),
+      this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="2"]//div`),
   };
   buttons = {};
   elements = {};
@@ -39,10 +39,6 @@ export default class ServicesPage extends BasePage {
     expectedStatus: 'Up' | 'Down',
     timeout = Timeouts.THIRTY_SECONDS,
   ) => {
-    await this.builders
-      .statusByServiceName(serviceName)
-      .waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
-
     for (let i = 0; i <= timeout; i += 1_000) {
       const actualStatus = await this.builders.statusByServiceName(serviceName).textContent();
 
