@@ -10,7 +10,7 @@ export default class ValkeyReplicationDashboard implements DashboardInterface {
     { name: 'valkey-replica-4-svc-*', type: 'unknown' },
     { name: 'valkey-replica-5-svc-*', type: 'unknown' },
     { name: 'valkey-replica-6-svc-*', type: 'unknown' },
-    { name: 'All - Replica vs Master Offsets', type: 'unknown' },
+    { name: 'All - Replica vs Primary offsets', type: 'unknown' },
     { name: 'Replicas', type: 'unknown' },
     { name: 'Connected Replicas', type: 'unknown' },
     { name: 'Full Resyncs', type: 'unknown' },
