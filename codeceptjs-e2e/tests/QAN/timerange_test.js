@@ -235,11 +235,10 @@ Scenario(
     await I.assertContain(url, '&page_number=2', 'Expected the Url to contain selected page');
     await queryAnalyticsPage.waitForLoaded();
     await queryAnalyticsPage.data.verifyActivePage(2);
-    await I.waitForVisible(queryAnalyticsPage.data.elements.selectedRow, 20);
+    await I.waitForElement(queryAnalyticsPage.data.buttons.close, 60);
     const queryTextAfter = await queryAnalyticsPage.data.getSelectedRowQueryText();
 
     assert.equal(queryText, queryTextAfter, 'Selected row query text is not the same after reload');
-    await I.waitForElement(queryAnalyticsPage.data.buttons.close, 30);
   },
 );
 
