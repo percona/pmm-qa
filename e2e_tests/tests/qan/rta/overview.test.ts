@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
@@ -182,5 +183,61 @@ pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnal
 
     await expect(queryAnalytics.rta.builders.hostForRow('1')).toContainText(sortedHostNames[1]);
     await expect(queryAnalytics.rta.builders.hostForLastRow()).toContainText(sortedHostNames[0]);
+  });
+});
+
+pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAnalytics }, testInfo) => {
+  await pmmTest.step('Verify export is hidden while real-time updates are running', async () => {
+    await expect(queryAnalytics.rta.buttons.pauseRealTimeAnalytics).toBeVisible();
+    await expect(queryAnalytics.rta.buttons.export).toBeHidden();
+  });
+
+  await pmmTest.step('Pause RTA, filter rows, and sort by host', async () => {
+    await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+    await expect(queryAnalytics.rta.buttons.export).toBeVisible();
+    await queryAnalytics.rta.filterQueriesByText('db.runCommand');
+    await queryAnalytics.rta.clickHostHeader();
+    await expect(queryAnalytics.rta.elements.realTimeTableRow.first()).toBeVisible();
+  });
+
+  await pmmTest.step('Export CSV and verify it matches the paginated table order', async () => {
+    const nextPageButton = queryAnalytics.rta.buttons.nextPage;
+    const uiOperationIds: string[] = [];
+
+    while (true) {
+      const rowsCount = await queryAnalytics.rta.elements.realTimeTableRow.count();
+
+      for (let index = 1; index <= rowsCount; index++) {
+        uiOperationIds.push(await queryAnalytics.rta.getOperationIdByRow(String(index)));
+      }
+
+      if (await nextPageButton.isDisabled()) {
+        break;
+      }
+
+      await nextPageButton.click();
+    }
+
+    const downloadPromise = page.waitForEvent('download');
+
+    await queryAnalytics.rta.buttons.export.click();
+
+    const download = await downloadPromise;
+    const fileName = download.suggestedFilename();
+    const csvPath = testInfo.outputPath(fileName);
+
+    expect(fileName).toMatch(/^mongodb_rta_export_\d{8}_\d{6}\.csv$/);
+
+    await download.saveAs(csvPath);
+
+    const csvContent = await readFile(csvPath, 'utf8');
+    const csvOperationIds = Array.from(csvContent.matchAll(/^"(\d+)",/gm), (match) => match[1]);
+
+    expect(csvContent).toContain('operation_id');
+    expect(csvContent).toContain('elapsed_exec_time_sec');
+    expect(csvContent).toContain('plan_summary');
+    expect(csvContent).toContain('raw_query');
+    expect(csvOperationIds).toHaveLength(uiOperationIds.length);
+    expect(csvOperationIds).toEqual(uiOperationIds);
   });
 });
