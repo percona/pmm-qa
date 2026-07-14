@@ -57,9 +57,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --password=${newPassword} --username=${newUsername}`,
       ];
 
-      commands.forEach((command) =>
-        cliHelper.execSilent(command).outContains('Access denied for user'),
-      );
+      commands.forEach((command) => cliHelper.execSilent(command).outContains('Access denied for user'));
 
       cliHelper.execSilent(
         `docker exec ${containerName} mysql -u root -p${mysqlPassword} -e "ALTER USER '${newUsername}'@'localhost' IDENTIFIED BY '${newPassword}'; FLUSH PRIVILEGES;"`,
