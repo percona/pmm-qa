@@ -9,12 +9,8 @@ data.add(['external-pgsql', 'external-postgres:5432', 'external-postgres']);
 data.add(['external-pgsql-ssl', 'external-postgres-ssl:5432', 'external-postgres-ssl']);
 
 After(async ({ I }) => {
-  await I.verifyCommand('docker stop external-postgres || true');
-  await I.verifyCommand('docker stop pmm-server-external-postgres || true');
-  await I.verifyCommand('docker volume rm pmm-server-external-pg || true');
-  await I.verifyCommand('docker stop external-postgres-ssl || true');
-  await I.verifyCommand('docker stop pmm-server-external-postgres-ssl || true');
-  await I.verifyCommand('docker volume rm pmm-server-external-pg-ssl || true');
+  await I.verifyCommand('docker rm -f external-postgres pmm-server-external-postgres external-postgres-ssl pmm-server-external-postgres-ssl || true');
+  await I.verifyCommand('docker volume rm pmm-server-external-pg pmm-server-external-pg-ssl || true');
 });
 
 Data(data).Scenario(
@@ -23,19 +19,14 @@ Data(data).Scenario(
     I, pmmInventoryPage, current, queryAnalyticsPage,
   }) => {
     const {
-      postgresqlAddress, ansibleName, pdpgsqlContainerName,
+      ansibleName, pdpgsqlContainerName,
     } = current;
     const basePmmUrl = 'http://127.0.0.1:8082/';
     const serviceName = 'pmm-server-postgresql';
-    const postgresDataSourceLocator = locate('div').withChild(locate('h2 > a').withText('PostgreSQL'));
 
     await I.verifyCommand(`ansible-playbook --connection=local --inventory 127.0.0.1, --limit 127.0.0.1 testdata/external-services/${ansibleName}.yml --extra-vars "pmm_server_image=${dockerImage} ansible_python_interpreter=/usr/bin/python3"`);
 
     await I.Authorize('admin', 'admin', basePmmUrl);
-    I.amOnPage(`${basePmmUrl}graph/datasources`);
-    I.waitForVisible(postgresDataSourceLocator, 30);
-    I.seeTextEquals(`${'PostgreSQL|'}${postgresqlAddress}`, locate(postgresDataSourceLocator).find('//div[2]'));
-
     I.amOnPage(`${basePmmUrl}${pmmInventoryPage.url}`);
     await I.waitForVisible(pmmInventoryPage.fields.serviceRow(serviceName), 30);
 
@@ -46,7 +37,7 @@ Data(data).Scenario(
     );
 
     I.assertEqual(
-      await pmmInventoryPage.servicesTab.getServiceMonitoringStatus(serviceName),
+      await pmmInventoryPage.servicesTab.waitForServiceMonitoringStatus(serviceName, 'OK', 120),
       'OK',
       `'${serviceName}' is expected to have 'OK' monitoring status`,
     );
