@@ -40,7 +40,9 @@ export default class ServicesPage extends BasePage {
     timeout = Timeouts.THIRTY_SECONDS,
   ) => {
     for (let i = 0; i <= timeout; i += 1_000) {
-      const actualStatus = await this.builders.statusByServiceName(serviceName).textContent();
+      const actualStatus = await this.builders
+        .statusByServiceName(serviceName)
+        .textContent({ timeout: Timeouts.ONE_MINUTE });
 
       if (actualStatus === expectedStatus) return;
       if (i == timeout) {
