@@ -58,7 +58,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       commands.forEach((command) =>
-        cliHelper.execSilent(command).outContains('password authentication failed for user'),
+        cliHelper.execSilent(command).outContains('Access denied for user'),
       );
 
       cliHelper.execSilent(
