@@ -7,7 +7,7 @@ export default class ServicesPage extends BasePage {
     monitoringByServiceName: (serviceName: string) =>
       this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="5"]//a`),
     statusByServiceName: (serviceName: string) =>
-      this.grafanaIframe().locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="2"]//div`),
+      this.page.locator(`//td[@title="${serviceName}"]//parent::tr//td[position()="2"]//div`),
   };
   buttons = {};
   elements = {};
