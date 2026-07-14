@@ -101,7 +101,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent debug, trace and json @valkey-integration',
     async ({ cliHelper }) => {
       cliHelper
         .execSilent(
