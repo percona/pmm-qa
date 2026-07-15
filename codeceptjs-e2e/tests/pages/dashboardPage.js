@@ -1372,8 +1372,12 @@ module.exports = {
     let maxTries = 20;
 
     while (collapsedRows > 0 && maxTries > 0) {
-      I.pressKey('End');
-      I.click(locate(this.fields.collapsedDashboardRow).first());
+      await I.usePlaywrightTo('Expand collapsed dashboard row', async ({ page }) => {
+        const expandButton = page.frameLocator('#grafana-iframe').locator('button[aria-label="Expand row"]').first();
+
+        await expandButton.scrollIntoViewIfNeeded();
+        await expandButton.click();
+      });
       I.wait(1);
       collapsedRows = await I.grabNumberOfVisibleElements(this.fields.collapsedDashboardRow);
       // eslint-disable-next-line no-plusplus
