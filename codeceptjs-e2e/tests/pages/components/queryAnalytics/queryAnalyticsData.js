@@ -20,7 +20,7 @@ class QueryAnalyticsData {
       columnHeaderText: (headerText) => locate('.ant-select-selection-item').withText(headerText),
       sorting: (columnNumber) => locate('$sort-by-control').at(columnNumber),
       sortingValue: (columnNumber) => this.elements.sorting(columnNumber).find('//span'),
-      queryTooltipValue: locate('.ant-tooltip-inner').find('code'),
+      queryTooltipValue: locate('.ant-tooltip-inner').find('code, [data-testid="highlight-code"]'),
       queryTooltipId: locate('.ant-tooltip-inner').find('h5'),
       latencyChart: locate('.latency-chart-container'),
       metricTooltip: locate('.ant-tooltip-content'),
@@ -226,6 +226,11 @@ class QueryAnalyticsData {
   mouseOverInfoIcon(rowNumber) {
     I.moveCursorTo(this.elements.queryRowIcon(rowNumber));
     I.waitForVisible(this.elements.queryTooltipValue, 30);
+  }
+
+  mouseOverInfoIconForQueryId(rowNumber) {
+    I.moveCursorTo(this.elements.queryRowIcon(rowNumber));
+    I.waitForVisible(this.elements.queryTooltipId, 30);
   }
 
   showTooltip(rowNumber, dataColumnNumber) {

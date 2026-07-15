@@ -38,7 +38,7 @@ Scenario(
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.data.searchByValue('query_plan');
     queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.data.mouseOverInfoIcon(1);
+    queryAnalyticsPage.data.mouseOverInfoIconForQueryId(1);
 
     const tooltipQueryId = await queryAnalyticsPage.data.getTooltipQueryId();
 
