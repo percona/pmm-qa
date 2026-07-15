@@ -1196,19 +1196,19 @@ module.exports = {
     await adminPage.performPageDown(5);
     I.waitForElement(this.graphsLocator(metrics[0]), 60);
     for (const i in metrics) {
-      I.pressKey('PageDown');
+      await I.pressKey('PageDown');
       await this.expandEachDashboardRow();
-      I.waitForElement(this.graphsLocator(metrics[i]), 5);
       I.scrollTo(this.graphsLocator(metrics[i]));
+      I.waitForElement(this.graphsLocator(metrics[i]), 30);
     }
   },
 
   async verifyMetricsExistencePartialMatch(metrics) {
     for (const i in metrics) {
-      I.pressKey('PageDown');
+      await I.pressKey('PageDown');
       await this.expandEachDashboardRow();
-      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 5);
       I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
+      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 30);
     }
   },
 
