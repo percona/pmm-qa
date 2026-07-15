@@ -58,12 +58,22 @@ class QueryAnalyticsFilters {
     I.waitForVisible(this.fields.filterBy, 30);
     I.usePlaywrightTo('Search and select QAN Filter', async ({ page }) => {
       const filterInput = page.locator(this.fields.filterBy.value);
-      const locator = page.locator(this.fields.filterByExactName(filterName).value).first();
+      const exactLocator = page.locator(this.fields.filterByExactName(filterName).value).first();
+      const containLocator = page.locator(this.fields.filterByName(filterName).value).first();
 
       await filterInput.waitFor({ state: 'visible', timeout });
       await filterInput.fill(filterName);
       await new Promise((resolve) => { setTimeout(resolve, 300); });
-      await locator.waitFor({ state: 'visible', timeout });
+
+      let locator = exactLocator;
+
+      try {
+        await exactLocator.waitFor({ state: 'visible', timeout: 3000 });
+      } catch (error) {
+        locator = containLocator;
+        await locator.waitFor({ state: 'visible', timeout });
+      }
+
       await locator.scrollIntoViewIfNeeded();
       await locator.click();
     });
@@ -80,6 +90,7 @@ class QueryAnalyticsFilters {
       await locator.waitFor({ state: 'attached' });
       await locator.click();
     });
+    queryAnalyticsPage.waitForLoaded();
   }
 
   selectFilterInGroup(filterName, groupName) {

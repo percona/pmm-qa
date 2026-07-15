@@ -25,6 +25,7 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
   }
 
   await queryAnalyticsPage.waitForLoaded();
+  await queryAnalyticsPage.filters.resetAllFilters();
   await queryAnalyticsPage.filters.selectFilter('pmm-server');
   await I.wait(3);
   const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup('Service Name'));
