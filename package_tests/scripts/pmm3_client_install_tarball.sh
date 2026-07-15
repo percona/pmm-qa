@@ -90,7 +90,9 @@ elif [[ "$architecture" == "x86_64" ]]; then
 fi
 
 if [[ "$architecture" == "arm64" ]]; then
-    tarball_url=https://downloads.percona.com/downloads/TESTING/pmm-arm/${client_tar}
+    # TESTING/pmm-arm was never populated by any pipeline; released arm64 client
+    # tarballs live on the downloads site with an -aarch64 suffix.
+    tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/pmm-client-${version}-aarch64.tar.gz
 elif [[ "$architecture" == "amd64" ]]; then
     tarball_url=https://downloads.percona.com/downloads/TESTING/pmm/${client_tar}
 fi
