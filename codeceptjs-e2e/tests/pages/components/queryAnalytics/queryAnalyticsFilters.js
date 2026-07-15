@@ -57,11 +57,14 @@ class QueryAnalyticsFilters {
   selectFilter(filterName, timeout = 30000) {
     I.waitForVisible(this.fields.filterBy, 30);
     I.usePlaywrightTo('Search and select QAN Filter', async ({ page }) => {
+      const filterInput = page.locator(this.fields.filterBy.value);
       const locator = page.locator(this.fields.filterByExactName(filterName).value).first();
 
-      await page.locator(this.fields.filterBy.value).fill(filterName);
-
-      await locator.waitFor({ state: 'attached', timeout });
+      await filterInput.waitFor({ state: 'visible', timeout });
+      await filterInput.fill(filterName);
+      await new Promise((resolve) => { setTimeout(resolve, 300); });
+      await locator.waitFor({ state: 'visible', timeout });
+      await locator.scrollIntoViewIfNeeded();
       await locator.click();
     });
     queryAnalyticsPage.waitForLoaded();
@@ -102,11 +105,13 @@ class QueryAnalyticsFilters {
 
   selectFilterInGroupAtPosition(groupName, position) {
     I.usePlaywrightTo('Select QAN Filter', async ({ page }) => {
-      const locator = await page.locator(this.fields.filterCheckBoxesInGroup(groupName).value);
+      const item = page.locator(this.fields.filterCheckBoxesInGroup(groupName).value).nth(position - 1);
 
-      await locator.nth(position - 1).waitFor({ state: 'attached' });
-      await locator.nth(position - 1).click();
+      await item.waitFor({ state: 'visible' });
+      await item.scrollIntoViewIfNeeded();
+      await item.click();
     });
+    queryAnalyticsPage.waitForLoaded();
   }
 
   selectContainFilter(filterName) {

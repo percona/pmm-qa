@@ -1372,9 +1372,15 @@ module.exports = {
     let maxTries = 20;
 
     while (collapsedRows > 0 && maxTries > 0) {
-      I.pressKey('End');
-      I.click(locate(this.fields.collapsedDashboardRow).first());
-      I.wait(1);
+      await I.pressKey('End');
+      I.usePlaywrightTo('Expand collapsed dashboard row', async ({ page }) => {
+        const locator = page.locator(this.fields.collapsedDashboardRow).first();
+
+        await locator.scrollIntoViewIfNeeded();
+        await locator.waitFor({ state: 'visible', timeout: 10000 });
+        await locator.click({ force: true });
+      });
+      await I.wait(1);
       collapsedRows = await I.grabNumberOfVisibleElements(this.fields.collapsedDashboardRow);
       // eslint-disable-next-line no-plusplus
       maxTries--; // eslint-disable-line no-plusplus

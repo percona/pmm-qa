@@ -8,14 +8,14 @@ Before(async ({ I, queryAnalyticsPage }) => {
 });
 
 Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, queryAnalyticsPage }) => {
-  queryAnalyticsPage.waitForLoaded();
-  I.waitForVisible(queryAnalyticsPage.buttons.addColumnButton, 30);
+  await queryAnalyticsPage.waitForLoaded();
+  await I.waitForVisible(queryAnalyticsPage.buttons.addColumnButton, 30);
   await queryAnalyticsPage.data.verifyRowCount(26);
   await queryAnalyticsPage.data.verifyPagesAndCount(25);
 
   for await (const filter of queryAnalyticsPage.filters.labels.filterGroups) {
-    I.wait(5);
-    I.waitForElement(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(filter), 10);
+    await I.wait(5);
+    await I.waitForElement(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(filter), 10);
     const countFilters = await I.grabNumberOfVisibleElements(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(filter));
     const randomFilterValue = Math.floor(Math.random() * countFilters) + 1;
 
@@ -24,8 +24,9 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
     await queryAnalyticsPage.filters.selectFilterInGroupAtPosition(filter, randomFilterValue);
   }
 
-  queryAnalyticsPage.filters.selectFilter('pmm-server');
-  I.wait(3);
+  await queryAnalyticsPage.waitForLoaded();
+  await queryAnalyticsPage.filters.selectFilter('pmm-server');
+  await I.wait(3);
   const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup('Service Name'));
 
   I.assertContain(
