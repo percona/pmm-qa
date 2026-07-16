@@ -65,7 +65,7 @@ jobs:
   # Canonical CLI tag mapping (defined in cli/tests/*.spec.ts):
   # @help, @server-only, @client-docker, @generic, @unregister,
   # @service-removal, @ps, @mysql, @mysql-conf-file, @pdpgsql,
-  # @psmdb, @shard-psmdb, @haproxy, @proxysql, @mongoDb
+  # @psmdb, @shard-psmdb, @haproxy, @proxysql, @mongoDb, @pmm-agent-reconnect
   help-tests:
     name: 'CLI / Integration'
     uses: ./.github/workflows/runner-integration-cli-tests.yml
@@ -111,6 +111,22 @@ jobs:
       cli_tag: '@client-docker'
       services_list: '--help'
       test_name: 'pmm-client docker'
+
+  pmm-agent-reconnect-tests:
+    name: 'CLI / Integration'
+    uses: ./.github/workflows/runner-integration-cli-tests.yml
+    secrets:
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+    with:
+      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
+      pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      cli_tag: '@pmm-agent-reconnect'
+      services_list: '--help'
+      test_name: 'pmm-agent reconnect'
 
   generic-tests:
     name: 'CLI / Integration'
