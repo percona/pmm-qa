@@ -49,7 +49,6 @@ Run commands from `cli/`.
 - `@mysql-conf-file`
 - `@pdpgsql`
 - `@percona-server`
-- `@pmm-agent-reconnect`
 - `@pgsql`
 - `@proxysql`
 - `@psmdb`
