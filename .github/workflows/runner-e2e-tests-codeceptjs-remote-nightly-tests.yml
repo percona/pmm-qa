@@ -144,7 +144,7 @@ jobs:
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
 
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "${{ env.INSTALLATION_TYPE }}-ui-nightly" > launchable-session.txt || true
+          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
           echo "$(cat launchable-subset.json)" || true
