@@ -35,6 +35,11 @@ on:
         required: false
         default: '100%'
         type: string
+      installation_type:
+        description: "PMM Server installation type (docker|ami|helm|ha)"
+        required: false
+        default: 'docker'
+        type: string
 
   workflow_call:
     inputs:
@@ -60,6 +65,10 @@ on:
       launchable_confidence:
         required: false
         default: '100%'
+        type: string
+      installation_type:
+        required: false
+        default: 'docker'
         type: string
     secrets:
       LAUNCHABLE_TOKEN:
@@ -138,3 +147,4 @@ jobs:
       expected_setup_jobs: 14
       workers: 1
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
+      installation_type: ${{ inputs.installation_type || 'docker' }}
