@@ -194,7 +194,7 @@ jobs:
             fi
             sleep 10
           done;
-          timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" != "200" ]]; do sleep 5; done'
+          timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" != "200" ]]; do sleep 5; done'
           # bash -x testdata/db_setup.sh
 
       - name: Print Podman logs on failure

@@ -21,6 +21,12 @@ services:
     ports:
       - '8180:8080'
       - '8143:8443'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:8080/v1/server/readyz']
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 60s
     environment:
       - PMM_DEBUG=1
     networks:

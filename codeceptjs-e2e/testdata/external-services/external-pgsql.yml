@@ -95,5 +95,5 @@
       shell: docker inspect --format='{{ "{{.State.Health.Status}}" }}' pmm-server-external-postgres
       register: pmm_server_health
       until: "'healthy' in pmm_server_health.stdout"
-      retries: 5
+      retries: 24
       delay: 5
