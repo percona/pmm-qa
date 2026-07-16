@@ -1,0 +1,8 @@
+{
+  "build": {
+    "context": "..",
+    "dockerfile": ".cursor/Dockerfile"
+  },
+  "install": "cd e2e_tests && npm ci && npx playwright install-deps && npx playwright install chromium",
+  "start": "sudo service docker start || true"
+}
