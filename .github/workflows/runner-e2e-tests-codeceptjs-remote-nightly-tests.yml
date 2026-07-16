@@ -37,6 +37,10 @@ on:
         required: false
         default: '100%'
         type: string
+      deployment_type:
+        required: false
+        default: 'docker'
+        type: string
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -64,6 +68,7 @@ jobs:
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests }}
       WORKERS: ${{ inputs.workers || 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
+      DEPLOYMENT_TYPE: ${{ inputs.deployment_type || 'docker' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       SUBSET_FILE_NAME: 'launchable-subset.json'
@@ -132,41 +137,52 @@ jobs:
         id: prepare_launchable
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
-          if [[ "${{ env.DOCKER_VERSION }}" == ami-* ]]; then
-            echo "skip_launchable=true" >> "$GITHUB_OUTPUT"
-            echo "AMI server image (${{ env.DOCKER_VERSION }}): skipping Launchable subset."
-            exit 0
-          fi
-
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
 
-          docker pull ${{ env.DOCKER_VERSION }} || true
-          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
-          echo "Launchable build: ${DOCKER_IMAGE_ID}"
+          DEPLOYMENT_TYPE="${{ env.DEPLOYMENT_TYPE }}"
+          SERVER_IMAGE="${{ env.DOCKER_VERSION }}"
+          CLIENT_VER="${{ env.CLIENT_VERSION }}"
+          TAGS_SUFFIX="${{ steps.tags_processed.outputs.result }}"
+
+          if [[ "${DEPLOYMENT_TYPE}" == "ami" || "${SERVER_IMAGE}" == ami-* ]]; then
+            export LAUNCHABLE_BUILD="${SERVER_IMAGE}"
+          else
+            docker pull "${SERVER_IMAGE}" || true
+            export LAUNCHABLE_BUILD=$(docker inspect -f '{{index .RepoDigests 0}}' "${SERVER_IMAGE}" | cut -d@ -f2) || true
+          fi
+
+          echo "Launchable build: ${LAUNCHABLE_BUILD}"
+          echo "Launchable deployment type: ${DEPLOYMENT_TYPE}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
 
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          launchable record session \
+            --build "${LAUNCHABLE_BUILD}" \
+            --test-suite "nightly-ui-tests-${DEPLOYMENT_TYPE}-${TAGS_SUFFIX}" \
+            --flavor "pmm-server-tag=${SERVER_IMAGE}" \
+            --flavor "pmm-client-version=${CLIENT_VER}" \
+            --flavor "deployment-type=${DEPLOYMENT_TYPE}" \
+            > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
+          cat test_list.txt | launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
           echo "$(cat launchable-subset.json)" || true
 
       - name: Check if launchable subset is empty
         id: check_launchable_subset
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
-          if [ "${{ steps.prepare_launchable.outputs.skip_launchable }}" = "true" ]; then
-            echo "has_subset=true" >> "$GITHUB_OUTPUT"
-            echo "run_all_tests=true" >> "$GITHUB_OUTPUT"
-            echo "AMI deployment: running all tests matching grep (Launchable skipped)."
-          elif [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
             echo "has_subset=true" >> "$GITHUB_OUTPUT"
             echo "run_all_tests=false" >> "$GITHUB_OUTPUT"
             echo "Launchable subset is not empty. Continue with tests."
+          elif [ -s launchable-session.txt ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "run_all_tests=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset empty (session recorded). Running all tests matching grep."
           else
             echo "has_subset=false" >> "$GITHUB_OUTPUT"
             echo "run_all_tests=false" >> "$GITHUB_OUTPUT"
-            echo "Launchable subset is empty. Test execution will be skipped."
+            echo "Launchable session missing. Test execution will be skipped."
           fi
 
       - name: Skip notice
@@ -294,15 +310,17 @@ jobs:
           unzip logs.zip -d logs || true
 
       - name: Record launchable test results
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && steps.check_launchable_subset.outputs.run_all_tests != 'true' && always() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
          sed -i "s|$(pwd)/||g" tests/output/result.xml || true
          launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
-         launchable gate --session "$(cat launchable-session.txt)"
+         if [ "${{ steps.check_launchable_subset.outputs.run_all_tests }}" != "true" ]; then
+           launchable gate --session "$(cat launchable-session.txt)"
+         fi
 
       - name: Record launchable logs on failure
-        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && steps.check_launchable_subset.outputs.run_all_tests != 'true' && failure() }}
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
         working-directory: pmm-qa/codeceptjs-e2e
         continue-on-error: true
         run: |
