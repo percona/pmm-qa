@@ -37,10 +37,6 @@ on:
         required: false
         default: '100%'
         type: string
-      deployment_type:
-        required: false
-        default: 'docker'
-        type: string
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -68,7 +64,6 @@ jobs:
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests }}
       WORKERS: ${{ inputs.workers || 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
-      DEPLOYMENT_TYPE: ${{ inputs.deployment_type || 'docker' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       SUBSET_FILE_NAME: 'launchable-subset.json'
@@ -140,28 +135,28 @@ jobs:
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
 
-          DEPLOYMENT_TYPE="${{ env.DEPLOYMENT_TYPE }}"
           SERVER_IMAGE="${{ env.DOCKER_VERSION }}"
           CLIENT_VER="${{ env.CLIENT_VERSION }}"
           TAGS_SUFFIX="${{ steps.tags_processed.outputs.result }}"
 
-          if [[ "${DEPLOYMENT_TYPE}" == "ami" || "${SERVER_IMAGE}" == ami-* ]]; then
+          if [[ "${SERVER_IMAGE}" == ami-* ]]; then
             export LAUNCHABLE_BUILD="${SERVER_IMAGE}"
+            TEST_SUITE="nightly-ui-tests-ami-${TAGS_SUFFIX}"
           else
             docker pull "${SERVER_IMAGE}" || true
             export LAUNCHABLE_BUILD=$(docker inspect -f '{{index .RepoDigests 0}}' "${SERVER_IMAGE}" | cut -d@ -f2) || true
+            TEST_SUITE="nightly-ui-tests-${TAGS_SUFFIX}"
           fi
 
           echo "Launchable build: ${LAUNCHABLE_BUILD}"
-          echo "Launchable deployment type: ${DEPLOYMENT_TYPE}"
+          echo "Launchable test suite: ${TEST_SUITE}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
 
           launchable record session \
             --build "${LAUNCHABLE_BUILD}" \
-            --test-suite "nightly-ui-tests-${DEPLOYMENT_TYPE}-${TAGS_SUFFIX}" \
+            --test-suite "${TEST_SUITE}" \
             --flavor "pmm-server-tag=${SERVER_IMAGE}" \
             --flavor "pmm-client-version=${CLIENT_VER}" \
-            --flavor "deployment-type=${DEPLOYMENT_TYPE}" \
             > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
           cat test_list.txt | launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
