@@ -111,10 +111,10 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
     expect(sourcePort, 'pmm-agent should have an established connection to the server').toBeTruthy();
 
     await cli.exec(
-      `docker exec ${client} iptables -A OUTPUT -p tcp -d ${serverIp} --dport=8443 -s ${clientIp} --sport=${sourcePort} -j DROP`,
+      `${sudo}nsenter -t ${pid} -n iptables -A OUTPUT -p tcp -d ${serverIp} --dport=8443 -s ${clientIp} --sport=${sourcePort} -j DROP`,
     );
     await cli.exec(
-      `docker exec ${client} iptables -A INPUT -p tcp -s ${serverIp} --sport=8443 -d ${clientIp} --dport=${sourcePort} -j DROP`,
+      `${sudo}nsenter -t ${pid} -n iptables -A INPUT -p tcp -s ${serverIp} --sport=8443 -d ${clientIp} --dport=${sourcePort} -j DROP`,
     );
 
     try {
@@ -129,8 +129,8 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
         expect(port, 'pmm-agent should use a new TCP source port').not.toBe(sourcePort);
       }).toPass({ timeout: 90_000, intervals: [5_000] });
     } finally {
-      await cli.exec(`docker exec ${client} iptables -F INPUT 2>/dev/null || true`);
-      await cli.exec(`docker exec ${client} iptables -F OUTPUT 2>/dev/null || true`);
+      await cli.exec(`${sudo}nsenter -t ${pid} -n iptables -F INPUT 2>/dev/null || true`);
+      await cli.exec(`${sudo}nsenter -t ${pid} -n iptables -F OUTPUT 2>/dev/null || true`);
     }
   });
 });
