@@ -4,6 +4,44 @@
 #   run-migration-single-test.sh <tests/file.test.ts> [setup_services] [setup_client] [--prepare-only] [--grep regex]
 set -Eeuo pipefail
 
+
+ensure_playwright_browser() {
+  local playwright_bin="$E2E_DIR/node_modules/.bin/playwright"
+  [[ -x "$playwright_bin" ]] || {
+    echo "ERROR: Playwright not installed in $E2E_DIR (run: cd e2e_tests && npm ci)" >&2
+    exit 2
+  }
+  "$playwright_bin" install chromium >/dev/null 2>&1 || true
+}
+
+print_playwright_target() {
+  (
+    cd "$E2E_DIR"
+    PMM_MIGRATION=1 PMM_UI_URL="$PMM_UI_URL" ADMIN_PASSWORD="$ADMIN_PASSWORD" node -e "
+      const dotenv = require('dotenv');
+      dotenv.config({ override: false, quiet: true });
+      const url = process.env.PMM_UI_URL || 'http://127.0.0.1/';
+      console.log('Playwright target: PMM_UI_URL=' + url + ' PMM_MIGRATION=' + !!process.env.PMM_MIGRATION);
+    "
+  )
+}
+
+run_playwright() {
+  local playwright_bin="$E2E_DIR/node_modules/.bin/playwright"
+  local -a cmd=("$playwright_bin" test "$TEST_FILE" "--workers=$WORKERS")
+  if [[ -n "$GREP_REGEX" ]]; then
+    cmd+=(--grep "$GREP_REGEX")
+  fi
+
+  print_playwright_target
+  printf 'Running:'
+  printf ' %q' "${cmd[@]}"
+  printf '\n'
+
+  PMM_MIGRATION=1 PMM_UI_URL="$PMM_UI_URL" ADMIN_PASSWORD="$ADMIN_PASSWORD" HEADLESS="$HEADLESS" \
+    "${cmd[@]}"
+}
+
 POSITIONAL_ARGS=()
 GREP_REGEX=""
 PREPARE_ONLY="false"
@@ -44,12 +82,17 @@ E2E_DIR="$REPO_ROOT/e2e_tests"
 QA_DIR="$REPO_ROOT/qa-integration/pmm_qa"
 COMPOSE_FILE="$E2E_DIR/docker-compose.yml"
 
+
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin-password}"
 DOCKER_VERSION="${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}"
 CLEAN_ENVIRONMENT="${CLEAN_ENVIRONMENT:-true}"
+PMM_UI_URL="${PMM_UI_URL:-http://127.0.0.1/}"
+HEADLESS="${HEADLESS:-true}"
+WORKERS="${WORKERS:-1}"
+export ADMIN_PASSWORD DOCKER_VERSION PMM_MIGRATION=1 PMM_UI_URL HEADLESS WORKERS
+
 READYZ_URL="http://127.0.0.1/v1/server/readyz"
 READYZ_BODY_FILE="${TMPDIR:-/tmp}/pmm-readyz-body.txt"
-export ADMIN_PASSWORD DOCKER_VERSION
 
 cleanup_pmm_qa_containers() {
   docker network inspect pmm-qa -f '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' 2>/dev/null |
@@ -168,20 +211,10 @@ fi
 
 if [[ "$PREPARE_ONLY" == "true" ]]; then
   echo "PMM migration environment is ready. Reuse it with CLEAN_ENVIRONMENT=false."
+  echo "PMM_UI_URL=${PMM_UI_URL} ADMIN_PASSWORD=***"
   exit 0
 fi
 
 cd "$E2E_DIR"
-export PMM_UI_URL="${PMM_UI_URL:-http://127.0.0.1/}"
-export HEADLESS="${HEADLESS:-true}"
-export WORKERS="${WORKERS:-1}"
-
-cmd=(npx playwright test "$TEST_FILE" --workers="$WORKERS")
-if [[ -n "$GREP_REGEX" ]]; then
-  cmd+=(--grep "$GREP_REGEX")
-fi
-
-printf 'Running:'
-printf ' %q' "${cmd[@]}"
-printf '\n'
-"${cmd[@]}"
+ensure_playwright_browser
+run_playwright

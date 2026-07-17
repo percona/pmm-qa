@@ -2,6 +2,19 @@
 
 Run exactly one migration at a time. One selected migration owns one PMM environment from review provisioning until PR creation. Do not clean or recreate that environment inside the workflow.
 
+Use WSL/Git Bash for `.cursor/scripts/*.sh`; keep shell scripts LF-only and run `bash -n .cursor/scripts/*.sh` after editing them.
+
+## Parent orchestration
+
+The parent agent coordinates writer, reviewer, and runner subagents. To avoid idle time:
+
+- Launch each subagent and **wait on its task completion notification** (or poll its transcript every 10–15s). Do **not** use long `Await` sleeps with regex patterns on terminal output.
+- Enforce gates strictly: no execution before `READY_TO_RUN`, no publish before `FINAL_REVIEW_PASS`, no tracker `done` before a PR exists.
+- Overlap only where gates allow: static review can start while PMM provisions; MCP locator checks begin after readyz passes.
+- Reuse one PMM environment per migration (`CLEAN_ENVIRONMENT=false` after the first `--prepare-only`).
+- Never edit `e2e_tests/.env` during migration; `run-migration-single-test.sh` exports `PMM_MIGRATION=1` and `PMM_UI_URL=http://127.0.0.1/`.
+- For MCP locator fallback, run `node .cursor/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
+
 ## 1. Select
 
 Select one `pending` tracker row and change it to `in-progress`.

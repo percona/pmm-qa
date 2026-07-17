@@ -2,13 +2,6 @@
 
 When a live run fails on a locator (timeout, not visible, strict mode violation), behavior preservation still applies: fix the `Locator` so it targets the same element the Codecept source intended. Never weaken assertions or click a different control.
 
-## Priority order
-
-| Priority | Tool                 | When                                                                                                                                                                                                                                                                                  |
-| -------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1        | **Playwright trace** | Always try first. Config retains trace on first failure. `npx playwright show-trace <path-to-trace.zip>`. Inspect DOM at the failing step; fix POM; re-run test.                                                                                                                      |
-| 2        | **Browser MCP**      | Only if trace is unavailable, empty, or the target page/iframe isn't reached. Login per `.agents/workflows/pmmLogin.md` — not the UI login form; navigate to the POM `url`; **one** `browser_snapshot`/CDP pass per page; update POM; re-run. Rules: `.agents/workflows/mcpRules.md`. |
-
 Trace path hint: failures write under `e2e_tests/test-results/`; open the `trace.zip` for the failed test.
 
 Do not use playwright-cli for migration verification. Do not change test behavior to work around a bad locator. **Max 2 locator-fix loops per run.**
