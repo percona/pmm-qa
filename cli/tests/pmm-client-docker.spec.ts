@@ -108,7 +108,7 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
     await output.outContains('Service removed.');
   });
 
-  test('@PMM-15200 pmm-agent reconnects after bilateral iptables DROP', async () => {
+  test('@PMM-T2255 pmm-agent reconnects after bilateral iptables DROP', async () => {
     test.setTimeout(180_000);
     const client = 'pmm-client-1';
 
