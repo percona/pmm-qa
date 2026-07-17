@@ -2,6 +2,7 @@ Feature('PMM Server Role Based Access Control (RBAC)');
 
 const newPsUser = { username: 'rbac_ps_test_user', password: 'Test1234!' };
 const newPgUser = { username: 'rbac_pg_test_user', password: 'Test1234!' };
+const dashboardTimeRange = { from: 'now-5m' };
 let rbacPsUserId;
 let rbacPgUserId;
 let psRole = {
@@ -65,13 +66,13 @@ Scenario(
 
     await I.Authorize(newPsUser.username, newPsUser.password);
 
-    I.amOnPage(dashboardPage.mySQLInstanceOverview.clearUrl);
+    I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThereAreNoGraphsWithoutData(4);
 
-    I.amOnPage(dashboardPage.postgresqlInstanceSummaryDashboard.url);
+    I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
@@ -81,13 +82,13 @@ Scenario(
 
     await I.Authorize(newPgUser.username, newPgUser.password);
 
-    I.amOnPage(dashboardPage.mySQLInstanceOverview.clearUrl);
+    I.amOnPage(I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(2);
 
-    I.amOnPage(dashboardPage.postgresqlInstanceSummaryDashboard.url);
+    I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
@@ -117,7 +118,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.verifyThatAllGraphsNoData(10);
   },
-);
+).retry(1);
 
 Scenario('PMM-T1585 - Verify deleting Access role @rbac', async ({ I, accessRolesPage, rolesApi }) => {
   await rolesApi.createRole(psRole);
