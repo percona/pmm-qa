@@ -3,15 +3,15 @@ import * as cli from '@helpers/cli-helper';
 import { clientDockerImage, dockerImage } from '@root/helpers/constants';
 
 test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async () => {
-  let iptablesCleanup: { sudo: string; pid: number } | undefined;
+  let iptablesCleanup: number | undefined;
 
   test.afterEach(async () => {
     if (!iptablesCleanup) {
       return;
     }
-    const { sudo, pid } = iptablesCleanup;
-    await cli.exec(`${sudo}nsenter -t ${pid} -n iptables -F INPUT 2>/dev/null || true`);
-    await cli.exec(`${sudo}nsenter -t ${pid} -n iptables -F OUTPUT 2>/dev/null || true`);
+    const pid = iptablesCleanup;
+    await cli.exec(`sudo nsenter -t ${pid} -n iptables -F INPUT 2>/dev/null || true`);
+    await cli.exec(`sudo nsenter -t ${pid} -n iptables -F OUTPUT 2>/dev/null || true`);
     iptablesCleanup = undefined;
   });
 
@@ -114,21 +114,20 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
 
     const serverIp = (await cli.exec(`docker exec ${client} getent hosts pmm-server-1 | awk '{print $1}'`)).stdout.trim();
     const pid = parseInt((await cli.exec(`docker inspect -f '{{.State.Pid}}' ${client}`)).stdout.trim(), 10);
-    const sudo = (await cli.exec('id -u')).stdout.trim() === '0' ? '' : 'sudo ';
     const conn = (await cli.exec(
-      `${sudo}nsenter -t ${pid} -n ss -tapn 2>/dev/null | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
+      `sudo nsenter -t ${pid} -n ss -tapn 2>/dev/null | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
     )).stdout.match(/(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\d+\.\d+\.\d+\.\d+):8443/);
     const clientIp = conn?.[1];
     const sourcePort = conn?.[2];
     expect(sourcePort, 'pmm-agent should have an established connection to the server').toBeTruthy();
 
     await cli.exec(
-      `${sudo}nsenter -t ${pid} -n iptables -A OUTPUT -p tcp -d ${serverIp} --dport=8443 -s ${clientIp} --sport=${sourcePort} -j DROP`,
+      `sudo nsenter -t ${pid} -n iptables -A OUTPUT -p tcp -d ${serverIp} --dport=8443 -s ${clientIp} --sport=${sourcePort} -j DROP`,
     );
     await cli.exec(
-      `${sudo}nsenter -t ${pid} -n iptables -A INPUT -p tcp -s ${serverIp} --sport=8443 -d ${clientIp} --dport=${sourcePort} -j DROP`,
+      `sudo nsenter -t ${pid} -n iptables -A INPUT -p tcp -s ${serverIp} --sport=8443 -d ${clientIp} --dport=${sourcePort} -j DROP`,
     );
-    iptablesCleanup = { sudo, pid };
+    iptablesCleanup = pid;
 
     await expect(async () => {
       const list = await cli.exec(`docker exec ${client} pmm-admin list`);
@@ -136,7 +135,7 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
       await list.outContains('pmm_agent');
       await list.outContains('Connected');
       const port = (await cli.exec(
-        `${sudo}nsenter -t ${pid} -n ss -tapn 2>/dev/null | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
+        `sudo nsenter -t ${pid} -n ss -tapn 2>/dev/null | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
       )).stdout.match(/(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\d+\.\d+\.\d+\.\d+):8443/)?.[2];
       expect(port, 'pmm-agent should use a new TCP source port').not.toBe(sourcePort);
     }).toPass({ timeout: 90_000, intervals: [5_000] });
