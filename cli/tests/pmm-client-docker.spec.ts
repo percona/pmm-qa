@@ -101,10 +101,13 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
     const client = 'pmm-client-1';
 
     const serverIp = (await cli.exec(`docker exec ${client} getent hosts pmm-server-1 | awk '{print $1}'`)).stdout.trim();
-    const clientIp = (await cli.exec(`docker exec ${client} hostname -i`)).stdout.trim();
-    const sourcePort = (await cli.exec(
-      `docker exec ${client} ss -tapn | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
-    )).stdout.match(/:(\d+)\s+\S+:8443/)?.[1];
+    const pid = parseInt((await cli.exec(`docker inspect -f '{{.State.Pid}}' ${client}`)).stdout.trim(), 10);
+    const sudo = (await cli.exec('id -u')).stdout.trim() === '0' ? '' : 'sudo ';
+    const conn = (await cli.exec(
+      `${sudo}nsenter -t ${pid} -n ss -tapn 2>/dev/null | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
+    )).stdout.match(/(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\d+\.\d+\.\d+\.\d+):8443/);
+    const clientIp = conn?.[1];
+    const sourcePort = conn?.[2];
     expect(sourcePort, 'pmm-agent should have an established connection to the server').toBeTruthy();
 
     await cli.exec(
@@ -120,6 +123,10 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
         await list.assertSuccess();
         await list.outContains('pmm_agent');
         await list.outContains('Connected');
+        const port = (await cli.exec(
+          `${sudo}nsenter -t ${pid} -n ss -tapn 2>/dev/null | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
+        )).stdout.match(/(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\d+\.\d+\.\d+\.\d+):8443/)?.[2];
+        expect(port, 'pmm-agent should use a new TCP source port').not.toBe(sourcePort);
       }).toPass({ timeout: 90_000, intervals: [5_000] });
     } finally {
       await cli.exec(`docker exec ${client} iptables -F INPUT 2>/dev/null || true`);
