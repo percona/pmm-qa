@@ -5,8 +5,8 @@ Use the **existing** Graphify artifacts for discovery during migration. Do not g
 ## Graph artifacts (read-only during migration)
 
 ```text
-codeceptjs-e2e/graphify-out/graph.json   # source side — read only; never regenerate during migration
-e2e_tests/graphify-out/graph.json        # target side — read during migration; update only after publish
+codeceptjs-e2e/graphify-out/graph.json   # source side - read only; never regenerate during migration
+e2e_tests/graphify-out/graph.json        # target side - read during migration; update only after publish
 ```
 
 ## Do not generate graphs during migration

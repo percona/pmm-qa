@@ -38,12 +38,37 @@ Do not add, remove, weaken, or improve coverage during migration.
 Preserve behavior, not redundant syntax. Omit arguments/options only when they restate a default and removal is behaviorally identical for the migrated values.
 When unsure, keep the source syntax.
 
+## Minimal reuse diffs
+
+When the source needs behavior that **already exists** in Playwright code (POM, helper, API client, component, fixture), reuse it with the **smallest** change:
+
+1. Prefer renaming or making the existing implementation public in place; match the source name when practical.
+2. Update existing internal callers in the same file to use that one implementation.
+3. Do **not** add a second public surface plus a private delegate/wrapper that only forwards to it.
+4. Do **not** duplicate the same logic in the test, a new helper, or a new abstraction when an existing one can be exposed.
+
+```ts
+// BAD - duplicate surface
+doThing = async () => { ... };
+private legacyDoThing = async () => this.doThing();
+
+// GOOD - one method, internal + migrated test callers share it
+doThing = async () => { ... };
+```
+
+Inline in the test only when no suitable existing abstraction exists. Creating a new file is the last resort, not the default.
+
 ## Native Playwright rules
 
 - Use `pmmTest` and existing fixtures.
 - Use Playwright `Locator` objects for UI elements.
 - Keep Playwright assertions visible in test bodies.
 - Reuse existing POMs, helpers, components, API clients, fixtures, and test data.
+- When reusing existing code, follow section Minimal reuse diffs (expose in place; no duplicate delegates).
+- Port behavior, not CodeceptJS helper APIs.
+- Helpers should have one stable return type.
+- Do not use boolean mode flags that change helper return shape.
+- Keep migration docs ASCII-only.
 - Add target registrations only when required.
 - Keep URLs in the repository's existing POM structure.
 - Use repository timeout constants when an explicit timeout is necessary.

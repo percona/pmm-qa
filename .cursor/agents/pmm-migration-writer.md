@@ -30,6 +30,9 @@ targetGraph:
   inspectedFiles: []
   reusedFiles: []
   changedFiles: []
+changedInvocations:
+  - file:
+    calls: []
 coverageDraft:
   scenarios: []
   hooks: []

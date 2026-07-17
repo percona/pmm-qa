@@ -12,7 +12,7 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Scenario titles and tags are preserved.
 - [ ] Data-driven rows and generated titles are preserved.
 
-### Behavior
+### Source fidelity
 
 - [ ] Hooks and suite setup are preserved.
 - [ ] Cleanup is preserved.
@@ -20,7 +20,24 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] UI, API, CLI, download, and file behavior is preserved.
 - [ ] Reachable custom steps were inspected and mapped.
 - [ ] No behavior was added, removed, weakened, or improved.
-- [ ] Omitted source syntax is behaviorally redundant.
+
+### Migration rules compliance
+
+- [ ] Every new or edited invocation in migration-related files was checked against `mappings.md` Helpers, CodeceptSyntax, SafeOmission, and Skip policy.
+- [ ] No explicit default arguments or options remain when `SKILL.md` or SafeOmission requires omission.
+- [ ] No `eslint-disable` was added to work around a rule that must be fixed in code.
+- [ ] Assertions remain in test bodies; helpers contain no hidden `expect()` unless `mappings.md` explicitly allows it.
+
+#### SafeOmission registry
+
+| Pattern | Rule |
+| --- | --- |
+| `parseInt(x, 10)` | Use `parseInt(x)` for decimal version segments. |
+| `expect()` inside changed helpers | Only `readZipArchive`-style utilities belong in helpers; assertions stay inline in tests. |
+| `pmmTest.skip` without skip-policy comments | Required by `mappings.md` § Skip policy. |
+| Copied PR patterns without a rule check | Flag when old code conflicts with current `mappings.md`. |
+
+- [ ] Ran `.cursor/scripts/check-migration-conventions.sh` against the changed migration files.
 
 ### Dependencies
 
@@ -28,13 +45,15 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Target Graphify-linked files were independently inspected.
 - [ ] Missing or stale graph edges were accounted for.
 - [ ] Existing Playwright abstractions were reused where applicable.
+- [ ] Reuse changes follow `SKILL.md` section Minimal reuse diffs (expose in place; no duplicate public+private delegates).
 - [ ] New fixtures, POMs, API clients, or endpoints are registered.
 
 ### Playwright quality
 
 - [ ] No CodeceptJS `I.*` calls remain.
-- [ ] Assertions remain visible in test bodies.
 - [ ] No arbitrary sleeps or unsupported shortcuts were added.
+- [ ] Helper APIs have no mode flags or union returns unless source behavior truly requires it.
+- [ ] Changed migration docs contain ASCII punctuation only.
 - [ ] Migrated test files contain zero comments, including ESLint disable comments.
 - [ ] No block-level ESLint disable comments were added anywhere in migration-related code.
 - [ ] Changed-file ESLint passes.
@@ -60,6 +79,7 @@ Unresolved dependencies: 0
 Unverified locators: 0
 New TypeScript failures: 0
 New ESLint failures: 0
+Migration convention violations: 0
 Result: READY_TO_RUN
 ```
 
@@ -73,6 +93,8 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] The final source and target dependency graphs were checked.
 - [ ] No required source dependency was omitted.
 - [ ] No target registration is missing.
+- [ ] Workflow coverage is preserved or updated for the migrated tags.
+- [ ] Old CodeceptJS workflow jobs are kept while active CodeceptJS scenarios still match their tag expression.
 - [ ] No debug or temporary code remains.
 - [ ] No unrelated files or behavior are included.
 - [ ] Static validation still introduces zero new failures.

@@ -103,11 +103,12 @@ Reviewer output: `FINAL_REVIEW_PASS` or `FINAL_REVIEW_FAILED`.
 Only after `FINAL_REVIEW_PASS`, the runner:
 
 1. retires the selected CodeceptJS source according to repository discovery rules;
-2. runs `graphify . --update` from `e2e_tests/` to refresh `e2e_tests/graphify-out/` only, then deletes generated graph files except `graph.json` and `manifest.json`;
-3. checks that only migration-related files are included;
-4. commits and pushes the migration branch;
-5. opens a PR targeting `main`; and
-6. updates the tracker row to `done` with the PR link.
+2. updates workflow coverage per `branch-workflow.md`;
+3. runs `graphify . --update` from `e2e_tests/` to refresh `e2e_tests/graphify-out/` only, then deletes generated graph files except `graph.json` and `manifest.json`;
+4. checks that only migration-related files are included;
+5. commits and pushes the migration branch;
+6. opens a PR targeting `main`; and
+7. updates the tracker row to `done` with the PR link.
 
 For this workflow, `done` means the PR was opened successfully.
 
@@ -124,6 +125,7 @@ pending
 -> test execution or already-covered regression with CLEAN_ENVIRONMENT=false
 -> final review
 -> retire source
+-> update workflow coverage
 -> e2e_tests graphify --update
 -> PR opened
 -> done

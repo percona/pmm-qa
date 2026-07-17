@@ -42,6 +42,18 @@ git mv codeceptjs-e2e/tests/<path>/<name>_test.js \
 
 Before committing, verify that the retired source no longer matches CodeceptJS test discovery. Do not retire unrelated files.
 
+## Workflow coverage
+
+If the migrated scenarios keep a tag used by an existing CodeceptJS workflow, add or update the matching Playwright runner job in the same workflow. Preserve the existing tag bucket and `setup_services` when the intent is to keep the workflow equivalent during partial migration.
+
+Append migrated tags to the Playwright job as coverage moves. Remove the old CodeceptJS job only when no active CodeceptJS scenarios remain for that job's tag expression:
+
+```bash
+rg -n "Scenario\(|Data\(.*\)\.Scenario\(" codeceptjs-e2e/tests -g "*_test.js" | rg "<tag-a>|<tag-b>"
+```
+
+Skipped CodeceptJS scenarios (`Scenario.skip`, `xScenario`) do not block removing the old runner unless the migration explicitly chooses to preserve them as future coverage.
+
 ## Commit and PR
 
 Inspect the final diff and include only migration-related changes.

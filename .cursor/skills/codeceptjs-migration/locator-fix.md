@@ -1,4 +1,4 @@
-# Broken Locator Fix Workflow (canonical — referenced by SKILL.md, context.md, run.md)
+# Broken Locator Fix Workflow (canonical - referenced by SKILL.md, context.md, run.md)
 
 When a live run fails on a locator (timeout, not visible, strict mode violation), behavior preservation still applies: fix the `Locator` so it targets the same element the Codecept source intended. Never weaken assertions or click a different control.
 
@@ -16,6 +16,6 @@ After a substantial POM fix, rerun changed-file ESLint/TypeScript validation and
 ## Locator rules
 
 - All POM entries must be Playwright `Locator` objects (`this.page.getByTestId(...)`, etc.), not strings.
-- Reuse existing locators from `context.md` §4 when the same page already exists in `e2e_tests`.
+- Reuse existing locators from `context.md` section 4 when the same page already exists in `e2e_tests`.
 - `$foo` in Codecept often maps to a different rendered test id; confirm against trace/MCP DOM, not by guess.
 - Chained `locate().find()` maps to chained `.locator()`; preserve scope.
