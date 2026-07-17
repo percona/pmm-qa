@@ -96,3 +96,13 @@ Full Release-Candidate testing is **not** driven from this repo. The orchestrato
 - **Lane 3**: `pmm3-migration-tests`, `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`rc-testing-suite.yml`](.github/workflows/rc-testing-suite.yml).
 
 **Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `rc-testing-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.
+
+---
+
+## Jira writes (agents)
+
+When posting **Jira comments** on `perconadev.atlassian.net` PMM tickets, **always** restrict visibility to the **Developers** role. Omitting `visibility` / `commentVisibility` posts publicly.
+
+- Skill reference: [.cursor/skills/pmm-manual-test/SKILL.md](.cursor/skills/pmm-manual-test/SKILL.md) and [fb-tests.md](.cursor/skills/pmm-manual-test/fb-tests.md)
+- Cloud automations (Tester): [.cursor/AUTOMATIONS.md](.cursor/AUTOMATIONS.md)
+- MCP: `jira_add_comment` → `visibility: "{\"type\":\"role\",\"value\":\"Developers\"}"`; `addCommentToJiraIssue` → `commentVisibility: {"type": "role", "value": "Developers"}`
