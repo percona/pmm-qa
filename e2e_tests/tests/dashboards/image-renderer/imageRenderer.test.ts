@@ -13,7 +13,5 @@ pmmTest('PMM-T1946 - verify image renderer usage @image-renderer', async ({ dash
   );
   await dashboard.verifyMetricsPresent(dashboard.home.metrics());
   await dashboard.renderImageForPanel('Failed advisors');
-  await expect(dashboard.elements.renderedImage).toHaveScreenshot('image-renderer-test.png', {
-    maxDiffPixelRatio: 0.03,
-  });
+  await expect(dashboard.elements.renderedImage).toHaveScreenshot('image-renderer-test.png');
 });
