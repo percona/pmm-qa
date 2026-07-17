@@ -12,7 +12,9 @@ export default class RealTimeAnalyticsPage extends BasePage {
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   builders = {
     detailsPaneCodeByText: (queryText: string) =>
-      this.elements.detailsPane.locator('code.language-mongodb', { hasText: queryText }),
+      this.elements.detailsPane.locator('[data-testid="query-text"], code.language-mongodb', {
+        hasText: queryText,
+      }),
     elapsedTimeForQueryByText: (queryText: string) =>
       this.builders.rowByQueryText(queryText).locator('//td[position()=4]'),
     elapsedTimeForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=4]'),
@@ -31,7 +33,9 @@ export default class RealTimeAnalyticsPage extends BasePage {
     closeDetailsPane: this.page.getByTestId('details-pane-close-button'),
     detailsNextQuery: this.page.getByTestId('details-pane-next-button'),
     detailsPreviousQuery: this.page.getByTestId('details-pane-prev-button'),
+    export: this.page.getByTestId('overview-table-export-button'),
     filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
+    nextPage: this.page.getByRole('button', { name: 'Go to next page' }),
     openNewSessionModal: this.page.getByTestId('open-new-modal'),
     pauseRealTimeAnalytics: this.page.getByTestId('overview-table-pause-button'),
     refresh: this.page.getByTestId('overview-table-refresh-button'),
@@ -47,7 +51,6 @@ export default class RealTimeAnalyticsPage extends BasePage {
       .getByTestId(realTimeTableTestId)
       .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
-    mongoDbQuery: this.page.locator('.language-mongodb'),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
