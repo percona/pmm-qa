@@ -24,7 +24,7 @@ Scenario.skip(
     I, pmmSettingsPage, settingsAPI,
   }) => {
     await settingsAPI.apiDisableSTT();
-    I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
+    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
 
     // Verify Interval fields are disabled and have default values
@@ -53,7 +53,7 @@ Scenario.skip(
   }) => {
     const interval = '0.1';
 
-    I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
+    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
 
     // Set 0.1 values for all 3 intervals
@@ -65,7 +65,7 @@ Scenario.skip(
     I.fillField(pmmSettingsPage.fields.frequentIntervalInput, interval);
 
     // Apply Settings
-    I.click(pmmSettingsPage.fields.advancedButton);
+    I.click(pmmSettingsPage.fields.advisorsButton);
     I.verifyPopUpMessage(pmmSettingsPage.messages.successPopUpMessage);
     I.refreshPage();
 
@@ -84,7 +84,7 @@ Scenario.skip(
   }) => {
     const greaterThanZero = 'Value should be greater or equal to 0.1';
 
-    I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
+    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
     I.waitForVisible(pmmSettingsPage.fields.rareIntervalInput, 30);
 
     I.clearField(pmmSettingsPage.fields.rareIntervalInput);
@@ -99,6 +99,6 @@ Scenario.skip(
     I.fillField(pmmSettingsPage.fields.frequentIntervalInput, current.input);
     I.seeTextEquals(greaterThanZero, pmmSettingsPage.fields.frequentIntervalValidation);
 
-    I.seeElementsDisabled(pmmSettingsPage.fields.advancedButton);
+    I.seeElementsDisabled(pmmSettingsPage.fields.advisorsButton);
   },
 );

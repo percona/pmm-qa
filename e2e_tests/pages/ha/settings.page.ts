@@ -5,18 +5,21 @@ export default class SettingsPage extends BasePage {
   url = '/pmm-ui/settings';
   urls = {
     advanced: '/pmm-ui/settings/advanced-settings',
+    advisors: '/pmm-ui/settings/advisors',
     metrics: '/pmm-ui/settings/metrics-resolution',
     ssh: '/pmm-ui/settings/ssh-key',
   };
   haQanErrorMessage = "Enabling QAN on PMM's own database is not supported in HA mode.";
   tabs = {
     advanced: this.page.getByTestId('settings-tab-advanced'),
+    advisors: this.page.getByTestId('settings-tab-advisors'),
     metrics: this.page.getByTestId('settings-tab-metrics'),
     ssh: this.page.getByTestId('settings-tab-ssh'),
   };
   builders = {};
   buttons = {
     applyAdvancedChanges: this.page.getByTestId('advanced-button'),
+    applyAdvisorsChanges: this.page.getByTestId('advisors-button'),
     applyMetricsChanges: this.page.getByTestId('metrics-resolution-button'),
     applySshKeyChanges: this.page.getByTestId('ssh-key-button'),
     getPublicAddressFromBrowser: this.page.getByRole('button', { name: 'Get from browser' }),
@@ -51,8 +54,10 @@ export default class SettingsPage extends BasePage {
 
   enableToggleAndApplyChanges = async (toggleName: keyof typeof this.buttons.toggles): Promise<void> =>
     await pmmTest.step(`Enable ${toggleName} and apply changes`, async () => {
-      await this.page.goto(this.urls.advanced);
+      const isAdvisors = toggleName === 'advisors';
+
+      await this.page.goto(isAdvisors ? this.urls.advisors : this.urls.advanced);
       await this.buttons.toggles[toggleName].locator.click();
-      await this.buttons.applyAdvancedChanges.click();
+      await (isAdvisors ? this.buttons.applyAdvisorsChanges : this.buttons.applyAdvancedChanges).click();
     });
 }
