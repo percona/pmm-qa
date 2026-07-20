@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
-import { isClientVersionAtLeast } from '@helpers/client-version';
-import { removeMySQLService } from '@root/helpers/pmm-admin';
+import { getPmmAdminMinorVersion, removeMySQLService } from '@root/helpers/pmm-admin';
 
 const MYSQL_USER = 'root';
 const MYSQL_PASSWORD = 'GRgrO9301RuF';
 const ipPort = '127.0.0.1:3306';
 let containerName: string;
+let adminVersion: number;
 const connectionTimeoutServiceName = 'mysql_connection_timeout_service';
 
 test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@percona-server' }, async () => {
@@ -14,6 +14,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^ps_pmm\'');
     await result.outContains('ps_pmm', 'Percona MySQL docker container should exist. please run pmm-framework with --database ps');
     containerName = result.stdout.trim();
+    adminVersion = await getPmmAdminMinorVersion(containerName);
   });
 
   test('run pmm-admin add mysql', async ({ }) => {
@@ -176,7 +177,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
   });
 
   test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
-    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
     await cli.exec('sleep 2');
@@ -189,7 +190,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
   });
 
   test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
-    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -204,7 +205,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
   });
 
   test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent", async ({ }) => {
-    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -219,7 +220,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
   });
 
   test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add", async ({ }) => {
-    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName}-timeout-check 195.15.25.15:3306`);
     await output.exitCodeEquals(1)
 

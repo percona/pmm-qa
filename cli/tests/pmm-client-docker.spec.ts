@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
-import { isClientVersionAtLeast } from '@helpers/client-version';
+import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { clientDockerImage, dockerImage } from '@root/helpers/constants';
 
 test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async () => {
   let iptablesCleanup: number | undefined;
+  let adminVersion: number;
 
   test.afterEach(async () => {
     if (!iptablesCleanup) {
@@ -29,6 +30,7 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
     await cli.exec('docker exec pmm-client-1 pmm-admin add mysql --username=pmm --password=pmm-pass --service-name=ps-8.0 --query-source=perfschema --host=ps-1 --port=3306 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
     await cli.exec('docker exec pmm-client-1 pmm-admin add postgresql --query-source=pgstatements --username=pmm --password=pmm-pass --service-name=pdpgsql-1 --host=pdpgsql-1 --port=5432 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
     await cli.exec('docker exec pmm-client-1 pmm-admin add mongodb --username=pmm --password=pmm-pass --service-name=mongodb-7.0  --host=psmdb-1 --port=27017 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
+    adminVersion = await getPmmAdminMinorVersion('pmm-client-1');
   });
 
   /**
@@ -110,7 +112,7 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
   });
 
   test('@PMM-T2255 pmm-agent reconnects after bilateral iptables DROP', async () => {
-    test.skip(!isClientVersionAtLeast('3.9.0'), 'pmm-agent reconnect behavior requires PMM client 3.9.0+ (PMM-15200)');
+    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
     test.setTimeout(180_000);
     const client = 'pmm-client-1';
 

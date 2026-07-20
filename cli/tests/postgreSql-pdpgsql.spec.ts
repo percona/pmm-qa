@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
-import { isClientVersionAtLeast } from '@helpers/client-version';
-import { removePGService } from '@helpers/pmm-admin';
+import { getPmmAdminMinorVersion, removePGService } from '@helpers/pmm-admin';
 
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
@@ -9,6 +8,7 @@ const ipPort = '127.0.0.1:5432';
 const connectionTimeoutServiceName = 'pgsql_connection_timeout_service';
 
 let containerName: string;
+let adminVersion: number;
 
 enum PgAgent {
   PGSTATMONITOR_AGENT = 'postgresql_pgstatmonitor_agent',
@@ -34,6 +34,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^pdpgsql_pmm_\'');
     await result.outContains('pdpgsql_pmm', 'PDPGSQL docker container should exist. please run pmm-framework with --database pdpgsql');
     containerName = result.stdout.trim();
+    adminVersion = await getPmmAdminMinorVersion(containerName);
     // const output = await cli.exec(`sudo pmm-admin add postgresql --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} prerequisite ${ipPort}`);
     // await output.assertSuccess();
   });
@@ -175,7 +176,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
 
 
   test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
-    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
@@ -187,7 +188,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
   test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
-    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -200,7 +201,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
   test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent", async ({ }) => {
-    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -213,7 +214,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
   test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add", async ({ }) => {
-    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root 2>/dev/null || true'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo root handle 1: prio'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo parent 1:3 handle 30: netem delay 5500ms'`);
