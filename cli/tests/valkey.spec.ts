@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import * as cli from "@helpers/cli-helper";
+import { isClientVersionAtLeast } from "@helpers/client-version";
 import {getPmmAdminMinorVersion} from "@helpers/pmm-admin";
 
 const containerName = 'valkey-primary-1';
@@ -17,6 +18,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
   });
 
   test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
+    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add valkey --connection-timeout=5s --username=${username} --password="${password}" --service-name=${connectionTimeoutServiceName} --host=${containerName} --port=${port}`);
     await output.exitCodeEquals(0);
 
@@ -29,6 +31,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
   });
 
   test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
+    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep valkey_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -38,6 +41,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
   });
 
   test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent @connectionTimeoutPGSQL", async ({ }) => {
+    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep valkey_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -47,6 +51,7 @@ test.describe('Valeky CLI tests', { tag: '@valkey' }, async () => {
   });
 
   test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add", async ({ }) => {
+    test.skip(!isClientVersionAtLeast('3.8.1'), 'Connection timeout flag requires PMM client 3.8.1+');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add valkey --connection-timeout=5s --username=${username} --password="${password}" --service-name=${connectionTimeoutServiceName}_timeout --host=195.15.25.15 --port=${port}`);
     await output.exitCodeEquals(1)
 

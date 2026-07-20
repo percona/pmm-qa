@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
+import { isClientVersionAtLeast } from '@helpers/client-version';
 import { clientDockerImage, dockerImage } from '@root/helpers/constants';
 
 test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async () => {
@@ -109,6 +110,7 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
   });
 
   test('@PMM-T2255 pmm-agent reconnects after bilateral iptables DROP', async () => {
+    test.skip(!isClientVersionAtLeast('3.9.0'), 'pmm-agent reconnect behavior requires PMM client 3.9.0+ (PMM-15200)');
     test.setTimeout(180_000);
     const client = 'pmm-client-1';
 
