@@ -5,7 +5,7 @@ description: Entry point for PMM LLM + Playwright workflow selection
 # Workflow Mappings
 | File | Slash | Open when… |
 |---|---|---|
-| `pmmLogin.md` | `/pmmLogin` | Needs auth/session setup. |
+| `pmmLogin.md` | `/pmmLogin` | Needs PMM UI auth — Cloud Agent: `pmm-ui-login.sh`; local IDE: Basic Auth MCP. |
 | `mcpRules.md` | `/mcpRules` | Core execution strategy (READ THIS FIRST). |
 | `pomRules.md` | `/pomRules` | Needs POM creation/updates. |
 | `report.md` | `/report` | Needs handoff report or blocked exploratory task. |

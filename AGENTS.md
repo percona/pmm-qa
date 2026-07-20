@@ -34,6 +34,7 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
 | [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite) | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) |
+| [.agents/](.agents/) | Agent workflows (login, MCP rules, API index, bug reports) for Cursor / IDE automation | [.agents/README.md](.agents/README.md) · start with `/workflowIndex` or `/pmmLogin` |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipeline Map](#ci--pipeline-map) below |
 
 ## Cross-Suite Architecture
@@ -95,3 +96,13 @@ Full Release-Candidate testing is **not** driven from this repo. The orchestrato
 - **Lane 3**: `pmm3-migration-tests`, `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`rc-testing-suite.yml`](.github/workflows/rc-testing-suite.yml).
 
 **Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `rc-testing-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.
+
+---
+
+## Jira writes (agents)
+
+When posting **Jira comments** on `perconadev.atlassian.net` PMM tickets, **always** restrict visibility to the **Developers** role. Omitting `visibility` / `commentVisibility` posts publicly.
+
+- Skill reference: [.cursor/skills/pmm-manual-test/SKILL.md](.cursor/skills/pmm-manual-test/SKILL.md) and [fb-tests.md](.cursor/skills/pmm-manual-test/fb-tests.md)
+- Cloud automations (Tester): [.cursor/AUTOMATIONS.md](.cursor/AUTOMATIONS.md)
+- MCP: `jira_add_comment` → `visibility: "{\"type\":\"role\",\"value\":\"Developers\"}"`; `addCommentToJiraIssue` → `commentVisibility: {"type": "role", "value": "Developers"}`

@@ -37,6 +37,8 @@
       - "9001:9001"
 
   tasks:
+    - include_tasks: ../tasks/microvm_container_facts.yml
+
     - name: Modify the node count for group replication
       set_fact:
         nodes_count: 3

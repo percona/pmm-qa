@@ -1,0 +1,26 @@
+# Compose override for MicroVM / environments without systemd as PID 1.
+# Usage: docker compose -f docker-compose-psmdb.yml -f docker-compose-psmdb.microvm.yaml up -d
+services:
+  psmdb-server:
+    privileged: false
+    cgroup: ~
+    volumes: !override
+      - ./conf:/etc/mongod
+      - ./certs:/mongodb_certs
+      - psmdb-server-data:/data/db
+      - keytabs:/keytabs
+      - ../pmm_psmdb-pbm_setup/conf/datagen:/etc/datagen:ro
+      - ../pmm_psmdb-pbm_setup/entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ../pmm_psmdb-pbm_setup/scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+    entrypoint:
+      - bash
+      - -c
+      - |
+        cp /mongodb_certs/ca-certs.pem /etc/pki/tls/certs/
+        chown -R mongod:mongod /keytabs
+        exec bash /entrypoint-no-systemd.sh run
+    healthcheck:
+      test: 'test $$(mongosh --quiet --eval "try { rs.initiate().ok } catch (_) {} rs.status().ok") -eq 1'
+      interval: 5s
+      start_period: 30s
+      retries: 12

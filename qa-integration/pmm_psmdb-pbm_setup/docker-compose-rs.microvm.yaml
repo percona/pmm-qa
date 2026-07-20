@@ -1,0 +1,75 @@
+# Compose override for MicroVM / environments without systemd as PID 1.
+# Usage: docker compose -f docker-compose-rs.yaml -f docker-compose-rs.microvm.yaml up -d
+services:
+  rs101:
+    privileged: false
+    cgroup: ~
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
+      - ./conf/datagen:/etc/datagen:ro
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+    entrypoint: bash /entrypoint-no-systemd.sh run
+
+  rs102:
+    privileged: false
+    cgroup: ~
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+    entrypoint: bash /entrypoint-no-systemd.sh run
+
+  rs103:
+    privileged: false
+    cgroup: ~
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+    entrypoint: bash /entrypoint-no-systemd.sh run
+
+  rs201:
+    privileged: false
+    cgroup: ~
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+    entrypoint: bash /entrypoint-no-systemd.sh run
+
+  rs202:
+    privileged: false
+    cgroup: ~
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+    entrypoint: bash /entrypoint-no-systemd.sh run
+
+  rs203:
+    privileged: false
+    cgroup: ~
+    volumes: !override
+      - ./conf/pbm:/etc/pbm
+      - ${MONGOD_RS_CONFIG_DIR:-./conf/mongod-rs}:/etc/mongod
+      - /tmp/backup_data:/tmp/backup_data:rw
+      - keytabs:/keytabs
+      - ./entrypoint-no-systemd.sh:/entrypoint-no-systemd.sh:ro
+      - ./scripts/systemctl-shim.sh:/usr/local/bin/systemctl:ro
+    entrypoint: bash /entrypoint-no-systemd.sh run

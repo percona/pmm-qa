@@ -1,0 +1,9 @@
+---
+# Start/stop/restart PostgreSQL inside QA containers (systemd vs MicroVM).
+- name: Start PostgreSQL (systemd)
+  shell: docker exec -u root {{ target_container }} systemctl start postgresql
+  when: not (pmm_qa_no_systemd | bool)
+
+- name: Start PostgreSQL (MicroVM)
+  shell: docker exec -u root {{ target_container }} /etc/init.d/postgresql start
+  when: pmm_qa_no_systemd | bool

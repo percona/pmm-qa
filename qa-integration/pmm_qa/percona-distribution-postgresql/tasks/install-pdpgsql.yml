@@ -5,11 +5,10 @@
       --restart=always \
       --network {{ network_name }} \
       -e POSTGRES_PASSWORD={{ root_password }} \
-      --privileged --cgroupns=host \
-      -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-      -v /var/lib/containerd \
+      {{ pmm_qa_container_privileged | default('--privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd') }} \
       -p {{ pdpgsql_port + (item - 1) }}:5432 \
-      antmelekhin/docker-systemd:ubuntu-24.04
+      {{ pmm_qa_base_image | default('antmelekhin/docker-systemd:ubuntu-24.04') }} \
+      {{ pmm_qa_container_cmd | default('') }}
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
@@ -60,8 +59,9 @@
   when: pgsm_branch | length > 0
 
 - name: Start Percona distribution for Postgresql
-  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl start postgresql
-  become: true
+  include_tasks: ../tasks/postgresql_start.yml
+  vars:
+    target_container: "{{ container_prefix }}{{ item }}"
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Wait 5 seconds for Percona Distribution for postgresql to start

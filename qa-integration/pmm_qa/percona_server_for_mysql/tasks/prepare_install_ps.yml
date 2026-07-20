@@ -3,7 +3,19 @@
   vars:
     port_start: 3306
 
-- name: Prepare Container for Percona Server for MySQL 8.0+
+- name: Prepare Container for Percona Server for MySQL 8.0+ (MicroVM)
+  shell: |
+    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+      --network="pmm-qa" \
+      -v ./ssl:/ssl \
+      -p {{ docker_port|int + item - 1 }}:3306 \
+      ubuntu:24.04 tail -f /dev/null
+  when:
+    - ps_version | replace('_', '') | int >= 80
+    - pmm_qa_no_systemd | bool
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare Container for Percona Server for MySQL 8.0+ (systemd)
   shell: |
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
       --network="pmm-qa" \
@@ -12,10 +24,23 @@
       -v ./ssl:/ssl \
       -p {{ docker_port|int + item - 1 }}:3306 \
       antmelekhin/docker-systemd:ubuntu-24.04
-  when: ps_version | replace('_', '') | int >= 80
+  when:
+    - ps_version | replace('_', '') | int >= 80
+    - not (pmm_qa_no_systemd | bool)
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-- name: Prepare Container for Percona Server for MySQL 5.7
+- name: Prepare Container for Percona Server for MySQL 5.7 (MicroVM)
+  shell: |
+    docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
+      --network="pmm-qa" \
+      -v ./ssl:/ssl \
+      ubuntu:22.04 tail -f /dev/null
+  when:
+    - ps_version | replace('_', '') | int < 80
+    - pmm_qa_no_systemd | bool
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare Container for Percona Server for MySQL 5.7 (systemd)
   shell: |
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
       --network="pmm-qa" \
@@ -23,7 +48,9 @@
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
       antmelekhin/docker-systemd:ubuntu-22.04
-  when: ps_version | replace('_', '') | int < 80
+  when:
+    - ps_version | replace('_', '') | int < 80
+    - not (pmm_qa_no_systemd | bool)
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Install dependencies
@@ -49,19 +76,34 @@
       percona-server-rocksdb{{ '-5.7' if ps_version | replace('_', '') == '57' else '' }} \
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-- name: Start Percona Server for MySQL
+- name: Start Percona Server for MySQL (systemd)
   shell: |
-    docker exec {{ container_prefix }}{{ item }} systemctl enable mysql 
+    docker exec {{ container_prefix }}{{ item }} systemctl enable mysql
     docker exec {{ container_prefix }}{{ item }} systemctl start mysql
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: not (pmm_qa_no_systemd | bool)
+
+- name: Start Percona Server for MySQL (MicroVM)
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} bash -c 'install -d -o mysql -g mysql /var/run/mysqld && mysqld --user=mysql --daemonize'
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: pmm_qa_no_systemd | bool
 
 - name: Copy config file to docker container
   shell: docker cp {{ data_dir }}/node{{ item }}/my.cnf {{ container_prefix }}{{ item }}:/etc/mysql/my.cnf
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-- name: Restart Percona Server for MySQL
+- name: Restart Percona Server for MySQL (systemd)
   shell: docker exec {{ container_prefix }}{{ item }} systemctl restart mysql
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: not (pmm_qa_no_systemd | bool)
+
+- name: Restart Percona Server for MySQL (MicroVM)
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} bash -c 'mysqladmin -uroot shutdown 2>/dev/null || pkill -x mysqld || true'
+    docker exec {{ container_prefix }}{{ item }} bash -c 'install -d -o mysql -g mysql /var/run/mysqld && mysqld --user=mysql --daemonize'
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: pmm_qa_no_systemd | bool
 
 - name: Wait 5 seconds for MySQL to start
   pause:

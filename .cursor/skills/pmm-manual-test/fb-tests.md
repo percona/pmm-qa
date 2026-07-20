@@ -110,6 +110,31 @@ Save screenshots to a temp path the user can find (e.g. workspace root or `%TEMP
 
 ## Update Jira
 
+### Comment visibility (mandatory)
+
+**Every Jira comment** on `perconadev.atlassian.net` PMM tickets MUST be restricted to the **Developers** role. Omitting visibility posts a **public** comment (visible to reporters/customers) — never do that for QA notes, triage, or test results.
+
+**Always** pass visibility when calling a comment tool:
+
+| MCP server | Tool | Required parameter |
+|------------|------|--------------------|
+| `user-mcp-atlassian` | `jira_add_comment` | `visibility: "{\"type\":\"role\",\"value\":\"Developers\"}"` |
+| `plugin-atlassian-atlassian` | `addCommentToJiraIssue` | `commentVisibility: {"type": "role", "value": "Developers"}` |
+
+Example (`user-mcp-atlassian`):
+
+```json
+jira_add_comment(
+  issue_key: "PMM-14915",
+  body: "*QA note (dev)* — ...",
+  visibility: "{\"type\":\"role\",\"value\":\"Developers\"}"
+)
+```
+
+If the MCP tool does not accept a visibility parameter, **do not post** — show the draft to the user and ask them to paste it with **Restrict to → Developers**.
+
+`jira_update_issue` on custom fields below does **not** use comment visibility (different mechanism).
+
 ### Custom fields
 
 | Field | ID | Use |

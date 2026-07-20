@@ -92,6 +92,19 @@ Then `git fetch` / `git pull --ff-only` in each repo that exists.
 
 Ask if missing. Proceed once you have the key (e.g. `PMM-14915`).
 
+## Jira writes — comment visibility (mandatory)
+
+Any time you post a **Jira comment** (QA results, triage notes, blockers), restrict it to the **Developers** role on `perconadev.atlassian.net`. **Never** call `jira_add_comment` or `addCommentToJiraIssue` without visibility — the default is public.
+
+| MCP | Tool | Pass |
+|-----|------|------|
+| `user-mcp-atlassian` | `jira_add_comment` | `visibility: "{\"type\":\"role\",\"value\":\"Developers\"}"` |
+| `plugin-atlassian-atlassian` | `addCommentToJiraIssue` | `commentVisibility: {"type": "role", "value": "Developers"}` |
+
+Full examples: [fb-tests.md](fb-tests.md) § Comment visibility. If visibility cannot be set programmatically, stop and ask the user to post with **Restrict to → Developers**.
+
+Custom-field updates (`jira_update_issue` on `customfield_10083` / `customfield_10492`) are separate — they do not use comment visibility.
+
 ## Step 2: Read Jira ticket
 
 Use **Atlassian MCP** (`jira_get_issue`, `jira_get_issue_development_info`):
@@ -209,6 +222,43 @@ FB test failures may inform this choice (e.g. CLI integration failure on a DB ty
 Leave `CLIENTS` empty for server-only tests (UI, API, settings, network-tab checks).
 
 See [jenkins-jobs.md](jenkins-jobs.md) for all parameters. Groovy source: `$ReposRoot/jenkins-pipelines/pmm/v3/`.
+
+### MicroVM local provisioning (instead of ad-hoc docker commands)
+
+On Cursor MicroVM, **do not freestyle** `docker run` / `curl` loops. Use the scripted path in **pmm-qa**:
+
+**1. Server only** (same as Jenkins `pmm3-aws-staging-start` server half):
+
+```bash
+export DOCKER_VERSION=perconalab/pmm-server-fb:PR-XXXX-<sha>
+export WATCHTOWER_VERSION=perconalab/pmm-watchtower-fb:PR-XXXX-<sha>   # optional
+export CLIENT_VERSION='https://s3.../pmm-client-PR-XXXX-<sha>.tar.gz' # for next step
+export ADMIN_PASSWORD='pmm3admin!'
+
+/agent/repos/pmm-qa/qa-integration/scripts/provision-pmm.sh --cleanup --fresh-volume
+# or: --skip-watchtower for pinned FB images
+```
+
+`readyz` success = **HTTP 200** and body **`{}`** at `https://127.0.0.1/v1/server/readyz` (not `grep ok`).
+
+**2. Databases/clients** (ticket-specific — run after server is up):
+
+```bash
+cd qa-integration/pmm_qa && source virtenv/bin/activate
+export PMM_QA_NO_SYSTEMD=1
+export ADMIN_PASSWORD='pmm3admin!'
+export CLIENT_VERSION='...'
+
+python pmm-framework.py \
+  --pmm-server-password "$ADMIN_PASSWORD" \
+  --client-version "$CLIENT_VERSION" \
+  --database <ticket-specific> \
+  --verbose
+```
+
+Map `<ticket-specific>` from ticket scope + `scripts/database_options.py` (e.g. PMM-14576 backup → `psmdb,SETUP_TYPE=pss`).
+
+**Reset:** `qa-integration/scripts/cleanup-pmm-microvm.sh` or `provision-pmm.sh --cleanup --fresh-volume`.
 
 ## Step 8: Determine required job parameters
 
@@ -354,6 +404,8 @@ playwright-cli close
 ```
 
 Jira fields: `customfield_10492` (FB test screenshots), `customfield_10083` (How to test).
+
+If you also post a **comment** (not just custom fields), apply **Developers** visibility — see [Jira writes](#jira-writes--comment-visibility-mandatory) above.
 
 **Ask the user before writing to Jira** unless they explicitly requested the update.
 

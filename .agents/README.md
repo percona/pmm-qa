@@ -19,7 +19,7 @@
 - `/apiIndex`: A subset of pmmApi.json, has list of common APIs used across PMM
 - `/bugReport`: Use this workflow to generate a bug report out of failing tests or unexpected behavior.
 - `/mcpRules`: Defines execution rules for the LLM when using Playwright MCP.
-- `/pmmLogin`: Use this workflow to login to PMM using basic Auth headers via MCP instead of the UI.
+- `/pmmLogin`: PMM UI login — **Cloud Agent / MicroVM**: `qa-integration/scripts/pmm-ui-login.sh <TICKET>` (playwright-cli); **local IDE**: Basic Auth via Playwright MCP. Never use the Grafana login form.
 - `/pomRules`: Use this to create a new Page Object Model (POM) or update an existing POM.
 - `/report`: Rules for the LLM to generate a handoff report that summarizes actions performed and findings.
 - `/workflowIndex`: This is the entry point for LLM. It guides the agent on which workflow to pick based on your current task.

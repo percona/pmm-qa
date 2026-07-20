@@ -29,8 +29,16 @@
         state: present
       ignore_errors: yes
 
+    - name: Remove old PostgreSQL containers
+      community.docker.docker_container:
+        name: "pgsql_pmm_{{ pg_version }}_{{ item }}"
+        state: absent
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+      ignore_errors: yes
+
     - name: Remove old data folders
-      shell: 'rm -fr {{ data_dir }}'
+      shell: sudo rm -fr {{ data_dir }}
+      ignore_errors: yes
 
     - name: Create data directories
       file:
@@ -65,7 +73,7 @@
           POSTGRES_PASSWORD: "{{ root_password }}"
         volumes:
           - "{{ data_dir }}/node1/data:/var/lib/postgresql/data"
-          - "./data/postgresql-primary.conf.j2:/etc/postgresql/postgresql.conf:ro"
+          - "./data/postgresql-primary.conf:/etc/postgresql/postgresql.conf:ro"
           - "{{ data_dir }}/node1/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro"
         command: -c config_file=/etc/postgresql/postgresql.conf
         ports:
@@ -107,7 +115,7 @@
           POSTGRES_PASSWORD: "{{ root_password }}"
         volumes:
           - "{{ data_dir }}/node{{ item }}/data:/var/lib/postgresql/data"
-          - "./data/postgresql-replica.conf:/etc/postgresql/postgresql.conf:ro"
+          - "./data/postgres-replica.conf:/etc/postgresql/postgresql.conf:ro"
           - "{{ data_dir }}/node1/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro"
       loop: "{{ range(2, nodes_count | int + 1) | list }}"
 
@@ -173,7 +181,7 @@
           POSTGRES_PASSWORD: "{{ root_password }}"
         volumes:
           - "{{ data_dir }}/node{{ item }}/data:/var/lib/postgresql/data"
-          - "./data/postgresql-replica.conf.j2:/etc/postgresql/postgresql.conf:ro"
+          - "./data/postgres-replica.conf:/etc/postgresql/postgresql.conf:ro"
           - "{{ data_dir }}/node1/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro"
         ports:
           - "{{ pgsql_port + item - 1 }}:5432"

@@ -14,5 +14,5 @@
       - "9001:9001"
 
   tasks:
-    name: Setup MinIO bucket
-    include_tasks: ./setup_minio_container.yml
+    - name: Setup MinIO bucket
+      include_tasks: ./setup_minio_container.yml

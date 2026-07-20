@@ -4,13 +4,18 @@
   when: metrics_mode is not defined
 
 - name: Get PMM server address
-  shell: 'docker ps -f name=-server --format "{{ "{{" }}.Names{{ "}}" }}"'
+  shell: 'docker ps -f name=^pmm-server$ --format "{{ "{{" }}.Names{{ "}}" }}"'
   register: pmm_server_ip_output
   when: pmm_server_ip == "127.0.0.1"
 
+- name: Fallback PMM server address from any pmm-server container
+  shell: 'docker ps -f name=pmm-server --format "{{ "{{" }}.Names{{ "}}" }}" | head -1'
+  register: pmm_server_ip_fallback
+  when: pmm_server_ip == "127.0.0.1" and (pmm_server_ip_output.stdout | default('') | trim) == ''
+
 - name: Set correct pmm server address
   set_fact:
-    pmm_server_ip: "{{ pmm_server_ip_output.stdout }}"
+    pmm_server_ip: "{{ (pmm_server_ip_output.stdout | default('') | trim) or (pmm_server_ip_fallback.stdout | default('') | trim) }}"
   when: pmm_server_ip == "127.0.0.1"
 
 - set_fact:
