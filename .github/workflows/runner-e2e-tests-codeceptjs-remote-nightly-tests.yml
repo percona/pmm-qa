@@ -75,7 +75,7 @@ jobs:
       SETUP_WAIT_STEP: 'Waiting for tests execution'
       SETUP_JOB_PREFIX: 'setup / '
       EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 14 }}
-      WAIT_POLL_INTERVAL_SECONDS: 600
+      WAIT_POLL_INTERVAL_SECONDS: 30
       WAIT_TIMEOUT_SECONDS: 10800
 
     steps:
@@ -213,30 +213,41 @@ jobs:
               return (job.steps || []).find((step) => step.name === setupWaitStep);
             }
 
+            function isWaitingForTests(job) {
+              const step = findSetupWaitStep(job);
+              return step?.status === 'in_progress';
+            }
+
+            function finishedWaitingSuccessfully(job) {
+              const step = findSetupWaitStep(job);
+              return step?.status === 'completed' && step?.conclusion === 'success';
+            }
+
+            function setupJobFailed(job) {
+              return ['failure', 'cancelled'].includes(job.conclusion);
+            }
+
             while (true) {
               const jobs = await listJobs();
               const setupJobs = jobs.filter((job) => job.name.startsWith(setupPrefix) || job.name.includes(setupPrefix));
               const detailedSetupJobs = await Promise.all(setupJobs.map(getJob));
               const setupJobsWithWaitStep = detailedSetupJobs.filter(findSetupWaitStep);
-              const readySetupJobs = setupJobsWithWaitStep.filter((job) => findSetupWaitStep(job).status === 'in_progress');
-              const completedWaitStepJobs = setupJobsWithWaitStep.filter((job) => findSetupWaitStep(job).status === 'completed');
-              const completedBeforeReadyJobs = detailedSetupJobs.filter((job) => {
-                const step = findSetupWaitStep(job);
-                return job.status === 'completed' && (!step || step.status !== 'in_progress');
-              });
+              const readySetupJobs = setupJobsWithWaitStep.filter(isWaitingForTests);
+              const failedSetupJobs = detailedSetupJobs.filter(setupJobFailed);
+              const finishedEarlyJobs = setupJobsWithWaitStep.filter(finishedWaitingSuccessfully);
 
               core.info(`Setup jobs: discovered=${setupJobsWithWaitStep.length}/${expectedSetupJobs}, ready=${readySetupJobs.length}/${expectedSetupJobs}`);
               for (const job of setupJobsWithWaitStep) {
                 const step = findSetupWaitStep(job);
-                core.info(`- ${job.name}: job_status=${job.status}, step_status=${step.status}, conclusion=${job.conclusion || 'null'}`);
+                core.info(`- ${job.name}: job_status=${job.status}, step_status=${step.status}, step_conclusion=${step.conclusion || 'null'}, job_conclusion=${job.conclusion || 'null'}`);
               }
 
-              if (completedWaitStepJobs.length > 0) {
-                throw new Error(`Setup wait step completed before this test job started: ${completedWaitStepJobs.map((job) => job.name).join(', ')}`);
+              if (failedSetupJobs.length > 0) {
+                throw new Error(`Setup job(s) failed or were cancelled: ${failedSetupJobs.map((job) => `${job.name} (${job.conclusion})`).join(', ')}`);
               }
 
-              if (completedBeforeReadyJobs.length > 0) {
-                throw new Error(`Setup jobs completed before reaching an in-progress '${setupWaitStep}' step: ${completedBeforeReadyJobs.map((job) => job.name).join(', ')}`);
+              if (finishedEarlyJobs.length > 0) {
+                throw new Error(`Setup wait step completed before this test job was ready: ${finishedEarlyJobs.map((job) => job.name).join(', ')}`);
               }
 
               if (setupJobsWithWaitStep.length >= expectedSetupJobs && readySetupJobs.length >= expectedSetupJobs) {
