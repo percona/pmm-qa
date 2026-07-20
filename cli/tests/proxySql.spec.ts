@@ -126,7 +126,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
   });
 
   test("PMM-T2221 - User can use connection timeout while using pmm-admin add @connectionTimeoutPXC", async ({ }) => {
-    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add proxysql --connection-timeout=5s --username=${PXC_USER} --password=${PXC_PASSWORD} --port=6032 ${connectionTimeoutServiceName} ${dbHostPort}`);
     await output.exitCodeEquals(0);
 
@@ -138,7 +138,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
   });
 
   test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent @connectionTimeoutPXC", async ({ }) => {
-    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep proxysql_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -151,7 +151,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
   });
 
   test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent @connectionTimeoutPXC", async ({ }) => {
-    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep proxysql_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -164,7 +164,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, async (
   });
 
   test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add @connectionTimeoutPXC", async ({ }) => {
-    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
+    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add proxysql --connection-timeout=5s --username=${PXC_USER} --password=${PXC_PASSWORD} --port=6032 ${connectionTimeoutServiceName}_timeout 195.15.25.15:6032`);
     await output.exitCodeEquals(1)
 

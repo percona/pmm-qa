@@ -1,13 +1,11 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
-import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { clientDockerImage, dockerImage } from '@helpers/constants';
 
 const PMM_SERVER_IMAGE = dockerImage;
 const PMM_CLIENT_IMAGE = clientDockerImage;
 const clientPassword = 'gfaks4d8OH';
 const services = ['mysql', 'mongodb', 'postgresql', 'proxysql', 'external', 'haproxy'];
-let adminVersion: number;
 
 test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@service-removal' }, async () => {
   test.beforeAll(async () => {
@@ -29,7 +27,6 @@ test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@
       await cli.exec(`docker exec pmm-client-remove pmm-admin add external --listen-port=1 --skip-connection-check --service-name=external${i}`);
       await cli.exec(`docker exec pmm-client-remove pmm-admin add haproxy --listen-port=1 --skip-connection-check haproxy${i}`);
     }
-    adminVersion = await getPmmAdminMinorVersion('pmm-client-remove');
   });
 
   test.afterAll(async () => {
@@ -37,13 +34,18 @@ test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@
   });
 
   test('PMM-T1286, PMM-T1287, PMM-T1288, PMM-T1308 - Verify service removal without specifying service name/service id', async ({}) => {
-    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
     for (let i = 0; i < services.length; i++) {
       const output = await cli.exec(`docker exec pmm-client-remove pmm-admin remove ${services[i]}`);
       await output.exitCodeEquals(1);
-      await output.outContains(
+      const normalizedOutput = output.stdout.replace(/ +(?= )/g, '');
+      const serviceNotFoundMessages = [
         'could not find a service associated with the local node; please provide "Service ID" or "Service name"',
-      );
+        'We could not find a service associated with the local node. Please provide "Service ID" or "Service name".',
+      ];
+      expect(
+        serviceNotFoundMessages.some((message) => normalizedOutput.includes(message)),
+        `Stdout does not contain a known service-not-found message! Output: "${output.stdout}"`,
+      ).toBeTruthy();
     }
 
     // remove services - only one per each database type left
