@@ -176,7 +176,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
 
 
   test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
-    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
+    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
@@ -188,7 +188,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
   test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
-    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
+    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -201,7 +201,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
   test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent", async ({ }) => {
-    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
+    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
     const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
     await serviceId.exitCodeEquals(0);
@@ -214,7 +214,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
   });
 
   test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add", async ({ }) => {
-    test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
+    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root 2>/dev/null || true'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo root handle 1: prio'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo parent 1:3 handle 30: netem delay 5500ms'`);
