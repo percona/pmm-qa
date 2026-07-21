@@ -137,13 +137,23 @@ fi
 
 ## Check if we are upgrading or attempting fresh install.
 if [[ -z "$upgrade" ]]; then
-    if [[ "$use_metrics_mode" == "yes" ]]; then
-        echo "setup pmm-agent"
-        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password}
-    else
-        echo "setup pmm-agent"
-        pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password}
-    fi
+    retry_pmm_agent_setup() {
+        local n=3
+        local i
+        for i in $(seq 1 $n); do
+            if [[ "$use_metrics_mode" == "yes" ]]; then
+                echo "setup pmm-agent (attempt $i/$n)"
+                pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --metrics-mode=${metrics_mode} --server-username=admin --server-password=${admin_password} && return 0
+            else
+                echo "setup pmm-agent (attempt $i/$n)"
+                pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --server-address=${pmm_server_ip}:${port} --server-insecure-tls $DEBUG_FLAG --server-username=admin --server-password=${admin_password} && return 0
+            fi
+            echo "pmm-agent setup failed (attempt $i/$n); retrying in 30s..."
+            sleep 30
+        done
+        return 1
+    }
+    retry_pmm_agent_setup
     sleep 10
     pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml > pmm-agent.log 2>&1 &
     sleep 10
