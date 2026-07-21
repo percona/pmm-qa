@@ -1,14 +1,12 @@
 const assert = require('assert');
 const { locateOption } = require('../../helper/locatorHelper');
 
-const {
-  I, alertRulesPage, ruleTemplatesPage, rulesAPI, templatesAPI, alertsPage, alertsAPI,
-} = inject();
+const { I, alertRulesPage, ruleTemplatesPage, rulesAPI, templatesAPI, alertsPage, alertsAPI } = inject();
 
 module.exports = {
   tabNames: {
-    firedAlerts: 'Fired alerts',
-    ruleTemplates: 'Alert templates',
+    firedAlerts: 'Status',
+    ruleTemplates: 'Templates',
     alertRules: 'Alert rules',
     contactPoints: 'Contact points',
     notificationPolicies: 'Notification policies',
@@ -28,7 +26,7 @@ module.exports = {
     settingsLink: '$settings-link',
     selectDropdownOption: (option) => locateOption(option),
     inputField: (id) => `input[id='${id}']`,
-    modalDialog: 'div[role=\'dialog\']',
+    modalDialog: "div[role='dialog']",
   },
   buttons: {
     firstPageButton: '$first-page-button',
@@ -54,13 +52,12 @@ module.exports = {
     I.switchTo();
     I.waitForVisible(this.elements.tab(tabName), 30);
     I.click(this.elements.tab(tabName));
-    I.switchTo('#grafana-iframe');
+    if (!tabUrl.includes('pmm-ui/')) {
+      I.switchTo('#grafana-iframe');
+    }
+
     I.waitForVisible(tabElement, 10);
     I.seeInCurrentUrl(tabUrl);
-    //
-    // const className = await I.grabAttributeFrom(this.elements.tab(tabName), 'class');
-    //
-    // assert.ok(className.endsWith('activeTabStyle'), `Tab ${tabName} should be active`);
   },
 
   getCreateEntitiesAndPageUrl(page) {

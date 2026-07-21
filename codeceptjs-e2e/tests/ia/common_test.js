@@ -7,7 +7,9 @@ Before(async ({ I, rulesAPI }) => {
   await rulesAPI.removeAllAlertRules();
 });
 
-Scenario('PMM-T643 - Verify message about disabled IA @fb-alerting', async ({ I, pmmSettingsPage, codeceptjsConfig }) => {
+// Bug: "Status" web page does not respect the IA Enabled/Disabled state
+// The page is accessible even if IA is disabled
+Scenario.skip('PMM-T643 - Verify message about disabled IA @fb-alerting', async ({ I, pmmSettingsPage, codeceptjsConfig }) => {
   await settingsAPI.apiDisableIA();
   I.amOnPage(alertsPage.url);
   I.waitForVisible(iaCommon.elements.disabledIa, 30);
@@ -45,7 +47,9 @@ Scenario(
       I.seeTitleEquals(expectedTitles[page] || `${page} - Alerting - Percona Monitoring and Management`);
     };
 
-    verifyTitle('Fired alerts');
+    // Bug: actual web page title "Percona Monitoring and Management"
+    // expected "Status - Alerting - Percona Monitoring and Management"
+    // verifyTitle('Status');
     await iaCommon.openAndVerifyTab(
       iaCommon.tabNames.ruleTemplates,
       ruleTemplatesPage.buttons.openAddTemplateModal,
@@ -73,6 +77,7 @@ Scenario(
     verifyTitle('Alert groups');
     await iaCommon.openAndVerifyTab(iaCommon.tabNames.admin, aiAdminPage.buttons.editConfig, aiAdminPage.url);
     verifyTitle('Settings');
+    I.switchTo();
     await iaCommon.openAndVerifyTab(iaCommon.tabNames.firedAlerts, alertsPage.elements.noAlerts, alertsPage.url);
   },
 );

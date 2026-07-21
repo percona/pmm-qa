@@ -7,7 +7,7 @@ module.exports = {
   elements: {
   },
   buttons: {
-    newSilence: locate('a').withText('Create silence'),
+    newSilence: locate('a').withText('Add Silence'),
   },
   messages: {
   },
