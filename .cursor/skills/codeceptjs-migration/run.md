@@ -104,11 +104,12 @@ Only after `FINAL_REVIEW_PASS`, the runner:
 
 1. retires the selected CodeceptJS source according to repository discovery rules;
 2. updates workflow coverage per `branch-workflow.md`;
-3. runs `graphify . --update` from `e2e_tests/` to refresh `e2e_tests/graphify-out/` only, then deletes generated graph files except `graph.json` and `manifest.json`;
-4. checks that only migration-related files are included;
-5. commits and pushes the migration branch;
-6. opens a PR targeting `main`; and
-7. updates the tracker row to `done` with the PR link.
+3. checks that only migration-related code, source-retirement, and workflow files are included;
+4. commits and pushes the migration branch;
+5. opens a PR targeting `main`;
+6. merges the frozen migration branch into control;
+7. runs `graphify . --update` from `e2e_tests/` on control, then deletes generated graph files except `graph.json` and `manifest.json`; and
+8. updates the tracker row to `done` with the PR link, then commits and pushes the tracker and target graph artifacts on control.
 
 For this workflow, `done` means the PR was opened successfully.
 

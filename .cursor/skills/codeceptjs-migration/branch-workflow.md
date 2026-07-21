@@ -17,7 +17,7 @@ git fetch origin main
 git switch -c migrate-<category>-<test-name> origin/main
 ```
 
-A separate control worktree may be used for tracker updates when the tracker lives on a dedicated control branch. If no separate control branch exists, update the tracker in the same migration branch.
+A separate control worktree owns tracker and target-graph maintenance when the tracker lives on a dedicated control branch. After the migration PR is opened, merge the frozen migration branch into control, then update `e2e_tests/graphify-out/` and the tracker there. The control branch may be ahead of `main` while the migration PR is open. If no separate control branch exists, update the tracker in the same migration branch.
 
 ## Before publication
 
@@ -58,7 +58,7 @@ Skipped CodeceptJS scenarios (`Scenario.skip`, `xScenario`) do not block removin
 
 ## Commit and PR
 
-Inspect the final diff and include only migration-related changes.
+Inspect the final diff and include only migration-related code, source-retirement, and workflow changes; do not include target graph artifacts.
 
 ```bash
 git status --short
@@ -84,7 +84,6 @@ The PR body must include:
 - actual target path;
 - migrated scenarios;
 - source and target files queried from existing graphs;
-- `e2e_tests/graphify-out/` updated with `graphify . --update` when changed;
 - setup used;
 - static validation result;
 - MCP locator verification result;
@@ -93,12 +92,11 @@ The PR body must include:
 
 ## Tracker completion
 
-After the PR exists:
+After the PR exists, on the control branch:
 
-1. update the row to `done`;
-2. record the PR URL or number;
-3. record actual target and setup;
-4. record review, MCP, and test results;
-5. push the tracker change.
+1. merge the frozen migration branch;
+2. update `e2e_tests/graphify-out/` from the merged tree;
+3. update the row to `done` and record the PR URL or number, actual target and setup, review, MCP, test, and graph-update results;
+4. commit and push only the tracker and target graph artifacts after the merge commit.
 
-If the PR opened but the tracker update or push failed, report publication as incomplete and do not claim completion.
+If the PR opened but the control-branch graph or tracker update failed, report publication as incomplete and do not claim completion.

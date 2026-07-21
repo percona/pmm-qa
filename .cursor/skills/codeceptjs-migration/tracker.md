@@ -20,6 +20,8 @@ Full procedure: `run.md`. This tracker only owns row selection and the two provi
 Everything else - best-fit target selection, source rename, branch/PR mechanics - is owned by
 `context.md` section 2a/2b and `branch-workflow.md`; see those instead of this file.
 
+After a migration PR is opened, merge its frozen branch into control before updating the row. Refresh the target graph and commit it with the tracker update on control; record the PR and graph-update result in Notes.
+
 ## Status legend
 
 `pending` -> not started or blocked before work can proceed | `in-progress` -> currently being migrated or waiting on a recorded blocker | `done` -> PR opened for review.

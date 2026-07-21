@@ -83,7 +83,7 @@ Inline in the test only when no suitable existing abstraction exists. Creating a
 
 ## Graphify rule
 
-Use the **existing** graphs in `codeceptjs-e2e/graphify-out/graph.json` and `e2e_tests/graphify-out/graph.json` to discover linked files. Do not run graphify or regenerate graphs during migration. Graphify is a discovery aid only. Open and inspect every behaviorally relevant file. Actual repository code is authoritative when it conflicts with the graph. During publish, after `FINAL_REVIEW_PASS`, the runner updates only `e2e_tests/graphify-out/` with `graphify . --update` from `e2e_tests/`. See `graphify.md`.
+Use the **existing** graphs in `codeceptjs-e2e/graphify-out/graph.json` and `e2e_tests/graphify-out/graph.json` to discover linked files. Do not run graphify or regenerate graphs during migration. Graphify is a discovery aid only. Open and inspect every behaviorally relevant file. Actual repository code is authoritative when it conflicts with the graph. After the migration PR is open, merge its frozen branch into control; the runner then updates only `e2e_tests/graphify-out/` with `graphify . --update` from `e2e_tests/` on control. See `graphify.md`.
 
 ## Agent responsibilities
 

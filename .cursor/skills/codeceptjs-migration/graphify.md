@@ -6,7 +6,7 @@ Use the **existing** Graphify artifacts for discovery during migration. Do not g
 
 ```text
 codeceptjs-e2e/graphify-out/graph.json   # source side - read only; never regenerate during migration
-e2e_tests/graphify-out/graph.json        # target side - read during migration; update only after publish
+e2e_tests/graphify-out/graph.json        # target side - read during migration; update on control after publish
 ```
 
 ## Do not generate graphs during migration
@@ -16,13 +16,13 @@ During writer, reviewer, and runner work (through `FINAL_REVIEW_PASS`):
 - do **not** run `graphify`, `/graphify`, or any graph build/extract command;
 - do **not** regenerate `graph.json`, `manifest.json`, or other `graphify-out/` artifacts;
 - do **not** update `codeceptjs-e2e/graphify-out/` as part of the migration workflow;
-- do **not** update `e2e_tests/graphify-out/` until publish (after `FINAL_REVIEW_PASS`, before commit).
+- do **not** update `e2e_tests/graphify-out/` until the migration PR is open and its frozen branch has been merged into control.
 
 Query and inspect the existing JSON graphs only. When a node or edge is missing, follow actual imports and code; record a graph discrepancy. Never block migration waiting for a fresh graph build.
 
-## Post-migration target graph update (runner only)
+## Post-migration target graph update (control branch)
 
-Only after `FINAL_REVIEW_PASS` and before commit, the runner performs one incremental update of the **target** graph:
+Only after `FINAL_REVIEW_PASS`, the migration PR is open, and the frozen migration branch is merged into control, the runner performs one incremental update of the **target** graph there:
 
 ```bash
 cd e2e_tests
@@ -33,7 +33,7 @@ find graphify-out -type f ! -name graph.json ! -name manifest.json -delete
 - Run from `e2e_tests/` so output stays in `e2e_tests/graphify-out/`.
 - Use `--update` only (incremental re-extract of new/changed files).
 - Keep only `graph.json` and `manifest.json`; delete generated reports, HTML, and `.graphify_*` sidecars after the update.
-- Include updated `e2e_tests/graphify-out/` files in the same migration PR when they change.
+- Commit updated `e2e_tests/graphify-out/` files with the tracker update on control; do not amend the migration PR with graph artifacts.
 - Do not regenerate the CodeceptJS source graph in this workflow.
 
 ## Source discovery
