@@ -54,7 +54,7 @@ module.exports = {
   },
 
   openRowActions(alertName) {
-    I.waitForVisible(this.buttons.rowActions(alertName, 10));
+    I.waitForVisible(this.buttons.rowActions(alertName), 10);
     I.click(this.buttons.rowActions(alertName));
     I.waitForVisible(this.buttons.viewAlertRule);
   },

@@ -60,7 +60,9 @@ AfterSuite(async ({ rulesAPI, I }) => {
   await rulesAPI.removeAllAlertRules();
 });
 
-Scenario('PMM-T1482 PMM-T1494 + PMM-T1495 - Verify fired alert in Pager Duty and Webhook @ia', async ({ I, alertsPage, rulesAPI, alertsAPI }) => {
+Scenario('PMM-T1482 PMM-T1494 + PMM-T1495 - Verify fired alert in Pager Duty and Webhook @ia', async ({
+  I, alertsPage, rulesAPI, alertsAPI,
+}) => {
   await alertsAPI.waitForAlerts(24, 1);
   await I.amOnPage(alertsPage.url);
   alertsPage.columnHeaders.forEach((header) => {
@@ -83,6 +85,7 @@ Scenario('PMM-T1482 PMM-T1494 + PMM-T1495 - Verify fired alert in Pager Duty and
   // Webhook notification check
   I.waitForFile(file, 180);
   I.seeFile(file);
+  I.seeInThisFile(ruleName);
 
   // Pager Duty notification check
   // await alertsAPI.verifyAlertInPagerDuty(alertUID);
