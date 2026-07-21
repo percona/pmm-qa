@@ -44,11 +44,11 @@ Before committing, verify that the retired source no longer matches CodeceptJS t
 
 ## Workflow coverage
 
-When migrating a scenario into an existing Playwright test file, update the migrated test title to use that file's existing execution tag (for example, replace `@menu` with `@new-navigation`). Reuse the existing Playwright job when its setup satisfies the scenario; do not create a new job or retain the source tag solely for parity.
+When appending a scenario to an existing Playwright test file, update its title to use that file's execution tag (for example, replace `@menu` with `@new-navigation`). Reuse the existing Playwright job when its `setup_services` is sufficient; do not create a new job or retain the source tag solely for parity.
 
 If the migrated scenarios keep a tag used by an existing CodeceptJS workflow, add or update the matching Playwright runner job in the same workflow. Preserve the existing tag bucket and `setup_services` when the intent is to keep the workflow equivalent during partial migration.
 
-Append migrated tags to the Playwright job as coverage moves. Remove the old CodeceptJS job only when no active CodeceptJS scenarios remain for that job's tag expression:
+When no active CodeceptJS scenario uses a migrated tag, remove that tag from the CodeceptJS grep expression. Keep a combined CodeceptJS job when its other tag terms still have active scenarios:
 
 ```bash
 rg -n "Scenario\(|Data\(.*\)\.Scenario\(" codeceptjs-e2e/tests -g "*_test.js" | rg "<tag-a>|<tag-b>"
