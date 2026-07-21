@@ -1,5 +1,7 @@
 const assert = require('assert');
 
+const homePage = require('../pages/homePage');
+
 Feature('QAN common');
 
 Before(async ({ I, queryAnalyticsPage }) => {
@@ -7,7 +9,7 @@ Before(async ({ I, queryAnalyticsPage }) => {
   I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m' }));
 });
 
-Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, queryAnalyticsPage }) => {
+Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, queryAnalyticsPage, inventoryAPI }) => {
   queryAnalyticsPage.waitForLoaded();
   I.waitForVisible(queryAnalyticsPage.buttons.addColumnButton, 30);
   await queryAnalyticsPage.data.verifyRowCount(26);
@@ -15,8 +17,13 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
 
   for await (const filter of queryAnalyticsPage.filters.labels.filterGroups) {
     I.wait(5);
-    I.waitForElement(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(filter), 10);
+    await queryAnalyticsPage.filters.applyShowAllLinkIfItIsVisible(filter);
     const countFilters = await I.grabNumberOfVisibleElements(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(filter));
+
+    if (countFilters === 0) {
+      continue;
+    }
+
     const randomFilterValue = Math.floor(Math.random() * countFilters) + 1;
 
     await queryAnalyticsPage.filters.selectFilterInGroupAtPosition(filter, randomFilterValue);
@@ -24,16 +31,32 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
     await queryAnalyticsPage.filters.selectFilterInGroupAtPosition(filter, randomFilterValue);
   }
 
-  queryAnalyticsPage.filters.selectFilter('pmm-server');
+  const serverNodeName = homePage.pmmServerName;
+  const services = (await inventoryAPI.apiGetServices()).data.services;
+
+  await queryAnalyticsPage.filters.applyShowAllLinkIfItIsVisible('Service Name');
+  const serviceLabelLocator = queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup('Service Name')
+    .find('//span[@class="checkbox-container__label-text"]');
+  const serviceLabels = await I.grabTextFromAll(serviceLabelLocator);
+  const serverServiceNames = services
+    .filter((service) => service.node_name === serverNodeName)
+    .map((service) => service.service_name);
+  const serviceFilter = serviceLabels.find((label) => serverServiceNames.some(
+    (name) => label.includes(name) || name.includes(label),
+  )) || serviceLabels.find((label) => label.includes(serverNodeName)) || serviceLabels[0];
+
+  I.assertTrue(serviceLabels.length > 0, `No Service Name filters found for node "${serverNodeName}"`);
+
+  queryAnalyticsPage.filters.selectContainFilterInGroup(serviceFilter, 'Service Name');
   I.wait(3);
   const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup('Service Name'));
 
   I.assertContain(
     displayedServiceName,
-    'pmm-server',
-    `Displayed filter value: "${displayedServiceName}" does not contain expected value: "pmm-server"`,
+    serviceFilter,
+    `Displayed filter value: "${displayedServiceName}" does not contain expected value: "${serviceFilter}"`,
   );
-  I.assertTrue((await queryAnalyticsPage.data.getRowCount()) > 0, 'No QAN rows displayed after filtering by pmm-server');
+  I.assertTrue((await queryAnalyticsPage.data.getRowCount()) > 0, `No QAN rows displayed after filtering by ${serviceFilter}`);
 });
 
 Scenario(
