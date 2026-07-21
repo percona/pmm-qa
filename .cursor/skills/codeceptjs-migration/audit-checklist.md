@@ -9,7 +9,7 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Every active executable scenario is migrated.
 - [ ] For `already-covered`, every active executable scenario is mapped to existing Playwright coverage.
 - [ ] Commented-out scenarios are excluded.
-- [ ] Scenario titles and tags are preserved.
+- [ ] Scenario titles are preserved; execution tags follow the Workflow coverage policy.
 - [ ] Data-driven rows and generated titles are preserved.
 
 ### Source fidelity
@@ -94,6 +94,7 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] No required source dependency was omitted.
 - [ ] No target registration is missing.
 - [ ] Workflow coverage is preserved or updated for the migrated tags.
+- [ ] Merged scenarios use the destination Playwright test's existing tag and reuse its runner job when its setup is sufficient; no source tag or duplicate job remains solely for parity.
 - [ ] Old CodeceptJS workflow jobs are kept while active CodeceptJS scenarios still match their tag expression.
 - [ ] No debug or temporary code remains.
 - [ ] No unrelated files or behavior are included.
