@@ -70,7 +70,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(4);
+    await dashboardPage.waitForGraphsToHaveData(5);
 
     I.amOnPage(I.buildUrlWithParams(dashboardPage.postgresqlInstanceSummaryDashboard.url, dashboardTimeRange));
     dashboardPage.waitForDashboardOpened();
@@ -92,7 +92,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     dashboardPage.waitForDashboardOpened();
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+    await dashboardPage.waitForGraphsToHaveData(3);
 
     await I.unAuthorize();
 
