@@ -54,6 +54,9 @@ on:
       sha:
         required: false
         type: string
+      job_timeout_minutes:
+        required: false
+        type: number
 
     secrets:
       LAUNCHABLE_TOKEN:
@@ -71,6 +74,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
 #      setup_services: '--database psmdb,SETUP_TYPE=pss'
       setup_services: '--database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra'
       tags_for_tests: '@bm-mongo'
@@ -86,6 +90,7 @@ jobs:
 #      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
 #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
 #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
 ###      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
 #      setup_services: '--mongo-replica-for-backup --setup-bm-mysql'
 #      tags_for_tests: '@bm-mysql'
@@ -101,6 +106,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss'
       #      tags_for_tests: '@bm-common|@bm-locations' -- include bm-common once setup for mysql fixed
@@ -117,6 +123,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps,QUERY_SOURCE=slowlog'
       tags_for_tests: '@exporters'
@@ -132,6 +139,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb'
       tags_for_tests: '@mongodb-exporter'
@@ -147,6 +155,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database external --database haproxy'
       tags_for_tests: '@fb-instances'
@@ -162,6 +171,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database mysql'
       tags_for_tests: '@fb-alerting|@fb-settings'
@@ -190,6 +200,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database psmdb --database pdpgsql'
       tags_for_tests: '@user-password'
@@ -205,6 +216,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database pdpgsql'
       tags_for_tests: '@pgsm-pmm-integration'
@@ -220,6 +232,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database pgsql'
       tags_for_tests: '@pgss-pmm-integration'
@@ -250,6 +263,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb,SETUP_TYPE=pss'
       tags_for_tests: '@pmm-psmdb-replica-integration'
@@ -264,6 +278,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database psmdb'
       tags_for_tests: '@user-password'
@@ -279,6 +294,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps'
       tags_for_tests: '@dump'
@@ -294,6 +310,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps=8.0'
       tags_for_tests: '@service-account'
@@ -309,6 +326,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database psmdb,SETUP_TYPE=psa'
       tags_for_tests: '@pmm-psmdb-arbiter-integration'
@@ -337,6 +355,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps --database pdpgsql'
       tags_for_tests: '@rbac'
@@ -352,6 +371,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps=8.0'
       tags_for_tests: '@fb-encryption'
@@ -367,6 +387,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '-h'
       tags_for_tests: '@docker-configuration'
@@ -395,6 +416,7 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       setup_services: '--database ps=8.4 --database pdpgsql --database psmdb'
       tags_for_tests: '@nomad'

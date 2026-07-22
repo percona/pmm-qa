@@ -107,12 +107,16 @@ on:
         description: "SHA (leave empty if running manually, default - 'null')"
         required: false
         type: string
+      job_timeout_minutes:
+        description: 'Job timeout in minutes (includes queue wait); default 60'
+        required: false
+        type: number
 
 jobs:
   test:
     name: ${{ inputs.test_name || inputs.playbook}}
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: ${{ inputs.job_timeout_minutes || 60 }}
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PMM_SERVER_IMAGE: ${{ inputs.pmm_server_image }}

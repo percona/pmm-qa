@@ -55,6 +55,9 @@ on:
       sha:
         required: false
         type: string
+      job_timeout_minutes:
+        required: false
+        type: number
 
 jobs:
   settings_and_cli:
@@ -67,6 +70,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--database pgsql'
       tags_for_tests: '@settings|@cli'
 
@@ -80,6 +84,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--database ssl_mysql'
       tags_for_tests: '@ssl-mysql'
 
@@ -93,6 +98,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--database ssl_psmdb'
       tags_for_tests: '@ssl-mongo'
 
@@ -106,6 +112,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--database ssl_pdpgsql=16'
       tags_for_tests: '@ssl-postgres'
 
@@ -119,6 +126,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha || github.event.inputs.sha ||  'null' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--help'
       tags_for_tests: '@disconnect'
 
@@ -131,6 +139,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--database haproxy --database ps --database pxc'
       pmm_test_flag: '@pmm-ps-pxc-haproxy-integration'
 
@@ -143,6 +152,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--database ps=8.4 --database psmdb --database valkey'
       pmm_test_flag: '@new-navigation'
 
@@ -167,6 +177,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--database pdpgsql'
       pmm_test_flag: '@inventory|@image-renderer'
 
@@ -179,6 +190,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       setup_services: '--database ps=8.4 --database psmdb --database pdpgsql'
       pmm_test_flag: '@LBAC'
 
@@ -192,4 +204,5 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || github.event.inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
 

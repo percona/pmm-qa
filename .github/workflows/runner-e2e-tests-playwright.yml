@@ -63,6 +63,10 @@ on:
       launchable_confidence:
         type: string
         required: false
+      job_timeout_minutes:
+        description: 'Job timeout in minutes (includes queue wait); default 60'
+        required: false
+        type: number
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -70,7 +74,7 @@ jobs:
   tests:
     name: "e2e tests: ${{ inputs.pmm_test_flag || '' }}"
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: ${{ inputs.job_timeout_minutes || 60 }}
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PMM_BASE_URL: https://127.0.0.1

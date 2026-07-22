@@ -38,11 +38,14 @@ on:
       pmm_client_version:
         required: false
         type: string
+      job_timeout_minutes:
+        required: false
+        type: number
 
 jobs:
   PMM_PDPGSQL_TEST:
     runs-on: ubuntu-22.04
-    timeout-minutes: 40
+    timeout-minutes: ${{ inputs.job_timeout_minutes || 40 }}
     env:
       ADMIN_PASSWORD: 'admin'
       PDPGSQL_VERSION: ${{ inputs.pdpgsql_version || '17' }}
