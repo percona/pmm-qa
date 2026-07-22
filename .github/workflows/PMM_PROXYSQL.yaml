@@ -50,7 +50,7 @@ on:
 jobs:
   PMM_PXC_TEST:
     runs-on: ubuntu-22.04
-    timeout-minutes: ${{ contains(inputs.pmm_server_image, '-rc') && 120 || 40 }}
+    timeout-minutes: 40
     env:
       ADMIN_PASSWORD: 'admin'
       PXC_VERSION: ${{ inputs.pxc_version || '8.0' }}

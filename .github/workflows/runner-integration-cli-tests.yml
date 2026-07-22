@@ -40,6 +40,10 @@ on:
         description: "SHA (leave empty if running manually, default - 'null')"
         required: false
         type: string
+      job_timeout_minutes:
+        description: 'Job timeout in minutes (includes queue wait); default 40'
+        required: false
+        type: number
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -48,7 +52,7 @@ jobs:
   cli-tests:
     name: ${{ inputs.test_name || inputs.cli_tag}}
     runs-on: ubuntu-22.04
-    timeout-minutes: ${{ contains(inputs.pmm_server_image, '-rc') && 120 || 40 }}
+    timeout-minutes: ${{ inputs.job_timeout_minutes || 40 }}
     env:
       SHA: ${{ github.event.inputs.sha || inputs.sha || github.event.pull_request.head.sha || github.event.pull_request.head.sha || github.sha || 'null' }}
       PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}

@@ -56,6 +56,9 @@ on:
       sha:
         required: false
         type: string
+      job_timeout_minutes:
+        required: false
+        type: number
 
     secrets:
       LAUNCHABLE_TOKEN:
@@ -74,6 +77,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -89,6 +93,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -104,6 +109,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -120,6 +126,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -136,6 +143,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -151,6 +159,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -167,6 +176,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -183,6 +193,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -199,6 +210,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -215,6 +227,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -231,6 +244,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -247,6 +261,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -263,6 +278,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -279,6 +295,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -295,6 +312,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -311,7 +329,9 @@ jobs:
   #    with:
   #      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
   #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
   #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
   #      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
   #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
   #      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
@@ -327,7 +347,9 @@ jobs:
   #    with:
   #      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
   #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
   #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
   #      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
   #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
   #      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
@@ -343,7 +365,9 @@ jobs:
   #    with:
   #      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
   #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
   #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
   #      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
   #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
   #      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
@@ -358,7 +382,9 @@ jobs:
   #    with:
   #      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
   #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
   #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
   #      pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:dev-latest' }}
   #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
   #      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
@@ -374,6 +400,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -390,6 +417,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -406,6 +434,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -422,6 +451,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -438,6 +468,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -454,6 +485,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -470,6 +502,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -486,6 +519,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -502,6 +536,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
@@ -518,6 +553,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}

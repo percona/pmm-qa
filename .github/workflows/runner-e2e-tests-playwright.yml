@@ -70,7 +70,7 @@ jobs:
   tests:
     name: "e2e tests: ${{ inputs.pmm_test_flag || '' }}"
     runs-on: ubuntu-22.04
-    timeout-minutes: ${{ contains(inputs.pmm_server_version, '-rc') && 120 || 60 }}
+    timeout-minutes: 60
     env:
       SHA: ${{ inputs.sha || 'null' }}
       PMM_BASE_URL: https://127.0.0.1
