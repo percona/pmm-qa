@@ -90,7 +90,6 @@ jobs:
 #      pmm_client_version: ${{ inputs.pmm_client_version || 'dev-latest' }}
 #      pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:dev-latest' }}
 #      pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
 ###      sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
 #      setup_services: '--mongo-replica-for-backup --setup-bm-mysql'
 #      tags_for_tests: '@bm-mysql'

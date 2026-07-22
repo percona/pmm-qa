@@ -66,13 +66,17 @@ on:
       sha:
         required: false
         type: string
+      job_timeout_minutes:
+        description: 'Job timeout in minutes (includes queue wait); default 60'
+        required: false
+        type: number
 
 jobs:
   ui-tests-e2e:
     name: "podman e2e tests: ${{ inputs.tags_for_tests || '@settings-fb' }}"
     #    runs-on: ubuntu-latest Mongo Replica setup fails in ubuntu-latest for some reason. Additional investigation needed
     runs-on: ubuntu-22.04
-    timeout-minutes: 60
+    timeout-minutes: ${{ inputs.job_timeout_minutes || 60 }}
     env:
       SHA: ${{ inputs.sha || 'null' }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
