@@ -14,7 +14,7 @@
   tasks:
   - name: Cleanup Docker container for client and DB setup
     shell: >
-      docker ps -a --filter "name={{ mongodb_ssl_container }}" | grep -q . && docker stop {{ mongodb_ssl_container }} && docker rm -fv {{ mongodb_ssl_container }}
+      docker rm -f {{ mongodb_ssl_container }} 2>/dev/null || true
     ignore_errors: true
     tags:
       - cleanup
@@ -25,10 +25,10 @@
       - cleanup
 
   - name: Create a network
-    shell: docker network create "{{ mongodb_ssl_container }}_network"
+    shell: docker network inspect "{{ mongodb_ssl_container }}_network" >/dev/null 2>&1 || docker network create "{{ mongodb_ssl_container }}_network"
 
   - name: Create pmm-qa network if not exist
-    shell: docker network create pmm-qa
+    shell: docker network inspect pmm-qa >/dev/null 2>&1 || docker network create pmm-qa
     ignore_errors: true
 
   - name: Prepare Container for mongodb ssl container

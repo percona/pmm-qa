@@ -15,8 +15,13 @@
 
 - name: Install dependencies
   shell: |
-    docker exec {{ container_prefix }}{{ item }} apt-get update
-    docker exec {{ container_prefix }}{{ item }} apt-get -y install wget gnupg2 lsb-release curl
+    for attempt in 1 2 3; do
+      docker exec {{ container_prefix }}{{ item }} apt-get update && \
+      docker exec {{ container_prefix }}{{ item }} apt-get -y install wget gnupg2 lsb-release curl && exit 0
+      echo "apt-get install failed (attempt ${attempt}/3); retrying in 15s..."
+      sleep 15
+    done
+    exit 1
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 

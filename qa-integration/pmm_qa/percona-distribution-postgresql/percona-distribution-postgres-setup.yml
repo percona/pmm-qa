@@ -32,7 +32,7 @@
         msg: "{{ setup_type }}"
 
     - name: Create Docker network
-      shell: docker network create {{ network_name }}
+      shell: docker network inspect {{ network_name }} >/dev/null 2>&1 || docker network create {{ network_name }}
       ignore_errors: yes
       become: true
 

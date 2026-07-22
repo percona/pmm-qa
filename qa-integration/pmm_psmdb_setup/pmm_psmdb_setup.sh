@@ -59,8 +59,8 @@ done
 declare pmm_server_data=${PMM_CONTAINER_NAME}-data
 
 ## Start creating pmm-server docker container, cleanup if one is already running with same name
-docker ps -a --filter "name=${PMM_CONTAINER_NAME}" | grep -q . && docker stop ${PMM_CONTAINER_NAME} && docker rm -fv ${PMM_CONTAINER_NAME} || true
-docker ps -a --filter "name=${pmm_server_data}" | grep -q . && docker stop ${pmm_server_data} && docker rm -fv ${pmm_server_data} || true
+docker rm -f ${PMM_CONTAINER_NAME} 2>/dev/null || true
+docker rm -f ${pmm_server_data} 2>/dev/null || true
 docker create -v /srv --name ${pmm_server_data} ${PMM_CONTAINER_IMAGE}
 docker run -d -p 8081:80 -p ${PMM_CONTAINER_PORT}:443 -e PMM_DEBUG=1 --volumes-from ${pmm_server_data} --name ${PMM_CONTAINER_NAME} ${PMM_CONTAINER_IMAGE}
 

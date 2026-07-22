@@ -16,13 +16,13 @@
   tasks:
   - name: cleanup container for client and DB setup
     shell: >
-      docker ps -a --filter "name={{ modb_container }}" | grep -q . && docker stop {{ modb_container }} && docker rm -fv {{ modb_container }}
+      docker rm -f {{ modb_container }} 2>/dev/null || true
     ignore_errors: true
     tags:
       - cleanup
 
   - name: Create pmm-qa network if not exist
-    shell: docker network create pmm-qa
+    shell: docker network inspect pmm-qa >/dev/null 2>&1 || docker network create pmm-qa
     ignore_errors: true
 
   - name: Prepare Container for modb
