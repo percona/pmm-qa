@@ -45,7 +45,7 @@ Scenario(
       I.seeTitleEquals(expectedTitles[page] || `${page} - Alerting - Percona Monitoring and Management`);
     };
 
-    verifyTitle('Fired alerts');
+    verifyTitle('Status');
     await iaCommon.openAndVerifyTab(
       iaCommon.tabNames.ruleTemplates,
       ruleTemplatesPage.buttons.openAddTemplateModal,
@@ -73,6 +73,7 @@ Scenario(
     verifyTitle('Alert groups');
     await iaCommon.openAndVerifyTab(iaCommon.tabNames.admin, aiAdminPage.buttons.editConfig, aiAdminPage.url);
     verifyTitle('Settings');
+    I.switchTo();
     await iaCommon.openAndVerifyTab(iaCommon.tabNames.firedAlerts, alertsPage.elements.noAlerts, alertsPage.url);
   },
 );
