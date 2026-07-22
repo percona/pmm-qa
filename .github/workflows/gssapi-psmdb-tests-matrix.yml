@@ -89,7 +89,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       setup_services: '--database psmdb,COMPOSE_PROFILES=extra,OL_VERSION=8,GSSAPI=true'
       tags_for_tests: '@bm-mongo'
 
@@ -102,7 +102,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       setup_services: '--database psmdb,COMPOSE_PROFILES=extra,OL_VERSION=9,GSSAPI=true'
       tags_for_tests: '@bm-mongo'
 
@@ -115,7 +115,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       setup_services: '--database psmdb,OL_VERSION=8,GSSAPI=true'
       tags_for_tests: '@mongodb-exporter'
 
@@ -128,7 +128,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       setup_services: '--database psmdb,OL_VERSION=9,GSSAPI=true'
       tags_for_tests: '@mongodb-exporter'
 
@@ -141,7 +141,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       setup_services: '--database psmdb,OL_VERSION=8,GSSAPI=true'
       tags_for_tests: '@pmm-psmdb-replica-integration'
 
@@ -154,7 +154,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       setup_services: '--database psmdb,OL_VERSION=9,GSSAPI=true'
       tags_for_tests: '@pmm-psmdb-replica-integration'
 
@@ -166,7 +166,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       setup_services: '--database psmdb,OL_VERSION=8,GSSAPI=true'
       pmm_test_flag: '@rta'
       workers: 1
@@ -179,7 +179,7 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       setup_services: '--database psmdb,OL_VERSION=9,GSSAPI=true'
       pmm_test_flag: '@rta'
       workers: 1
@@ -192,7 +192,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
@@ -207,7 +207,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
@@ -222,7 +222,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol8 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol8-latest.tar.gz' }}
@@ -237,7 +237,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
@@ -252,7 +252,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
@@ -267,7 +267,7 @@ jobs:
     with:
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version_ol9 || 'https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol9-latest.tar.gz' }}
@@ -287,7 +287,7 @@ jobs:
       repository: ${{ inputs.repository || 'release'}}
       metrics_mode: "auto"
       package: "pmm3-client"
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       os: "ol-8"
 
   mongo_package_tests_integration_ol9:
@@ -302,5 +302,5 @@ jobs:
       repository: ${{ inputs.repository || 'release'}}
       metrics_mode: "auto"
       package: "pmm3-client"
-      job_timeout_minutes: ${{ inputs.job_timeout_minutes }}
+      job_timeout_minutes: ${{ inputs.job_timeout_minutes || 0 }}
       os: "ol-9"
