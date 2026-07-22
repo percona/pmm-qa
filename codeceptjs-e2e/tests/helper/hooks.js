@@ -85,7 +85,7 @@ module.exports = function pmmGrafanaIframeHook() {
   const helper = container.helpers('Playwright');
   const navigationMethods = ['amOnPage', 'refreshPage', 'openNewTab', 'switchToNextTab', 'switchToPreviousTab'];
   const noIframeMethods = ['openNewTab'];
-  const noIframeUrls = ['login', 'logout', 'help', 'updates', '/pmm-ui/settings'];
+  const noIframeUrls = ['login', 'logout', 'help', 'updates', '/pmm-ui/settings', 'pmm-ui/alerting'];
 
   navigationMethods.forEach((methodName) => {
     applyOverride(helper, methodName, async function (original, ...args) {
@@ -94,7 +94,7 @@ module.exports = function pmmGrafanaIframeHook() {
 
       const currentUrl = helper.page && helper.page.url ? helper.page.url() : '';
 
-      if (currentUrl.includes('/pmm-ui/settings')) return;
+      if (currentUrl.includes('/pmm-ui/settings') || currentUrl.includes('/pmm-ui/alerting')) return;
 
       if (methodName === 'amOnPage' && noIframeUrls.some((url) => args[0].includes(url))) return;
 
