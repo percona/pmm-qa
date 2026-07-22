@@ -42,7 +42,7 @@ on:
 jobs:
   PMM_PDPGSQL_TEST:
     runs-on: ubuntu-22.04
-    timeout-minutes: 40
+    timeout-minutes: ${{ contains(inputs.pmm_server_image, '-rc') && 120 || 40 }}
     env:
       ADMIN_PASSWORD: 'admin'
       PDPGSQL_VERSION: ${{ inputs.pdpgsql_version || '17' }}
