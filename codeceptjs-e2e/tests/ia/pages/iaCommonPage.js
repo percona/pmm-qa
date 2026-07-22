@@ -1,7 +1,9 @@
 const assert = require('assert');
 const { locateOption } = require('../../helper/locatorHelper');
 
-const { I, alertRulesPage, ruleTemplatesPage, rulesAPI, templatesAPI, alertsPage, alertsAPI } = inject();
+const {
+  I, alertRulesPage, ruleTemplatesPage, rulesAPI, templatesAPI, alertsPage, alertsAPI,
+} = inject();
 
 module.exports = {
   tabNames: {
@@ -22,11 +24,11 @@ module.exports = {
     // tab: (tabName) => locate('[role="tablist"] a').withAttr({ 'aria-label': `Tab ${tabName}` }),
     tab: (tabName) => locate(`//span[text()="${tabName}"]`),
     table: '$table-tbody',
-    disabledIa: '$empty-block',
+    disabledIa: '$empty-block-card',
     settingsLink: '$settings-link',
     selectDropdownOption: (option) => locateOption(option),
     inputField: (id) => `input[id='${id}']`,
-    modalDialog: "div[role='dialog']",
+    modalDialog: 'div[role=\'dialog\']',
   },
   buttons: {
     firstPageButton: '$first-page-button',
@@ -40,7 +42,7 @@ module.exports = {
   },
   messages: {
     itemsShown: (leftNumber, rightNumber, totalItems) => `Showing ${leftNumber}-${rightNumber} of ${totalItems} items`,
-    disabledIa: 'Percona Alerting is disabled. You can enable it in  PMM Settings.',
+    disabledIa: 'Percona Alerting is disabled. You can enable it in PMM Settings.',
   },
 
   /**
