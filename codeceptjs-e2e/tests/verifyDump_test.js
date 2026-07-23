@@ -68,7 +68,7 @@ Scenario('PMM-T1835 - Download and Verify Dump Archive with QAN enabled @dump', 
   const result = await dumpAPI.verifyDump(uid.dump_id);
 
   I.assertEqual(2, result.dirs.length, `Expected 2 folders in the archive but found ${result.dirs}`);
-  I.assertEqual(3, result.files.length, `Expected 2 files in the archive but found ${result.files}`);
+  I.assertEqual(5, result.files.length, `Expected 5 files in the archive but found ${result.files}`);
   await dumpAPI.deleteDump(uid.dump_id);
 });
 
@@ -86,7 +86,7 @@ Scenario('PMM-T1835 - Download and Verify Dump Archive with QAN disabled @dump',
   const result = await dumpAPI.verifyDump(uid.dump_id);
 
   I.assertEqual(1, result.dirs.length, `Expected 1 folders in the archive but found ${result.dirs}`);
-  I.assertEqual(2, result.files.length, `Expected 2 files in the archive but found ${result.files}`);
+  I.assertEqual(4, result.files.length, `Expected 4 files in the archive but found ${result.files}`);
   await dumpAPI.deleteDump(uid.dump_id);
 });
 
@@ -109,7 +109,7 @@ Scenario('PMM-T1835 - Check Dump Archives can be sent to Support in UI @dump', a
   const result = await dumpAPI.verifyDump(uid.dump_id, hostVolume);
 
   I.assertEqual(2, result.dirs.length, `Expected 2 folders in the archive but found ${result.dirs}`);
-  I.assertEqual(3, result.files.length, `Expected 2 files in the archive but found ${result.files}`);
+  I.assertEqual(5, result.files.length, `Expected 5 files in the archive but found ${result.files}`);
   await dumpAPI.deleteDump(uid.dump_id);
 });
 Scenario('PMM-T1835 - Verify Dump extraction logs are visible @dump', async ({ dumpAPI, dumpPage }) => {

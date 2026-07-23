@@ -7,8 +7,8 @@ const {
 
 module.exports = {
   tabNames: {
-    firedAlerts: 'Fired alerts',
-    ruleTemplates: 'Alert templates',
+    firedAlerts: 'Status',
+    ruleTemplates: 'Templates',
     alertRules: 'Alert rules',
     contactPoints: 'Contact points',
     notificationPolicies: 'Notification policies',
@@ -24,7 +24,7 @@ module.exports = {
     // tab: (tabName) => locate('[role="tablist"] a').withAttr({ 'aria-label': `Tab ${tabName}` }),
     tab: (tabName) => locate(`//span[text()="${tabName}"]`),
     table: '$table-tbody',
-    disabledIa: '$empty-block',
+    disabledIa: '$empty-block-card',
     settingsLink: '$settings-link',
     selectDropdownOption: (option) => locateOption(option),
     inputField: (id) => `input[id='${id}']`,
@@ -42,7 +42,7 @@ module.exports = {
   },
   messages: {
     itemsShown: (leftNumber, rightNumber, totalItems) => `Showing ${leftNumber}-${rightNumber} of ${totalItems} items`,
-    disabledIa: 'Percona Alerting is disabled. You can enable it in  PMM Settings.',
+    disabledIa: 'Percona Alerting is disabled. You can enable it in PMM Settings.',
   },
 
   /**
@@ -54,13 +54,12 @@ module.exports = {
     I.switchTo();
     I.waitForVisible(this.elements.tab(tabName), 30);
     I.click(this.elements.tab(tabName));
-    I.switchTo('#grafana-iframe');
+    if (!tabUrl.includes('pmm-ui/')) {
+      I.switchTo('#grafana-iframe');
+    }
+
     I.waitForVisible(tabElement, 10);
     I.seeInCurrentUrl(tabUrl);
-    //
-    // const className = await I.grabAttributeFrom(this.elements.tab(tabName), 'class');
-    //
-    // assert.ok(className.endsWith('activeTabStyle'), `Tab ${tabName} should be active`);
   },
 
   getCreateEntitiesAndPageUrl(page) {
