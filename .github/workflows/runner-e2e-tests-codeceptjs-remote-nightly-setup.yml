@@ -105,7 +105,7 @@ jobs:
       - name: Setup PMM-Client against remote PMM Server
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 15
+          timeout_minutes: 10
           retry_wait_seconds: '10'
           max_attempts: 2
           retry_on: 'error'
