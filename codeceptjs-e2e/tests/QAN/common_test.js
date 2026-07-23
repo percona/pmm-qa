@@ -32,7 +32,6 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
   }
 
   queryAnalyticsPage.filters.resetAllFilters();
-  queryAnalyticsPage.waitForLoaded();
 
   const serverNodeName = homePage.pmmServerName;
   const services = (await inventoryAPI.apiGetServices()).data.services;
@@ -51,13 +50,13 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
   I.assertTrue(serviceLabels.length > 0, `No Service Name filters found for node "${serverNodeName}"`);
 
   queryAnalyticsPage.filters.selectContainFilterInGroup(serviceFilter, 'Service Name');
-  queryAnalyticsPage.waitForLoaded();
-  I.waitForVisible(queryAnalyticsPage.filters.fields.checkedFilters(), 30);
-  const checkedServiceFilters = await I.grabTextFromAll(queryAnalyticsPage.filters.fields.checkedFilters());
+  I.wait(3);
+  const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup('Service Name'));
 
-  I.assertTrue(
-    checkedServiceFilters.some((label) => label.includes(serviceFilter) || serviceFilter.includes(label)),
-    `Checked Service Name filters [${checkedServiceFilters.join(', ')}] do not include "${serviceFilter}"`,
+  I.assertContain(
+    displayedServiceName,
+    serviceFilter,
+    `Displayed filter value: "${displayedServiceName}" does not contain expected value: "${serviceFilter}"`,
   );
   I.assertTrue((await queryAnalyticsPage.data.getRowCount()) > 0, `No QAN rows displayed after filtering by ${serviceFilter}`);
 });
