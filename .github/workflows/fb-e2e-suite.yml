@@ -206,7 +206,7 @@ jobs:
       pmm_client_image: ${{ inputs.pmm_client_image || 'perconalab/pmm-client:3-dev-latest' }}
       pmm_qa_branch: ${{ inputs.pmm_qa_branch || 'main' }}
       sha: ${{ inputs.sha || github.event.pull_request.head.sha ||  'null' }}
-      setup_services: '--database pdpgsql'
+      setup_services: '--database pdpgsql=13'
       tags_for_tests: '@pgsm-pmm-integration'
 
   pgss:
