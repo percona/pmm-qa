@@ -69,13 +69,10 @@
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-- name: Run queries for generating data
-  shell: docker exec {{ container_prefix }}{{ item }} bash ./data/pgsm_run_queries.sh &
-  become: true
-  loop: "{{ range(1, nodes_count | int + 1) | list }}"
-
-- name: Copy a file into the container
-  shell: docker cp ./data/pgsql_load.sql {{ container_prefix }}{{ item }}:/pgsql_load.sql
+- name: Copy query load scripts into the container
+  shell: |
+    docker cp ./data/pgsql_load.sql {{ container_prefix }}{{ item }}:/pgsql_load.sql
+    docker cp ./data/pdpgsql_run_queries.sh {{ container_prefix }}{{ item }}:/pdpgsql_run_queries.sh
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
@@ -86,6 +83,11 @@
 
 - name: Run SQL script using docker exec
   shell: docker exec {{ container_prefix }}{{ item }} psql -U postgres -d school -f /pgsql_load.sql > /dev/null
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Run queries for generating data
+  shell: docker exec {{ container_prefix }}{{ item }} bash /pdpgsql_run_queries.sh &
   become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
