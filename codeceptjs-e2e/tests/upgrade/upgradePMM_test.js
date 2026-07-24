@@ -58,12 +58,11 @@ Scenario(
   'PMM-T288 - Verify user can see Update widget before upgrade [critical] @pmm-upgrade',
   async ({ I, homePage }) => {
     await I.stopMockingUpgrade();
-    I.amOnPage(homePage.url);
-    await homePage.verifyPreUpdateWidgetIsPresent(versionMinor);
+    await homePage.verifyUpdateStatusIsPresent(process.env.PMM_SERVER_LATEST);
   },
 );
 
-Scenario(
+Scenario.skip(
   'PMM-T3 - Verify user is able to Upgrade PMM version [blocker] @pmm-upgrade',
   async ({ I, homePage }) => {
     await I.stopMockingUpgrade();

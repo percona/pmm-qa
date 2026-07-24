@@ -157,7 +157,17 @@ module.exports = {
       'Available and Current versions match',
     );
   },
+  async verifyUpdateStatusIsPresent(expectedVersion) {
+    I.amOnPage(pmmUpgradePage.url);
+    I.switchTo();
+    I.waitForVisible(pmmUpgradePage.elements.newUpdateAvailable, 60);
+    I.waitForVisible(pmmUpgradePage.elements.runningVersion, 30);
+    I.waitForVisible(pmmUpgradePage.elements.newVersion, 30);
 
+    if (expectedVersion) {
+      I.see(expectedVersion, pmmUpgradePage.elements.newVersion);
+    }
+  },
   async verifyPostUpdateWidgetIsPresent() {
     const locators = this.getLocators('latest');
 
@@ -225,8 +235,14 @@ module.exports = {
   },
 
   async verifyPMMServerVersion(expectedVersion) {
-    I.waitForElement(this.fields.updateWidget.latest.currentVersion);
-    const actualVersion = await I.grabTextFrom(this.fields.updateWidget.latest.currentVersion);
+    I.amOnPage(pmmUpgradePage.url);
+    I.switchTo();
+    I.waitForVisible(pmmUpgradePage.elements.runningVersion, 60);
+    const actualVersion = await I.grabTextFrom(pmmUpgradePage.elements.runningVersion);
+
+    if (!expectedVersion) {
+      return;
+    }
 
     I.assertContain(
       actualVersion,

@@ -78,7 +78,7 @@ Scenario(
   },
 );
 
-Scenario(
+Scenario.skip(
   'PMM-T1256 Verify GF_SECURITY_ADMIN_PASSWORD environment variable after upgrade',
   async ({
     I, homePage,

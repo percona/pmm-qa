@@ -16,12 +16,11 @@ export default class UpdatesPage extends BasePage {
   homeUrl = '/pmm-ui/graph/';
   builders = {};
   buttons = {
-    updateNow: this.page.getByRole('button', { name: 'Update now' }),
     whatsNew: this.grafanaIframe().getByRole('link', { name: "What's new" }),
   };
   elements = {
     availableSection: this.page.getByRole('heading', { name: /New update available/i }),
-    newVersionLine: this.page.locator('p').filter({ hasText: 'New version:' }),
+    newVersionLine: this.page.locator('strong').filter({ hasText: 'New version:' }),
     pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
   };
   inputs = {};
