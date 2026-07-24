@@ -25,6 +25,7 @@ export default class Api {
     this.inventoryApi = new InventoryApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
+    this.serverApi = new ServerApi(request);
     this.settingsApi = new SettingsApi(request);
     this.serverApi = new ServerApi(request);
   }
