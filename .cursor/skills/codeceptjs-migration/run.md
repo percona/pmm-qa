@@ -21,6 +21,8 @@ Select one `pending` tracker row and change it to `in-progress`.
 
 If another row is already `in-progress`, stop and report the conflict.
 
+Merge `origin/main` into the current branch and resolve conflicts per `branch-workflow.md` before migration work begins.
+
 ## Test-run mode
 
 The parent may explicitly designate a run as test-only (dry run). In that mode, skip only:

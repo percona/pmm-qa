@@ -10,6 +10,15 @@ Recommended name:
 migrate-<category>-<test-name>
 ```
 
+Before starting a migration, merge latest `main` into the current branch and resolve any conflicts:
+
+```bash
+git fetch origin main
+git merge origin/main
+```
+
+Do not begin migration work until the merge is clean and committed.
+
 Before editing migration code, verify:
 
 ```bash
