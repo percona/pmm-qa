@@ -12,6 +12,7 @@ module.exports = {
   publicAddress: process.env.VM_IP ? process.env.VM_IP : process.env.SERVER_IP || '127.0.0.1',
   metricsResolutionUrl: '/pmm-ui/settings/metrics-resolution',
   advancedSettingsUrl: '/pmm-ui/settings/advanced-settings',
+  advisorsSettingsUrl: '/pmm-ui/settings/advisors',
   sshKeyUrl: '/pmm-ui/settings/ssh-key',
   alertManagerIntegrationUrl: 'graph/settings/am-integration',
   communicationSettingsUrl: 'graph/settings/communication',
@@ -82,6 +83,7 @@ module.exports = {
   sectionTabsList: {
     metrics: 'Metrics Resolution',
     advanced: 'Advanced Settings',
+    advisors: 'Advisors',
     ssh: 'SSH Key',
   },
   sectionButtonText: {
@@ -122,8 +124,8 @@ module.exports = {
         link: links.checkForUpdates,
       },
       stt: {
-        nativeTextLocator: locate('$advanced-advisors-label-description').as('Advisors tooltip'),
-        nativeLinkLocator: locate('$advanced-advisors-label-description').find('a').as('Advisors tooltip Read more link'),
+        nativeTextLocator: locate('$advisors-label-description').as('Advisors tooltip'),
+        nativeLinkLocator: locate('$advisors-label-description').find('a').as('Advisors tooltip Read more link'),
         text: 'Run automated checks to identify potential database performance and configuration issues.',
         link: links.advisorsDocs,
       },
@@ -248,6 +250,7 @@ module.exports = {
   fields: {
     advancedLabel: '$advanced-label',
     advancedButton: '$advanced-button',
+    advisorsButton: '$advisors-button',
     addAlertRuleButton: '//span[text()="Apply Alertmanager settings"]/parent::span',
     alertRulesInput: '$alertmanager-rules',
     alertURLInput: '$alertmanager-url',
@@ -304,9 +307,9 @@ module.exports = {
     sshKeyInput: '$ssh-key',
     sshKeyLabel: '$ssh-key-label',
     sshKeyButton: '$ssh-key-button',
-    sttLabel: locate('$advanced-advisors').find('span'),
-    sttSwitchSelectorInput: locate('$advanced-advisors').find('input'),
-    sttSwitchSelector: locate('$advanced-advisors').find('label'),
+    sttLabel: locate('$advisors-settings').find('span'),
+    sttSwitchSelectorInput: locate('$advisors-settings').find('input'),
+    sttSwitchSelector: locate('$advisors-settings').find('label'),
     subSectionHeader: '//following-sibling::div//div[@class="ant-collapse-header"]',
     signUpEmail: '$email-text-input',
     signUpPassword: '$password-password-input',
@@ -342,6 +345,11 @@ module.exports = {
     await this.waitForPmmSettingsPageLoaded();
   },
 
+  async openAdvisorsSettings() {
+    I.amOnPage(this.advisorsSettingsUrl);
+    await this.waitForPmmSettingsPageLoaded();
+  },
+
   async applyChanges() {
     I.click(this.fields.applyButton);
     I.verifyPopUpMessage(this.messages.successPopUpMessage, 30);
@@ -367,6 +375,9 @@ module.exports = {
         break;
       case 'advanced settings':
         sectionExpandLocator = I.useDataQA('settings-tab-advanced');
+        break;
+      case 'advisors':
+        sectionExpandLocator = I.useDataQA('settings-tab-advisors');
         break;
       case 'ssh key':
         sectionExpandLocator = I.useDataQA('settings-tab-ssh');

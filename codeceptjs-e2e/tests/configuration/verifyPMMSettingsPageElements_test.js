@@ -54,11 +54,17 @@ Scenario('Verify Advanced Section Elements @settings @grafana-pr', async ({ I, p
   I.see('Data retention', pmmSettingsPage.fields.advancedLabel);
   I.see('Telemetry', pmmSettingsPage.fields.telemetryLabel);
   I.see('Check for updates', pmmSettingsPage.fields.checkForUpdatesLabel);
-  I.see('Advisors', pmmSettingsPage.fields.sttLabel);
   I.seeElement(pmmSettingsPage.fields.telemetrySwitchSelectorInput);
   I.seeElement(pmmSettingsPage.fields.telemetryLabel);
   I.seeElement(pmmSettingsPage.fields.checkForUpdatesSwitch);
   I.seeElement(pmmSettingsPage.fields.checkForUpdatesLabel);
+});
+
+Scenario('Verify Advisors Section Elements @settings @grafana-pr', async ({ I, pmmSettingsPage }) => {
+  I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
+
+  await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+  I.see('Advisors', pmmSettingsPage.fields.sttLabel);
   I.seeElement(pmmSettingsPage.fields.sttSwitchSelectorInput);
   I.seeElement(pmmSettingsPage.fields.sttLabel);
 });

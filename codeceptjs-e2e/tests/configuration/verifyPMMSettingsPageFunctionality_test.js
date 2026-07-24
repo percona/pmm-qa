@@ -46,11 +46,11 @@ Scenario(
 Scenario.skip(
   'PMM-T253 - Verify user can see correct tooltip for STT [trivial] @settings @stt @grafana-pr',
   async ({ I, pmmSettingsPage }) => {
-    const sectionNameToExpand = pmmSettingsPage.sectionTabsList.advanced;
+    const sectionNameToExpand = pmmSettingsPage.sectionTabsList.advisors;
 
     I.amOnPage(pmmSettingsPage.url);
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-    await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advancedButton);
+    await pmmSettingsPage.expandSection(sectionNameToExpand, pmmSettingsPage.fields.advisorsButton);
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
 
     await pmmSettingsPage.verifyTooltip(pmmSettingsPage.tooltips.advancedSettings.stt);
@@ -60,17 +60,21 @@ Scenario.skip(
 Scenario.skip(
   'PMM-T254 + PMM-T253 - Verify disable telemetry while Advisors enabled @settings @stt @grafana-pr',
   async ({ I, pmmSettingsPage }) => {
+    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
+    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.sttSwitchSelectorInput, 'on');
     I.amOnPage(pmmSettingsPage.advancedSettingsUrl);
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
     pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.telemetrySwitchSelectorInput, 'on');
-    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.sttSwitchSelectorInput, 'on');
     I.click(pmmSettingsPage.fields.telemetrySwitchSelector);
     pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.telemetrySwitchSelectorInput, 'off');
     I.click(pmmSettingsPage.fields.advancedButton);
     I.refreshPage();
     await pmmSettingsPage.waitForPmmSettingsPageLoaded();
-    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.sttSwitchSelectorInput, 'on');
     pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.telemetrySwitchSelectorInput, 'off');
+    I.amOnPage(pmmSettingsPage.advisorsSettingsUrl);
+    await pmmSettingsPage.waitForPmmSettingsPageLoaded();
+    pmmSettingsPage.verifySwitch(pmmSettingsPage.fields.sttSwitchSelectorInput, 'on');
   },
 );
 
