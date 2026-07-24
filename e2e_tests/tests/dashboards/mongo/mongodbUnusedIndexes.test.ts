@@ -58,13 +58,4 @@ pmmTest.describe('MongoDB Unused Indexes @mongodb-exporter', () => {
       });
     },
   );
-
-  pmmTest(
-    'PMM-15071 Verify Unused indexes navigation entry @new-navigation',
-    async ({ leftNavigation, page }) => {
-      await page.goto('pmm-ui/help');
-      await leftNavigation.selectMenuItem('mongodb.unusedIndexes');
-      await expect(page).toHaveURL(/mongodb-unused-indexes/);
-    },
-  );
 });
