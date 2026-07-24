@@ -1,4 +1,5 @@
 import { MongoClient } from 'mongodb';
+import { Timeouts } from './timeouts';
 
 interface MongoConfig {
   host?: string;
@@ -18,7 +19,7 @@ export default class MongoDBHelper {
     this.port = config.port || 27_017;
     this.url = `mongodb://${config.username}:${encodeURIComponent(config.password)}@${this.host}:${this.port}/?authSource=admin`;
     this.client = new MongoClient(this.url, {
-      connectTimeoutMS: 30_000,
+      connectTimeoutMS: Timeouts.THIRTY_SECONDS,
       directConnection: true,
     });
   }
@@ -56,10 +57,10 @@ export default class MongoDBHelper {
     } = {},
   ) => {
     const {
-      chunkMs = 5_000,
+      chunkMs = Timeouts.FIVE_SECONDS,
       collectionName = 'test',
       dbName = 'admin',
-      delayMs = 10_000,
+      delayMs = Timeouts.TEN_SECONDS,
       queryLabel = 'rta-simulated-query',
     } = options;
     const numDocs = Math.max(1, Math.ceil(delayMs / chunkMs));

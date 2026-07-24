@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
+import apiEndpoints from '@helpers/apiEndpoints';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await page.goto('');
@@ -45,7 +46,7 @@ pmmTest(
     await pmmTest.step('API platform connect removed', async () => {
       await portalRemoval.openAdvancedSettings();
 
-      const response = await page.request.post('/v1/platform:connect', {
+      const response = await page.request.post(apiEndpoints.platform.connect, {
         data: {
           personal_access_token: 'test-token',
           server_name: 'server-name',

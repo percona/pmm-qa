@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import data from '@fixtures/dataTest';
+import { expect } from '@playwright/test';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -27,6 +28,7 @@ data(services).pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceSummary.url, {
         from: 'now-1h',
+        refresh: '5s',
         serviceName: service_name,
       }),
     );
@@ -44,6 +46,7 @@ data(services).pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstancesCompare.url, {
         from: 'now-1h',
+        refresh: '5s',
         serviceName: service_name,
       }),
     );
@@ -74,7 +77,10 @@ data(services).pmmTest(
 pmmTest(
   'PMM-T324 - Verify MySQL - MySQL User Details dashboard @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm');
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
+      'ps_pmm_replication_.*_1',
+      { replication_set: 'ps-async-replication' },
+    );
 
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlUserDetails.url, {
@@ -148,6 +154,14 @@ pmmTest(
         serviceName: service.service_name,
       }),
     );
+    await dashboard.selectVariableValue('Environment', 'ps-replication-dev');
+
+    const services = await dashboard.getVariableValues('Service Name');
+
+    expect(services.length).toBeGreaterThan(0);
+    services.forEach((serviceName: string) => {
+      expect(serviceName).toContain('replication');
+    });
     await dashboard.verifyMetricsPresent(
       dashboard.mysql.mysqlReplicationSummary.metrics(service.service_name),
     );

@@ -5,6 +5,7 @@ interface BuildUrlParameters {
   schema?: string;
   environment?: string;
   serviceName?: string;
+  replicationSet?: string;
   refresh?: string;
   from?: string;
   to?: string;
@@ -28,6 +29,9 @@ export default class UrlHelper {
           break;
         case 'serviceName':
           queryParams['var-service_name'] = parameters[key];
+          break;
+        case 'replicationSet':
+          queryParams['var-replication_set'] = parameters[key];
           break;
         case 'refresh':
           queryParams['refresh'] = parameters[key];

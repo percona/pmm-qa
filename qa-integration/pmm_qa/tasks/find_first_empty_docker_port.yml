@@ -1,0 +1,32 @@
+- name: Find first bindable TCP port starting at {{ port_start }}
+  ansible.builtin.shell: |
+    python3 - <<'PY'
+    import socket
+    start = int("{{ port_start }}")
+    end = start + 100
+    for p in range(start, end):
+      s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+      try:
+        s.bind(("0.0.0.0", p))
+      except OSError:
+        pass
+      else:
+        print(p)
+        break
+      finally:
+        s.close()
+    PY
+  args:
+    executable: /bin/bash
+  register: port_out
+  changed_when: false
+
+- name: Set docker_port
+  ansible.builtin.set_fact:
+    docker_port: "{{ port_out.stdout | trim | int }}"
+
+- name: Verify a port was found
+  ansible.builtin.fail:
+    msg: "No free port found in range {{ port_start }}..{{ port_start | int + 99 }}"
+  when: port_out.stdout | trim == ""

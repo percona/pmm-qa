@@ -1,4 +1,21 @@
 const apiEndpoints = {
+  accessControl: {
+    roles: '/v1/accesscontrol/roles',
+    rolesAssign: '/v1/accesscontrol/roles:assign',
+  },
+  alerting: {
+    rules: '/v1/alerting/rules',
+    templates: '/v1/alerting/templates',
+  },
+  backups: {
+    artifacts: '/v1/backups/artifacts',
+    locations: '/v1/backups/locations',
+    schedule: '/v1/backups:schedule',
+    scheduled: '/v1/backups/scheduled',
+  },
+  ha: {
+    status: '/v1/ha/status',
+  },
   inventory: {
     services: '/v1/inventory/services',
   },
@@ -14,10 +31,12 @@ const apiEndpoints = {
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
-    updates: '/v1/server/updates',
+    readyz: '/v1/server/readyz',
+    settings: '/v1/server/settings',
+    updates: '**/v1/server/updates?force=**',
   },
   users: {
-    me: '/v1/users/me',
+    me: '**/v1/users/me',
   },
 } as const;
 

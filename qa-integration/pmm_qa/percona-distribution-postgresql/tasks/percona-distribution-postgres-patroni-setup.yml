@@ -1,0 +1,186 @@
+- name: Set correct nodes count for patroni setup
+  set_fact:
+    nodes_count: 3
+  when: nodes_count | int < 3
+
+- name: Set external facing port in patroni setup
+  set_fact:
+    pdpgsql_port: 6432
+
+- name: Remove old data folders
+  shell: 'rm -fr {{ data_dir }}'
+  become: true
+
+- name: Create data directories
+  file:
+    path: "{{ data_dir }}/node{{ item }}/data"
+    state: directory
+    mode: '0755'
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Generate postgres.conf for primary node
+  template:
+    src: data/postgresql-primary.conf.j2
+    dest: "{{ data_dir }}/node1/postgresql.conf"
+  become: true
+
+- name: Generate etcd configuration
+  template:
+    src: data/etcd.conf.yaml.j2
+    dest: "{{ data_dir }}/node{{ item }}/etcd.conf.yaml"
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Generate patroni configuration
+  template:
+    src: data/patroni.yml.j2
+    dest: "{{ data_dir }}/node{{ item }}/patroni.yml"
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Generate postgres.conf for primary node
+  template:
+    src: data/postgresql-primary.conf.j2
+    dest: "{{ data_dir }}/node1/postgresql.conf"
+  become: true
+
+- name: Generate postgres.conf for replica nodes
+  template:
+    src: data/postgresql-replica.conf.j2
+    dest: "{{ data_dir }}/node{{ item }}/postgresql.conf"
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Install Percona distribution for Postgresql
+  include_tasks: tasks/install-pdpgsql.yml
+
+- name: Copy config files to all nodes
+  shell: |
+    docker cp {{ data_dir }}/node{{ item }}/patroni.yml {{ container_prefix }}{{ item }}:/patroni.yml
+    docker cp {{ data_dir }}/node{{ item }}/etcd.conf.yaml {{ container_prefix }}{{ item }}:/etcd.conf.yaml
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install dependencies for Percona Distribution for PostgresSQL
+  shell: |
+    docker exec -u root {{ container_prefix }}{{ item }} apt-get install -y percona-patroni etcd python3-etcd percona-pgbackrest
+    docker exec -u root {{ container_prefix }}{{ item }} patroni --version
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Start etcd service
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} /bin/sh -c '
+      ps aux | grep postgres
+      rm -f /data/db/postmaster.pid
+      mkdir -p /data/db/logs
+      mkdir /pg_wal
+      touch /dev/watchdog
+      nohup etcd --config-file /etcd.conf.yaml > /data/db/logs/etcd.log 2>&1 &
+      chown -R postgres:postgres /data/db/logs
+      chown -R postgres:postgres /dev/watchdog
+      chown -R postgres:postgres /pg_wal
+      chown -R postgres:postgres /var/lib/postgresql/{{ pdpgsql_version }}/main/
+    '
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare replication user and config file for primary node
+  shell: |
+    docker cp {{ data_dir }}/node1/postgresql.conf {{ container_prefix }}1:/var/lib/postgresql/{{ pdpgsql_version }}/main
+    docker exec -u postgres {{ container_prefix }}1 psql -c "CREATE ROLE replicator WITH LOGIN REPLICATION PASSWORD 'replPasswd';"
+    docker exec -u postgres {{ container_prefix }}1 mkdir -p /var/lib/pgbackrest/archive/patroni_backup
+    docker exec -u postgres {{ container_prefix }}1 chown -R postgres:postgres /var/lib/pgbackrest
+    docker exec -u postgres {{ container_prefix }}1 pgbackrest --stanza=patroni_backup --pg1-path=/var/lib/postgresql/{{ pdpgsql_version }}/main stanza-create
+  become: true
+
+- name: Remove data folder on replica nodes.
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} rm -fr /var/lib/postgresql/{{ pdpgsql_version }}/main
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Install pg stat monitor.
+  include_tasks: ./tasks/install_pg_stat-monitor.yml
+
+- name: Grant pg_monitor to postgres user
+  shell: |
+    docker exec -u postgres {{ container_prefix }}1 bash -c '
+      psql -d {{ db_name | default("postgres") }} -c "GRANT pg_monitor TO postgres;"
+    '
+  become: true
+
+- name: Change postgres user password
+  shell: |
+    docker exec -u postgres {{ container_prefix }}1 psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'pass+this';"
+  become: true
+
+- name: Stop Percona distribution for Postgresql, due to being managed by patroni
+  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl stop postgresql
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Start patroni service in all nodes
+  shell: >
+    docker exec -u postgres {{ container_prefix }}{{ item }} /bin/sh -c "nohup patroni /patroni.yml > /data/db/logs/patroni.log 2>&1 &"
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Show logs from patroni for debug
+  shell: docker exec -u postgres {{ container_prefix }}{{ item }} cat /data/db/logs/patroni.log
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install and add pmm client.
+  include_tasks: ../tasks/install_pmm_client.yml
+  vars:
+    container_name: "{{ container_prefix }}{{ item }}"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Get already connected services to pmm server
+  shell: docker exec {{ container_prefix }}1 sh -c 'curl --location --insecure -u"admin:{{ admin_password }}" -s --request GET "http://{{ pmm_server_ip }}:{{ "80" if pmm_server_ip is match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$') else "8080" }}/v1/management/services" | jq -r ".services[].service_name"'
+  become: true
+  register: pmm_server_services
+
+- name: Display already connected services to pmm server
+  debug:
+    msg: "{{ pmm_server_services.stdout | split('\n') }}"
+
+- name: Find out if service is already connected to pmm server
+  block:
+    - name: Loop through percona servers
+      set_fact:
+        random_service_name_value: "_{{ 9999 | random + 1 }}"
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+      when: "('pdpgsql_pmm_patroni_' ~ pdpgsql_version ~ '_' ~ item) in pmm_server_services.stdout"
+
+- name: Add service to pmm server
+  shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=postgres --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment --password=pass+this --query-source=pgstatmonitor {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:5432
+  become: true
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Add patroni primary service to pmm server
+  shell: docker exec {{ container_prefix }}1 pmm-admin add external --listen-port=8008 --service-name=patroni_service_1{{ random_service_name_value }}
+  become: true
+
+- name: Add patroni replication service to pmm server
+  shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster --environment=pdpgsql_patroni_service_environment --service-name=patroni_service_{{ item }}{{ random_service_name_value }}
+  become: true
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Copy a file into the container
+  shell: docker cp ./data/pgsql_load.sql {{ container_prefix }}1:/pgsql_load.sql
+  become: true
+
+- name: Create database if it doesn't exist
+  shell: docker exec {{ container_prefix }}1 psql -U postgres -c "CREATE DATABASE school;"
+  become: true
+
+- name: Run SQL script using docker exec
+  shell: docker exec {{ container_prefix }}1 psql -U postgres -d school -f /pgsql_load.sql > /dev/null
+  become: true
+
+- name: Log Patroni cluster
+  shell: docker exec {{ container_prefix }}1 patronictl -c /patroni.yml list
+  become: true

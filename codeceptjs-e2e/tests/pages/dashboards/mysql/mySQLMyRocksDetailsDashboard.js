@@ -1,0 +1,58 @@
+class MySQLMyRocksDetailsDashboard {
+  constructor() {
+    this.url = 'graph/d/mysql-myrocks/mysql-myrocks-details';
+    this.metrics = [
+      'MyRocks Cache',
+      'MyRocks Cache Data Bytes R/W',
+      'MyRocks Cache Index Hit Rate',
+      'MyRocks Cache Index',
+      'MyRocks Cache Filter Hit Rate',
+      'MyRocks Cache Filter',
+      'MyRocks Cache Data Bytes Inserted',
+      'MyRocks Bloom Filter',
+      'MyRocks Memtable',
+      'Memtable Size',
+      'MyRocks Number Of Keys',
+      'MyRocks Cache L0/L1',
+      'MyRocks Number of DB ops',
+      'MyRocks R/W',
+      'MyRocks Bytes Read by Iterations',
+      'MyRocks Write ops',
+      'MyRocks WAL',
+      'MyRocks Number Reseeks in Iterations',
+      'RocksDB Row Operations',
+      'MyRocks File Operations',
+      'RocksDB Stalls',
+      'RocksDB Stops/Slowdowns',
+      'MySQL Uptime',
+      'Version',
+      'Current QPS',
+      'File Handlers Used',
+      'Table Open Cache Miss Ratio',
+      'Table Open Cache Size',
+      'Table Definition Cache Size',
+      'Service',
+      'MySQL Connections',
+      'MySQL Client Thread Activity',
+      'MySQL Handlers',
+      'Top Command Counters',
+      'Process States',
+      'MySQL Network Traffic',
+      'System Uptime',
+      'Load Average',
+      'RAM',
+      'Memory Available',
+      'Virtual Memory',
+      'Disk Space',
+      'Min Space Available',
+      'Node',
+      'CPU Usage',
+      'CPU Saturation and Max Core Usage',
+      'Disk I/O and Swap Activity',
+      'Network Traffic',
+    ];
+  }
+}
+
+module.exports = new MySQLMyRocksDetailsDashboard();
+module.exports.MySQLMyRocksDetailsDashboard = MySQLMyRocksDetailsDashboard;

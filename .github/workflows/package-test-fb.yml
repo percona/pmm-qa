@@ -4,11 +4,6 @@ name: Package Test FB
 on:
   workflow_dispatch:
     inputs:
-      package_testing_branch:
-        description: 'Target branch for package-testing repository'
-        type: string
-        default: 'master'
-        required: true
       pmm_server_image:
         description: "pmm-server docker image"
         required: true
@@ -16,7 +11,7 @@ on:
         default: "perconalab/pmm-server:3-dev-latest"
       pmm_client_tarball:
         description: "PMM Client tarball link or FB-code"
-        default: '3-dev-latest'
+        default: 'latest-tarball'
         type: string
         required: true
       playbook:
@@ -46,9 +41,6 @@ on:
 
   workflow_call:
     inputs:
-      package_testing_branch:
-        type: string
-        required: false
       pmm_server_image:
         required: true
         type: string
@@ -98,9 +90,8 @@ jobs:
       matrix:
         os: ${{ fromJSON(needs.filter_os.outputs.filtered_os) }}
     with:
-      package_testing_branch: ${{ inputs.package_testing_branch || 'master' }}
       pmm_server_image: ${{ inputs.pmm_server_image }}
-      pmm_client_tarball: ${{ inputs.pmm_client_tarball == '3-dev-latest' && needs.get_versions.outputs.finish_version || inputs.pmm_client_tarball }}
+      pmm_client_tarball: ${{ inputs.pmm_client_tarball == 'latest-tarball' && needs.get_versions.outputs.finish_version || inputs.pmm_client_tarball }}
       expected_version: ${{needs.get_versions.outputs.finish_version}}
       package: 'pmm3-client'
       repository: 'dev-latest'

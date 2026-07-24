@@ -9,27 +9,35 @@ import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
+import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
+
+const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
+const hasKnownNoDataMarker = (panelText: string) =>
+  panelNoDataMarkers.some((marker) => panelText.includes(marker)) ||
+  panelText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .includes('-');
 
 export default class Dashboards extends BasePage {
-  readonly home = new HomeDashboard();
+  readonly home = new HomeDashboard(this.page);
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
+  readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
+    panelByExactName: (panelName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
       this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
     panelHeaderByName: (panelName: string) =>
-      this.builders.panelByName(panelName).getByTestId('header-container'),
+      this.builders.panelByExactName(panelName).getByTestId('header-container'),
     panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
     panelMenuItemByName: (menuItemName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
   };
   buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally download image button',
-    ),
-    imageRendererGenerateImage: this.grafanaIframe().getByTestId(
-      'data-testid share panel internally generate image button',
-    ),
+    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
+    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   elements = {
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
@@ -44,10 +52,12 @@ export default class Dashboards extends BasePage {
       '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
     ),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
+    qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
+    qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
     refreshButton: this.grafanaIframe().getByLabel('Refresh', { exact: true }),
-    renderedImage: this.grafanaIframe().locator('[alt="panel-preview-img"]'),
+    renderedImage: this.grafanaIframe().locator('[aria-label="Generated image preview"]'),
     summaryPanelText: this.grafanaIframe().locator(
-      '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Percona Toolkit MySQL Summary Report")]',
+      '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
   };
   inputs = {};
@@ -56,14 +66,9 @@ export default class Dashboards extends BasePage {
   readonly panels = () => Panels(this.page);
 
   loadAllPanels = async () => {
-    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+    await this.waitForDashboardToLoad();
 
-    // Wait for the dashboard to be visible before proceeding.
-    await test.step('Wait for initial loading to finish', async () => {
-      await expectPanel(this.elements.refreshButton).toBeVisible();
-      await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
-      await expectPanel(this.elements.loadingText).toHaveCount(0);
-    });
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
 
     // Expand rows if present and wait for content in each item.
     await test.step('Expand rows and load panel content', async () => {
@@ -74,7 +79,10 @@ export default class Dashboards extends BasePage {
 
         const expandButton = item.getByLabel('Expand row');
 
-        if (await expandButton.isVisible()) await expandButton.click();
+        if (await expandButton.isVisible()) {
+          await expandButton.click();
+          await expectPanel(expandButton).toBeHidden();
+        }
 
         await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
       }
@@ -84,6 +92,13 @@ export default class Dashboards extends BasePage {
     await test.step('Wait for loading to finish', async () => {
       await expectPanel(this.elements.loadingBar).toHaveCount(0);
     });
+
+    if (this.page.url().includes('/pmm-qan/')) {
+      await test.step('Wait for QAN stats to finish loading', async () => {
+        await expectPanel(this.elements.qanGrid).toBeVisible();
+        await expectPanel(this.elements.qanTableLoading).toHaveCount(0);
+      });
+    }
   };
 
   openPanelMenu = async (panelName: string) => {
@@ -127,14 +142,6 @@ export default class Dashboards extends BasePage {
       await this.page.waitForTimeout(Timeouts.THIRTY_SECONDS);
     }
 
-    if (missingMetrics.length > 0) {
-      for (const missingMetric of missingMetrics) {
-        await this.builders.panelByName(missingMetric).screenshot({
-          path: `./screenshots/missing-metric-${missingMetric.toLowerCase().replace(/[^a-z0-9-_]+/gi, '_')}.png`,
-        });
-      }
-    }
-
     expect.soft(missingMetrics, `Metrics without data are: ${missingMetrics}`).toHaveLength(0);
   };
 
@@ -149,6 +156,28 @@ export default class Dashboards extends BasePage {
     const availableMetrics = await this.elements.panelName.allTextContents();
 
     expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
+  };
+
+  verifyNamedPanelsHaveData = async (panelNames: string[]) => {
+    await this.loadAllPanels();
+
+    for (const panelName of panelNames) {
+      const panelText = await this.builders.panelByName(panelName).innerText();
+
+      expect(hasKnownNoDataMarker(panelText), `Panel ${panelName} should contain real data`).toBeFalsy();
+    }
+  };
+
+  verifyPanelsShowNoRealDataMarkers = async (panelNames: string[]) => {
+    await this.loadAllPanels();
+
+    for (const panelName of panelNames) {
+      const panelText = await this.grafanaIframe()
+        .getByRole('region', { exact: true, name: panelName })
+        .innerText();
+
+      expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
+    }
   };
 
   verifyPanelValues = async (panels: GrafanaPanel[], serviceList?: GetService[]) => {
@@ -192,5 +221,15 @@ export default class Dashboards extends BasePage {
           throw new Error(`Unsupported panel: ${panel.name}`);
       }
     }
+  };
+
+  waitForDashboardToLoad = async () => {
+    const expectPanel = expect.configure({ timeout: Timeouts.ONE_MINUTE });
+
+    await test.step('Wait for initial loading to finish', async () => {
+      await expectPanel(this.elements.refreshButton).toBeVisible();
+      await expectPanel(this.elements.loadingIndicator).toHaveCount(0);
+      await expectPanel(this.elements.loadingText).toHaveCount(0);
+    });
   };
 }

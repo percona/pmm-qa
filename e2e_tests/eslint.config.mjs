@@ -280,6 +280,7 @@ export default defineConfig([
             'verifyQanStoredMetricsHaveData',
             'verifyTotalQueryCount',
             'verifyRTAAgentStatus',
+            'verifyAllMenuItems',
           ],
         },
       ],

@@ -1,0 +1,17 @@
+- name: Install and add pmm client
+  include_tasks: install_pmm_client.yml
+
+- name: Set unique service name
+  include_tasks: ./set_unique_service_name.yml
+
+- name: Add group replication service to pmm server
+  community.docker.docker_container_exec:
+    container: "{{ container_name }}"
+    command: pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --environment=ps-gr-dev --cluster=ps-gr-dev-cluster --replication-set=ps-gr-replication {{ service_name }} --debug 127.0.0.1:3306
+  when: setup_type == "gr"
+
+- name: Add service to pmm server
+  community.docker.docker_container_exec:
+    container: "{{ container_name }}"
+    command: pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --environment=ps-dev {{ service_name }} --debug 127.0.0.1:3306
+  when: setup_type != "gr"

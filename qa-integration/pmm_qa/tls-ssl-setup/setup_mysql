@@ -1,0 +1,84 @@
+---
+# This playbook does following:
+#   enables Percona testing repository
+#   Install Percona Server at Version 8.0.25 
+#   Install all required tools for backups in compatible version
+
+- hosts: all
+  become: true
+  become_method: sudo
+  vars:
+    mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL_VERSION') | default('8.0', true) ) }}"
+    mysql_ssl_container: "{{ lookup('vars', 'extra_mysql_ssl_container', default=lookup('env','MYSQL_SSL_CONTAINER') | default('mysql_ssl', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
+
+  tasks:
+  - name: Cleanup Docker container for client and DB setup
+    shell: >
+      docker ps -a --filter "name={{ mysql_ssl_container }}" | grep -q . && docker stop {{ mysql_ssl_container }} && docker rm -fv {{ mysql_ssl_container }}
+    ignore_errors: true
+    tags:
+      - cleanup
+  - name: delete network if exist
+    shell: docker network rm "{{ mysql_ssl_container }}_network"
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Create a network
+    shell: docker network create "{{ mysql_ssl_container }}_network"
+
+  - name: Create pmm-qa network if not exist
+    shell: docker network create pmm-qa
+    ignore_errors: true
+
+  - name: Prepare Container for mysql ssl container
+    shell: >
+      docker run -d --name={{ mysql_ssl_container }}
+      --network "{{ mysql_ssl_container }}_network"
+      phusion/baseimage:focal-1.1.0
+  
+  - name: Copy all required Artifacts to the docker mysql_ssl_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mysql_ssl_container }} mkdir -p artifacts
+      - docker cp ./mysql/mysql_ssl_setup.sh {{ mysql_ssl_container }}:/
+
+  - name: Execute Setup script inside the mysql mysql_ssl_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mysql_ssl_container }} bash -xe ./mysql_ssl_setup.sh --mysql_version {{ mysql_version }} > mysql/setup_mysql_ssl_{{ mysql_version }}.log
+
+  - name: Install pmm2-client on the mysql_ssl_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mysql_ssl_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
+      - docker network connect pmm-qa {{ mysql_ssl_container }}
+      - docker exec {{ mysql_ssl_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+  
+  - name: Add pmm-admin binary to path when tar ball installation
+    shell: docker exec {{ mysql_ssl_container }} echo "export PATH=$PATH:/pmm2-client/bin" > setup_path.sh
+    when: '"http" in client_version'
+
+  - name: Remove mysql service if already added previously
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mysql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin remove mysql {{ mysql_ssl_container }}_service'
+    ignore_errors: true
+
+  - name: Add mysql_ssl for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ mysql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
+      - docker exec {{ mysql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add mysql --username=pmm --password=pmm --query-source=perfschema --tls --tls-skip-verify --tls-ca=/var/lib/mysql/ca.pem --tls-cert=/var/lib/mysql/client-cert.pem --tls-key=/var/lib/mysql/client-key.pem {{ mysql_ssl_container }}_ssl_service'
+  
+  - name: Get client cert Files on host
+    shell: "{{ item }}"
+    with_items:
+      - mkdir -p mysql/{{ mysql_version }} || true
+      - docker exec {{ mysql_ssl_container }} cat /var/lib/mysql/ca.pem > mysql/{{ mysql_version }}/ca.pem
+      - docker exec {{ mysql_ssl_container }} cat /var/lib/mysql/client-key.pem > mysql/{{ mysql_version }}/client-key.pem
+      - docker exec {{ mysql_ssl_container }} cat /var/lib/mysql/client-cert.pem > mysql/{{ mysql_version }}/client-cert.pem

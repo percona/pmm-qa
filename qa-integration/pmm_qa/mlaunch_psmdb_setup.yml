@@ -1,0 +1,85 @@
+---
+
+- hosts: all
+  become: true
+  become_method: sudo
+  vars:
+    psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB_VERSION') | default('4.4', true) ) }}"
+    psmdb_tarball: "{{ lookup('vars', 'extra_psmdb_tarball', default=lookup('env','PSMDB_TARBALL') | default('', true) ) }}"
+    psmdb_setup: "{{ lookup('vars', 'extra_psmdb_setup', default=lookup('env','PSMDB_SETUP') | default('pss', true) ) }}"
+    psmdb_container: "{{ lookup('vars', 'extra_psmdb_container', default=lookup('env','PSMDB_CONTAINER') | default('psmdb', true) ) }}"
+    pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('127.0.0.1', true) ) }}"
+    client_version: "{{ lookup('vars', 'extra_client_version', default=lookup('env','CLIENT_VERSION') | default('dev-latest', true) ) }}"
+    admin_password: "{{ lookup('vars', 'extra_admin_password', default=lookup('env','ADMIN_PASSWORD') | default('admin', true) ) }}"
+    pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('v3', true) ) }}"
+
+  tasks:
+  - name: cleanup container for client and DB setup
+    shell: >
+      docker ps -a --filter "name={{ psmdb_container }}" | grep -q . && docker stop {{ psmdb_container }} && docker rm -fv {{ psmdb_container }}
+    ignore_errors: true
+    tags:
+      - cleanup
+
+  - name: Create pmm-qa network if not exist
+    shell: docker network create pmm-qa
+    ignore_errors: true
+
+  - name: Prepare Container for PSMDB
+    shell: >
+      docker run -d --name={{ psmdb_container }}
+      -p 27017:27017
+      phusion/baseimage:jammy-1.0.1
+
+  - name: Copy all required Artifacts to the docker psmdb_container
+    shell: "{{ item }}"
+    with_items:
+      - docker cp ./mlaunch_psmdb_setup.sh {{ psmdb_container }}:/
+      - docker cp ./pmm3-client-setup.sh {{ psmdb_container }}:/
+      - docker exec {{ psmdb_container }} apt-get update
+      - docker exec {{ psmdb_container }} apt-get -y install wget curl git gnupg2 lsb-release jq python3 pip
+
+  - name: Install required software's to the docker psmdb_container
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ psmdb_container }} python3 -m pip install --upgrade pip
+      - docker exec {{ psmdb_container }} pip3 install 'mtools[all]'
+
+  - name: Install pmm2-client on the psmdb_container
+    shell: "{{ item }}"
+    with_items:
+      - docker network connect pmm-qa {{ psmdb_container }}
+      - docker exec {{ psmdb_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+
+  - name: Setup psmdb for monitoring
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ psmdb_container }} bash -x ./mlaunch_psmdb_setup.sh --mongodb_version {{ psmdb_version }} --mongodb_setup {{ psmdb_setup }} > setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+
+  - name: Setup Load Running Docker Container
+    shell: "{{ item }}"
+    with_items:
+      - rm -rf ~/psmdb_{{ psmdb_version }} || true; mkdir -p ~/psmdb_{{ psmdb_version }}
+      - wget -P ~/psmdb_{{ psmdb_version }}/ "https://raw.githubusercontent.com/Percona-Lab/qa-integration/{{pmm_qa_branch}}/pmm_qa/Dockerfile"
+      - wget -P ~/psmdb_{{ psmdb_version }}/ "https://raw.githubusercontent.com/Percona-Lab/qa-integration/{{pmm_qa_branch}}/pmm_qa/mongodb_query.php"
+      - docker build --tag php-db ~/psmdb_{{ psmdb_version }}/ > ~/docker-build_mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }}.log || true
+      - docker rm mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} || true
+      - docker run --rm --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db composer require mongodb/mongodb || true
+
+  - name: Run load on Replica Set Master(PSS)
+    shell: "{{ item }}"
+    with_items:
+      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+    when: psmdb_setup == "pss"
+
+  - name: Run load on Replica Set Master(PSA)
+    shell: "{{ item }}"
+    with_items:
+      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+    when: psmdb_setup == "psa"
+
+  - name: Run load on Sharded Clusters Master
+    shell: "{{ item }}"
+    with_items:
+      - docker run --name mongodb_load_{{ psmdb_version }}_{{ psmdb_setup }} -d -e MONGODB_HOST={{ psmdb_container }} -e MONGODB_PORT=27017 -e TEST_TARGET_QPS=10 -e TEST_COLLECTION=10 -e TEST_DB=30 --network=pmm-qa -v $(pwd):/usr/src/myapp -w /usr/src/myapp php-db php mongodb_query.php >> setup_psmdb_{{ psmdb_version }}_{{ psmdb_setup }}.log
+    when: psmdb_setup == "sharded"

@@ -1,0 +1,83 @@
+scope: patroni_cls
+namespace: /var/lib/pgsql/config/
+name: {{ container_prefix }}{{ item }}
+
+restapi:
+  listen: 0.0.0.0:8008
+  connect_address: "{{ container_prefix }}{{ item }}:8008"
+
+etcd3:
+  host: "{{ container_prefix }}1:2379"
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 10
+    maximum_lag_on_failover: 1048576
+
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        shared_preload_libraries: 'pg_stat_monitor'
+        wal_level: replica
+        hot_standby: "on"
+        wal_keep_size: 128MB
+        max_wal_senders: 10
+        max_replication_slots: 10
+        wal_log_hints: "on"
+        archive_mode: "on"
+        archive_timeout: 600s
+        archive_command: pgbackrest --stanza=patroni_backup --log-level-console=info archive-push /var/lib/postgresql/{{ pdpgsql_version }}/main/pg_wal/%f
+      pg_hba:
+        - host replication replicator 127.0.0.1/32 md5
+        - host replication replicator 172.18.0.0/16 md5
+        - host all all 0.0.0.0/0 md5
+        - local all postgres trust
+
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+    - waldir: /pg_wal
+    - wal-segsize=512
+
+  users:
+    admin:
+      password: admin
+      options:
+        - createrole
+        - createdb
+
+postgresql:
+  listen: 0.0.0.0:5432
+  connect_address: "{{ container_prefix }}{{ item }}:5432"
+  data_dir: /var/lib/postgresql/{{ pdpgsql_version }}/main
+  bin_dir: /usr/lib/postgresql/{{ pdpgsql_version }}/bin
+  pgpass: /tmp/pgpass
+
+  authentication:
+    replication:
+      username: replicator
+      password: replPasswd
+    superuser:
+      username: postgres
+      password: pass+this
+
+  create_replica_methods:
+    - pgbackrest
+    - basebackup
+
+  pgbackrest:
+    command: pgbackrest --stanza=patroni_backup restore --pg1-path=/var/lib/postgresql/{{ pdpgsql_version }}/main --type=none
+    keep_data: true
+    no_params: true
+
+  basebackup:
+    checkpoint: fast
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false

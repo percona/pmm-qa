@@ -1,0 +1,4 @@
+OPTIONS="-f /etc/mongod/mongod.conf"
+STDOUT="/var/log/mongo/mongod.stdout"
+STDERR="/var/log/mongo/mongod.stderr"
+KRB5_KTNAME=/keytabs/mongodb.keytab

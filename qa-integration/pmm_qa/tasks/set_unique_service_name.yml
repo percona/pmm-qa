@@ -1,0 +1,44 @@
+- name: Install jq via appropriate package manager
+  become: true
+  block:
+    - name: Install jq on Debian/Ubuntu
+      apt:
+        name: jq
+        state: present
+      when: ansible_facts['os_family'] == 'Debian'
+
+    - name: Install jq on RHEL/CentOS/Alma/Rocky
+      dnf:
+        name: jq
+        state: present
+      when: ansible_facts['os_family'] == 'RedHat'
+
+- name: Verify that service with expected name is not connected to pmm server
+  shell: |
+    SERVICE_NAME="{{ container_name }}"
+    echo "$SERVICE_NAME"
+    curl -u admin:{{ admin_password }} --location 'http://{{ pmm_server_ip}}/v1/management/services' | jq -r '.services[].service_name' | grep -q $SERVICE_NAME
+  register: service_exists_old
+  ignore_errors: yes
+
+- name: Set correct service name in pmm server
+  set_fact:
+    service_name: "{{ service_exists_old.stdout }}"
+  when: service_exists_old.rc == 1
+
+- name: Create a new service name that is not already connected to pmm server
+  shell: |
+    RANDOM_ID="_$(shuf -i 1-10000 -n 1)"
+    SERVICE_NAME="{{ container_name }}$RANDOM_ID"
+    echo "$SERVICE_NAME"
+    curl -u admin:{{ admin_password }} --location 'http://{{ pmm_server_ip}}/v1/management/services' | jq -r '.services[].service_name' | grep -q $SERVICE_NAME
+  register: service_exists_new
+  ignore_errors: yes
+  retries: 5
+  until: service_exists_new.rc == 1
+  when: service_exists_old.rc == 0
+
+- name: Set correct service name in pmm server
+  set_fact:
+    service_name: "{{ service_exists_new.stdout }}"
+  when: service_exists_old.rc == 0

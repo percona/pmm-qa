@@ -1,0 +1,68 @@
+version: "3.8"
+
+services:
+  cert-generator:
+    image: alpine:latest
+    container_name: cert-generator
+    volumes:
+      - pmm-certs:/certs
+    entrypoint: >
+      sh -c "
+          apk add --no-cache openssl &&
+          cd /certs &&
+          if [ ! -f ca.crt ]; then
+            echo 'Generating CA...';
+            openssl genrsa -out ca.key 2048 &&
+            openssl req -x509 -new -nodes -key ca.key -sha256 -days 3650 \
+              -out ca.crt -subj '/CN=PMM_CA';
+          fi &&
+          if [ ! -f server.crt ]; then
+            echo 'Generating server cert signed by CA...';
+            openssl genrsa -out server.key 2048 &&
+            openssl req -new -key server.key -out server.csr -subj '/CN=pmm-server' &&
+            openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+              -out server.crt -days 365 -sha256;
+          fi
+        "
+    restart: "no"
+
+  pmm-server:
+    image: perconalab/pmm-server:3-dev-latest
+    container_name: pmm-server
+    ports:
+      - "443:8443"
+    environment:
+      - PMM_DEBUG=1
+      - PMM_ENABLE_ACCESS_CONTROL=1
+      - GF_AUTH_OAUTH_ALLOW_INSECURE_EMAIL_LOOKUP=1
+      - PMM_DEV_PORTAL_URL=https://portal-dev.percona.com
+      - PMM_DEV_PERCONA_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX
+      - PMM_DEV_PERCONA_PLATFORM_ADDRESS=https://check-dev.percona.com:443
+      - PMM_DEV_TELEMETRY_INTERVAL=10s
+      - PMM_DEV_TELEMETRY_RETRY_BACKOFF=10s
+    depends_on:
+      - cert-generator
+    volumes:
+      - pmm-data:/srv
+      - pmm-certs:/srv/nginx
+
+  pmm-client:
+    image: perconalab/pmm-client:3-dev-latest
+    container_name: pmm-client
+    depends_on:
+      pmm-server:
+        condition: service_healthy
+    volumes:
+      - pmm-certs:/certs:ro
+    environment:
+      PMM_AGENT_SERVER_ADDRESS: pmm-server:8443
+      PMM_AGENT_SETUP: "1"
+      PMM_AGENT_SETUP_NODE_NAME: pmm-client
+      PMM_AGENT_SERVER_INSECURE_TLS: "1"
+      SSL_CERT_FILE: /certs/ca.crt
+      PMM_AGENT_SETUP_NODE_TYPE: container
+    restart: on-failure
+
+volumes:
+  pmm-data:
+  pmm-certs:

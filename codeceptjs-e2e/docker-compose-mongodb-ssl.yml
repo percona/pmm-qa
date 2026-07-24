@@ -1,0 +1,15 @@
+services:
+  mongo_with_ssl:
+    image: ${MONGO_IMAGE:-percona/percona-server-mongodb:4.4}
+    container_name: mongodb_ssl
+    ports:
+      - "27018:27017"
+    command:
+      - --profile=2
+      - --sslMode=requireSSL
+      - --sslPEMKeyFile=/etc/ssl/certificates/server.pem
+      - --sslCAFile=/etc/ssl/certificates/ca.crt
+      - --sslWeakCertificateValidation
+      - --bind_ip=0.0.0.0
+    volumes:
+      - ${PWD}/testdata/mongodb/certs:/etc/ssl/certificates

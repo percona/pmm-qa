@@ -1,0 +1,118 @@
+# This task installs and starts Percona Server MongoDB with gssapi on Oracle Linux
+#
+# Task adjustments are handled by parent playbook vars:
+#             var "port_flag"      :  to access agent with custom port
+#                                     ex: port_flag: "--pmm-agent-listen-port={{ custom_port }}"
+#
+
+- debug:
+    msg: "PSMDB to test is: {{ psmdb_to_test }}"
+
+- name: Download install_setup_psmdb.yml
+  get_url:
+    url: https://raw.githubusercontent.com/Percona-QA/psmdb-testing/main/pbm/tasks/install_setup_psmdb.yml
+    dest: /tmp
+    mode: 0777
+
+- name: enable psmdb repo
+  include_tasks: ./enable_repo.yml
+  vars:
+    package: "{{ psmdb_to_test }}"
+    repository: "release"
+
+- name: Run install_setup_psmdb.yml
+  include_tasks: /tmp/install_setup_psmdb.yml
+
+- name: Install Kerberos
+  dnf:
+    name:
+      - krb5-workstation
+      - krb5-server
+      - krb5-pkinit
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Deploy krb5.conf from template
+  template:
+    src: ../templates/krb5.conf.j2
+    dest: /etc/krb5.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+
+- name: Setup mongodb with gssapi
+  template:
+    src: ../templates/mongod.conf.j2
+    dest: /etc/mongod.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+
+- name: Setup ldap-server
+  shell: |
+    docker run -d \
+      --name ldap-server \
+      --hostname ldap-server \
+      -e LDAP_ADMIN_USERNAME=admin \
+      -e LDAP_ADMIN_PASSWORD=adminpassword \
+      -e LDAP_USERS="pmm-test" \
+      -e LDAP_PASSWORDS="password1" \
+      -p 1389:1389 \
+      -p 1636:1636 \
+      -v openldap-data:/bitnami/openldap \
+      bitnamilegacy/openldap
+  retries: "{{ retries | default(3, true) }}"
+
+- name: Generate certificates for tests
+  shell: |
+    rm -rf easy-rsa pki certs && mkdir certs
+    git clone https://github.com/OpenVPN/easy-rsa.git
+    ./easy-rsa/easyrsa3/easyrsa init-pki
+    ./easy-rsa/easyrsa3/easyrsa --req-cn=Percona --batch build-ca nopass
+    ./easy-rsa/easyrsa3/easyrsa --req-ou=server --subject-alt-name=DNS:pmm-server --batch build-server-full pmm-server nopass
+    ./easy-rsa/easyrsa3/easyrsa --req-ou=server --subject-alt-name=DNS:psmdb-server --batch build-server-full psmdb-server nopass
+    ./easy-rsa/easyrsa3/easyrsa --req-ou=client --batch build-client-full pmm-test nopass
+    openssl dhparam -out certs/dhparam.pem 2048
+    cp pki/ca.crt certs/ca-certs.pem
+    cp pki/private/pmm-server.key certs/certificate.key
+    cp pki/issued/pmm-server.crt certs/certificate.crt
+    cat pki/private/psmdb-server.key pki/issued/psmdb-server.crt > certs/psmdb-server.pem
+    cat pki/private/pmm-test.key pki/issued/pmm-test.crt > certs/client.pem
+    find certs -type f -exec chmod 644 {} \;
+    mkdir -p /mongodb_certs
+    cp -r ./certs/* /mongodb_certs/
+- name: Setup kerberos
+  shell: |
+    mkdir -p /keytabs
+    chmod 700 /keytabs
+    kdb5_util -P password create -s
+    kadmin.local -q "addprinc -pw password root/admin"
+    kadmin.local -q "addprinc -pw mongodb mongodb/127.0.0.1"
+    kadmin.local -q "addprinc -pw password1 pmm-test"
+    kadmin.local -q "ktadd -k /etc/krb5.keytab mongodb/127.0.0.1@PERCONATEST.COM"
+    chown mongod:mongod /etc/krb5.keytab
+    chmod 600 /etc/krb5.keytab
+    systemctl enable krb5kdc
+    systemctl start krb5kdc
+    echo "password1" | kinit pmm-test@PERCONATEST.COM
+- name: Creata root user for MongoDB
+  shell: |
+    mongo --eval 'db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] })'
+- name: Setup MongoDB config file
+  shell: |
+    mongo -u root -p 'root' ./support-files/setup_psmdb.js
+- name: Restart mongodb to use new config
+  shell: |
+    chown -R mongod:mongod /var/lib/mongo
+    systemctl restart mongod
+    systemctl status mongod.service
+  ignore_errors: yes
+
+- name: Add mongodb metrics to monitoring
+  command: pmm-admin add mongodb {{ port_flag if port_flag is defined else '' }} --service-name={{ mongo_service_name }} --username="pmm-test@PERCONATEST.COM" --password=password1 --authentication-mechanism=GSSAPI --authentication-database='$external'
+
+- name: Wait 30 seconds for percona server for mongodb start to complete
+  pause:
+    seconds: 30

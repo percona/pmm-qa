@@ -1,12 +1,13 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
-  await page.goto('');
   await grafanaHelper.authorize();
+  await page.goto('pmm-ui/help');
 });
 
-pmmTest('PMM-T2096 - Verify view docs button @new-navigation', async ({ helpPage }) => {
+pmmTest('PMM-T2098 - Verify view docs button @new-navigation', async ({ helpPage }) => {
   await pmmTest.step('Verify navigation to external URL', async () => {
     await expect(helpPage.buttons.viewDocs).toBeVisible();
 
@@ -24,7 +25,7 @@ pmmTest('PMM-T2116 - Verify Get Percona Support button @new-navigation', async (
     const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.contactSupport);
 
     expect(href).toBeTruthy();
-    expect(newTab.url()).toContain('/www.percona.com/about/contact');
+    expect(newTab.url()).toContain('www.percona.com/contact-us');
   });
 });
 
@@ -76,10 +77,85 @@ pmmTest('PMM-T2120 - Verify start pmm tour button @new-navigation', async ({ hel
 pmmTest('PMM-T2121 - Verify share your thoughts button @new-navigation', async ({ helpPage }) => {
   await pmmTest.step('Verify navigation to external URL', async () => {
     await expect(helpPage.buttons.shareYourThoughts).toBeVisible();
-
-    const { href, newTab } = await helpPage.clickExternalLink(helpPage.buttons.shareYourThoughts);
-
-    expect(href).toBeTruthy();
-    expect(newTab.url()).toContain('/docs.google.com/forms/');
+    await expect(helpPage.buttons.shareYourThoughts).toHaveAttribute(
+      'href',
+      'https://per.co.na/pmm3_feedback',
+    );
   });
+});
+
+pmmTest(
+  'PMM-T2132 Verify welcome Card appears on fresh install @new-navigation',
+  async ({ helpPage, mocks }) => {
+    await pmmTest.step('Mock fresh install and no services', async () => {
+      await mocks.mockFreshInstall();
+      await mocks.mockNoServices();
+    });
+
+    await pmmTest.step('Verify welcome card and its buttons are visible', async () => {
+      await expect(helpPage.elements.welcomeCard).toBeVisible();
+      await expect(helpPage.buttons.addServiceButton).toBeVisible();
+      await expect(helpPage.buttons.dismissButton).toBeVisible();
+      await expect(helpPage.buttons.startTourButton).toBeVisible();
+    });
+  },
+);
+
+pmmTest(
+  'PMM-T2101 verify dismiss button on welcome card @new-navigation',
+  async ({ helpPage, mocks, page }) => {
+    await pmmTest.step('Mock fresh install', async () => {
+      await mocks.mockFreshInstall();
+    });
+
+    await pmmTest.step('Verify welcome card visibility and click dismiss', async () => {
+      await expect(helpPage.elements.welcomeCard).toBeVisible();
+      await helpPage.buttons.dismissButton.click();
+    });
+
+    await pmmTest.step('Reload page and verify welcome card is not visible', async () => {
+      await page.reload();
+      await expect(helpPage.elements.welcomeCard).toBeHidden();
+    });
+  },
+);
+
+pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ helpPage, mocks, page }) => {
+  await pmmTest.step('Mock fresh install', async () => {
+    await mocks.mockFreshInstall();
+  });
+
+  await pmmTest.step('Verify welcome card and start tour', async () => {
+    await expect(helpPage.elements.welcomeCard).toBeVisible();
+    await helpPage.buttons.startTourButton.click();
+  });
+
+  await pmmTest.step('Verify tour popover and close tour', async () => {
+    await expect(helpPage.elements.tourPopover).toBeVisible();
+    await helpPage.buttons.tourCloseButton.click();
+  });
+
+  await pmmTest.step('Reload page and verify welcome card is not visible', async () => {
+    await page.reload();
+    await expect(helpPage.elements.welcomeCard).toBeHidden();
+  });
+});
+
+pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mocks, page }) => {
+  const cases = helpPage.cases;
+
+  for (const c of cases) {
+    await pmmTest.step('Verify update check', async () => {
+      await mocks.mockUpdateAvailable(c.updateAvailable);
+      await page.reload();
+
+      /* eslint-disable playwright/no-conditional-expect -- TODO: Refactor test case to avoid conditional expect */
+      if (c.updateAvailable) {
+        await expect(helpPage.buttons.updates).toBeVisible({ timeout: Timeouts.TEN_SECONDS });
+      } else {
+        await expect(helpPage.buttons.updates).toBeHidden({ timeout: Timeouts.TEN_SECONDS });
+      }
+      /* eslint-enable playwright/no-conditional-expect */
+    });
+  }
 });

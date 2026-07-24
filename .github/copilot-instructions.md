@@ -1,7 +1,7 @@
-# PMM QA Automation — GitHub Copilot Entry Point
+# PMM-QA — GitHub Copilot Entry Point
 
-Read [AGENTS.md](../AGENTS.md) at the repository root for the complete guide covering test architecture, Playwright E2E suite, Helm/Bats tests, CI orchestration, page object patterns, and development workflow.
+Read [AGENTS.md](../AGENTS.md) at the repository root for the complete guide covering repository map, all test suites (Playwright, CodeceptJS, CLI, package, Helm), CI orchestration, patterns, and development workflow.
 
 ## PMM Context
 
-This is the QA automation repo for [PMM](https://github.com/percona/pmm). See [copilot-instructions.md](https://github.com/percona/pmm/blob/v3/.github/copilot-instructions.md) for the product overview.
+This is the QA automation repo for [PMM](https://github.com/percona/pmm). For product-wide architecture and domain model, see [percona/pmm AGENTS.md](https://github.com/percona/pmm/blob/main/AGENTS.md).

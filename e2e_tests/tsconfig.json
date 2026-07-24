@@ -17,22 +17,22 @@
     "isolatedModules": true,
     "paths": {
       "@fixtures/*": [
-        "fixtures/*"
+        "./fixtures/*"
       ],
       "@interfaces/*": [
-        "interfaces/*"
+        "./interfaces/*"
       ],
       "@helpers/*": [
-        "helpers/*"
+        "./helpers/*"
       ],
       "@components/*": [
-        "components/*"
+        "./components/*"
       ],
       "@pages/*": [
-        "pages/*"
+        "./pages/*"
       ],
       "@api/*": [
-        "api/*"
+        "./api/*"
       ],
       "@valkey": [
         "./pages/dashboards/valkey/index.ts"
