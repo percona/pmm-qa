@@ -6,6 +6,7 @@ import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
+import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
@@ -22,6 +23,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
 export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard(this.page);
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
+  readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {

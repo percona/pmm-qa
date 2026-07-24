@@ -78,6 +78,7 @@ export default class LeftNavigation extends BasePage {
       otherDashboards: { locator: this.page.getByTestId('navitem-mongo-other-dashboards') },
       overview: { locator: this.page.getByTestId('navitem-mongo-overview') },
       summary: { locator: this.page.getByTestId('navitem-mongo-summary') },
+      unusedIndexes: { locator: this.page.getByTestId('navitem-mongo-unused-indexes') },
     },
     mysql: {
       commandHandler: { locator: this.page.getByTestId('navitem-mysql-command-handler-counters-compare') },

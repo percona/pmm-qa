@@ -40,6 +40,33 @@ export default class MongoDBHelper {
   };
 
   /**
+   * Creates a used and an unused index so indexstats-based dashboards have deterministic data.
+   */
+  ensureUnusedIndex = async (options: {
+    collectionName: string;
+    dbName: string;
+    indexField?: string;
+    usedIndexField?: string;
+  }) => {
+    const {
+      collectionName,
+      dbName,
+      indexField = 'unused_field_qa',
+      usedIndexField = 'used_field_qa',
+    } = options;
+    const collection = this.client.db(dbName).collection(collectionName);
+
+    await collection.createIndex({ [indexField]: 1 });
+    await collection.createIndex({ [usedIndexField]: 1 });
+    await collection.updateOne(
+      { [usedIndexField]: { $exists: true } },
+      { $set: { [usedIndexField]: `seed-${Date.now()}` } },
+      { upsert: true },
+    );
+    await collection.findOne({ [usedIndexField]: { $exists: true } });
+  };
+
+  /**
    * Simulates a long-running query by splitting delay across many documents.
    * MongoDB kills server-side JS after a few seconds; so we use a short delay per document
    * (e.g. 2s) and ensure enough documents so total time ≈ delayMs. Query stays "running" on server.
