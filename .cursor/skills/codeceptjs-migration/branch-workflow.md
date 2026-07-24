@@ -90,13 +90,25 @@ The PR body must include:
 - execution commands and results;
 - final review result.
 
+## Attach CI execution
+
+PRs to `main` auto-trigger `e2e-tests-matrix.yml`. After `gh pr create`, resolve the workflow run and link it on the PR:
+
+```bash
+PR_NUM=$(gh pr view --json number -q .number)
+RUN_URL=$(gh run list --workflow e2e-tests-matrix.yml --branch "$(git branch --show-current)" --limit 1 --json url -q '.[0].url')
+[ -n "$RUN_URL" ] && gh pr comment "$PR_NUM" --body "GitHub Actions: ${RUN_URL}"
+```
+
+Include the run URL in the tracker Notes. Do not wait for CI to finish before marking `done`.
+
 ## Tracker completion
 
 After the PR exists, on the control branch:
 
 1. merge the frozen migration branch;
 2. update `e2e_tests/graphify-out/` from the merged tree;
-3. update the row to `done` and record the PR URL or number, actual target and setup, review, MCP, test, and graph-update results;
+3. update the row to `done` and record the PR URL or number, GitHub Actions run URL, actual target and setup, review, MCP, test, and graph-update results;
 4. commit and push only the tracker and target graph artifacts after the merge commit.
 
 If the PR opened but the control-branch graph or tracker update failed, report publication as incomplete and do not claim completion.
