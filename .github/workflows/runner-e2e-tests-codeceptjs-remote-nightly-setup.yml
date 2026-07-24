@@ -103,13 +103,19 @@ jobs:
         run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
 
       - name: Setup PMM-Client against remote PMM Server
-        working-directory: pmm-qa/qa-integration/pmm_qa
-        run: |
-          sudo bash -x pmm3-client-setup.sh \
-            --pmm_server_ip "${SERVER_IP}" \
-            --client_version "${{ env.PMM_CLIENT_VERSION }}" \
-            --admin_password "${{ env.ADMIN_PASSWORD }}" \
-            --use_metrics_mode no
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 10
+          retry_wait_seconds: '10'
+          max_attempts: 2
+          retry_on: 'error'
+          command: |
+            cd pmm-qa/qa-integration/pmm_qa
+            sudo bash -x pmm3-client-setup.sh \
+              --pmm_server_ip "${SERVER_IP}" \
+              --client_version "${{ env.PMM_CLIENT_VERSION }}" \
+              --admin_password "${{ env.ADMIN_PASSWORD }}" \
+              --use_metrics_mode no
 
       - name: Run setup for E2E tests (start client services on this runner)
         uses: nick-fields/retry@v3

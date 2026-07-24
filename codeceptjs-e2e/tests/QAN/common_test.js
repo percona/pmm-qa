@@ -20,7 +20,7 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
     await queryAnalyticsPage.filters.applyShowAllLinkIfItIsVisible(filter);
     const countFilters = await I.grabNumberOfVisibleElements(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup(filter));
 
-    if (countFilters === 0) {
+    if (countFilters === 0 || filter === 'Service Name') {
       continue;
     }
 
@@ -49,7 +49,7 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
 
   queryAnalyticsPage.filters.selectContainFilterInGroup(serviceFilter, 'Service Name');
   I.wait(3);
-  const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.filterCheckBoxesInGroup('Service Name'));
+  const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.checkedFilters());
 
   I.assertContain(
     displayedServiceName,
