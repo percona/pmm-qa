@@ -19,7 +19,7 @@
     "@types/lodash": "^4.17.4",
     "@types/luxon": "^3.4.2",
     "@types/mocha": "^10.0.6",
-    "adm-zip": "^0.5.14",
+    "adm-zip": "^0.6.0",
     "axios": "1.7.2",
     "build-url": "^6.0.1",
     "chai": "^5.1.1",
