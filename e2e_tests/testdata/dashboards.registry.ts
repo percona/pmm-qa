@@ -20,12 +20,6 @@ export const DASHBOARDS: DashboardEntry[] = [
     folder: 'MongoDB',
     url: 'graph/d/mongodb-collections-overview/mongodb-collections-overview',
   },
-  {
-    cluster: 'replicaset',
-    folder: 'MongoDB',
-    replicationSet: 'rs',
-    url: 'graph/d/mongodb-unused-indexes/mongodb-unused-indexes',
-  },
   { folder: 'MongoDB', url: 'graph/d/mongodb-inmemory/mongodb-inmemory-details' },
   {
     cluster: 'replicaset',

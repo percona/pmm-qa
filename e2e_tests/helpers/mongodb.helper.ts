@@ -39,31 +39,8 @@ export default class MongoDBHelper {
     }
   };
 
-  /**
-   * Creates a used and an unused index so indexstats-based dashboards have deterministic data.
-   */
-  ensureUnusedIndex = async (options: {
-    collectionName: string;
-    dbName: string;
-    indexField?: string;
-    usedIndexField?: string;
-  }) => {
-    const {
-      collectionName,
-      dbName,
-      indexField = 'unused_field_qa',
-      usedIndexField = 'used_field_qa',
-    } = options;
-    const collection = this.client.db(dbName).collection(collectionName);
-
-    await collection.createIndex({ [indexField]: 1 });
-    await collection.createIndex({ [usedIndexField]: 1 });
-    await collection.updateOne(
-      { [usedIndexField]: { $exists: true } },
-      { $set: { [usedIndexField]: `seed-${Date.now()}` } },
-      { upsert: true },
-    );
-    await collection.findOne({ [usedIndexField]: { $exists: true } });
+  seedUnusedIndex = async (dbName: string, collectionName: string, indexField: string) => {
+    await this.client.db(dbName).collection(collectionName).createIndex({ [indexField]: 1 });
   };
 
   /**
