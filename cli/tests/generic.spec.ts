@@ -571,7 +571,8 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
   test('PMM-T2227 - Verify tarball upgrade @generic', async ({}) => {
     const containerName = 'tarball_client';
     await cli.exec('docker network create pmm-qa || true');
-    await cli.exec('docker network connect pmm-server pmm-qa');
+    await cli.exec('docker network connect pmm-qa pmm-server || true');
+    await cli.exec(`docker rm -f ${containerName} 2>/dev/null || true`);
     await cli.exec(`docker run --rm -d --name="${containerName}" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`);
     const latestReleasedVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout;
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`);
@@ -588,16 +589,27 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
     const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http') ? process.env.PMM_CLIENT_VERSION : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
 
     await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
-    await cli.exec(`docker exec ${containerName} pkill -f pmm-agent`);
+    await cli.exec(`docker exec ${containerName} pkill -9 -f pmm-agent || true`);
+    await expect(async () => {
+      const ps = await cli.exec(`docker exec ${containerName} pgrep -c pmm-agent || true`);
+      expect(parseInt(ps.stdout.trim(), 10) || 0).toBe(0);
+    }).toPass({ intervals: [500], timeout: 10_000 });
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
 
-    const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
     const latestVersion = (await cli.exec('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')).stdout.trim();
     const newAdminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
+    const oldPidValue = oldPid.stdout.trim();
 
-    await newPid.outNotContains(oldPid.stdout);
+    await expect(async () => {
+      const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
+      const pids = newPid.getStdOutLines().map((pid) => pid.trim());
+      expect(pids, 'PMM Agent should be running after upgrade').toHaveLength(1);
+      expect(pids[0], `PMM Agent was not restarted. Old PID: ${oldPidValue}, New PID: ${pids[0]}`).not.toBe(oldPidValue);
+    }).toPass({ intervals: [1_000], timeout: 30_000 });
     await newAdminStatus.outContains('Connected');
     await newVersion.outContains(latestVersion);
+
+    await cli.exec(`docker rm -f ${containerName}`);
   });
 });
