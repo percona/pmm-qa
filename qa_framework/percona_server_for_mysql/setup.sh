@@ -187,6 +187,16 @@ for (( idx=1; idx<=NODES_COUNT; idx++ )); do
   start_node "$idx"
 done
 
+# ---- Install the PMM client inside each node ----
+INSTALL_PMM_CLIENT="${INSTALL_PMM_CLIENT:-true}"
+INSTALL_SCRIPT="$SCRIPT_DIR/../tasks/install_pmm_client.sh"
+if [[ "$INSTALL_PMM_CLIENT" == "true" ]]; then
+  for (( idx=1; idx<=NODES_COUNT; idx++ )); do
+    echo "Installing PMM client in ${CONTAINER_PREFIX}${idx} ..."
+    CONTAINER_NAME="${CONTAINER_PREFIX}${idx}" bash "$INSTALL_SCRIPT"
+  done
+fi
+
 echo
 echo "Started ${NODES_COUNT} node(s) on network '${NETWORK}'."
 echo "Per-node setup log:  docker exec ${PRIMARY_HOST} cat /var/log/ps-node-setup.log"
