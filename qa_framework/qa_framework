@@ -133,12 +133,17 @@ for KEY in "${!CONFIG[@]}"; do
   echo "  $KEY=${CONFIG[$KEY]}"
 done
 
-# ---- Dispatch (next steps go here) ----
-# At this point DATABASE, DB_VERSION and every KEY=VALUE are available as
-# environment variables. Hook the actual setup (docker/ansible/python) below.
-# e.g.:
-#   case "$DATABASE" in
-#     ps|PS) ... ;;
-#     mysql) ... ;;
-#     *) echo "Unsupported database: $DATABASE" >&2; exit 1 ;;
-#   esac
+# ---- Dispatch ----
+# DATABASE, DB_VERSION and every KEY=VALUE are exported, so the setup scripts
+# below inherit them from the environment.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+case "$DATABASE" in
+  ps|PS)
+    "$SCRIPT_DIR/percona_server_for_mysql/setup.sh"
+    ;;
+  *)
+    echo "Error: unsupported database '$DATABASE'" >&2
+    exit 1
+    ;;
+esac
