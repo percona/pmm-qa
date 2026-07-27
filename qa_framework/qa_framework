@@ -17,14 +17,37 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Usage: ./qa_framework --database <db>=<version>[,KEY=VALUE,...]
+qa_framework — set up databases for PMM QA.
 
-Options:
-  -d, --database SPEC   Database spec to set up. First element is <db>=<version>;
-                        any further comma-separated KEY=VALUE pairs become variables.
-  -h, --help            Show this help.
+USAGE:
+  ./qa_framework --database <db>=<version>[,KEY=VALUE,KEY=VALUE,...]
 
-Examples:
+OPTIONS:
+  -d, --database SPEC   Database spec (required). The first comma-separated
+                        element is <db>=<version>; each additional KEY=VALUE
+                        pair is exported as a variable for the setup step.
+  -h, --help            Show this help and exit.
+
+DATABASES (<db>) and versions:
+  ps        Percona Server for MySQL      8.0 | 8.4 | 5.7   (default: 8.4)
+  mysql     MySQL Community               5.7 | 8.0 | 8.4
+  pdpgsql   Percona Distribution PostgreSQL  11..18
+  pgsql     PostgreSQL Community          11..18
+  psmdb     Percona Server for MongoDB    4.4 | 5.0 | 6.0 | 7.0 | 8.0
+  mongodb   MongoDB Community             4.4 | 5.0 | 6.0 | 7.0 | 8.0
+  pxc       Percona XtraDB Cluster        5.7 | 8.0
+  valkey    Valkey                        latest
+
+COMMON KEY=VALUE OPTIONS:
+  SETUP_TYPE=single|replication|gr   Topology (db-dependent; default: single)
+  NODES_COUNT=N                      Number of nodes
+  QUERY_SOURCE=perfschema|slowlog    MySQL/PS query source (default: perfschema)
+
+If a value is omitted, the per-database setup applies its own defaults
+(e.g. ps -> DB_VERSION=8.4, SETUP_TYPE=single).
+
+EXAMPLES:
+  ./qa_framework --database ps                         # ps 8.4, single node
   ./qa_framework --database ps=8.0,SETUP_TYPE=gr
   ./qa_framework --database ps=8.4,SETUP_TYPE=replication,QUERY_SOURCE=slowlog
   ./qa_framework --database mysql=8.0
