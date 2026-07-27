@@ -202,6 +202,11 @@ RANDOM_SUFFIX="_$(( RANDOM % 99999 + 1 ))"   # one suffix per run, like the play
 if [[ "$INSTALL_PMM_CLIENT" == "true" ]]; then
   for (( idx=1; idx<=NODES_COUNT; idx++ )); do
     name="${CONTAINER_PREFIX}${idx}"
+    if [[ "$QUERY_SOURCE" == "slowlog" ]]; then
+      echo "Configuring slow query log for ${name} ..."
+      docker exec "$name" mysql -uroot -p"$ROOT_PASSWORD" -e "SET GLOBAL slow_query_log='ON'; SET GLOBAL long_query_time=0; SET GLOBAL log_slow_rate_limit=1;"
+      docker exec "$name" mysql -uroot -p"$ROOT_PASSWORD" -e "SET GLOBAL log_slow_admin_statements=ON; SET GLOBAL log_slow_slave_statements=ON; SET GLOBAL log_slow_replica_statements=ON;"
+    fi
     echo "Installing PMM client in ${name} ..."
     CONTAINER_NAME="$name" bash "$INSTALL_SCRIPT"
     echo "Adding MySQL service for ${name} ..."
