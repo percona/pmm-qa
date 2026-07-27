@@ -17,10 +17,6 @@ on:
           - percona-server-mongodb
           - mongodb
           - valkey
-      version:
-        description: 'Version to tag (e.g. 1.11.0). Leave empty to auto-bump minor.'
-        required: false
-        default: ''
       db_version:
         description: 'Database version to build/tag (e.g. 8.0, 8.4, 5.7). Applies to any image.'
         required: false
@@ -109,63 +105,16 @@ jobs:
           echo "flavor=$FLAVOR" >> "$GITHUB_OUTPUT"
           echo "Resolved: image=$NAME file=$FILE context=$CONTEXT flavor=${FLAVOR:-none}"
 
-      - name: Determine version
-        id: version
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          INPUT="${{ github.event.inputs.version }}"
-          if [ -n "$INPUT" ]; then
-            VERSION="$INPUT"
-            echo "Using provided version: $VERSION"
-          else
-            ORG="${GITHUB_REPOSITORY%/*}"          # percona
-            PKG="${GITHUB_REPOSITORY#*/}"          # pmm-qa
-        
-            # Page through all published versions, extract every tag,
-            # keep only strict X.Y.Z, pick the highest.
-            page=1
-            all_tags=""
-            while :; do
-              resp=$(gh api \
-                -H "Accept: application/vnd.github+json" \
-                "/orgs/${ORG}/packages/container/${PKG}/versions?per_page=100&page=${page}" \
-                2>/dev/null || echo "[]")
-              # stop on empty page or error/no-package
-              count=$(echo "$resp" | jq 'if type=="array" then length else 0 end')
-              [ "$count" -eq 0 ] && break
-              tags=$(echo "$resp" | jq -r '.[].metadata.container.tags[]?')
-              all_tags="${all_tags}"$'\n'"${tags}"
-              page=$((page + 1))
-            done
-        
-            LATEST=$(echo "$all_tags" \
-              | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
-              | sort -V | tail -n1)
-            LATEST=${LATEST:-0.0.0}
-            MAJOR=$(echo "$LATEST" | cut -d. -f1)
-            MINOR=$(echo "$LATEST" | cut -d. -f2)
-            VERSION="${MAJOR}.$((MINOR + 1)).0"
-            echo "Highest published: $LATEST -> new: $VERSION"
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
       - name: Assemble tags
         id: tags
         run: |
           IMG="${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ steps.cfg.outputs.name }}"
-          VER="${{ steps.version.outputs.version }}"
           FLAVOR="${{ steps.cfg.outputs.flavor }}"
+          # Two tags only: latest, plus the db_version (flavor) when set.
           {
             echo "tags<<EOF"
-            if [ -n "$FLAVOR" ]; then
-              # e.g. percona-server-mysql:8.0  and  :8.0-1.11.0
-              echo "${IMG}:${FLAVOR}"
-              echo "${IMG}:${FLAVOR}-${VER}"
-            else
-              echo "${IMG}:latest"
-              echo "${IMG}:${VER}"
-            fi
+            echo "${IMG}:latest"
+            [ -n "$FLAVOR" ] && echo "${IMG}:${FLAVOR}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
