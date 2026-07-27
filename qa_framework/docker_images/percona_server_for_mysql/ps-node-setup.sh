@@ -141,12 +141,24 @@ render_gr() {
   } > /etc/mysql/my.cnf
 }
 
-case "$SETUP_TYPE" in
-  replication) render_async ;;
-  gr)          render_gr ;;
-  *)           render_single ;;
-esac
-echo "--- rendered /etc/mysql/my.cnf ---"; cat /etc/mysql/my.cnf
+# If a config file is mounted/provided via MYSQL_CFG_FILE, use it (role-based),
+# then append per-node identity. Otherwise render the full config for this role.
+if [ -n "${MYSQL_CFG_FILE:-}" ] && [ -f "$MYSQL_CFG_FILE" ]; then
+  echo "Using provided config: $MYSQL_CFG_FILE"
+  cp "$MYSQL_CFG_FILE" /etc/mysql/my.cnf
+  # The config may already be fully rendered per node. Only append the per-node
+  # identity if explicitly requested (role-based configs that omit it).
+  if [ "${MYSQL_CFG_APPEND_IDENTITY:-false}" = "true" ]; then
+    append_node_identity
+  fi
+else
+  case "$SETUP_TYPE" in
+    replication) render_async ;;
+    gr)          render_gr ;;
+    *)           render_single ;;
+  esac
+fi
+echo "--- /etc/mysql/my.cnf ---"; cat /etc/mysql/my.cnf
 
 ########################################
 # 2. Initialize datadir (once) — fresh init gives each node a unique server UUID

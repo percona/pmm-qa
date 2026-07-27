@@ -4,9 +4,9 @@
 # Reproduces the same container the pmm-qa Ansible framework builds, WITHOUT the
 # PMM client. A single image acts as any node in three topologies, selected at
 # runtime via the SETUP_TYPE env var:
-#   - single       : standalone instance          (my.cnf.j2)
-#   - replication  : async replication            (my-async-replication.cnf.j2)
-#   - gr           : group replication            (my-group-replication.cnf.j2)
+#   - single       : standalone instance          (my.cnf)
+#   - replication  : async replication            (my-async-replication.cnf)
+#   - gr           : group replication            (my-group-replication.cnf)
 #
 # The entrypoint (ps-node-setup.sh, run by a systemd oneshot unit) renders the
 # matching my.cnf from env vars, initializes the datadir, sets the root password,
