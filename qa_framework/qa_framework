@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+#
+# qa_framework — entrypoint for the PMM QA framework.
+#
+# Parses a --database spec of the form:
+#     <db>=<version>[,KEY=VALUE,KEY=VALUE,...]
+# into shell variables:
+#     DATABASE     e.g. ps
+#     DB_VERSION   e.g. 8.0
+#     <KEY>        each extra pair, e.g. SETUP_TYPE=gr -> $SETUP_TYPE
+#
+# Example:
+#     ./qa_framework --database ps=8.0,SETUP_TYPE=gr,QUERY_SOURCE=perfschema
+#         -> DATABASE=ps  DB_VERSION=8.0  SETUP_TYPE=gr  QUERY_SOURCE=perfschema
+#
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: ./qa_framework --database <db>=<version>[,KEY=VALUE,...]
+
+Options:
+  -d, --database SPEC   Database spec to set up. First element is <db>=<version>;
+                        any further comma-separated KEY=VALUE pairs become variables.
+  -h, --help            Show this help.
+
+Examples:
+  ./qa_framework --database ps=8.0,SETUP_TYPE=gr
+  ./qa_framework --database ps=8.4,SETUP_TYPE=replication,QUERY_SOURCE=slowlog
+  ./qa_framework --database mysql=8.0
+EOF
+}
+
+# ---- Parse CLI arguments ----
+DATABASE_SPEC=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -d|--database)
+      [[ $# -ge 2 ]] || { echo "Error: $1 requires a value" >&2; usage; exit 1; }
+      DATABASE_SPEC="$2"; shift 2 ;;
+    --database=*)
+      DATABASE_SPEC="${1#*=}"; shift ;;
+    -h|--help)
+      usage; exit 0 ;;
+    *)
+      echo "Error: unknown argument '$1'" >&2; usage; exit 1 ;;
+  esac
+done
+
+if [[ -z "$DATABASE_SPEC" ]]; then
+  echo "Error: --database is required" >&2
+  usage
+  exit 1
+fi
+
+# ---- Split the spec on commas ----
+IFS=',' read -ra PARTS <<< "$DATABASE_SPEC"
+
+# First element: <db>=<version>
+FIRST="${PARTS[0]}"
+DATABASE="${FIRST%%=*}"
+if [[ "$FIRST" == *=* ]]; then
+  DB_VERSION="${FIRST#*=}"
+else
+  DB_VERSION=""
+fi
+
+if [[ -z "$DATABASE" ]]; then
+  echo "Error: could not determine database from '$DATABASE_SPEC'" >&2
+  exit 1
+fi
+
+# Remaining elements: KEY=VALUE -> exported variables
+declare -A CONFIG=()
+for (( i=1; i<${#PARTS[@]}; i++ )); do
+  KV="${PARTS[$i]}"
+  [[ -z "$KV" ]] && continue
+  if [[ "$KV" != *=* ]]; then
+    echo "Warning: ignoring malformed pair '$KV' (expected KEY=VALUE)" >&2
+    continue
+  fi
+  KEY="${KV%%=*}"
+  VALUE="${KV#*=}"
+  CONFIG["$KEY"]="$VALUE"
+  # Export so downstream steps (ansible/python) can read them from the environment
+  export "$KEY=$VALUE"
+done
+
+export DATABASE DB_VERSION
+
+# ---- Cleanup: unset everything we exported, on any exit ----
+cleanup() {
+  local rc=$?
+  unset DATABASE DB_VERSION DATABASE_SPEC 2>/dev/null || true
+  local key
+  for key in "${!CONFIG[@]}"; do
+    unset "$key" 2>/dev/null || true
+  done
+  unset CONFIG 2>/dev/null || true
+  echo "Cleaned up environment variables."
+  return $rc
+}
+trap cleanup EXIT
+
+# ---- Summary ----
+echo "Parsed database spec:"
+echo "  DATABASE=$DATABASE"
+echo "  DB_VERSION=$DB_VERSION"
+for KEY in "${!CONFIG[@]}"; do
+  echo "  $KEY=${CONFIG[$KEY]}"
+done
+
+# ---- Dispatch (next steps go here) ----
+# At this point DATABASE, DB_VERSION and every KEY=VALUE are available as
+# environment variables. Hook the actual setup (docker/ansible/python) below.
+# e.g.:
+#   case "$DATABASE" in
+#     ps|PS) ... ;;
+#     mysql) ... ;;
+#     *) echo "Unsupported database: $DATABASE" >&2; exit 1 ;;
+#   esac
