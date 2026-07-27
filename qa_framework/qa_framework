@@ -140,7 +140,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 case "$DATABASE" in
   ps|PS)
-    "$SCRIPT_DIR/percona_server_for_mysql/setup.sh"
+    bash "$SCRIPT_DIR/percona_server_for_mysql/setup.sh"
     ;;
   *)
     echo "Error: unsupported database '$DATABASE'" >&2
