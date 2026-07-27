@@ -7,7 +7,7 @@
 #   CONTAINER_NAME   target container
 # Optional (env, with defaults matching the playbook):
 #   CLIENT_VERSION   3-dev-latest | pmm3-rc | pmm3-latest | 3.x.y | https://...tar.gz
-#                    (default: 3-dev-latest)
+#                    (default: latest-tarball)
 #   PMM_SERVER_IP    server address (default: auto-detect running *-server container)
 #   ADMIN_PASSWORD   PMM admin password        (default: admin)
 #   METRICS_MODE     metrics mode              (default: auto; empty => omit flag)
@@ -35,8 +35,9 @@ if [[ "${1:-}" == "--selfcheck" ]]; then
   echo "selfcheck OK"; exit 0
 fi
 
+LATEST_TARBALL_URL="https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz"
 CONTAINER_NAME="${CONTAINER_NAME:?CONTAINER_NAME is required}"
-CLIENT_VERSION="${CLIENT_VERSION:-3-dev-latest}"
+CLIENT_VERSION="${CLIENT_VERSION:-latest-tarball}"
 PMM_SERVER_IP="${PMM_SERVER_IP:-127.0.0.1}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
 METRICS_MODE="${METRICS_MODE:-auto}"
@@ -122,6 +123,7 @@ case "$CLIENT_VERSION" in
   3-dev-latest)               install_from_repo experimental ;;
   pmm3-rc)                    install_from_repo testing ;;
   pmm3-latest)                install_from_repo release ;;
+  latest-tarball)             install_tarball "$LATEST_TARBALL_URL" ;;
   http://*.tar.gz|https://*.tar.gz) install_tarball "$CLIENT_VERSION" ;;
   3.*.*)                      install_specific_version ;;
   *) echo "Unknown CLIENT_VERSION: $CLIENT_VERSION" >&2; exit 1 ;;
