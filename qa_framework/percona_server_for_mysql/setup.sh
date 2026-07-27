@@ -220,7 +220,11 @@ if [[ "$INSTALL_PMM_CLIENT" == "true" ]]; then
       docker exec "$name" mysql -uroot -p"$ROOT_PASSWORD" -e "SET GLOBAL log_slow_admin_statements=ON; SET GLOBAL log_slow_slave_statements=ON; SET GLOBAL log_slow_replica_statements=ON;"
     fi
     echo "Installing PMM client in ${name} ..."
-    CONTAINER_NAME="$name" bash "$INSTALL_SCRIPT"
+    if ! out="$(CONTAINER_NAME="$name" bash "$INSTALL_SCRIPT" 2>&1)"; then
+      echo "$out" >&2
+      echo "ERROR: PMM client install failed for ${name}" >&2
+      exit 1
+    fi
     echo "Adding MySQL service for ${name} ..."
     docker exec "$name" pmm-admin add mysql \
       --query-source="$QUERY_SOURCE" --username=root --password="$ROOT_PASSWORD" \
