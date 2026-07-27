@@ -75,4 +75,52 @@ if ! docker pull "$IMAGE"; then
 fi
 echo "Image ready: $IMAGE"
 
-# ---- PS setup / orchestration goes here (intentionally not implemented yet) ----
+# ---- Topology / container settings ----
+NETWORK="${NETWORK:-pmm-qa}"
+VER_TAG="${DB_VERSION//./_}"                                  # 8.0 -> 8_0
+# Container name format (matches qa-integration):
+#   ps_pmm[_<setup_type>]_<ps_version>_<node>
+#   - single (or empty) setup type omits the setup segment
+SETUP_SEG=""
+if [[ -n "$SETUP_TYPE" && "$SETUP_TYPE" != "single" ]]; then
+  SETUP_SEG="_${SETUP_TYPE}"
+fi
+CONTAINER_PREFIX="${CONTAINER_PREFIX:-ps_pmm${SETUP_SEG}_${VER_TAG}_}"
+PRIMARY_HOST="${CONTAINER_PREFIX}1"
+ROOT_PASSWORD="${ROOT_PASSWORD:-GRgrO9301RuF}"
+REPL_USER="${REPL_USER:-repl_user}"
+REPL_PASSWORD="${REPL_PASSWORD:-GRgrO9301RuF}"
+HOST_PORT_BASE="${HOST_PORT_BASE:-3306}"                     # node i -> HOST_PORT_BASE + (i-1)
+
+docker network create "$NETWORK" >/dev/null 2>&1 || true
+
+# ---- Start the nodes (primary first so replicas/GR members can find it) ----
+start_node() {
+  local idx="$1"
+  local name="${CONTAINER_PREFIX}${idx}"
+  local host_port=$(( HOST_PORT_BASE + idx - 1 ))
+  echo "Starting node ${idx}/${NODES_COUNT}: ${name} (host port ${host_port})"
+  docker rm -f "$name" >/dev/null 2>&1 || true
+  docker run -d --name "$name" --network "$NETWORK" \
+    --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+    -e SETUP_TYPE="$SETUP_TYPE" \
+    -e CONTAINER_PREFIX="$CONTAINER_PREFIX" \
+    -e NODE_INDEX="$idx" \
+    -e NODES_COUNT="$NODES_COUNT" \
+    -e SERVER_ID="$idx" \
+    -e PRIMARY_HOST="$PRIMARY_HOST" \
+    -e ROOT_PASSWORD="$ROOT_PASSWORD" \
+    -e REPL_USER="$REPL_USER" \
+    -e REPL_PASSWORD="$REPL_PASSWORD" \
+    -p "${host_port}:3306" \
+    "$IMAGE" >/dev/null
+}
+
+for (( idx=1; idx<=NODES_COUNT; idx++ )); do
+  start_node "$idx"
+done
+
+echo
+echo "Started ${NODES_COUNT} node(s) on network '${NETWORK}'."
+echo "Per-node setup log:  docker exec ${PRIMARY_HOST} cat /var/log/ps-node-setup.log"
+echo "Connect to primary:  docker exec -it ${PRIMARY_HOST} mysql -uroot -p${ROOT_PASSWORD}"
