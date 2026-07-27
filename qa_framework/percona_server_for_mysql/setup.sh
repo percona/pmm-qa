@@ -199,9 +199,21 @@ case "$SETUP_TYPE" in
 esac
 RANDOM_SUFFIX="_$(( RANDOM % 99999 + 1 ))"   # one suffix per run, like the playbook
 
+# Wait until mysql is up AND the entrypoint has set the root password.
+wait_mysql() {
+  local name="$1" i
+  for (( i=0; i<180; i++ )); do
+    docker exec "$name" mysql -uroot -p"$ROOT_PASSWORD" -e 'SELECT 1' >/dev/null 2>&1 && return 0
+    sleep 2
+  done
+  echo "WARN: mysql in $name not ready after ~6min" >&2; return 1
+}
+
 if [[ "$INSTALL_PMM_CLIENT" == "true" ]]; then
   for (( idx=1; idx<=NODES_COUNT; idx++ )); do
     name="${CONTAINER_PREFIX}${idx}"
+    echo "Waiting for mysql in ${name} ..."
+    wait_mysql "$name"
     if [[ "$QUERY_SOURCE" == "slowlog" ]]; then
       echo "Configuring slow query log for ${name} ..."
       docker exec "$name" mysql -uroot -p"$ROOT_PASSWORD" -e "SET GLOBAL slow_query_log='ON'; SET GLOBAL long_query_time=0; SET GLOBAL log_slow_rate_limit=1;"
