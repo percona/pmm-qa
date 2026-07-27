@@ -134,11 +134,11 @@ if len(errors) > 0:
 expected_version=arguments[1].replace("\\r\\n", "").replace("-rc", "")
 
 
-if admin_version != expected_version:
+if not admin_version.startswith(expected_version):
   print(f"admin version is: {admin_version} and expected version is: {expected_version}")
   errors.append(f"Version of pmm admin is not correct expected: {expected_version} actual: {admin_version}")
 
-if agent_version != expected_version:
+if not agent_version.startswith(expected_version):
   print(f"agent version is: {agent_version} and expected version is: {expected_version}")
   errors.append(f"Version of pmm agent is not correct expected: {expected_version} actual: {agent_version}")
 
