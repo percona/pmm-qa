@@ -187,13 +187,27 @@ for (( idx=1; idx<=NODES_COUNT; idx++ )); do
   start_node "$idx"
 done
 
-# ---- Install the PMM client inside each node ----
+# ---- Install PMM client + add MySQL service inside each node ----
 INSTALL_PMM_CLIENT="${INSTALL_PMM_CLIENT:-true}"
 INSTALL_SCRIPT="$SCRIPT_DIR/../tasks/install_pmm_client.sh"
+
+# pmm-admin add mysql flags per setup type (from percona-server-setup.yml)
+case "$SETUP_TYPE" in
+  gr)          PMM_FLAGS=(--environment=ps-gr-dev          --cluster=ps-gr-dev-cluster          --replication-set=ps-gr-replication) ;;
+  replication) PMM_FLAGS=(--environment=ps-replication-dev --cluster=ps-replication-dev-cluster --replication-set=ps-async-replication) ;;
+  *)           PMM_FLAGS=(--cluster=ps-single-dev-cluster  --environment=ps-dev) ;;
+esac
+RANDOM_SUFFIX="_$(( RANDOM % 99999 + 1 ))"   # one suffix per run, like the playbook
+
 if [[ "$INSTALL_PMM_CLIENT" == "true" ]]; then
   for (( idx=1; idx<=NODES_COUNT; idx++ )); do
-    echo "Installing PMM client in ${CONTAINER_PREFIX}${idx} ..."
-    CONTAINER_NAME="${CONTAINER_PREFIX}${idx}" bash "$INSTALL_SCRIPT"
+    name="${CONTAINER_PREFIX}${idx}"
+    echo "Installing PMM client in ${name} ..."
+    CONTAINER_NAME="$name" bash "$INSTALL_SCRIPT"
+    echo "Adding MySQL service for ${name} ..."
+    docker exec "$name" pmm-admin add mysql \
+      --query-source="$QUERY_SOURCE" --username=root --password="$ROOT_PASSWORD" \
+      "${PMM_FLAGS[@]}" "${name}${RANDOM_SUFFIX}" --debug 127.0.0.1:3306
   done
 fi
 
