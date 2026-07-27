@@ -1,0 +1,13 @@
+[Unit]
+Description=Percona Server node setup (single / async / group replication)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=900
+ExecStart=/usr/local/bin/ps-node-setup.sh
+
+[Install]
+WantedBy=multi-user.target
