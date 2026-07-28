@@ -1,0 +1,198 @@
+name: PMM Upgrade (Docker image change)
+# Skeleton port of the Jenkins upgrade pipeline — DOCKER server-upgrade path only.
+# UI-upgrade path, Launchable and the AWS/remote-DB credential env block are omitted;
+# add them back if a test subset actually needs them.
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/upgrade-pmm-docker.yml']
+  workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: 'PMM Server image to start from (old)'
+        default: 'percona/pmm-server:3.0.0'
+        type: string
+      docker_tag_upgrade:
+        description: 'PMM Server image to upgrade to (new)'
+        default: 'perconalab/pmm-server:3-dev-latest'
+        required: true
+        type: string
+      client_version:
+        description: 'PMM Client version to start with (x.y.z | 3-dev-latest | pmm3-rc | https...tar.gz)'
+        default: 'latest-tarball'
+        type: string
+      pmm_server_latest:
+        description: 'Expected version after upgrade (for check_client_upgrade.py)'
+        required: true
+        type: string
+      client_repository:
+        description: 'pmm3-client repo channel for client upgrade'
+        default: 'release'
+        type: choice
+        options: [experimental, testing, release]
+      client_tarball_upgrade:
+        description: 'Client tarball URL to upgrade to (empty = use repo)'
+        default: ''
+        type: string
+      upgrade_flag:
+        description: 'Test subset'
+        default: 'OTHERS'
+        type: choice
+        options: [SSL, EXTERNAL SERVICES, OTHERS]
+      pmm_qa_branch:
+        description: 'pmm-qa branch'
+        default: 'main'
+        type: string
+
+env:
+  ADMIN_PASSWORD: admin
+  PMM_URL: http://admin:admin@127.0.0.1
+  DOCKER_TAG: ${{ inputs.docker_tag || 'percona/pmm-server:3.0.0' }}
+  DOCKER_TAG_UPGRADE: ${{ inputs.docker_tag_upgrade || 'perconalab/pmm-server:3-dev-latest' }}
+  CLIENT_VERSION: ${{ inputs.client_version || 'latest-tarball' }}
+  PMM_SERVER_LATEST: ${{ inputs.pmm_server_latest || '3-dev-latest' }}
+  CLIENT_REPOSITORY: ${{ inputs.client_repository || 'release' }}
+  CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
+  UPGRADE_FLAG: ${{ inputs.upgrade_flag || 'OTHERS' }}
+  PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+
+jobs:
+  upgrade-docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout pmm-qa
+        uses: actions/checkout@v4
+        with:
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: pmm-qa
+
+      - name: Select test subset
+        run: |
+          case "$UPGRADE_FLAG" in
+            SSL)
+              echo "PRE_UPGRADE_FLAG=@pre-ssl-upgrade"  >> "$GITHUB_ENV"
+              echo "POST_UPGRADE_FLAG=@post-ssl-upgrade" >> "$GITHUB_ENV"
+              echo "PLAYWRIGHT_FLAG=noTestsRunning"      >> "$GITHUB_ENV"
+              echo "PMM_CLIENTS=--database ssl_psmdb --database ssl_mysql --database ssl_pdpgsql" >> "$GITHUB_ENV" ;;
+            "EXTERNAL SERVICES")
+              echo "PRE_UPGRADE_FLAG=@pre-external-upgrade"   >> "$GITHUB_ENV"
+              echo "POST_UPGRADE_FLAG=@post-external-upgrade" >> "$GITHUB_ENV"
+              echo "PLAYWRIGHT_FLAG=@rta"                     >> "$GITHUB_ENV"
+              echo "PMM_CLIENTS=--database external --database ps=8.4 --database pdpgsql --database psmdb --database pxc" >> "$GITHUB_ENV" ;;
+            *)  # OTHERS
+              echo "PRE_UPGRADE_FLAG=@pre-settings-metrics-upgrade|@pre-advisors-alerting-upgrade|@pre-annotations-prometheus-upgrade|@pre-dashboards-upgrade|@pre-custom-password-upgrade|@pre-mongo-backup-upgrade" >> "$GITHUB_ENV"
+              echo "POST_UPGRADE_FLAG=@post-settings-metrics-upgrade|@post-advisors-alerting-upgrade|@post-annotations-prometheus-upgrade|@post-dashboards-upgrade|@post-custom-password-upgrade|@post-mongo-backup-upgrade" >> "$GITHUB_ENV"
+              echo "PLAYWRIGHT_FLAG=@rta" >> "$GITHUB_ENV"
+              echo "PMM_CLIENTS=--database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra" >> "$GITHUB_ENV" ;;
+          esac
+
+      - name: Start PMM Server (old image)
+        run: |
+          docker network create pmm-qa || true
+          docker volume create pmm-volume
+          docker run --detach --restart always --network pmm-qa \
+            -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+            --publish 80:8080 --publish 443:8443 \
+            --volume pmm-volume:/srv --name pmm-server "$DOCKER_TAG"
+          timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+          # TODO: watchtower + platform-dev env vars only needed for UI-triggered updates.
+
+      - name: Setup databases + clients
+        working-directory: pmm-qa/qa-integration/pmm_qa
+        run: |
+          python3 -m venv virtenv && . virtenv/bin/activate
+          pip install --upgrade pip && pip install -r requirements.txt setuptools netaddr
+          python pmm-framework.py --verbose \
+            --client-version="$CLIENT_VERSION" \
+            --pmm-server-password="$ADMIN_PASSWORD" $PMM_CLIENTS
+
+      - name: Check packages before upgrade
+        run: |
+          V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
+          python3 pmm-qa/support_scripts/check_upgrade.py -v "$V" -p pre
+
+      - name: Check client before upgrade
+        run: |
+          case "$CLIENT_VERSION" in
+            3-dev-latest) V=$(wget -qO- https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION) ;;
+            pmm3-rc)      V=$(wget -qO- "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" | jq -r '.results[].name' | grep -E '3\..*-rc$' | sort -V | tail -n1) ;;
+            *)            V="$CLIENT_VERSION" ;;
+          esac
+          python3 pmm-qa/support_scripts/check_client_upgrade.py "$V"
+
+      - name: Pre-upgrade UI tests
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          npm ci
+          ./node_modules/.bin/codeceptjs run --reporter mocha-multi -c pr.codecept.js --steps --grep "$PRE_UPGRADE_FLAG"
+
+      - name: Docker upgrade (swap server image, keep volume)
+        run: |
+          docker stop pmm-server
+          docker pull "$DOCKER_TAG_UPGRADE"
+          docker rename pmm-server pmm-server-old
+          docker run --detach --restart always --network pmm-qa \
+            -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
+            --publish 80:8080 --publish 443:8443 \
+            --volumes-from pmm-server-old --name pmm-server "$DOCKER_TAG_UPGRADE"
+          timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
+
+      - name: Post-server-upgrade UI tests
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: ./node_modules/.bin/codeceptjs run --reporter mocha-multi -c pr.codecept.js --steps --grep "$POST_UPGRADE_FLAG"
+
+      - name: Upgrade PMM client in every client container
+        # ponytail: collapsed the per-service if/elif from Jenkins into one loop that
+        # auto-detects apt/dnf and tarball-vs-repo. Re-split only if a service needs
+        # bespoke steps.
+        run: |
+          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower)$'); do
+            echo "== upgrading client in $c =="
+            if [ -n "$CLIENT_TARBALL_UPGRADE" ]; then
+              docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v dnf >/dev/null && dnf install -y wget || apt-get install -y wget)'
+              docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
+              docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz && d=$(ls -1td pmm-client*/ | head -n1) && rm -rf /usr/local/bin/pmm-client && mv -f "$d" /usr/local/bin/pmm-client && bash -x /usr/local/bin/pmm-client/install_tarball -u'
+            else
+              docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
+              docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
+            fi
+            docker exec "$c" sh -c 'systemctl restart pmm-agent 2>/dev/null || { pkill -f pmm-agent || true; nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >/var/log/pmm-agent.log 2>&1 & }'
+          done
+
+      - name: Check client after upgrade
+        run: python3 pmm-qa/support_scripts/check_client_upgrade.py "$PMM_SERVER_LATEST"
+
+      - name: Post-client-upgrade UI tests
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: ./node_modules/.bin/codeceptjs run --reporter mocha-multi -c pr.codecept.js --steps --grep "$POST_UPGRADE_FLAG"
+
+      - name: Post-upgrade Playwright E2E
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          CI=true npx playwright test --grep "$PLAYWRIGHT_FLAG" --pass-with-no-tests
+
+      - name: Check packages after upgrade
+        run: |
+          V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
+          python3 pmm-qa/support_scripts/check_upgrade.py -v "$V" -p post
+
+      - name: Collect logs
+        if: always()
+        run: |
+          curl --insecure "$PMM_URL/logs.zip" --output logs.zip || true
+          docker cp pmm-server:/srv/logs srv-logs || true
+          tar -zcf srv-logs.tar.gz srv-logs || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upgrade-logs
+          path: |
+            logs.zip
+            srv-logs.tar.gz
+            pmm-qa/e2e_tests/playwright-report
