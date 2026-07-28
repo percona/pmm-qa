@@ -138,8 +138,8 @@ jobs:
       - name: Checkout pre upgrade branch
         working-directory: pmm-qa
         run: |
-          ls
-          git checkout pmm-$CLIENT_VERSION
+          git fetch origin "pmm-$CLIENT_VERSION"
+          git checkout FETCH_HEAD
 
       - name: Pre-upgrade UI tests
         working-directory: pmm-qa/codeceptjs-e2e
