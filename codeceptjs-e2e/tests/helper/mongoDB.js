@@ -32,7 +32,10 @@ class MongoDBHelper extends Helper {
 
     if (password) this.password = password;
 
-    this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin`;
+    // directConnection: talk only to this seed and skip replica-set discovery.
+    // Members advertise internal docker addresses (rsNNN:27017) unreachable from
+    // the runner, so without this the driver can't select the primary.
+    this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin&directConnection=true`;
     this.client.s.url = this.url;
 
     this.client = new MongoClient(this.url, {
