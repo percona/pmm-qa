@@ -222,4 +222,6 @@ jobs:
             pmm-qa/e2e_tests/logs
             pmm-qa/e2e_tests/screenshots
             pmm-qa/e2e_tests/test-results
-            pmm-qa/codeceptjs-e2e/tests/output
+            pmm-qa/codeceptjs-e2e/tests/output/*.png
+            pmm-qa/codeceptjs-e2e/tests/output/trace/*.zip
+            pmm-qa/codeceptjs-e2e/logs
