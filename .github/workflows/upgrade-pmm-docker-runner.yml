@@ -121,12 +121,6 @@ jobs:
             --client-version="$CLIENT_VERSION" \
             --pmm-server-password="$ADMIN_PASSWORD" $PMM_CLIENTS
 
-      - name: Checkout pre upgrade branch
-        working-directory: pmm-qa
-        run: |
-          git fetch origin "pmm-$CLIENT_VERSION"
-          git checkout FETCH_HEAD
-
       - name: Check packages before upgrade
         run: |
           V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
@@ -140,6 +134,12 @@ jobs:
             *)            V="$CLIENT_VERSION" ;;
           esac
           python3 pmm-qa/support_scripts/check_client_upgrade.py "$V"
+
+      - name: Checkout pre upgrade branch
+        working-directory: pmm-qa
+        run: |
+          git fetch origin "pmm-$CLIENT_VERSION"
+          git checkout FETCH_HEAD
 
       - name: Pre-upgrade UI tests
         working-directory: pmm-qa/codeceptjs-e2e
