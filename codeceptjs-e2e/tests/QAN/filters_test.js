@@ -276,23 +276,21 @@ Scenario('PMM-T437 - Verify short-cut navigation for n/a items @qan', async ({ I
 });
 
 Scenario(
-  'PMM-T2032 - Verify there is no name with brackets in Plan Summary in QAN @qan',
+  'PMM-T2032 - Verify Plan Summary filters with brackets work in QAN @qan',
   async ({ I, queryAnalyticsPage, adminPage }) => {
-    queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.filters.filterBy('{');
-    queryAnalyticsPage.waitForLoaded();
+    // PMM-13897: MongoDB plan summaries contain brackets (e.g. EXPRESS_IXSCAN { _id: 1 }).
+    // Verify such filters can be searched and selected without server errors.
+    for (const bracket of ['{', '}']) {
+      queryAnalyticsPage.waitForLoaded();
+      queryAnalyticsPage.filters.filterBy(bracket);
+      queryAnalyticsPage.waitForLoaded();
 
-    if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
-      throw new Error('Filter with character "{" displayed');
-    }
+      if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
+        queryAnalyticsPage.filters.selectContainFilter(bracket);
+        queryAnalyticsPage.waitForLoaded();
+      }
 
-    adminPage.customClearField(queryAnalyticsPage.filters.fields.filterBy);
-    queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.filters.filterBy('}');
-    queryAnalyticsPage.waitForLoaded();
-
-    if (await I.isElementDisplayed(queryAnalyticsPage.filters.fields.filterCheckboxes, 2)) {
-      throw new Error('Filter with character "}" displayed');
+      adminPage.customClearField(queryAnalyticsPage.filters.fields.filterBy);
     }
   },
 );
