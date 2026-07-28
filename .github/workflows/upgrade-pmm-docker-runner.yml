@@ -135,7 +135,7 @@ jobs:
           esac
           python3 pmm-qa/support_scripts/check_client_upgrade.py "$V"
 
-      - name: Pre-upgrade UI tests
+      - name: Checkout pre upgrade branch
         working-directory: pmm-qa
         run: |
           ls
@@ -213,3 +213,7 @@ jobs:
             logs.zip
             srv-logs.tar.gz
             pmm-qa/e2e_tests/playwright-report
+            pmm-qa/e2e_tests/logs
+            pmm-qa/e2e_tests/screenshots
+            pmm-qa/e2e_tests/test-results
+            pmm-qa/codeceptjs-e2e/tests/output
