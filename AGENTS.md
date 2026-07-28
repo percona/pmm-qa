@@ -103,6 +103,8 @@ Full Release-Candidate testing is **not** driven from this repo. The orchestrato
 
 When posting **Jira comments** on `perconadev.atlassian.net` PMM tickets, **always** restrict visibility to the **Developers** role. Omitting `visibility` / `commentVisibility` posts publicly.
 
-- Skill reference: [.cursor/skills/pmm-manual-test/SKILL.md](.cursor/skills/pmm-manual-test/SKILL.md) and [fb-tests.md](.cursor/skills/pmm-manual-test/fb-tests.md)
-- Cloud automations (Tester): [.cursor/AUTOMATIONS.md](.cursor/AUTOMATIONS.md)
+- Skill reference: [.cursor/skills/pmm-jenkins-staging/SKILL.md](.cursor/skills/pmm-jenkins-staging/SKILL.md) (local Jenkins path)
+- Domain skills: `.cursor/skills/pmm-jira/`, `pmm-fb-tests/`, `pmm-provisioning/`, etc.
+- Cloud roles: [.cursor/agents/test-runner.md](.cursor/agents/test-runner.md), [test-healer.md](.cursor/agents/test-healer.md), [test-reporter.md](.cursor/agents/test-reporter.md)
+- Cloud automations (dashboard copy-paste): [docs/agents/AUTOMATIONS.md](docs/agents/AUTOMATIONS.md)
 - MCP: `jira_add_comment` → `visibility: "{\"type\":\"role\",\"value\":\"Developers\"}"`; `addCommentToJiraIssue` → `commentVisibility: {"type": "role", "value": "Developers"}`

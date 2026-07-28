@@ -150,5 +150,17 @@ dist
 # AI tools
 CLAUDE.md
 .claude
-.cursor
+.cursor/*
+!.cursor/agents/
+!.cursor/agents/**
+!.cursor/skills/
+!.cursor/skills/**
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/hooks/
+!.cursor/hooks/**
+!.cursor/hooks.json
+!.cursor/environment.json
+!.cursor/AUTOMATIONS.md
+!.cursor/settings.json
 .cursorrules

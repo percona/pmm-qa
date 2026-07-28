@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/block-pmm-submodules-clone.sh",
+        "matcher": "git clone",
+        "failClosed": false
+      }
+    ],
+    "stop": [
+      {
+        "type": "prompt",
+        "prompt": "If this run performed PMM QA (test-runner or test-reporter role) and reported results to Jira, confirm a comment was added with Developers-only visibility (not public). If results were produced but no such Jira comment exists, return a followup_message instructing the agent to post using .cursor/skills/pmm-jira/SKILL.md visibility rules. Otherwise allow completion. Input: $ARGUMENTS",
+        "loop_limit": 2
+      }
+    ]
+  }
+}

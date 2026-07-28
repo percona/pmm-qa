@@ -1,6 +1,6 @@
 ---
-name: pmm-manual-test
-description: Guides PMM manual testing by reading a Jira ticket, syncing local repos, finding pmm-submodules build artifacts, analyzing flaky FB Tests for test insights, choosing pmm3-aws-staging-start or pmm3-deploy-services, determining all Jenkins parameters, generating a fully pre-filled parambuild URL, screenshotting FB test results with playwright-cli into Jira FB test screenshots field, and writing verified test steps. Use when the user asks for help with manual testing, PMM staging setup, FB test analysis, or wants a Jenkins job link to test a Jira ticket.
+name: pmm-jenkins-staging
+description: Local PMM manual testing via Jenkins parambuild URLs — choose pmm3-aws-staging-start vs pmm3-deploy-services, derive all job parameters from ticket and FB build, open pre-filled parambuild URL. Use for local/staging Jenkins workflows on a developer PC, not cloud MicroVM provisioning.
 ---
 
 # PMM Manual Test
