@@ -138,7 +138,9 @@ class MongoDBHelper extends Helper {
     } = parameters;
     const user = username || this.username;
     const pass = password || this.password;
-    const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin`;
+    // directConnection: use only this seed, skip replica-set discovery (members
+    // advertise internal docker addresses unreachable from the runner).
+    const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin&directConnection=true`;
     const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000 });
 
     return await client.connect();
