@@ -5,7 +5,8 @@ name: PMM Upgrade (Docker image change)
 
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       docker_tag:
