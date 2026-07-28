@@ -7,23 +7,55 @@
     valkey_password: "UfY9s73Gx~!?@#$%^&*(){}[]<>|/:;,.-_+="
 
 - name: Enable Valkey repository
-  shell: percona-release enable valkey experimental
+  include_tasks: ./enable_repo.yml
+  vars:
+    only: yes
+    package: "valkey"
+    repository: "experimental"
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int == 9
+
+- name: Enable Valkey repository
+  include_tasks: ./enable_repo.yml
+  vars:
+    only: yes
+    package: "{{ valkey_to_test }}"
+    repository: "release"
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int != 9
+
+- name: Enable Valkey repository
+  include_tasks: ./enable_repo.yml
+  vars:
+    only: yes
+    package: "{{ valkey_to_test }}"
+    repository: "release"
+  when: ansible_os_family == "Debian"
 
 - name: Install Valkey on Debian based systems
   shell: "{{item}}"
   with_items:
     - apt update
-    - apt install -y valkey
+    - apt install -y percona-valkey-server percona-valkey-tools
   become: yes
   when: ansible_os_family == "Debian"
 
 - name: Install Valkey on Red Hat based systems
-  shell: "{{item}}"
-  with_items:
-    - dnf install -y valkey
-    - systemctl start valkey
+  shell: dnf install -y valkey
   become: yes
   when: ansible_os_family == "RedHat"
+
+- name: Start valkey@default service
+  shell: systemctl start valkey@default
+  become: yes
+  register: valkey_start
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int != 9
+
+- name: Start valkey@default service
+  shell: systemctl start valkey
+  become: yes
+  register: valkey_start
+  ignore_errors: yes
+  when: ansible_os_family == "RedHat" and ansible_distribution_major_version|int == 9
 
 - name: Set password for valkey
   shell: valkey-cli CONFIG SET requirepass '{{ valkey_password }}'

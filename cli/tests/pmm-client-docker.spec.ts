@@ -1,8 +1,22 @@
 import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
+import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { clientDockerImage, dockerImage } from '@root/helpers/constants';
 
 test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async () => {
+  let iptablesCleanup: number | undefined;
+  let adminVersion: number;
+
+  test.afterEach(async () => {
+    if (!iptablesCleanup) {
+      return;
+    }
+    const pid = iptablesCleanup;
+    await cli.exec(`sudo nsenter -t ${pid} -n iptables -F INPUT 2>/dev/null || true`);
+    await cli.exec(`sudo nsenter -t ${pid} -n iptables -F OUTPUT 2>/dev/null || true`);
+    iptablesCleanup = undefined;
+  });
+
   test.beforeAll(async ({}) => {
     const startCommand = `DOCKER_VERSION=${dockerImage} CLIENT_DOCKER_VERSION=${clientDockerImage} docker compose -f test-setup/docker-compose-pmm-client.yaml up -d`;
     await cli.exec(startCommand);
@@ -16,6 +30,7 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
     await cli.exec('docker exec pmm-client-1 pmm-admin add mysql --username=pmm --password=pmm-pass --service-name=ps-8.0 --query-source=perfschema --host=ps-1 --port=3306 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
     await cli.exec('docker exec pmm-client-1 pmm-admin add postgresql --query-source=pgstatements --username=pmm --password=pmm-pass --service-name=pdpgsql-1 --host=pdpgsql-1 --port=5432 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
     await cli.exec('docker exec pmm-client-1 pmm-admin add mongodb --username=pmm --password=pmm-pass --service-name=mongodb-7.0  --host=psmdb-1 --port=27017 --server-url=https://admin:admin@pmm-server-1:8443 --server-insecure-tls=true');
+    adminVersion = await getPmmAdminMinorVersion('pmm-client-1');
   });
 
   /**
@@ -94,6 +109,40 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
     const output = await cli.exec('docker exec pmm-client-1 pmm-admin remove postgresql postgres-16_2');
     await output.assertSuccess();
     await output.outContains('Service removed.');
+  });
+
+  test('@PMM-T2255 pmm-agent reconnects after bilateral iptables DROP', async () => {
+    test.skip(adminVersion < 9, 'This test is relevant for pmm-client version 3.9.0 and above');
+    test.setTimeout(180_000);
+    const client = 'pmm-client-1';
+
+    const serverIp = (await cli.exec(`docker exec ${client} getent hosts pmm-server-1 | awk '{print $1}'`)).stdout.trim();
+    const pid = parseInt((await cli.exec(`docker inspect -f '{{.State.Pid}}' ${client}`)).stdout.trim(), 10);
+    const conn = (await cli.exec(
+      `sudo nsenter -t ${pid} -n ss -tapn 2>/dev/null | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
+    )).stdout.match(/(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\d+\.\d+\.\d+\.\d+):8443/);
+    const clientIp = conn?.[1];
+    const sourcePort = conn?.[2];
+    expect(sourcePort, 'pmm-agent should have an established connection to the server').toBeTruthy();
+
+    await cli.exec(
+      `sudo nsenter -t ${pid} -n iptables -A OUTPUT -p tcp -d ${serverIp} --dport=8443 -s ${clientIp} --sport=${sourcePort} -j DROP`,
+    );
+    await cli.exec(
+      `sudo nsenter -t ${pid} -n iptables -A INPUT -p tcp -s ${serverIp} --sport=8443 -d ${clientIp} --dport=${sourcePort} -j DROP`,
+    );
+    iptablesCleanup = pid;
+
+    await expect(async () => {
+      const list = await cli.exec(`docker exec ${client} pmm-admin list`);
+      await list.assertSuccess();
+      await list.outContains('pmm_agent');
+      await list.outContains('Connected');
+      const port = (await cli.exec(
+        `sudo nsenter -t ${pid} -n ss -tapn 2>/dev/null | grep pmm-agent | grep '${serverIp}:8443' | grep ESTAB | head -1`,
+      )).stdout.match(/(\d+\.\d+\.\d+\.\d+):(\d+)\s+(\d+\.\d+\.\d+\.\d+):8443/)?.[2];
+      expect(port, 'pmm-agent should use a new TCP source port').not.toBe(sourcePort);
+    }).toPass({ timeout: 90_000, intervals: [5_000] });
   });
 });
 

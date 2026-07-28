@@ -1,5 +1,9 @@
 name: "E2E tests Matrix"
 
+concurrency:
+  group: e2e-tests-${{ github.event_name == 'pull_request' && github.head_ref || (github.event.inputs.pmm_qa_branch || github.ref_name) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 on:
   pull_request:
     branches:

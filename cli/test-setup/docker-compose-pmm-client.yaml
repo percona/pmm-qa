@@ -17,6 +17,8 @@ services:
     container_name: pmm-client-1
     image: ${CLIENT_DOCKER_VERSION:-perconalab/pmm-client:3-dev-latest}
     platform: linux/amd64
+    cap_add:
+      - NET_ADMIN
     environment:
       - PMM_AGENT_SERVER_ADDRESS=pmm-server-1:8443
       - PMM_AGENT_SERVER_USERNAME=admin

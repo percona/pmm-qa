@@ -41,7 +41,6 @@
   - name: Prepare Container for External Exporters (systemd)
     shell: |
       docker run -d \
-        -p 43100:43100 \
         --name={{ external_container }} \
         --network=pmm-qa \
         --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \

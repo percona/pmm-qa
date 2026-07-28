@@ -2,9 +2,7 @@ const assert = require('assert');
 const faker = require('faker');
 const { SERVICE_TYPE, AGENT_NAMES } = require('./helper/constants');
 
-const {
-  remoteInstancesPage, remoteInstancesHelper, pmmInventoryPage,
-} = inject();
+const { remoteInstancesPage, remoteInstancesHelper, pmmInventoryPage } = inject();
 
 const externalExporterServiceName = 'external_service_new';
 const haproxyServiceName = 'haproxy_remote';
@@ -116,26 +114,23 @@ Data(instances).Scenario(
   },
 );
 
-Scenario(
-  'PMM-T590 - Verify parsing URL on adding External service page @instances',
-  async ({ I, remoteInstancesPage }) => {
-    const metricsPath = '/metrics2';
-    const credentials = 'something';
-    const url = `https://something:something@${process.env.MONITORING_HOST}:${process.env.EXTERNAL_EXPORTER_PORT}/metrics2`;
+Scenario('PMM-T590 - Verify parsing URL on adding External service page @instances', async ({ I, remoteInstancesPage }) => {
+  const metricsPath = '/metrics2';
+  const credentials = 'something';
+  const url = `https://something:something@${process.env.MONITORING_HOST}:${process.env.EXTERNAL_EXPORTER_PORT}/metrics2`;
 
-    I.amOnPage(remoteInstancesPage.url);
-    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
-    remoteInstancesPage.openAddRemotePage('external');
-    remoteInstancesPage.parseURL(url);
-    I.wait(2);
+  I.amOnPage(remoteInstancesPage.url);
+  remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
+  remoteInstancesPage.openAddRemotePage('external');
+  remoteInstancesPage.parseURL(url);
+  I.wait(2);
 
-    I.seeAttributesOnElements(remoteInstancesPage.fields.hostName, { value: process.env.MONITORING_HOST });
-    I.seeAttributesOnElements(remoteInstancesPage.fields.metricsPath, { value: metricsPath });
-    I.seeAttributesOnElements(remoteInstancesPage.fields.portNumber, { value: process.env.EXTERNAL_EXPORTER_PORT });
-    I.seeAttributesOnElements(remoteInstancesPage.fields.userName, { value: credentials });
-    I.seeAttributesOnElements(locate('$schema-radio-state'), { value: 'https' });
-  },
-);
+  I.seeAttributesOnElements(remoteInstancesPage.fields.hostName, { value: process.env.MONITORING_HOST });
+  I.seeAttributesOnElements(remoteInstancesPage.fields.metricsPath, { value: metricsPath });
+  I.seeAttributesOnElements(remoteInstancesPage.fields.portNumber, { value: process.env.EXTERNAL_EXPORTER_PORT });
+  I.seeAttributesOnElements(remoteInstancesPage.fields.userName, { value: credentials });
+  I.seeAttributesOnElements(locate('$schema-radio-state'), { value: 'https' });
+});
 
 Scenario(
   'PMM-T630 - Verify adding External service with empty fields via UI @fb-instances',
@@ -151,9 +146,7 @@ Scenario(
 
 Data(instances).Scenario(
   'Verify Remote Instance has Status Running [critical] @fb-instances',
-  async ({
-    I, pmmInventoryPage, current,
-  }) => {
+  async ({ I, pmmInventoryPage, current }) => {
     const serviceName = remoteInstancesHelper.services[current.name];
 
     I.amOnPage(pmmInventoryPage.url);
@@ -170,66 +163,64 @@ Scenario(
     remoteInstancesPage.openAddRemotePage('mysql');
     adminPage.performPageDown(1);
     I.waitForVisible(remoteInstancesPage.fields.tableStatsGroupTableLimit, 30);
-    assert.strictEqual('-1', await remoteInstancesPage.getTableLimitFieldValue(), 'Count for Disabled Table Stats dont Match, was expecting -1');
+    assert.strictEqual(
+      '-1',
+      await remoteInstancesPage.getTableLimitFieldValue(),
+      'Count for Disabled Table Stats dont Match, was expecting -1',
+    );
     I.click(remoteInstancesPage.tableStatsLimitRadioButtonLocator('Default'));
-    assert.strictEqual('1000', await remoteInstancesPage.getTableLimitFieldValue(), 'Count for Default Table Stats dont Match, was expecting 1000');
+    assert.strictEqual(
+      '1000',
+      await remoteInstancesPage.getTableLimitFieldValue(),
+      'Count for Default Table Stats dont Match, was expecting 1000',
+    );
     I.click(remoteInstancesPage.tableStatsLimitRadioButtonLocator('Custom'));
-    assert.strictEqual('1000', await remoteInstancesPage.getTableLimitFieldValue(), 'Count for Custom Table Stats dont Match, was expecting 1000');
+    assert.strictEqual(
+      '1000',
+      await remoteInstancesPage.getTableLimitFieldValue(),
+      'Count for Custom Table Stats dont Match, was expecting 1000',
+    );
   },
 );
 
-Scenario(
-  'PMM-T637 - Verify elements on HAProxy page @fb-instances',
-  async ({ I, remoteInstancesPage }) => {
-    I.amOnPage(remoteInstancesPage.url);
-    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
-    remoteInstancesPage.openAddRemotePage('haproxy');
-    I.waitForVisible(remoteInstancesPage.fields.hostName, 30);
-    I.waitForVisible(remoteInstancesPage.fields.serviceName, 30);
-    I.waitForVisible(remoteInstancesPage.fields.portNumber, 30);
-    I.waitForVisible(remoteInstancesPage.fields.userName, 30);
-    I.waitForVisible(remoteInstancesPage.fields.password, 30);
-    I.waitForVisible(remoteInstancesPage.fields.environment, 30);
-    I.waitForVisible(remoteInstancesPage.fields.region, 30);
-    I.waitForVisible(remoteInstancesPage.fields.availabilityZone, 30);
-    I.waitForVisible(remoteInstancesPage.fields.replicationSet, 30);
-    I.waitForVisible(remoteInstancesPage.fields.cluster, 30);
-    I.waitForVisible(remoteInstancesPage.fields.customLabels, 30);
-    I.waitForVisible(remoteInstancesPage.fields.skipConnectionCheck, 30);
-  },
-);
+Scenario('PMM-T637 - Verify elements on HAProxy page @fb-instances', async ({ I, remoteInstancesPage }) => {
+  I.amOnPage(remoteInstancesPage.url);
+  remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
+  remoteInstancesPage.openAddRemotePage('haproxy');
+  I.waitForVisible(remoteInstancesPage.fields.hostName, 30);
+  I.waitForVisible(remoteInstancesPage.fields.serviceName, 30);
+  I.waitForVisible(remoteInstancesPage.fields.portNumber, 30);
+  I.waitForVisible(remoteInstancesPage.fields.userName, 30);
+  I.waitForVisible(remoteInstancesPage.fields.password, 30);
+  I.waitForVisible(remoteInstancesPage.fields.environment, 30);
+  I.waitForVisible(remoteInstancesPage.fields.region, 30);
+  I.waitForVisible(remoteInstancesPage.fields.availabilityZone, 30);
+  I.waitForVisible(remoteInstancesPage.fields.replicationSet, 30);
+  I.waitForVisible(remoteInstancesPage.fields.cluster, 30);
+  I.waitForVisible(remoteInstancesPage.fields.customLabels, 30);
+  I.waitForVisible(remoteInstancesPage.fields.skipConnectionCheck, 30);
+});
 
-Scenario(
-  'PMM-T636 - Verify adding HAProxy with all empty fields @fb-instances',
-  async ({ I, remoteInstancesPage }) => {
-    I.amOnPage(remoteInstancesPage.url);
-    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
-    remoteInstancesPage.openAddRemotePage('haproxy');
-    I.waitForVisible(remoteInstancesPage.fields.addService, 30);
-    I.click(remoteInstancesPage.fields.addService);
-    I.waitForVisible(remoteInstancesPage.fields.requiredFieldHostname, 30);
-  },
-);
+Scenario('PMM-T636 - Verify adding HAProxy with all empty fields @fb-instances', async ({ I, remoteInstancesPage }) => {
+  I.amOnPage(remoteInstancesPage.url);
+  remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
+  remoteInstancesPage.openAddRemotePage('haproxy');
+  I.waitForVisible(remoteInstancesPage.fields.addService, 30);
+  I.click(remoteInstancesPage.fields.addService);
+  I.waitForVisible(remoteInstancesPage.fields.requiredFieldHostname, 30);
+});
 
 Scenario(
   'PMM-T635 - Verify Adding HAProxy service via UI @fb-instances',
-  async ({
-    I, remoteInstancesPage, pmmInventoryPage,
-  }) => {
+  async ({ I, remoteInstancesPage, pmmInventoryPage }) => {
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('haproxy');
     I.waitForVisible(remoteInstancesPage.fields.hostName, 30);
-    I.fillField(
-      remoteInstancesPage.fields.hostName,
-      remoteInstancesHelper.remote_instance.haproxy.haproxy_2.host,
-    );
+    I.fillField(remoteInstancesPage.fields.hostName, remoteInstancesHelper.remote_instance.haproxy.haproxy_2.host);
     I.fillField(remoteInstancesPage.fields.serviceName, haproxyServiceName);
     I.clearField(remoteInstancesPage.fields.portNumber);
-    I.fillField(
-      remoteInstancesPage.fields.portNumber,
-      remoteInstancesHelper.remote_instance.haproxy.haproxy_2.port,
-    );
+    I.fillField(remoteInstancesPage.fields.portNumber, remoteInstancesHelper.remote_instance.haproxy.haproxy_2.port);
     I.scrollPageToBottom();
     await remoteInstancesPage.clickAddInstanceAndWaitForSuccess();
     pmmInventoryPage.verifyRemoteServiceIsDisplayed(haproxyServiceName);
@@ -243,40 +234,33 @@ Scenario(
   },
 );
 
-Scenario(
-  'PMM-T1089 - Verify UI elements for PostgreSQL Instance @fb-instances',
-  async ({
-    I, remoteInstancesPage,
-  }) => {
-    I.amOnPage(remoteInstancesPage.url);
-    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
-    remoteInstancesPage.openAddRemotePage('postgresql');
-    I.click(remoteInstancesPage.fields.addService);
-    remoteInstancesPage.checkRequiredField();
-    // Verify fields on the page
-    I.seeElement(remoteInstancesPage.fields.hostName, 30);
-    I.seeElement(remoteInstancesPage.fields.serviceName, 30);
-    I.seeElement(remoteInstancesPage.fields.portNumber, 30);
-    I.seeElement(remoteInstancesPage.fields.userName, 30);
-    I.seeElement(remoteInstancesPage.fields.password, 30);
-    I.seeElement(remoteInstancesPage.fields.environment, 30);
-    I.seeElement(remoteInstancesPage.fields.region, 30);
-    I.seeElement(remoteInstancesPage.fields.availabilityZone, 30);
-    I.seeElement(remoteInstancesPage.fields.replicationSet, 30);
-    I.seeElement(remoteInstancesPage.fields.cluster, 30);
-    I.seeElement(remoteInstancesPage.fields.customLabels, 30);
-    I.seeElement(remoteInstancesPage.fields.skipConnectionCheck, 30);
-    I.seeElement(remoteInstancesPage.fields.dontTrackingRadio, 30);
-    I.seeElement(remoteInstancesPage.fields.pgStatStatementsRadio, 30);
-    I.seeElement(remoteInstancesPage.fields.pgStatMonitorRadio, 30);
-  },
-);
+Scenario('PMM-T1089 - Verify UI elements for PostgreSQL Instance @fb-instances', async ({ I, remoteInstancesPage }) => {
+  I.amOnPage(remoteInstancesPage.url);
+  remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
+  remoteInstancesPage.openAddRemotePage('postgresql');
+  I.click(remoteInstancesPage.fields.addService);
+  remoteInstancesPage.checkRequiredField();
+  // Verify fields on the page
+  I.seeElement(remoteInstancesPage.fields.hostName, 30);
+  I.seeElement(remoteInstancesPage.fields.serviceName, 30);
+  I.seeElement(remoteInstancesPage.fields.portNumber, 30);
+  I.seeElement(remoteInstancesPage.fields.userName, 30);
+  I.seeElement(remoteInstancesPage.fields.password, 30);
+  I.seeElement(remoteInstancesPage.fields.environment, 30);
+  I.seeElement(remoteInstancesPage.fields.region, 30);
+  I.seeElement(remoteInstancesPage.fields.availabilityZone, 30);
+  I.seeElement(remoteInstancesPage.fields.replicationSet, 30);
+  I.seeElement(remoteInstancesPage.fields.cluster, 30);
+  I.seeElement(remoteInstancesPage.fields.customLabels, 30);
+  I.seeElement(remoteInstancesPage.fields.skipConnectionCheck, 30);
+  I.seeElement(remoteInstancesPage.fields.dontTrackingRadio, 30);
+  I.seeElement(remoteInstancesPage.fields.pgStatStatementsRadio, 30);
+  I.seeElement(remoteInstancesPage.fields.pgStatMonitorRadio, 30);
+});
 
 Data(remotePostgreSQL).Scenario(
   'PMM-T441 - Verify adding Remote PostgreSQL Instance @fb-instances',
-  async ({
-    I, remoteInstancesPage, pmmInventoryPage, current,
-  }) => {
+  async ({ I, remoteInstancesPage, pmmInventoryPage, current }) => {
     I.amOnPage(remoteInstancesPage.url);
     remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
     remoteInstancesPage.openAddRemotePage('postgresql');
@@ -293,9 +277,7 @@ Data(remotePostgreSQL).Scenario(
 
 Data(dashboardCheck).Scenario(
   'PMM-T853 - Verify dashboard after remote postgreSQL instance is added @fb-instances',
-  async ({
-    I, dashboardPage, adminPage, current,
-  }) => {
+  async ({ I, dashboardPage, adminPage, current }) => {
     // Wait 10 seconds before test to start getting metrics
     I.wait(10);
     I.amOnPage(dashboardPage.postgresqlInstanceOverviewDashboard.url);
@@ -309,9 +291,7 @@ Data(dashboardCheck).Scenario(
 
 Data(qanFilters).Scenario(
   'PMM-T854 - Verify QAN after remote instance is added @fb-instances',
-  async ({
-    I, queryAnalyticsPage, current,
-  }) => {
+  async ({ I, queryAnalyticsPage, current }) => {
     const url = I.buildUrlWithParams(queryAnalyticsPage.url, {
       environment: current.filterName,
       from: 'now-5m',
@@ -334,9 +314,7 @@ Data(metrics).Scenario(
 
 Scenario(
   'PMM-T1087 - Verify adding PostgreSQL remote instance without postgres database @fb-instances',
-  async ({
-    I, remoteInstancesPage, grafanaAPI,
-  }) => {
+  async ({ I, remoteInstancesPage, grafanaAPI }) => {
     const errorMessage = 'Connection check failed: pq: database "postgres" does not exist';
     const remoteServiceName = `${faker.lorem.word()}_service`;
     const metric = 'pg_stat_database_xact_rollback';
@@ -369,9 +347,7 @@ Scenario(
 
 Scenario(
   'PMM-T2080 - Verify disable examples for MySQL @fb-instances',
-  async ({
-    I, remoteInstancesPage, queryAnalyticsPage, inventoryAPI,
-  }) => {
+  async ({ I, remoteInstancesPage, queryAnalyticsPage, inventoryAPI }) => {
     const service = 'mysql';
     const serviceName = remoteInstancesHelper.services[service];
     const nodeName = 'pmm-server';
@@ -402,5 +378,72 @@ Scenario(
     queryAnalyticsPage.data.selectRow(1);
     queryAnalyticsPage.waitForLoaded();
     queryAnalyticsPage.queryDetails.verifyNoExamples();
+  },
+);
+const disableCollectorsTests = new DataTable([
+  'service',
+  'serviceType',
+  'agentName',
+  'collectors',
+  'presentMetric',
+  'absentMetric',
+]);
+
+disableCollectorsTests.add([
+  'mysql',
+  SERVICE_TYPE.MYSQL,
+  'MySQL exporter',
+  ['global_status', 'perf_schema.eventsstatements'],
+  'mysql_exporter_collector_success',
+  'mysql_global_status_connection_errors_total',
+]);
+disableCollectorsTests.add([
+  'postgresql',
+  SERVICE_TYPE.POSTGRESQL,
+  AGENT_NAMES.POSTGRESQL_EXPORTER,
+  ['stat_database'],
+  'pg_database_size_bytes',
+  'pg_stat_database_blks_read',
+]);
+disableCollectorsTests.add([
+  'proxysql',
+  SERVICE_TYPE.PROXYSQL,
+  AGENT_NAMES.PROXYSQL_EXPORTER,
+  ['stats_memory_metrics'],
+  'proxysql_up',
+  'proxysql_stats_memory_auth_memory',
+]);
+
+Data(disableCollectorsTests).Scenario(
+  'PMM-T2246 + PMM-T2247 + PMM-T2248 - Verify disable collectors for remote DB services @fb-instances',
+  async ({ I, current, remoteInstancesPage, inventoryAPI, grafanaAPI }) => {
+    const serviceName = remoteInstancesHelper.services[current.service];
+    const nodeName = 'pmm-server';
+    const newServiceName = `${current.service}_disable_collectors_${faker.lorem.word()}`;
+
+    I.amOnPage(remoteInstancesPage.url);
+    remoteInstancesPage.waitUntilRemoteInstancesPageLoaded();
+    remoteInstancesPage.openAddRemotePage(current.service);
+    await remoteInstancesPage.fillRemoteFields(serviceName, nodeName, newServiceName);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectors, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsLabel, 30);
+    I.waitForVisible(remoteInstancesPage.fields.disableCollectorsDescription, 30);
+    I.see('Disable collectors', remoteInstancesPage.fields.disableCollectorsLabel);
+
+    await remoteInstancesPage.createRemoteInstance(newServiceName, {
+      disableCollectors: current.collectors.join(', '),
+    });
+
+    const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(current.serviceType, newServiceName);
+
+    await pmmInventoryPage.openAgents(service_id);
+    I.click(pmmInventoryPage.fields.showAgentDetails(current.agentName));
+    I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText('disabled_collectors='), 10);
+    current.collectors.forEach((collector) => {
+      I.waitForVisible(pmmInventoryPage.fields.agentDetailsLabelByText(collector), 10);
+    });
+
+    await grafanaAPI.checkMetricExist(current.presentMetric, { type: 'service_id', value: service_id });
+    await grafanaAPI.checkMetricAbsent(current.absentMetric, { type: 'service_id', value: service_id });
   },
 );

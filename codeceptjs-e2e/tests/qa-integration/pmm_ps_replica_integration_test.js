@@ -36,8 +36,10 @@ Data(serviceList).Scenario(
     adminPage.performPageUp(5);
     await dashboardPage.verifyMetricsExistence(dashboardPage.mysqlReplcationDashboard.metrics);
     if (current.serviceName === '_1') {
+      await dashboardPage.waitForGraphsToHaveData(9, 120);
       await dashboardPage.verifyThereAreNoGraphsWithoutData(9);
     } else {
+      await dashboardPage.waitForGraphsToHaveData(4, 120);
       await dashboardPage.verifyThereAreNoGraphsWithoutData(4);
     }
   },

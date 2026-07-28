@@ -14,6 +14,12 @@ services:
       - "1443:8443"
     environment:
       - PMM_DEBUG=1
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/v1/server/readyz" ]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 60s
     networks:
       - scrape-interval
 
@@ -51,6 +57,15 @@ services:
       - PMM_DEBUG=1
       - PMM_PROMSCRAPE_MAX_SCRAPE_SIZE=128MiB
       - VMAGENT_remoteWrite_maxDiskUsagePerURL=52428800
+    depends_on:
+      pmm-server-scrape-interval:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/v1/server/readyz" ]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+      start_period: 60s
     networks:
       - scrape-interval
 

@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import data from '@fixtures/dataTest';
+import { expect } from '@playwright/test';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -153,6 +154,14 @@ pmmTest(
         serviceName: service.service_name,
       }),
     );
+    await dashboard.selectVariableValue('Environment', 'ps-replication-dev');
+
+    const services = await dashboard.getVariableValues('Service Name');
+
+    expect(services.length).toBeGreaterThan(0);
+    services.forEach((serviceName: string) => {
+      expect(serviceName).toContain('replication');
+    });
     await dashboard.verifyMetricsPresent(
       dashboard.mysql.mysqlReplicationSummary.metrics(service.service_name),
     );
