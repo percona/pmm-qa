@@ -1,7 +1,4 @@
-name: PMM Upgrade (Docker image change)
-# Skeleton port of the Jenkins upgrade pipeline — DOCKER server-upgrade path only.
-# UI-upgrade path, Launchable and the AWS/remote-DB credential env block are omitted;
-# add them back if a test subset actually needs them.
+name: PMM Upgrade runner
 
 on:
   pull_request:
