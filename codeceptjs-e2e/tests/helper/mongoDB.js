@@ -39,7 +39,7 @@ class MongoDBHelper extends Helper {
       useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
     });
 
-    return await this.client.connect();
+    return await this._connect();
   }
 
   async mongoConnectReplica(connection) {
@@ -63,7 +63,29 @@ class MongoDBHelper extends Helper {
       useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
     });
 
-    return await this.client.connect();
+    return await this._connect();
+  }
+
+  /**
+   * Connects the current client, logging diagnostics on failure so CI logs show
+   * the target URL (password masked) and mongo container/port state.
+   * @returns {Promise<*>}
+   */
+  async _connect() {
+    try {
+      return await this.client.connect();
+    } catch (e) {
+      const safeUrl = String(this.url).replace(/(mongodb:\/\/[^:]+:)[^@]+@/, '$1***@');
+      console.error(`[mongoDB helper] connect FAILED for ${safeUrl}: ${e.message}`);
+      try {
+        const { execSync } = require('child_process');
+        const ps = execSync(
+          "docker ps --format '{{.Names}}\\t{{.Status}}\\t{{.Ports}}' | grep -iE 'rs[0-9]|mongo|psmdb' || true",
+        ).toString();
+        console.error(`[mongoDB helper] mongo containers:\n${ps}`);
+      } catch (_) { /* docker not available in this context */ }
+      throw e;
+    }
   }
 
   /**
