@@ -105,6 +105,13 @@ jobs:
           sudo rm -rf "/usr/local/share/boost"
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
+      - name: Setup npm modules for e2e tests
+        working-directory: pmm-qa/codeceptjs-e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps
+          envsubst < env.list > env.generated.list
+
       - name: Setup databases + clients
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
