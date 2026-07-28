@@ -42,6 +42,7 @@ class MongoDBHelper extends Helper {
       useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
     });
 
+    console.log(`[mongoDB helper] mongoConnect -> ${String(this.url).replace(/(mongodb:\/\/[^:]+:)[^@]+@/, '$1***@')}`);
     return await this._connect();
   }
 
