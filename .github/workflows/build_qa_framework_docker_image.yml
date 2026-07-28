@@ -114,7 +114,6 @@ jobs:
           # Two tags only: latest, plus the db_version (flavor) when set.
           {
             echo "tags<<EOF"
-            echo "${IMG}:latest"
             [ -n "$FLAVOR" ] && echo "${IMG}:${FLAVOR}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
