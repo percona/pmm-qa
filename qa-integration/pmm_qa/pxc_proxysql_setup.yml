@@ -160,13 +160,18 @@
       "systemctl stop pmm-agent 2>/dev/null; pkill -x pmm-agent 2>/dev/null; sleep 3; true"
     when: proxysql_auth_plugin | length > 0
 
-  - name: Start pmm-agent so proxysql_exporter re-authenticates
+  # docker exec WITHOUT -d waits for the exec session's stdout/stderr to close,
+  # so a backgrounded agent makes the task hang. -d detaches and returns.
+  - name: Start pmm-agent (systemd containers)
+    shell: docker exec {{ pxc_container }} bash -c "systemctl start pmm-agent 2>/dev/null || true"
+    when: proxysql_auth_plugin | length > 0
+
+  - name: Start pmm-agent (non-systemd fallback)
     shell: >
-      docker exec {{ pxc_container }} bash -c
-      "systemctl start pmm-agent 2>/dev/null ||
-       ( pgrep -x pmm-agent >/dev/null ||
-         setsid nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml
-         >> /var/log/pmm-agent.log 2>&1 < /dev/null & ); true"
+      docker exec -d {{ pxc_container }} bash -c
+      "pgrep -x pmm-agent >/dev/null ||
+       pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml
+       >> /var/log/pmm-agent.log 2>&1"
     when: proxysql_auth_plugin | length > 0
 
   - name: Wait for pmm-agent to reconnect
