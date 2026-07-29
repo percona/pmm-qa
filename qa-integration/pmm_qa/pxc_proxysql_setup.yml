@@ -155,22 +155,23 @@
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT variable_name, variable_value FROM global_variables WHERE variable_name IN ('mysql-default_authentication_plugin','admin-hash_passwords');"
     when: proxysql_auth_plugin | length > 0
 
-  # Cleartext passwords let ProxySQL complete caching_sha2 via its fast path, so
-  # the exporter connects fine. Hashing them removes that path and forces the
-  # full-authentication handshake that fails without TLS/RSA.
-  - name: Hash ProxySQL mysql_users passwords (force caching_sha2 full auth)
-    shell: "{{ item }}"
-    with_items:
-      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "UPDATE mysql_users SET password=CACHING_SHA2_PASSWORD(password) WHERE password NOT LIKE '$A$%'; LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
-      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT username, password FROM mysql_users;"
-    when: proxysql_hash_passwords | bool
-
   - name: Add ProxySQL to PMM
     shell: >
       docker exec {{ pxc_container }} pmm-admin add proxysql
       --username={{ proxysql_pmm_user }} --password={{ proxysql_pmm_password }}
       --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }}
       --host=127.0.0.1 --port={{ proxysql_pmm_port }}
+
+  # Hash the passwords only AFTER the service is registered. pmm-admin's
+  # pre-flight connection check would otherwise fail and the service would never
+  # be added - we want the *running* exporter to fail at scrape time, which is
+  # what K8SPXC-1830 reports (component=agent-process, source=exporter.go).
+  - name: Hash ProxySQL mysql_users passwords (force caching_sha2 full auth)
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "UPDATE mysql_users SET password=CACHING_SHA2_PASSWORD(password) WHERE password NOT LIKE '$A$%'; LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT username, password FROM mysql_users;"
+    when: proxysql_hash_passwords | bool
 
   # Force the exporter to re-handshake against the new auth plugin, otherwise a
   # connection established before the change keeps working and hides the issue.
@@ -180,13 +181,13 @@
     shell: >
       docker exec {{ pxc_container }} bash -c
       "systemctl stop pmm-agent 2>/dev/null; pkill -x pmm-agent 2>/dev/null; sleep 3; true"
-    when: proxysql_auth_plugin | length > 0
+    when: proxysql_auth_plugin | length > 0 or proxysql_hash_passwords | bool
 
   # docker exec WITHOUT -d waits for the exec session's stdout/stderr to close,
   # so a backgrounded agent makes the task hang. -d detaches and returns.
   - name: Start pmm-agent (systemd containers)
     shell: docker exec {{ pxc_container }} bash -c "systemctl start pmm-agent 2>/dev/null || true"
-    when: proxysql_auth_plugin | length > 0
+    when: proxysql_auth_plugin | length > 0 or proxysql_hash_passwords | bool
 
   - name: Start pmm-agent (non-systemd fallback)
     shell: >
@@ -194,12 +195,12 @@
       "pgrep -x pmm-agent >/dev/null ||
        pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml
        >> /var/log/pmm-agent.log 2>&1"
-    when: proxysql_auth_plugin | length > 0
+    when: proxysql_auth_plugin | length > 0 or proxysql_hash_passwords | bool
 
   - name: Wait for pmm-agent to reconnect
     pause:
       seconds: 20
-    when: proxysql_auth_plugin | length > 0
+    when: proxysql_auth_plugin | length > 0 or proxysql_hash_passwords | bool
 
   - name: Execute Service, Sysbench Script inside the PXC pxc_container
     shell: "{{ item }}"
