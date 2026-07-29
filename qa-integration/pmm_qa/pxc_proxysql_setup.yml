@@ -137,7 +137,10 @@
   - name: Configure ProxySQL authentication plugin
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SET mysql-default_authentication_plugin='{{ proxysql_auth_plugin }}'; SET admin-hash_passwords=false; LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK; LOAD ADMIN VARIABLES TO RUNTIME; SAVE ADMIN VARIABLES TO DISK;"
+      # separate statements: an unsupported variable must not abort the rest
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SET mysql-default_authentication_plugin='{{ proxysql_auth_plugin }}';"
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SET admin-hash_passwords=false;" || true
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "INSERT OR REPLACE INTO mysql_users(username,password,default_hostgroup) VALUES ('monitor','monitor',10); LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT variable_name, variable_value FROM global_variables WHERE variable_name IN ('mysql-default_authentication_plugin','admin-hash_passwords');"
     when: proxysql_auth_plugin | length > 0
@@ -146,6 +149,16 @@
     shell: >
       docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin
       --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
+
+  # Force the exporter to re-handshake against the new auth plugin, otherwise a
+  # connection established before the change keeps working and hides the issue.
+  - name: Restart pmm-agent so proxysql_exporter re-authenticates
+    shell: >
+      docker exec {{ pxc_container }} bash -c
+      "systemctl restart pmm-agent 2>/dev/null ||
+       { pkill -f pmm-agent; nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml
+         > /var/log/pmm-agent.log 2>&1 & }; sleep 20"
+    when: proxysql_auth_plugin | length > 0
 
   - name: Execute Service, Sysbench Script inside the PXC pxc_container
     shell: "{{ item }}"
@@ -157,8 +170,19 @@
   - name: Check proxysql_exporter status
     shell: >
       docker exec {{ pxc_container }} bash -c
-      "sleep 15; pmm-admin list | grep -i proxysql;
-       grep -i 'proxysql_exporter' /var/log/pmm-agent.log | tail -20 || true"
+      "sleep 15;
+       echo '== proxysql auth plugin ==';
+       mysql -h127.0.0.1 -P6032 -uadmin -padmin -Nse \"SELECT variable_name, variable_value FROM global_variables WHERE variable_name LIKE '%authentication_plugin%';\" 2>/dev/null;
+       echo '== pmm-admin list ==';
+       pmm-admin list | grep -i proxysql;
+       echo '== proxysql_up metric (1=exporter authenticated) ==';
+       PORT=\$(pmm-admin list | awk '/proxysql_exporter/{print \$NF}');
+       curl -s http://127.0.0.1:\$PORT/metrics 2>/dev/null | grep -E '^proxysql_up' || echo 'NO proxysql_up METRIC';
+       echo '== agent log (caching_sha2 / full authentication) ==';
+       for f in /var/log/pmm-agent.log /usr/local/percona/pmm/pmm-agent.log; do
+         [ -f \$f ] && grep -iE 'proxysql_exporter|caching_sha2|full authentication' \$f | tail -20;
+       done;
+       journalctl -u pmm-agent --no-pager 2>/dev/null | grep -iE 'proxysql_exporter|caching_sha2|full authentication' | tail -20 || true"
     register: proxysql_exporter_status
     changed_when: false
     ignore_errors: true
