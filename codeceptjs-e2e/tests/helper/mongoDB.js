@@ -39,7 +39,7 @@ class MongoDBHelper extends Helper {
     this.client.s.url = this.url;
 
     this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
+      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000, directConnection: true,
     });
 
     console.log(`[mongoDB helper] mongoConnect -> ${String(this.url).replace(/(mongodb:\/\/[^:]+:)[^@]+@/, '$1***@')}`);
@@ -119,7 +119,7 @@ class MongoDBHelper extends Helper {
     const user = username || this.username;
     const pass = password || this.password;
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000 });
+    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000, directConnection: true });
 
     return await client.connect();
   }
@@ -142,7 +142,7 @@ class MongoDBHelper extends Helper {
     // directConnection: use only this seed, skip replica-set discovery (members
     // advertise internal docker addresses unreachable from the runner).
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin&directConnection=true`;
-    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000 });
+    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000, directConnection: true });
 
     return await client.connect();
   }
