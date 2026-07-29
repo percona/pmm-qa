@@ -5,9 +5,11 @@
 
 - name: Prepare socket folders
   shell: |
-    sudo rm -fr /tmp/mysql-sockets/{{ item }}
-    sudo mkdir -p /tmp/mysql-sockets/{{ item }}
-    sudo chmod 0777 /tmp/mysql-sockets/{{ item }}
+    docker run --rm -v /tmp:/host-tmp busybox:1.37.0 sh -c '
+      rm -rf /host-tmp/mysql-sockets/{{ item }}
+      mkdir -p /host-tmp/mysql-sockets/{{ item }}
+      chmod 0777 /host-tmp/mysql-sockets/{{ item }}
+    '
 
 - name: Prepare Container for MySQL 8.0+
   shell: |

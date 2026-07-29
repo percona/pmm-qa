@@ -43,8 +43,12 @@
       ignore_errors: true
 
     - name: Remove old data folders
-      shell: 'rm -fr {{ data_dir }}'
-      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+      shell: |
+        if [ -d "{{ data_dir }}" ]; then
+          docker run --rm -v "{{ data_dir }}:/data" busybox:1.37.0 \
+            sh -c 'rm -rf /data/* /data/.[!.]* /data/..?*'
+          rm -rf "{{ data_dir }}"
+        fi
 
     - name: Create data directories
       file:
@@ -54,7 +58,10 @@
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
     - name: Recursively change ownership of a directory
-      shell: "sudo chown -R 1001:1001 {{ data_dir }}/node{{ item }}/data"
+      shell: |
+        docker run --rm \
+          -v "{{ data_dir }}/node{{ item }}/data:/data" \
+          busybox:1.37.0 chown -R 1001:1001 /data
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
     - name: Setup MySQL group replication
