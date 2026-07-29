@@ -18,27 +18,29 @@ Each person must authenticate — team-shared MCP does **not** share OAuth.
 1. Install Cursor Slack app to workspace
 2. Connect your Cursor account
 3. In any channel: `@Cursor help`
-4. For PMM runs: `@Cursor env=PMM test-runner PMM-15196`
+4. For PMM runs: `@Cursor please test PMM-15196` — add `env=PMM` when you need both `pmm` and `pmm-qa` on the cloud VM (required on Slack/mobile; optional on Desktop when `pmm-qa` is already open)
 
 ## 4. Desktop shortcut
 
 1. Clone/open `percona/pmm-qa`
 2. Agent input → dropdown → **Cloud**
-3. Type `/test-runner PMM-15196`
+3. Type `/test-runner PMM-15196` or natural language
 
 For multi-repo (`pmm` + `pmm-qa`), prefer Slack `env=PMM` or cursor.com/agents — Desktop may not expose environment picker.
 
-## Team admin (not required to start)
+## Team admin (optional, not required to start)
 
-See [ADMIN_REQUEST.md](ADMIN_REQUEST.md) for Team Owned automations, `GH_TOKEN`, Jira integration, Team follow-ups.
+- Promote Healer/Reporter automations to **Team Owned**
+- `GH_TOKEN` in PMM environment secrets
+- Jira integration + Team follow-ups = Service accounts only
 
 ## Verify environment
 
-After admin pushes `environment.json`, confirm in a cloud run:
+After `environment.json` is on `main`, confirm in a cloud run:
 
 ```bash
 gh --version
-playwright-cli --version
+json-diff --version
 docker run hello-world
 ```
 

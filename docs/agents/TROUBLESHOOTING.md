@@ -6,7 +6,7 @@
 
 **Cause:** The automation ran under **your** Cursor account (Private/Team Visible automations bill the creator).
 
-**Fix:** Use your own `@Cursor` in Slack or Desktop Cloud run. Ask admin to promote event automations to **Team Owned** ([ADMIN_REQUEST.md](ADMIN_REQUEST.md)).
+**Fix:** Use your own `@Cursor` in Slack or Desktop Cloud run. Ask admin to promote event automations to **Team Owned**.
 
 ## Jira comment could not be posted (no Atlassian API auth)
 
@@ -38,7 +38,7 @@
 
 **Cause:** Follow-ups only work if you **own** the agent, unless Team follow-ups = All or Service accounts only on Team Owned agents.
 
-**Fix:** `@Cursor agent <new prompt>` for separate run, or share agent URL (read-only). See [ADMIN_REQUEST.md](ADMIN_REQUEST.md).
+**Fix:** `@Cursor agent <new prompt>` for separate run, or share agent URL (read-only).
 
 ## Wrong branch / old setup scripts
 

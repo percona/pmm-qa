@@ -16,4 +16,4 @@ Run these once after merging agent files to `main`. Document results in a commen
 
 **Pass criteria for rollout:** items 1–2 work via read-by-path; items 3–7 documented for team; 8–9 verified.
 
-If item 3 fails, workers in Fase 3 stay unused — roles still work via path pointers.
+If item 3 fails, Phase 3 orchestration stays skill-based — roles still work via path pointers.

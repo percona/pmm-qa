@@ -55,8 +55,7 @@ rm -r Percona-XtraDB-Cluster.tar.gz
 mv Percona-XtraDB-Cluster* PXC
 cd PXC
 
-## start PXC (umask 022: mysqld ignores world-writable config files)
-umask 022
+## start PXC
 bash ../pxc-startup.sh
 bash ./start_pxc $number_of_nodes
 touch sysbench_run_node1_prepare.txt

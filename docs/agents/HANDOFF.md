@@ -1,12 +1,12 @@
-# Handoff — dev → QA (Fase 3)
+# Handoff — dev → QA (Phase 3)
 
-## Within one run (orchestrator)
+## Within one run
 
-Test Runner delegates to workers in `.cursor/agents/`:
+Test Runner reads skills inline (no thin subagents required):
 
-1. `read-git-diff` — scope from PRs
-2. `provision-pmm` — server + DBs
-3. `run-e2e` or `run-cli` — targeted suites
+1. `pmm-git-diff` — scope from PRs
+2. `pmm-provisioning` — server + DBs via `cursor-qa-integration/`
+3. `pmm-fb-tests` — map failed checks to CodeceptJS (`codeceptjs-e2e/`) or Playwright (`e2e_tests/`) runners
 
 **Prerequisite:** [VALIDATION.md](VALIDATION.md) items 3–4 pass on cloud.
 
@@ -37,8 +37,12 @@ flowchart LR
 
 Repeat for `qa:failed` → `test-healer.md`.
 
+## Test Healer dedup
+
+Before opening a pmm-qa PR, Healer checks `gh pr list -R percona/pmm-qa --state open` for the same failing test. Optional `#pmm-ai` canvas rows for team visibility — see `test-healer.md`.
+
 ## Future: dev-implementer role
 
-Add `.cursor/agents/dev-implementer.md` + skills; no dispatcher needed — `/dev-implementer` or auto-delegation by description.
+Add `.cursor/agents/dev-implementer.md` + skills; `/dev-implementer` or auto-delegation by description.
 
 Cloud environment `PMM` already includes `pmm` + `pmm-qa` for compile + e2e in one VM.

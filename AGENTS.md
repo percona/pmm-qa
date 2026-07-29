@@ -216,5 +216,6 @@ When posting **Jira comments** on `perconadev.atlassian.net` PMM tickets, **alwa
 - Skill reference: [.cursor/skills/pmm-jenkins-staging/SKILL.md](.cursor/skills/pmm-jenkins-staging/SKILL.md) (local Jenkins path)
 - Domain skills: `.cursor/skills/pmm-jira/`, `pmm-fb-tests/`, `pmm-provisioning/`, etc.
 - Cloud roles: [.cursor/agents/test-runner.md](.cursor/agents/test-runner.md), [test-healer.md](.cursor/agents/test-healer.md), [test-reporter.md](.cursor/agents/test-reporter.md)
+- Cursor provisioning (MicroVM): `cursor-qa-integration/` — **do not** modify `qa-integration/` for cloud setup
 - Cloud automations (dashboard copy-paste): [docs/agents/AUTOMATIONS.md](docs/agents/AUTOMATIONS.md)
 - MCP: `jira_add_comment` → `visibility: "{\"type\":\"role\",\"value\":\"Developers\"}"`; `addCommentToJiraIssue` → `commentVisibility: {"type": "role", "value": "Developers"}`

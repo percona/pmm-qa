@@ -21,9 +21,9 @@ Input: the Jira key or issueKey from the webhook / triggering message.
 If the file is missing, stop and report.
 ```
 
-**Slack:** `@Cursor env=PMM test-runner PMM-15196` or discuss in thread then invoke.
+**Slack:** `@Cursor please test PMM-15196` — use `env=PMM` for multi-repo. Natural language works; rigid `test-runner` prefix not required.
 
-**Desktop:** Cloud dropdown → `/test-runner PMM-15196`
+**Desktop:** Cloud dropdown → `/test-runner PMM-15196` or natural language
 
 ### Test Healer (GitHub FB failure)
 
@@ -67,6 +67,7 @@ Do not combine roles in one automation.
 |------|--------|
 | Repos | `percona/pmm` + `percona/pmm-qa` |
 | `environment.json` | `pmm-qa/.cursor/environment.json` |
+| Cursor provisioning | `cursor-qa-integration/` (not `qa-integration/`) |
 | `pmm-submodules` | **`gh` only** — never clone |
 
 After pushing `environment.json`, refresh snapshot at [cursor.com/agents](https://cursor.com/agents).
@@ -98,16 +99,16 @@ Jira Automation: transition → **Ready for QA** → Send web request (POST).
 |------|--------|
 | MCP atlassian | Optional (context) |
 | Pull request creation | Yes (`percona/pmm-qa` only) |
-| Comment on PR | Optional |
+| Slack MCP | Optional (healer tracking canvas) |
 
-**Team Owned** recommended — see [ADMIN_REQUEST.md](ADMIN_REQUEST.md).
+**Team Owned** recommended for shared billing.
 
 ---
 
 ## Go-live checklist
 
 - [ ] `.cursor/environment.json` on `main`, PMM snapshot refreshed
-- [ ] `gh --version`, `playwright-cli --version`, `docker run hello-world` in test run
+- [ ] `gh --version`, `json-diff --version`, `docker run hello-world` in test run
 - [ ] Atlassian MCP authenticated (each user)
 - [ ] `GH_TOKEN` in environment secrets
 - [ ] Three automations with pointer prompts above

@@ -1,0 +1,18 @@
+---
+- name: Deploy MinIO bucket.
+  hosts: localhost
+  connection: local
+  gather_facts: yes
+  vars:
+    network_name: "pmm-qa"
+    buckets: "{{ lookup('env', 'BUCKETS') | default('bcp', true) }}"
+    minio_access_key: minio1234
+    minio_secret_key: minio1234
+    minio_volume_name: minio_backups
+    minio_ports:
+      - "9010:9000"
+      - "9001:9001"
+
+  tasks:
+    - name: Setup MinIO bucket
+      include_tasks: ./setup_minio_container.yml

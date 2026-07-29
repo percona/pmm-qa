@@ -10,9 +10,11 @@ Versioned QA roles live in this repo. **First cloud run in under 5 minutes** (af
 
 | Surface | How |
 |---------|-----|
-| **Slack** (phone) | `@Cursor env=PMM test-runner PMM-15196` |
+| **Slack** (phone) | `@Cursor please test PMM-15196` — add `env=PMM` when you need the multi-repo PMM environment (pmm + pmm-qa) |
 | **Web / iOS** | [cursor.com/agents](https://cursor.com/agents) → environment **PMM** |
-| **Desktop** | Open `pmm-qa` → input dropdown **Cloud** → `/test-runner PMM-15196` |
+| **Desktop** | Open `pmm-qa` → input dropdown **Cloud** → `/test-runner PMM-15196` or natural language |
+
+You do **not** need a rigid `test-runner` prefix in Slack when the message clearly asks for QA on a ticket. Automations use pointer prompts that load `.cursor/agents/test-runner.md` by path.
 
 Results: Jira comment (Developers-only), PR on `percona/pmm-qa` if applicable, Slack thread updates.
 
@@ -32,8 +34,10 @@ Detail: [ROLES.md](ROLES.md)
 |------|--------|
 | Role definitions | `.cursor/agents/*.md` |
 | Domain knowledge | `.cursor/skills/pmm-*/` |
+| Cursor provisioning | `cursor-qa-integration/` (separate from `qa-integration/`) |
 | Dashboard automations | [AUTOMATIONS.md](AUTOMATIONS.md) (pointer prompts only) |
 | Environment | `.cursor/environment.json` |
+| IDE workflow prompts (not cloud roles) | [.agents/](../../.agents/README.md) — see [WORKFLOWS.md](WORKFLOWS.md) |
 
 Change behavior via **git PR** to `percona/pmm-qa` — not by editing long prompts in cursor.com.
 
@@ -48,6 +52,6 @@ Change behavior via **git PR** to `percona/pmm-qa` — not by editing long promp
 ## Help
 
 - [SETUP.md](SETUP.md) — accounts, MCP, billing
+- [WORKFLOWS.md](WORKFLOWS.md) — `.agents/workflows` vs `.cursor/agents`
 - [TROUBLESHOOTING.md](TROUBLESHOOTING.md) — rate limits, 401 webhook, auth
 - [VALIDATION.md](VALIDATION.md) — undocumented behaviors to verify
-- [ADMIN_REQUEST.md](ADMIN_REQUEST.md) — what to ask team admin

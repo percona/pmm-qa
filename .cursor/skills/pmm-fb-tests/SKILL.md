@@ -34,7 +34,7 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 
 | Failed check pattern | pmm-qa workflow | Runner |
 |---------------------|-----------------|--------|
-| `@* UI tests` | `fb-e2e-suite.yml` | `runner-e2e-tests-codeceptjs.yml` |
+| `@* UI tests` | `fb-e2e-suite.yml` | `runner-e2e-tests-codeceptjs.yml` (legacy) or `runner-e2e-tests-playwright.yml` (`e2e_tests/`) |
 | `CLI tests *` | `fb-integration-suite.yml` | `runner-integration-cli-tests.yml` |
 
 Extract `setup_services` / `tags_for_tests` or `services_list` / `cli_tag` from the failed job inputs.

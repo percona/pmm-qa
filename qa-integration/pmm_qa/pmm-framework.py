@@ -9,9 +9,6 @@ import yaml
 from scripts.get_env_value import get_value
 from scripts.database_options import database_options as database_configs
 from scripts.run_ansible_playbook import run_ansible_playbook
-from scripts.cursor_vm import apply_cursor_vm_env, is_cursor_vm, resolve_pmm_server_ip
-
-apply_cursor_vm_env()
 
 LATEST_TARBALL_URL = "https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz"
 
@@ -25,36 +22,34 @@ def normalize_client_version(client_version):
 def get_running_container_name():
     container_image_name = "pmm-server"
     container_name = ''
-    fallback_name = ''
     try:
+        # Run 'docker ps' to get a list of running containers
         output = subprocess.check_output(['docker', 'ps', '--format', 'table {{.ID}}\t{{.Image}}\t{{.Names}}'])
+        # Split the output into a list of container
         containers = output.strip().decode('utf-8').split('\n')[1:]
+        # Check each line for the docker image name
         for line in containers:
+            # Extract the image name
             info_parts = line.split('\t')[0]
             image_info = info_parts.split()[1]
-            name = info_parts.split()[2]
+            # Check if the container is in the list of running containers
+            # and establish N/W connection with it.
             if container_image_name in image_info:
-                if name == 'pmm-server':
-                    container_name = name
-                    break
-                if not fallback_name:
-                    fallback_name = name
-        if not container_name:
-            container_name = fallback_name
-        if not container_name:
-            return None
-
-        result = subprocess.run(['docker', 'network', 'inspect', 'pmm-qa'], capture_output=True, text=True)
-        if result.returncode != 0:
-            subprocess.run(['docker', 'network', 'create', 'pmm-qa'])
-            subprocess.run(['docker', 'network', 'connect', 'pmm-qa', container_name])
-        else:
-            networks = result.stdout
-            if container_name not in networks:
-                subprocess.run(['docker', 'network', 'connect', 'pmm-qa', container_name])
-        return container_name
+                container_name = info_parts.split()[2]
+                # Check if pmm-qa n/w exists and already connected to running container n/w
+                # if not connect it.
+                result = subprocess.run(['docker', 'network', 'inspect', 'pmm-qa'], capture_output=True, text=True)
+                if result.returncode != 0:
+                    subprocess.run(['docker', 'network', 'create', 'pmm-qa'])
+                    subprocess.run(['docker', 'network', 'connect', 'pmm-qa', container_name])
+                else:
+                    networks = result.stdout
+                    if container_name not in networks:
+                        subprocess.run(['docker', 'network', 'connect', 'pmm-qa', container_name])
+                return container_name
 
     except subprocess.CalledProcessError:
+        # Handle the case where the 'docker ps' command fails
         return None
 
     return None
@@ -82,7 +77,7 @@ def setup_ps(db_type, db_version=None, db_config=None, args=None):
     # Define environment variables for playbook
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'SETUP_TYPE': setup_type_value,
         'NODES_COUNT': get_value('NODES_COUNT', db_type, args, db_config),
         'QUERY_SOURCE': get_value('QUERY_SOURCE', db_type, args, db_config),
@@ -125,7 +120,7 @@ def setup_mysql(db_type, db_version=None, db_config=None, args=None):
         'MS_NODES': no_of_nodes,
         'MS_VERSION': ms_version,
         'SETUP_TYPE': setup_type_value,
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'MS_CONTAINER': 'mysql_pmm_' + str(ms_version),
         'CLIENT_VERSION': client_version,
         'QUERY_SOURCE': get_value('QUERY_SOURCE', db_type, args, db_config),
@@ -156,7 +151,7 @@ def setup_ssl_mysql(db_type, db_version=None, db_config=None, args=None):
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'MYSQL_VERSION': ms_version,
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'MYSQL_SSL_CONTAINER': 'mysql_ssl_' + str(ms_version),
         'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
@@ -188,7 +183,7 @@ def setup_pdpgsql(db_type, db_version=None, db_config=None, args=None):
     env_vars = {
         'PGSTAT_MONITOR_BRANCH': 'main',
         'PDPGSQL_VERSION': pdpgsql_version,
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'PDPGSQL_PGSM_CONTAINER': 'pdpgsql_pgsm_pmm_' + str(pdpgsql_version),
         'CLIENT_VERSION': client_version,
         'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
@@ -224,7 +219,7 @@ def setup_ssl_pdpgsql(db_type, db_version=None, db_config=None, args=None):
     env_vars = {
         'PGSTAT_MONITOR_BRANCH': 'main',
         'PGSQL_VERSION': pdpgsql_version,
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'PGSQL_SSL_CONTAINER': 'pdpgsql_pgsm_ssl_' + str(pdpgsql_version),
         'CLIENT_VERSION': client_version,
         'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
@@ -258,7 +253,7 @@ def setup_pgsql(db_type, db_version=None, db_config=None, args=None):
         # Define environment variables for playbook
         env_vars = {
             'PGSQL_VERSION': pgsql_version,
-            'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+            'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
             'PGSQL_PGSS_CONTAINER': 'pgsql_pgss_pmm_' + str(pgsql_version),
             'CLIENT_VERSION': client_version,
             'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
@@ -276,7 +271,7 @@ def setup_pgsql(db_type, db_version=None, db_config=None, args=None):
         # Define environment variables for playbook
         env_vars = {
             'PGSQL_VERSION': pgsql_version,
-            'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+            'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
             'PGSQL_PGSS_CONTAINER': 'pgsql_pgss_pmm_' + str(pgsql_version),
             'CLIENT_VERSION': client_version,
             'USE_SOCKET': get_value('USE_SOCKET', db_type, args, db_config),
@@ -303,7 +298,7 @@ def setup_haproxy(db_type, db_version=None, db_config=None, args=None):
     # Define environment variables for playbook
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'HAPROXY_CONTAINER': 'haproxy_pmm',
         'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
@@ -333,7 +328,7 @@ def setup_external(db_type, db_version=None, db_config=None, args=None):
     # Define environment variables for playbook
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'REDIS_EXPORTER_VERSION': redis_version,
         'NODE_PROCESS_EXPORTER_VERSION': nodeprocess_version,
         'EXTERNAL_CONTAINER': 'external_pmm',
@@ -364,7 +359,7 @@ def setup_mlaunch_psmdb(db_type, db_version=None, db_config=None, args=None):
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'PSMDB_VERSION': psmdb_version,
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'PSMDB_CONTAINER': 'psmdb_pmm_' + str(psmdb_version),
         'PSMDB_SETUP': get_value('SETUP_TYPE', db_type, args, db_config),
         'CLIENT_VERSION': client_version,
@@ -394,7 +389,7 @@ def setup_mlaunch_modb(db_type, db_version=None, db_config=None, args=None):
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'MODB_VERSION': modb_version,
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'MODB_CONTAINER': 'modb_pmm_' + str(modb_version),
         'MODB_SETUP': get_value('SETUP_TYPE', db_type, args, db_config),
         'CLIENT_VERSION': client_version,
@@ -522,15 +517,9 @@ def setup_psmdb(db_type, db_version=None, db_config=None, args=None):
     setup_type = get_value('SETUP_TYPE', db_type, args, db_config).lower()
 
     if setup_type in ("pss", "psa"):
-        if is_cursor_vm():
-            shell_scripts = ['start-rs-only-microvm.sh']
-        else:
-            shell_scripts = ['start-rs-only.sh']
+        shell_scripts = ['start-rs-only.sh']
     elif setup_type in ("shards", "sharding"):
-        if is_cursor_vm():
-            shell_scripts = ['start-sharded-microvm.sh']
-        else:
-            shell_scripts = ['start-sharded.sh']
+        shell_scripts = ['start-sharded.sh']
 
     # Execute shell scripts
     if not shell_scripts == []:
@@ -688,7 +677,7 @@ def setup_ssl_mlaunch(db_type, db_version=None, db_config=None, args=None):
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
         'MONGODB_VERSION': psmdb_version,
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'MONGODB_SSL_CONTAINER': 'psmdb_ssl_pmm_' + str(psmdb_version),
         'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
@@ -721,7 +710,7 @@ def setup_pxc_proxysql(db_type, db_version=None, db_config=None, args=None):
         'PROXYSQL_VERSION': proxysql_version,
         'PXC_TARBALL': get_value('TARBALL', db_type, args, db_config),
         'PROXYSQL_PACKAGE': get_value('PACKAGE', 'PROXYSQL', args, db_config),
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'PXC_CONTAINER': 'pxc_proxysql_pmm_' + str(pxc_version),
         'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',
@@ -763,7 +752,7 @@ def setup_valkey(db_type, db_version=None, db_config=None, args=None):
     # Define environment variables for playbook
     client_version = normalize_client_version(get_value('CLIENT_VERSION', db_type, args, db_config))
     env_vars = {
-        'PMM_SERVER_IP': resolve_pmm_server_ip(args, container_name),
+        'PMM_SERVER_IP': args.pmm_server_ip or container_name or '127.0.0.1',
         'VALKEY_VERSION': valkey_version,
         'CLIENT_VERSION': client_version,
         'ADMIN_PASSWORD': os.getenv('ADMIN_PASSWORD') or args.pmm_server_password or 'admin',

@@ -9,16 +9,16 @@ Source files: `.cursor/agents/<name>.md`. Skills listed are read **by path** fro
 | | |
 |--|--|
 | **Does** | Full manual QA for a Jira ticket: read ticket, plan, provision PMM on cloud VM, test (CLI + UI), Developers-only Jira report, optional `pmm-qa` PR |
-| **Skills** | `pmm-jira`, `pmm-fb-tests`, `pmm-provisioning`, `pmm-ui-evidence`, `pmm-repos` |
+| **Skills** | `pmm-jira`, `pmm-fb-tests`, `pmm-provisioning`, `pmm-git-diff`, `pmm-ui-evidence`, `pmm-repos` |
 | **Produces** | Jira comment (Developers), screenshots/videos, optional PR to `percona/pmm-qa` |
 
 ### How to run
 
 | Surface | Command |
 |---------|---------|
-| Desktop | Cloud dropdown → `/test-runner PMM-15196` |
-| Slack | `@Cursor env=PMM test-runner PMM-15196` |
-| Web / iOS | cursor.com/agents → PMM → prompt with ticket key |
+| Desktop | Cloud dropdown → `/test-runner PMM-15196` or "test PMM-15196" |
+| Slack | `@Cursor please test PMM-15196` — use `env=PMM` for multi-repo environment |
+| Web / iOS | cursor.com/agents → PMM → ticket key or natural language |
 | Automation | Jira webhook → pointer in [AUTOMATIONS.md](AUTOMATIONS.md) |
 
 **Automation status:** webhook configurable (Jira Ready for QA); manual via Slack/Desktop **today**.
@@ -29,9 +29,9 @@ Source files: `.cursor/agents/<name>.md`. Skills listed are read **by path** fro
 
 | | |
 |--|--|
-| **Does** | On FB Tests failure: product vs test bug; reproduce with FB workflow setup; fix `pmm-qa`; open PR |
+| **Does** | On FB Tests failure: product vs test bug; reproduce with FB workflow setup; fix `pmm-qa`; open PR (dedup via open PR search) |
 | **Skills** | `pmm-fb-tests`, `pmm-provisioning`, `pmm-repos`, `pmm-jira` (optional) |
-| **Produces** | PR to `percona/pmm-qa`; optional pmm-submodules PR comment |
+| **Produces** | PR to `percona/pmm-qa` |
 
 ### How to run
 
@@ -49,7 +49,7 @@ Source files: `.cursor/agents/<name>.md`. Skills listed are read **by path** fro
 
 | | |
 |--|--|
-| **Does** | When all FB checks green: screenshot Actions run, update Jira `customfield_10492` |
+| **Does** | When all FB checks green: screenshot Actions run, update Jira `customfield_10492` only (no comments) |
 | **Skills** | `pmm-fb-tests`, `pmm-jira`, `pmm-ui-evidence`, `pmm-repos` |
 | **Produces** | Jira FB screenshot field + attachment |
 
@@ -64,16 +64,9 @@ Source files: `.cursor/agents/<name>.md`. Skills listed are read **by path** fro
 
 ---
 
-## Workers (orchestration, Fase 3)
+## Phase 3 (orchestration)
 
-| Agent | Purpose |
-|-------|---------|
-| `read-git-diff` | Isolated PR diff summary |
-| `provision-pmm` | Isolated server + DB setup |
-| `run-e2e` | CodeceptJS / UI slice |
-| `run-cli` | CLI Playwright slice |
-
-Test Runner may delegate when validated on cloud. See [HANDOFF.md](HANDOFF.md).
+Skills read inline by Test Runner — no thin subagent files. See [HANDOFF.md](HANDOFF.md).
 
 ---
 

@@ -20,12 +20,12 @@ You are **Test Reporter** — attach FB test evidence to Jira when all checks pa
 
 ## Workflow
 
-1. **Verify green** — `gh pr checks <PR> -R Percona-Lab/pmm-submodules` — any `fail` → **do not** screenshot; text-only Jira note if needed (see `pmm-fb-tests`).
-2. **Screenshot** — FB Tests Actions run (not PR checks page). Use `playwright-cli` or computer use per `pmm-ui-evidence`.
-3. **Update Jira** — `customfield_10492` with run URL, failure notes if any (flaky/out of scope), and image attachment via Atlassian MCP.
+1. **Verify green** — `gh pr checks <PR> -R Percona-Lab/pmm-submodules` — any `fail` → **stop** (no screenshot, no Jira update).
+2. **Screenshot** — FB Tests Actions run (not PR checks page). Use **computer use** per `pmm-ui-evidence`.
+3. **Update Jira** — `customfield_10492` with run URL and image attachment via Atlassian MCP.
 
 ## Never
 
 - Attach green screenshot when checks failed
 - Clone `pmm-submodules`
-- Post public comments with internal QA notes without Developers visibility when commenting
+- Post Jira **comments** — this role only updates `customfield_10492` (and attachments). Comments are Test Runner / human QA.
