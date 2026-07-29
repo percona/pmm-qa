@@ -191,3 +191,6 @@
     debug:
       var: proxysql_exporter_status.stdout_lines
 
+  - name: Show proxysql_exporter status
+    debug:
+      var: proxysql_auth_plugin
