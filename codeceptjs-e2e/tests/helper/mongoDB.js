@@ -8,9 +8,7 @@ class MongoDBHelper extends Helper {
     this.username = config.username;
     this.password = config.password;
     this.url = `mongodb://${config.username}:${encodeURIComponent(config.password)}@${config.host}:${config.port}/?authSource=admin`;
-    this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, connectTimeoutMS: 30000,
-    });
+    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
   }
 
   /**
@@ -36,16 +34,8 @@ class MongoDBHelper extends Helper {
     // Members advertise internal docker addresses (rsNNN:27017) unreachable from
     // the runner, so without this the driver can't select the primary.
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin&directConnection=true`;
-    this.client.s.url = this.url;
+    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000, directConnection: true });
 
-    // useUnifiedTopology:false -> legacy single-server connect. Driver 3.7 ignores
-    // directConnection under unified topology and swaps the reachable seed for the
-    // member's advertised address (rsNNN:27017), unreachable from the runner.
-    this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, useUnifiedTopology: false, connectTimeoutMS: 30000, directConnection: true,
-    });
-
-    console.log(`[mongoDB helper] mongoConnect -> ${String(this.url).replace(/(mongodb:\/\/[^:]+:)[^@]+@/, '$1***@')}`);
     return await this._connect();
   }
 
@@ -64,11 +54,7 @@ class MongoDBHelper extends Helper {
     if (password) this.password = password;
 
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    this.client.s.url = this.url;
-
-    this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
-    });
+    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
 
     return await this._connect();
   }
@@ -80,12 +66,7 @@ class MongoDBHelper extends Helper {
    */
   async _connect() {
     try {
-      const conn = await this.client.connect();
-      try {
-        const im = await this.client.db('admin').command({ isMaster: 1 });
-        console.log(`[mongoDB helper] isMaster=${im.ismaster} secondary=${im.secondary} setName=${im.setName} primary=${im.primary} me=${im.me} hosts=${JSON.stringify(im.hosts)}`);
-      } catch (e) { console.error(`[mongoDB helper] isMaster failed: ${e.message}`); }
-      return conn;
+      return await this.client.connect();
     } catch (e) {
       const safeUrl = String(this.url).replace(/(mongodb:\/\/[^:]+:)[^@]+@/, '$1***@');
       console.error(`[mongoDB helper] connect FAILED for ${safeUrl}: ${e.message}`);
@@ -127,7 +108,7 @@ class MongoDBHelper extends Helper {
     const user = username || this.username;
     const pass = password || this.password;
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: false, connectTimeoutMS: 30000, directConnection: true });
+    const client = new MongoClient(url, { connectTimeoutMS: 30000, directConnection: true });
 
     return await client.connect();
   }
@@ -150,7 +131,7 @@ class MongoDBHelper extends Helper {
     // directConnection: use only this seed, skip replica-set discovery (members
     // advertise internal docker addresses unreachable from the runner).
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin&directConnection=true`;
-    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: false, connectTimeoutMS: 30000, directConnection: true });
+    const client = new MongoClient(url, { connectTimeoutMS: 30000, directConnection: true });
 
     return await client.connect();
   }
@@ -186,7 +167,8 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<unknown>}
    */
   async mongoAddUser(username, password, roles = [{ db: 'admin', role: 'userAdminAnyDatabase' }]) {
-    return this.client.db().admin().addUser(username, password, { roles });
+    // addUser() was removed in driver 4.0; use the createUser command.
+    return this.client.db('admin').command({ createUser: username, pwd: password, roles });
   }
 
   /**
@@ -195,7 +177,8 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<*>}
    */
   async mongoRemoveUser(username) {
-    return await this.client.db().admin().removeUser(username);
+    // removeUser() was removed in driver 4.0; use the dropUser command.
+    return await this.client.db('admin').command({ dropUser: username });
   }
 
   /**
