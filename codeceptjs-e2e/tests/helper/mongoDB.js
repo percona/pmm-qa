@@ -77,7 +77,12 @@ class MongoDBHelper extends Helper {
    */
   async _connect() {
     try {
-      return await this.client.connect();
+      const conn = await this.client.connect();
+      try {
+        const im = await this.client.db('admin').command({ isMaster: 1 });
+        console.log(`[mongoDB helper] isMaster=${im.ismaster} secondary=${im.secondary} setName=${im.setName} primary=${im.primary} me=${im.me} hosts=${JSON.stringify(im.hosts)}`);
+      } catch (e) { console.error(`[mongoDB helper] isMaster failed: ${e.message}`); }
+      return conn;
     } catch (e) {
       const safeUrl = String(this.url).replace(/(mongodb:\/\/[^:]+:)[^@]+@/, '$1***@');
       console.error(`[mongoDB helper] connect FAILED for ${safeUrl}: ${e.message}`);
