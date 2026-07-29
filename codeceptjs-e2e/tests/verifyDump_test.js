@@ -49,10 +49,8 @@ Scenario('PMM-T1835 - Verify Edit Buttons are Enabled for Dump @dump', async ({ 
   I.amOnPage(dumpPage.url);
   // Required wait as delete in previous test takes time to reload page content.
   I.wait(5);
-  await I.click(dumpPage.fields.status(uid.dump_id));
-  dumpPage.verifyDownloadEnabled();
-  dumpPage.verifyDeleteEnabled();
-  dumpPage.verifySFTPEnabled();
+  dumpPage.verifyDownloadEnabled(uid.dump_id);
+  dumpPage.verifySFTPEnabled(uid.dump_id);
   await dumpAPI.deleteDump(uid.dump_id);
 });
 
@@ -70,7 +68,7 @@ Scenario('PMM-T1835 - Download and Verify Dump Archive with QAN enabled @dump', 
   const result = await dumpAPI.verifyDump(uid.dump_id);
 
   I.assertEqual(2, result.dirs.length, `Expected 2 folders in the archive but found ${result.dirs}`);
-  I.assertEqual(3, result.files.length, `Expected 2 files in the archive but found ${result.files}`);
+  I.assertEqual(5, result.files.length, `Expected 5 files in the archive but found ${result.files}`);
   await dumpAPI.deleteDump(uid.dump_id);
 });
 
@@ -88,7 +86,7 @@ Scenario('PMM-T1835 - Download and Verify Dump Archive with QAN disabled @dump',
   const result = await dumpAPI.verifyDump(uid.dump_id);
 
   I.assertEqual(1, result.dirs.length, `Expected 1 folders in the archive but found ${result.dirs}`);
-  I.assertEqual(2, result.files.length, `Expected 2 files in the archive but found ${result.files}`);
+  I.assertEqual(4, result.files.length, `Expected 4 files in the archive but found ${result.files}`);
   await dumpAPI.deleteDump(uid.dump_id);
 });
 
@@ -101,8 +99,7 @@ Scenario('PMM-T1835 - Check Dump Archives can be sent to Support in UI @dump', a
   I.amOnPage(dumpPage.url);
   // Required wait as delete in previous test takes time to reload page content.
   I.wait(5);
-  await I.click(dumpPage.fields.status(uid.dump_id));
-  dumpPage.verifySFTPEnabled();
+  dumpPage.verifySFTPEnabled(uid.dump_id);
   await I.click(dumpPage.fields.sendSupportButton);
 
   sftp.address = 'sftp-server:22';
@@ -112,7 +109,7 @@ Scenario('PMM-T1835 - Check Dump Archives can be sent to Support in UI @dump', a
   const result = await dumpAPI.verifyDump(uid.dump_id, hostVolume);
 
   I.assertEqual(2, result.dirs.length, `Expected 2 folders in the archive but found ${result.dirs}`);
-  I.assertEqual(3, result.files.length, `Expected 2 files in the archive but found ${result.files}`);
+  I.assertEqual(5, result.files.length, `Expected 5 files in the archive but found ${result.files}`);
   await dumpAPI.deleteDump(uid.dump_id);
 });
 Scenario('PMM-T1835 - Verify Dump extraction logs are visible @dump', async ({ dumpAPI, dumpPage }) => {

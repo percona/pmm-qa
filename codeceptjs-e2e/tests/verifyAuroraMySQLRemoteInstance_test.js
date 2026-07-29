@@ -91,7 +91,7 @@ Data(instances).Scenario('PMM-T1295 - Verify dashboard after Aurora MySQL instan
   adminPage.performPageDown(5);
   await dashboardPage.expandEachDashboardRow();
   adminPage.performPageUp(5);
-  await dashboardPage.verifyThereAreNoGraphsWithoutData(8);
+  await dashboardPage.verifyThereAreNoGraphsWithoutData(9);
 }).retry(3);
 
 Data(instances).Scenario(

@@ -59,6 +59,7 @@ services:
       --performance-schema --innodb_monitor_enable=all --userstat
       --slow_query_log --log_slow_rate_limit=1 --log_slow_admin_statements --log_slow_slave_statements --slow_query_log_file=/tmp/mysql/log/ps5_slow_log.log --long_query_time=0
       --character-set-server=utf8 --default-authentication-plugin=mysql_native_password --collation-server=utf8_unicode_ci
+    platform: linux/amd64
     ports:
       - "3309:3306"
     environment:
@@ -108,6 +109,7 @@ services:
   postgres:
     image: ${POSTGRES_IMAGE:-perconalab/percona-distribution-postgresql:15.4}
     container_name: pmm-agent_postgres
+    platform: linux/amd64
     command: >
       -c shared_preload_libraries=pg_stat_monitor,pg_stat_statements
       -c track_activity_query_size=2048

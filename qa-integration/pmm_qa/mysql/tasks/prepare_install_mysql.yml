@@ -63,7 +63,7 @@
 
 - name: Install MySQL 8.0+
   shell: |
-    docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.xz https://dev.mysql.com/get/Downloads/MySQL-{{ mysql_version | replace('_', '.') }}/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64.tar.xz
+    docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.xz https://cdn.mysql.com/Downloads/MySQL-{{ mysql_version | replace('_', '.') }}/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64.tar.xz
     docker exec {{ container_prefix }}{{ index }} tar -xf mysql.tar.xz
     docker exec {{ container_prefix }}{{ index }} groupadd mysql
     docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql

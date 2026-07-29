@@ -30,15 +30,19 @@ module.exports = {
     I.seeElement(this.fields.status(uid));
   },
 
-  verifyDownloadEnabled() {
+  openRowMenu(uid) {
+    I.seeElement(this.fields.kebabMenu(uid));
+    I.click(this.fields.kebabMenu(uid));
+  },
+
+  verifyDownloadEnabled(uid) {
+    this.openRowMenu(uid);
     I.seeElement(this.fields.downloadButton);
+    I.pressKey('Escape');
   },
 
-  verifyDeleteEnabled() {
-    I.seeElement(this.fields.deleteButton);
-  },
-
-  verifySFTPEnabled() {
+  verifySFTPEnabled(uid) {
+    this.openRowMenu(uid);
     I.seeElement(this.fields.sendSupportButton);
   },
 
