@@ -717,9 +717,10 @@ def setup_pxc_proxysql(db_type, db_version=None, db_config=None, args=None):
         'QUERY_SOURCE': get_value('QUERY_SOURCE', db_type, args, db_config),
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
         'CLIENT_DEBUG': args.client_debug,
-        # Opt-in: set PROXYSQL_AUTH_PLUGIN=caching_sha2_password to make ProxySQL
-        # advertise that plugin (K8SPXC-1830 repro). Empty = leave ProxySQL default.
-        'PROXYSQL_AUTH_PLUGIN': os.getenv('PROXYSQL_AUTH_PLUGIN') or '',
+        # ProxySQL auth plugin. Defaults to caching_sha2_password on 8.4 (which
+        # disables mysql_native_password) and off on 5.7/8.0, where 5.7 has no
+        # caching_sha2_password at all. Override with PROXYSQL_AUTH_PLUGIN.
+        'PROXYSQL_AUTH_PLUGIN': os.getenv('PROXYSQL_AUTH_PLUGIN') or ('caching_sha2_password' if str(pxc_version).startswith('8.4') else ''),
     }
 
     # Ansible playbook filename
