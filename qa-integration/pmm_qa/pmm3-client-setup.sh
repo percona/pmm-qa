@@ -99,6 +99,7 @@ fi
 if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   build_number=7
   minor_version=${client_version#3.}
+  minor_version=${client_version#3.}
   minor_version=${minor_version%%.*}
   if [ "$client_version" = "3.7.1" ] || [ "$client_version" = "3.8.0" ]; then
     build_number=8
