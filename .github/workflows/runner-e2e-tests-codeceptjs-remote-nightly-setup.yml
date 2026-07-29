@@ -132,7 +132,8 @@ jobs:
             pip install --upgrade pip
             pip install -r requirements.txt
             pip install setuptools
-            python pmm-framework.py \
+            ./pmm-framework-bash/pmm-framework \
+              --parallel \
               --pmm-server-ip "${SERVER_IP}" \
               --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
               --client-version "${{ env.PMM_CLIENT_VERSION }}" \

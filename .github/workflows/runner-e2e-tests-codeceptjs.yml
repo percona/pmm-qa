@@ -226,7 +226,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
           pip install setuptools
-          python pmm-framework.py --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
+          ./pmm-framework-bash/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --verbose ${{ env.WIZARD_ARGS }}
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}

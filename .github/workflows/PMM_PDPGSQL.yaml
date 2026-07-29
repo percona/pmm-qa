@@ -71,7 +71,7 @@ jobs:
           pip install --upgrade pip
           pip install --force-reinstall -U setuptools
           pip install -r requirements.txt
-          python pmm-framework.py --verbose --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PDPGSQL=${{ env.PDPGSQL_VERSION }}
+          ./pmm-framework-bash/pmm-framework --parallel --verbose --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PDPGSQL=${{ env.PDPGSQL_VERSION }}
 
       - name: Setup npm modules for CodeceptJS
         working-directory: codeceptjs-e2e
