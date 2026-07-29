@@ -17,6 +17,9 @@
     number_of_nodes: "{{ lookup('vars', 'extra_number_of_nodes', default=lookup('env','PXC_NODES') | default('3', true) ) }}"
     pxc_dev_cluster: "{{ lookup('vars', 'extra_pxc_cluster_name', default=lookup('env','PXC_CLUSTER_NAME') | default('pxc-dev-cluster', true) ) }}"
     query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('perfschema', true) ) }}"
+    # Set to 'caching_sha2_password' to make ProxySQL itself advertise that plugin
+    # (reproduces K8SPXC-1830: proxysql_exporter full-auth failure without TLS).
+    proxysql_auth_plugin: "{{ lookup('vars', 'extra_proxysql_auth_plugin', default=lookup('env','PROXYSQL_AUTH_PLUGIN') | default('', true) ) }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
@@ -128,10 +131,39 @@
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SET admin-stats_credentials='read_user:read_user';"
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "LOAD ADMIN VARIABLES TO RUNTIME;"
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SAVE ADMIN VARIABLES TO DISK;"
-      - docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
-      
+
+  # Make ProxySQL advertise caching_sha2_password to clients (incl. the PMM
+  # proxysql_exporter). Needs cleartext passwords, so admin-hash_passwords=false.
+  - name: Configure ProxySQL authentication plugin
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SET mysql-default_authentication_plugin='{{ proxysql_auth_plugin }}'; SET admin-hash_passwords=false; LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK; LOAD ADMIN VARIABLES TO RUNTIME; SAVE ADMIN VARIABLES TO DISK;"
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "INSERT OR REPLACE INTO mysql_users(username,password,default_hostgroup) VALUES ('monitor','monitor',10); LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT variable_name, variable_value FROM global_variables WHERE variable_name IN ('mysql-default_authentication_plugin','admin-hash_passwords');"
+    when: proxysql_auth_plugin | length > 0
+
+  - name: Add ProxySQL to PMM
+    shell: >
+      docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin
+      --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
+
   - name: Execute Service, Sysbench Script inside the PXC pxc_container
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pxc_container }} bash -xe ./client_container_proxysql_setup.sh  > setup_proxy_{{ pxc_version }}.log
+
+  # Report whether proxysql_exporter authenticated (K8SPXC-1830 shows up here as
+  # "unexpected resp from server for caching_sha2_password, perform full authentication").
+  - name: Check proxysql_exporter status
+    shell: >
+      docker exec {{ pxc_container }} bash -c
+      "sleep 15; pmm-admin list | grep -i proxysql;
+       grep -i 'proxysql_exporter' /var/log/pmm-agent.log | tail -20 || true"
+    register: proxysql_exporter_status
+    changed_when: false
+    ignore_errors: true
+
+  - name: Show proxysql_exporter status
+    debug:
+      var: proxysql_exporter_status.stdout_lines
 

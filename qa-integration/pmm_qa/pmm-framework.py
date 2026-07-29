@@ -717,6 +717,9 @@ def setup_pxc_proxysql(db_type, db_version=None, db_config=None, args=None):
         'QUERY_SOURCE': get_value('QUERY_SOURCE', db_type, args, db_config),
         'PMM_QA_GIT_BRANCH': os.getenv('PMM_QA_GIT_BRANCH') or 'v3',
         'CLIENT_DEBUG': args.client_debug,
+        # Opt-in: set PROXYSQL_AUTH_PLUGIN=caching_sha2_password to make ProxySQL
+        # advertise that plugin (K8SPXC-1830 repro). Empty = leave ProxySQL default.
+        'PROXYSQL_AUTH_PLUGIN': os.getenv('PROXYSQL_AUTH_PLUGIN') or '',
     }
 
     # Ansible playbook filename
