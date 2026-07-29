@@ -74,8 +74,7 @@ if [ "$query_source" == "slowlog" ]; then
   done
 fi
 
-# 8.4 disables mysql_native_password by default, so CREATE USER ... IDENTIFIED
-# WITH mysql_native_password fails there. Use caching_sha2_password instead.
+# 8.4 ships mysql_native_password disabled; use caching_sha2_password there.
 case "$pxc_version" in
   8.4*) auth_plugin=caching_sha2_password ;;
   *)    auth_plugin=mysql_native_password ;;

@@ -108,6 +108,14 @@
     set_fact:
       random_number: "{{ (10000 | random) | int }}"
 
+  # PXC 8.4 ships mysql_native_password disabled, but proxysql-admin hardcodes it
+  # when creating its monitor/cluster users. Point it at caching_sha2_password.
+  - name: Patch proxysql-admin auth plugin for PXC 8.4
+    shell: >
+      docker exec {{ pxc_container }} bash -c
+      "sed -i 's/mysql_native_password/caching_sha2_password/g' \$(command -v proxysql-admin)"
+    when: pxc_version is match('^8\.4')
+
   - name: Start ProxySQL inside the PXC extra_pxc_container
     shell: "{{ item }}"
     with_items:
