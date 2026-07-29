@@ -721,6 +721,14 @@ def setup_pxc_proxysql(db_type, db_version=None, db_config=None, args=None):
         # disables mysql_native_password) and off on 5.7/8.0, where 5.7 has no
         # caching_sha2_password at all. Override with PROXYSQL_AUTH_PLUGIN.
         'PROXYSQL_AUTH_PLUGIN': os.getenv('PROXYSQL_AUTH_PLUGIN') or ('caching_sha2_password' if str(pxc_version).startswith('8.4') else ''),
+        # Which ProxySQL interface PMM monitors: 6032 = admin (always native
+        # password), 6033 = mysql interface (honours the auth plugin above).
+        'PROXYSQL_PMM_PORT': os.getenv('PROXYSQL_PMM_PORT') or '6032',
+        'PROXYSQL_PMM_USER': os.getenv('PROXYSQL_PMM_USER') or 'admin',
+        'PROXYSQL_PMM_PASSWORD': os.getenv('PROXYSQL_PMM_PASSWORD') or 'admin',
+        # Store mysql_users passwords hashed -> forces caching_sha2 full auth,
+        # which fails without TLS/RSA (K8SPXC-1830 repro).
+        'PROXYSQL_HASH_PASSWORDS': os.getenv('PROXYSQL_HASH_PASSWORDS') or 'false',
     }
 
     # Ansible playbook filename

@@ -20,6 +20,16 @@
     # Set to 'caching_sha2_password' to make ProxySQL itself advertise that plugin
     # (reproduces K8SPXC-1830: proxysql_exporter full-auth failure without TLS).
     proxysql_auth_plugin: "{{ lookup('vars', 'extra_proxysql_auth_plugin', default=lookup('env','PROXYSQL_AUTH_PLUGIN') | default('', true) ) }}"
+    # Which ProxySQL interface the PMM exporter is registered against.
+    #   6032 = admin interface (default; always mysql_native_password)
+    #   6033 = mysql interface (honours mysql-default_authentication_plugin)
+    proxysql_pmm_port: "{{ lookup('vars', 'extra_proxysql_pmm_port', default=lookup('env','PROXYSQL_PMM_PORT') | default('6032', true) ) }}"
+    proxysql_pmm_user: "{{ lookup('vars', 'extra_proxysql_pmm_user', default=lookup('env','PROXYSQL_PMM_USER') | default('admin', true) ) }}"
+    proxysql_pmm_password: "{{ lookup('vars', 'extra_proxysql_pmm_password', default=lookup('env','PROXYSQL_PMM_PASSWORD') | default('admin', true) ) }}"
+    # Store mysql_users passwords as caching_sha2 hashes instead of cleartext.
+    # Removes ProxySQL's fast-auth path, forcing "full authentication" - which
+    # fails without TLS/RSA (K8SPXC-1830). Requires ProxySQL >= 2.6.2.
+    proxysql_hash_passwords: "{{ lookup('vars', 'extra_proxysql_hash_passwords', default=lookup('env','PROXYSQL_HASH_PASSWORDS') | default('false', true) ) | bool }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
@@ -145,10 +155,22 @@
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT variable_name, variable_value FROM global_variables WHERE variable_name IN ('mysql-default_authentication_plugin','admin-hash_passwords');"
     when: proxysql_auth_plugin | length > 0
 
+  # Cleartext passwords let ProxySQL complete caching_sha2 via its fast path, so
+  # the exporter connects fine. Hashing them removes that path and forces the
+  # full-authentication handshake that fails without TLS/RSA.
+  - name: Hash ProxySQL mysql_users passwords (force caching_sha2 full auth)
+    shell: "{{ item }}"
+    with_items:
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "UPDATE mysql_users SET password=CACHING_SHA2_PASSWORD(password) WHERE password NOT LIKE '$A$%'; LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
+      - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT username, password FROM mysql_users;"
+    when: proxysql_hash_passwords | bool
+
   - name: Add ProxySQL to PMM
     shell: >
-      docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin
-      --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
+      docker exec {{ pxc_container }} pmm-admin add proxysql
+      --username={{ proxysql_pmm_user }} --password={{ proxysql_pmm_password }}
+      --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }}
+      --host=127.0.0.1 --port={{ proxysql_pmm_port }}
 
   # Force the exporter to re-handshake against the new auth plugin, otherwise a
   # connection established before the change keeps working and hides the issue.
