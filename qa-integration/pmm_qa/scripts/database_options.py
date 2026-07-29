@@ -52,7 +52,7 @@ database_options = {
         "configurations": {"CLIENT_VERSION": "3-dev-latest", "USE_SOCKET": ""}
     },
     "PXC": {
-        "versions": ["5.7", "8.0"],
+        "versions": ["5.7", "8.0", "8.4"],
         "configurations": {"CLIENT_VERSION": "3-dev-latest", "QUERY_SOURCE": "perfschema", "TARBALL": ""}
     },
     "PROXYSQL": {

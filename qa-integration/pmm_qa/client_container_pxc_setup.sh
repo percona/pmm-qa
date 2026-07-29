@@ -74,8 +74,15 @@ if [ "$query_source" == "slowlog" ]; then
   done
 fi
 
-bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'admin'@'%' identified with mysql_native_password by 'admin';"
-bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'read_user'@'%' identified with mysql_native_password by 'read_user';"
+# 8.4 disables mysql_native_password by default, so CREATE USER ... IDENTIFIED
+# WITH mysql_native_password fails there. Use caching_sha2_password instead.
+case "$pxc_version" in
+  8.4*) auth_plugin=caching_sha2_password ;;
+  *)    auth_plugin=mysql_native_password ;;
+esac
+
+bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'admin'@'%' identified with ${auth_plugin} by 'admin';"
+bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "create user 'read_user'@'%' identified with ${auth_plugin} by 'read_user';"
 bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "grant all on *.* to 'admin'@'%';"
 bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "grant select on *.* to 'read_user'@'%';"
 
