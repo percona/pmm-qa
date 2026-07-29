@@ -38,8 +38,11 @@ class MongoDBHelper extends Helper {
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin&directConnection=true`;
     this.client.s.url = this.url;
 
+    // useUnifiedTopology:false -> legacy single-server connect. Driver 3.7 ignores
+    // directConnection under unified topology and swaps the reachable seed for the
+    // member's advertised address (rsNNN:27017), unreachable from the runner.
     this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000, directConnection: true,
+      useNewUrlParser: true, useUnifiedTopology: false, connectTimeoutMS: 30000, directConnection: true,
     });
 
     console.log(`[mongoDB helper] mongoConnect -> ${String(this.url).replace(/(mongodb:\/\/[^:]+:)[^@]+@/, '$1***@')}`);
@@ -124,7 +127,7 @@ class MongoDBHelper extends Helper {
     const user = username || this.username;
     const pass = password || this.password;
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000, directConnection: true });
+    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: false, connectTimeoutMS: 30000, directConnection: true });
 
     return await client.connect();
   }
@@ -147,7 +150,7 @@ class MongoDBHelper extends Helper {
     // directConnection: use only this seed, skip replica-set discovery (members
     // advertise internal docker addresses unreachable from the runner).
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin&directConnection=true`;
-    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000, directConnection: true });
+    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: false, connectTimeoutMS: 30000, directConnection: true });
 
     return await client.connect();
   }
