@@ -221,12 +221,7 @@ jobs:
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
           mkdir -m 777 -p /tmp/backup_data
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          ./pmm-framework-bash/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}

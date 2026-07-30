@@ -37,14 +37,14 @@ override files instead of modifying the tracked source compose or shell files.
 Run from any working directory:
 
 ```bash
-qa-integration/pmm_qa/pmm-framework-bash/pmm-framework \
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --database ps=8.4
 ```
 
 Use an external PMM Server:
 
 ```bash
-qa-integration/pmm_qa/pmm-framework-bash/pmm-framework \
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --pmm-server-ip 192.0.2.10 \
   --pmm-server-password admin \
   --client-version 3-dev-latest \
@@ -54,7 +54,7 @@ qa-integration/pmm_qa/pmm-framework-bash/pmm-framework \
 Set up multiple databases sequentially:
 
 ```bash
-qa-integration/pmm_qa/pmm-framework-bash/pmm-framework \
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --database ps=8.4,SETUP_TYPE=gr \
   --database psmdb=8.0,SETUP_TYPE=sharding,GSSAPI=true \
   --database valkey=8,SETUP_TYPE=sentinel
@@ -63,7 +63,7 @@ qa-integration/pmm_qa/pmm-framework-bash/pmm-framework \
 Run independent setups concurrently:
 
 ```bash
-qa-integration/pmm_qa/pmm-framework-bash/pmm-framework \
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --parallel \
   --database ps=8.4 \
   --database pgsql=17,SETUP_TYPE=replication \
@@ -90,7 +90,7 @@ To rerun the representative four-database setup and print its wall-clock time
 to milliseconds:
 
 ```bash
-qa-integration/pmm_qa/pmm-framework-bash/run_parallel_timing.sh
+qa-integration/pmm_qa/pmm-framework/run_parallel_timing.sh
 ```
 
 `--database` values use this grammar:
@@ -139,7 +139,7 @@ python3 pmm-framework.py \
   --pmm-server-ip 192.0.2.10 \
   --database ps=8.4,SETUP_TYPE=gr
 
-./pmm-framework-bash/pmm-framework \
+./pmm-framework/pmm-framework \
   --pmm-server-ip 192.0.2.10 \
   --database ps=8.4,SETUP_TYPE=gr
 ```

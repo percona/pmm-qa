@@ -127,12 +127,7 @@ jobs:
           command: |
             cd pmm-qa/qa-integration/pmm_qa
             mkdir -m 777 -p /tmp/backup_data || true
-            python3 -m venv virtenv
-            . virtenv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
-            pip install setuptools
-            ./pmm-framework-bash/pmm-framework \
+            ./pmm-framework/pmm-framework \
               --parallel \
               --pmm-server-ip "${SERVER_IP}" \
               --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \

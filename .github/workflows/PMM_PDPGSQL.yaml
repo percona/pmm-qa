@@ -66,12 +66,7 @@ jobs:
         working-directory: qa-integration/pmm_qa
         run: |
           mkdir -m 777 -p /tmp/backup_data
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install --force-reinstall -U setuptools
-          pip install -r requirements.txt
-          ./pmm-framework-bash/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PDPGSQL=${{ env.PDPGSQL_VERSION }}
+          ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PDPGSQL=${{ env.PDPGSQL_VERSION }}
 
       - name: Setup npm modules for CodeceptJS
         working-directory: codeceptjs-e2e

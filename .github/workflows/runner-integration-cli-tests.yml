@@ -21,7 +21,7 @@ on:
         required: true
         type: string
       services_list:
-        description: "pmm-framework.py flags to perform setup"
+        description: "pmm-framework flags to perform setup"
         required: false
         type: string
       cli_tag:
@@ -189,12 +189,7 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install setuptools
-          pip install -r requirements.txt
-          ./pmm-framework-bash/pmm-framework --parallel --client-debug ${{ env.WIZARD_ARGS }}
+          ./pmm-framework/pmm-framework --parallel --client-debug ${{ env.WIZARD_ARGS }}
 
       - name: 'Run CLI tests: ${{ inputs.cli_tag }}'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}

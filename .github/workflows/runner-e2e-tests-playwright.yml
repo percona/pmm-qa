@@ -193,12 +193,7 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: |
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          ./pmm-framework-bash/pmm-framework --parallel --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          ./pmm-framework/pmm-framework --parallel --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
