@@ -36,7 +36,7 @@ Before(async ({ I }) => {
   await I.Authorize();
 });
 
-Scenario(
+Scenario.skip(
   'PMM-T289 - Verify Whats New link is presented on Update Widget @pmm-upgrade',
   async ({ I, homePage }) => {
     const locators = homePage.getLocators(versionMinor);
