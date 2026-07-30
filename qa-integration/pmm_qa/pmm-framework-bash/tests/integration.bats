@@ -98,6 +98,8 @@ EOF
   [[ $output == *'Starting [2/2] pgsql=16'* ]]
   [[ $output == *'[1/2] ps=8.4: OK (log:'* ]]
   [[ $output == *'[2/2] pgsql=16: OK (log:'* ]]
+  [[ $output != *'PS parallel log'* ]]
+  [[ $output != *'PGSQL parallel log'* ]]
 
   # pgsql has no artificial delay, so it should finish before sleeping ps.
   pgsql_ok_line=$(printf '%s\n' "$output" | awk '/\[2\/2\] pgsql=16: OK/{print NR; exit}')
@@ -208,16 +210,14 @@ EOF
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
-@test "parallel setup output is not lost when stdout is not a terminal" {
-  # This is the CI shape: the log directory does not outlive the job, so the
-  # buffered playbook output has to reach stdout or it is gone for good. A
-  # sequential run always prints it, and parallel must not differ.
+@test "verbose parallel runs echo the logs of successful setups" {
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
     PARALLEL_TEST=true \
     "$FRAMEWORK_DIR/pmm-framework" \
       --parallel \
+      --verbose \
       --pmm-server-ip 10.0.0.5 \
       --database ps=8.4 \
       --database pgsql=16

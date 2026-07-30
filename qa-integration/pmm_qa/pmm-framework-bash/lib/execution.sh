@@ -61,15 +61,12 @@ run_database_spec() {
   dispatch_setup
 }
 
-# A sequential run always streams playbook output, so a parallel run must not
-# quietly drop it. On a terminal the one-line summary is enough, because the log
-# file it names is still on disk to open. Anywhere else -- CI above all -- the
-# log directory is deleted when the run ends, so echoing it here is the only
-# record that survives.
+# Successful setups print only their one-line summary, so a passing run stays
+# readable. Failures always dump their buffered log, which is what makes a
+# broken setup diagnosable without opting in; `--verbose` additionally echoes
+# the logs of the setups that succeeded.
 should_dump_successful_logs() {
-  [[ ${VERBOSE:-false} == true ]] && return 0
-  [[ -t 1 ]] && return 1
-  return 0
+  [[ ${VERBOSE:-false} == true ]]
 }
 
 print_setup_log() {
