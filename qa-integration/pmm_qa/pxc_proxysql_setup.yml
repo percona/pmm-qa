@@ -122,7 +122,16 @@
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "LOAD ADMIN VARIABLES TO RUNTIME;"
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SAVE ADMIN VARIABLES TO DISK;"
       - docker exec {{ pxc_container }} pmm-admin add proxysql --username=admin --password=admin --service-name=my-new-proxysql_{{ pxc_container }}_{{ random_number }} --host=127.0.0.1 --port=6032
-      
+    register: proxysql_start
+    # The proxysql2 package's postinst can auto-start the daemon during
+    # install (observed non-deterministically), so the explicit `proxysql -c
+    # ...` start above sometimes finds it already running -- that is the
+    # desired end state, not a failure. Any other non-zero exit in this loop
+    # still fails the play.
+    failed_when: >-
+      proxysql_start.rc != 0 and
+      'Daemon already running' not in (proxysql_start.stderr | default(''))
+
   - name: Execute Service, Sysbench Script inside the PXC pxc_container
     shell: "{{ item }}"
     with_items:
