@@ -49,9 +49,7 @@ Pick `--database` from test plan + `qa-integration/pmm_qa/scripts/database_optio
 
 ## 3. UI (computer use)
 
-**Do not** open `/graph/login` and type credentials into the Grafana form — use Basic Auth / PMM login flow via **computer use** (cloud agent browser).
-
-Reference selectors and patterns: [.agents/workflows/pmmLogin.md](../../.agents/workflows/pmmLogin.md).
+Use cloud agent **computer use** for PMM UI. Do not use the Grafana login form.
 
 ## 4. Reset
 

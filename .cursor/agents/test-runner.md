@@ -38,7 +38,3 @@ Read each file when its step needs it. Do not guess field IDs or setup commands.
 - Modify files under `qa-integration/` (use `cursor-qa-integration/` for Cursor setup)
 - Trust "How to test" without reading PR diff
 - Post public Jira comments on QA results
-
-## Phase 3 (optional)
-
-Test Runner may read additional skills inline (`pmm-git-diff`, `pmm-provisioning`) instead of spawning thin subagents. See [docs/agents/HANDOFF.md](../../docs/agents/HANDOFF.md).

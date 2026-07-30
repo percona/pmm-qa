@@ -1,18 +1,16 @@
-# PMM — Cursor Cloud Automations (dashboard spec)
+# PMM — Cursor dashboard (automations + canvas)
 
-**Source of truth for agent behavior:** `.cursor/agents/*.md` and `.cursor/skills/*` on `main`.
+Agent behavior lives in `.cursor/agents/*.md` and `.cursor/skills/*` on `main`. Dashboard prompts are **4-line pointers only**.
 
-Automation prompts in the dashboard are **4-line pointers** — never edit long prompts in the UI.
+Environment **`PMM`** = `percona/pmm` + `percona/pmm-qa`. Config: `.cursor/environment.json`. Refresh snapshot at [cursor.com/agents](https://cursor.com/agents) after changes.
 
-Environment **`PMM`** = `percona/pmm` + `percona/pmm-qa`. Config: `.cursor/environment.json`.
-
-Create at [cursor.com/automations](https://cursor.com/automations).
+Create automations at [cursor.com/automations](https://cursor.com/automations).
 
 ---
 
 ## Pointer prompts (copy into dashboard)
 
-### Test Runner (manual QA / webhook / Slack)
+### Test Runner
 
 ```
 Read .cursor/agents/test-runner.md in percona/pmm-qa (main) and act as
@@ -21,11 +19,11 @@ Input: the Jira key or issueKey from the webhook / triggering message.
 If the file is missing, stop and report.
 ```
 
-**Slack:** `@Cursor please test PMM-15196` — use `env=PMM` for multi-repo. Natural language works; rigid `test-runner` prefix not required.
+Slack: `@Cursor please test PMM-15196` — add `env=PMM` for multi-repo. Desktop: Cloud → `/test-runner PMM-15196`.
 
-**Desktop:** Cloud dropdown → `/test-runner PMM-15196` or natural language
+Jira webhook body: `{"issueKey": "{{issue.key}}"}` — headers `Authorization: Bearer crsr_<token>`, `Content-Type: application/json`.
 
-### Test Healer (GitHub FB failure)
+### Test Healer
 
 ```
 Read .cursor/agents/test-healer.md in percona/pmm-qa (main) and act as
@@ -34,9 +32,9 @@ Input: the pmm-submodules PR or Actions run from the triggering event.
 If all FB checks passed, exit immediately. If the file is missing, stop.
 ```
 
-**Trigger:** GitHub → Workflow run completed → `Percona-Lab/pmm-submodules` (FB Tests).
+Trigger: GitHub → Workflow run completed → `Percona-Lab/pmm-submodules`.
 
-### Test Reporter (GitHub FB green)
+### Test Reporter
 
 ```
 Read .cursor/agents/test-reporter.md in percona/pmm-qa (main) and act as
@@ -45,75 +43,33 @@ Input: the pmm-submodules PR from the triggering event.
 If any check failed, do not attach screenshots. If the file is missing, stop.
 ```
 
-**Trigger:** Same workflow as Healer — prompt gates on green checks only.
-
----
-
-## Overview
-
-| Role | Agent file | Typical trigger |
-|------|------------|-----------------|
-| **Test Runner** | `.cursor/agents/test-runner.md` | Jira Ready for QA webhook, Slack, Desktop |
-| **Test Healer** | `.cursor/agents/test-healer.md` | pmm-submodules FB Tests **failed** |
-| **Test Reporter** | `.cursor/agents/test-reporter.md` | pmm-submodules FB Tests **green** |
-
-Do not combine roles in one automation.
-
----
-
-## Shared: environment `PMM`
-
-| Item | Value |
-|------|--------|
-| Repos | `percona/pmm` + `percona/pmm-qa` |
-| `environment.json` | `pmm-qa/.cursor/environment.json` |
-| Cursor provisioning | `cursor-qa-integration/` (not `qa-integration/`) |
-| `pmm-submodules` | **`gh` only** — never clone |
-
-After pushing `environment.json`, refresh snapshot at [cursor.com/agents](https://cursor.com/agents).
-
-### Secrets
-
-| Secret | Used by |
-|--------|---------|
-| `GH_TOKEN` | `gh` on private repos |
-| Atlassian MCP | Jira (per-user OAuth at cursor.com/agents) |
-
----
-
-## Test Runner — Jira webhook
-
-Webhook URL after save: `https://api2.cursor.sh/automations/webhook/<uuid>`
-
-Headers: `Authorization: Bearer crsr_<token>`, `Content-Type: application/json`
-
-Body: `{"issueKey": "{{issue.key}}"}`
-
-Jira Automation: transition → **Ready for QA** → Send web request (POST).
-
----
-
-## Test Healer — GitHub
-
-| Tool | Enable |
-|------|--------|
-| MCP atlassian | Optional (context) |
-| Pull request creation | Yes (`percona/pmm-qa` only) |
-| Slack MCP | Optional (healer tracking canvas) |
-
-**Team Owned** recommended for shared billing.
+Same GitHub trigger as Healer; prompt gates on green checks only.
 
 ---
 
 ## Go-live checklist
 
 - [ ] `.cursor/environment.json` on `main`, PMM snapshot refreshed
-- [ ] `gh --version`, `json-diff --version`, `docker run hello-world` in test run
-- [ ] Atlassian MCP authenticated (each user)
-- [ ] `GH_TOKEN` in environment secrets
+- [ ] `gh --version`, `json-diff --version`, `docker run hello-world` in a test run
+- [ ] Atlassian MCP authenticated (each user, cursor.com/agents)
+- [ ] `GH_TOKEN` in PMM environment secrets
 - [ ] Three automations with pointer prompts above
-- [ ] Dry run Runner on a Ready for QA ticket
-- [ ] Dry run Healer on failed FB PR
-- [ ] Dry run Reporter on green FB PR
 
-See also [SETUP.md](SETUP.md) and [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+---
+
+## Canvas sync (#pmm-ai)
+
+Canvas ID: `F0BESJWC8AE`.
+
+Update when `.cursor/agents/test-runner.md`, `test-healer.md`, or `test-reporter.md` change on `main`.
+
+**Cron automation prompt:**
+
+```
+Read .cursor/agents/test-runner.md, test-healer.md, and test-reporter.md
+from percona/pmm-qa on main. Update Slack canvas F0BESJWC8AE table columns:
+Agent | What it does | How to manually run | Automation status.
+Keep the Cursor Slack auth callout. Do not change canvas ID.
+```
+
+Tools: Slack MCP canvas update + read repo files. Team Owned automation recommended.
