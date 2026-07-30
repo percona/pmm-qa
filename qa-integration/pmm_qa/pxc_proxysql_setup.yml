@@ -21,8 +21,14 @@
     # (reproduces K8SPXC-1830: proxysql_exporter full-auth failure without TLS).
     proxysql_auth_plugin: "{{ lookup('vars', 'extra_proxysql_auth_plugin', default=lookup('env','PROXYSQL_AUTH_PLUGIN') | default('', true) ) }}"
     # Which ProxySQL interface the PMM exporter is registered against.
-    #   6032 = admin interface (default; always mysql_native_password)
-    #   6033 = mysql interface (honours mysql-default_authentication_plugin)
+    #   6032 = admin interface (default) - the only one exposing the stats_*/
+    #          runtime_* tables the exporter scrapes. Credentials come from
+    #          admin-admin_credentials (cleartext), so caching_sha2 always
+    #          succeeds via the fast path.
+    #   6033 = mysql interface - authenticates against mysql_users, but has no
+    #          admin tables, so the exporter connects and then fails to scrape.
+    # Both interfaces advertise whatever mysql-default_authentication_plugin is
+    # set to (verified from the handshake packet on ProxySQL 2.7.3).
     proxysql_pmm_port: "{{ lookup('vars', 'extra_proxysql_pmm_port', default=lookup('env','PROXYSQL_PMM_PORT') | default('6032', true) ) }}"
     proxysql_pmm_user: "{{ lookup('vars', 'extra_proxysql_pmm_user', default=lookup('env','PROXYSQL_PMM_USER') | default('admin', true) ) }}"
     proxysql_pmm_password: "{{ lookup('vars', 'extra_proxysql_pmm_password', default=lookup('env','PROXYSQL_PMM_PASSWORD') | default('admin', true) ) }}"
@@ -63,7 +69,7 @@
     register: tarball
     when: lookup('env', 'PXC_TARBALL') == ''
 
-  - name: Set PXC Product URL if environment or paramater are not defined
+  - name: Set PXC Product URL if environment or parameter are not defined
     set_fact:
       pxc_tarball: "{{tarball.stdout | default(pxc_tarball,true)}}"
 
@@ -175,6 +181,15 @@
     with_items:
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "UPDATE mysql_users SET password=CACHING_SHA2_PASSWORD(password) WHERE password NOT LIKE '$A$%'; LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"
       - docker exec {{ pxc_container }} mysql -h 127.0.0.1 -P 6032 -u admin -padmin -e "SELECT username, password FROM mysql_users;"
+    when: proxysql_hash_passwords | bool
+
+  # Restart ProxySQL to drop its caching_sha2 auth cache. Without this the
+  # exporter keeps using the fast path it earned on its first (cleartext)
+  # connection and never hits the full-authentication failure.
+  - name: Restart ProxySQL to clear the caching_sha2 auth cache
+    shell: >
+      docker exec {{ pxc_container }} bash -c
+      "pkill -x proxysql; sleep 5; proxysql -c /etc/proxysql.cnf; sleep 15; true"
     when: proxysql_hash_passwords | bool
 
   # Force the exporter to re-handshake against the new auth plugin, otherwise a
