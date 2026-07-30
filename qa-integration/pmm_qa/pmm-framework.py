@@ -723,12 +723,16 @@ def setup_pxc_proxysql(db_type, db_version=None, db_config=None, args=None):
         'PROXYSQL_AUTH_PLUGIN': os.getenv('PROXYSQL_AUTH_PLUGIN') or ('caching_sha2_password' if str(pxc_version).startswith('8.4') else ''),
         # Which ProxySQL interface PMM monitors: 6032 = admin (always native
         # password), 6033 = mysql interface (honours the auth plugin above).
-        'PROXYSQL_PMM_PORT': os.getenv('PROXYSQL_PMM_PORT') or '6032',
-        'PROXYSQL_PMM_USER': os.getenv('PROXYSQL_PMM_USER') or 'admin',
-        'PROXYSQL_PMM_PASSWORD': os.getenv('PROXYSQL_PMM_PASSWORD') or 'admin',
+        # Default to 6033/monitor so a bare `--database pxc` reproduces
+        # K8SPXC-1830 out of the box (6032/admin never hits caching_sha2).
+        'PROXYSQL_PMM_PORT': os.getenv('PROXYSQL_PMM_PORT') or '6033',
+        'PROXYSQL_PMM_USER': os.getenv('PROXYSQL_PMM_USER') or 'monitor',
+        'PROXYSQL_PMM_PASSWORD': os.getenv('PROXYSQL_PMM_PASSWORD') or 'monitor',
         # Store mysql_users passwords hashed -> forces caching_sha2 full auth,
-        # which fails without TLS/RSA (K8SPXC-1830 repro).
-        'PROXYSQL_HASH_PASSWORDS': os.getenv('PROXYSQL_HASH_PASSWORDS') or 'false',
+        # which fails without TLS/RSA (K8SPXC-1830 repro). On by default so the
+        # bug reproduces with no extra flags; set PROXYSQL_HASH_PASSWORDS=false
+        # for a plain working proxysql setup.
+        'PROXYSQL_HASH_PASSWORDS': os.getenv('PROXYSQL_HASH_PASSWORDS') or 'true',
     }
 
     # Ansible playbook filename
