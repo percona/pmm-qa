@@ -227,3 +227,25 @@ EOF
   [[ $output == *'PGSQL parallel log'* ]]
   [[ $output == *'setup log ====='* ]]
 }
+
+@test "verbose parallel runs still dump the log of a setup that failed" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    PARALLEL_TEST=true \
+    FAIL_PS=true \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --verbose \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 \
+      --database pgsql=16
+
+  [[ $status -ne 0 ]]
+  # --verbose echoes both, but the failure keeps its own FAILED banner so it is
+  # still findable among the successful logs.
+  [[ $output == *'PS failed as requested'* ]]
+  [[ $output == *'FAILED (exit=1)'* ]]
+  [[ $output == *'PGSQL parallel log'* ]]
+  [[ $output == *'Parallel setup logs kept at:'* ]]
+}

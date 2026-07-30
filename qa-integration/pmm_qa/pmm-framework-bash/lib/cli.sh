@@ -1,16 +1,40 @@
 #!/usr/bin/env bash
+#
+# lib/cli.sh -- command-line parsing and the --database spec grammar.
+#
+# Turns argv into two things the rest of the framework reads:
+#   * global switches (PMM Server address, verbosity, --parallel, ...)
+#   * DATABASE_SPECS -- the raw spec strings, still unparsed
+#
+# Specs stay raw on purpose. preflight_database_setups() parses each one to
+# inspect the run, then each setup parses it again just before running, so a
+# spec is always expanded against freshly reset state. See lib/execution.sh.
+#
+# TO ADD A GLOBAL FLAG:
+#   1. give it a default in the block below
+#   2. add a case arm in parse_args (value-taking flags join the shared arm)
+#   3. document it in print_help
+#   4. read it wherever it applies -- most flags end up in a setup's env map
 
+# Raw `--database` values, in the order given on the command line.
 declare -ag DATABASE_SPECS=()
+
+# Options parsed from the spec currently being expanded, e.g. DB_CONFIG[SETUP_TYPE].
+# parse_database_spec() clears and repopulates this for every spec.
 declare -Ag DB_CONFIG=()
 
-PMM_SERVER_IP_ARG=''
-PMM_SERVER_PASSWORD=''
-GLOBAL_CLIENT_VERSION=''
-VERBOSE=false
-VERBOSITY_LEVEL=1
-CLIENT_DEBUG=false
-PARALLEL=false
+# --- global switch defaults -------------------------------------------------
+# Do not name any of these after a registered option key: resolve_value() looks
+# up shell variables by name and would pick one of these up by accident.
+PMM_SERVER_IP_ARG=''      # --pmm-server-ip; empty means discover via Docker
+PMM_SERVER_PASSWORD=''    # --pmm-server-password; ADMIN_PASSWORD env wins
+GLOBAL_CLIENT_VERSION=''  # --client-version; applies to every setup
+VERBOSE=false             # --verbose/--v
+VERBOSITY_LEVEL=1         # --verbosity-level; becomes that many -v for ansible
+CLIENT_DEBUG=false        # --client-debug
+PARALLEL=false            # --parallel; preflight may turn this back off
 
+# Print the user-facing help text. Keep in sync with parse_args.
 print_help() {
   cat <<'EOF'
 PMM Framework (Bash)
@@ -24,7 +48,8 @@ Options:
   --pmm-server-ip VALUE        PMM Server address (otherwise Docker discovery).
   --pmm-server-password VALUE  PMM Server admin password (default: admin).
   --client-version VALUE       Global PMM Client version/tarball override.
-  --verbose, --v               Print resolved setup details.
+  --verbose, --v               Print resolved setup details, and with --parallel
+                               also echo the logs of successful setups.
   --verbosity-level N          Ansible verbosity level (numeric, default: 1).
   --client-debug               Enable PMM Client debug mode.
   --parallel                   Run setups concurrently; dump logs only on failure.
@@ -40,10 +65,21 @@ Examples:
 EOF
 }
 
+# Parse argv into the global switches and DATABASE_SPECS.
+#
+# Both `--flag value` and `--flag=value` spellings are accepted. Value-taking
+# flags treat a following argument that starts with '-' as "no value given"
+# rather than swallowing the next flag, which keeps `--client-version
+# --database ps` from silently eating the --database.
+#
+# Writes:  DATABASE_SPECS and every global switch above
+# Exits:   0 via --help; via die() on an unknown flag, a non-numeric
+#          --verbosity-level, or when no --database was supplied
 parse_args() {
   DATABASE_SPECS=()
   while (($#)); do
     local arg=$1 inline='' consumed=1 has_inline=false
+    # Split the --flag=value spelling before matching.
     if [[ $arg == --*=* ]]; then
       inline=${arg#*=}
       arg=${arg%%=*}
@@ -59,6 +95,8 @@ parse_args() {
           consumed=2
         fi
         ;;
+      # Flags that take a value. Collected here so the "next arg looks like a
+      # flag" rule lives in exactly one place, then dispatched below.
       --pmm-server-ip|--pmm-server-password|--client-version|--verbosity-level)
         local value
         if [[ $has_inline == true ]]; then
@@ -74,6 +112,7 @@ parse_args() {
           --pmm-server-password) PMM_SERVER_PASSWORD=$value ;;
           --client-version) GLOBAL_CLIENT_VERSION=$value ;;
           --verbosity-level)
+            # A bare --verbosity-level keeps the default rather than blanking it.
             if [[ $has_inline == true || -n $value ]]; then
               VERBOSITY_LEVEL=$value
             fi
@@ -98,6 +137,22 @@ parse_args() {
     die "At least one --database SPEC is required."
 }
 
+# Expand one spec string into DB_TYPE, DB_VERSION and DB_CONFIG.
+#
+# Grammar: NAME[=VERSION][,OPTION=VALUE...]
+#   ps=8.4,SETUP_TYPE=gr,QUERY_SOURCE=slowlog
+#
+# Names and option keys are case-insensitive and upper-cased here, so the
+# catalogue in lib/config.sh only ever deals in uppercase.
+#
+# Unknown *versions* and unknown *options* are not fatal: they are noted under
+# --verbose and the registered default is used instead. This matches the Python
+# framework, where a typo degrades to a default rather than failing a long CI
+# job. An unknown database *name* is fatal, since there is nothing to fall back
+# to.
+#
+# Writes:  DB_TYPE, DB_VERSION, DB_CONFIG (all reset on entry)
+# Exits:   via die() on an empty spec or unknown database name
 parse_database_spec() {
   local spec=$1
   DB_TYPE=''
@@ -108,6 +163,7 @@ parse_database_spec() {
   IFS=',' read -r -a tokens <<< "$spec"
   ((${#tokens[@]} > 0)) || die "Empty --database specification."
 
+  # First token is NAME or NAME=VERSION.
   local first=${tokens[0]}
   local type_token=${first%%=*}
   DB_TYPE=${type_token^^}
@@ -123,6 +179,7 @@ parse_database_spec() {
     fi
   fi
 
+  # Remaining tokens are OPTION=VALUE pairs.
   local token key value
   for token in "${tokens[@]:1}"; do
     if [[ $token != *=* ]]; then

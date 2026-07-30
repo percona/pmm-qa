@@ -1,5 +1,21 @@
 #!/usr/bin/env bash
+#
+# setups/postgresql.sh -- PostgreSQL-family setups: PDPGSQL, SSL_PDPGSQL, PGSQL.
+#
+# Same shape as setups/mysql.sh -- see that file's header for the pattern and
+# for why the env maps are spelled out rather than shared.
+#
+# The distinction between the two products: PDPGSQL is the Percona Distribution
+# with pg_stat_monitor (PGSM), PGSQL is upstream PostgreSQL with
+# pg_stat_statements (PGSS). They use different playbooks, ports and container
+# names.
 
+# Percona Distribution for PostgreSQL, monitored through pg_stat_monitor.
+#
+# PGSTAT_MONITOR_BRANCH is pinned to 'main' while PGSM_BRANCH stays
+# spec-controlled: the playbook uses them for different things, so the
+# similar-looking names are not a duplicate. DISTRIBUTION is intentionally
+# empty -- the playbook fills in its own default.
 setup_pdpgsql() {
   local version setup_type pgsm_branch client
   version=$(resolved_version PDPGSQL_VERSION PDPGSQL "$DB_VERSION")
@@ -30,6 +46,10 @@ setup_pdpgsql() {
     env_map
 }
 
+# Percona Distribution for PostgreSQL with TLS.
+#
+# Note the env key is PGSQL_VERSION even though the type is SSL_PDPGSQL -- that
+# is what the TLS playbook reads. Match the playbook, not the type name.
 setup_ssl_pdpgsql() {
   local version client
   version=$(resolved_version PDPGSQL_VERSION SSL_PDPGSQL "$DB_VERSION")
@@ -48,6 +68,12 @@ setup_ssl_pdpgsql() {
   run_playbook 'tls-ssl-setup/postgresql_tls_setup.yml' env_map
 }
 
+# Upstream PostgreSQL, monitored through pg_stat_statements.
+#
+# One of the two setups that pick their playbook at runtime (setup_valkey is
+# the other). SETUP_TYPE=replication switches to the replication playbook and
+# adds two keys that only it reads -- which is why they are appended after the
+# map literal rather than always being present.
 setup_pgsql() {
   local version setup_type client playbook
   version=$(resolved_version PGSQL_VERSION PGSQL "$DB_VERSION")

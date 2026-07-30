@@ -6,6 +6,11 @@ interface and reuses the existing Ansible playbooks and setup scripts. The
 Python implementation and CI workflows remain unchanged while both versions
 are validated side by side.
 
+> **Contributing or reading the code?** See
+> [ARCHITECTURE.md](ARCHITECTURE.md) for the module map, diagrams of the run
+> flow, how value resolution works, and step-by-step instructions for adding a
+> database type, a CLI flag, or a backend.
+
 ## Requirements
 
 - Bash 4.4 or newer (associative arrays, name references, `inherit_errexit`,
@@ -67,14 +72,19 @@ qa-integration/pmm_qa/pmm-framework-bash/pmm-framework \
 
 `--parallel` writes each setup's stdout/stderr to its own log file. Successful
 setups print only a one-line summary with the log path as soon as they finish;
-failed setups dump their buffered log immediately. All setups are allowed to
-finish, and the framework returns nonzero if any setup fails. On failure the log
-directory is kept for inspection. Each setup runs in its own process group, so
-interrupting the framework also terminates the `ansible-playbook` processes it
-started. Avoid parallel configurations that reuse the same product topology
-because container names, ports, or data directories may collide. PS and MySQL
-combinations are rejected during preflight because both use
-`mysql_cluster_data` and overlapping host ports.
+failed setups dump their buffered log immediately, with no flag required. Add
+`--verbose` to echo the logs of successful setups as well. All setups are
+allowed to finish, and the framework returns nonzero if any setup fails. On
+failure the log directory is kept for inspection; on a fully successful run it
+is removed.
+
+Each setup runs in its own process group, so interrupting the framework also
+terminates the `ansible-playbook` processes it started.
+
+Setups that cannot run concurrently — two of the same database type, or any two
+of the MySQL family (PS/MySQL), which share `mysql_cluster_data` and host
+ports — are detected during preflight. The run is not rejected: it falls back
+to sequential execution with a warning, so every requested setup still runs.
 
 To rerun the representative four-database setup and print its wall-clock time
 to milliseconds:
@@ -146,6 +156,9 @@ intentionally not implemented; current workflows use repeatable `--database`.
 
 The entrypoint is intentionally thin. Shared behavior is under `lib/`, while
 product-specific environment maps and dispatch live under `setups/`.
+[ARCHITECTURE.md](ARCHITECTURE.md) walks through the call flow and the
+extension points; every function also carries a header comment describing its
+arguments, the globals it reads and writes, and how it reports failure.
 
 Install development tools (`bats-core` and `shellcheck`), then run:
 

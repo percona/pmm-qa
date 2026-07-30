@@ -137,7 +137,6 @@ jobs:
               --pmm-server-ip "${SERVER_IP}" \
               --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
               --client-version "${{ env.PMM_CLIENT_VERSION }}" \
-              --verbose \
               ${{ env.WIZARD_ARGS }}
           on_retry_command: |
             docker rm -f $(docker ps -a -q) || true

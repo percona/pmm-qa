@@ -1,5 +1,27 @@
 #!/usr/bin/env bash
+#
+# setups/mysql.sh -- MySQL-family setups: PS, MYSQL, SSL_MYSQL, PXC.
+#
+# Every setup function here follows the same shape, which is the pattern to
+# copy when adding a new one:
+#
+#   1. resolve the version, setup type and client version
+#   2. build `declare -A env_map=(...)` -- the contract with the playbook
+#   3. hand it to run_playbook() (or run_setup_script())
+#
+# The env maps are written out in full rather than shared through a helper. The
+# repetition is deliberate: each map mirrors exactly what its playbook reads,
+# and the differences between them are real (setup_external omits CLIENT_DEBUG,
+# the PSMDB setups use PMM_CLIENT_VERSION instead of CLIENT_VERSION). Factoring
+# out the common keys would hide those asymmetries.
+#
+# Reads, in every function: DB_VERSION and DB_CONFIG (set by
+# parse_database_spec), PMM_SERVER_HOST, CLIENT_DEBUG.
 
+# Percona Server for MySQL.
+#
+# SETUP_TYPE selects the topology inside the playbook ('' single, gr, replication).
+# NODES_COUNT, MY_ROCKS and BACKUP are passed through for the playbook to act on.
 setup_ps() {
   local version setup_type client
   version=$(resolved_version PS_VERSION PS "$DB_VERSION")
@@ -23,6 +45,11 @@ setup_ps() {
   run_playbook 'percona_server_for_mysql/percona-server-setup.yml' env_map
 }
 
+# Upstream MySQL.
+#
+# Unlike PS, this playbook wants the topology pre-translated: SETUP_TYPE=gr sets
+# GROUP_REPLICATION=1, and SETUP_TYPE=replication asks for two nodes. Both are
+# still passed alongside the raw SETUP_TYPE.
 setup_mysql() {
   local version setup_type client group_replication='' nodes=1
   version=$(resolved_version MS_VERSION MYSQL "$DB_VERSION")
@@ -53,6 +80,7 @@ setup_mysql() {
   run_playbook 'mysql/mysql-setup.yml' env_map
 }
 
+# MySQL with TLS, monitored over an encrypted connection.
 setup_ssl_mysql() {
   local version client
   version=$(resolved_version MS_VERSION SSL_MYSQL "$DB_VERSION")
@@ -69,6 +97,12 @@ setup_ssl_mysql() {
   run_playbook 'tls-ssl-setup/mysql_tls_setup.yml' env_map
 }
 
+# Percona XtraDB Cluster, always three nodes, fronted by ProxySQL.
+#
+# ProxySQL is not separately requestable (dispatch_setup rejects it), so its
+# version and package come from the PROXYSQL registration instead of a spec.
+# The empty proxysql_config array exists only to satisfy resolve_value's
+# signature -- there is no PROXYSQL spec to read options from.
 setup_pxc() {
   local version proxysql_version client
   version=$(resolved_version PXC_VERSION PXC "$DB_VERSION")

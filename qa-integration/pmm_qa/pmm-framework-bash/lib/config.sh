@@ -1,15 +1,43 @@
 #!/usr/bin/env bash
+#
+# lib/config.sh -- the database catalogue and value resolution.
+#
+# Everything the framework knows about a product declaratively lives here: the
+# versions it accepts, which spec options are valid, and the default for each.
+# Nothing in this file runs a setup; it only answers questions about them.
+#
+# TO ADD A NEW DATABASE TYPE you normally touch three files:
+#   1. this one          -- register_database ... (validation + defaults)
+#   2. setups/<family>.sh -- a setup_<name> function that builds the env map
+#   3. setups/dispatch.sh -- one case arm pointing DB_TYPE at that function
+# See ARCHITECTURE.md for the walkthrough.
+#
+# Data model (four parallel associative arrays, all keyed by uppercase type):
+#   DB_VERSIONS[TYPE]         space-separated list of accepted versions
+#   DB_OPTIONS[TYPE]          space-separated list of accepted option keys
+#   DB_DEFAULTS[TYPE:KEY]     default value for one option
+#   DB_DEFAULT_VERSIONS[TYPE] version used when the spec omits one
 
 declare -Ag DB_VERSIONS=()
 declare -Ag DB_OPTIONS=()
 declare -Ag DB_DEFAULTS=()
 declare -Ag DB_DEFAULT_VERSIONS=()
 
-# register_database TYPE 'versions...' 'OPTION_KEYS...' 'KEY=default'...
+# Declare one database type.
 #
-# DEFAULT_VERSION is not a user-settable option: it is pulled out of the
+# Usage: register_database TYPE 'versions...' 'OPTION_KEYS...' 'KEY=default'...
+#
+#   TYPE          uppercase identifier, matched case-insensitively on the CLI
+#   versions      accepted versions, space separated; '' for versionless types
+#   OPTION_KEYS   accepted `KEY=value` option names inside a --database spec
+#   KEY=default   one pair per option; unlisted options resolve to ''
+#
+# DEFAULT_VERSION is not a user-settable option. It is pulled out of the
 # defaults list into DB_DEFAULT_VERSIONS and names the version used when the
-# spec omits one. Version list order carries no meaning.
+# spec omits one, so the *order* of the version list carries no meaning. The
+# guard at the bottom of this file rejects a versioned type that forgets it.
+#
+# Writes: DB_VERSIONS, DB_OPTIONS, DB_DEFAULTS, DB_DEFAULT_VERSIONS
 register_database() {
   local type=$1 versions=$2 options=$3
   shift 3
@@ -25,6 +53,11 @@ register_database() {
     fi
   done
 }
+
+# --------------------------------------------------------------------------
+# The catalogue. Keep each entry's option list and defaults in sync: an option
+# without a default silently resolves to the empty string.
+# --------------------------------------------------------------------------
 
 register_database PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
@@ -103,7 +136,12 @@ register_database PXC \
   'DEFAULT_VERSION=8.0' \
   'CLIENT_VERSION=3-dev-latest' 'QUERY_SOURCE=perfschema' 'TARBALL='
 
+# PROXYSQL is not independently setup-able: it only supplies defaults that the
+# PXC setup reads (see setups/mysql.sh). dispatch_setup rejects it explicitly.
 register_database PROXYSQL '2' 'PACKAGE' 'DEFAULT_VERSION=2' 'PACKAGE='
+
+# Versionless types: '' means "no version accepted", so `--database haproxy=1`
+# logs a note under --verbose and falls back to the (empty) default.
 register_database HAPROXY '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
 register_database EXTERNAL '' 'CLIENT_VERSION' 'CLIENT_VERSION=3-dev-latest'
 register_database DOCKERCLIENTS '' ''
@@ -115,10 +153,19 @@ register_database VALKEY \
   'DEFAULT_VERSION=8' \
   'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=' 'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
+# --------------------------------------------------------------------------
+# Catalogue queries. All take an already-uppercased TYPE.
+# --------------------------------------------------------------------------
+
+# Is TYPE a registered database?
+# Returns: 0 if registered, 1 otherwise
 database_exists() {
   [[ -v "DB_OPTIONS[$1]" ]]
 }
 
+# Does TYPE accept the spec option KEY?
+# Usage:   database_option_exists PS SETUP_TYPE
+# Returns: 0 if accepted, 1 otherwise
 database_option_exists() {
   local type=$1 key=$2 option
   for option in ${DB_OPTIONS[$type]-}; do
@@ -127,6 +174,9 @@ database_option_exists() {
   return 1
 }
 
+# Does TYPE offer the given version?
+# Usage:   database_version_exists PGSQL 17
+# Returns: 0 if offered, 1 otherwise (including versionless types)
 database_version_exists() {
   local type=$1 wanted=$2 version
   [[ -z ${DB_VERSIONS[$type]-} ]] && return 1
@@ -136,14 +186,39 @@ database_version_exists() {
   return 1
 }
 
+# The version used when a spec omits one.
+# Stdout: the registered DEFAULT_VERSION, or '' for versionless types
 database_default_version() {
   printf '%s' "${DB_DEFAULT_VERSIONS[$1]-}"
 }
 
+# The registered default for one option.
+# Usage:  database_default_value PS QUERY_SOURCE   # -> perfschema
+# Stdout: the default, or '' when the option has none
 database_default_value() {
   printf '%s' "${DB_DEFAULTS["$1:$2"]-}"
 }
 
+# Resolve one option value using the framework's precedence rules.
+#
+# Usage: resolve_value TYPE KEY CONFIG_ARRAY_NAME
+#   e.g. setup_type=$(resolve_value PS SETUP_TYPE DB_CONFIG)
+#
+# Precedence, highest first:
+#   1. an existing shell/environment variable named KEY
+#   2. the global --client-version, for KEY == CLIENT_VERSION only
+#   3. the per-database option parsed from the --database spec
+#   4. the default registered above
+#
+# Step 1 mirrors the Python framework's `os.environ.get(KEY)`, so an exported
+# but *empty* variable deliberately wins and yields ''. Contrast with
+# resolved_version() in lib/runners.sh, which mirrors `os.getenv(...) or ...`
+# and therefore skips empty values -- the two rules are intentionally
+# different. Because `-v` also sees non-exported shell variables, avoid naming
+# any global in lib/cli.sh after a registered option key.
+#
+# Reads:  the named config array (normally DB_CONFIG), GLOBAL_CLIENT_VERSION
+# Stdout: the resolved value (possibly empty)
 resolve_value() {
   local type=$1 key=$2 config_name=$3
   local -n config_ref=$config_name

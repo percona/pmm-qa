@@ -1,7 +1,32 @@
 #!/usr/bin/env bash
+#
+# lib/docker.sh -- locating the PMM Server the setups should report to.
+#
+# Every setup needs an address to point pmm-agent at. It comes from one of two
+# places, and the choice also decides the port:
+#
+#   --pmm-server-ip 10.0.0.5   an external/remote server, reached on 443
+#   (omitted)                  a local container on the pmm-qa Docker network,
+#                              reached by container name on 8443
+#
+# Both are published as PMM_SERVER_HOST / PMM_SERVER_PORT for the setup
+# functions to drop into their env maps.
 
+# Name of the discovered PMM Server container; empty until discovery runs.
 PMM_SERVER_CONTAINER=''
 
+# Find a running PMM Server container and attach it to the pmm-qa network.
+#
+# Matches any running container whose *image* contains 'pmm-server'. When
+# several match, the first is used and a warning names them all -- picking
+# silently would let a run monitor the wrong server, which is confusing to
+# debug. Pass --pmm-server-ip to be explicit.
+#
+# Creates the pmm-qa network if missing and connects the server to it, so the
+# database containers the setups create can reach it by name.
+#
+# Writes:  PMM_SERVER_CONTAINER
+# Returns: 0 when a server was found, 1 when none is running
 discover_pmm_server() {
   local image name
   local -a candidates=()
@@ -29,6 +54,14 @@ discover_pmm_server() {
   fi
 }
 
+# Decide the PMM Server address for this run.
+#
+# Called once from preflight, and only when at least one requested setup
+# actually needs a server (BUCKET and DOCKERCLIENTS do not).
+#
+# Reads:  PMM_SERVER_IP_ARG
+# Writes: PMM_SERVER_HOST, PMM_SERVER_PORT
+# Exits:  via die() when no server is running and no address was given
 resolve_pmm_server() {
   if [[ -n ${PMM_SERVER_IP_ARG:-} ]]; then
     PMM_SERVER_HOST=$PMM_SERVER_IP_ARG

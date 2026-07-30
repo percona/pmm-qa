@@ -219,7 +219,7 @@ stub_docker_ps() {
   [[ $output != *'first line'* ]]
 }
 
-@test "verbose also echoes the logs of setups that succeeded" {
+@test "verbose echoes the logs of setups that succeeded" {
   local log=$BATS_TEST_TMPDIR/setup.log
   printf 'first line\nno trailing newline' >"$log"
   VERBOSE=true

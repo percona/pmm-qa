@@ -105,9 +105,9 @@ jobs:
           pip install --force-reinstall -U setuptools
           pip install -r requirements.txt
           if [[ "${PXC_VERSION}" != http* ]]; then
-            ./pmm-framework-bash/pmm-framework --parallel --verbose --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC=${PXC_VERSION}
+            ./pmm-framework-bash/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC=${PXC_VERSION}
           else
-            ./pmm-framework-bash/pmm-framework --parallel --verbose --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC,TARBALL=${PXC_TARBALL_PATH}
+            ./pmm-framework-bash/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC,TARBALL=${PXC_TARBALL_PATH}
           fi
 
       - name: Install npx dependencies

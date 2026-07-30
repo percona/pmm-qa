@@ -1,4 +1,27 @@
 #!/usr/bin/env bash
+#
+# pmm-framework -- provision databases and register them with a PMM Server.
+#
+#   ./pmm-framework --database ps=8.4 --database psmdb,SETUP_TYPE=sharding
+#   ./pmm-framework --parallel --pmm-server-ip 10.0.0.5 --database valkey=8
+#   ./pmm-framework --help
+#
+# This entrypoint is intentionally thin: it checks the Bash version, works out
+# where the repo lives, sources every module, then hands over to parse_args()
+# and run_database_setups(). All real behaviour lives in lib/ and setups/.
+#
+# Layout:
+#   lib/common.sh     logging, die(), small value helpers
+#   lib/config.sh     the database catalogue and value resolution
+#   lib/cli.sh        argument parsing and the --database spec grammar
+#   lib/docker.sh     finding the PMM Server
+#   lib/ansible.sh    running playbooks
+#   lib/runners.sh    running setup scripts, plus version/password helpers
+#   setups/*.sh       one function per database type, and the dispatch table
+#   lib/execution.sh  preflight and the sequential/parallel strategies
+#
+# See ARCHITECTURE.md for the call flow, a diagram, and how to add a database.
+
 set -euo pipefail
 
 # Bash 4.4 is the floor: expanding an empty array under `set -u` (setups with
@@ -14,6 +37,11 @@ fi
 # run instead of silently yielding an empty value.
 shopt -s inherit_errexit
 
+# Anchor every path to this script rather than the caller's cwd, so the
+# framework can be invoked from anywhere:
+#   FRAMEWORK_DIR       .../qa-integration/pmm_qa/pmm-framework-bash
+#   PMM_QA_ROOT         .../qa-integration/pmm_qa        (playbooks live here)
+#   QA_INTEGRATION_ROOT .../qa-integration               (setup scripts here)
 FRAMEWORK_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PMM_QA_ROOT=$(cd "$FRAMEWORK_DIR/.." && pwd)
 QA_INTEGRATION_ROOT=$(cd "$PMM_QA_ROOT/.." && pwd)
@@ -46,6 +74,8 @@ source "$FRAMEWORK_DIR/lib/execution.sh"
 
 parse_args "$@"
 
+# Checked up front so a missing tool fails in milliseconds. curl is not here:
+# only the PSMDB setups need it, so preflight checks for it conditionally.
 require_command docker
 require_command bash
 require_command ansible-playbook
