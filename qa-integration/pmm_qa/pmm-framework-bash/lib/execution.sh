@@ -8,7 +8,8 @@ setup_uses_ansible() {
 }
 
 preflight_database_setups() {
-  local spec needs_server=false needs_curl=false needs_ansible=false mysql_data_owner=''
+  local spec needs_server=false needs_curl=false needs_ansible=false
+  local mysql_data_owner='' conflict=''
   declare -A seen_types=()
 
   for spec in "${DATABASE_SPECS[@]}"; do
@@ -17,17 +18,26 @@ preflight_database_setups() {
     [[ $DB_TYPE == PSMDB || $DB_TYPE == SSL_PSMDB ]] && needs_curl=true
     setup_uses_ansible "$DB_TYPE" && needs_ansible=true
 
-    if [[ $PARALLEL == true && -v "seen_types[$DB_TYPE]" ]]; then
-      log_warn "Parallel $DB_TYPE setups may collide on containers, ports, or data directories."
-    fi
-    if [[ $PARALLEL == true && ($DB_TYPE == PS || $DB_TYPE == MYSQL) ]]; then
+    # Two setups of the same product, or any two of the MySQL family, reuse the
+    # same container names, host ports and data directories, so they cannot run
+    # at the same time.
+    if [[ -v "seen_types[$DB_TYPE]" ]]; then
+      conflict="two $DB_TYPE setups"
+    elif [[ $DB_TYPE == PS || $DB_TYPE == MYSQL ]]; then
       if [[ -n $mysql_data_owner ]]; then
-        die "Parallel $mysql_data_owner and $DB_TYPE setups share mysql_cluster_data and host ports."
+        conflict="$mysql_data_owner and $DB_TYPE setups (shared mysql_cluster_data and host ports)"
       fi
       mysql_data_owner=$DB_TYPE
     fi
     seen_types["$DB_TYPE"]=1
   done
+
+  # Fall back to sequential rather than refusing to run: the caller asked for a
+  # valid set of setups, they just cannot be provisioned concurrently.
+  if [[ $PARALLEL == true && -n $conflict ]]; then
+    log_warn "Running setups sequentially: $conflict cannot run in parallel."
+    PARALLEL=false
+  fi
 
   [[ $needs_server == true ]] && resolve_pmm_server
   [[ $needs_curl == true ]] && require_command curl
@@ -51,6 +61,17 @@ run_database_spec() {
   dispatch_setup
 }
 
+# A sequential run always streams playbook output, so a parallel run must not
+# quietly drop it. On a terminal the one-line summary is enough, because the log
+# file it names is still on disk to open. Anywhere else -- CI above all -- the
+# log directory is deleted when the run ends, so echoing it here is the only
+# record that survives.
+should_dump_successful_logs() {
+  [[ ${VERBOSE:-false} == true ]] && return 0
+  [[ -t 1 ]] && return 1
+  return 0
+}
+
 print_setup_log() {
   local index=$1 total=$2 spec=$3 status=$4 log_file=$5
 
@@ -59,6 +80,14 @@ print_setup_log() {
   # console without interleaving other parallel jobs.
   if ((status == 0)); then
     printf '[%d/%d] %s: OK (log: %s)\n' "$index" "$total" "$spec" "$log_file"
+    if should_dump_successful_logs; then
+      printf '\n===== [%d/%d] %s setup log =====\n' "$index" "$total" "$spec"
+      cat "$log_file"
+      if [[ -s $log_file ]] && (($(tail -c 1 "$log_file" | wc -l) == 0)); then
+        printf '\n'
+      fi
+      printf '===== END [%d/%d] %s =====\n' "$index" "$total" "$spec"
+    fi
     return
   fi
 

@@ -98,8 +98,6 @@ EOF
   [[ $output == *'Starting [2/2] pgsql=16'* ]]
   [[ $output == *'[1/2] ps=8.4: OK (log:'* ]]
   [[ $output == *'[2/2] pgsql=16: OK (log:'* ]]
-  [[ $output != *'PS parallel log'* ]]
-  [[ $output != *'PGSQL parallel log'* ]]
 
   # pgsql has no artificial delay, so it should finish before sleeping ps.
   pgsql_ok_line=$(printf '%s\n' "$output" | awk '/\[2\/2\] pgsql=16: OK/{print NR; exit}')
@@ -177,7 +175,7 @@ EOF
   fi
 }
 
-@test "parallel mode rejects PS and MySQL shared resources" {
+@test "parallel mode falls back to sequential for PS and MySQL" {
   run env \
     PATH="$TEST_BIN:$PATH" \
     RECORD_FILE="$RECORD_FILE" \
@@ -187,7 +185,45 @@ EOF
       --database ps=8.4 \
       --database mysql=8.4
 
-  [[ $status -ne 0 ]]
-  [[ $output == *'share mysql_cluster_data and host ports'* ]]
-  [[ ! -f $RECORD_FILE ]]
+  # Both setups must still run; only their concurrency is given up.
+  [[ $status -eq 0 ]]
+  [[ $output == *'Running setups sequentially'* ]]
+  [[ $output == *'shared mysql_cluster_data and host ports'* ]]
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+}
+
+@test "parallel mode falls back to sequential for duplicate database types" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps,SETUP_TYPE=replication \
+      --database ps,SETUP_TYPE=gr
+
+  [[ $status -eq 0 ]]
+  [[ $output == *'Running setups sequentially'* ]]
+  [[ $output == *'two PS setups'* ]]
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+}
+
+@test "parallel setup output is not lost when stdout is not a terminal" {
+  # This is the CI shape: the log directory does not outlive the job, so the
+  # buffered playbook output has to reach stdout or it is gone for good. A
+  # sequential run always prints it, and parallel must not differ.
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    PARALLEL_TEST=true \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database ps=8.4 \
+      --database pgsql=16
+
+  [[ $status -eq 0 ]]
+  [[ $output == *'PS parallel log'* ]]
+  [[ $output == *'PGSQL parallel log'* ]]
+  [[ $output == *'setup log ====='* ]]
 }

@@ -208,15 +208,26 @@ stub_docker_ps() {
   [[ $status -ne 0 ]]
 }
 
-@test "successful setup logs stay on disk and print only a summary" {
+@test "successful setup logs are summarised and echoed off-terminal" {
   local log=$BATS_TEST_TMPDIR/setup.log
   printf 'first line\nno trailing newline' >"$log"
 
+  # bats captures stdout, so this is the off-terminal branch: the summary names
+  # the log file, and the content is echoed because the log directory will not
+  # outlive the run. On a real terminal the summary alone is printed.
   run print_setup_log 1 2 'ps=8.4' 0 "$log"
 
   [[ $status -eq 0 ]]
   [[ $output == *"[1/2] ps=8.4: OK (log: $log)"* ]]
-  [[ $output != *'first line'* ]]
+  [[ $output == *$'no trailing newline\n===== END [1/2] ps=8.4 ====='* ]]
+}
+
+@test "log echo decision follows verbosity and whether stdout is a terminal" {
+  VERBOSE=false
+  should_dump_successful_logs
+
+  VERBOSE=true
+  should_dump_successful_logs
 }
 
 @test "failed setup logs dump to the console with END on its own line" {
