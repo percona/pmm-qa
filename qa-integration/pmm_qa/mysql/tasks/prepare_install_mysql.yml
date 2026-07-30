@@ -5,7 +5,7 @@
 
 - name: Prepare socket folders
   shell: |
-    docker run --rm -v /tmp:/host-tmp busybox:1.37.0 sh -c '
+    docker run --rm -v /tmp:/host-tmp {{ busybox_image }} sh -c '
       rm -rf /host-tmp/mysql-sockets/{{ item }}
       mkdir -p /host-tmp/mysql-sockets/{{ item }}
       chmod 0777 /host-tmp/mysql-sockets/{{ item }}

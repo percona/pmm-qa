@@ -81,6 +81,10 @@ print_env_map() {
 #
 # VERBOSITY_LEVEL becomes that many -v flags (default 1).
 #
+# Every playbook is given vars/pinned_images.yml as --extra-vars, so pinned
+# third-party image versions (e.g. busybox_image) have one place to bump
+# instead of a literal repeated in each playbook that needs one.
+#
 # Reads:  PMM_QA_ROOT, VERBOSE, VERBOSITY_LEVEL
 # Exits:  via die() when the playbook fails
 run_playbook() {
@@ -109,6 +113,7 @@ run_playbook() {
     env "${env_args[@]}" ansible-playbook \
       -i 'localhost,' \
       --connection=local \
+      --extra-vars '@vars/pinned_images.yml' \
       "${verbosity_args[@]}" \
       "$playbook"
   ) || die "$playbook playbook execution failed."

@@ -32,7 +32,7 @@
     - name: Remove old data folders
       shell: |
         if [ -d "{{ data_dir }}" ]; then
-          docker run --rm -v "{{ data_dir }}:/data" busybox:1.37.0 \
+          docker run --rm -v "{{ data_dir }}:/data" {{ busybox_image }} \
             sh -c 'rm -rf /data/* /data/.[!.]* /data/..?*'
           rm -rf "{{ data_dir }}"
         fi
