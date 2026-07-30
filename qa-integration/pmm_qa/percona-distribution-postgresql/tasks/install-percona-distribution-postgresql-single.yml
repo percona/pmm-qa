@@ -84,7 +84,6 @@
   shell: |
     docker cp ./data/pgsql_load.sql {{ container_prefix }}{{ item }}:/pgsql_load.sql
     docker cp ./data/pdpgsql_run_queries.sh {{ container_prefix }}{{ item }}:/pdpgsql_run_queries.sh
-  become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Create database if it doesn't exist
@@ -97,7 +96,6 @@
 
 - name: Run queries for generating data
   shell: docker exec {{ container_prefix }}{{ item }} bash /pdpgsql_run_queries.sh &
-  become: true
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Change postgres user password

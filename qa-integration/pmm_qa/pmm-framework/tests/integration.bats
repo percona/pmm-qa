@@ -210,6 +210,41 @@ EOF
   [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
 }
 
+@test "parallel mode falls back to sequential for PDPGSQL and PGSQL replication" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database pdpgsql \
+      --database pgsql,SETUP_TYPE=replication
+
+  # Both setups must still run; only their concurrency is given up.
+  [[ $status -eq 0 ]]
+  [[ $output == *'Running setups sequentially'* ]]
+  [[ $output == *'shared pgsql_cluster_data and host port 6432'* ]]
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+}
+
+@test "parallel mode stays parallel for PDPGSQL and non-replication PGSQL" {
+  run env \
+    PATH="$TEST_BIN:$PATH" \
+    RECORD_FILE="$RECORD_FILE" \
+    PARALLEL_TEST=true \
+    "$FRAMEWORK_DIR/pmm-framework" \
+      --parallel \
+      --pmm-server-ip 10.0.0.5 \
+      --database pdpgsql \
+      --database pgsql
+
+  # No shared data_dir or port when PGSQL doesn't use replication, so the
+  # framework must not give up concurrency for this pair.
+  [[ $status -eq 0 ]]
+  [[ $output != *'Running setups sequentially'* ]]
+  [[ $(grep -c -- '--- call ---' "$RECORD_FILE") -eq 2 ]]
+}
+
 @test "verbose parallel runs echo the logs of successful setups" {
   run env \
     PATH="$TEST_BIN:$PATH" \

@@ -38,11 +38,17 @@ setup_uses_ansible() {
 #   * do any two setups conflict, so parallel is unsafe?
 #   * are the shared Ansible prerequisites ready before jobs fork?
 #
-# Conflict rule: two setups of the same type, or any two of the MySQL family
-# (PS/MYSQL), reuse the same container names, host ports and data directories.
-# Rather than refusing the run, the framework keeps every setup and gives up
-# only the concurrency -- the caller asked for something valid that merely
-# cannot happen at the same time.
+# Conflict rule: two setups of the same type, any two of the MySQL family
+# (PS/MYSQL), or PDPGSQL with a PGSQL setup that uses replication, reuse the
+# same container names, host ports and/or data directories. Rather than
+# refusing the run, the framework keeps every setup and gives up only the
+# concurrency -- the caller asked for something valid that merely cannot
+# happen at the same time.
+#
+# The PDPGSQL/PGSQL rule is narrower than the MySQL one: only PGSQL's
+# replication playbook (postgresql/postgresql-setup.yml) shares PDPGSQL's
+# fixed $HOME/pgsql_cluster_data and port 6432 -- PGSQL's default,
+# non-replication path is fully containerized and does not conflict.
 #
 # Reads:  DATABASE_SPECS, PARALLEL
 # Writes: PARALLEL (may be turned off), PMM_SERVER_HOST/PORT via resolve_pmm_server
@@ -50,6 +56,7 @@ setup_uses_ansible() {
 preflight_database_setups() {
   local spec needs_server=false needs_curl=false needs_ansible=false
   local mysql_data_owner='' conflict=''
+  local pdpgsql_seen=false pgsql_replication_seen=false
   declare -A seen_types=()
 
   for spec in "${DATABASE_SPECS[@]}"; do
@@ -68,6 +75,18 @@ preflight_database_setups() {
         conflict="$mysql_data_owner and $DB_TYPE setups (shared mysql_cluster_data and host ports)"
       fi
       mysql_data_owner=$DB_TYPE
+    elif [[ $DB_TYPE == PDPGSQL ]]; then
+      pdpgsql_seen=true
+      [[ $pgsql_replication_seen == true ]] &&
+        conflict="PGSQL (replication) and PDPGSQL setups (shared pgsql_cluster_data and host port 6432)"
+    elif [[ $DB_TYPE == PGSQL ]]; then
+      local pgsql_setup_type
+      pgsql_setup_type=$(resolve_value PGSQL SETUP_TYPE DB_CONFIG)
+      if [[ ${pgsql_setup_type,,} == replication ]]; then
+        pgsql_replication_seen=true
+        [[ $pdpgsql_seen == true ]] &&
+          conflict="PDPGSQL and PGSQL (replication) setups (shared pgsql_cluster_data and host port 6432)"
+      fi
     fi
     seen_types["$DB_TYPE"]=1
   done
