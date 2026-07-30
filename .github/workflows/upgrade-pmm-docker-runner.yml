@@ -122,6 +122,26 @@ jobs:
             --client-version="$CLIENT_VERSION" \
             --pmm-server-password="$ADMIN_PASSWORD" $PMM_CLIENTS
 
+      - name: Setup custom queries
+        if: ${{ env.UPGRADE_FLAG == 'OTHERS' }}
+        run: |
+          PS=$(docker ps -a --format '{{.Names}}' | grep ps_pmm)
+          PG=$(docker ps -a --format '{{.Names}}' | grep pgsql_pg)
+          COLLECTORS=/usr/local/percona/pmm/collectors
+
+          git clone --depth 1 https://github.com/Percona-Lab/pmm-custom-queries
+          docker cp pmm-custom-queries/mysql/.      "$PS:$COLLECTORS/custom-queries/mysql/high-resolution/"
+          docker cp pmm-custom-queries/postgresql/. "$PG:$COLLECTORS/custom-queries/postgresql/high-resolution/"
+
+          echo 'node_role{role="my_monitored_server_1"} 1' > node_role.prom
+          docker cp node_role.prom "$PG:$COLLECTORS/textfile-collector/high-resolution/"
+
+          # exporters reload their collectors on restart; pmm-agent respawns them
+          docker exec -u root "$PS" pkill -f mysqld_exporter
+          docker exec "$PG" pkill -f postgres_exporter
+          docker exec "$PG" pkill -f node_exporter
+          sleep 5
+
       - name: Check packages before upgrade
         run: |
           V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
