@@ -3,8 +3,6 @@
 #   enables Percona testing repository
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     ps_version: "{{ lookup('vars', 'extra_ps_version', default=lookup('env','PS_VERSION') | default('8.0', true) ) }}"
     ps_tarball: "{{ lookup('vars', 'extra_ps_tarball', default=lookup('env','PS_TARBALL') | default('', true) ) }}"

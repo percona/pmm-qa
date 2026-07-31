@@ -1,0 +1,21 @@
+# Wait until mysqld accepts connections inside a container.
+# Expects: container_name
+# Optional: mysql_user (default root), mysql_password (omit for socket/default auth)
+- name: Wait until MySQL is ready in {{ container_name }}
+  vars:
+    _mysql_user: "{{ mysql_user | default('root') }}"
+    _mysql_password: "{{ mysql_password | default('') }}"
+  shell: |
+    if [ -n "{{ _mysql_password }}" ]; then
+      docker exec {{ container_name }} mysqladmin ping \
+        -u{{ _mysql_user }} \
+        -p{{ _mysql_password }} \
+        --silent
+    else
+      docker exec {{ container_name }} mysqladmin ping --silent
+    fi
+  register: mysql_ready
+  retries: "{{ mysql_ready_retries | default(30) }}"
+  delay: "{{ mysql_ready_delay | default(1) }}"
+  until: mysql_ready.rc == 0
+  changed_when: false

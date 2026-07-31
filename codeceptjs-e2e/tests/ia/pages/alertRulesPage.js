@@ -63,8 +63,9 @@ module.exports = {
     // resultsLocator: (name) => locate('//div[@aria-label="Select options menu"]')
       .find(I.useDataQA('data-testid Select option')).withText(name),
     inputField: (input) => `input[name='${input}']`,
-    editRuleThreshold: 'input[name=\'evaluateFor\']',
-    editRuleEvaluate: 'input[name=\'evaluateEvery\']',
+    editRuleThreshold: locate('input[name="evaluateFor"]'),
+    editRuleExpression: locate('textarea[placeholder*="Math operations on one or more queries"]'),
+    editRuleEvaluate: locate('input[name="evaluateEvery"]'),
     editRuleSeverity: I.useDataQA('label-value-1'),
     templatesLoader: locate('//div[@id=\'template\']').find('div').withText('Choose'),
     evaluationGroupName: I.useDataQA('data-testid alert-rule new-evaluation-group-name'),

@@ -5,8 +5,6 @@
 #   Install all required tools for backups in compatible version
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     pgsql_version: "{{ lookup('vars', 'extra_pgsql_version', default=lookup('env','PGSQL_VERSION') | default('13', true) ) }}"
     pgsql_ssl_container: "{{ lookup('vars', 'extra_pgsql_ssl_container', default=lookup('env','PGSQL_SSL_CONTAINER') | default('pgsql_ssl', true) ) }}"

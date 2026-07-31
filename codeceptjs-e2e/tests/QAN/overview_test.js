@@ -36,8 +36,9 @@ Scenario(
     queryAnalyticsPage.waitForLoaded();
     await adminPage.applyTimeRange('Last 12 hours');
     queryAnalyticsPage.waitForLoaded();
-    queryAnalyticsPage.data.searchByValue('query_plan');
+    queryAnalyticsPage.data.searchByValue('pgsm_t1 t1');
     queryAnalyticsPage.waitForLoaded();
+    I.waitForVisible(queryAnalyticsPage.data.elements.queryRowValue(1), 60);
     queryAnalyticsPage.data.mouseOverInfoIcon(1);
 
     const tooltipQueryId = await queryAnalyticsPage.data.getTooltipQueryId();

@@ -7,7 +7,13 @@ module.exports = {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
     const {
       // todo: channels, disabled, etc?
-      ruleName, severity, filters, params, duration, channels, disabled,
+      ruleName,
+      severity,
+      filters,
+      params,
+      duration,
+      channels,
+      disabled,
     } = ruleObj;
 
     const body = {
@@ -21,7 +27,9 @@ module.exports = {
           type: 'FILTER_TYPE_MATCH',
         },
       ],
-      for: `${(duration || 60)}s`,
+      for: `${duration || 10}s`,
+      group: '10s',
+      interval: '10s',
       severity: severity || 'SEVERITY_CRITICAL',
       template_name: templateName || 'pmm_postgresql_too_many_connections',
       name: ruleName || 'Test Rule',
@@ -29,24 +37,18 @@ module.exports = {
         {
           name: 'threshold',
           type: 'PARAM_TYPE_FLOAT',
-          float: 1,
+          float: 0.01,
         },
       ],
-      group: 'default-alert-group',
       folder_uid: await this.getFolderUID(folder),
     };
     const resp = await I.sendPostRequest('v1/alerting/rules', body, headers);
 
-    assert.ok(
-      resp.status === 200,
-      `Failed to create alert rule with "${ruleName}". Response message is "${resp.data.message}"`,
-    );
+    assert.ok(resp.status === 200, `Failed to create alert rule with "${ruleName}". Response message is "${resp.data.message}"`);
   },
 
   async updateAlertRule(ruleObj, templateName) {
-    const {
-      ruleId, ruleName, filters, severity, params, duration,
-    } = ruleObj;
+    const { ruleId, ruleName, filters, severity, params, duration } = ruleObj;
 
     const body = {
       custom_labels: {},
@@ -59,7 +61,7 @@ module.exports = {
           type: 'EQUAL',
         },
       ],
-      for: `${(duration || 1)}s`,
+      for: `${duration || 1}s`,
       rule_id: ruleId,
       severity: severity || 'SEVERITY_CRITICAL',
       template_name: templateName || 'pmm_postgresql_too_many_connections',
@@ -76,22 +78,16 @@ module.exports = {
 
     const resp = await I.sendPostRequest('v1/management/ia/Rules/Update', body, headers);
 
-    assert.ok(
-      resp.status === 200,
-      `Failed to update alert rule with "${ruleName}". Response message is "${resp.data.message}"`,
-    );
+    assert.ok(resp.status === 200, `Failed to update alert rule with "${ruleName}". Response message is "${resp.data.message}"`);
   },
 
   async removeAlertRule(folderIdOrName, name = 'default-alert-group') {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
-    const folderId = await this.getFolderUID(folderIdOrName) || folderIdOrName;
+    const folderId = (await this.getFolderUID(folderIdOrName)) || folderIdOrName;
 
     const resp = await I.sendDeleteRequest(`graph/api/ruler/grafana/api/v1/rules/${folderId}/${name}?subtype=cortex`, headers);
 
-    assert.ok(
-      resp.status === 202,
-      `Failed to remove alert rule group "${name}". Response message is "${resp.data.message}"`,
-    );
+    assert.ok(resp.status === 202, `Failed to remove alert rule group "${name}". Response message is "${resp.data.message}"`);
   },
 
   async removeAllAlertRules() {
@@ -99,12 +95,14 @@ module.exports = {
     const resp = await I.sendGetRequest('graph/api/prometheus/grafana/api/v1/rules', headers);
     const rules = resp.data.data.groups;
 
-    const allRules = rules && rules.map((r) => {
-      const { name } = r;
-      const folderId = r.folderUid || r.rules[0].grafana_alert.namespace_uid;
+    const allRules =
+      rules &&
+      rules.map((r) => {
+        const { name } = r;
+        const folderId = r.folderUid || r.rules[0].grafana_alert.namespace_uid;
 
-      return { name, folderId };
-    });
+        return { name, folderId };
+      });
 
     for (const rule of allRules) {
       await this.removeAlertRule(rule.folderId, rule.name);

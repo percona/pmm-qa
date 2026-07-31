@@ -32,7 +32,7 @@ on:
       workers:
         description: 'Number of workers for Playwright tests'
         type: number
-        default: 4
+        default: 1
         required: false
       launchable_confidence:
         description: 'Launchable subset confidence percentage'
@@ -90,7 +90,7 @@ jobs:
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'
-      WORKERS: ${{ inputs.workers || 4 }}
+      WORKERS: ${{ inputs.workers || 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || github.event.inputs.launchable_confidence || '100%' }}
       SUBSET_FILE_NAME: 'launchable-subset.txt'
 
@@ -193,12 +193,7 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/qa-integration/pmm_qa
         run: |
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          ./pmm-framework/pmm-framework --parallel --verbosity-level=2 --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}

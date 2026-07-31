@@ -5,9 +5,11 @@
 
 - name: Prepare socket folders
   shell: |
-    sudo rm -fr /tmp/mysql-sockets/{{ item }}
-    sudo mkdir -p /tmp/mysql-sockets/{{ item }}
-    sudo chmod 0777 /tmp/mysql-sockets/{{ item }}
+    docker run --rm -v /tmp:/host-tmp {{ busybox_image }} sh -c '
+      rm -rf /host-tmp/mysql-sockets/{{ item }}
+      mkdir -p /host-tmp/mysql-sockets/{{ item }}
+      chmod 0777 /host-tmp/mysql-sockets/{{ item }}
+    '
 
 - name: Prepare Container for MySQL 8.0+
   shell: |
@@ -63,7 +65,7 @@
 
 - name: Install MySQL 8.0+
   shell: |
-    docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.xz https://dev.mysql.com/get/Downloads/MySQL-{{ mysql_version | replace('_', '.') }}/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64.tar.xz
+    docker exec {{ container_prefix }}{{ index }} wget -q -O mysql.tar.xz https://cdn.mysql.com/Downloads/MySQL-{{ mysql_version | replace('_', '.') }}/mysql-{{ mysql_exact_version }}-linux-glibc2.28-x86_64.tar.xz
     docker exec {{ container_prefix }}{{ index }} tar -xf mysql.tar.xz
     docker exec {{ container_prefix }}{{ index }} groupadd mysql
     docker exec {{ container_prefix }}{{ index }} useradd -r -g mysql -s /bin/false mysql

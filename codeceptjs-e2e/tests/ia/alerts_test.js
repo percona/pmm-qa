@@ -6,27 +6,35 @@ const ruleFolder = 'PostgreSQL';
 const rulesForAlerts = [
   {
     severity: 'SEVERITY_CRITICAL',
+    text: 'Critical',
   },
   {
     severity: 'SEVERITY_ERROR',
+    text: 'Error',
   },
   {
     severity: 'SEVERITY_NOTICE',
+    text: 'Notice',
   },
   {
     severity: 'SEVERITY_WARNING',
+    text: 'Warning',
   },
   {
     severity: 'SEVERITY_ALERT',
+    text: 'Alert',
   },
   {
     severity: 'SEVERITY_INFO',
+    text: 'Info',
   },
   {
     severity: 'SEVERITY_DEBUG',
+    text: 'Debug',
   },
   {
     severity: 'SEVERITY_EMERGENCY',
+    text: 'Emergency',
   },
 ];
 
@@ -36,7 +44,8 @@ Before(async ({ I }) => {
   await I.Authorize();
 });
 
-BeforeSuite(async ({ I, rulesAPI }) => {
+BeforeSuite(async ({ I, rulesAPI, settingsAPI }) => {
+  await settingsAPI.apiEnableIA();
   await rulesAPI.removeAllAlertRules();
   await contactPointsAPI.createContactPoints();
   await rulesAPI.createAlertRule({ ruleName }, ruleFolder);
@@ -51,7 +60,9 @@ AfterSuite(async ({ rulesAPI, I }) => {
   await rulesAPI.removeAllAlertRules();
 });
 
-Scenario('PMM-T1482 - Verify fired alert @ia', async ({ I, alertsPage, alertsAPI }) => {
+Scenario('PMM-T1482 PMM-T1494 + PMM-T1495 - Verify fired alert in Pager Duty and Webhook @ia', async ({
+  I, alertsPage, rulesAPI, alertsAPI,
+}) => {
   await alertsAPI.waitForAlerts(24, 1);
   await I.amOnPage(alertsPage.url);
   alertsPage.columnHeaders.forEach((header) => {
@@ -64,6 +75,20 @@ Scenario('PMM-T1482 - Verify fired alert @ia', async ({ I, alertsPage, alertsAPI
   await I.seeNumberOfElements(alertsPage.elements.alertRow(ruleName), 1);
   // Wait for the firing alert to arrive in webhook and PD
   await I.wait(60);
+
+  // Verify fired alert in Webhook
+  const file = './testdata/ia/scripts/alert.txt';
+  const alertUID = await rulesAPI.getAlertUID(ruleName, ruleFolder);
+
+  await alertsAPI.waitForAlerts(24, 1);
+  await contactPointsAPI.createContactPoints();
+  // Webhook notification check
+  I.waitForFile(file, 180);
+  I.seeFile(file);
+  I.seeInThisFile(ruleName);
+
+  // Pager Duty notification check
+  // await alertsAPI.verifyAlertInPagerDuty(alertUID);
 });
 
 Scenario('PMM-T1997 - verify viewer can not silence alert @ia', async ({ I, alertsPage, alertsAPI }) => {
@@ -74,12 +99,16 @@ Scenario('PMM-T1997 - verify viewer can not silence alert @ia', async ({ I, aler
   I.amOnPage(alertsPage.url);
   I.waitForElement(alertsPage.elements.alertRow(ruleName), 20);
   I.seeNumberOfElements(alertsPage.elements.alertRow(ruleName), 1);
-  I.seeAttributesOnElements(alertsPage.buttons.silenceActivate(ruleName), { 'aria-disabled': 'true' });
+  await alertsPage.openRowActions(ruleName);
+  I.dontSeeElement(alertsPage.buttons.silenceButton);
+  I.dontSeeElement(alertsPage.buttons.editAlertRule);
 });
 
 Scenario(
   'PMM-T1998 - verify editor is able to silence and unsilence alert @ia',
-  async ({ I, alertsPage, alertmanagerAPI, alertsAPI }) => {
+  async ({
+    I, alertsPage, alertmanagerAPI, alertsAPI,
+  }) => {
     await I.Authorize(users.editor.username, users.editor.password);
 
     await alertsAPI.waitForAlerts(24, 1);
@@ -96,24 +125,12 @@ Scenario(
   },
 );
 
-Scenario('PMM-T1494 + PMM-T1495 - Verify fired alert in Pager Duty and Webhook @ia', async ({ I, rulesAPI, alertsAPI }) => {
-  const file = './testdata/ia/scripts/alert.txt';
-  const alertUID = await rulesAPI.getAlertUID(ruleName, ruleFolder);
-
-  await alertsAPI.waitForAlerts(24, 1);
-  await contactPointsAPI.createContactPoints();
-  // Webhook notification check
-  I.waitForFile(file, 180);
-  I.seeFile(file);
-  I.seeInThisFile(ruleName);
-
-  // Pager Duty notification check
-  // await alertsAPI.verifyAlertInPagerDuty(alertUID);
-});
-
 Scenario(
   'PMM-T1496 + PMM-T1497 - Verify it is possible to silence and unsilence alert @ia',
-  async ({ I, alertsPage, alertmanagerAPI }) => {
+  async ({
+    I, alertsPage, alertmanagerAPI, alertsAPI,
+  }) => {
+    await alertsAPI.waitForAlerts(24, 1);
     I.amOnPage(alertsPage.url);
     await alertsPage.verifyAlert(ruleName);
     await alertsPage.silenceAlert(ruleName);
@@ -128,21 +145,27 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T1498 - Verify firing alerts dissappear when the condition is fixed @ia',
+  'PMM-T1498 - Verify firing alerts disappear when the condition is fixed @ia',
   async ({ I, alertsPage, alertRulesPage }) => {
     I.amOnPage(alertsPage.url);
-    I.waitForElement(alertsPage.elements.firedAlertLink(ruleName));
-    I.click(alertsPage.elements.firedAlertLink(ruleName));
-    I.click(alertRulesPage.buttons.editRuleOnView);
-    I.fillField(alertRulesPage.fields.editRuleThreshold, '20m');
+    I.waitForVisible(alertsPage.elements.alertRow(ruleName));
+
+    alertsPage.navigateToEditAlertRule(ruleName);
+    I.switchTo('#grafana-iframe');
+    I.waitForVisible(alertRulesPage.fields.editRuleThreshold, 10);
+    I.scrollTo(alertRulesPage.fields.editRuleThreshold);
+    I.waitForVisible(alertRulesPage.fields.editRuleExpression, 10);
+    I.clearField(alertRulesPage.fields.editRuleExpression);
+    I.fillField(alertRulesPage.fields.editRuleExpression, '$A > 10');
     I.click(alertRulesPage.buttons.saveEditRule);
+
     I.amOnPage(alertsPage.url);
     await I.asyncWaitFor(async () => {
-      const noAlerts = await I.grabNumberOfVisibleElements(alertsPage.elements.noAlerts);
+      const state = await I.grabTextFrom(alertsPage.elements.stateCell(ruleName));
 
-      return noAlerts === 1;
+      return state === alertsPage.alertStatus.normal;
     }, 100);
-    I.dontSeeElement(alertsPage.elements.alertRow(ruleName));
+    I.see(alertsPage.alertStatus.normal, alertsPage.elements.stateCell(ruleName));
   },
 );
 
@@ -177,7 +200,9 @@ Scenario.skip(
   },
 );
 
-Scenario('PMM-T564 - Verify fired alert severity colors @ia', async ({ I, alertsPage, rulesAPI, alertsAPI }) => {
+Scenario('PMM-T564 - Verify fired alert severity colors @ia', async ({
+  I, alertsPage, rulesAPI, alertsAPI,
+}) => {
   await rulesAPI.removeAllAlertRules();
   for (const rule of rulesForAlerts) {
     await rulesAPI.createAlertRule({ ruleName: rule.severity, severity: rule.severity }, ruleFolder);
@@ -186,16 +211,11 @@ Scenario('PMM-T564 - Verify fired alert severity colors @ia', async ({ I, alerts
   await alertsAPI.waitForAlerts(24, 8);
   await I.wait(10);
   await I.amOnPage(alertsPage.url);
-  rulesForAlerts.forEach((item) => I.waitForElement(alertsPage.elements.alertRow(item.severity), 10));
-  rulesForAlerts.forEach((item) => I.see('Active', alertsPage.elements.stateCell(item.severity)));
-  I.seeCssPropertiesOnElements(alertsPage.elements.criticalSeverity, { color: alertsPage.colors.critical });
-  I.seeCssPropertiesOnElements(alertsPage.elements.errorSeverity, { color: alertsPage.colors.error });
-  I.seeCssPropertiesOnElements(alertsPage.elements.noticeSeverity, { color: alertsPage.colors.notice });
-  I.seeCssPropertiesOnElements(alertsPage.elements.warningSeverity, { color: alertsPage.colors.warning });
-  I.seeCssPropertiesOnElements(alertsPage.elements.emergencySeverity, { color: alertsPage.colors.critical });
-  I.seeCssPropertiesOnElements(alertsPage.elements.debugSeverity, { color: alertsPage.colors.notice });
-  I.seeCssPropertiesOnElements(alertsPage.elements.infoSeverity, { color: alertsPage.colors.notice });
-  I.seeCssPropertiesOnElements(alertsPage.elements.alertSeverity, { color: alertsPage.colors.critical });
+  for (const rule of rulesForAlerts) {
+    I.waitForElement(alertsPage.elements.alertRow(rule.severity), 10);
+    I.waitForText(alertsPage.alertStatus.firing, 10, alertsPage.elements.stateCell(rule.severity));
+    I.see(rule.text, alertsPage.elements.severityCell(rule.severity));
+  }
 });
 
 Scenario('PMM-T1467 - Verify empty Fired alerts list @fb-alerting', async ({ I, alertsPage, rulesAPI }) => {
