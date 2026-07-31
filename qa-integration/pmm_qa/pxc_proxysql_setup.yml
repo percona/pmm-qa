@@ -29,13 +29,13 @@
     #          admin tables, so the exporter connects and then fails to scrape.
     # Both interfaces advertise whatever mysql-default_authentication_plugin is
     # set to (verified from the handshake packet on ProxySQL 2.7.3).
-    proxysql_pmm_port: "{{ lookup('vars', 'extra_proxysql_pmm_port', default=lookup('env','PROXYSQL_PMM_PORT') | default('6033', true) ) }}"
-    proxysql_pmm_user: "{{ lookup('vars', 'extra_proxysql_pmm_user', default=lookup('env','PROXYSQL_PMM_USER') | default('monitor', true) ) }}"
-    proxysql_pmm_password: "{{ lookup('vars', 'extra_proxysql_pmm_password', default=lookup('env','PROXYSQL_PMM_PASSWORD') | default('monitor', true) ) }}"
+    proxysql_pmm_port: "{{ lookup('vars', 'extra_proxysql_pmm_port', default=lookup('env','PROXYSQL_PMM_PORT') | default('6032', true) ) }}"
+    proxysql_pmm_user: "{{ lookup('vars', 'extra_proxysql_pmm_user', default=lookup('env','PROXYSQL_PMM_USER') | default('admin', true) ) }}"
+    proxysql_pmm_password: "{{ lookup('vars', 'extra_proxysql_pmm_password', default=lookup('env','PROXYSQL_PMM_PASSWORD') | default('admin', true) ) }}"
     # Store mysql_users passwords as caching_sha2 hashes instead of cleartext.
     # Removes ProxySQL's fast-auth path, forcing "full authentication" - which
     # fails without TLS/RSA (K8SPXC-1830). Requires ProxySQL >= 2.6.2.
-    proxysql_hash_passwords: "{{ lookup('vars', 'extra_proxysql_hash_passwords', default=lookup('env','PROXYSQL_HASH_PASSWORDS') | default('true', true) ) | bool }}"
+    proxysql_hash_passwords: "{{ lookup('vars', 'extra_proxysql_hash_passwords', default=lookup('env','PROXYSQL_HASH_PASSWORDS') | default('false', true) ) | bool }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
