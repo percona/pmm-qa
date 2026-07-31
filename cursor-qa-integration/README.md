@@ -7,8 +7,8 @@
 | `scripts/` | `provision-pmm.sh`, `cleanup-pmm-microvm.sh`, `pmm-ui-login.sh`, docker helpers |
 | `pmm_qa/` | Forked `pmm-framework.py` + Ansible overlays for MicroVM (`IS_CURSOR_VM`, `PMM_QA_NO_SYSTEMD`) |
 | `pmm_psmdb-pbm_setup/` | No-systemd PSMDB+PBM compose and entrypoints |
-| `MANUAL-QA-MICROVM.md` | Agent runbook (also in `.cursor/skills/pmm-provisioning/references/`) |
-| `SETUP-INVENTORY.md` | MicroVM setup pass/fail inventory |
+| `MANUAL-QA-MICROVM.md` | Runbook — canonical copy in `.cursor/skills/pmm-provisioning/references/MANUAL-QA-MICROVM.md` |
+| `SETUP-INVENTORY.md` | Full setup catalog + MicroVM pass/fail inventory |
 
 ## Usage (cloud agent)
 

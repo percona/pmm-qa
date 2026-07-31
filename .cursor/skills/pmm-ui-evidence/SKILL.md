@@ -8,7 +8,7 @@ description: Capture PMM UI screenshots and screen recordings with computer use 
 Use **computer use** (cloud agent browser) for all UI verification and screenshots.
 
 1. Open `PMM_UI_URL` or `https://127.0.0.1` (ignore TLS warnings on MicroVM).
-2. Log in with PMM admin credentials — **not** the Grafana login form.
+2. Log in with PMM admin credentials (login form or Basic Auth — either is fine).
 3. Navigate, interact, capture screenshots or recordings as artifacts.
 
 ## FB Actions run screenshot (Test Reporter, all checks green)

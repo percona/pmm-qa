@@ -49,7 +49,7 @@ Pick `--database` from test plan + `qa-integration/pmm_qa/scripts/database_optio
 
 ## 3. UI (computer use)
 
-Use cloud agent **computer use** for PMM UI. Do not use the Grafana login form.
+Use cloud agent **computer use** for PMM UI. Log in with admin credentials as needed.
 
 ## 4. Reset
 

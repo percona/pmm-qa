@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Run pending MicroVM setup verifications sequentially.
+# Run nightly-gha database setups on MicroVM (same --database flags as nightly-e2e-tests-matrix.yml).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PMM_QA_DIR="${SCRIPT_DIR}/../pmm_qa"
-RESULTS_FILE="/tmp/setup-results-$(date +%Y%m%d).txt"
+CURSOR_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+RESULTS_FILE="/tmp/nightly-setup-results-$(date +%Y%m%d).txt"
 
 # shellcheck source=lib/cursor-vm.sh
 source "${SCRIPT_DIR}/lib/cursor-vm.sh"
@@ -14,10 +14,7 @@ cursor_vm_apply
 export ADMIN_PASSWORD="${ADMIN_PASSWORD:-pmm3admin!}"
 export CLIENT_VERSION="${CLIENT_VERSION:-https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz}"
 
-cd "${PMM_QA_DIR}"
-source virtenv/bin/activate 2>/dev/null || true
-
-RUN_FRAMEWORK="${SCRIPT_DIR}/../pmm_qa/run-framework.sh"
+RUN_FRAMEWORK="${CURSOR_ROOT}/pmm_qa/run-framework.sh"
 
 cleanup_qa_containers() {
   echo "==> Cleaning QA containers (keeping pmm-server)..."
@@ -49,23 +46,21 @@ run_setup() {
 
 : >"$RESULTS_FILE"
 
+# Mirrors .github/workflows/nightly-e2e-tests-matrix.yml setup matrix (13 unique shards; nightly runs pxc twice).
 SETUPS=(
-  'mysql,SETUP_TYPE=gr'
-  'mysql,SETUP_TYPE=replication'
-  'pgsql'
-  'pgsql,SETUP_TYPE=replication'
-  'pdpgsql'
-  'pdpgsql,SETUP_TYPE=replication'
-  'pdpgsql,SETUP_TYPE=patroni'
-  'valkey'
-  'valkey,SETUP_TYPE=sentinel'
+  'external'
+  'haproxy'
+  'ps,SETUP_TYPE=gr'
+  'mysql'
+  'ps,SETUP_TYPE=replication'
   'pxc'
-  'ssl_mysql'
-  'ssl_pdpgsql'
-  'ssl_psmdb'
-  'ssl_mlaunch'
-  'mlaunch_psmdb'
-  'mlaunch_modb'
+  'ps,QUERY_SOURCE=slowlog,MY_ROCKS=true'
+  'psmdb,SETUP_TYPE=pss'
+  'pdpgsql'
+  'pgsql'
+  'pdpgsql,SETUP_TYPE=patroni'
+  'psmdb,SETUP_TYPE=sharding'
+  'valkey'
 )
 
 failed=0
