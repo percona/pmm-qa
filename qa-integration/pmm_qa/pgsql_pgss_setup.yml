@@ -3,8 +3,6 @@
 #   install postgres with pgstatement enabled for QAN and PMM Integration testing
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     pgsql_version: "{{ lookup('vars', 'extra_pgsql_version', default=lookup('env','PGSQL_VERSION') | default('14', true) ) }}"
     pgsql_pgss_container: "{{ lookup('vars', 'extra_pgsql_pgss_container', default=lookup('env','PGSQL_PGSS_CONTAINER') | default('pgsql_pgss', true) ) }}"
@@ -28,7 +26,7 @@
 
   - name: Prepare Container for PostgreSQL
     shell: >
-      sudo docker run -d --name={{ pgsql_pgss_container }}
+      docker run -d --name={{ pgsql_pgss_container }}
       -p {{ pgsql_pgss_port }}:5432
       phusion/baseimage:jammy-1.0.1
 
