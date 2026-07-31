@@ -131,19 +131,19 @@ Scenario(
 Scenario(
   'PMM-T577 Verify user can see IA alerts after upgrade @post-advisors-alerting-upgrade',
   async ({
-    I, alertsPage, alertsAPI,
-  }) => {
+           I, alertsPage, alertsAPI,
+         }) => {
     const alertName = 'Node high CPU load';
 
     I.amOnPage(alertsPage.url);
-    I.waitForElement(alertsPage.elements.alertRow(alertName), 120);
+    I.waitForElement(alertsPage.elements.alertRow(ruleName), 120);
 
     await alertsAPI.waitForAlerts(10, 1);
     const alerts = await alertsAPI.getAlertsList();
 
     assert.ok(alerts[0].annotations.summary.includes(alertName), `Didn't find alert with name ${alertName}`);
 
-    I.waitForElement(alertsPage.elements.alertRow(alertName), 60);
+    I.waitForElement(alertsPage.elements.alertRow(ruleName), 60);
   },
 );
 
