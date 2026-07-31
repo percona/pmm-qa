@@ -44,7 +44,7 @@
   - name: Setup haproxy for monitoring
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ haproxy_container }} bash -x ./haproxy_setup.sh > setup_haproxy.log
+      - docker exec {{ haproxy_container }} bash -x ./haproxy_setup.sh
 
   - name: Install pmm3-client on the haproxy_container
     shell: "{{ item }}"

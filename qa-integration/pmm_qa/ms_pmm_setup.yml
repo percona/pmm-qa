@@ -3,8 +3,6 @@
 #   enables Percona testing repository
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     ms_version: "{{ lookup('vars', 'extra_ms_version', default=lookup('env','MS_VERSION') | default('8.0', true) ) }}"
     ms_tarball: "{{ lookup('vars', 'extra_ms_tarball', default=lookup('env','MS_TARBALL') | default('', true) ) }}"

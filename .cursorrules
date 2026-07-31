@@ -1,0 +1,8 @@
+# PMM-QA — Cursor Entry Point
+
+Read AGENTS.md for the complete guide covering repository map, all test suites (Playwright, CodeceptJS, CLI, package, Helm), CI orchestration, patterns, and development workflow.
+
+## PMM Context
+
+QA automation for PMM (Percona Monitoring and Management).
+See https://github.com/percona/pmm/blob/main/AGENTS.md for the product overview.
