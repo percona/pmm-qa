@@ -19,7 +19,7 @@
     query_source: "{{ lookup('vars', 'extra_query_source', default=lookup('env','QUERY_SOURCE') | default('perfschema', true) ) }}"
     # Set to 'caching_sha2_password' to make ProxySQL itself advertise that plugin
     # (reproduces K8SPXC-1830: proxysql_exporter full-auth failure without TLS).
-    proxysql_auth_plugin: "{{ lookup('vars', 'extra_proxysql_auth_plugin', default=lookup('env','PROXYSQL_AUTH_PLUGIN') | default('caching_sha2_password', true) ) }}"
+    proxysql_auth_plugin: "caching_sha2_password"
     # Which ProxySQL interface the PMM exporter is registered against.
     #   6032 = admin interface (default) - the only one exposing the stats_*/
     #          runtime_* tables the exporter scrapes. Credentials come from
@@ -29,13 +29,13 @@
     #          admin tables, so the exporter connects and then fails to scrape.
     # Both interfaces advertise whatever mysql-default_authentication_plugin is
     # set to (verified from the handshake packet on ProxySQL 2.7.3).
-    proxysql_pmm_port: "{{ lookup('vars', 'extra_proxysql_pmm_port', default=lookup('env','PROXYSQL_PMM_PORT') | default('6032', true) ) }}"
-    proxysql_pmm_user: "{{ lookup('vars', 'extra_proxysql_pmm_user', default=lookup('env','PROXYSQL_PMM_USER') | default('admin', true) ) }}"
-    proxysql_pmm_password: "{{ lookup('vars', 'extra_proxysql_pmm_password', default=lookup('env','PROXYSQL_PMM_PASSWORD') | default('admin', true) ) }}"
+    proxysql_pmm_port: "6032"
+    proxysql_pmm_user: "admin"
+    proxysql_pmm_password: "admin"
     # Store mysql_users passwords as caching_sha2 hashes instead of cleartext.
     # Removes ProxySQL's fast-auth path, forcing "full authentication" - which
     # fails without TLS/RSA (K8SPXC-1830). Requires ProxySQL >= 2.6.2.
-    proxysql_hash_passwords: "{{ lookup('vars', 'extra_proxysql_hash_passwords', default=lookup('env','PROXYSQL_HASH_PASSWORDS') | default('false', true) ) | bool }}"
+    proxysql_hash_passwords: "true | bool }}"
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
