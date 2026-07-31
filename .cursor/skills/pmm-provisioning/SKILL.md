@@ -47,7 +47,7 @@ export CLIENT_VERSION='...'
   --verbose
 ```
 
-Pick `--database` from ticket + `qa-integration/pmm_qa/scripts/database_options.py` (shared catalog).
+Pick `--database` from ticket + `qa-integration/pmm_qa/pmm-framework/lib/config.sh` (catalogue) or `./pmm-framework --help`.
 
 ## FB workflow reproduction (Test Healer)
 

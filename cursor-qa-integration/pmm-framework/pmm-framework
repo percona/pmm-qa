@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+#
+# Cursor MicroVM entrypoint for the bash pmm-framework (qa-integration).
+#
+# Merges cursor Ansible overlays into a temp PMM_QA_ROOT, applies MicroVM
+# setup overrides (PSMDB compose scripts, ssl_psmdb), then runs the same
+# dispatch/execution path as upstream.
+
+set -euo pipefail
+
+if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
+  printf 'ERROR: pmm-framework requires Bash 4.4 or newer (found %s).\n' \
+    "$BASH_VERSION" >&2
+  exit 1
+fi
+
+shopt -s inherit_errexit
+
+CURSOR_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+REPO_ROOT=$(cd "$CURSOR_ROOT/.." && pwd)
+MAIN_FRAMEWORK_DIR="$REPO_ROOT/qa-integration/pmm_qa/pmm-framework"
+MAIN_PMM_QA_ROOT="$REPO_ROOT/qa-integration/pmm_qa"
+PMM_QA_CURSOR_OVERLAY="$CURSOR_ROOT/pmm_qa"
+
+# shellcheck source=../scripts/lib/cursor-vm.sh
+source "$CURSOR_ROOT/scripts/lib/cursor-vm.sh"
+export IS_CURSOR_VM="${IS_CURSOR_VM:-1}"
+cursor_vm_apply
+
+PMM_QA_EFFECTIVE_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/pmm-qa-cursor.XXXXXX")
+cleanup_merged_root() {
+  rm -rf "$PMM_QA_EFFECTIVE_ROOT"
+}
+trap cleanup_merged_root EXIT
+
+cp -a "$MAIN_PMM_QA_ROOT/." "$PMM_QA_EFFECTIVE_ROOT/"
+cp -a "$PMM_QA_CURSOR_OVERLAY/." "$PMM_QA_EFFECTIVE_ROOT/"
+
+FRAMEWORK_DIR=$MAIN_FRAMEWORK_DIR
+PMM_QA_ROOT=$PMM_QA_EFFECTIVE_ROOT
+QA_INTEGRATION_ROOT=$(cd "$MAIN_PMM_QA_ROOT/.." && pwd)
+export PMM_QA_CURSOR_PSMDB_ROOT="$CURSOR_ROOT/pmm_psmdb-pbm_setup"
+export PMM_QA_CURSOR_DIFFAUTH_ROOT="$CURSOR_ROOT/pmm_psmdb_diffauth_setup"
+export FRAMEWORK_DIR PMM_QA_ROOT QA_INTEGRATION_ROOT
+
+if [[ -x $MAIN_PMM_QA_ROOT/virtenv/bin/python ]]; then
+  export PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK="$MAIN_PMM_QA_ROOT/virtenv/bin/python"
+elif [[ -x $MAIN_PMM_QA_ROOT/pmm_framework/bin/python ]]; then
+  export PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK="$MAIN_PMM_QA_ROOT/pmm_framework/bin/python"
+fi
+
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/lib/common.sh
+source "$FRAMEWORK_DIR/lib/common.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/lib/config.sh
+source "$FRAMEWORK_DIR/lib/config.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/lib/cli.sh
+source "$FRAMEWORK_DIR/lib/cli.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/lib/docker.sh
+source "$FRAMEWORK_DIR/lib/docker.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/lib/ansible.sh
+source "$FRAMEWORK_DIR/lib/ansible.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/lib/runners.sh
+source "$FRAMEWORK_DIR/lib/runners.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/setups/mysql.sh
+source "$FRAMEWORK_DIR/setups/mysql.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/setups/postgresql.sh
+source "$FRAMEWORK_DIR/setups/postgresql.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/setups/mongodb.sh
+source "$FRAMEWORK_DIR/setups/mongodb.sh"
+# shellcheck source=setups/microvm-overrides.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/setups/microvm-overrides.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/setups/services.sh
+source "$FRAMEWORK_DIR/setups/services.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/setups/dispatch.sh
+source "$FRAMEWORK_DIR/setups/dispatch.sh"
+# shellcheck source=../../qa-integration/pmm_qa/pmm-framework/lib/execution.sh
+source "$FRAMEWORK_DIR/lib/execution.sh"
+
+parse_args "$@"
+
+require_command docker
+require_command bash
+require_command ansible-playbook
+require_command ansible-galaxy
+
+run_database_setups

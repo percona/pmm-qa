@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
-# Run cursor-qa-integration pmm-framework.py with shared qa-integration modules.
+# Run bash pmm-framework on MicroVM (upstream qa-integration + cursor overlays).
 set -euo pipefail
 
 CURSOR_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-REPO_ROOT="$(cd "${CURSOR_ROOT}/.." && pwd)"
-ORIG_PMM_QA="${REPO_ROOT}/qa-integration/pmm_qa"
-CURSOR_PMM_QA="${CURSOR_ROOT}/pmm_qa"
 
-export IS_CURSOR_VM=1
-export PMM_QA_NO_SYSTEMD=1
-export PYTHONPATH="${CURSOR_PMM_QA}:${ORIG_PMM_QA}:${PYTHONPATH:-}"
+# shellcheck source=../scripts/lib/cursor-vm.sh
+source "${CURSOR_ROOT}/scripts/lib/cursor-vm.sh"
+export IS_CURSOR_VM="${IS_CURSOR_VM:-1}"
+cursor_vm_apply
 
-if [ -f "${ORIG_PMM_QA}/virtenv/bin/activate" ]; then
-  # shellcheck source=/dev/null
-  source "${ORIG_PMM_QA}/virtenv/bin/activate"
-fi
-
-exec python "${CURSOR_PMM_QA}/pmm-framework.py" "$@"
+exec "${CURSOR_ROOT}/pmm-framework/pmm-framework" "$@"

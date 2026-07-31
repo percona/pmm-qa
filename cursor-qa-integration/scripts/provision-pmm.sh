@@ -2,7 +2,7 @@
 # Provision PMM Server for manual QA on MicroVM (Jenkins pmm3-aws-staging-start parity).
 #
 # This script only brings up Docker + PMM Server (+ optional Watchtower).
-# Database/client provisioning is a separate step via pmm-framework.py so each
+# Database/client provisioning is a separate step via run-framework.sh so each
 # ticket can choose the right --database flags.
 #
 # Usage:
@@ -146,23 +146,18 @@ PMM Server provisioning complete (profile: ${PROFILE})
 
 Next — provision monitored databases for your ticket (examples):
 
-  cd ${PMM_QA_DIR}
-  python3 -m venv virtenv 2>/dev/null || true
-  source virtenv/bin/activate
-  pip install -q -r requirements.txt
-
   export IS_CURSOR_VM=1
   export ADMIN_PASSWORD='${ADMIN_PASSWORD}'
   export CLIENT_VERSION='${CLIENT_VERSION}'
 
   # PMM-14576 MongoDB backup / PBM:
-  python pmm-framework.py \\
+  ${QA_ROOT}/pmm_qa/run-framework.sh \\
     --pmm-server-password "\$ADMIN_PASSWORD" \\
     --client-version "\$CLIENT_VERSION" \\
     --database psmdb,SETUP_TYPE=pss \\
     --verbose
 
-  # Other tickets — change --database per scripts/database_options.py, e.g.:
+  # Other tickets — change --database per pmm-framework --help / catalogue, e.g.:
   #   --database ps,SETUP_TYPE=gr
   #   --database pgsql
   #   --database psmdb,SETUP_TYPE=sharding

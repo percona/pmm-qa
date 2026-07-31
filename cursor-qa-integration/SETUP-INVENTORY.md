@@ -1,7 +1,9 @@
-# pmm-framework.py — setup inventory (MicroVM target)
+# pmm-framework — setup inventory (MicroVM target)
 
 Every database type and meaningful variant exposed via `--database`.  
-Format: `python pmm-framework.py --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value>]`
+Format: `cursor-qa-integration/pmm_qa/run-framework.sh --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value>]`
+
+Uses the bash framework from `qa-integration/pmm_qa/pmm-framework/` plus MicroVM overlays in this tree.
 
 ## MongoDB / PSMDB family
 

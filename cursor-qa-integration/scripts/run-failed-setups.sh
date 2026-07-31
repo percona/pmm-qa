@@ -3,7 +3,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PMM_QA_DIR="${SCRIPT_DIR}/../pmm_qa"
+CURSOR_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+RUN_FRAMEWORK="${CURSOR_ROOT}/pmm_qa/run-framework.sh"
 RESULTS_FILE="/tmp/setup-results-rerun-$(date +%Y%m%d-%H%M%S).txt"
 
 # shellcheck source=lib/cursor-vm.sh
@@ -14,16 +15,13 @@ cursor_vm_apply
 export ADMIN_PASSWORD="${ADMIN_PASSWORD:-pmm3admin!}"
 export CLIENT_VERSION="${CLIENT_VERSION:-https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz}"
 
-cd "${PMM_QA_DIR}"
-source virtenv/bin/activate 2>/dev/null || { python3 -m venv virtenv && source virtenv/bin/activate && pip install -q -r requirements.txt; }
-
 cleanup_qa_containers() {
   echo "==> Cleaning QA containers (keeping pmm-server)..."
   docker ps -a --format '{{.Names}}' | grep -v '^pmm-server$' | while read -r name; do
     docker rm -f "$name" 2>/dev/null || true
   done
   docker image prune -f >/dev/null 2>&1 || true
-  sudo rm -rf "${HOME}/pgsql_cluster_data" 2>/dev/null || true
+  rm -rf "${HOME}/pgsql_cluster_data" 2>/dev/null || true
 }
 
 run_setup() {
@@ -32,7 +30,7 @@ run_setup() {
   echo ""
   echo "========== TESTING: $db =========="
   cleanup_qa_containers
-  if python pmm-framework.py \
+  if "$RUN_FRAMEWORK" \
     --pmm-server-password "$ADMIN_PASSWORD" \
     --client-version "$CLIENT_VERSION" \
     --database "$db" >"$log" 2>&1; then
