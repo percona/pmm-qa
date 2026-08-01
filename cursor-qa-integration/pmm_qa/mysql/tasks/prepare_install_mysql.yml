@@ -19,6 +19,7 @@
     docker run -d --name="{{ container_prefix }}{{ index }}" \
       --network="pmm-qa" \
       -v ./ssl:/ssl \
+      -v /tmp/mysql-sockets/{{ index }}:/tmp \
       -v /tmp/mysql-sockets/{{ index }}:/var/run/mysqld \
       -p {{ docker_port|int + index|int - 1 }}:3306 \
       ubuntu:24.04 tail -f /dev/null
