@@ -165,4 +165,6 @@ CLAUDE.md
 !.cursor/environment.json
 !.cursor/AUTOMATIONS.md
 !.cursor/settings.json
+!.cursor/scripts/
+!.cursor/scripts/**
 .cursorrules

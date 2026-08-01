@@ -4,11 +4,10 @@
 #
 # Usage:
 #   export PMM_URL='https://127.0.0.1'      # optional, default below
-#   export ADMIN_PASSWORD='pmm3admin!'        # optional; match provision-pmm.sh
-#   qa-integration/scripts/pmm-ui-login.sh PMM-14576
+#   export ADMIN_PASSWORD='pmm3admin!'        # optional
+#   .cursor/scripts/pmm-ui-login.sh PMM-14576
 #
 # Session name: pmm-<SESSION_ID> (reuse the same id for follow-up UI commands).
-# Opens headed + maximized by default (better for screen recordings). Set PMM_UI_HEADED=0 for headless.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

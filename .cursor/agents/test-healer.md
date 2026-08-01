@@ -48,7 +48,7 @@ List **all** tests fixed in this PR so future runs can dedup via step 3.
 
 ## Cleanup
 
-Remove all Docker resources when finished (`cursor-qa-integration/scripts/cleanup-pmm-microvm.sh` or full docker teardown).
+Remove all Docker resources when finished (see `pmm-provisioning` cleanup section or full docker teardown).
 
 ## Never
 
