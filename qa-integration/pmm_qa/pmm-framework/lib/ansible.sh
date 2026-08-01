@@ -28,11 +28,20 @@ ANSIBLE_COLLECTION_CHECKED=false
 configure_ansible_python() {
   [[ -n ${ANSIBLE_PYTHON_INTERPRETER:-} ]] && return
 
-  local candidate=${PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK:-$PMM_QA_ROOT/pmm_framework/bin/python}
-  if [[ -x $candidate ]] && "$candidate" -c 'import requests' >/dev/null 2>&1; then
-    export ANSIBLE_PYTHON_INTERPRETER=$candidate
-    log_verbose "Using Ansible module interpreter: $ANSIBLE_PYTHON_INTERPRETER"
-  fi
+  local candidate
+  for candidate in "${PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK:-}" "$PMM_QA_ROOT/pmm_framework/bin/python" "$(command -v python3)"; do
+    [[ -n $candidate && -x $candidate ]] || continue
+    if "$candidate" -c 'import requests, docker' >/dev/null 2>&1; then
+      export ANSIBLE_PYTHON_INTERPRETER=$candidate
+      log_verbose "Using Ansible module interpreter: $ANSIBLE_PYTHON_INTERPRETER"
+      return
+    fi
+    if "$candidate" -c 'import requests' >/dev/null 2>&1; then
+      export ANSIBLE_PYTHON_INTERPRETER=$candidate
+      log_verbose "Using Ansible module interpreter: $ANSIBLE_PYTHON_INTERPRETER"
+      return
+    fi
+  done
 }
 
 # Install the community.docker collection unless it is already present.
