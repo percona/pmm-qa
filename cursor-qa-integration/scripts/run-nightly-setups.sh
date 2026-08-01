@@ -21,6 +21,8 @@ cleanup_qa_containers() {
   docker ps -a --format '{{.Names}}' | grep -v '^pmm-server$' | while read -r name; do
     docker rm -f "$name" 2>/dev/null || true
   done
+  docker volume ls -q | grep -E 'valkey' | xargs -r docker volume rm 2>/dev/null || true
+  rm -rf "${HOME}/valkey/cluster-config" 2>/dev/null || true
   docker image prune -f >/dev/null 2>&1 || true
 }
 
