@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CURSOR_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-RUN_FRAMEWORK="${CURSOR_ROOT}/pmm_qa/run-framework.sh"
+RUN_FRAMEWORK="${SCRIPT_DIR}/run-framework.sh"
 RESULTS_FILE="/tmp/setup-results-rerun-$(date +%Y%m%d-%H%M%S).txt"
 
 # shellcheck source=lib/cursor-vm.sh

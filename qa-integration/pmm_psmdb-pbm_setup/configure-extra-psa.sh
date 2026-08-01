@@ -1,4 +1,5 @@
 #!/bin/bash
+source "$(dirname "$0")/scripts/compose-env.sh"
 set -e
 
 pmm_mongo_user=${PMM_MONGO_USER:-pmm}
@@ -8,7 +9,7 @@ pbm_pass=${PBM_PASS:-pbmpass}
 
 echo
 echo "configuring extra PSA replicaset with members priorities"
-docker compose -f docker-compose-rs.yaml exec -T rs201 mongo --quiet << EOF
+compose_rs exec -T rs201 mongo --quiet << EOF
     config = {
         "_id" : "rs",
         "members" : [
@@ -35,12 +36,12 @@ echo
 sleep 60
 echo
 echo "configuring root user on primary"
-docker compose -f docker-compose-rs.yaml exec -T rs201 mongo --quiet << EOF
+compose_rs exec -T rs201 mongo --quiet << EOF
 db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] });
 EOF
 echo
 echo "configuring pbm and pmm roles"
-docker compose -f docker-compose-rs.yaml exec -T rs201 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
+compose_rs exec -T rs201 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
 db.getSiblingDB("admin").createRole({
     "role": "pbmAnyAction",
     "privileges": [{
@@ -70,7 +71,7 @@ db.getSiblingDB("admin").createRole({
 EOF
 echo
 echo "creating pbm user"
-docker compose -f docker-compose-rs.yaml exec -T rs201 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
+compose_rs exec -T rs201 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
 db.getSiblingDB("admin").createUser({
     user: "${pbm_user}",
     pwd: "${pbm_pass}",
@@ -85,7 +86,7 @@ db.getSiblingDB("admin").createUser({
 EOF
 echo
 echo "creating pmm user"
-docker compose -f docker-compose-rs.yaml exec -T rs201 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
+compose_rs exec -T rs201 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
 db.getSiblingDB("admin").createUser({
     user: "${pmm_mongo_user}",
     pwd: "${pmm_mongo_user_pass}",

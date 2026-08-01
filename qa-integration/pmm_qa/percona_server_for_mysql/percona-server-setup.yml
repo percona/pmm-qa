@@ -37,6 +37,8 @@
       - "9001:9001"
 
   tasks:
+    - include_tasks: ../tasks/microvm_container_facts.yml
+
     - name: Modify the node count for group replication
       set_fact:
         nodes_count: 3
@@ -52,12 +54,8 @@
       ignore_errors: true
 
     - name: Remove old data folders
-      shell: |
-        if [ -d "{{ data_dir }}" ]; then
-          docker run --rm -v "{{ data_dir }}:/data" {{ busybox_image }} \
-            sh -c 'rm -rf /data/* /data/.[!.]* /data/..?*'
-          rm -rf "{{ data_dir }}"
-        fi
+      shell: 'rm -fr {{ data_dir }}'
+      loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
     - name: Create data directories
       file:
@@ -67,10 +65,7 @@
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
     - name: Recursively change ownership of a directory
-      shell: |
-        docker run --rm \
-          -v "{{ data_dir }}/node{{ item }}/data:/data" \
-          {{ busybox_image }} chown -R 1001:1001 /data
+      shell: "sudo chown -R 1001:1001 {{ data_dir }}/node{{ item }}/data"
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
     - name: Setup Percona Server group replication
@@ -85,13 +80,9 @@
       include_tasks: tasks/percona-server-setup-single.yml
       when: setup_type != "gr" and setup_type != "replication"
 
-    - name: Wait until MySQL is ready on all nodes
-      include_tasks: ../tasks/wait_mysql_ready.yml
-      vars:
-        container_name: "{{ container_prefix }}{{ item }}"
-        mysql_user: root
-        mysql_password: "{{ root_password }}"
-      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+    - name: Wait 10 seconds for setup to finish
+      pause:
+        seconds: 10
 
     - name: Install Percona XtraBackup for MySQL backups
       include_tasks: tasks/backup_setup.yml
@@ -166,23 +157,21 @@
       when: setup_type == "gr" or setup_type == "replication"
 
     - name: Run load for sysbench inside of all percona server nodes
-      shell: docker exec {{ container_prefix }}{{ item }} sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest --tables=10 --table-size=100000 --threads=16 --time=30 run
+      shell: docker exec {{ container_prefix }}{{ item }} sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest --tables=10 --table-size=100000 --threads=16 --time=60 run
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type != "gr" and setup_type != "replication"
 
     - name: Run load for sysbench inside of primary percona server node
-      shell: docker exec {{ container_prefix }}1 sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest --tables=10 --table-size=100000 --threads=16 --time=30 run
+      shell: docker exec {{ container_prefix }}1 sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest --tables=10 --table-size=100000 --threads=16 --time=60 run
       when: setup_type == "gr" or setup_type == "replication"
 
     - name: Copy a load file into the container
       shell: docker cp ../data/mysql_load.sql {{ container_prefix }}{{ item }}:/ps_load.sql
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-    - name: Wait until pmm-agent is connected on all nodes
-      include_tasks: ../tasks/wait_pmm_agent_ready.yml
-      vars:
-        container_name: "{{ container_prefix }}{{ item }}"
-      loop: "{{ range(1, nodes_count | int + 1) | list }}"
+    - name: Wait 10 seconds for node to be connected
+      pause:
+        seconds: 10
 
     - name: Run load inside of first percona server node
       shell: |

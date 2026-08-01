@@ -1,37 +1,33 @@
 # Cursor QA integration
 
-**Cursor Cloud / MicroVM provisioning only.** This tree is separate from [`qa-integration/`](../qa-integration/) so Jenkins and EC2 setups are never affected by Cursor-specific changes.
+**Cursor Cloud / MicroVM provisioning only.** Jenkins/EC2 paths stay in [`qa-integration/`](../qa-integration/).
+
+MicroVM database setups use the **same** bash `pmm-framework` as Jenkins, with `IS_CURSOR_VM=1` (no duplicate Ansible tree in this folder).
 
 | Path | Purpose |
 |------|---------|
-| `scripts/` | `provision-pmm.sh`, `cleanup-pmm-microvm.sh`, `pmm-ui-login.sh`, docker helpers |
-| `pmm-framework/` | MicroVM entrypoint wrapping upstream bash `qa-integration/pmm_qa/pmm-framework/pmm-framework` |
-| `pmm_qa/` | Ansible overlays merged at runtime (`IS_CURSOR_VM`, `PMM_QA_NO_SYSTEMD`, ubuntu base image) |
-| `pmm_psmdb-pbm_setup/` | No-systemd PSMDB+PBM compose and entrypoints |
-| `MANUAL-QA-MICROVM.md` | Runbook — canonical copy in `.cursor/skills/pmm-provisioning/references/MANUAL-QA-MICROVM.md` |
-| `SETUP-INVENTORY.md` | Full setup catalog + MicroVM pass/fail inventory |
+| `scripts/provision-pmm.sh` | PMM Server + Docker on MicroVM |
+| `scripts/run-framework.sh` | `IS_CURSOR_VM=1` wrapper → `qa-integration/pmm_qa/pmm-framework/pmm-framework` |
+| `scripts/run-nightly-setups.sh` | Nightly matrix validation |
+| `scripts/cleanup-pmm-microvm.sh` | Tear down PMM + QA containers |
 
-## Usage (cloud agent)
+## Usage
 
 ```bash
-QA_ROOT="${PWD}"; [ -d pmm-qa ] && QA_ROOT="${PWD}/pmm-qa"
-CURSOR_QA="${QA_ROOT}/cursor-qa-integration"
-
-export DOCKER_VERSION=...
-export CLIENT_VERSION='...'
+export DOCKER_VERSION=perconalab/pmm-server:3-dev-latest
+export CLIENT_VERSION='https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz'
 export ADMIN_PASSWORD='pmm3admin!'
+export IS_CURSOR_VM=1
 
-"$CURSOR_QA/scripts/provision-pmm.sh" --cleanup --fresh-volume
+cursor-qa-integration/scripts/provision-pmm.sh --cleanup --fresh-volume --skip-watchtower
 
-"$CURSOR_QA/pmm_qa/run-framework.sh" \
+cursor-qa-integration/scripts/run-framework.sh \
   --pmm-server-password "$ADMIN_PASSWORD" \
   --client-version "$CLIENT_VERSION" \
-  --database <FROM_TICKET> \
+  --database psmdb,SETUP_TYPE=pss \
   --verbose
 ```
 
-`run-framework.sh` execs the bash framework from `qa-integration/` and merges MicroVM Ansible overlays from `pmm_qa/` (no Python fork).
+## Do not add setup logic here
 
-## Do not modify `qa-integration/`
-
-All Cursor drift belongs here. When a fix is needed for both Jenkins and Cursor, land the Jenkins-safe change in `qa-integration/` first, then mirror or adapt in this tree.
+MicroVM fixes belong in `qa-integration/` (gated by `IS_CURSOR_VM` / `pmm_qa_no_systemd`). This tree is orchestration only.

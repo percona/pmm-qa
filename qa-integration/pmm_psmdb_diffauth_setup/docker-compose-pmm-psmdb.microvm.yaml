@@ -1,5 +1,4 @@
 # Compose override for MicroVM / environments without systemd as PID 1.
-# Usage: docker compose -f docker-compose-psmdb.yml -f docker-compose-psmdb.microvm.yaml up -d
 services:
   psmdb-server:
     privileged: false

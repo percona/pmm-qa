@@ -151,7 +151,7 @@ Next — provision monitored databases for your ticket (examples):
   export CLIENT_VERSION='${CLIENT_VERSION}'
 
   # PMM-14576 MongoDB backup / PBM:
-  ${QA_ROOT}/pmm_qa/run-framework.sh \\
+  ${SCRIPT_DIR}/run-framework.sh \\
     --pmm-server-password "\$ADMIN_PASSWORD" \\
     --client-version "\$CLIENT_VERSION" \\
     --database psmdb,SETUP_TYPE=pss \\

@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source "$(dirname "$0")/scripts/compose-env.sh"
+
 pmm_mongo_user=${PMM_MONGO_USER:-pmm}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
@@ -8,7 +10,7 @@ pbm_pass=${PBM_PASS:-pbmpass}
 
 echo
 echo "configuring replicaset with members priorities"
-docker compose -f docker-compose-rs.yaml exec -T rs101 mongo --quiet << EOF
+compose_rs exec -T rs101 mongo --quiet << EOF
     config = {
         "_id" : "rs",
         "members" : [
@@ -35,12 +37,12 @@ echo
 sleep 60
 echo
 echo "configuring root user on primary"
-docker compose -f docker-compose-rs.yaml exec -T rs101 mongo --quiet << EOF
+compose_rs exec -T rs101 mongo --quiet << EOF
 db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] });
 EOF
 echo
 echo "configuring pbm and pmm roles"
-docker compose -f docker-compose-rs.yaml exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
+compose_rs exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
 db.getSiblingDB("admin").createRole({
     "role": "pbmAnyAction",
     "privileges": [{
@@ -70,7 +72,7 @@ db.getSiblingDB("admin").createRole({
 EOF
 echo
 echo "creating pbm user"
-docker compose -f docker-compose-rs.yaml exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
+compose_rs exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
 db.getSiblingDB("admin").createUser({
     user: "${pbm_user}",
     pwd: "${pbm_pass}",
@@ -85,7 +87,7 @@ db.getSiblingDB("admin").createUser({
 EOF
 echo
 echo "creating pmm regular user"
-docker compose -f docker-compose-rs.yaml exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
+compose_rs exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
 db.getSiblingDB("admin").createUser({
     user: "${pmm_mongo_user}",
     pwd: "${pmm_mongo_user_pass}",
@@ -102,7 +104,7 @@ db.getSiblingDB("admin").createUser({
 });
 EOF
 echo "creating pmm kerberos user"
-docker compose -f docker-compose-rs.yaml exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
+compose_rs exec -T rs101 mongo "mongodb://root:root@localhost/?replicaSet=rs" --quiet << EOF
 db.getSiblingDB("\$external").createUser({
     user: "${pmm_mongo_user}@PERCONATEST.COM",
     roles: [

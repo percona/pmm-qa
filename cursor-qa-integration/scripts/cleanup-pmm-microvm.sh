@@ -15,20 +15,19 @@ for name in pmm-server watchtower; do
 done
 
 echo "==> Stopping PSMDB/PBM replica set (if present)..."
-QA_PSMDB="${QA_ROOT}/../qa-integration/pmm_psmdb-pbm_setup"
-CURSOR_PSMDB="${QA_ROOT}/pmm_psmdb-pbm_setup"
-if [ -f "${QA_PSMDB}/docker-compose-rs.yaml" ]; then
+PSMDB="${QA_ROOT}/../qa-integration/pmm_psmdb-pbm_setup"
+if [ -f "${PSMDB}/docker-compose-rs.yaml" ]; then
   docker compose \
-    -f "${QA_PSMDB}/docker-compose-rs.yaml" \
-    -f "${CURSOR_PSMDB}/docker-compose-rs.microvm.yaml" \
+    -f "${PSMDB}/docker-compose-rs.yaml" \
+    -f "${PSMDB}/docker-compose-rs.microvm.yaml" \
     down -v --remove-orphans 2>/dev/null \
-    || docker compose -f "${QA_PSMDB}/docker-compose-rs.yaml" down -v --remove-orphans 2>/dev/null \
+    || docker compose -f "${PSMDB}/docker-compose-rs.yaml" down -v --remove-orphans 2>/dev/null \
     || true
   docker compose \
-    -f "${QA_PSMDB}/docker-compose-sharded.yaml" \
-    -f "${CURSOR_PSMDB}/docker-compose-sharded.microvm.yaml" \
+    -f "${PSMDB}/docker-compose-sharded.yaml" \
+    -f "${PSMDB}/docker-compose-sharded.microvm.yaml" \
     down -v --remove-orphans 2>/dev/null \
-    || docker compose -f "${QA_PSMDB}/docker-compose-sharded.yaml" down -v --remove-orphans 2>/dev/null \
+    || docker compose -f "${PSMDB}/docker-compose-sharded.yaml" down -v --remove-orphans 2>/dev/null \
     || true
 fi
 

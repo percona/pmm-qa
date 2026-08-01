@@ -17,7 +17,7 @@ export CLIENT_VERSION="${CLIENT_VERSION:-https://pmm-build-cache.s3.us-east-2.am
 cd "${PMM_QA_DIR}"
 source virtenv/bin/activate 2>/dev/null || true
 
-RUN_FRAMEWORK="${SCRIPT_DIR}/../pmm_qa/run-framework.sh"
+RUN_FRAMEWORK="${SCRIPT_DIR}/run-framework.sh"
 
 cleanup_qa_containers() {
   echo "==> Cleaning QA containers (keeping pmm-server)..."

@@ -65,6 +65,11 @@ setup_psmdb() {
     [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
   )
 
+  if is_cursor_vm; then
+    env_map[IS_CURSOR_VM]=1
+    env_map[PMM_QA_NO_SYSTEMD]=1
+  fi
+
   case "$setup_type" in
     pss|psa) script='start-rs-only.sh' ;;
     shards|sharding) script='start-sharded.sh' ;;
@@ -196,6 +201,11 @@ EOF
     [TESTS]=no
     [CLEANUP]=no
   )
+
+  if is_cursor_vm; then
+    env_map[IS_CURSOR_VM]=1
+    env_map[PMM_QA_NO_SYSTEMD]=1
+  fi
 
   # Absolute script path, but the original directory as cwd: the patched script
   # still resolves the stack's compose files relative to where they live.

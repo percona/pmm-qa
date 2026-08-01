@@ -1,6 +1,8 @@
 ---
 
 - hosts: all
+  become: true
+  become_method: sudo
   vars:
     mongodb_version: "{{ lookup('vars', 'extra_mongodb_version', default=lookup('env','MONGODB_VERSION') | default('4.4', true) ) }}"
     mongodb_ssl_container: "{{ lookup('vars', 'extra_mongodb_ssl_container', default=lookup('env','MONGODB_SSL_CONTAINER') | default('mongodb_ssl', true) ) }}"
@@ -11,28 +13,29 @@
 
   tasks:
   - name: Cleanup Docker container for client and DB setup
-    shell: >
-      docker ps -a --filter "name={{ mongodb_ssl_container }}" | grep -q . && docker stop {{ mongodb_ssl_container }} && docker rm -fv {{ mongodb_ssl_container }}
+    shell: docker rm -f {{ mongodb_ssl_container }} 2>/dev/null || true
     ignore_errors: true
     tags:
       - cleanup
   - name: delete network if exist
-    shell: docker network rm "{{ mongodb_ssl_container }}_network"
+    shell: docker network rm "{{ mongodb_ssl_container }}_network" 2>/dev/null || true
     ignore_errors: true
     tags:
       - cleanup
 
   - name: Create a network
-    shell: docker network create "{{ mongodb_ssl_container }}_network"
+    shell: docker network create "{{ mongodb_ssl_container }}_network" 2>/dev/null || true
+    ignore_errors: true
 
   - name: Create pmm-qa network if not exist
-    shell: docker network create pmm-qa
+    shell: docker network create pmm-qa 2>/dev/null || true
     ignore_errors: true
 
   - name: Prepare Container for mongodb ssl container
     shell: >
       docker run -d --name={{ mongodb_ssl_container }}
       --network "{{ mongodb_ssl_container }}_network"
+      --shm-size=1g
       phusion/baseimage:jammy-1.0.1
 
   - name: Copy all required Artifacts to the docker mongodb_ssl_container
@@ -40,6 +43,7 @@
     with_items:
       - docker exec {{ mongodb_ssl_container }} mkdir -p artifacts
       - docker cp ./mongodb/mlaunch_ssl_setup.sh {{ mongodb_ssl_container }}:/
+      - docker cp ../pmm-tests/mongodb_user_setup_ssl.js {{ mongodb_ssl_container }}:/
       - docker cp ./create_certs.sh {{ mongodb_ssl_container }}:/
       - docker cp ../pmm3-client-setup.sh {{ mongodb_ssl_container }}:/
 

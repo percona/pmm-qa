@@ -14,7 +14,7 @@ cursor_vm_apply
 export ADMIN_PASSWORD="${ADMIN_PASSWORD:-pmm3admin!}"
 export CLIENT_VERSION="${CLIENT_VERSION:-https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz}"
 
-RUN_FRAMEWORK="${CURSOR_ROOT}/pmm_qa/run-framework.sh"
+RUN_FRAMEWORK="${SCRIPT_DIR}/run-framework.sh"
 
 cleanup_qa_containers() {
   echo "==> Cleaning QA containers (keeping pmm-server)..."

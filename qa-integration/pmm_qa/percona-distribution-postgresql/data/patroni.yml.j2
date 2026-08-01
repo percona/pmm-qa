@@ -32,7 +32,7 @@ bootstrap:
         archive_command: pgbackrest --stanza=patroni_backup --log-level-console=info archive-push /var/lib/postgresql/{{ pdpgsql_version }}/main/pg_wal/%f
       pg_hba:
         - host replication replicator 127.0.0.1/32 md5
-        - host replication replicator 172.18.0.0/16 md5
+        - host replication replicator 0.0.0.0/0 md5
         - host all all 0.0.0.0/0 md5
         - local all postgres trust
 
@@ -65,8 +65,8 @@ postgresql:
       password: pass+this
 
   create_replica_methods:
-    - pgbackrest
     - basebackup
+    - pgbackrest
 
   pgbackrest:
     command: pgbackrest --stanza=patroni_backup restore --pg1-path=/var/lib/postgresql/{{ pdpgsql_version }}/main --type=none
