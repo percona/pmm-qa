@@ -7,13 +7,15 @@
 # start-rs-only-microvm.sh); only compose overlays and no-systemd helpers live
 # under cursor-qa-integration/pmm_psmdb-pbm_setup/.
 
-_psmdb_microvm_script_header() {
+  _psmdb_microvm_script_header() {
   local qa_psmdb=$1 cursor_psmdb=$2
   cat <<EOF
 #!/bin/bash
 set -euo pipefail
 PMM_QA_PSMDB_ROOT='$qa_psmdb'
 PMM_QA_PSMDB_MICROVM_ROOT='$cursor_psmdb'
+export PMM_QA_PSMDB_ROOT PMM_QA_PSMDB_MICROVM_ROOT
+export MONGOD_RS_CONFIG_DIR="\${MONGOD_RS_CONFIG_DIR:-\$PMM_QA_PSMDB_ROOT/conf/mongod-rs}"
 # shellcheck source=/dev/null
 source "\$PMM_QA_PSMDB_MICROVM_ROOT/scripts/compose-env.sh"
 EOF
