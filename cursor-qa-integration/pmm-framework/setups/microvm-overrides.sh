@@ -28,7 +28,7 @@ patch_psmdb_script_for_microvm() {
   tail -n +2 "$source" | sed \
     -e 's|docker compose -f docker-compose-rs.yaml|compose_rs|g' \
     -e 's|docker compose -f docker-compose-sharded.yaml|compose_sharded|g' \
-    -e 's| systemctl | /usr/local/bin/systemctl |g' \
+    -e 's| systemctl | bash /usr/local/bin/systemctl |g' \
     >>"$dest"
   chmod +x "$dest"
 }
