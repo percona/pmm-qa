@@ -4,10 +4,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PSMDB_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 is_cursor_vm() {
-  case "${IS_CURSOR_VM:-}${PMM_QA_NO_SYSTEMD:-}" in
-    1|true|yes|TRUE|YES|True) return 0 ;;
-    *) return 1 ;;
-  esac
+  case "${IS_CURSOR_VM:-}" in 1|true|yes|TRUE|YES|True) return 0 ;; esac
+  case "${PMM_QA_NO_SYSTEMD:-}" in 1|true|yes|TRUE|YES|True) return 0 ;; esac
+  return 1
 }
 
 compose_rs() {

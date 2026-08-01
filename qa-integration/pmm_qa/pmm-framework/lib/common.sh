@@ -83,8 +83,7 @@ normalize_client_version() {
 
 # True when running on Cursor Cloud MicroVM (no systemd as container PID 1).
 is_cursor_vm() {
-  case "${IS_CURSOR_VM:-}${PMM_QA_NO_SYSTEMD:-}" in
-    1 | true | yes | TRUE | YES | True) return 0 ;;
-    *) return 1 ;;
-  esac
+  case "${IS_CURSOR_VM:-}" in 1 | true | yes | TRUE | YES | True) return 0 ;; esac
+  case "${PMM_QA_NO_SYSTEMD:-}" in 1 | true | yes | TRUE | YES | True) return 0 ;; esac
+  return 1
 }
