@@ -1,0 +1,5 @@
+---
+- name: Install systemctl shim in container
+  shell: |
+    docker cp {{ playbook_dir }}/../scripts/systemctl-shim.sh {{ container_name }}:/usr/local/bin/systemctl
+    docker exec {{ container_name }} chmod +x /usr/local/bin/systemctl

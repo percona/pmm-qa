@@ -31,9 +31,7 @@
       docker run -d \
         --name={{ external_container }} \
         --network=pmm-qa \
-        --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        -v /var/lib/containerd \
-        antmelekhin/docker-systemd:ubuntu-24.04
+        {{ qa_ubuntu24_image }} tail -f /dev/null
 
   - name: Copy all required Artifacts to the docker external_container
     shell: "{{ item }}"

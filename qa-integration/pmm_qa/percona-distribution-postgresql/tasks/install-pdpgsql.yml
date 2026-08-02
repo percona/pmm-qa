@@ -10,11 +10,14 @@
       --restart=always \
       --network {{ network_name }} \
       -e POSTGRES_PASSWORD={{ root_password }} \
-      --privileged --cgroupns=host \
-      -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-      -v /var/lib/containerd \
       -p {{ pdpgsql_port + (item - 1) }}:5432 \
-      antmelekhin/docker-systemd:ubuntu-24.04
+      {{ qa_ubuntu24_image }} tail -f /dev/null
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Install systemctl shim
+  include_tasks: ../tasks/install_systemctl_shim.yml
+  vars:
+    container_name: "{{ container_prefix }}{{ item }}"
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Install dependencies

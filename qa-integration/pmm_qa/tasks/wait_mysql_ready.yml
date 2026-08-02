@@ -7,12 +7,11 @@
     _mysql_password: "{{ mysql_password | default('') }}"
   shell: |
     if [ -n "{{ _mysql_password }}" ]; then
-      docker exec {{ container_name }} mysqladmin ping \
-        -u{{ _mysql_user }} \
-        -p{{ _mysql_password }} \
-        --silent
+      docker exec {{ container_name }} env MYSQL_PWD='{{ _mysql_password }}' bash -lc \
+        'mysqladmin ping -h 127.0.0.1 -u{{ _mysql_user }} --silent'
     else
-      docker exec {{ container_name }} mysqladmin ping --silent
+      docker exec {{ container_name }} bash -lc \
+        'mysqladmin ping -h 127.0.0.1 --silent'
     fi
   register: mysql_ready
   retries: "{{ mysql_ready_retries | default(30) }}"
