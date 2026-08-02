@@ -130,6 +130,7 @@
   shell: |
     docker exec {{ container_prefix }}{{ item }} mkdir -p /etc/mysql
     docker cp {{ data_dir }}/node{{ index }}/my.cnf {{ container_prefix }}{{ item }}:/etc/mysql/my.cnf
+    docker exec {{ container_prefix }}{{ item }} chmod 644 /etc/mysql/my.cnf
 
 - name: Restart MySQL
   shell: docker exec {{ container_prefix }}{{ index }} systemctl restart mysql
