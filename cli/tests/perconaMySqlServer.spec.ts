@@ -247,6 +247,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
 
     await test.step('add MySQL RTA agent and verify it reaches Running', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin inventory add agent rta-mysql-agent ${pmmAgentId} ${serviceId} ${MYSQL_USER} --password=${MYSQL_PASSWORD}`);
+      await output.assertSuccess();
       await output.outContains('Real-Time Analytics MySQL agent added.');
 
       await expect(async () => {
@@ -266,6 +267,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
 
     await test.step('change MySQL RTA agent log level and collect interval', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent rta-mysql-agent ${rtaAgentId} --log-level=debug --collect-interval=5s`);
+      await output.assertSuccess();
       await output.outContains('Real-Time Analytics MySQL agent configuration updated.');
       await output.outContains('changed log level to debug');
       await output.outContains('changed collect interval to 5s');
@@ -273,6 +275,7 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
 
     await test.step('remove MySQL RTA agent and service', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin inventory remove agent ${rtaAgentId}`);
+      await output.assertSuccess();
       await output.outContains('Agent removed.');
 
       await removeMySQLService(containerName, serviceName);

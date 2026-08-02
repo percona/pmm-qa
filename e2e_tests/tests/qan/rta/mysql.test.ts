@@ -22,6 +22,7 @@ const buildMySqlQuery = (overrides: {
     program_name: 'sysbench',
     rows_examined: '100',
     rows_sent: '10',
+    state: 'executing',
     username: overrides.username ?? 'sbtest@localhost',
   },
   query_collect_time: new Date().toISOString(),
