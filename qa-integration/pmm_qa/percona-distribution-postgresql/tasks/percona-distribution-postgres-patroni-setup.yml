@@ -144,6 +144,14 @@
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: "('pdpgsql_pmm_patroni_' ~ pdpgsql_version ~ '_' ~ item) in pmm_server_services.stdout"
 
+- name: Wait for Patroni-managed PostgreSQL on each node
+  include_tasks: ../tasks/wait_pgsql_ready.yml
+  vars:
+    container_name: "{{ container_prefix }}{{ item }}"
+    pgsql_ready_retries: 60
+    pgsql_ready_delay: 5
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
 - name: Add service to pmm server
   shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=postgres --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment --password=pass+this --query-source=pgstatmonitor {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:5432
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
