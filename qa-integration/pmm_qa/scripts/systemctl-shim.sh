@@ -8,6 +8,21 @@ kill_mysql() {
   pkill -9 -x mysqld_safe 2>/dev/null || true
   rm -f /var/run/mysqld/mysqld.pid /var/run/mysqld/*.sock /var/run/mysqld/*.lock
 }
+pg_stop() {
+  if [[ "$unit" == postgresql ]]; then
+    pg_lsclusters -h 2>/dev/null | while read -r ver name _; do
+      pg_ctlcluster "$ver" "$name" stop || true
+    done
+    return 0
+  fi
+  ver=${unit#postgresql@}; ver=${ver%-main}
+  pg_ctlcluster "$ver" main stop
+}
+pg_start() {
+  ver=${unit#postgresql@}; ver=${ver%-main}
+  [[ $cmd == restart ]] && pg_ctlcluster "$ver" main restart && return
+  pg_ctlcluster "$ver" main start
+}
 case "$cmd" in
   enable|disable|daemon-reload|is-enabled|is-active) exit 0 ;;
   start|restart)
@@ -18,21 +33,14 @@ case "$cmd" in
         [[ -x /etc/init.d/mysql ]] && exec /etc/init.d/mysql start
         exec service mysql start
         ;;
-      postgresql@*)
-        ver=${unit#postgresql@}; ver=${ver%-main}
-        [[ $cmd == restart ]] && exec pg_ctlcluster "$ver" main restart
-        exec pg_ctlcluster "$ver" main start
-        ;;
+      postgresql@*) pg_start ;;
       *) exit 0 ;;
     esac
     ;;
   stop)
     case "$unit" in
-      mysql) kill_mysql; exit 0 ;;
-      postgresql@*)
-        ver=${unit#postgresql@}; ver=${ver%-main}
-        exec pg_ctlcluster "$ver" main stop
-        ;;
+      mysql) kill_mysql ;;
+      postgresql*) pg_stop ;;
       *) exit 0 ;;
     esac
     ;;
