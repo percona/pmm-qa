@@ -23,14 +23,16 @@
     ignore_errors: true
 
   - name: Prepare Container for HAPROXY
-    shell: >
+    shell: |
       docker run -d \
         -p 42100:42100 \
         --name={{ haproxy_container }} \
         --network=pmm-qa \
         --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
         -v /var/lib/containerd \
-        antmelekhin/docker-systemd:ubuntu-24.04
+        ubuntu:24.04 sleep infinity
+      docker cp scripts/systemctl-shim.sh {{ haproxy_container }}:/usr/local/bin/systemctl
+      docker exec {{ haproxy_container }} chmod +x /usr/local/bin/systemctl
   
   - name: Copy all required Artifacts to the docker haproxy_container
     shell: "{{ item }}"

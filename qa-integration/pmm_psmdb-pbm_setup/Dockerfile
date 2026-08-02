@@ -17,7 +17,7 @@ rm -f /lib/systemd/system/anaconda.target.wants/*;
 
 VOLUME [ "/sys/fs/cgroup" ]
 
-CMD ["/usr/sbin/init"]
+CMD ["/entrypoint.sh"]
 
 ARG OL_VERSION
 RUN set -ex; \
@@ -96,6 +96,8 @@ RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
 COPY conf/sysconfig/mongod /etc/sysconfig/
 COPY keyfile /etc/keyfile
 COPY conf/krb/krb5.conf /etc/krb5.conf
-RUN ln -s /usr/bin/mongosh /usr/bin/mongo || true
+COPY entrypoint.sh /entrypoint.sh
+COPY systemctl-shim.sh /usr/local/bin/systemctl
+RUN chmod +x /entrypoint.sh /usr/local/bin/systemctl && ln -s /usr/bin/mongosh /usr/bin/mongo || true
 RUN chown mongod /etc/keyfile && chmod 400 /etc/keyfile
 EXPOSE 27017

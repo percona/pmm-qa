@@ -48,7 +48,7 @@ services:
       PMM_AGENT_SERVER_INSECURE_TLS: 1
     container_name: rs101
     hostname: rs101
-    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /entrypoint.sh"
 
   rs102:
     depends_on:
@@ -80,7 +80,7 @@ services:
       PMM_AGENT_SERVER_INSECURE_TLS: 1
     container_name: rs102
     hostname: rs102
-    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /entrypoint.sh"
 
   rs103:
     depends_on:
@@ -112,7 +112,7 @@ services:
       PMM_AGENT_SERVER_INSECURE_TLS: 1
     container_name: rs103
     hostname: rs103
-    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /entrypoint.sh"
 
   rs201:
     depends_on:
@@ -146,7 +146,7 @@ services:
       PMM_AGENT_SERVER_INSECURE_TLS: 1
     container_name: rs201
     hostname: rs201
-    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /entrypoint.sh"
 
   rs202:
     depends_on:
@@ -178,7 +178,7 @@ services:
       PMM_AGENT_SERVER_INSECURE_TLS: 1
     container_name: rs202
     hostname: rs202
-    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /entrypoint.sh"
 
   rs203:
     depends_on:
@@ -210,7 +210,7 @@ services:
       PMM_AGENT_SERVER_INSECURE_TLS: 1
     container_name: rs203
     hostname: rs203
-    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
+    entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /entrypoint.sh"
 
   minio:
     image: minio/minio

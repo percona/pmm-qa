@@ -33,7 +33,9 @@
         --network=pmm-qa \
         --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
         -v /var/lib/containerd \
-        antmelekhin/docker-systemd:ubuntu-24.04
+        ubuntu:24.04 sleep infinity
+      docker cp scripts/systemctl-shim.sh {{ external_container }}:/usr/local/bin/systemctl
+      docker exec {{ external_container }} chmod +x /usr/local/bin/systemctl
 
   - name: Copy all required Artifacts to the docker external_container
     shell: "{{ item }}"

@@ -20,7 +20,9 @@
       -v ./ssl:/ssl \
       -v /tmp/mysql-sockets/{{ item }}:/tmp \
       -p {{ docker_port|int + item - 1 }}:3306 \
-      antmelekhin/docker-systemd:ubuntu-24.04
+      ubuntu:24.04 sleep infinity
+    docker cp scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
+    docker exec {{ container_prefix }}{{ item }} chmod +x /usr/local/bin/systemctl
   when: mysql_version | replace('_', '') | int >= 80
 
 - name: Prepare Container for MySQL 5.7
@@ -32,7 +34,9 @@
       -v ./ssl:/ssl \
       -v /tmp/mysql-sockets/{{ item }}:/var/run/mysqld \
       -p {{ docker_port|int + item - 1 }}:3306 \
-      antmelekhin/docker-systemd:ubuntu-22.04
+      ubuntu:22.04 sleep infinity
+    docker cp scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
+    docker exec {{ container_prefix }}{{ item }} chmod +x /usr/local/bin/systemctl
   when: mysql_version | replace('_', '') | int < 80
 
 - name: Install dependencies
@@ -129,9 +133,6 @@
 
 - name: Restart MySQL
   shell: docker exec {{ container_prefix }}{{ index }} systemctl restart mysql
-
-- name: Restart MySQL docker container
-  shell: docker restart {{ container_prefix }}{{ index }}
 
 - name: Wait 5 seconds for MySQL to start
   pause:

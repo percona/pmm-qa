@@ -14,7 +14,9 @@
       -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
       -v /var/lib/containerd \
       -p {{ pdpgsql_port + (item - 1) }}:5432 \
-      antmelekhin/docker-systemd:ubuntu-24.04
+      ubuntu:24.04 sleep infinity
+    docker cp scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
+    docker exec {{ container_prefix }}{{ item }} chmod +x /usr/local/bin/systemctl
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Install dependencies

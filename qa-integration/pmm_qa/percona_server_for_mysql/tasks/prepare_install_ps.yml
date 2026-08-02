@@ -11,7 +11,9 @@
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
       -p {{ docker_port|int + item - 1 }}:3306 \
-      antmelekhin/docker-systemd:ubuntu-24.04
+      ubuntu:24.04 sleep infinity
+    docker cp scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
+    docker exec {{ container_prefix }}{{ item }} chmod +x /usr/local/bin/systemctl
   when: ps_version | replace('_', '') | int >= 80
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
@@ -22,7 +24,9 @@
       --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
-      antmelekhin/docker-systemd:ubuntu-22.04
+      ubuntu:22.04 sleep infinity
+    docker cp scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
+    docker exec {{ container_prefix }}{{ item }} chmod +x /usr/local/bin/systemctl
   when: ps_version | replace('_', '') | int < 80
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
