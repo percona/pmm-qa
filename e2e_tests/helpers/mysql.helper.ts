@@ -48,8 +48,9 @@ export default class MySQLHelper {
   /**
    * Simulates a long-running query visible in sys.x$processlist (and therefore in RTA).
    * SLEEP() keeps the statement in the processlist for the whole delay while consuming
-   * nothing; the label is embedded as a string literal so the RTA query text can be
-   * filtered by it (comments could be stripped by intermediaries, literals cannot).
+   * nothing; the label is selected as a string literal so the RTA query text can be
+   * filtered by it. mysql2's query() interpolates placeholders client-side (no server
+   * prepare), so the label stays visible in the processlist statement text.
    *
    * Runs on a dedicated connection that close() destroys, so tests do not have to
    * wait for the full delay. Errors caused by that teardown are suppressed; anything
@@ -65,20 +66,30 @@ export default class MySQLHelper {
     } = {},
   ) => {
     const { delayMs = Timeouts.TEN_SECONDS, queryLabel = 'rta-simulated-query' } = options;
-    const escapedLabel = queryLabel.replace(/\\/g, '\\\\').replace(/'/g, "''");
     const delaySeconds = Math.max(1, Math.ceil(delayMs / 1_000));
-    const connection = await mysql.createConnection(this.config);
-
-    this.longRunningConnections.push(connection);
+    let connection: Connection | undefined;
 
     try {
-      return await connection.query(`SELECT '${escapedLabel}', SLEEP(${delaySeconds})`);
+      connection = await mysql.createConnection(this.config);
+
+      if (this.closed) {
+        return null;
+      }
+
+      this.longRunningConnections.push(connection);
+
+      return await connection.query('SELECT ?, SLEEP(?)', [queryLabel, delaySeconds]);
     } catch (error) {
       if (this.closed) {
         return null;
       }
 
       throw error;
+    } finally {
+      if (connection) {
+        this.longRunningConnections = this.longRunningConnections.filter((c) => c !== connection);
+        connection.destroy();
+      }
     }
   };
 }
