@@ -3,5 +3,3 @@
 # rather than editing each playbook individually -- loaded into every
 # playbook run by run_playbook() in pmm-framework/lib/ansible.sh.
 busybox_image: busybox:1.37.0
-qa_ubuntu24_image: ubuntu:24.04
-qa_ubuntu22_image: ubuntu:22.04
