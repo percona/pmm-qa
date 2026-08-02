@@ -6,6 +6,7 @@ kill_mysql() {
   /etc/init.d/mysql stop 2>/dev/null || service mysql stop 2>/dev/null || true
   pkill -9 -x mysqld 2>/dev/null || true
   pkill -9 -x mysqld_safe 2>/dev/null || true
+  rm -f /var/run/mysqld/mysqld.pid /var/run/mysqld/*.sock /var/run/mysqld/*.lock
 }
 case "$cmd" in
   enable|disable|daemon-reload|is-enabled|is-active) exit 0 ;;
@@ -13,6 +14,7 @@ case "$cmd" in
     case "$unit" in
       mysql)
         [[ $cmd == restart ]] && kill_mysql
+        mkdir -p /var/run/mysqld && chown mysql:mysql /var/run/mysqld 2>/dev/null || true
         [[ -x /etc/init.d/mysql ]] && exec /etc/init.d/mysql start
         exec service mysql start
         ;;

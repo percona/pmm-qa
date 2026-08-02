@@ -60,7 +60,10 @@
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Copy config file to docker container
-  shell: docker cp {{ data_dir }}/node{{ item }}/my.cnf {{ container_prefix }}{{ item }}:/etc/mysql/my.cnf
+  shell: |
+    docker exec {{ container_prefix }}{{ item }} mkdir -p /etc/mysql/mysql.conf.d
+    docker cp {{ data_dir }}/node{{ item }}/my.cnf {{ container_prefix }}{{ item }}:/etc/mysql/mysql.conf.d/pmm.cnf
+    docker exec {{ container_prefix }}{{ item }} chmod 644 /etc/mysql/mysql.conf.d/pmm.cnf
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Restart Percona Server for MySQL
