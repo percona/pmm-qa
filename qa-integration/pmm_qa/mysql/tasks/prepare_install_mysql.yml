@@ -21,7 +21,7 @@
       -v /tmp/mysql-sockets/{{ item }}:/tmp \
       -p {{ docker_port|int + item - 1 }}:3306 \
       ubuntu:24.04 sleep infinity
-    docker cp scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
+    docker cp {{ playbook_dir }}/../scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
     docker exec {{ container_prefix }}{{ item }} chmod +x /usr/local/bin/systemctl
   when: mysql_version | replace('_', '') | int >= 80
 
@@ -35,7 +35,7 @@
       -v /tmp/mysql-sockets/{{ item }}:/var/run/mysqld \
       -p {{ docker_port|int + item - 1 }}:3306 \
       ubuntu:22.04 sleep infinity
-    docker cp scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
+    docker cp {{ playbook_dir }}/../scripts/systemctl-shim.sh {{ container_prefix }}{{ item }}:/usr/local/bin/systemctl
     docker exec {{ container_prefix }}{{ item }} chmod +x /usr/local/bin/systemctl
   when: mysql_version | replace('_', '') | int < 80
 

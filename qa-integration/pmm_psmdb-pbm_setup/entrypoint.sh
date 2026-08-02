@@ -40,6 +40,7 @@ case "${1:-run}" in
       sleep 1
     done
     start_pbm
+    start_pmm
     wait "$(cat /var/run/mongod.pid)"
     ;;
   start-mongod) start_mongod ;;

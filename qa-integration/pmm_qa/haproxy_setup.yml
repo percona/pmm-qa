@@ -31,7 +31,7 @@
         --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
         -v /var/lib/containerd \
         ubuntu:24.04 sleep infinity
-      docker cp scripts/systemctl-shim.sh {{ haproxy_container }}:/usr/local/bin/systemctl
+      docker cp {{ playbook_dir }}/scripts/systemctl-shim.sh {{ haproxy_container }}:/usr/local/bin/systemctl
       docker exec {{ haproxy_container }} chmod +x /usr/local/bin/systemctl
   
   - name: Copy all required Artifacts to the docker haproxy_container

@@ -62,6 +62,8 @@ sed -i 's#MYSQLD_PATH=$(readlink -f /proc/${WSREP_SST_OPT_PARENT}/exe)#MYSQLD_PA
 cd PXC
 
 ## start PXC
+# MySQL 8 ignores world-writable option files; keep umask sane in nested Docker.
+umask 022
 bash ../pxc-startup.sh
 bash ./start_pxc $number_of_nodes
 touch sysbench_run_node1_prepare.txt
