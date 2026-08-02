@@ -175,9 +175,9 @@ pmmTest(
 );
 
 pmmTest(
-  'Verify Database and User multi-select filters narrow the query list @rta',
+  'Verify Database and User text filters support comma-separated lazy matching @rta',
   async ({ page, queryAnalytics }) => {
-    await pmmTest.step('Mock RTA search response with queries from two databases', async () => {
+    await pmmTest.step('Mock RTA search response with queries from three databases', async () => {
       await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
         route.fulfill({
           body: JSON.stringify({
@@ -194,6 +194,12 @@ pmmTest(
                 queryText: 'SELECT id FROM orders WHERE status=1',
                 username: 'app@localhost',
               }),
+              buildMySqlQuery({
+                database: 'inventory',
+                queryId: '203',
+                queryText: 'SELECT sku FROM inventory WHERE qty=0',
+                username: 'app@localhost',
+              }),
             ],
           }),
           contentType: 'application/json',
@@ -202,31 +208,33 @@ pmmTest(
       );
       await page.reload();
 
-      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2, {
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(3, {
         timeout: Timeouts.TEN_SECONDS,
       });
     });
 
-    await pmmTest.step('Filter by database and verify only matching rows remain', async () => {
+    await pmmTest.step('Filter by a partial database name (lazy match)', async () => {
       await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
       await queryAnalytics.rta.openFilters();
-      await queryAnalytics.rta.filterByColumnOption('Database', 'sbtest');
+      await queryAnalytics.rta.filterByColumnText('Database', 'sbt');
 
       await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toBeVisible();
-      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT id FROM orders')).toHaveCount(0);
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1);
     });
 
-    await pmmTest.step('Verify User filter options are faceted to the filtered rows', async () => {
-      await page.getByRole('combobox', { name: 'Filter by User' }).click();
-
-      // The hidden row's user is no longer offered; only users present in the
-      // currently filtered result set are.
-      await expect(page.getByRole('option', { name: 'app@localhost' })).toBeHidden();
-      await page.getByRole('option', { name: 'sbtest@localhost' }).click();
-      await page.keyboard.press('Escape');
+    await pmmTest.step('Filter by a comma-separated database list (any term matches)', async () => {
+      await queryAnalytics.rta.filterByColumnText('Database', 'sbtest, ord');
 
       await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1')).toBeVisible();
-      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT id FROM orders')).toHaveCount(0);
+      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT id FROM orders')).toBeVisible();
+      await expect(queryAnalytics.rta.builders.rowByQueryText('SELECT sku FROM inventory')).toHaveCount(0);
+    });
+
+    await pmmTest.step('Combine with a User filter that matches none of the remaining rows', async () => {
+      await queryAnalytics.rta.filterByColumnText('Database', 'orders');
+      await queryAnalytics.rta.filterByColumnText('User', 'sbtest@localhost');
+
+      await expect(queryAnalytics.rta.elements.noFilterResults).toBeVisible();
     });
   },
 );

@@ -67,6 +67,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
       .getByTestId(realTimeTableTestId)
       .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
+    noFilterResults: this.builders.rowByIndex('1').getByRole('alert').filter({ hasText: 'No data found' }),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
@@ -95,14 +96,13 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
 
   /**
-   * Selects a value in a multi-select column filter (Database / User columns).
+   * Types into a text column filter (Database / User columns). Supports a
+   * comma-separated list of lazy (substring) matches, e.g. 'sbtest, orders'.
    * Expects the filter row to be open already (see openFilters).
    */
-  filterByColumnOption = async (columnHeader: 'Database' | 'User', optionText: string) => {
-    await pmmTest.step(`Filter ${columnHeader} column by: ${optionText}`, async () => {
-      await this.page.getByRole('combobox', { name: `Filter by ${columnHeader}` }).click();
-      await this.page.getByRole('option', { name: optionText }).click();
-      await this.page.keyboard.press('Escape');
+  filterByColumnText = async (columnHeader: 'Database' | 'User', filterText: string) => {
+    await pmmTest.step(`Filter ${columnHeader} column by: ${filterText}`, async () => {
+      await this.page.getByTitle(`Filter by ${columnHeader}`).fill(filterText);
     });
   };
 
