@@ -230,5 +230,53 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
       `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
       ).toBeGreaterThan(5_000);
   });
+
+  test('Verify adding, changing and removing MySQL RTA Agent in pmm-admin CLI', async ({ }) => {
+    test.skip(adminVersion < 9, 'MySQL RTA is available from pmm-client version 3.9.0');
+
+    const serviceName = 'rta_mysql_service';
+
+    await test.step('add MySQL service for the RTA agent', async () => {
+      const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${serviceName} ${ipPort}`);
+      await output.assertSuccess();
+      await output.outContains('MySQL Service added.');
+    });
+
+    const serviceId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep "${serviceName}" | awk -F" " '{print $4}'`)).getStdOutLines()[0];
+    const pmmAgentId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep pmm_agent | awk -F" " '{print $3}'`)).getStdOutLines()[0];
+
+    await test.step('add MySQL RTA agent and verify it reaches Running', async () => {
+      const output = await cli.exec(`docker exec ${containerName} pmm-admin inventory add agent rta-mysql-agent ${pmmAgentId} ${serviceId} ${MYSQL_USER} --password=${MYSQL_PASSWORD}`);
+      await output.outContains('Real-Time Analytics MySQL agent added.');
+
+      await expect(async () => {
+        const pmmAdminListOutput = await cli.exec(`docker exec ${containerName} pmm-admin list`);
+
+        await pmmAdminListOutput.outContains('rta_mysql_agent Running');
+      }).toPass({ intervals: [1_000], timeout: 60_000 });
+
+      await expect(async () => {
+        const pmmAdminListOutput = await cli.exec(`docker exec ${containerName} pmm-admin inventory list agents --service-id=${serviceId}`);
+
+        await pmmAdminListOutput.outContains('rta_mysql_agent Running');
+      }).toPass({ intervals: [1_000], timeout: 60_000 });
+    });
+
+    const rtaAgentId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep rta_mysql_agent | awk -F" " '{print $3}'`)).getStdOutLines()[0];
+
+    await test.step('change MySQL RTA agent log level and collect interval', async () => {
+      const output = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent rta-mysql-agent ${rtaAgentId} --log-level=debug --collect-interval=5s`);
+      await output.outContains('Real-Time Analytics MySQL agent configuration updated.');
+      await output.outContains('changed log level to debug');
+      await output.outContains('changed collect interval to 5s');
+    });
+
+    await test.step('remove MySQL RTA agent and service', async () => {
+      const output = await cli.exec(`docker exec ${containerName} pmm-admin inventory remove agent ${rtaAgentId}`);
+      await output.outContains('Agent removed.');
+
+      await removeMySQLService(containerName, serviceName);
+    });
+  });
 });
 

@@ -10,29 +10,36 @@ export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
+  toggles = {
+    hideCommit: this.page.getByTestId('overview-table-hide-commit-toggle'),
+  };
+  // Column order: 1 Query text, 2 Host, 3 Database, 4 User, 5 Operation ID, 6 Elapsed time (pinned right).
   builders = {
+    databaseForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=3]'),
     detailsPaneCodeByText: (queryText: string) =>
       this.elements.detailsPane.locator('[data-testid="query-text"], code.language-mongodb', {
         hasText: queryText,
       }),
     elapsedTimeForQueryByText: (queryText: string) =>
-      this.builders.rowByQueryText(queryText).locator('//td[position()=4]'),
-    elapsedTimeForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=4]'),
+      this.builders.rowByQueryText(queryText).locator('//td[position()=6]'),
+    elapsedTimeForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=6]'),
     hostForLastRow: () =>
       this.page.getByTestId(realTimeTableTestId).locator('tbody tr').last().locator('td').nth(1),
     hostForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=2]'),
-    operationIdForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=3]'),
+    operationIdForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=5]'),
     queryByRowIndex: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=1]'),
     rowByIndex: (rowIndex: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`//tbody//tr[position()=${rowIndex}]`),
     rowByQueryText: (queryText: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
+    userForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=4]'),
   };
   buttons = {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),
     closeDetailsPane: this.page.getByTestId('details-pane-close-button'),
     detailsNextQuery: this.page.getByTestId('details-pane-next-button'),
     detailsPreviousQuery: this.page.getByTestId('details-pane-prev-button'),
+    detailsRawDataTab: this.page.getByTestId('details-pane-raw-data-tab'),
     export: this.page.getByTestId('overview-table-export-button'),
     filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
     nextPage: this.page.getByRole('button', { name: 'Go to next page' }),
@@ -45,8 +52,17 @@ export default class RealTimeAnalyticsPage extends BasePage {
     stopAllSessions: this.page.getByTestId('open-stop-all-modal'),
   };
   elements = {
+    databaseColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Database', { exact: true }),
+    detailsCommand: this.page.getByTestId('command-value'),
+    detailsFullScan: this.page.getByTestId('full-scan-value'),
     detailsOperationId: this.page.getByTestId('operation-id-value'),
     detailsPane: this.page.getByTestId('query-details-pane'),
+    detailsProgramName: this.page.getByTestId('program-name-value'),
+    detailsRawData: this.page.getByTestId('query-raw-data'),
+    detailsRowsExamined: this.page.getByTestId('rows-examined-value'),
+    detailsRowsSent: this.page.getByTestId('rows-sent-value'),
+    detailsState: this.page.getByTestId('state-value'),
+    detailsUsername: this.page.getByTestId('username-value'),
     elapsedTimeColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
       .getByText('Elapsed time', { exact: true }),
@@ -57,6 +73,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
       .getByText('Query text', { exact: true }),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tbody tr'),
+    userColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('User', { exact: true }),
   };
   inputs = {
     clusterService: this.page.locator('input[name = "service"]'),
@@ -75,6 +92,18 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   clickQueryTextHeader = async () => {
     await this.elements.queryTextColumnHeader.click();
+  };
+
+  /**
+   * Selects a value in a multi-select column filter (Database / User columns).
+   * Expects the filter row to be open already (see openFilters).
+   */
+  filterByColumnOption = async (columnHeader: 'Database' | 'User', optionText: string) => {
+    await pmmTest.step(`Filter ${columnHeader} column by: ${optionText}`, async () => {
+      await this.page.getByRole('combobox', { name: `Filter by ${columnHeader}` }).click();
+      await this.page.getByRole('option', { name: optionText }).click();
+      await this.page.keyboard.press('Escape');
+    });
   };
 
   filterQueriesByText = async (queryText: string) => {
@@ -163,6 +192,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await this.buttons.stopAllSessions.click();
     await this.buttons.stopAgentsButton.click();
     await this.buttons.stopAgentsButton.waitFor({ state: 'hidden', timeout: Timeouts.THREE_SECONDS });
+  };
+
+  toggleHideCommit = async () => {
+    await pmmTest.step('Toggle Hide COMMIT', async () => {
+      await this.toggles.hideCommit.click();
+    });
   };
 
   verifyRequestInterval = async (

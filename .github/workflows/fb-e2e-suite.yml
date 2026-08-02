@@ -409,7 +409,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || 'main') }}
-      setup_services: '--database psmdb'
+      setup_services: '--database psmdb --database ps=8.4'
       pmm_test_flag: '@rta'
       workers: 1
 

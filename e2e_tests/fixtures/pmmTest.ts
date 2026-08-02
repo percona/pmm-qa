@@ -17,6 +17,7 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import MySQLHelper from '@helpers/mysql.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
@@ -31,6 +32,7 @@ const pmmTest = base.extend<{
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
   mongoDbHelper: MongoDBHelper;
+  mySqlDbHelper: MySQLHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
@@ -121,6 +123,20 @@ const pmmTest = base.extend<{
     });
 
     await use(mongoDbHelper);
+  },
+  mySqlDbHelper: async ({}, use) => {
+    // Defaults match the QA framework ps setup (host port 3317 -> sandbox 3307,
+    // dbdeployer msandbox credentials); override via env for local environments.
+    const mySqlDbHelper = new MySQLHelper({
+      database: process.env.MYSQL_DATABASE || 'test',
+      host: process.env.MYSQL_HOST || '127.0.0.1',
+      password: process.env.MYSQL_PASSWORD || 'msandbox',
+      port: Number(process.env.MYSQL_PORT) || 3_317,
+      username: process.env.MYSQL_USER || 'msandbox',
+    });
+
+    await use(mySqlDbHelper);
+    await mySqlDbHelper.close();
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
   portalRemoval: async ({ page }, use) => {
