@@ -13,10 +13,11 @@ pg_stop() {
     pg_lsclusters -h 2>/dev/null | while read -r ver name _; do
       pg_ctlcluster "$ver" "$name" stop || true
     done
-    return 0
+  else
+    ver=${unit#postgresql@}; ver=${ver%-main}
+    pg_ctlcluster "$ver" main stop || true
   fi
-  ver=${unit#postgresql@}; ver=${ver%-main}
-  pg_ctlcluster "$ver" main stop
+  pkill -9 postgres 2>/dev/null || true
 }
 pg_start() {
   ver=${unit#postgresql@}; ver=${ver%-main}

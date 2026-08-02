@@ -91,11 +91,6 @@
     docker exec -u postgres {{ container_prefix }}1 chown -R postgres:postgres /var/lib/pgbackrest
     docker exec -u postgres {{ container_prefix }}1 pgbackrest --stanza=patroni_backup --pg1-path=/var/lib/postgresql/{{ pdpgsql_version }}/main stanza-create
 
-- name: Remove data folder on replica nodes.
-  shell: |
-    docker exec {{ container_prefix }}{{ item }} rm -fr /var/lib/postgresql/{{ pdpgsql_version }}/main
-  loop: "{{ range(2, nodes_count | int + 1) | list }}"
-
 - name: Install pg stat monitor.
   include_tasks: ./tasks/install_pg_stat-monitor.yml
 
@@ -110,13 +105,26 @@
     docker exec -u postgres {{ container_prefix }}1 psql -U postgres -c "ALTER USER postgres WITH PASSWORD 'pass+this';"
 
 - name: Stop Percona distribution for Postgresql, due to being managed by patroni
-  shell: docker exec -u root {{ container_prefix }}{{ item }} systemctl stop postgresql
+  shell: docker exec -u root {{ container_prefix }}{{ item }} bash -c 'systemctl stop postgresql; pkill -9 postgres || true'
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
-- name: Start patroni service in all nodes
-  shell: >
-    docker exec -u postgres {{ container_prefix }}{{ item }} /bin/sh -c "nohup patroni /patroni.yml > /data/db/logs/patroni.log 2>&1 &"
-  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+- name: Remove data folder on replica nodes.
+  shell: docker exec {{ container_prefix }}{{ item }} rm -fr /var/lib/postgresql/{{ pdpgsql_version }}/main
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
+
+- name: Start patroni on primary
+  shell: docker exec -u postgres {{ container_prefix }}1 /bin/sh -c "nohup patroni /patroni.yml > /data/db/logs/patroni.log 2>&1 &"
+
+- name: Wait for primary PostgreSQL
+  include_tasks: ../tasks/wait_pgsql_ready.yml
+  vars:
+    container_name: "{{ container_prefix }}1"
+    pgsql_ready_retries: 60
+    pgsql_ready_delay: 5
+
+- name: Start patroni on replicas
+  shell: docker exec -u postgres {{ container_prefix }}{{ item }} /bin/sh -c "nohup patroni /patroni.yml > /data/db/logs/patroni.log 2>&1 &"
+  loop: "{{ range(2, nodes_count | int + 1) | list }}"
 
 - name: Show logs from patroni for debug
   shell: docker exec -u postgres {{ container_prefix }}{{ item }} cat /data/db/logs/patroni.log
