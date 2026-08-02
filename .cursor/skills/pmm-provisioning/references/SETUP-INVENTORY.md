@@ -1,13 +1,13 @@
-# pmm-framework.py — setup inventory (MicroVM target)
+# pmm-framework — setup inventory
 
 Every database type and meaningful variant exposed via `--database`.  
-Format: `python pmm-framework.py --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value>]`
+Format: `pmm-framework --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value>]`
 
 ## MongoDB / PSMDB family
 
 | # | Command | Script / playbook | Notes |
 |---|---------|-------------------|-------|
-| 1 | `psmdb` | `start-rs-only.sh` (+ `.microvm.yaml` when `IS_CURSOR_VM=1`) | Default `SETUP_TYPE=pss` |
+| 1 | `psmdb` | `start-rs-only.sh` | Default `SETUP_TYPE=pss` |
 | 2 | `psmdb,SETUP_TYPE=psa` | same | PSA replica set |
 | 3 | `psmdb,SETUP_TYPE=sharding` | `start-sharded.sh` | Sharded cluster + PBM |
 | 4 | `psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra` | same + extra RS | Second replica set |
@@ -53,49 +53,3 @@ Format: `python pmm-framework.py --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTI
 | 29 | `bucket` | `tasks/create_minio_container.yml` | MinIO backup bucket |
 | 30 | `valkey` | `valkey/valkey-cluster.yml` | Cluster (default) |
 | 31 | `valkey,SETUP_TYPE=sentinel` | `valkey/valkey-sentinel.yml` | Sentinel HA |
-
-## MicroVM env
-
-Set **`IS_CURSOR_VM=1`** in Cursor automation secrets (one variable for the whole MicroVM QA path).
-`PMM_QA_NO_SYSTEMD` and other internal flags are derived automatically.
-Batch runners default `IS_CURSOR_VM=1` when unset.
-
-```bash
-export IS_CURSOR_VM=1
-export ADMIN_PASSWORD='pmm3admin!'
-export CLIENT_VERSION='<tarball-url>'
-```
-
-## MicroVM verification status (2026-07-03)
-
-Requires only `IS_CURSOR_VM=1` (set in Cursor automation secrets).
-
-| Setup | Status | Notes |
-|-------|--------|-------|
-| `psmdb,SETUP_TYPE=pss` | PASS | `start-rs-only-microvm.sh` |
-| `psmdb,SETUP_TYPE=psa` | PASS | same microvm RS path |
-| `psmdb,SETUP_TYPE=sharding` | PASS | `start-sharded-microvm.sh` |
-| `dockerclients` | PASS | |
-| `ps` (single) | PASS | Ubuntu base + `mysqld --daemonize` |
-| `ps,SETUP_TYPE=gr` | PASS | |
-| `ps,SETUP_TYPE=replication` | PASS | |
-| `mysql` (single) | PASS | |
-| `mysql,SETUP_TYPE=gr` | PASS | multi-node prepare_install fix |
-| `mysql,SETUP_TYPE=replication` | PASS | |
-| `bucket` | PASS | |
-| `haproxy` | PASS | |
-| `external` | PASS | cleanup shell fix |
-| `valkey` | PASS | |
-| `valkey,SETUP_TYPE=sentinel` | PASS | |
-| `pgsql` | PASS | |
-| `pgsql,SETUP_TYPE=replication` | PASS | fixed conf paths + data cleanup |
-| `pdpgsql` | PASS | removed invalid `become` on include_tasks |
-| `pdpgsql,SETUP_TYPE=replication` | PASS | |
-| `pdpgsql,SETUP_TYPE=patroni` | PASS | sequential patroni + socket lock cleanup |
-| `ssl_mysql` | PASS | |
-| `ssl_pdpgsql` | PASS | |
-| `mlaunch_psmdb` | PASS | |
-| `mlaunch_modb` | PASS | |
-| `pxc` | PASS | xtrabackup-80 + umask 022 for node cnf |
-| `ssl_psmdb` | PASS | docker-compose microvm override |
-| `ssl_mlaunch` | PASS | community MongoDB 8.0 tarball + mongosh TLS |

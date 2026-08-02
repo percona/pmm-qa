@@ -28,32 +28,11 @@ ANSIBLE_COLLECTION_CHECKED=false
 configure_ansible_python() {
   [[ -n ${ANSIBLE_PYTHON_INTERPRETER:-} ]] && return
 
-  local -a candidates=()
-  if [[ -n ${PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK:-} ]]; then
-    candidates+=("$PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK")
+  local candidate=${PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK:-$PMM_QA_ROOT/pmm_framework/bin/python}
+  if [[ -x $candidate ]] && "$candidate" -c 'import requests' >/dev/null 2>&1; then
+    export ANSIBLE_PYTHON_INTERPRETER=$candidate
+    log_verbose "Using Ansible module interpreter: $ANSIBLE_PYTHON_INTERPRETER"
   fi
-  if is_cursor_vm; then
-    candidates+=("$PMM_QA_ROOT/virtenv/bin/python")
-  fi
-  candidates+=("$PMM_QA_ROOT/pmm_framework/bin/python" "$(command -v python3)")
-
-  local candidate
-  for candidate in "${candidates[@]}"; do
-    [[ -n $candidate && -x $candidate ]] || continue
-    if is_cursor_vm && ! "$candidate" -c 'import docker' >/dev/null 2>&1; then
-      "$candidate" -m pip install -q 'docker>=7.0.0' 2>/dev/null || true
-    fi
-    if "$candidate" -c 'import requests, docker' >/dev/null 2>&1; then
-      export ANSIBLE_PYTHON_INTERPRETER=$candidate
-      log_verbose "Using Ansible module interpreter: $ANSIBLE_PYTHON_INTERPRETER"
-      return
-    fi
-    if "$candidate" -c 'import requests' >/dev/null 2>&1; then
-      export ANSIBLE_PYTHON_INTERPRETER=$candidate
-      log_verbose "Using Ansible module interpreter: $ANSIBLE_PYTHON_INTERPRETER"
-      return
-    fi
-  done
 }
 
 # Install the community.docker collection unless it is already present.
@@ -65,25 +44,9 @@ configure_ansible_python() {
 # Exits:  via die() when the install fails
 ensure_docker_collection() {
   [[ $ANSIBLE_COLLECTION_CHECKED == true ]] && return
-
-  local collection_path="${HOME}/.ansible/collections"
-  local install_args=()
-  local major_version=0
-
-  if is_cursor_vm; then
-    export ANSIBLE_COLLECTIONS_PATH="${collection_path}:${ANSIBLE_COLLECTIONS_PATH:-/usr/lib/python3/dist-packages/ansible_collections}"
-    install_args=(-p "$collection_path")
-    major_version=$(
-      ansible-galaxy collection list community.docker 2>/dev/null |
-        awk '/community\.docker/{print $2; exit}' |
-        cut -d. -f1
-    )
-    major_version=${major_version:-0}
-  fi
-
-  if ! ansible-galaxy collection list community.docker >/dev/null 2>&1 || [[ $major_version -lt 5 ]]; then
+  if ! ansible-galaxy collection list community.docker >/dev/null 2>&1; then
     log_info "Installing Ansible collection community.docker..."
-    ansible-galaxy collection install "${install_args[@]}" community.docker ||
+    ansible-galaxy collection install community.docker ||
       die "Failed to install Ansible collection community.docker."
   fi
   ANSIBLE_COLLECTION_CHECKED=true

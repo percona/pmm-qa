@@ -53,10 +53,15 @@ tar -xzf Percona-XtraDB-Cluster.tar.gz
 sleep 10
 rm -r Percona-XtraDB-Cluster.tar.gz
 mv Percona-XtraDB-Cluster* PXC
+
+# Docker Desktop's Rosetta emulation exposes /proc/<pid>/exe as an
+# unresolvable /run/rosetta/rosetta link. Do not let readlink's failure
+# terminate the SST helper before it can fall back to mysqld from PATH.
+sed -i 's#MYSQLD_PATH=$(readlink -f /proc/${WSREP_SST_OPT_PARENT}/exe)#MYSQLD_PATH=$(readlink -f /proc/${WSREP_SST_OPT_PARENT}/exe || true)#' PXC/bin/wsrep_sst_common
+
 cd PXC
 
-## start PXC (umask 022: mysqld ignores world-writable config files)
-umask 022
+## start PXC
 bash ../pxc-startup.sh
 bash ./start_pxc $number_of_nodes
 touch sysbench_run_node1_prepare.txt

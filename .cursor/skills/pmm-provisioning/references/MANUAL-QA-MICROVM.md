@@ -2,8 +2,8 @@
 
 Condensed runbook for the PMM manual QA cloud agent on Cursor MicroVM.
 
-**Environment bootstrap** (Docker, Ansible, `IS_CURSOR_VM=1`) is in `.cursor/environment.json`.  
-**Database provisioning** uses `qa-integration/pmm_qa/pmm-framework/pmm-framework` directly — no wrapper scripts.
+**Environment bootstrap** (Docker, virtenv, Ansible) is in `.cursor/environment.json`.  
+**Database provisioning** uses `qa-integration/pmm_qa/pmm-framework/pmm-framework` directly — same entrypoint as Jenkins/EC2.
 
 ## 1. Server (always first)
 
@@ -32,12 +32,6 @@ docker volume create pmm-data 2>/dev/null || true
 mkdir -m 777 -p /tmp/backup_data
 docker pull "$DOCKER_VERSION"
 
-# Optional watchtower (skip for pinned FB images):
-# docker pull "$WATCHTOWER_VERSION"
-# docker run -d --restart=always --name watchtower --network pmm-qa \
-#   -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock \
-#   -e WATCHTOWER_HTTP_API_TOKEN=testToken "$WATCHTOWER_VERSION"
-
 docker rm -f pmm-server 2>/dev/null || true
 docker run -d --restart=always --name pmm-server --hostname pmm-server \
   --network pmm-qa -p 443:8443 -p 4647:4647 -v pmm-data:/srv \
@@ -59,12 +53,6 @@ echo "PMM Server ready"
 - **Do not** run `pmm3-client-setup.sh` on MicroVM (GHA pattern; clients live in DB containers via pmm-framework)
 
 ## 2. Databases (ticket-specific, after server is up)
-
-`IS_CURSOR_VM=1` is set by environment `start`. Verify:
-
-```bash
-echo "IS_CURSOR_VM=${IS_CURSOR_VM:-unset}"
-```
 
 ```bash
 export ADMIN_PASSWORD='pmm3admin!'
@@ -108,15 +96,12 @@ sudo rm -rf /tmp/backup_data /tmp/minio 2>/dev/null || true
 
 ## Escalation
 
-If pmm-framework fails with RS containers exit 255, ensure **`IS_CURSOR_VM=1`** is set (environment `start` or export manually).  
-If still blocked, report BLOCKED and link Jenkins `pmm3-aws-staging-start` parambuild URL.
+If pmm-framework fails with "container is not running" right after `docker run`, the playbook likely uses `antmelekhin/docker-systemd` which does not stay up on MicroVM. Report **BLOCKED** — do not add MicroVM forks in this agent PR; fix belongs upstream in `qa-integration/`.
 
 ## What lives where
 
 | Location | Purpose |
 |----------|---------|
-| `.cursor/environment.json` | Docker start, virtenv, Ansible collection, `IS_CURSOR_VM` |
-| `qa-integration/pmm_qa/pmm-framework/pmm-framework` | database provisioning (same as Jenkins) |
-| `qa-integration/pmm_qa/tasks/microvm_container_facts.yml` | MicroVM Ansible overlay |
-| `qa-integration/pmm_psmdb-pbm_setup/*.microvm.yaml` | PSMDB compose overlay |
+| `.cursor/environment.json` | Docker start, virtenv, Ansible collection |
+| `qa-integration/pmm_qa/pmm-framework/pmm-framework` | database provisioning (unchanged from main) |
 | `.cursor/scripts/pmm-ui-login.sh` | optional Playwright UI session |

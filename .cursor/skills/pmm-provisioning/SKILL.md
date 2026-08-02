@@ -1,11 +1,11 @@
 ---
 name: pmm-provisioning
-description: Provision PMM Server and monitored databases on the Cursor Cloud MicroVM — docker network pmm-qa, watchtower, readyz, qa-integration pmm-framework, IS_CURSOR_VM. Use when setting up PMM for manual QA or reproducing FB test environment on the agent VM.
+description: Provision PMM Server and monitored databases on the Cursor Cloud MicroVM — docker network pmm-qa, watchtower, readyz, qa-integration bash pmm-framework. Use when setting up PMM for manual QA or reproducing FB test environment on the agent VM.
 ---
 
 # PMM provisioning (Cursor Cloud / MicroVM)
 
-MicroVM uses the **same** `qa-integration/pmm_qa/pmm-framework/pmm-framework` as Jenkins/EC2, with `IS_CURSOR_VM=1` (set automatically by `.cursor/environment.json` `start`).
+Uses the **same** bash `qa-integration/pmm_qa/pmm-framework/pmm-framework` as Jenkins/EC2 — no wrapper scripts, no forked playbooks.
 
 Resolve repo root:
 
@@ -17,16 +17,17 @@ FRAMEWORK="${QA_ROOT}/qa-integration/pmm_qa/pmm-framework/pmm-framework"
 
 ## Runbook
 
-Read [references/MANUAL-QA-MICROVM.md](references/MANUAL-QA-MICROVM.md). Setup inventory: [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md).
+Read [references/MANUAL-QA-MICROVM.md](references/MANUAL-QA-MICROVM.md). Setup catalogue: [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md).
+
+## Environment
+
+Docker, virtenv, and Ansible collection bootstrap run from `.cursor/environment.json` (`install` + `start`).
 
 ## Server (MicroVM)
 
-Docker and Ansible bootstrap run from `.cursor/environment.json` (`install` + `start`).  
-`IS_CURSOR_VM=1` and `PMM_QA_NO_SYSTEMD=1` are exported on agent start.
-
 ```bash
 export DOCKER_VERSION=...          # from FB JNKPercona comment
-export WATCHTOWER_VERSION=...      # optional with --skip-watchtower
+export WATCHTOWER_VERSION=...      # optional
 export CLIENT_VERSION='...'        # client tarball URL (for databases step)
 export ADMIN_PASSWORD='pmm3admin!'
 export DOCKER_ENV_VARIABLE='-e PMM_DEBUG=1 -e PMM_ENABLE_TELEMETRY=0'  # override per ticket
@@ -40,13 +41,11 @@ docker volume create pmm-data 2>/dev/null || true
 mkdir -m 777 -p /tmp/backup_data
 docker pull "$DOCKER_VERSION"
 docker rm -f pmm-server watchtower 2>/dev/null || true
-# optional watchtower — see runbook
 docker run -d --restart=always --name pmm-server --hostname pmm-server \
   --network pmm-qa -p 443:8443 -p 4647:4647 -v pmm-data:/srv \
   -e "GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD}" \
   $DOCKER_ENV_VARIABLE \
   "$DOCKER_VERSION"
-# wait for readyz: HTTP 200, body {}
 until [ "$(curl -ksS -o /tmp/rz -w '%{http_code}' https://127.0.0.1/v1/server/readyz)" = "200" ] \
   && [ "$(tr -d '[:space:]' </tmp/rz)" = "{}" ]; do sleep 5; done
 ```
@@ -64,7 +63,7 @@ export CLIENT_VERSION='...'
   --verbose
 ```
 
-Pick `--database` from ticket + `qa-integration/pmm_qa/pmm-framework/lib/config.sh` (catalogue) or `./pmm-framework --help`.
+Pick `--database` from ticket + `qa-integration/pmm_qa/pmm-framework/lib/config.sh` or `./pmm-framework --help`.
 
 ## FB workflow reproduction (Test Healer)
 
@@ -85,4 +84,6 @@ docker volume rm pmm-data 2>/dev/null || true
 docker network rm pmm-qa 2>/dev/null || true
 ```
 
-When in doubt: tear down all containers on `pmm-qa` network and remove `pmm-data` after confirming nothing else needs them.
+## Known MicroVM limits
+
+Some playbooks use `antmelekhin/docker-systemd` images that exit immediately on Cursor MicroVM Docker. If a setup fails with "container is not running", report **BLOCKED** — fixing that belongs in `qa-integration/` as a general playbook change (separate PR), not MicroVM-specific forks.

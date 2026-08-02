@@ -35,6 +35,6 @@ Read each file when its step needs it. Do not guess field IDs or setup commands.
 
 - Open PRs to `percona/pmm` or `percona/grafana`
 - `git clone` `Percona-Lab/pmm-submodules`
-- Modify `qa-integration/` unless fixing MicroVM behaviour gated by `IS_CURSOR_VM`
+- Modify `qa-integration/` in this agent PR (provisioning fixes are separate upstream PRs)
 - Trust "How to test" without reading PR diff
 - Post public Jira comments on QA results

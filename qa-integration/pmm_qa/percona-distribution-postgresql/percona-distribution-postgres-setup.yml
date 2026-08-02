@@ -27,8 +27,6 @@
     debug_client: "{{ lookup('env', 'CLIENT_DEBUG') | default(false, true) | bool }}"
 
   tasks:
-    - include_tasks: ../tasks/microvm_container_facts.yml
-
     - name: Display setup type selected
       debug:
         msg: "{{ setup_type }}"
@@ -36,7 +34,6 @@
     - name: Create Docker network
       shell: docker network create {{ network_name }}
       ignore_errors: yes
-      become: true
 
     - name: Install Percona Distribution for Postgres
       include_tasks: tasks/install-percona-distribution-postgresql-single.yml

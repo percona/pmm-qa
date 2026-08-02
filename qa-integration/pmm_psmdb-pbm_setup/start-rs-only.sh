@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-source "$(dirname "$0")/scripts/compose-env.sh"
-
 profile=${COMPOSE_PROFILES:-classic}
 mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
 mongo_setup_type=${mongo_setup_type,,}
@@ -32,21 +30,12 @@ docker network create pmm-ui-tests_pmm-network || true
 docker network create pmm2-upgrade-tests_pmm-network || true
 docker network create pmm2-ui-tests_pmm-network || true
 
-compose_rs down -v --remove-orphans
-if is_cursor_vm; then
-  compose_rs build
-else
-  compose_rs build --no-cache
-fi
-compose_rs up -d
+docker compose -f docker-compose-rs.yaml down -v --remove-orphans
+docker compose -f docker-compose-rs.yaml build --no-cache
+docker compose -f docker-compose-rs.yaml up -d
 echo
-if is_cursor_vm; then
-  echo "waiting 30 seconds for replica set members to start (no-systemd mode)"
-  sleep 30
-else
-  echo "waiting 60 seconds for replica set members to start"
-  sleep 60
-fi
+echo "waiting 60 seconds for replica set members to start"
+sleep 60
 echo
 if [ $mongo_setup_type == "pss" ]; then
   bash -e ./configure-replset.sh

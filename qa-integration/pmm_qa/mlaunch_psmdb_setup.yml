@@ -1,8 +1,6 @@
 ---
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     psmdb_version: "{{ lookup('vars', 'extra_psmdb_version', default=lookup('env','PSMDB_VERSION') | default('4.4', true) ) }}"
     psmdb_tarball: "{{ lookup('vars', 'extra_psmdb_tarball', default=lookup('env','PSMDB_TARBALL') | default('', true) ) }}"
@@ -15,20 +13,20 @@
 
   tasks:
   - name: cleanup container for client and DB setup
-    shell: docker rm -f {{ psmdb_container }} 2>/dev/null || true
+    shell: >
+      docker ps -a --filter "name={{ psmdb_container }}" | grep -q . && docker stop {{ psmdb_container }} && docker rm -fv {{ psmdb_container }}
     ignore_errors: true
     tags:
       - cleanup
 
   - name: Create pmm-qa network if not exist
-    shell: docker network create pmm-qa 2>/dev/null || true
+    shell: docker network create pmm-qa
     ignore_errors: true
 
   - name: Prepare Container for PSMDB
     shell: >
       docker run -d --name={{ psmdb_container }}
       -p 27017:27017
-      --shm-size=1g
       phusion/baseimage:jammy-1.0.1
 
   - name: Copy all required Artifacts to the docker psmdb_container
