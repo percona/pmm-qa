@@ -44,11 +44,26 @@ const clientCredentialsFlags = gssapi.enabled
   ? gssapi.credentials_flags
   : `--username=${mongoConnection.username} --password=${mongoConnection.password}`;
 
+const mongoRS1Nodes = ['rs101', 'rs102', 'rs103'];
+const mongoRS2Nodes = ['rs201', 'rs202', 'rs203'];
+
+async function ensureMongodOnNodes(I, nodes) {
+  for (const node of nodes) {
+    await I.verifyCommand(`docker exec ${node} systemctl start mongod`);
+  }
+}
+
+async function ensureRs101MongoClient(I) {
+  await I.verifyCommand('docker exec rs101 systemctl start mongod');
+  await I.mongoConnect(mongoConnection);
+}
+
 Feature('BM: Backup Inventory');
 
 BeforeSuite(async ({
   I, locationsAPI, settingsAPI, inventoryAPI,
 }) => {
+  await ensureMongodOnNodes(I, [...mongoRS1Nodes, ...mongoRS2Nodes]);
   await settingsAPI.changeSettings({ backup: true });
   await locationsAPI.clearAllLocations(true);
   localStorageLocationId = await locationsAPI.createStorageLocation(
@@ -93,7 +108,7 @@ Before(async ({
 
   serviceId = service_id;
 
-  await I.verifyCommand('docker exec rs101 systemctl start mongod');
+  await ensureRs101MongoClient(I);
 
   const c = await I.mongoGetCollection('test', 'test');
 
@@ -110,7 +125,7 @@ After(async ({ I }) => {
     await mongoClient.close();
   }
 
-  await I.verifyCommand('docker exec rs101 systemctl start mongod');
+  await ensureRs101MongoClient(I);
 });
 
 AfterSuite(async ({ I }) => {

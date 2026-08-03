@@ -23,6 +23,12 @@ const clientCredentialsFlags = gssapi.enabled
   : '--username=pmm --password=pmmpass';
 
 const mongoNameWithoutCluster = 'mongo-schedule-no-cluster';
+const mongoConnection = {
+  username: 'pmm',
+  password: 'pmmpass',
+  port: 27027,
+};
+const mongoRSNodes = ['rs101', 'rs102', 'rs103'];
 const scheduleErrors = new DataTable(['mode', 'serviceName', 'error']);
 
 scheduleErrors.add(['PITR', mongoServiceName2, scheduledPage.messages.clusterHasPitrNoMoreAllowed(mongoCluster)]);
@@ -53,11 +59,10 @@ BeforeSuite(async ({
     locationsAPI.storageLocationConnection,
     location.description,
   );
-  await I.mongoConnect({
-    username: 'pmm',
-    password: 'pmmpass',
-    port: 27027,
-  });
+  for (const node of mongoRSNodes) {
+    I.say(await I.verifyCommand(`docker exec ${node} systemctl start mongod`));
+  }
+  await I.mongoConnect(mongoConnection);
 
   I.say(await I.verifyCommand(`docker exec rs101 pmm-admin add mongodb ${clientCredentialsFlags} --host=rs101 --port=27017 --service-name=${mongoServiceName} --replication-set=rs --cluster=rs`));
   I.say(await I.verifyCommand(`docker exec rs102 pmm-admin add mongodb ${clientCredentialsFlags} --host=rs102 --port=27017 --service-name=${mongoServiceName2} --replication-set=rs --cluster=rs`));
@@ -70,6 +75,8 @@ Before(async ({
   const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, mongoServiceName);
 
   serviceId = service_id;
+  await I.verifyCommand('docker exec rs101 systemctl start mongod');
+  await I.mongoConnect(mongoConnection);
   const c = await I.mongoGetCollection('test', 'test');
 
   await c.deleteMany({ number: 2 });

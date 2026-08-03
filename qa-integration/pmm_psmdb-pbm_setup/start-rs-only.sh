@@ -34,8 +34,11 @@ docker compose -f docker-compose-rs.yaml down -v --remove-orphans
 docker compose -f docker-compose-rs.yaml build --no-cache
 docker compose -f docker-compose-rs.yaml up -d
 echo
-echo "waiting 60 seconds for replica set members to start"
-sleep 60
+echo "waiting for replica set members to start"
+bash -e ./wait-for-mongod-nodes.sh docker-compose-rs.yaml "rs101 rs102 rs103"
+if [ "$profile" = "extra" ]; then
+  bash -e ./wait-for-mongod-nodes.sh docker-compose-rs.yaml "rs201 rs202 rs203"
+fi
 echo
 if [ $mongo_setup_type == "pss" ]; then
   bash -e ./configure-replset.sh
