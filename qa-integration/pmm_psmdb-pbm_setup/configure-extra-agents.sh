@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=setup-helpers.sh
+source "${SCRIPT_DIR}/setup-helpers.sh"
+
 pmm_mongo_user=${PMM_MONGO_USER:-pmm}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
@@ -44,10 +48,10 @@ echo
 echo "configuring pmm agents"
 random_number=$RANDOM
 nodes="rs201 rs202 rs203"
+wait_mongod_nodes docker-compose-rs.yaml rs201 rs202 rs203
 for node in $nodes
 do
-    echo "configuring pmm agent on $node"
-    docker compose -f docker-compose-rs.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}._${random_number} $node pmm-agent setup
+    setup_pmm_agent_on_node "$node" docker-compose-rs.yaml "${node}._${random_number}"
     if [[ $mongo_setup_type == "psa" && $node == "rs203"  ]]; then
       docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --cluster=replicaset --replication-set=rs1 --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
     else

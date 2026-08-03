@@ -11,6 +11,11 @@
     pmm_qa_branch: "{{ lookup('vars', 'extra_pmm_qa_branch', default=lookup('env','PMM_QA_GIT_BRANCH') | default('main', true) ) }}"
 
   tasks:
+  - name: Get first free docker port for HAProxy
+    include_tasks: tasks/find_first_empty_docker_port.yml
+    vars:
+      port_start: 42100
+
   - name: cleanup container for client and DB setup
     shell: >
       docker ps -a --filter "name={{ haproxy_container }}" | grep -q . && docker stop {{ haproxy_container }} && docker rm -fv {{ haproxy_container }}
@@ -25,7 +30,7 @@
   - name: Prepare Container for HAPROXY
     shell: |
       docker run -d \
-        -p 42100:42100 \
+        -p {{ docker_port }}:{{ docker_port }} \
         --name={{ haproxy_container }} \
         --network=pmm-qa \
         --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
@@ -34,11 +39,23 @@
       docker cp {{ playbook_dir }}/scripts/systemctl-shim.sh {{ haproxy_container }}:/usr/local/bin/systemctl
       docker exec {{ haproxy_container }} chmod +x /usr/local/bin/systemctl
   
+  - name: Render haproxy.cfg with selected listen port
+    ansible.builtin.copy:
+      src: haproxy.cfg
+      dest: /tmp/haproxy-{{ docker_port }}.cfg
+      mode: '0644'
+
+  - name: Set listen port in rendered haproxy.cfg
+    ansible.builtin.replace:
+      path: /tmp/haproxy-{{ docker_port }}.cfg
+      regexp: 'bind \*:42100'
+      replace: 'bind *:{{ docker_port }}'
+
   - name: Copy all required Artifacts to the docker haproxy_container
     shell: "{{ item }}"
     with_items:
       - docker cp ./haproxy_setup.sh {{ haproxy_container }}:/
-      - docker cp ./haproxy.cfg {{ haproxy_container }}:/
+      - docker cp /tmp/haproxy-{{ docker_port }}.cfg {{ haproxy_container }}:/haproxy.cfg
       - docker cp ./pmm3-client-setup.sh {{ haproxy_container }}:/
       - docker exec {{ haproxy_container }} apt-get update
       - docker exec {{ haproxy_container }} apt-get -y install wget curl git gnupg2 lsb-release
@@ -77,7 +94,7 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-      - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add haproxy --listen-port=42100 --environment=haproxy {{ haproxy_container }}_service_{{ random_number }}'
+      - docker exec {{ haproxy_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add haproxy --listen-port={{ docker_port }} --environment=haproxy {{ haproxy_container }}_service_{{ random_number }}'
 
   - name: Run ping to FE of HAPROXY to monitor the load balancing
-    shell: while true; do curl http://localhost:42100/; sleep 10; done >/dev/null 2>&1 &
+    shell: while true; do curl http://localhost:{{ docker_port }}/; sleep 10; done >/dev/null 2>&1 &
