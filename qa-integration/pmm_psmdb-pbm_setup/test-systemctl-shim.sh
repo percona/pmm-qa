@@ -18,7 +18,10 @@ for _ in $(seq 1 30); do
 done
 docker exec "$node" mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1 \
   && fail "mongod still responds after systemctl stop"
-pass "systemctl stop mongod"
+sleep 3
+docker exec "$node" mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1 \
+  && fail "mongod auto-restarted after systemctl stop"
+pass "systemctl stop mongod (stays stopped)"
 
 docker exec "$node" systemctl start mongod
 for _ in $(seq 1 60); do

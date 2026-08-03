@@ -10,7 +10,7 @@ docker compose -f docker-compose-sharded-with-pmm.yaml build
 docker compose -f docker-compose-sharded-with-pmm.yaml up -d
 
 echo "waiting for pmm-server to start"
-timeout 120 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD:-password}" https://127.0.0.1/ping)" = "200" ]; do sleep 5; done'
+timeout 240 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD:-password}" https://127.0.0.1/ping)" = "200" ]; do sleep 5; done'
 
 echo "waiting for mongodb to start"
 timeout 180 bash -c 'until docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rs101 mongosh --quiet --eval "db.adminCommand({ping:1})" >/dev/null 2>&1; do sleep 5; done'
@@ -234,6 +234,7 @@ do
     echo "congiguring pmm agent on $node"
     rs=$(echo $node | awk -F "0" '{print $1}')
     docker compose -f docker-compose-sharded-with-pmm.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}_${random_number} $node pmm-agent setup
+    sleep 5
     docker compose -f docker-compose-sharded-with-pmm.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --cluster=sharded --environment=mongo-sharded-dev --username=${pmm_user} --password=${pmm_pass} ${node}_${random_number} 127.0.0.1:27017
 done
 echo "configuring pmm-agent on primary rscfg01 for mongos instance"

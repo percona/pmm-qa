@@ -23,7 +23,8 @@ record_mongod_pid() {
 }
 
 start_mongod() {
-  mongod_running && return 0
+  mongod_running && record_mongod_pid && return 0
+  rm -f /var/run/mongod-stopped
   /usr/bin/percona-server-mongodb-helper.sh || true
   . /etc/sysconfig/mongod
   if [[ ! -f ${KRB5_KTNAME:-/nonexistent} ]]; then
@@ -31,14 +32,15 @@ start_mongod() {
   fi
   export GLIBC_TUNABLES=glibc.pthread.rseq=0 MONGODB_CONFIG_OVERRIDE_NOFORK=1
   [[ -v KRB5_KTNAME ]] && export KRB5_KTNAME
-  runuser -u mongod -- /usr/bin/mongod ${OPTIONS} &
-  for _ in $(seq 1 60); do
+  runuser -u mongod -- /usr/bin/mongod ${OPTIONS} >>/var/log/mongo/mongod.log 2>&1 &
+  for _ in $(seq 1 120); do
     mongod_running && record_mongod_pid && return 0
     sleep 1
   done
   return 1
 }
 stop_mongod() {
+  touch /var/run/mongod-stopped
   if mongod_running; then
     mongosh --quiet --eval 'try { db.adminCommand({shutdown: 1}) } catch (e) {}' >/dev/null 2>&1 || true
     for _ in $(seq 1 30); do
@@ -86,7 +88,19 @@ case "${1:-run}" in
     done
     start_pbm
     start_pmm
-    while true; do wait "$(cat /var/run/mongod.pid)" || start_mongod; done
+    while true; do
+      if [[ -f /var/run/mongod-stopped ]]; then
+        sleep 2
+        continue
+      fi
+      pid=$(cat /var/run/mongod.pid 2>/dev/null || true)
+      if [[ -n "$pid" ]]; then
+        wait "$pid" 2>/dev/null || true
+      fi
+      if [[ ! -f /var/run/mongod-stopped ]] && ! mongod_running; then
+        start_mongod || sleep 5
+      fi
+    done
     ;;
   start-mongod) start_mongod ;;
   stop-mongod) stop_mongod ;;
