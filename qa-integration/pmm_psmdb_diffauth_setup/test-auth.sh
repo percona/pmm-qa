@@ -45,7 +45,13 @@ minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
   fi
 ) 200>"$minio_lock"
 
-docker compose -f docker-compose-pmm-psmdb.yml up -d
+# --wait blocks here until psmdb-server reports healthy (i.e. its replica
+# set is initiated -- see the healthcheck in docker-compose-pmm-psmdb.yml).
+# This used to happen implicitly, as a side effect of minio's depends_on
+# waiting on psmdb-server's health before the (single) "up -d" call
+# returned; splitting minio into its own --no-deps step above removed that
+# accidental wait, so it's made explicit here instead.
+docker compose -f docker-compose-pmm-psmdb.yml up -d --wait --wait-timeout 180
 
 #Add users
 docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mongo --quiet << EOF
