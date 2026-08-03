@@ -13,13 +13,30 @@ class MongoDBHelper extends Helper {
     });
   }
 
+  buildMongoUrl(host, port, username, password, extraParams = {}) {
+    const params = new URLSearchParams({ authSource: 'admin', ...extraParams });
+    return `mongodb://${username}:${encodeURIComponent(password)}@${host}:${port}/?${params}`;
+  }
+
+  async closeClient() {
+    if (!this.client) {
+      return;
+    }
+    try {
+      await this.client.close();
+    } catch (e) {
+      // ignore close errors on stale clients
+    }
+    this.client = null;
+  }
+
   /**
    * Connects to mongo shell. Takes options from the Helper config by default
    * if url param is passed - it is used for a connection
    * @returns {Promise<*>}
    * @param connection
    */
-  async mongoConnect(connection) {
+  async mongoConnect(connection = {}) {
     const {
       host, port, username, password,
     } = connection;
@@ -32,11 +49,17 @@ class MongoDBHelper extends Helper {
 
     if (password) this.password = password;
 
-    this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin`;
-    this.client.s.url = this.url;
+    this.url = this.buildMongoUrl(this.host, this.port, this.username, this.password, {
+      directConnection: 'true',
+    });
+
+    await this.closeClient();
 
     this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      connectTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 30000,
     });
 
     return await this.client.connect();
@@ -57,7 +80,7 @@ class MongoDBHelper extends Helper {
     if (password) this.password = password;
 
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    this.client.s.url = this.url;
+    await this.closeClient();
 
     this.client = new MongoClient(this.url, {
       useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
@@ -71,7 +94,7 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<void>}
    */
   async mongoDisconnect() {
-    await this.client.close();
+    await this.closeClient();
   }
 
   /**

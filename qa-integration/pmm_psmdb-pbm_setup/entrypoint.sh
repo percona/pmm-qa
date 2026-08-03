@@ -34,7 +34,10 @@ start_mongod() {
   [[ -v KRB5_KTNAME ]] && export KRB5_KTNAME
   runuser -u mongod -- /usr/bin/mongod ${OPTIONS} >>/var/log/mongo/mongod.log 2>&1 &
   for _ in $(seq 1 120); do
-    mongod_running && record_mongod_pid && return 0
+    if mongod_running; then
+      mongosh --quiet --eval 'try { const s = rs.status(); if (s.ok) { quit(0) } } catch (e) {} quit(1)' >/dev/null 2>&1 && record_mongod_pid && return 0
+      mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1 && record_mongod_pid && return 0
+    fi
     sleep 1
   done
   return 1
