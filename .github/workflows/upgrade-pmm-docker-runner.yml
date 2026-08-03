@@ -163,9 +163,9 @@ jobs:
           git checkout FETCH_HEAD
 
       - name: Pre-upgrade UI tests
-        working-directory: pmm-qa/codeceptjs-e2e
+        working-directory: pmm-qa/e2e_test
         run: |
-          ./node_modules/.bin/codeceptjs run --reporter mocha-multi -c pr.codecept.js --steps --grep "$PRE_UPGRADE_FLAG"
+          npx playwright test --grep "@pre-upgrade"
 
       - name: Checkout upgrade branch
         working-directory: pmm-qa
@@ -185,8 +185,8 @@ jobs:
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: Post-server-upgrade UI tests
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: ./node_modules/.bin/codeceptjs run --reporter mocha-multi -c pr.codecept.js --steps --grep "$POST_UPGRADE_FLAG"
+        working-directory: pmm-qa/e2e_tests
+        run: npx playwright test --grep "@post-upgrade"
 
       - name: Upgrade PMM client in every client container
         # ponytail: collapsed the per-service if/elif from Jenkins into one loop that
