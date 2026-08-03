@@ -25,6 +25,15 @@ fi
 
 bash -e ./generate-certs.sh
 
+#Start our own minio only if no other setup is already running one
+if docker ps --filter name=minio --filter status=running --format '{{.Names}}' | grep -q .; then
+    echo "minio already running, reusing it"
+    COMPOSE_PROFILES=""
+else
+    COMPOSE_PROFILES="minio"
+fi
+export COMPOSE_PROFILES
+
 #Start setup
 docker compose -f docker-compose-pmm-psmdb.yml down -v --remove-orphans
 docker compose -f docker-compose-pmm-psmdb.yml build

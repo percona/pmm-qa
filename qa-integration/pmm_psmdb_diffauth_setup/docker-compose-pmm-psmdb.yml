@@ -117,9 +117,12 @@ services:
       timeout: 1s
       retries: 5
 
+  # Opt-in: started only with --profile minio. test-auth.sh enables it when no
+  # minio container is already running, so a minio from another setup is reused.
+  # No container_name / fixed port so a second instance cannot clash.
   minio:
+    profiles: [minio]
     image: minio/minio
-    container_name: minio
     ports:
       - "9001:9000"
     volumes:
@@ -133,7 +136,7 @@ services:
        condition: service_healthy
 
   createbucket:
-    container_name: createbucket
+    profiles: [minio]
     image: minio/mc
     depends_on:
       - minio
