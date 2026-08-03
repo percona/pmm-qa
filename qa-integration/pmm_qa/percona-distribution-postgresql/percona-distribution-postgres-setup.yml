@@ -34,7 +34,6 @@
     - name: Create Docker network
       shell: docker network create {{ network_name }}
       ignore_errors: yes
-      become: true
 
     - name: Install Percona Distribution for Postgres
       include_tasks: tasks/install-percona-distribution-postgresql-single.yml

@@ -5,6 +5,7 @@ const apiEndpoints = {
   },
   alerting: {
     folders: 'graph/api/folders',
+    listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
     rules: '/v1/alerting/rules',
     templates: '/v1/alerting/templates',
   },

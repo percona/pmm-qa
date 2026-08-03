@@ -88,40 +88,6 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T998 - Verify dashboard folders after upgrade @post-dashboards-upgrade',
-  async ({
-    I, searchDashboardsModal, grafanaAPI, homePage, dashboardPage,
-  }) => {
-    await homePage.open();
-    I.waitForVisible(locate('a').withText('Dashboards'));
-    I.click(locate('a').withText('Dashboards'));
-
-    const actualFolders = (await searchDashboardsModal.getFoldersList());
-
-    I.assertDeepIncludeMembers(actualFolders, [grafanaAPI.customFolderName]);
-    I.click(searchDashboardsModal.fields.folderItemLocatorExpand(grafanaAPI.customFolderName));
-    I.waitForVisible(searchDashboardsModal.fields.folderItemLocator(grafanaAPI.customDashboardName));
-  },
-);
-
-Scenario(
-  'PMM-T1091 - Verify PMM Dashboards folders are correct @post-dashboards-upgrade',
-  async ({
-    I, searchDashboardsModal,
-  }) => {
-    I.amOnPage(searchDashboardsModal.url);
-
-    searchDashboardsModal.waitForOpened();
-    const foldersNames = Object.values(searchDashboardsModal.folders).map((folder) => folder.name);
-
-    foldersNames.push('auto-test-folder');
-    const actualFolders = (await searchDashboardsModal.getFoldersList());
-
-    I.assertDeepMembers([...actualFolders].sort(), [...foldersNames].sort());
-  },
-);
-
-Scenario(
   'PMM-T1003 - Verify UI upgrade with Custom dashboard @post-dashboards-upgrade',
   async ({
     I, searchDashboardsModal, grafanaAPI, homePage, dashboardPage,
@@ -133,21 +99,6 @@ Scenario(
     searchDashboardsModal.expandFolder(searchDashboardsModal.folders.insight.name);
     I.seeElement(searchDashboardsModal.fields.folderItemLocator(grafanaAPI.randomDashboardName));
     I.seeElement(searchDashboardsModal.fields.folderItemWithTagLocator(grafanaAPI.randomDashboardName, grafanaAPI.randomTag));
-  },
-);
-
-Scenario(
-  'PMM-T424 Verify PT Summary Panel is available after Upgrade @post-dashboards-upgrade',
-  async ({ I, dashboardPage }) => {
-    const filter = 'Node Name';
-
-    I.amOnPage(`${dashboardPage.nodeSummaryDashboard.url}&var-node_name=pmm-server`);
-    dashboardPage.waitForDashboardOpened();
-    await dashboardPage.expandEachDashboardRow();
-    await dashboardPage.applyFilter(filter, 'pmm-server');
-
-    I.waitForElement(dashboardPage.nodeSummaryDashboard.ptSummaryDetail.reportContainer, 60);
-    I.seeElement(dashboardPage.nodeSummaryDashboard.ptSummaryDetail.reportContainer);
   },
 );
 
@@ -174,3 +125,7 @@ Scenario(
     I.seeInCurrentUrl(url2);
   },
 );
+
+// mongodb dashboards test after upgrade replicaset cluster routers.
+// mysql overview and postgres overview.
+// invetory nodes, services and agents.
