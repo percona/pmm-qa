@@ -117,9 +117,10 @@ services:
       timeout: 1s
       retries: 5
 
-  # Opt-in: started only with --profile minio. test-auth.sh enables it when no
-  # minio container is already running, so a minio from another setup is reused.
-  # No container_name / fixed port so a second instance cannot clash.
+  # Opt-in: started only with --profile minio. test-auth.sh starts it (under a
+  # flock, see pmm-qa-minio.lock) only when no minio container is already
+  # running, so a minio from another concurrent setup is reused instead of a
+  # second one clashing on this fixed container name/port.
   minio:
     profiles: [minio]
     image: minio/minio
