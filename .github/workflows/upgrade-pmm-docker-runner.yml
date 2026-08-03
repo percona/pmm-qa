@@ -33,14 +33,13 @@ on:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
         type: string
-      upgrade_flag:
-        description: 'Test subset'
-        default: 'OTHERS'
-        type: choice
-        options: [SSL, EXTERNAL SERVICES, OTHERS]
       pmm_qa_branch:
         description: 'pmm-qa branch'
         default: 'main'
+        type: string
+      pmm_clients:
+        description: 'Clients running to verify upgrade'
+        default: '--database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra --database ssl_psmdb'
         type: string
 
 env:
@@ -52,8 +51,8 @@ env:
   PMM_SERVER_LATEST: ${{ inputs.pmm_server_latest || '3-dev-latest' }}
   CLIENT_REPOSITORY: ${{ inputs.client_repository || 'release' }}
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
-  UPGRADE_FLAG: ${{ inputs.upgrade_flag || 'OTHERS' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+  PMM_CLIENTS: ${{ inputs.pmm_clients || '' }}
 
 jobs:
   upgrade-docker:
@@ -66,26 +65,6 @@ jobs:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
           path: pmm-qa
-
-      - name: Select test subset
-        run: |
-          case "$UPGRADE_FLAG" in
-            SSL)
-              echo "PRE_UPGRADE_FLAG=@pre-ssl-upgrade"  >> "$GITHUB_ENV"
-              echo "POST_UPGRADE_FLAG=@post-ssl-upgrade" >> "$GITHUB_ENV"
-              echo "PLAYWRIGHT_FLAG=noTestsRunning"      >> "$GITHUB_ENV"
-              echo "PMM_CLIENTS=--database ssl_psmdb --database ssl_mysql --database ssl_pdpgsql" >> "$GITHUB_ENV" ;;
-            "EXTERNAL SERVICES")
-              echo "PRE_UPGRADE_FLAG=@pre-external-upgrade"   >> "$GITHUB_ENV"
-              echo "POST_UPGRADE_FLAG=@post-external-upgrade" >> "$GITHUB_ENV"
-              echo "PLAYWRIGHT_FLAG=@rta"                     >> "$GITHUB_ENV"
-              echo "PMM_CLIENTS=--database external --database ps=8.4 --database pdpgsql --database psmdb --database pxc" >> "$GITHUB_ENV" ;;
-            *)  # OTHERS
-              echo "PRE_UPGRADE_FLAG=@pre-settings-metrics-upgrade|@pre-advisors-alerting-upgrade|@pre-annotations-prometheus-upgrade|@pre-dashboards-upgrade|@pre-custom-password-upgrade|@pre-mongo-backup-upgrade" >> "$GITHUB_ENV"
-              echo "POST_UPGRADE_FLAG=@post-settings-metrics-upgrade|@post-advisors-alerting-upgrade|@post-annotations-prometheus-upgrade|@post-dashboards-upgrade|@post-custom-password-upgrade|@post-mongo-backup-upgrade" >> "$GITHUB_ENV"
-              echo "PLAYWRIGHT_FLAG=@rta" >> "$GITHUB_ENV"
-              echo "PMM_CLIENTS=--database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra" >> "$GITHUB_ENV" ;;
-          esac
 
       - name: Start PMM Server (old image)
         run: |
@@ -123,7 +102,6 @@ jobs:
             --pmm-server-password="$ADMIN_PASSWORD" $PMM_CLIENTS
 
       - name: Setup custom queries
-        if: ${{ env.UPGRADE_FLAG == 'OTHERS' }}
         run: |
           PS=$(docker ps -a --format '{{.Names}}' | grep ps_pmm)
           PG=$(docker ps -a --format '{{.Names}}' | grep pgsql_pg)
@@ -190,9 +168,6 @@ jobs:
         run: npx playwright test --grep "@post-upgrade"
 
       - name: Upgrade PMM client in every client container
-        # ponytail: collapsed the per-service if/elif from Jenkins into one loop that
-        # auto-detects apt/dnf and tarball-vs-repo. Re-split only if a service needs
-        # bespoke steps.
         run: |
           for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower)$'); do
             echo "== upgrading client in $c =="
