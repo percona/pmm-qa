@@ -8,24 +8,27 @@ export interface AddRemoteInstance {
   mongodb?: {
     metricsParameters?: string;
     schema: 'https' | 'http';
-    pmm_agent_id: string;
+    pmm_agent_id?: string;
     port: string;
     address: string;
-    username: string;
-    password: string;
+    username?: string;
+    password?: string;
     skip_connection_check: boolean;
     service_name: string;
     add_node: {
       node_name: string;
       node_type: 'NODE_TYPE_REMOTE_NODE';
     };
-    metrics_mode: number;
+    metrics_mode?: number;
+    tls_certificate_file_password?: string;
+    tls_ca?: string;
+    tls_certificate_key?: string;
   };
 }
 export default class RemoteInstanceApi {
   constructor(private request: APIRequestContext) {}
 
-  addRemoteInstance = async (remoteInstance: AddRemoteInstance, headers: Headers) => {
+  addRemoteInstance = async (remoteInstance: AddRemoteInstance, headers?: Headers) => {
     const authHeaders = headers ? headers : GrafanaHelper.getAuthHeader();
     const response = await this.request.post(apiEndpoints.management.services, {
       data: remoteInstance,
