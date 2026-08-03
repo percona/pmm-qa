@@ -17,6 +17,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-rs1:/etc/mongod
@@ -44,6 +45,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-rs1:/etc/mongod
@@ -69,6 +71,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-rs1:/etc/mongod
@@ -94,6 +97,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-rs2:/etc/mongod
@@ -119,6 +123,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-rs2:/etc/mongod
@@ -144,6 +149,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-rs2:/etc/mongod
@@ -169,6 +175,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-cfg:/etc/mongod
@@ -194,6 +201,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-cfg:/etc/mongod
@@ -219,6 +227,7 @@ services:
     depends_on:
       - build_member
     image: replica_member/local
+    entrypoint: ["bash", "-c", "exec /entrypoint.sh"]
     volumes:
       - ./conf/pbm:/etc/pbm
       - ./conf/mongod-cfg:/etc/mongod

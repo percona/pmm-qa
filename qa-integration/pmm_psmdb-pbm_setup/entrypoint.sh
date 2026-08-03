@@ -3,14 +3,19 @@
 set -euo pipefail
 export PATH="/usr/local/bin:${PATH}" MANAGE_THP=0
 chown -R mongod:mongod /keytabs 2>/dev/null || true
-mkdir -p /var/log/mongo /var/lib/mongo /var/run
+mkdir -p /var/log/mongo /var/lib/mongo /var/run /tmp
 chown -R mongod:mongod /var/log/mongo /var/lib/mongo
+chown mongod:mongod /tmp 2>/dev/null || chmod 1777 /tmp
 [[ -f /etc/sysconfig/pbm-agent ]] && . /etc/sysconfig/pbm-agent
 
 start_mongod() {
   /usr/bin/percona-server-mongodb-helper.sh || true
   . /etc/sysconfig/mongod
-  export GLIBC_TUNABLES=glibc.pthread.rseq=0 MONGODB_CONFIG_OVERRIDE_NOFORK=1 KRB5_KTNAME
+  if [[ ! -f ${KRB5_KTNAME:-/nonexistent} ]]; then
+    unset KRB5_KTNAME
+  fi
+  export GLIBC_TUNABLES=glibc.pthread.rseq=0 MONGODB_CONFIG_OVERRIDE_NOFORK=1
+  [[ -v KRB5_KTNAME ]] && export KRB5_KTNAME
   runuser -u mongod -- /usr/bin/mongod ${OPTIONS} &
   echo $! >/var/run/mongod.pid
 }
@@ -27,7 +32,11 @@ stop_pbm() {
 }
 start_pmm() {
   [[ -f /var/run/pmm-agent.pid ]] && kill -0 "$(cat /var/run/pmm-agent.pid)" 2>/dev/null && return 0
-  export KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab
+  if [[ -f /keytabs/mongodb.keytab ]]; then
+    export KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab
+  else
+    unset KRB5_CLIENT_KTNAME
+  fi
   /usr/sbin/pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >>/var/log/pmm-agent.log 2>&1 &
   echo $! >/var/run/pmm-agent.pid
 }
