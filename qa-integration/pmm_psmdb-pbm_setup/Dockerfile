@@ -77,7 +77,13 @@ RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
             MINOR_VERSION=${MINOR_VERSION%%.*}; \
             if [ "$PMM_CLIENT_VERSION" = "3.7.1" ] || [ "$PMM_CLIENT_VERSION" = "3.8.0" ]; then BUILD_NUMBER=8; \
             elif [ "$PMM_CLIENT_VERSION" = "3.8.1" ] || [ "$MINOR_VERSION" -gt 8 ]; then BUILD_NUMBER=1; fi; \
-            dnf -y install pmm-client-${PMM_CLIENT_VERSION}-${BUILD_NUMBER}.el${OL_VERSION} ; \
+            installed=0; \
+            for attempt in 1 2 3; do \
+              dnf -y install pmm-client-${PMM_CLIENT_VERSION}-${BUILD_NUMBER}.el${OL_VERSION} && installed=1 && break; \
+              dnf clean all; \
+              sleep 3; \
+            done; \
+            [ "$installed" -eq 1 ]; \
         else \
             dnf -y install pmm-client-${PMM_CLIENT_VERSION}-6.el${OL_VERSION} ; \
         fi \
