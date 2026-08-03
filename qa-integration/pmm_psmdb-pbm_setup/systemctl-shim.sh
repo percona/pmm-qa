@@ -7,7 +7,10 @@ case "$cmd" in
   start|restart)
     case "$unit" in
       pbm-agent) [[ $cmd == restart ]] && exec /entrypoint.sh restart-pbm-agent; exec /entrypoint.sh start-pbm-agent ;;
-      pmm-agent) exec /entrypoint.sh start-pmm-agent ;;
+      pmm-agent)
+        [[ $cmd == restart ]] && exec /entrypoint.sh restart-pmm-agent
+        exec /entrypoint.sh start-pmm-agent
+        ;;
       mongod)
         [[ $cmd == restart ]] && exec /entrypoint.sh restart-mongod
         exec /entrypoint.sh start-mongod
@@ -19,11 +22,7 @@ case "$cmd" in
     case "$unit" in
       mongod) exec /entrypoint.sh stop-mongod ;;
       pbm-agent) exec /entrypoint.sh stop-pbm-agent ;;
-      pmm-agent)
-        [[ -f /var/run/pmm-agent.pid ]] && kill "$(cat /var/run/pmm-agent.pid)" 2>/dev/null || true
-        rm -f /var/run/pmm-agent.pid
-        pkill -x pmm-agent 2>/dev/null || true
-        ;;
+      pmm-agent) exec /entrypoint.sh stop-pmm-agent ;;
       *) exit 0 ;;
     esac
     ;;
