@@ -12,8 +12,8 @@ docker compose -f docker-compose-sharded-with-pmm.yaml up -d
 echo "waiting for pmm-server to start"
 timeout 120 bash -c 'until [ "$(curl -ks -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD:-password}" https://127.0.0.1/ping)" = "200" ]; do sleep 5; done'
 
-echo "waiting 30 seconds for mongodb to start"
-sleep 30
+echo "waiting for mongodb to start"
+timeout 180 bash -c 'until docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rs101 mongosh --quiet --eval "db.adminCommand({ping:1})" >/dev/null 2>&1; do sleep 5; done'
 
 nodes="rs101 rs201"
 for node in $nodes

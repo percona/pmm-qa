@@ -10,8 +10,8 @@ chown -R mongod:mongod /var/log/mongo /var/lib/mongo
 start_mongod() {
   /usr/bin/percona-server-mongodb-helper.sh || true
   . /etc/sysconfig/mongod
-  export GLIBC_TUNABLES=glibc.pthread.rseq=0 MONGODB_CONFIG_OVERRIDE_NOFORK=1
-  su -s /bin/bash mongod -c "/usr/bin/mongod ${OPTIONS}" &
+  export GLIBC_TUNABLES=glibc.pthread.rseq=0 MONGODB_CONFIG_OVERRIDE_NOFORK=1 KRB5_KTNAME
+  runuser -u mongod -- /usr/bin/mongod ${OPTIONS} &
   echo $! >/var/run/mongod.pid
 }
 start_pbm() {
@@ -41,7 +41,7 @@ case "${1:-run}" in
     done
     start_pbm
     start_pmm
-    wait "$(cat /var/run/mongod.pid)"
+    while true; do wait "$(cat /var/run/mongod.pid)" || start_mongod; done
     ;;
   start-mongod) start_mongod ;;
   start-pbm-agent) start_pbm ;;
