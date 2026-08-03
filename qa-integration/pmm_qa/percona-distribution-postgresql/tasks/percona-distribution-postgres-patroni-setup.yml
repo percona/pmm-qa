@@ -136,6 +136,10 @@
     container_name: "{{ container_prefix }}{{ item }}"
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
+- name: Set random suffix for patroni service names
+  set_fact:
+    random_service_name_value: "_{{ 9999 | random + 1 }}"
+
 - name: Get already connected services to pmm server
   shell: docker exec {{ container_prefix }}1 sh -c 'curl --location --insecure -u"admin:{{ admin_password }}" -s --request GET "http://{{ pmm_server_ip }}:{{ "80" if pmm_server_ip is match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$') else "8080" }}/v1/management/services" | jq -r ".services[].service_name"'
   register: pmm_server_services
@@ -144,13 +148,11 @@
   debug:
     msg: "{{ pmm_server_services.stdout | split('\n') }}"
 
-- name: Find out if service is already connected to pmm server
-  block:
-    - name: Loop through percona servers
-      set_fact:
-        random_service_name_value: "_{{ 9999 | random + 1 }}"
-      loop: "{{ range(1, nodes_count | int + 1) | list }}"
-      when: "('pdpgsql_pmm_patroni_' ~ pdpgsql_version ~ '_' ~ item) in pmm_server_services.stdout"
+- name: Bump random suffix when patroni services already exist on PMM Server
+  set_fact:
+    random_service_name_value: "_{{ 9999 | random + 1 }}"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  when: "('pdpgsql_pmm_patroni_' ~ pdpgsql_version ~ '_' ~ item) in pmm_server_services.stdout"
 
 - name: Wait for Patroni-managed PostgreSQL on each node
   include_tasks: ../tasks/wait_pgsql_ready.yml
