@@ -4,6 +4,7 @@ const apiEndpoints = {
     rolesAssign: '/v1/accesscontrol/roles:assign',
   },
   alerting: {
+    folders: 'graph/api/folders',
     rules: '/v1/alerting/rules',
     templates: '/v1/alerting/templates',
   },

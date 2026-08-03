@@ -12,38 +12,6 @@ Before(async ({ I }) => {
   I.Authorize();
 });
 
-Scenario(
-  'PMM-T577 - Verify user is able to see IA alerts before upgrade @pre-advisors-alerting-upgrade',
-  async ({
-    settingsAPI, rulesAPI, alertsAPI,
-  }) => {
-    await settingsAPI.changeSettings({ alerting: true });
-    await rulesAPI.removeAllAlertRules(true);
-    const ruleFolder = 'MySQL';
-
-    await rulesAPI.createAlertRule({ ruleName, filters: [{ label: 'node_name', regexp: 'pmm-server', type: 'FILTER_TYPE_MATCH' }] }, ruleFolder, 'pmm_node_high_cpu_load');
-
-    // Wait for alert to appear
-    await alertsAPI.waitForAlerts(60, 1);
-  },
-);
-
-Scenario(
-  'Change advisors intervals before the upgrade @pre-advisors-alerting-upgrade',
-  async ({
-    I,
-    advisorsPage,
-  }) => {
-    I.amOnPage(advisorsPage.urlConfiguration);
-    I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
-    I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
-    I.click(advisorsPage.buttons.openChangeInterval(advisorName));
-    I.click(advisorsPage.buttons.intervalValue('Frequent'));
-    I.click(advisorsPage.buttons.applyIntervalChange);
-    I.waitForText('Frequent', 5, advisorsPage.elements.intervalCellByName(advisorName));
-  },
-);
-
 Scenario('Disable advisor before upgrade @pre-advisors-alerting-upgrade', async ({
   I,
   advisorsPage,
@@ -57,38 +25,6 @@ Scenario('Disable advisor before upgrade @pre-advisors-alerting-upgrade', async 
     I.seeTextEquals('Enable', advisorsPage.buttons.disableEnableCheck(checkName));
   }
 });
-
-Scenario(
-  'Verify advisors intervals remain the same after upgrade @post-advisors-alerting-upgrade',
-  async ({
-    I,
-    advisorsPage,
-  }) => {
-    I.amOnPage(advisorsPage.urlConfiguration);
-    I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
-    I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
-    const advisorInterval = await I.grabTextFrom(advisorsPage.elements.intervalCellByName(advisorName));
-
-    I.assertTrue(advisorInterval === 'Frequent', `Expected advisor interval to be: "Frequent", but actual advisor interval is: ${advisorInterval}`);
-  },
-);
-
-Scenario(
-  'Verify disabled advisor remain disabled after upgrade @post-advisors-alerting-upgrade',
-  async ({
-    I,
-    advisorsPage,
-  }) => {
-    if (beforeUpgradePmmVersion > 340) {
-      I.amOnPage(advisorsPage.urlConfiguration);
-      I.waitForVisible(advisorsPage.elements.advisorsGroupHeader(groupName));
-      I.click(advisorsPage.elements.advisorsGroupHeader(groupName));
-
-      I.waitForVisible(advisorsPage.buttons.disableEnableCheck(checkName));
-      I.seeTextEquals('Enable', advisorsPage.buttons.disableEnableCheck(checkName));
-    }
-  },
-);
 
 const rareInterval = '48';
 const standardInterval = '12';
@@ -125,25 +61,6 @@ Scenario(
     I.seeInField(pmmSettingsPage.fields.rareIntervalInput, rareInterval);
     I.seeInField(pmmSettingsPage.fields.standartIntervalInput, standardInterval);
     I.seeInField(pmmSettingsPage.fields.frequentIntervalInput, frequentInterval);
-  },
-);
-
-Scenario(
-  'PMM-T577 Verify user can see IA alerts after upgrade @post-advisors-alerting-upgrade',
-  async ({
-           I, alertsPage, alertsAPI,
-         }) => {
-    const alertName = 'Node high CPU load';
-
-    I.amOnPage(alertsPage.url);
-    I.waitForElement(alertsPage.elements.alertRow(ruleName), 120);
-
-    await alertsAPI.waitForAlerts(10, 1);
-    const alerts = await alertsAPI.getAlertsList();
-
-    assert.ok(alerts[0].annotations.summary.includes(alertName), `Didn't find alert with name ${alertName}`);
-
-    I.waitForElement(alertsPage.elements.alertRow(ruleName), 60);
   },
 );
 

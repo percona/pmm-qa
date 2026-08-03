@@ -22,9 +22,13 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
+import AlertStatusPage from '@pages/alerts/alertStatus.page';
+import AdvisorsPage from '@pages/advisors/advisors.page';
 
 const pmmTest = base.extend<{
+  advisorsPage: AdvisorsPage;
   settingsPage: SettingsPage;
+  alertStatusPage: AlertStatusPage;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -47,7 +51,9 @@ const pmmTest = base.extend<{
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
 }>({
+  advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
+  alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 

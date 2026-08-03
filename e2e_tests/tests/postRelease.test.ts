@@ -3,13 +3,14 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
-if (!process.env.PMM_SERVER_LATEST?.trim()) {
-  throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
-}
-
-const expectedVersion = process.env.PMM_SERVER_LATEST.trim();
+let expectedVersion = '';
 
 pmmTest.beforeEach(async ({ context, page }) => {
+  if (!process.env.PMM_SERVER_LATEST?.trim()) {
+    throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
+  }
+
+  expectedVersion = process.env.PMM_SERVER_LATEST.trim();
   await page.unroute(apiEndpoints.server.updates);
   await context.unroute(apiEndpoints.server.updates);
   await page.unroute(apiEndpoints.users.me);
