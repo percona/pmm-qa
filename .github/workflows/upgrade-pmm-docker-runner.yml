@@ -68,6 +68,8 @@ jobs:
 
       - name: Start PMM Server (old image)
         run: |
+          ls
+          ls pmm-qa
           docker network create pmm-qa || true
           docker volume create pmm-volume
           docker run --detach --restart always --network pmm-qa \
