@@ -39,21 +39,10 @@
       docker cp {{ playbook_dir }}/scripts/systemctl-shim.sh {{ haproxy_container }}:/usr/local/bin/systemctl
       docker exec {{ haproxy_container }} chmod +x /usr/local/bin/systemctl
   
-  - name: Render haproxy.cfg with selected listen port
-    ansible.builtin.copy:
-      src: haproxy.cfg
-      dest: /tmp/haproxy-{{ docker_port }}.cfg
-      mode: '0644'
-
-  - name: Set listen port in rendered haproxy.cfg
-    ansible.builtin.replace:
-      path: /tmp/haproxy-{{ docker_port }}.cfg
-      regexp: 'bind \*:42100'
-      replace: 'bind *:{{ docker_port }}'
-
   - name: Copy all required Artifacts to the docker haproxy_container
     shell: "{{ item }}"
     with_items:
+      - sed 's/42100/{{ docker_port }}/' {{ playbook_dir }}/haproxy.cfg > /tmp/haproxy-{{ docker_port }}.cfg
       - docker cp ./haproxy_setup.sh {{ haproxy_container }}:/
       - docker cp /tmp/haproxy-{{ docker_port }}.cfg {{ haproxy_container }}:/haproxy.cfg
       - docker cp ./pmm3-client-setup.sh {{ haproxy_container }}:/

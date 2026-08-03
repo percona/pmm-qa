@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=setup-helpers.sh
-source "${SCRIPT_DIR}/setup-helpers.sh"
-
 pmm_mongo_user=${PMM_MONGO_USER:-pmm}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
@@ -54,10 +50,21 @@ DEBUG_FLAG=""
 
 random_number=$RANDOM
 nodes="rs101 rs102 rs103"
-wait_mongod_nodes docker-compose-rs.yaml rs101 rs102 rs103
 for node in $nodes
 do
-    setup_pmm_agent_on_node "$node" docker-compose-rs.yaml "${node}._${random_number}" "${DEBUG_FLAG}"
+    echo "configuring pmm agent on $node"
+    for attempt in $(seq 1 5); do
+      docker compose -f docker-compose-rs.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}._${random_number} $node pmm-agent setup ${DEBUG_FLAG} || true
+      if docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin status 2>/dev/null | grep -q Connected; then
+        break
+      fi
+      if [[ $attempt -eq 5 ]]; then
+        echo "pmm-agent on $node failed to connect after 5 attempts"
+        exit 1
+      fi
+      echo "pmm-agent on $node not connected yet (attempt $attempt/5); retrying in 10s..."
+      sleep 10
+    done
     if [[ $mongo_setup_type == "psa" && $node == "rs103" ]]; then
       docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
     else

@@ -1,10 +1,6 @@
 #!/bin/bash
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=setup-helpers.sh
-source "${SCRIPT_DIR}/setup-helpers.sh"
-
 profile=${COMPOSE_PROFILES:-classic}
 mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
 mongo_setup_type=${mongo_setup_type,,}
@@ -38,8 +34,8 @@ docker compose -f docker-compose-rs.yaml down -v --remove-orphans
 docker compose -f docker-compose-rs.yaml build --no-cache
 docker compose -f docker-compose-rs.yaml up -d
 echo
-echo "waiting for replica set members to start"
-wait_mongod_nodes docker-compose-rs.yaml rs101 rs102 rs103
+echo "waiting 60 seconds for replica set members to start"
+sleep 60
 echo
 if [ $mongo_setup_type == "pss" ]; then
   bash -e ./configure-replset.sh
@@ -54,12 +50,5 @@ if [ $profile = "extra" ]; then
   else
     bash -x ./configure-extra-psa.sh
   fi
-  wait_mongod_nodes docker-compose-rs.yaml rs201 rs202 rs203
   bash -x ./configure-extra-agents.sh
-fi
-
-echo "verifying all replica set members are reachable"
-wait_mongod_nodes docker-compose-rs.yaml rs101 rs102 rs103
-if [ $profile = "extra" ]; then
-  wait_mongod_nodes docker-compose-rs.yaml rs201 rs202 rs203
 fi
