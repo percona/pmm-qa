@@ -97,9 +97,10 @@ jobs:
           mkdir -m 777 -p /tmp/backup_data
           python3 -m venv virtenv && . virtenv/bin/activate
           pip install --upgrade pip && pip install -r requirements.txt setuptools netaddr
-          python pmm-framework.py --verbose \
+          ./pmm-framework/pmm-framework --parallel \
             --client-version="$CLIENT_VERSION" \
-            --pmm-server-password="$ADMIN_PASSWORD" $PMM_CLIENTS
+            --pmm-server-password="$ADMIN_PASSWORD" \
+            $PMM_CLIENTS
 
       - name: Setup custom queries
         run: |

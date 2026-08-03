@@ -7,6 +7,7 @@ import SettingsApi from '@api/settings.api';
 import AccessControlApi from '@api/accessControl.api';
 import ServerApi from '@api/server.api';
 import AlertingApi from '@api/alerting.api';
+import RemoteInstanceApi from '@api/remoteInstance.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
@@ -15,6 +16,7 @@ export default class Api {
   readonly grafanaApi: GrafanaApi;
   readonly inventoryApi: InventoryApi;
   readonly realTimeAnalyticsApi: RealTimeAnalyticsApi;
+  readonly remoteInstanceApi: RemoteInstanceApi;
   readonly serverApi: ServerApi;
   readonly settingsApi: SettingsApi;
 
@@ -22,10 +24,11 @@ export default class Api {
     this.accessControlApi = new AccessControlApi(request);
     this.alertingApi = new AlertingApi(request);
     this.backupsApi = new BackupsApi(request);
-    this.inventoryApi = new InventoryApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
+    this.inventoryApi = new InventoryApi(request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
-    this.settingsApi = new SettingsApi(request);
+    this.remoteInstanceApi = new RemoteInstanceApi(request);
     this.serverApi = new ServerApi(request);
+    this.settingsApi = new SettingsApi(request);
   }
 }
