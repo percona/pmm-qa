@@ -22,7 +22,7 @@
 - name: Install dependencies
   shell: |
     docker exec {{ container_prefix }}{{ item }} apt-get update
-    docker exec {{ container_prefix }}{{ item }} apt-get -y install wget gnupg2 lsb-release curl
+    docker exec {{ container_prefix }}{{ item }} apt-get -y install wget gnupg2 lsb-release curl iproute2
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Install Percona Release
