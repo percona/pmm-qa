@@ -68,8 +68,6 @@ jobs:
 
       - name: Start PMM Server (old image)
         run: |
-          ls
-          ls pmm-qa
           docker network create pmm-qa || true
           docker volume create pmm-volume
           docker run --detach --restart always --network pmm-qa \
@@ -142,7 +140,7 @@ jobs:
           git checkout FETCH_HEAD
 
       - name: Pre-upgrade UI tests
-        working-directory: pmm-qa/e2e_test
+        working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
           npx playwright test --grep "@pre-upgrade"
