@@ -8,7 +8,11 @@ case "$cmd" in
     case "$unit" in
       pbm-agent) [[ $cmd == restart ]] && exec /entrypoint.sh restart-pbm-agent; exec /entrypoint.sh start-pbm-agent ;;
       pmm-agent) exec /entrypoint.sh start-pmm-agent ;;
-      mongod) exec /entrypoint.sh start-mongod ;;
+      mongod)
+        [[ $cmd == restart ]] && exec /entrypoint.sh restart-mongod
+        [[ $cmd == stop ]] && exec /entrypoint.sh stop-mongod
+        exec /entrypoint.sh start-mongod
+        ;;
       *) exit 0 ;;
     esac
     ;;

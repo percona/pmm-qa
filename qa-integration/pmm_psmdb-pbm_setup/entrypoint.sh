@@ -9,6 +9,7 @@ chown mongod:mongod /tmp 2>/dev/null || chmod 1777 /tmp
 [[ -f /etc/sysconfig/pbm-agent ]] && . /etc/sysconfig/pbm-agent
 
 start_mongod() {
+  mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1 && return 0
   /usr/bin/percona-server-mongodb-helper.sh || true
   . /etc/sysconfig/mongod
   if [[ ! -f ${KRB5_KTNAME:-/nonexistent} ]]; then
@@ -18,6 +19,11 @@ start_mongod() {
   [[ -v KRB5_KTNAME ]] && export KRB5_KTNAME
   runuser -u mongod -- /usr/bin/mongod ${OPTIONS} &
   echo $! >/var/run/mongod.pid
+}
+stop_mongod() {
+  [[ -f /var/run/mongod.pid ]] && kill "$(cat /var/run/mongod.pid)" 2>/dev/null || true
+  pkill -u mongod -x mongod 2>/dev/null || true
+  rm -f /var/run/mongod.pid
 }
 start_pbm() {
   pgrep -u mongod -x pbm-agent >/dev/null 2>&1 && return 0
@@ -53,6 +59,8 @@ case "${1:-run}" in
     while true; do wait "$(cat /var/run/mongod.pid)" || start_mongod; done
     ;;
   start-mongod) start_mongod ;;
+  stop-mongod) stop_mongod ;;
+  restart-mongod) stop_mongod; sleep 1; start_mongod ;;
   start-pbm-agent) start_pbm ;;
   restart-pbm-agent) stop_pbm; sleep 1; start_pbm ;;
   stop-pbm-agent) stop_pbm ;;
