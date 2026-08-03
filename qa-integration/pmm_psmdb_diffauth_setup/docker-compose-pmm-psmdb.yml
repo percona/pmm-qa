@@ -123,6 +123,7 @@ services:
   minio:
     profiles: [minio]
     image: minio/minio
+    container_name: minio
     ports:
       - "9001:9000"
     volumes:
@@ -138,6 +139,7 @@ services:
   createbucket:
     profiles: [minio]
     image: minio/mc
+    container_name: createbucket
     depends_on:
       - minio
     entrypoint: >

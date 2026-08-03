@@ -215,6 +215,7 @@ services:
   minio:
     profiles: ["minio"]
     image: minio/minio
+    container_name: minio
     ports:
       - "9001:9000"
     depends_on:
@@ -235,6 +236,7 @@ services:
   createbucket:
     profiles: ["minio"]
     image: minio/mc
+    container_name: createbucket
     networks:
       - pmm-qa
       - pmm-ui-tests1

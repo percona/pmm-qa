@@ -267,8 +267,9 @@ services:
   minio:
     profiles: ["minio"]
     image: minio/minio
+    container_name: minio
     ports:
-      - "${MINIO_PORT:-9001}:9000"
+      - "9001:9000"
     networks:
       - pmm-qa
       - pmm-ui-tests1
@@ -285,6 +286,7 @@ services:
   createbucket:
     profiles: ["minio"]
     image: minio/mc
+    container_name: createbucket
     networks:
       - pmm-qa
       - pmm-ui-tests1

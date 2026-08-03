@@ -26,8 +26,8 @@ fi
 bash -e ./generate-certs.sh
 
 #Start our own minio only if no other setup is already running one
-if docker ps --filter name=minio --filter status=running --format '{{.Names}}' | grep -q .; then
-    echo "minio already running, reusing it"
+if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
+    echo "minio container exists, reusing it"
     COMPOSE_PROFILES=""
 else
     COMPOSE_PROFILES="minio"
