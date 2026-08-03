@@ -45,13 +45,19 @@ minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
   fi
 ) 200>"$minio_lock"
 
-# --wait blocks here until psmdb-server reports healthy (i.e. its replica
-# set is initiated -- see the healthcheck in docker-compose-pmm-psmdb.yml).
-# This used to happen implicitly, as a side effect of minio's depends_on
-# waiting on psmdb-server's health before the (single) "up -d" call
-# returned; splitting minio into its own --no-deps step above removed that
-# accidental wait, so it's made explicit here instead.
-docker compose -f docker-compose-pmm-psmdb.yml up -d --wait --wait-timeout 180
+docker compose -f docker-compose-pmm-psmdb.yml up -d
+
+# Wait until psmdb-server reports healthy (i.e. its replica set is
+# initiated -- see its healthcheck in docker-compose-pmm-psmdb.yml). This
+# used to happen implicitly, as a side effect of minio's depends_on waiting
+# on psmdb-server's health before the (single) "up -d" call returned;
+# splitting minio into its own --no-deps step above removed that accidental
+# wait, so it's made explicit here. (Not using "up -d --wait" for this: it
+# requires every container in the stack to be running/healthy, but
+# build_member is a throwaway container that intentionally exits 0 as soon
+# as its image is built, which --wait would wrongly treat as a failure.)
+echo "waiting for psmdb-server to become healthy..."
+timeout 180 bash -c 'until [ "$(docker inspect -f "{{.State.Health.Status}}" psmdb-server 2>/dev/null)" = "healthy" ]; do sleep 3; done'
 
 #Add users
 docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mongo --quiet << EOF
