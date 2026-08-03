@@ -265,10 +265,10 @@ services:
       - rscfg03
 
   minio:
+    profiles: ["minio"]
     image: minio/minio
-    container_name: minio
     ports:
-      - "9001:9000"
+      - "${MINIO_PORT:-9001}:9000"
     networks:
       - pmm-qa
       - pmm-ui-tests1
@@ -283,7 +283,7 @@ services:
     command: server /backups
 
   createbucket:
-    container_name: createbucket
+    profiles: ["minio"]
     image: minio/mc
     networks:
       - pmm-qa

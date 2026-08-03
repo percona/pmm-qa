@@ -5,6 +5,14 @@ pmm_pass=${PMM_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
 
+# Start our own minio only if no other setup is already running one.
+if docker ps --filter name=minio --filter status=running --format '{{.Names}}' | grep -q .; then
+    echo "minio already running, reusing it"
+else
+    COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}minio"
+fi
+export COMPOSE_PROFILES
+
 docker compose -f docker-compose-sharded-with-pmm.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded-with-pmm.yaml build
 docker compose -f docker-compose-sharded-with-pmm.yaml up -d

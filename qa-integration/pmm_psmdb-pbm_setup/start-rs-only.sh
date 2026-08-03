@@ -10,6 +10,14 @@ ol_version=${OL_VERSION:-9}
 
 
 export COMPOSE_PROFILES=${profile}
+
+# Start our own minio only if no other setup is already running one.
+if docker ps --filter name=minio --filter status=running --format '{{.Names}}' | grep -q .; then
+    echo "minio already running, reusing it"
+else
+    COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}minio"
+fi
+export COMPOSE_PROFILES
 export MONGO_SETUP_TYPE=${mongo_setup_type}
 export OL_VERSION=${ol_version}
 

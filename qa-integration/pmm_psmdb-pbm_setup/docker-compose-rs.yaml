@@ -213,9 +213,8 @@ services:
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
   minio:
+    profiles: ["minio"]
     image: minio/minio
-    profiles: ["classic", "extra"]
-    container_name: minio
     ports:
       - "9001:9000"
     depends_on:
@@ -234,9 +233,8 @@ services:
     command: server /backups
 
   createbucket:
-    container_name: createbucket
+    profiles: ["minio"]
     image: minio/mc
-    profiles: ["classic", "extra"]
     networks:
       - pmm-qa
       - pmm-ui-tests1

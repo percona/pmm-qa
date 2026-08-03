@@ -226,6 +226,7 @@ services:
       - rscfg03
 
   minio:
+    profiles: ["minio"]
     image: minio/minio
     container_name: minio
     ports:
@@ -240,7 +241,7 @@ services:
     command: server /backups
 
   createbucket:
-    container_name: createbucket
+    profiles: ["minio"]
     image: minio/mc
     networks:
       - test-network
