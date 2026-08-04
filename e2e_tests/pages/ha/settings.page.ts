@@ -41,11 +41,15 @@ export default class SettingsPage extends BasePage {
     pageTitle: this.page.getByRole('heading', { name: 'Settings' }),
   };
   inputs = {
+    dataRetention: this.page.getByTestId('retention-number-input'),
+    frequentAdvisorInterval: this.page.getByTestId('frequentInterval-number-input'),
     high: this.page.locator('[name="hr"]'),
     low: this.page.locator('[name="lr"]'),
     medium: this.page.locator('[name="mr"]'),
     publicAddress: this.page.getByTestId('text-input-public-address'),
+    rareAdvisorInterval: this.page.getByTestId('rareInterval-number-input'),
     sshKey: this.page.getByTestId('text-input-ssh-key'),
+    standardAdvisorInterval: this.page.getByTestId('standardInterval-number-input'),
   };
   messages = {};
 

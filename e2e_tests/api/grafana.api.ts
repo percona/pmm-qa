@@ -20,19 +20,17 @@ export default class GrafanaApi {
     return (await dataSources.json()).find((d: { name: string }) => d.name === name);
   };
 
-  getMetric = async (metricName: string) => {
+  getMetric = async (metricName: string, serviceName?: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const datasource = await this.getDataSourceByName();
+    const expr = serviceName ? `${metricName}{service_name="${serviceName}"}` : metricName;
     const requestBody = {
       from: 'now-1m',
       queries: [
         {
-          datasource: {
-            type: 'prometheus',
-            uid: datasource.uid,
-          },
+          datasource: { type: 'prometheus', uid: datasource.uid },
           datasourceId: datasource.uid,
-          expr: metricName,
+          expr,
           intervalMs: 1_000,
           maxDataPoints: 100,
         },
@@ -40,6 +38,8 @@ export default class GrafanaApi {
       to: 'now',
     };
     const metric = await this.request.post('graph/api/ds/query', { data: requestBody, headers });
+
+    console.log(await metric.json());
 
     expect(
       metric.status(),
@@ -49,13 +49,17 @@ export default class GrafanaApi {
     return await metric.json();
   };
 
-  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+  waitForMetric = async (
+    metricName: string,
+    serviceName?: string,
+    timeout: Timeouts = Timeouts.ONE_MINUTE,
+  ) => {
     let iterator = 0;
 
     while (true) {
       if (iterator > timeout) throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
 
-      const metric = await this.getMetric(metricName);
+      const metric = await this.getMetric(metricName, serviceName);
 
       if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
 
