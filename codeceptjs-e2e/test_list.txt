@@ -1,1 +1,0 @@
-tests/configuration/profile_test.js
