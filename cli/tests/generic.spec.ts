@@ -7,6 +7,13 @@ const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
 
+const getClientImageVersion = (): string => {
+  const clientImage = process.env.CLIENT_IMAGE ?? 'perconalab/pmm-client:3-dev-latest';
+  return JSON.parse(
+    cli.execute(`docker run --rm --entrypoint pmm-admin ${clientImage} --version --json`).stdout,
+  ).Version;
+};
+
 test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep pdpgsql_pmm | awk \'{print $NF}\'');
@@ -17,10 +24,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
   if (/latest-tarball|3-dev-latest|pmm3-rc|https:/.test(PMM_VERSION)) {
-    // TODO: refactor to use docker hub API to remove file-update dependency
-    // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
-    PMM_VERSION = cli.execute('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')
-      .stdout.trim();
+    PMM_VERSION = process.env.CLIENT_IMAGE
+      ? getClientImageVersion()
+      : cli.execute('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION').stdout.trim();
   }
 
   test('Verify pt summary for mysql mongodb and pgsql', async ({}) => {
@@ -570,13 +576,10 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
 
   test('PMM-T2227 - Verify tarball upgrade @generic', async ({}) => {
     const containerName = 'tarball_client';
-    const clientImage = process.env.CLIENT_IMAGE ?? 'perconalab/pmm-client:3-dev-latest';
     const tarballURL = process.env.PMM_CLIENT_VERSION?.includes('http')
       ? process.env.PMM_CLIENT_VERSION
       : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
-    const expectedUpgradeVersion = JSON.parse(
-      (await cli.exec(`docker run --rm --entrypoint pmm-admin ${clientImage} --version --json`)).stdout,
-    ).Version;
+    const expectedUpgradeVersion = getClientImageVersion();
 
     await cli.exec('docker network create pmm-qa || true');
     await cli.exec('docker network connect pmm-qa pmm-server || true');
