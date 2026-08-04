@@ -20,14 +20,19 @@ DRY_RUN=0
 [ "${1:-}" = "--dry-run" ] && DRY_RUN=1
 
 api_get() {
-  curl -fsS -H "Authorization: Bearer $LINODE_TOKEN" "https://api.linode.com/v4$1"
+  curl -fsS -H "Authorization: Bearer $LINODE_TOKEN" "$@"
 }
 
 now_epoch=$(date -u +%s)
 reaped=0
 kept=0
 
-instances=$(api_get "/linode/instances?tags=pmm-qa-ephemeral&page_size=100" | jq -c '.data[]')
+# Tag filtering is NOT a query-string param on this API -- it silently
+# ignores ?tags=... and returns every instance on the account unfiltered.
+# The only correct mechanism is the X-Filter header (verified against the
+# live API; see https://techdocs.akamai.com/linode-api/reference/filtering-and-sorting).
+instances=$(api_get -H 'X-Filter: {"tags": "pmm-qa-ephemeral"}' \
+  "https://api.linode.com/v4/linode/instances?page_size=100" | jq -c '.data[]')
 
 if [ -z "$instances" ]; then
   echo "No pmm-qa-ephemeral instances found."

@@ -24,8 +24,15 @@ workflow. This README is the implementation reference.
   safety net still works even if the original run's container/session is
   long gone.
 - **Firewall by default.** Every instance gets a `linode_firewall` allowing
-  only 22/443/4647 inbound (from `var.allowed_ssh_cidr`, default open —
+  only port **443** inbound (from `var.allowed_ssh_cidr`, default open —
   tighten it if you have a stable egress IP) and dropping everything else.
+- **443-only, on purpose.** A session driving this from Claude Code Remote
+  can only make outbound raw TCP connections on port 443 — confirmed live,
+  not a proxy quirk (see `git log` on this file / the commit that added
+  `sslh`). `cloud-init.yaml` installs `sslh` to multiplex real SSH and PMM's
+  HTTPS UI over that single port by protocol-sniffing, so `up.sh`/`run.sh`
+  talk `ssh -p 443` and the PMM UI is still plain `https://<ip>/` — nothing
+  about the client-side workflow changes, only the on-box plumbing.
 
 ## Requirements
 
@@ -33,7 +40,8 @@ workflow. This README is the implementation reference.
   token with `linodes:read_write` and `firewalls:read_write` scopes).
   Never pass it as a `-var` or write it to a `.tfvars` file — the provider
   reads it straight from the environment.
-- `terraform` >= 1.5, `jq`, `rsync`, `ssh`.
+- `terraform` >= 1.5, `jq`, `rsync`, `ssh` (openssh-client). The SessionStart
+  hook installs `rsync`/`ssh` if missing; they are not in the base image.
 
 ## Usage
 

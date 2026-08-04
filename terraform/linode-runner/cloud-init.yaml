@@ -8,8 +8,37 @@ packages:
   - python3-venv
   - python3-pip
   - ansible
+  - sslh
+
+# This environment's controller can only reach the outside world on port
+# 443 (confirmed live: raw TCP to arbitrary hosts on any other port, e.g.
+# 22, is dropped at the network level, not just blocked by an HTTP proxy).
+# sslh multiplexes that one open port between real sshd (by protocol
+# sniffing, not a custom exec service) and PMM's HTTPS UI, so both SSH and
+# the PMM web UI stay reachable through the single externally-open port.
+# See terraform/linode-runner/README.md.
+write_files:
+  - path: /etc/systemd/system/sslh.service
+    content: |
+      [Unit]
+      Description=sslh -- multiplex SSH and PMM's HTTPS UI on port 443
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/sbin/sslh -F /dev/null -f -n --listen 0.0.0.0:443 --ssh 127.0.0.1:22 --tls 127.0.0.1:8443
+      Restart=always
+      User=root
+
+      [Install]
+      WantedBy=multi-user.target
 
 runcmd:
+  # sslh first: this is what makes SSH reachable at all from a controller
+  # that can only egress on 443, so bring it up before the slower docker
+  # install below -- up.sh's cloud-init wait loop can then succeed well
+  # before docker/ansible finish.
+  - systemctl daemon-reload
+  - systemctl enable --now sslh.service
   - install -m 0755 -d /etc/apt/keyrings
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   - chmod a+r /etc/apt/keyrings/docker.asc
@@ -23,5 +52,5 @@ runcmd:
   - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   - systemctl enable --now docker
   - ansible-galaxy collection install community.docker
-  # Marker up.sh polls for over SSH before rsyncing/running anything.
+  # Marker up.sh polls for (over SSH via sslh on 443) before rsyncing/running anything.
   - touch /var/lib/cloud/pmm-qa-cloud-init-done

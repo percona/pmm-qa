@@ -29,6 +29,6 @@ variable "ttl_hours" {
 
 variable "allowed_ssh_cidr" {
   type        = string
-  description = "CIDR allowed to reach SSH (22), the PMM UI (443), and the PMM agent port (4647) on the instance. Tighten this if you have a stable egress IP."
+  description = "CIDR allowed to reach port 443 on the instance (both SSH and the PMM UI ride this one port via sslh). Tighten this if you have a stable egress IP."
   default     = "0.0.0.0/0"
 }

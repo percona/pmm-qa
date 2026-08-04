@@ -21,8 +21,8 @@ terraform/linode-runner/up.sh <role> <run_id>
 ```
 
 `role` is `test-runner` or `test-healer` (free text, just for the tag). This:
-- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 22/443/4647, tagged `pmm-qa-ephemeral` + a TTL the reaper respects.
-- Waits for cloud-init to finish installing Docker + Ansible.
+- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open **only on port 443**, tagged `pmm-qa-ephemeral` + a TTL the reaper respects. Both SSH and the PMM UI ride this one port via `sslh` on the box (protocol-sniffing multiplex, not a custom exec service) — most session controllers driving this skill can only egress on 443 themselves, so provisioning has to work within that.
+- Waits for cloud-init to finish installing Docker + Ansible (and bringing up `sslh`).
 - Rsyncs this checkout's `qa-integration/` to the box — whatever this session currently has, including uncommitted changes, is exactly what runs. No separate clone, no pinned ref to drift from.
 
 Takes 2-4 minutes. Prints the VM's IP on success.
@@ -43,24 +43,28 @@ terraform/linode-runner/run.sh <run_id> -- "
   docker pull '$DOCKER_VERSION'
   docker rm -f pmm-server watchtower 2>/dev/null || true
   docker run -d --restart=always --name pmm-server --hostname pmm-server \
-    --network pmm-qa -p 443:8443 -p 4647:4647 -v pmm-data:/srv \
+    --network pmm-qa -p 127.0.0.1:8443:8443 -v pmm-data:/srv \
     -e GF_SECURITY_ADMIN_PASSWORD='$ADMIN_PASSWORD' \
     $DOCKER_ENV_VARIABLE \
     '$DOCKER_VERSION'
 "
 ```
 
-Wait for **readyz**: `https://<linode-ip>/v1/server/readyz` → HTTP **200**, body **`{}`**:
+Published to `127.0.0.1:8443`, not host port 443 — `sslh` owns 443 externally and forwards TLS-looking connections to `127.0.0.1:8443` (see cloud-init.yaml). The PMM agent port (4647) does **not** need to be published at all: agents run in DB containers on the same `pmm-qa` Docker network and reach the server by container name, not the public IP.
+
+Wait for **readyz** (checked locally on the box, so it's the internal `8443` port, not 443):
 
 ```bash
 terraform/linode-runner/run.sh <run_id> -- "
-  until code=\$(curl -ksS -o /tmp/rz -w '%{http_code}' https://127.0.0.1/v1/server/readyz) \
+  until code=\$(curl -ksS -o /tmp/rz -w '%{http_code}' https://127.0.0.1:8443/v1/server/readyz) \
     && [ \"\$code\" = 200 ] && [ \"\$(tr -d '[:space:]' </tmp/rz)\" = '{}' ]; do
     sleep 5
   done
   echo 'PMM Server ready'
 "
 ```
+
+From the controller (this session), the PMM UI is still just `https://<linode-ip>/` on the default port 443 — `sslh` forwards it to 8443 transparently, no port needed in the URL.
 
 ## 3. Databases (ticket-specific, after server is up)
 
@@ -99,4 +103,6 @@ Call this whether the run passed, failed, or was blocked. It is the primary clea
 
 ## Known limits
 
-None specific to this VM — it is a real kernel with real systemd, so playbooks that need `antmelekhin/docker-systemd`-style images work normally (this is the whole reason this setup exists instead of running inside the agent's own sandbox). If a setup still fails, it is a genuine `qa-integration` bug — report it, do not fork around it here.
+None specific to the VM itself — it is a real kernel with real systemd, so playbooks that need `antmelekhin/docker-systemd`-style images work normally (this is the whole reason this setup exists instead of running inside the agent's own sandbox). If a setup still fails, it is a genuine `qa-integration` bug — report it, do not fork around it here.
+
+The one real constraint is on the **controller side**: a session driving this skill (confirmed live on a Claude Code Remote session) can only make outbound raw TCP connections on port 443 — not a proxy quirk, a network-level restriction, true for arbitrary hosts on arbitrary non-443 ports. That is why the VM exposes only port 443 and multiplexes SSH + the PMM UI over it via `sslh` instead of opening 22 separately. If you're running this from an environment that does allow arbitrary outbound ports, nothing changes for you — `up.sh`/`run.sh` already target 443, and it works either way.
