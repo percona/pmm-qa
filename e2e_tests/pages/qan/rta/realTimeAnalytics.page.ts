@@ -194,14 +194,15 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   /**
    * Reveals columns that the overview hides by default (Database, User) through
-   * the table's Show/Hide columns menu.
+   * the table's Show/Hide columns menu. Uses check() rather than click() so the
+   * requested columns end up visible even if some of them already are.
    */
   showColumns = async (...columns: ('Database' | 'User')[]) => {
     await pmmTest.step(`Show columns: ${columns.join(', ')}`, async () => {
       await this.buttons.showHideColumns.click();
 
       for (const column of columns) {
-        await this.page.getByRole('checkbox', { exact: true, name: column }).click();
+        await this.page.getByRole('checkbox', { exact: true, name: column }).check();
       }
 
       await this.page.keyboard.press('Escape');
