@@ -146,8 +146,8 @@ jobs:
       - name: Pre-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
         run: |
-          ls
           npm ci
+          npx playwright install
           npx playwright test --grep "@pre-upgrade"
 
       - name: Checkout upgrade branch
