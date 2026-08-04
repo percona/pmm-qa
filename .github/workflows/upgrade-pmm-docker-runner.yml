@@ -109,14 +109,14 @@ jobs:
           PS=$(docker ps -a --format '{{.Names}}' | grep ps_pmm)
           PG=$(docker ps -a --format '{{.Names}}' | grep pgsql_pg)
           COLLECTORS=/usr/local/percona/pmm/collectors
-
+          
           git clone --depth 1 https://github.com/Percona-Lab/pmm-custom-queries
           docker cp pmm-custom-queries/mysql/.      "$PS:$COLLECTORS/custom-queries/mysql/high-resolution/"
           docker cp pmm-custom-queries/postgresql/. "$PG:$COLLECTORS/custom-queries/postgresql/high-resolution/"
-
+          
           echo 'node_role{role="my_monitored_server_1"} 1' > node_role.prom
           docker cp node_role.prom "$PG:$COLLECTORS/textfile-collector/high-resolution/"
-
+          
           # exporters reload their collectors on restart; pmm-agent respawns them
           docker exec -u root "$PS" pkill -f mysqld_exporter
           docker exec "$PG" pkill -f postgres_exporter
@@ -171,20 +171,34 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         run: npx playwright test --grep "@post-upgrade"
 
-      - name: Upgrade PMM client in every client container
+      - name: Upgrade PMM client in every client container to show logs only if error occurs
         run: |
           docker ps
-          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server)$'); do
+          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos)$'); do
             echo "== upgrading client in $c =="
-            if [ -n "$CLIENT_TARBALL_UPGRADE" ]; then
-              docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v dnf >/dev/null && dnf install -y wget || apt-get install -y wget)'
-              docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
-              docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz && d=$(ls -1td pmm-client*/ | head -n1) && rm -rf /usr/local/bin/pmm-client && mv -f "$d" /usr/local/bin/pmm-client && bash -x /usr/local/bin/pmm-client/install_tarball -u'
-            else
-              docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
-              docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
+            log=$(mktemp)
+            set +e
+            {
+              if [ -n "$CLIENT_TARBALL_UPGRADE" ]; then
+                docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v dnf >/dev/null && dnf install -y wget || apt-get install -y wget)'
+                docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
+                docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz && d=$(ls -1td pmm-client*/ | head -n1) && rm -rf /usr/local/bin/pmm-client && mv -f "$d" /usr/local/bin/pmm-client && bash -x /usr/local/bin/pmm-client/install_tarball -u'
+              else
+                docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
+                docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
+              fi
+              docker exec "$c" sh -c 'systemctl restart pmm-agent 2>/dev/null || { pkill -f pmm-agent || true; nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >/var/log/pmm-agent.log 2>&1 & }'
+            } >"$log" 2>&1
+            status=$?
+            set -e
+            if [ $status -ne 0 ]; then
+              echo "!! upgrade failed in $c, showing logs:"
+              cat "$log"
+              rm -f "$log"
+              exit $status
             fi
-            docker exec "$c" sh -c 'systemctl restart pmm-agent 2>/dev/null || { pkill -f pmm-agent || true; nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >/var/log/pmm-agent.log 2>&1 & }'
+            echo "== upgrade succeeded in $c =="
+            rm -f "$log"
           done
 
       - name: Check client after upgrade
