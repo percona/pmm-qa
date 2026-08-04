@@ -525,3 +525,27 @@ jobs:
       cli_tag: '@valkey'
       services_list: '--database valkey=8'
       test_name: 'Valkey 8.x'
+
+  notify-test-doctor:
+    name: Notify Test Doctor (nightly failure on main)
+    needs: [help-tests, pmm-server-tests, pmm-client-container-tests, generic-tests, remove-tests, ps-57-tests, ps-80-tests, ps-84-tests, mysql-80-tests, mysql-84-tests, pdpgsql-14-tests, pdpgsql-15-tests, pdpgsql-16-tests, pdpgsql-17-tests, pdpgsql-18-tests, psmdb-6-replica-tests, psmdb-7-replica-tests, psmdb-8-tests, psmdb-7-shard-tests, psmdb-8-shard-tests, haproxy-tests, pxc-57-proxysql-tests, pxc-80-proxysql-tests, valkey-7-tests, valkey-8-tests]
+    if: ${{ failure() && github.event_name == 'schedule' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fire Test Doctor routine
+        env:
+          ROUTINE_ID: ${{ secrets.TEST_DOCTOR_ROUTINE_ID }}
+          ROUTINE_TOKEN: ${{ secrets.TEST_DOCTOR_ROUTINE_TOKEN }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$ROUTINE_ID" ] || [ -z "$ROUTINE_TOKEN" ]; then
+            echo "TEST_DOCTOR_ROUTINE_ID/TEST_DOCTOR_ROUTINE_TOKEN not configured yet -- skipping notify."
+            exit 0
+          fi
+          curl -fsS -X POST "https://api.anthropic.com/v1/claude_code/routines/${ROUTINE_ID}/fire" \
+            -H "Authorization: Bearer ${ROUTINE_TOKEN}" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "anthropic-beta: experimental-cc-routine-2026-04-01" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"Nightly workflow '${WORKFLOW_NAME}' failed on main. Run: ${RUN_URL}\"}"

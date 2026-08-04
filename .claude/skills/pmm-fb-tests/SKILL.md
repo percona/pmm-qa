@@ -43,7 +43,7 @@ Extract `setup_services` / `tags_for_tests` or `services_list` / `cli_tag` from 
 
 Mark each failure: **relevant** (overlaps ticket) / **flaky** / **out of scope**. Only expand manual scope for **relevant** failures.
 
-## Green gate (Test Reporter)
+## Green gate (FB Validator)
 
 ```bash
 gh pr checks <PR> -R Percona-Lab/pmm-submodules 2>&1 | grep -E '\tfail\t'

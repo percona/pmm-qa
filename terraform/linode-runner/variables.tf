@@ -11,7 +11,7 @@ variable "linode_token" {
 
 variable "role" {
   type        = string
-  description = "Which agent workflow provisioned this box: test-runner, test-doctor, or an ad-hoc smoke test."
+  description = "Which agent workflow provisioned this box: test-runner, test-doctor, fb-validator, or an ad-hoc smoke test."
   default     = "unknown"
 }
 

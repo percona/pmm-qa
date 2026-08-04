@@ -39,7 +39,7 @@ node .claude/scripts/pw-record.js \
 
 The last argument is dwell time in seconds (default 15) — how long it sits on the page after load before stopping. For anything more interactive (clicking through a flow, not just loading one page and watching it), copy `pw-record.js` and add real Playwright actions between the `goto()` and the dwell; it's a plain script, not a fixed tool.
 
-## FB Actions run screenshot (Test Reporter, all checks green)
+## FB Actions run screenshot (FB Validator, all checks green)
 
 1. Resolve run URL from `gh pr checks <PR> -R Percona-Lab/pmm-submodules` (see `pmm-fb-tests`).
 2. `node .claude/scripts/pw-screenshot.js "<actions-run-url>" "/tmp/fb-test-<PR>-checks.png"`.

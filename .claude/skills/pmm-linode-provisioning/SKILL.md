@@ -15,7 +15,7 @@ The VM is purely an execution target — it runs Docker/Ansible, nothing else. A
 
 ## Pick a run_id
 
-Something unique and traceable: the Jira key (`PMM-15196`), or `heal-<submodules-pr>` for Test Doctor. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
+Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, `heal-<submodules-pr>` for FB Validator, or `nightly-<workflow>-<date>` for Test Doctor. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
 
 ## 1. Provision the VM
 
@@ -24,7 +24,7 @@ export LINODE_TOKEN=...   # already in this environment's secrets; never print i
 terraform/linode-runner/up.sh <role> <run_id>
 ```
 
-`role` is `test-runner` or `test-doctor` (free text, just for the tag). This:
+`role` is `test-runner`, `test-doctor`, or `fb-validator` (free text, just for the tag). This:
 - Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open on SSH (22) and the PMM UI (443), tagged `pmm-qa-ephemeral`.
 - Waits for cloud-init to finish installing Docker + Ansible, and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or whatever `PMM_QA_REF` names (must already be pushed; see "Never code on the Linode VM" above).
@@ -91,7 +91,7 @@ PMM_URL="https://$(cat terraform/linode-runner/runs/<run_id>/ip)" \
   node .claude/scripts/pmm-ui-login.js <TICKET>
 ```
 
-## 5. FB workflow reproduction (Test Doctor)
+## 5. FB / nightly workflow reproduction (FB Validator, Test Doctor)
 
 Follow `pmm-qa/.github/workflows/runner-e2e-tests-codeceptjs.yml`, `runner-e2e-tests-playwright.yml`, or `runner-integration-cli-tests.yml` for the exact steps — not Jenkins staging. If the fix under test lives on a branch, push it, then `up.sh`/`sync.sh` with `PMM_QA_REF` set to that branch — never patch it in by hand on the box.
 
