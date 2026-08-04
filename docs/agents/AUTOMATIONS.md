@@ -39,16 +39,15 @@ your last check and have a linked Jira ticket without FB evidence attached
 yet. If none, do nothing and exit.
 ```
 
-**Not created yet.** Wiring these as live cron Routines means a recurring job running unattended with `gh`/Jira/Linode-reaper-adjacent privileges — pick a cadence (suggested: every 15-30 min) and confirm before turning it on, the same way the Linode reaper cadence needed sign-off (see below).
+**Not created yet.** Wiring these as live cron Routines means a recurring job running unattended with `gh`/Jira privileges — pick a cadence (suggested: every 15-30 min) and confirm before turning it on.
 
 ## Linode cost-safety net
 
-Test Runner and Test Healer provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [pmm-linode-provisioning](../../.claude/skills/pmm-linode-provisioning/SKILL.md)). Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop for runs where that never happened (crashed/abandoned session) is `terraform/linode-runner/reap.sh`, meant to run on its own scheduled Routine — again, **not enabled by default**; needs an explicit cadence + TTL sign-off since it has real delete privileges against the Linode account. See `terraform/linode-runner/README.md` for the mechanics.
+Test Runner and Test Healer provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [pmm-linode-provisioning](../../.claude/skills/pmm-linode-provisioning/SKILL.md)). Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop is **not** a scheduled Routine — every instance carries its own on-box self-destruct timer (default 24h, see `terraform/linode-runner/README.md`) that deletes it via the Linode API with no external process involved. Nothing scans the account, nothing needs a cadence/TTL sign-off, and nothing can mistakenly delete a still-active run: an instance only ever removes itself, on a schedule it was given at creation. `extend.sh` pushes that timer back if a run needs more time.
 
 ## Go-live checklist
 
 - [ ] `LINODE_TOKEN` available to sessions that need it (environment secret, not committed anywhere)
 - [ ] Atlassian MCP / GitHub connector authenticated for each user
 - [ ] `gh --version`, `terraform version`, `json-diff --version` succeed after a fresh SessionStart hook run
-- [ ] Confirm cadence + TTL, then create the `reap.sh` Routine
 - [ ] Confirm cadence, then create the Test Healer / Test Reporter polling Routines (optional — ad hoc triggering works without them)

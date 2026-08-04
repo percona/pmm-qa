@@ -26,7 +26,7 @@ Read each file when its step needs it. Do not guess field IDs or setup commands.
 
 1. **Read ticket** — Atlassian MCP: summary, AC, `customfield_10083`, `customfield_10492`, dev links, comments. Cross-check with `pmm-git-diff` on linked `percona/pmm` / `percona/grafana` PRs.
 2. **Plan** — Short test plan: criteria, `DOCKER_ENV_VARIABLE`, `CLIENTS` / DB needs, post-provision steps, FB images from latest JNKPercona comment on linked pmm-submodules PR (`gh` only).
-3. **Provision** — Follow `pmm-linode-provisioning`: `terraform/linode-runner/up.sh test-runner <run-id>` spins up a throwaway Linode VM, syncs this checkout's `qa-integration/` to it, then `run.sh` runs the **unmodified** `qa-integration/pmm_qa/pmm-framework/pmm-framework` there — same entrypoint as Jenkins/EC2, no forks.
+3. **Provision** — Follow `pmm-linode-provisioning`: `terraform/linode-runner/up.sh test-runner <run-id>` spins up a throwaway Linode VM and `git clone`s `percona/pmm-qa` onto it, then `run.sh` runs the **unmodified** `qa-integration/pmm_qa/pmm-framework/pmm-framework` there — same entrypoint as Jenkins/EC2, no forks. If a fix under test isn't on `main` yet, push it to a branch first and pass it as `PMM_QA_REF` — never edit files directly on the box.
 4. **Execute** — Terminal (SSH to the Linode box) for API/CLI; local Playwright/Chromium for UI per `pmm-ui-evidence`.
 5. **Report** — One Jira comment, **Developers visibility only** (see `pmm-jira`). Include pass/fail per criterion, artifact paths, blockers. Do not mark pass if criteria failed.
 6. **Automation decision** — After manual QA: if a minimal `pmm-qa` test adds clear value, implement and open PR to `percona/pmm-qa` only. Otherwise stop after Jira comment.
@@ -40,3 +40,4 @@ Read each file when its step needs it. Do not guess field IDs or setup commands.
 - Trust "How to test" without reading PR diff
 - Post public Jira comments on QA results
 - Skip `down.sh` — an unterminated Linode VM costs real money every hour
+- Write or edit code on the Linode VM — it is an execution target only; every change must be committed and pushed from this environment first

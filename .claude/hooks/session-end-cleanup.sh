@@ -5,9 +5,9 @@
 # NOT the guarantee: SessionEnd does not reliably fire on an abandoned /
 # timed-out remote session, and even when it does fire, async work here can
 # be killed before finishing. It only helps on a clean, graceful session
-# end. The actual guarantee is terraform/linode-runner/reap.sh running on a
-# schedule (see docs/agents/AUTOMATIONS.md) -- this hook is a nice-to-have
-# that shaves time off the reaper's TTL window when it does get to run.
+# end. The actual guarantee is each instance's own on-box self-destruct
+# timer (see terraform/linode-runner/cloud-init.yaml.tftpl) -- this hook is
+# a nice-to-have that shaves time off that window when it does get to run.
 set -euo pipefail
 
 if [ -z "${LINODE_TOKEN:-}" ]; then

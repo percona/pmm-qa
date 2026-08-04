@@ -1,0 +1,53 @@
+#cloud-config
+package_update: true
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - git
+  - python3-venv
+  - python3-pip
+  - ansible
+
+# Self-destruct: the only cleanup mechanism other than an agent explicitly
+# calling down.sh. No external reaper/cron -- the instance deletes itself by
+# calling the Linode API on its own tag, ttl_seconds after boot. The token
+# is scoped no differently than LINODE_TOKEN already is account-wide, so
+# treat it like any other secret on this box: root-only (0600), and moot
+# the moment the instance is gone.
+write_files:
+  - path: /etc/pmm-qa/linode-token
+    permissions: "0600"
+    owner: root:root
+    content: |
+      ${linode_token}
+  - path: /usr/local/bin/pmm-qa-self-destruct.sh
+    permissions: "0700"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      token=$(cat /etc/pmm-qa/linode-token)
+      id=$(curl -fsS -H "Authorization: Bearer $token" \
+        -H 'X-Filter: {"tags": "pmm-qa-run:${run_id}"}' \
+        "https://api.linode.com/v4/linode/instances" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
+      curl -fsS -X DELETE -H "Authorization: Bearer $token" \
+        "https://api.linode.com/v4/linode/instances/$id"
+
+runcmd:
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - >-
+    echo "deb [arch=$(dpkg --print-architecture)
+    signed-by=/etc/apt/keyrings/docker.asc]
+    https://download.docker.com/linux/ubuntu
+    $(. /etc/os-release && echo $VERSION_CODENAME) stable"
+    > /etc/apt/sources.list.d/docker.list
+  - apt-get update -y
+  - apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - systemctl enable --now docker
+  - ansible-galaxy collection install community.docker
+  - systemd-run --on-active=${ttl_seconds} --unit=pmm-qa-self-destruct /usr/local/bin/pmm-qa-self-destruct.sh
+  # Marker up.sh polls for over SSH before cloning/running anything.
+  - touch /var/lib/cloud/pmm-qa-cloud-init-done

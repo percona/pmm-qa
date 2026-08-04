@@ -35,12 +35,12 @@ if ! command -v terraform >/dev/null 2>&1; then
   rm -f /tmp/terraform.zip
 fi
 
-# --- ssh client + rsync ---------------------------------------------------
+# --- ssh client -----------------------------------------------------------
 # Not present in the base image -- terraform/linode-runner/up.sh and run.sh
-# need both to reach the provisioned Linode VM.
-if ! command -v ssh >/dev/null 2>&1 || ! command -v rsync >/dev/null 2>&1; then
+# need it to reach the provisioned Linode VM.
+if ! command -v ssh >/dev/null 2>&1; then
   sudo apt-get update -qq
-  sudo apt-get install -y openssh-client rsync
+  sudo apt-get install -y openssh-client
 fi
 
 # --- json-diff (large Grafana dashboard JSON PR diffs) -------------------

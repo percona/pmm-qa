@@ -3,9 +3,10 @@
 #
 # Deliberately NOT a shared remote backend: state lives in
 # runs/<run_id>/terraform.tfstate on whichever machine ran up.sh, and nothing
-# is expected to outlive that one run. The independent safety net is
-# reap.sh, which talks to the Linode API directly (tags + creation time),
-# not to this state.
+# is expected to outlive that one run. The independent safety net is a
+# self-destruct systemd timer baked into cloud-init (see
+# cloud-init.yaml.tftpl) -- the instance deletes itself after ttl_hours with
+# no external process required. extend.sh reschedules it on a live instance.
 
 resource "tls_private_key" "ssh" {
   algorithm = "ED25519"
@@ -40,17 +41,21 @@ resource "linode_instance" "runner" {
   booted          = true
   swap_size       = 512
 
-  # Tags are the reaper's only source of truth -- keep the ttl-hours tag in
-  # sync with variables.tf's ttl_hours default/override.
+  # The pmm-qa-run tag is also how the self-destruct timer finds its own
+  # instance ID at delete time (see cloud-init.yaml.tftpl) -- it must stay
+  # unique per run.
   tags = [
     "pmm-qa-ephemeral",
     "pmm-qa-role:${var.role}",
     "pmm-qa-run:${var.run_id}",
-    "pmm-qa-ttl-hours:${var.ttl_hours}",
   ]
 
   metadata {
-    user_data = base64encode(file("${path.module}/cloud-init.yaml"))
+    user_data = base64encode(templatefile("${path.module}/cloud-init.yaml.tftpl", {
+      run_id       = var.run_id
+      ttl_seconds  = var.ttl_hours * 3600
+      linode_token = var.linode_token
+    }))
   }
 }
 

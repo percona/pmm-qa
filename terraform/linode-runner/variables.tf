@@ -1,6 +1,12 @@
 variable "run_id" {
   type        = string
-  description = "Unique identifier for this ephemeral run (e.g. a ticket key or ISO timestamp slug). Used in the instance label and tags so the reaper and humans can trace ownership."
+  description = "Unique identifier for this ephemeral run (e.g. a ticket key or ISO timestamp slug). Used in the instance label and tags, and by the on-box self-destruct timer to find its own instance by tag."
+}
+
+variable "linode_token" {
+  type        = string
+  sensitive   = true
+  description = "Same value as the LINODE_TOKEN env var the provider itself reads. Passed through separately (via TF_VAR_linode_token, never a -var on the command line) so it can be templated into cloud-init for the self-destruct timer, which needs to delete its own instance without any external process. Ends up in this run's local tfstate, same as the generated SSH key already does -- both are gitignored and local-only."
 }
 
 variable "role" {
@@ -23,8 +29,8 @@ variable "instance_type" {
 
 variable "ttl_hours" {
   type        = number
-  description = "Advisory max lifetime recorded as a tag for the reaper safety net (terraform/linode-runner/reap.sh). Normal cleanup is down.sh at the end of the agent workflow -- this is only the backstop for an abandoned run."
-  default     = 4
+  description = "How long the instance lives before it deletes itself via an on-box systemd timer (see cloud-init.yaml.tftpl) -- no external reaper process involved. Normal cleanup is still down.sh at the end of the agent workflow; this is the backstop for a run nobody explicitly tore down. Extend a live instance with extend.sh instead of recreating it."
+  default     = 24
 }
 
 variable "allowed_ssh_cidr" {

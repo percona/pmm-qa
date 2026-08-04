@@ -9,9 +9,13 @@ Uses the **same** bash `qa-integration/pmm_qa/pmm-framework/pmm-framework` as Je
 
 Full implementation reference: [terraform/linode-runner/README.md](../../../terraform/linode-runner/README.md).
 
+## Never code on the Linode VM
+
+The VM is purely an execution target — it runs Docker/Ansible, nothing else. All code changes (fixes, new tests, playbook edits) happen in this Claude Code environment, where they're tracked by git from the first keystroke. If a change needs to run on the box, **commit and push it to a branch first**, then point the box at that branch (`PMM_QA_REF=<branch> up.sh ...`, or `sync.sh <run_id> <branch>` on an already-running one). Never SSH in and edit files directly — anything written only on the VM's disk is gone the moment the instance is destroyed or self-destructs, with no way to recover it.
+
 ## Pick a run_id
 
-Something unique and traceable: the Jira key (`PMM-15196`), or `heal-<submodules-pr>` for Test Healer. Reused as the Linode instance label/tags — this is what the reaper safety net and any human auditing spend will see.
+Something unique and traceable: the Jira key (`PMM-15196`), or `heal-<submodules-pr>` for Test Healer. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
 
 ## 1. Provision the VM
 
@@ -21,9 +25,9 @@ terraform/linode-runner/up.sh <role> <run_id>
 ```
 
 `role` is `test-runner` or `test-healer` (free text, just for the tag). This:
-- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open on SSH (22) and the PMM UI (443), tagged `pmm-qa-ephemeral` + a TTL the reaper respects.
-- Waits for cloud-init to finish installing Docker + Ansible.
-- Rsyncs this checkout's `qa-integration/` to the box — whatever this session currently has, including uncommitted changes, is exactly what runs. No separate clone, no pinned ref to drift from.
+- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open on SSH (22) and the PMM UI (443), tagged `pmm-qa-ephemeral`.
+- Waits for cloud-init to finish installing Docker + Ansible, and scheduling its own self-destruct timer (default 24h — see Cleanup below).
+- `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or whatever `PMM_QA_REF` names (must already be pushed; see "Never code on the Linode VM" above).
 
 Requires a session/environment network policy that allows outbound SSH (raw TCP on port 22) to arbitrary hosts — a locked-down policy that only permits proxied HTTPS traffic will not be able to reach the VM at all (confirmed the hard way: not fixable by moving SSH to port 443, since such a policy inspects payloads, not just ports). Use a permissive network policy for the environment this skill runs in.
 
@@ -68,7 +72,7 @@ terraform/linode-runner/run.sh <run_id> -- "
 
 ```bash
 terraform/linode-runner/run.sh <run_id> -- "
-  cd qa-integration/pmm_qa/pmm-framework && \
+  cd pmm-qa/qa-integration/pmm_qa/pmm-framework && \
   ADMIN_PASSWORD='$ADMIN_PASSWORD' CLIENT_VERSION='$CLIENT_VERSION' \
   ./pmm-framework --pmm-server-password \"\$ADMIN_PASSWORD\" \
     --client-version \"\$CLIENT_VERSION\" \
@@ -89,15 +93,23 @@ PMM_URL="https://$(cat terraform/linode-runner/runs/<run_id>/ip)" \
 
 ## 5. FB workflow reproduction (Test Healer)
 
-Follow `pmm-qa/.github/workflows/runner-e2e-tests-codeceptjs.yml`, `runner-e2e-tests-playwright.yml`, or `runner-integration-cli-tests.yml` for the exact steps — not Jenkins staging.
+Follow `pmm-qa/.github/workflows/runner-e2e-tests-codeceptjs.yml`, `runner-e2e-tests-playwright.yml`, or `runner-integration-cli-tests.yml` for the exact steps — not Jenkins staging. If the fix under test lives on a branch, push it, then `up.sh`/`sync.sh` with `PMM_QA_REF` set to that branch — never patch it in by hand on the box.
 
-## 6. Cleanup — mandatory, every path
+## 6. Running longer than expected?
+
+```bash
+terraform/linode-runner/extend.sh <run_id> <more_hours>
+```
+
+Reschedules the self-destruct timer on the live instance instead of losing it mid-investigation. Ask before extending someone else's run.
+
+## 7. Cleanup — mandatory, every path
 
 ```bash
 terraform/linode-runner/down.sh <run_id>
 ```
 
-Call this whether the run passed, failed, or was blocked. It is the primary cleanup mechanism — a scheduled `reap.sh` safety net only catches runs where this step never happened (crashed session, abandoned chat). Never skip it: an unterminated Linode VM keeps costing money every hour it's up.
+Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `down.sh` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires.
 
 ## Known limits
 
