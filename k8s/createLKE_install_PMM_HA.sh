@@ -11,7 +11,7 @@ REGION="ap-west"              # Change if required
 K8S_VERSION="1.36"
 NODE_TYPE="g6-standard-4"
 NODE_COUNT=7
-
+PMM_PW=$1 #PMM password
 #KUBECONFIG_FILE="$HOME/.kube/pmm-ha-lke-config"
 
 #############################################
@@ -90,8 +90,6 @@ linode-cli lke kubeconfig-view "$CLUSTER_ID" --json \
 
 # Export KUBECONFIG
 export KUBECONFIG=/tmp/HA-linode/kubeconfig.yaml
-#cp /Users/shruti/Scripts/HA-linode/kubeconfig.yaml ~/.kube/config
-#chmod 600 ~/.kube/config
 echo "KUBECONFIG exported: $KUBECONFIG"
 
 if [ -f /tmp/HA-linode/kubeconfig.yaml ]; then
@@ -120,13 +118,12 @@ kubectl get pods -A
 # Finished
 #############################################
 
-echo
 echo "======================================="
 echo "Linode Kubernetes Cluster is Ready!"
 echo "Cluster ID : $CLUSTER_ID"
 echo "Kubeconfig : $KUBECONFIG"
 echo "======================================="
-echo
+
 echo "Cluster is ready for PMM HA Installation using Helm."
 
 sleep 60
@@ -161,18 +158,22 @@ echo "PMM dependencies installed successfully!"
 kubectl get pods -n pmm
 
 # Create secret
+PG_PW=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
+GF_PW=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
+CH_PW=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
+VM_PW=$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)
 
 kubectl create secret generic pmm-secret \
-  --from-literal=PMM_ADMIN_PASSWORD="admin" \
+  --from-literal=PMM_ADMIN_PASSWORD="$PMM_PW" \
   --from-literal=PMM_CLICKHOUSE_USER="clickhouse_pmm" \
-  --from-literal=PMM_CLICKHOUSE_PASSWORD="clickhouse-password" \
+  --from-literal=PMM_CLICKHOUSE_PASSWORD="$CH_PW" \
   --from-literal=VMAGENT_remoteWrite_basicAuth_username="victoriametrics_pmm" \
-  --from-literal=VMAGENT_remoteWrite_basicAuth_password="vm-password" \
-  --from-literal=PG_PASSWORD="postgres-password" \
-  --from-literal=GF_PASSWORD="grafana-password" \
+  --from-literal=VMAGENT_remoteWrite_basicAuth_password="$VM_PW" \
+  --from-literal=PG_PASSWORD="$PG_PW" \
+  --from-literal=GF_PASSWORD="$GF_PW" \
   --namespace pmm
 echo " PMM Secrets created successfully!"
-sleep 60
+sleep 45
 
 
 #####################################
@@ -199,13 +200,22 @@ kubectl patch svc pmm-ha-haproxy \
 
 while true; do EXTERNAL_IP=$(kubectl get svc pmm-ha-haproxy -n pmm -o jsonpath='{.status.loadBalancer.ingress[0].ip}'); if [[ -n "$EXTERNAL_IP" ]]; then break; fi; echo "Waiting for LoadBalancer..."; sleep 15; done
 echo "External IP: ${EXTERNAL_IP}"
-echo "PMM HA is available at:"
-echo "https://${EXTERNAL_IP}"
+
 
 ###################################
-#Get Events and logs
+#Cluster Summary and pod logs
 ####################################
 mkdir -p /tmp/helm-debug
 kubectl get pods -n pmm -o wide > /tmp/helm-debug/pods.txt || true
 kubectl get events -n pmm --sort-by=.metadata.creationTimestamp > /tmp/helm-debug/events.txt || true
 echo "Pod logs and events at /tmp/helm-debug"
+
+echo " CLUSTER SUMMARY---------"
+echo "External IP: ${EXTERNAL_IP}"
+echo "PMM HA is available at:"
+echo "https://${EXTERNAL_IP}"
+echo "PMM PAssword : $PMM_PW"
+echo "Clickhouse password: $CH_PW"
+echo "Postgres password: $PG_PW"
+echo "Grafana password: $GF_PW"
+echo "VM password: $VM_PW"
