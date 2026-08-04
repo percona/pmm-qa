@@ -187,7 +187,7 @@ jobs:
                 docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
                 docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
               fi
-              docker exec "$c" sh -c 'systemctl restart pmm-agent 2>/dev/null || { pkill -f pmm-agent || true; nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >/var/log/pmm-agent.log 2>&1 & }'
+              docker exec "$c" sh -c 'systemctl restart pmm-agent 2>/dev/null || { pkill -x pmm-agent || true; nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >/var/log/pmm-agent.log 2>&1 & }'
             } >"$log" 2>&1
             status=$?
             set -e
