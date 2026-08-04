@@ -87,6 +87,9 @@ pmmTest(
 
     await pmmTest.step('Verify host, database and user columns for the MySQL row', async () => {
       await expect(queryAnalytics.rta.builders.hostForRow('1')).toHaveText(service.service_name);
+
+      await queryAnalytics.rta.showColumns('Database', 'User');
+
       await expect(queryAnalytics.rta.builders.databaseForRow('1')).toHaveText('test');
       await expect(queryAnalytics.rta.builders.userForRow('1')).toContainText('msandbox');
     });
@@ -215,6 +218,7 @@ pmmTest(
 
     await pmmTest.step('Filter by a partial database name (lazy match)', async () => {
       await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+      await queryAnalytics.rta.showColumns('Database', 'User');
       await queryAnalytics.rta.openFilters();
       await queryAnalytics.rta.filterByColumnText('Database', 'sbt');
 
@@ -235,6 +239,77 @@ pmmTest(
       await queryAnalytics.rta.filterByColumnText('User', 'sbtest@localhost');
 
       await expect(queryAnalytics.rta.elements.noFilterResults).toBeVisible();
+    });
+  },
+);
+
+pmmTest(
+  'Verify Database and User columns are hidden by default and can be revealed @rta',
+  async ({ page, queryAnalytics }) => {
+    await pmmTest.step('Mock RTA search response with a MySQL query', async () => {
+      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
+        route.fulfill({
+          body: JSON.stringify({
+            queries: [buildMySqlQuery({ queryId: '501', queryText: 'SELECT c FROM sbtest1 WHERE id=21' })],
+          }),
+          contentType: 'application/json',
+          status: 200,
+        }),
+      );
+      await page.reload();
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
+        timeout: Timeouts.TEN_SECONDS,
+      });
+    });
+
+    await pmmTest.step('Verify only the default columns are shown', async () => {
+      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+
+      await expect(queryAnalytics.rta.elements.queryTextColumnHeader).toBeVisible();
+      await expect(queryAnalytics.rta.elements.hostColumnHeader).toBeVisible();
+      await expect(queryAnalytics.rta.elements.elapsedTimeColumnHeader).toBeVisible();
+      await expect(queryAnalytics.rta.elements.databaseColumnHeader).toBeHidden();
+      await expect(queryAnalytics.rta.elements.userColumnHeader).toBeHidden();
+      await expect(queryAnalytics.rta.builders.databaseForRow('1')).toHaveCount(0);
+      await expect(queryAnalytics.rta.builders.userForRow('1')).toHaveCount(0);
+    });
+
+    await pmmTest.step('Reveal Database and User and verify their values', async () => {
+      await queryAnalytics.rta.showColumns('Database', 'User');
+
+      await expect(queryAnalytics.rta.elements.databaseColumnHeader).toBeVisible();
+      await expect(queryAnalytics.rta.elements.userColumnHeader).toBeVisible();
+      await expect(queryAnalytics.rta.builders.databaseForRow('1')).toHaveText('sbtest');
+      await expect(queryAnalytics.rta.builders.userForRow('1')).toHaveText('sbtest@localhost');
+    });
+  },
+);
+
+pmmTest(
+  'Verify elapsed time is rendered in compact seconds format @rta',
+  async ({ page, queryAnalytics }) => {
+    await pmmTest.step('Mock RTA search response with a two-second query', async () => {
+      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
+        route.fulfill({
+          body: JSON.stringify({
+            queries: [buildMySqlQuery({ queryId: '601', queryText: 'SELECT c FROM sbtest1 WHERE id=34' })],
+          }),
+          contentType: 'application/json',
+          status: 200,
+        }),
+      );
+      await page.reload();
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
+        timeout: Timeouts.TEN_SECONDS,
+      });
+    });
+
+    await pmmTest.step('Verify the elapsed time cell uses the unit suffix, not the word', async () => {
+      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+
+      await expect(queryAnalytics.rta.builders.elapsedTimeForRow('1')).toHaveText('2s');
     });
   },
 );
@@ -267,6 +342,7 @@ pmmTest(
 
     await pmmTest.step('Verify each row resolves database and user from its own payload', async () => {
       await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+      await queryAnalytics.rta.showColumns('Database', 'User');
 
       const mongoRow = queryAnalytics.rta.builders.rowByQueryText('find: "mycollection"');
       const mySqlRow = queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1');
