@@ -140,7 +140,7 @@ jobs:
       - name: Checkout pre upgrade branch
         working-directory: pmm-qa
         run: |
-          git fetch origin "pmm-$CLIENT_VERSION"
+          git fetch origin $PRE_UPGRADE_BRANCH
           git checkout FETCH_HEAD
 
       - name: Pre-upgrade UI tests
