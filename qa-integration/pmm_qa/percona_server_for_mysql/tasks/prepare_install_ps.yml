@@ -8,6 +8,7 @@
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
       --network="pmm-qa" \
       --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      --init \
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
       -p {{ docker_port|int + item - 1 }}:3306 \
@@ -22,6 +23,7 @@
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
       --network="pmm-qa" \
       --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      --init \
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
       ubuntu:22.04 sleep infinity

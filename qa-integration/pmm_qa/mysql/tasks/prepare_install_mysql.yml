@@ -16,6 +16,7 @@
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
       --network="pmm-qa" \
       --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      --init \
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
       -v /tmp/mysql-sockets/{{ item }}:/tmp \
@@ -30,6 +31,7 @@
     docker run --rm -d --name="{{ container_prefix }}{{ item }}" \
       --network="pmm-qa" \
       --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
+      --init \
       -v /var/lib/containerd \
       -v ./ssl:/ssl \
       -v /tmp/mysql-sockets/{{ item }}:/var/run/mysqld \
