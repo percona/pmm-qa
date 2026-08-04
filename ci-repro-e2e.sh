@@ -1,24 +1,28 @@
 #!/bin/bash
-# Local reproduction of .github/workflows/runner-e2e-tests-codeceptjs.yml for @bm-mongo.
+# Local reproduction of .github/workflows/runner-e2e-tests-codeceptjs.yml.
 # Mirrors the CI steps, order and environment so failures reproduce faithfully.
+#
+#   ./ci-repro-e2e.sh '@bm-mongo' '--database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra'
+#   ./ci-repro-e2e.sh '@user-password' '--database ps --database psmdb --database pdpgsql'
+#
+# Launchable is not reachable from here, so the subset is rebuilt the same way
+# `launchable subset --confidence 100%` does: every file carrying the tag.
 set -o pipefail
 
 REPO_ROOT=$(cd "$(dirname "$0")" && pwd)
 
+export TAGS_FOR_TESTS=${1:-@bm-mongo}
+export WIZARD_ARGS=${2:---database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra}
+
 export ADMIN_PASSWORD='admin-password'
 export DOCKER_VERSION="${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}"
 export DOCKER_COMPOSE_FILE='docker-compose.yml'
-export PMM_CLIENT_VERSION='latest-tarball'
-export CLIENT_VERSION='latest-tarball'
-export WIZARD_ARGS='--database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra'
-export TAGS_FOR_TESTS='@bm-mongo'
-export GSSAPI_ENABLED='false'
+export PMM_CLIENT_VERSION="${PMM_CLIENT_VERSION:-latest-tarball}"
+export CLIENT_VERSION="${PMM_CLIENT_VERSION}"
 export SERVER_IP='127.0.0.1'
 export PMM_UI_URL='http://127.0.0.1/'
 export PMM_URL="http://admin:${ADMIN_PASSWORD}@${SERVER_IP}"
-
-# Launchable subset produced by CI with 100% confidence (order matters).
-SUBSET='{"tests": ["tests/backup/inventory_test.js", "tests/backup/scheduled_test.js"]}'
+case "${WIZARD_ARGS}" in *GSSAPI*) export GSSAPI_ENABLED=true ;; *) export GSSAPI_ENABLED=false ;; esac
 
 step() { echo; echo "===== $(date -u +%H:%M:%S) $* ====="; }
 
@@ -33,6 +37,15 @@ sudo rm -rf /tmp/backup_data
 step "Setup npm modules for e2e tests"
 cd "${REPO_ROOT}/codeceptjs-e2e"
 envsubst < env.list > env.generated.list
+
+step "Prepare subset for ${TAGS_FOR_TESTS}"
+node launchable-prepare.js "${TAGS_FOR_TESTS}" || exit 1
+SUBSET=$(python3 -c '
+import json, sys
+files = [l.strip() for l in open("test_list.txt") if l.strip()]
+print(json.dumps({"tests": sorted(files)}))
+')
+echo "subset: ${SUBSET}"
 
 step "Setup PMM Server"
 docker network create pmm-qa || true
@@ -50,7 +63,9 @@ sudo bash -x pmm3-client-setup.sh --pmm_server_ip 127.0.0.1 --client_version ${P
 step "Run Setup for E2E Tests"
 mkdir -m 777 -p /tmp/backup_data
 export PATH_TO_PMM_QA="${REPO_ROOT}/qa-integration"
-./pmm-framework/pmm-framework --parallel --pmm-server-password=${ADMIN_PASSWORD} ${WIZARD_ARGS} || exit 1
+if [ "${WIZARD_ARGS}" != "-h" ]; then
+  ./pmm-framework/pmm-framework --parallel --pmm-server-password=${ADMIN_PASSWORD} ${WIZARD_ARGS} || exit 1
+fi
 
 step "Execute e2e tests with tags ${TAGS_FOR_TESTS}"
 cd "${REPO_ROOT}/codeceptjs-e2e"
