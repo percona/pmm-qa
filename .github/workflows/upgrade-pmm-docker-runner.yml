@@ -173,7 +173,8 @@ jobs:
 
       - name: Upgrade PMM client in every client container
         run: |
-          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower)$'); do
+          docker ps
+          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server)$'); do
             echo "== upgrading client in $c =="
             if [ -n "$CLIENT_TARBALL_UPGRADE" ]; then
               docker exec "$c" sh -c 'command -v wget >/dev/null || (command -v dnf >/dev/null && dnf install -y wget || apt-get install -y wget)'
