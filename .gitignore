@@ -171,4 +171,4 @@ CLAUDE.md
 
 # Generated during local CI reproduction
 codeceptjs-e2e/env.generated.list
-qa-integration/pmm_qa/percona-release_latest.*.deb
+qa-integration/pmm_qa/percona-release_latest.*.deb*
