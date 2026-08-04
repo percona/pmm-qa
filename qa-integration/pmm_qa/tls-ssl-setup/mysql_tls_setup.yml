@@ -5,8 +5,6 @@
 #   Install all required tools for backups in compatible version
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     mysql_version: "{{ lookup('vars', 'extra_mysql_version', default=lookup('env','MYSQL_VERSION') | default('8.0', true) ) }}"
     mysql_ssl_container: "{{ lookup('vars', 'extra_mysql_ssl_container', default=lookup('env','MYSQL_SSL_CONTAINER') | default('mysql_ssl', true) ) }}"

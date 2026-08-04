@@ -1,0 +1,10 @@
+# Wait until PostgreSQL accepts connections inside a container.
+# Expects: container_name
+# Optional: pgsql_ready_retries (default 30), pgsql_ready_delay (default 1)
+- name: Wait until PostgreSQL is ready in {{ container_name }}
+  shell: docker exec -u postgres {{ container_name }} pg_isready -q
+  register: pgsql_ready
+  retries: "{{ pgsql_ready_retries | default(30) }}"
+  delay: "{{ pgsql_ready_delay | default(1) }}"
+  until: pgsql_ready.rc == 0
+  changed_when: false
