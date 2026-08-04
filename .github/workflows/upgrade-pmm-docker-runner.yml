@@ -147,7 +147,7 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         run: |
           npm ci
-          npx playwright install
+          npx playwright install --with-deps
           npx playwright test --grep "@pre-upgrade"
 
       - name: Checkout upgrade branch
