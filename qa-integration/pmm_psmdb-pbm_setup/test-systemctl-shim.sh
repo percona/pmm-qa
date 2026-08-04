@@ -37,6 +37,17 @@ pgrep_out=$(docker exec "$node" pgrep -u mongod -x pbm-agent || true)
 [[ -n "$pgrep_out" ]] || fail "pbm-agent not running after restart"
 pass "systemctl restart pbm-agent"
 
+# PMM runs these through an action runner that clears the environment
+# (agent/runner/actions/process_action.go), so PATH and the unit's
+# EnvironmentFile values have to be recovered by the shim itself.
+docker exec "$node" env -i /usr/local/bin/systemctl restart pbm-agent
+pgrep_out=$(docker exec "$node" pgrep -u mongod -x pbm-agent || true)
+[[ -n "$pgrep_out" ]] || fail "pbm-agent not running after restart with empty environment"
+docker exec "$node" env -i /usr/local/bin/systemctl restart mongod
+docker exec "$node" mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null \
+  || fail "mongod not running after restart with empty environment"
+pass "systemctl restart with empty environment (as PMM invokes it)"
+
 # PBM physical restore stops pbm-agent on purpose and PMM restarts it later, so
 # nothing may bring it back on its own.
 docker exec "$node" systemctl stop pbm-agent

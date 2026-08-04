@@ -22,7 +22,18 @@ chown -R mongod:mongod /keytabs 2>/dev/null || true
 mkdir -p /var/log/mongo /var/lib/mongo /var/run /tmp
 chown -R mongod:mongod /var/log/mongo /var/lib/mongo
 chown mongod:mongod /tmp 2>/dev/null || chmod 1777 /tmp
-[[ -f /etc/sysconfig/pbm-agent ]] && . /etc/sysconfig/pbm-agent
+# Stand-in for the units' `EnvironmentFile=`. PMM restarts services with an
+# empty environment, so the values must be exported here rather than relying on
+# whatever docker-compose put in the entrypoint's own environment.
+load_env_file() {
+  [[ -f $1 ]] || return 0
+  set -a
+  # shellcheck disable=SC1090
+  . "$1"
+  set +a
+}
+
+load_env_file /etc/sysconfig/pbm-agent
 
 # Cheap liveness probe: spawning mongosh costs a full node startup, so it must
 # never run in the supervisor loop.
@@ -48,12 +59,11 @@ record_mongod_pid() {
 start_mongod() {
   mongod_ready && record_mongod_pid && return 0
   /usr/bin/percona-server-mongodb-helper.sh || true
-  . /etc/sysconfig/mongod
+  load_env_file /etc/sysconfig/mongod
   if [[ ! -f ${KRB5_KTNAME:-/nonexistent} ]]; then
     unset KRB5_KTNAME
   fi
   export GLIBC_TUNABLES=glibc.pthread.rseq=0 MONGODB_CONFIG_OVERRIDE_NOFORK=1
-  [[ -v KRB5_KTNAME ]] && export KRB5_KTNAME
   runuser -u mongod -- /usr/bin/mongod ${OPTIONS} >>/var/log/mongo/mongod.log 2>&1 &
   for _ in $(seq 1 60); do
     mongod_ready && record_mongod_pid && return 0
@@ -77,7 +87,8 @@ stop_mongod() {
 
 start_pbm() {
   pgrep -u mongod -x pbm-agent >/dev/null 2>&1 && return 0
-  nohup runuser -u mongod -- /usr/bin/pbm-agent >>/var/log/pbm-agent.log 2>&1 &
+  load_env_file /etc/sysconfig/pbm-agent
+  nohup runuser -u mongod --preserve-environment -- /usr/bin/pbm-agent >>/var/log/pbm-agent.log 2>&1 &
   sleep 1
   pgrep -u mongod -x pbm-agent >/var/run/pbm-agent.pid || true
 }
