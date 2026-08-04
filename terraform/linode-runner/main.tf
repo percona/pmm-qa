@@ -1,4 +1,4 @@
-# A single throwaway Linode VM that a Claude agent (test-runner / test-healer)
+# A single throwaway Linode VM that a Claude agent (test-runner / test-doctor)
 # provisions for the lifetime of one QA run, then destroys via down.sh.
 #
 # Deliberately NOT a shared remote backend: state lives in

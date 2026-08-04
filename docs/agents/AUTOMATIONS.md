@@ -1,13 +1,13 @@
 # PMM — Claude Code agents (automations)
 
-Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this repo — committed, so anyone who opens `percona/pmm-qa` in Claude Code gets Test Runner, Test Healer, and Test Reporter automatically. No separate environment snapshot or dashboard config to keep in sync (unlike the earlier Cursor prototype this replaces).
+Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this repo — committed, so anyone who opens `percona/pmm-qa` in Claude Code gets Test Runner, Test Doctor, and Test Reporter automatically. No separate environment snapshot or dashboard config to keep in sync (unlike the earlier Cursor prototype this replaces).
 
 ## The three agents
 
 | Agent | Trigger | Does | Never |
 |-------|---------|------|-------|
 | [test-runner](../../.claude/agents/test-runner.md) | Ad hoc: "please test PMM-15196" | Reads a Jira ticket, provisions a throwaway Linode VM, runs the manual QA, posts a Developers-only Jira comment | Open PRs outside pmm-qa, post public Jira comments |
-| [test-healer](../../.claude/agents/test-healer.md) | pmm-submodules FB Tests / CI failure | Triages product vs. test bug, reproduces on a Linode VM, fixes `pmm-qa`, opens a PR | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules` |
+| [test-doctor](../../.claude/agents/test-doctor.md) | pmm-submodules FB Tests / CI failure | Triages product vs. test bug, reproduces on a Linode VM, fixes `pmm-qa`, opens a PR | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules` |
 | [test-reporter](../../.claude/agents/test-reporter.md) | pmm-submodules FB Tests all green | Screenshots the Actions run, attaches it to Jira `customfield_10492` | Post Jira comments, attach a screenshot when checks failed |
 
 ## Running one manually
@@ -16,18 +16,20 @@ In any Claude Code session on this repo, just ask in natural language — "pleas
 
 ## Running one from Slack / Jira
 
-Wire up the Claude in Slack app ("Claude Tag") to mention the relevant agent by name in a message, or trigger a Claude Code Remote session directly from a Jira automation webhook — either way, the prompt just needs to name the ticket/PR and ask for the role by name, e.g.:
+**Gap vs. Cursor, confirmed:** Cursor's dashboard could passively watch a channel for any matching message with no @mention. Claude Tag (the official Slack app) does not support that — it only responds to an explicit `@Claude` mention or a DM, by design, with no configuration to make it watch a channel silently. Every trigger from Slack has to actually @-mention it:
 
 ```
 @Claude please act as test-runner on PMM-15196.
 ```
 
-## Scheduled triage (Test Healer / Test Reporter without a human asking)
+For Jira: a Jira Automation rule can POST to a Claude Code Remote Routine's **API trigger** URL (`create_trigger` supports firing via a plain HTTPS POST, not just cron) — set the rule to fire on whatever event you want (ticket transitions to a QA status, a comment mentions "please test", etc.) and have it call that endpoint with the ticket key in the payload.
 
-Cursor's dashboard used inbound GitHub webhooks to fire on every `pmm-submodules` workflow completion. Claude Code Remote does not have a generic inbound webhook receiver here, so the equivalent is a **scheduled Routine** (cron trigger, fresh session per fire) that polls recent `pmm-submodules` activity and acts like the corresponding agent would on a real event:
+## Scheduled triage (Test Doctor / Test Reporter without a human asking)
+
+Cursor's dashboard used inbound GitHub webhooks to fire on every `pmm-submodules` workflow completion. Confirmed: Claude Code Remote Routines support **schedule**, **API**, and **GitHub** trigger types, but the GitHub trigger type only covers repos this integration owns/connects — not an arbitrary third-party repo like `Percona-Lab/pmm-submodules`. There is no way to fire a Routine off that repo's workflow completing. The only mechanism today is a **scheduled Routine** (cron, fresh session per fire) that polls recent activity and acts like the corresponding agent would on a real event:
 
 ```
-Read .claude/agents/test-healer.md and act as that role. Check
+Read .claude/agents/test-doctor.md and act as that role. Check
 Percona-Lab/pmm-submodules for FB Tests runs that finished since your last
 check with new failures. If none, do nothing and exit.
 ```
@@ -43,11 +45,11 @@ yet. If none, do nothing and exit.
 
 ## Linode cost-safety net
 
-Test Runner and Test Healer provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [pmm-linode-provisioning](../../.claude/skills/pmm-linode-provisioning/SKILL.md)). Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop is **not** a scheduled Routine — every instance carries its own on-box self-destruct timer (default 24h, see `terraform/linode-runner/README.md`) that deletes it via the Linode API with no external process involved. Nothing scans the account, nothing needs a cadence/TTL sign-off, and nothing can mistakenly delete a still-active run: an instance only ever removes itself, on a schedule it was given at creation. `extend.sh` pushes that timer back if a run needs more time.
+Test Runner and Test Doctor provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [pmm-linode-provisioning](../../.claude/skills/pmm-linode-provisioning/SKILL.md)). Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop is **not** a scheduled Routine — every instance carries its own on-box self-destruct timer (default 24h, see `terraform/linode-runner/README.md`) that deletes it via the Linode API with no external process involved. Nothing scans the account, nothing needs a cadence/TTL sign-off, and nothing can mistakenly delete a still-active run: an instance only ever removes itself, on a schedule it was given at creation. `extend.sh` pushes that timer back if a run needs more time.
 
 ## Go-live checklist
 
 - [ ] `LINODE_TOKEN` available to sessions that need it (environment secret, not committed anywhere)
 - [ ] Atlassian MCP / GitHub connector authenticated for each user
 - [ ] `gh --version`, `terraform version`, `json-diff --version` succeed after a fresh SessionStart hook run
-- [ ] Confirm cadence, then create the Test Healer / Test Reporter polling Routines (optional — ad hoc triggering works without them)
+- [ ] Confirm cadence, then create the Test Doctor / Test Reporter polling Routines (optional — ad hoc triggering works without them)

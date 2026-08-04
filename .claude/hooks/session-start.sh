@@ -43,6 +43,12 @@ if ! command -v ssh >/dev/null 2>&1; then
   sudo apt-get install -y openssh-client
 fi
 
+# --- ffmpeg -----------------------------------------------------------
+# Playwright records its own .webm directly (no ffmpeg needed for capture);
+# this is only for pw-record.js's transcode to .mp4 for easier viewing/
+# attaching to Jira.
+command -v ffmpeg >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y ffmpeg)
+
 # --- json-diff (large Grafana dashboard JSON PR diffs) -------------------
 command -v json-diff >/dev/null 2>&1 || npm install -g json-diff >/dev/null 2>&1 || true
 

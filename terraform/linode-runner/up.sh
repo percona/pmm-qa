@@ -6,8 +6,8 @@
 #
 # Examples:
 #   up.sh test-runner PMM-15196
-#   up.sh test-healer heal-4376 -var ttl_hours=6 -var region=us-east
-#   PMM_QA_REF=fix/some-branch up.sh test-healer heal-4376
+#   up.sh test-doctor heal-4376 -var ttl_hours=6 -var region=us-east
+#   PMM_QA_REF=fix/some-branch up.sh test-doctor heal-4376
 #
 # On success, writes runs/<run_id>/{ip,ssh_key_path,role} and clones
 # percona/pmm-qa (default ref: main; override with PMM_QA_REF) onto the box
