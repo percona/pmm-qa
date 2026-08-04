@@ -16,6 +16,7 @@ pmmTest.describe('PMM Alerts tests for upgrade', () => {
       const folder = await api.alertingApi.getFolderByName('PMM Health');
 
       await api.alertingApi.createRule(GrafanaHelper.getAuthHeader(), {
+        filters: [{ label: 'node_name', regexp: 'pmm-server', type: 'FILTER_TYPE_MATCH' }],
         folder_uid: folder.uid,
         for: '30s',
         group: 'upgrade test group',

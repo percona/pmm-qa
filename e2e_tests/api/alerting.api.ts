@@ -17,6 +17,11 @@ export interface CreateRuleBody {
   params?: [{ name: string; type: string; float: number }];
   group?: string;
   folder_uid?: string;
+  filters?: {
+    label: string;
+    regexp: string;
+    type: 'FILTER_TYPE_MATCH' | 'FILTER_TYPE_MISMATCH';
+  }[];
 }
 
 export interface FoldersResponseBody {
