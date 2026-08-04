@@ -9,15 +9,27 @@
 # `launchable subset --confidence 100%` does: every file carrying the tag.
 set -o pipefail
 
+# A GitHub runner starts each job from a clean environment. Stray values such as
+# COMPOSE_PROFILES or PMM_CLIENT_VERSION left over from an earlier command in the
+# same shell silently change the setup, so drop everything before doing any work.
+if [[ -z ${CI_REPRO_CLEAN_ENV:-} ]]; then
+  exec env -i \
+    CI_REPRO_CLEAN_ENV=1 \
+    HOME="${HOME}" \
+    PATH="${PATH}" \
+    TERM="${TERM:-xterm}" \
+    "$0" "$@"
+fi
+
 REPO_ROOT=$(cd "$(dirname "$0")" && pwd)
 
 export TAGS_FOR_TESTS=${1:-@bm-mongo}
 export WIZARD_ARGS=${2:---database psmdb,SETUP_TYPE=pss,COMPOSE_PROFILES=extra}
 
 export ADMIN_PASSWORD='admin-password'
-export DOCKER_VERSION="${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}"
+export DOCKER_VERSION='perconalab/pmm-server:3-dev-latest'
 export DOCKER_COMPOSE_FILE='docker-compose.yml'
-export PMM_CLIENT_VERSION="${PMM_CLIENT_VERSION:-latest-tarball}"
+export PMM_CLIENT_VERSION='latest-tarball'
 export CLIENT_VERSION="${PMM_CLIENT_VERSION}"
 export SERVER_IP='127.0.0.1'
 export PMM_UI_URL='http://127.0.0.1/'
