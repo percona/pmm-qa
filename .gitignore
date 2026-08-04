@@ -168,3 +168,7 @@ CLAUDE.md
 !.cursor/scripts/
 !.cursor/scripts/**
 .cursorrules
+
+# Generated during local CI reproduction
+codeceptjs-e2e/env.generated.list
+qa-integration/pmm_qa/percona-release_latest.*.deb

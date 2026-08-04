@@ -8,7 +8,17 @@ chown -R mongod:mongod /var/log/mongo /var/lib/mongo
 chown mongod:mongod /tmp 2>/dev/null || chmod 1777 /tmp
 [[ -f /etc/sysconfig/pbm-agent ]] && . /etc/sysconfig/pbm-agent
 
-mongod_running() {
+STOPPED_FLAG=/var/run/mongod-stopped
+
+# Cheap liveness probe. Spawning mongosh costs ~250MB and a full node startup,
+# so it must never run in the supervisor loop.
+mongod_alive() {
+  pgrep -u mongod -f '/usr/bin/mongod -f' >/dev/null 2>&1
+}
+
+# Expensive readiness probe, only used around start/stop transitions.
+mongod_ready() {
+  mongod_alive || return 1
   mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1
 }
 
@@ -23,8 +33,8 @@ record_mongod_pid() {
 }
 
 start_mongod() {
-  mongod_running && record_mongod_pid && return 0
-  rm -f /var/run/mongod-stopped
+  mongod_ready && record_mongod_pid && return 0
+  rm -f "$STOPPED_FLAG"
   /usr/bin/percona-server-mongodb-helper.sh || true
   . /etc/sysconfig/mongod
   if [[ ! -f ${KRB5_KTNAME:-/nonexistent} ]]; then
@@ -33,21 +43,19 @@ start_mongod() {
   export GLIBC_TUNABLES=glibc.pthread.rseq=0 MONGODB_CONFIG_OVERRIDE_NOFORK=1
   [[ -v KRB5_KTNAME ]] && export KRB5_KTNAME
   runuser -u mongod -- /usr/bin/mongod ${OPTIONS} >>/var/log/mongo/mongod.log 2>&1 &
-  for _ in $(seq 1 120); do
-    if mongod_running; then
-      mongosh --quiet --eval 'try { const s = rs.status(); if (s.ok) { quit(0) } } catch (e) {} quit(1)' >/dev/null 2>&1 && record_mongod_pid && return 0
-      mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1 && record_mongod_pid && return 0
-    fi
-    sleep 1
+  for _ in $(seq 1 60); do
+    mongod_ready && record_mongod_pid && return 0
+    sleep 2
   done
   return 1
 }
+
 stop_mongod() {
-  touch /var/run/mongod-stopped
-  if mongod_running; then
+  touch "$STOPPED_FLAG"
+  if mongod_alive; then
     mongosh --quiet --eval 'try { db.adminCommand({shutdown: 1}) } catch (e) {}' >/dev/null 2>&1 || true
     for _ in $(seq 1 30); do
-      mongod_running || break
+      mongod_alive || break
       sleep 1
     done
   fi
@@ -55,6 +63,7 @@ stop_mongod() {
   pkill -9 -u mongod -f 'runuser.*mongod' 2>/dev/null || true
   rm -f /var/run/mongod.pid
 }
+
 start_pbm() {
   pgrep -u mongod -x pbm-agent >/dev/null 2>&1 && return 0
   nohup runuser -u mongod -- /usr/bin/pbm-agent >>/var/log/pbm-agent.log 2>&1 &
@@ -85,24 +94,15 @@ start_pmm() {
 case "${1:-run}" in
   run)
     start_mongod
-    for _ in $(seq 1 90); do
-      mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1 && break
-      sleep 1
-    done
     start_pbm
     start_pmm
+    # mongod may be (re)started from a separate `systemctl` shim process, so it
+    # is not always a child of this shell and cannot be waited on. Poll with a
+    # cheap probe instead.
     while true; do
-      if [[ -f /var/run/mongod-stopped ]]; then
-        sleep 2
-        continue
-      fi
-      pid=$(cat /var/run/mongod.pid 2>/dev/null || true)
-      if [[ -n "$pid" ]]; then
-        wait "$pid" 2>/dev/null || true
-      fi
-      if [[ ! -f /var/run/mongod-stopped ]] && ! mongod_running; then
-        start_mongod || sleep 5
-      fi
+      sleep 5
+      [[ -f "$STOPPED_FLAG" ]] && continue
+      mongod_alive || start_mongod || true
     done
     ;;
   start-mongod) start_mongod ;;

@@ -23,36 +23,6 @@ const clientCredentialsFlags = gssapi.enabled
   : '--username=pmm --password=pmmpass';
 
 const mongoNameWithoutCluster = 'mongo-schedule-no-cluster';
-const mongoConnection = {
-  username: 'pmm',
-  password: 'pmmpass',
-  port: 27027,
-};
-
-async function ensureMongoClient(I) {
-  await I.verifyCommand('docker exec rs101 systemctl start mongod');
-  await I.mongoDisconnect();
-  for (let attempt = 0; attempt < 30; attempt++) {
-    try {
-      await I.mongoConnect(mongoConnection);
-      await I.mongoExecuteCommand({ ping: 1 }, 'admin');
-      return;
-    } catch (e) {
-      await new Promise((resolve) => { setTimeout(resolve, 2000); });
-    }
-  }
-  throw new Error('rs101 mongodb is not reachable after systemctl start mongod');
-}
-
-const mongoRSNodes = ['rs101', 'rs102', 'rs103'];
-
-async function ensureMongodOnNodes(I, nodes) {
-  for (const node of nodes) {
-    await I.verifyCommand(`docker exec ${node} systemctl start mongod`);
-    await I.verifyCommand(`timeout 120 bash -c 'until docker exec ${node} mongosh --quiet --eval "db.adminCommand({ping:1})" >/dev/null 2>&1; do sleep 2; done'`);
-  }
-}
-
 const scheduleErrors = new DataTable(['mode', 'serviceName', 'error']);
 
 scheduleErrors.add(['PITR', mongoServiceName2, scheduledPage.messages.clusterHasPitrNoMoreAllowed(mongoCluster)]);
@@ -83,8 +53,11 @@ BeforeSuite(async ({
     locationsAPI.storageLocationConnection,
     location.description,
   );
-  await ensureMongodOnNodes(I, mongoRSNodes);
-  await ensureMongoClient(I);
+  await I.mongoConnect({
+    username: 'pmm',
+    password: 'pmmpass',
+    port: 27027,
+  });
 
   I.say(await I.verifyCommand(`docker exec rs101 pmm-admin add mongodb ${clientCredentialsFlags} --host=rs101 --port=27017 --service-name=${mongoServiceName} --replication-set=rs --cluster=rs`));
   I.say(await I.verifyCommand(`docker exec rs102 pmm-admin add mongodb ${clientCredentialsFlags} --host=rs102 --port=27017 --service-name=${mongoServiceName2} --replication-set=rs --cluster=rs`));
@@ -97,7 +70,6 @@ Before(async ({
   const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, mongoServiceName);
 
   serviceId = service_id;
-  await ensureMongoClient(I);
   const c = await I.mongoGetCollection('test', 'test');
 
   await c.deleteMany({ number: 2 });
