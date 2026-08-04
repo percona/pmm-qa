@@ -37,4 +37,25 @@ pgrep_out=$(docker exec "$node" pgrep -u mongod -x pbm-agent || true)
 [[ -n "$pgrep_out" ]] || fail "pbm-agent not running after restart"
 pass "systemctl restart pbm-agent"
 
+# PBM physical restore stops pbm-agent on purpose and PMM restarts it later, so
+# nothing may bring it back on its own.
+docker exec "$node" systemctl stop pbm-agent
+sleep 5
+pgrep_out=$(docker exec "$node" pgrep -u mongod -x pbm-agent || true)
+[[ -z "$pgrep_out" ]] || fail "pbm-agent auto-restarted after systemctl stop"
+docker exec "$node" systemctl start pbm-agent
+pgrep_out=$(docker exec "$node" pgrep -u mongod -x pbm-agent || true)
+[[ -n "$pgrep_out" ]] || fail "pbm-agent not running after start"
+pass "systemctl stop/start pbm-agent (no auto-restart)"
+
+# pmm-agent is the only unit declared Restart=always.
+docker exec "$node" bash -c 'pkill -x pmm-agent' || true
+for _ in $(seq 1 15); do
+  docker exec "$node" pgrep -x pmm-agent >/dev/null 2>&1 && break
+  sleep 1
+done
+docker exec "$node" pgrep -x pmm-agent >/dev/null 2>&1 \
+  || fail "pmm-agent was not restarted automatically"
+pass "pmm-agent auto-restart"
+
 echo "=== all shim checks passed on $node ==="

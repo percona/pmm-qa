@@ -1,5 +1,17 @@
 #!/bin/bash
-# PSMDB container entrypoint without systemd (works on MicroVM and CI).
+# PSMDB container entrypoint used instead of systemd (works on MicroVM and CI).
+#
+# Supervision must mirror the packaged systemd units, because the backup tests
+# and PMM itself rely on that behaviour:
+#   mongod.service     Type=simple, no Restart  -> never restarted automatically
+#   pbm-agent.service  Type=simple, no Restart  -> never restarted automatically
+#   pmm-agent.service  Restart=always RestartSec=2s
+#
+# Restarting mongod on our own is actively harmful: a PBM physical restore stops
+# mongod and runs its own standalone instance over the same dbPath, so a
+# competing mongod corrupts the restore. PMM asks for the services to come back
+# by running `systemctl restart mongod` / `systemctl restart pbm-agent`, which
+# the systemctl shim forwards to this script.
 set -euo pipefail
 export PATH="/usr/local/bin:${PATH}" MANAGE_THP=0
 chown -R mongod:mongod /keytabs 2>/dev/null || true
@@ -8,15 +20,12 @@ chown -R mongod:mongod /var/log/mongo /var/lib/mongo
 chown mongod:mongod /tmp 2>/dev/null || chmod 1777 /tmp
 [[ -f /etc/sysconfig/pbm-agent ]] && . /etc/sysconfig/pbm-agent
 
-STOPPED_FLAG=/var/run/mongod-stopped
-
-# Cheap liveness probe. Spawning mongosh costs ~250MB and a full node startup,
-# so it must never run in the supervisor loop.
+# Cheap liveness probe: spawning mongosh costs a full node startup, so it must
+# never run in the supervisor loop.
 mongod_alive() {
   pgrep -u mongod -f '/usr/bin/mongod -f' >/dev/null 2>&1
 }
 
-# Expensive readiness probe, only used around start/stop transitions.
 mongod_ready() {
   mongod_alive || return 1
   mongosh --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1
@@ -34,7 +43,6 @@ record_mongod_pid() {
 
 start_mongod() {
   mongod_ready && record_mongod_pid && return 0
-  rm -f "$STOPPED_FLAG"
   /usr/bin/percona-server-mongodb-helper.sh || true
   . /etc/sysconfig/mongod
   if [[ ! -f ${KRB5_KTNAME:-/nonexistent} ]]; then
@@ -51,7 +59,6 @@ start_mongod() {
 }
 
 stop_mongod() {
-  touch "$STOPPED_FLAG"
   if mongod_alive; then
     mongosh --quiet --eval 'try { db.adminCommand({shutdown: 1}) } catch (e) {}' >/dev/null 2>&1 || true
     for _ in $(seq 1 30); do
@@ -76,11 +83,13 @@ stop_pbm() {
   pkill -u mongod -x pbm-agent 2>/dev/null || true
 }
 stop_pmm() {
+  touch /var/run/pmm-agent-stopped
   [[ -f /var/run/pmm-agent.pid ]] && kill "$(cat /var/run/pmm-agent.pid)" 2>/dev/null || true
   rm -f /var/run/pmm-agent.pid
   pkill -x pmm-agent 2>/dev/null || true
 }
 start_pmm() {
+  rm -f /var/run/pmm-agent-stopped
   pgrep -x pmm-agent >/dev/null 2>&1 && return 0
   if [[ -f /keytabs/mongodb.keytab ]]; then
     export KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab
@@ -96,13 +105,12 @@ case "${1:-run}" in
     start_mongod
     start_pbm
     start_pmm
-    # mongod may be (re)started from a separate `systemctl` shim process, so it
-    # is not always a child of this shell and cannot be waited on. Poll with a
-    # cheap probe instead.
+    # Only pmm-agent is declared Restart=always; mongod and pbm-agent stay down
+    # until PMM or a test explicitly restarts them.
     while true; do
-      sleep 5
-      [[ -f "$STOPPED_FLAG" ]] && continue
-      mongod_alive || start_mongod || true
+      sleep 2
+      [[ -f /var/run/pmm-agent-stopped ]] && continue
+      pgrep -x pmm-agent >/dev/null 2>&1 || start_pmm || true
     done
     ;;
   start-mongod) start_mongod ;;
