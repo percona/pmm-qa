@@ -575,13 +575,17 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
       ? process.env.PMM_CLIENT_VERSION
       : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
     const expectedUpgradeVersion = JSON.parse(
-      (await cli.exec(`docker run --rm ${clientImage} pmm-admin --version --json`)).stdout,
+      (await cli.exec(`docker run --rm --entrypoint pmm-admin ${clientImage} --version --json`)).stdout,
     ).Version;
 
     await cli.exec('docker network create pmm-qa || true');
     await cli.exec('docker network connect pmm-qa pmm-server || true');
     await cli.exec(`docker rm -f ${containerName} 2>/dev/null || true`);
     await cli.exec(`docker run --rm -d --name="${containerName}" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`);
+    await expect(async () => {
+      const status = await cli.exec(`docker inspect -f '{{.State.Running}}' ${containerName}`);
+      expect(status.stdout.trim()).toBe('true');
+    }).toPass({ intervals: [1_000], timeout: 60_000 });
     const latestReleasedVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout.trim();
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`);
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
