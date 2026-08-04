@@ -28,7 +28,5 @@ RUN_DIR="$MODULE_DIR/runs/$RUN_ID"
 IP=$(cat "$RUN_DIR/ip")
 KEY=$(cat "$RUN_DIR/ssh_key_path")
 
-# Port 443: sslh on the box demultiplexes real SSH off the one externally
-# open port -- see cloud-init.yaml.
-exec ssh -p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$KEY" \
+exec ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i "$KEY" \
   "root@$IP" "$@"

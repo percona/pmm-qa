@@ -46,10 +46,7 @@ echo "$IP" >"$RUN_DIR/ip"
 echo "$KEY" >"$RUN_DIR/ssh_key_path"
 echo "$ROLE" >"$RUN_DIR/role"
 
-# Port 443, not 22: many controllers driving this script (Claude Code
-# Remote sessions included) can only egress on 443. sslh on the box
-# demultiplexes real SSH off that same port -- see cloud-init.yaml.
-SSH=(ssh -p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i "$KEY")
+SSH=(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i "$KEY")
 
 echo "Instance up: $IP -- waiting for cloud-init (Docker + Ansible) to finish..."
 ready=0
@@ -68,7 +65,7 @@ fi
 echo "Syncing qa-integration/ (unmodified pmm-framework) to the runner..."
 REPO_ROOT="$(cd "$MODULE_DIR/../.." && pwd)"
 rsync -az --delete \
-  -e "ssh -p 443 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $KEY" \
+  -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i $KEY" \
   "$REPO_ROOT/qa-integration/" "root@$IP:/root/qa-integration/"
 
 echo

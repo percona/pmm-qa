@@ -24,15 +24,15 @@ workflow. This README is the implementation reference.
   safety net still works even if the original run's container/session is
   long gone.
 - **Firewall by default.** Every instance gets a `linode_firewall` allowing
-  only port **443** inbound (from `var.allowed_ssh_cidr`, default open —
-  tighten it if you have a stable egress IP) and dropping everything else.
-- **443-only, on purpose.** A session driving this from Claude Code Remote
-  can only make outbound raw TCP connections on port 443 — confirmed live,
-  not a proxy quirk (see `git log` on this file / the commit that added
-  `sslh`). `cloud-init.yaml` installs `sslh` to multiplex real SSH and PMM's
-  HTTPS UI over that single port by protocol-sniffing, so `up.sh`/`run.sh`
-  talk `ssh -p 443` and the PMM UI is still plain `https://<ip>/` — nothing
-  about the client-side workflow changes, only the on-box plumbing.
+  only SSH (22) and the PMM UI (443) inbound (from `var.allowed_ssh_cidr`,
+  default open — tighten it if you have a stable egress IP) and dropping
+  everything else.
+- **Needs a permissive network policy on the controller.** A session with a
+  locked-down egress policy (proxied-HTTPS-only) cannot reach the VM over
+  SSH at all — confirmed live, and moving SSH to port 443 doesn't help
+  either, since that class of policy inspects payloads, not just ports.
+  Run `up.sh`/`run.sh` from a session/environment whose network policy
+  allows outbound SSH.
 
 ## Requirements
 
@@ -42,6 +42,7 @@ workflow. This README is the implementation reference.
   reads it straight from the environment.
 - `terraform` >= 1.5, `jq`, `rsync`, `ssh` (openssh-client). The SessionStart
   hook installs `rsync`/`ssh` if missing; they are not in the base image.
+- A network policy on the controller that permits outbound SSH (see above).
 
 ## Usage
 

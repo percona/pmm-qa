@@ -60,14 +60,16 @@ resource "linode_firewall" "runner" {
   inbound_policy  = "DROP"
   outbound_policy = "ACCEPT"
 
-  # Only 443 is open. Many session controllers driving this module (Claude
-  # Code Remote sessions) can only egress on port 443 themselves -- so SSH
-  # and the PMM UI both ride this one port, demultiplexed on-box by sslh
-  # (see cloud-init.yaml). Nothing on the box needs a separate externally
-  # reachable port: pmm-agent registration happens over the local Docker
-  # network, not the public IP.
   inbound {
-    label    = "sslh"
+    label    = "ssh"
+    action   = "ACCEPT"
+    ports    = "22"
+    protocol = "TCP"
+    ipv4     = [var.allowed_ssh_cidr]
+  }
+
+  inbound {
+    label    = "pmm-ui"
     action   = "ACCEPT"
     ports    = "443"
     protocol = "TCP"
