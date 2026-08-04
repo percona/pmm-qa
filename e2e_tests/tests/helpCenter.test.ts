@@ -163,49 +163,11 @@ pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mock
 
 pmmTest(
   'PMM-T2263 Verify update notification remains snoozed after refresh @new-navigation',
-  async ({ helpPage, page }) => {
-    let snoozedAt = 0;
-    let snoozedVersion = '';
+  async ({ helpPage, mocks, page }) => {
     const snoozeDuration = Timeouts.ONE_MINUTE;
     const updateVersion = `test-update-${Date.now()}`;
+    const snooze = await mocks.mockSnoozedUpdate(updateVersion);
 
-    await page.context().unroute(apiEndpoints.users.me);
-    await page.context().unroute(apiEndpoints.server.updates);
-    await page.route(apiEndpoints.users.me, async (route) => {
-      if (route.request().method() === 'PUT') {
-        const body = route.request().postDataJSON() as { snoozed_pmm_version?: string };
-
-        snoozedAt = Date.now();
-        snoozedVersion = body.snoozed_pmm_version ?? '';
-      }
-
-      await route.fulfill({
-        body: JSON.stringify({
-          alerting_tour_completed: true,
-          product_tour_completed: true,
-          snoozed_at: snoozedAt ? new Date(snoozedAt).toISOString() : null,
-          snoozed_pmm_version: snoozedVersion,
-          user_id: 1,
-        }),
-        contentType: 'application/json',
-        status: 200,
-      });
-    });
-    await page.route(apiEndpoints.server.updates, (route) =>
-      route.fulfill({
-        body: JSON.stringify({
-          installed: {},
-          last_check: new Date().toISOString(),
-          latest: {
-            timestamp: new Date(0).toISOString(),
-            version: updateVersion,
-          },
-          update_available: true,
-        }),
-        contentType: 'application/json',
-        status: 200,
-      }),
-    );
     await page.evaluate(
       (duration) => localStorage.setItem('pmm-ui.dev.updateSnoozeDurationMs', String(duration)),
       snoozeDuration,
@@ -215,7 +177,7 @@ pmmTest(
     await expect(helpPage.buttons.remindMeLater).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
     await helpPage.buttons.remindMeLater.click();
     await expect(helpPage.buttons.remindMeLater).toBeHidden();
-    expect(snoozedAt).toBeGreaterThan(0);
+    expect(snooze.snoozedAt).toBeGreaterThan(0);
 
     await Promise.all([
       page.waitForResponse(apiEndpoints.users.me),
@@ -227,7 +189,7 @@ pmmTest(
     });
     await expect(helpPage.buttons.remindMeLater).toBeHidden();
 
-    snoozedAt = Date.now() - snoozeDuration - 1;
+    snooze.snoozedAt = Date.now() - snoozeDuration - 1;
     await page.reload();
     await expect(helpPage.buttons.remindMeLater).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
   },
