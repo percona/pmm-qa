@@ -1,6 +1,9 @@
 #!/bin/bash
 # systemctl stand-in when the container has no systemd PID 1.
 set -euo pipefail
+# PMM restarts services through its action runner, which clears the
+# environment, so bash would fall back to a PATH without /usr/sbin and /sbin.
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
 cmd=${1:-}; unit=${2:-}
 kill_mysql() {
   /etc/init.d/mysql stop 2>/dev/null || service mysql stop 2>/dev/null || true

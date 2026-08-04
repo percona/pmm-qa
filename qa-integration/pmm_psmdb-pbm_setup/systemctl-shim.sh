@@ -1,6 +1,7 @@
 #!/bin/bash
 # systemctl stand-in for PSMDB containers (entrypoint.sh manages processes).
 set -euo pipefail
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
 cmd=${1:-}; unit=${2:-}
 case "$cmd" in
   enable|disable|daemon-reload) exit 0 ;;

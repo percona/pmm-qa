@@ -13,7 +13,11 @@
 # by running `systemctl restart mongod` / `systemctl restart pbm-agent`, which
 # the systemctl shim forwards to this script.
 set -euo pipefail
-export PATH="/usr/local/bin:${PATH}" MANAGE_THP=0
+# PMM runs `systemctl restart mongod` through its action runner, which does not
+# pass a login PATH, so /usr/sbin (runuser) would be missing and mongod would
+# silently never come back. Always start from a complete PATH.
+export PATH="/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
+export MANAGE_THP=0
 chown -R mongod:mongod /keytabs 2>/dev/null || true
 mkdir -p /var/log/mongo /var/lib/mongo /var/run /tmp
 chown -R mongod:mongod /var/log/mongo /var/lib/mongo
