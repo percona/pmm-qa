@@ -13,6 +13,7 @@ export default class HelpPage extends BasePage {
     exportLogs: this.page.getByRole('link', { name: 'Export logs' }),
     manageDatasets: this.page.getByRole('link', { name: 'Manage datasets' }),
     nextTip: this.page.getByTestId('tour-next-step-button'),
+    remindMeLater: this.page.getByTestId('update-modal-remind-me-button'),
     shareYourThoughts: this.page.getByRole('link', { name: 'Share your thoughts' }),
     startPmmTour: this.page.getByTestId('tips-card-start-product-tour-button'),
     startTourButton: this.page.getByTestId('welcome-card-start-tour'),
