@@ -59,10 +59,13 @@ RUN set -ex; \
 
 ARG OL_VERSION
 RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
-        dnf -y install pmm-client && \
-        curl -Lf -o /tmp/pmm-client.tar.gz $PMM_CLIENT_VERSION && \
+        curl -Lf -o /tmp/pmm-client.tar.gz "$PMM_CLIENT_VERSION" && \
         cd /tmp && tar -xvf pmm-client.tar.gz --transform 's,^/*[^/]*,/pmm-client,S' && \
-        cd /tmp/pmm-client && ./install_tarball && cd ../ && rm -rf pmm* ;\
+        cd /tmp/pmm-client && ./install_tarball && cd / && \
+        install -D -m 0644 /tmp/pmm-client/config/pmm-agent.service /usr/lib/systemd/system/pmm-agent.service && \
+        ln -sf /usr/local/percona/pmm/bin/pmm-agent /usr/sbin/pmm-agent && \
+        ln -sf /usr/local/percona/pmm/bin/pmm-admin /usr/sbin/pmm-admin && \
+        rm -rf /tmp/pmm-client /tmp/pmm-client.tar.gz ; \
     elif [[ "$PMM_CLIENT_VERSION" =~ 3-dev-latest|latest ]]; then \
         dnf -y install pmm-client ; \
     elif [[ "$PMM_CLIENT_VERSION" = "pmm3-rc" ]]; then \

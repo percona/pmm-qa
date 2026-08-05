@@ -18,21 +18,58 @@ ANSIBLE_COLLECTION_CHECKED=false
 # Point Ansible modules at a Python that has `requests`, if one is available.
 #
 # community.docker modules need `requests`; the interpreter Ansible discovers by
-# default may not have it. Prefers an explicit ANSIBLE_PYTHON_INTERPRETER, then
-# the repo's pmm_framework virtualenv. Silently does nothing when neither is
-# usable, leaving Ansible's own discovery in charge.
+# default may not have it -- e.g. Homebrew's python3 on macOS, which has no
+# `requests` and no easy way to add one (PEP 668 externally-managed-environment).
+# Prefers an explicit ANSIBLE_PYTHON_INTERPRETER, then
+# PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK, then whatever ansible_python_interpreter()
+# finds or self-provisions. Silently does nothing when none of that works,
+# leaving Ansible's own discovery in charge.
 #
-# Reads:  ANSIBLE_PYTHON_INTERPRETER, PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK,
-#         PMM_QA_ROOT
+# Reads:  ANSIBLE_PYTHON_INTERPRETER, PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK
 # Writes: exports ANSIBLE_PYTHON_INTERPRETER when a suitable interpreter is found
 configure_ansible_python() {
   [[ -n ${ANSIBLE_PYTHON_INTERPRETER:-} ]] && return
 
-  local candidate=${PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK:-$PMM_QA_ROOT/pmm_framework/bin/python}
-  if [[ -x $candidate ]] && "$candidate" -c 'import requests' >/dev/null 2>&1; then
+  local candidate=${PMM_FRAMEWORK_ANSIBLE_PYTHON_FALLBACK:-}
+  [[ -n $candidate ]] || candidate=$(ansible_python_interpreter)
+
+  if [[ -n $candidate ]] && "$candidate" -c 'import requests' >/dev/null 2>&1; then
     export ANSIBLE_PYTHON_INTERPRETER=$candidate
     log_verbose "Using Ansible module interpreter: $ANSIBLE_PYTHON_INTERPRETER"
   fi
+}
+
+# Find, or self-provision, a Python interpreter with `requests` importable.
+#
+# Tried in order: python3/python already on PATH -- no venv needed if one of
+# those already has `requests` -- then a venv at $PMM_QA_ROOT/pmm_framework,
+# reused as-is if a previous run already created it. If nothing usable is
+# found, python3 creates that venv and pip-installs `requests` into it. This is
+# what lets pmm-framework work out of the box on a host like Homebrew's macOS
+# Python that has no `requests` and no easy way to add one system-wide -- no
+# manual setup step required.
+#
+# This only ever runs once per process (configure_ansible_python's caller
+# exports ANSIBLE_PYTHON_INTERPRETER on success, which short-circuits every
+# later call), and preflight_database_setups() calls it before forking
+# parallel jobs specifically so they cannot race to create the same venv.
+#
+# Reads:  PMM_QA_ROOT
+# Stdout: an interpreter path, or nothing if none could be found or provisioned
+ansible_python_interpreter() {
+  local venv_python=$PMM_QA_ROOT/pmm_framework/bin/python
+  local candidate
+  for candidate in python3 python "$venv_python"; do
+    command -v "$candidate" >/dev/null 2>&1 || continue
+    "$candidate" -c 'import requests' >/dev/null 2>&1 && { printf '%s' "$candidate"; return; }
+  done
+
+  command -v python3 >/dev/null 2>&1 || return 0
+  log_verbose "No Python with 'requests' on PATH for Ansible modules; installing one into $PMM_QA_ROOT/pmm_framework..."
+  python3 -m venv "$PMM_QA_ROOT/pmm_framework" >/dev/null 2>&1 &&
+    "$venv_python" -m pip install --quiet --no-cache-dir requests >/dev/null 2>&1 &&
+    "$venv_python" -c 'import requests' >/dev/null 2>&1 &&
+    printf '%s' "$venv_python"
 }
 
 # Install the community.docker collection unless it is already present.
