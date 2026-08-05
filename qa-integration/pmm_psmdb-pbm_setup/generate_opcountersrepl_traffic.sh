@@ -2,46 +2,60 @@
 #
 # generate_opcountersrepl_traffic.sh
 #
-# Generates a steady stream of insert/update/delete operations against the
-# qa-integration sharded PSMDB cluster (pmm_psmdb-pbm_setup/docker-compose-sharded*.yaml)
-# so that mongodb_ss_opcountersRepl{legacy_op_type=~"insert|update|delete"} has
-# non-zero test data in Grafana/PMM.
+# Generates a steady stream of insert/update/delete operations against a
+# qa-integration PSMDB cluster so that
+# mongodb_ss_opcountersRepl{legacy_op_type=~"insert|update|delete"} has
+# non-zero test data in Grafana/PMM. Works against either topology:
+#   - the sharded cluster (docker-compose-sharded*.yaml)      -> connect via mongos
+#   - a plain replica set (docker-compose-rs.yaml)            -> connect via the primary (rs101)
+# The script detects which one it's talking to (via isMaster().msg == "isdbgrid")
+# and only runs the sharding setup commands when actually connected to a mongos.
 #
 # IMPORTANT: opcountersRepl is only ever reported by mongod replica-set members
 # (it counts ops applied from the oplog during replication). mongos routers
-# never expose this field, so a PromQL filter like service_name=~"mongos_XXXXX"
-# will always be empty for this metric -- no amount of load changes that.
-# Point your panel at the shard/config-server members instead. Every node
-# started by start-sharded.sh / start-sharded-with-pmm.sh shares the same
-# random suffix as the mongos service, e.g. if your mongos PMM service is
-# "mongos_31226" the matching mongod services are:
-#   rs101_31226 rs102_31226 rs103_31226 rs201_31226 rs202_31226 rs203_31226
-#   rscfg01_31226 rscfg02_31226 rscfg03_31226
-# (rs102/rs103/rs202/rs203 are normally the secondaries, which is where
-# opcountersRepl actually climbs -- the primary of each shard applies writes
-# directly, not via replication.)
+# never expose this field at all, so:
+#   - on the sharded cluster, point your panel's service_name at the shard/
+#     config-server members, never at the mongos service. Every node started
+#     by start-sharded.sh / start-sharded-with-pmm.sh shares the same random
+#     suffix as the mongos service, e.g. if your mongos PMM service is
+#     "mongos_31226" the matching mongod services are:
+#       rs101_31226 rs102_31226 rs103_31226 rs201_31226 rs202_31226 rs203_31226
+#       rscfg01_31226 rscfg02_31226 rscfg03_31226
+#   - on a plain replica set, point it at the secondaries (rs102_<suffix>,
+#     rs103_<suffix>), not the primary (rs101_<suffix>) -- the primary applies
+#     writes directly, only secondaries apply them via replication.
+# Also note some dashboards restrict their service_name variable to services
+# that expose a mongos-only metric (e.g. mongodb_mongos_sharding_shards_total,
+# behind listShards, which MongoDB only runs on mongos) -- on a dashboard like
+# that, no mongod service (shard member, config server, or plain replica set
+# member) will ever appear as an option, regardless of topology or traffic.
 #
-# Usage (run from qa-integration/pmm_psmdb-pbm_setup, same cwd as start-sharded.sh):
+# Usage (run from qa-integration/pmm_psmdb-pbm_setup, same cwd as start-sharded.sh
+# / start-rs.sh / start-rs-only.sh):
 #   ./generate_opcountersrepl_traffic.sh
 #
 # Env vars:
-#   COMPOSE_FILE       docker-compose-sharded.yaml (default) or
-#                       docker-compose-sharded-with-pmm.yaml
-#   MONGOS_SERVICE      compose service name for the router (default: mongos)
-#   DURATION_SECONDS    how long to generate traffic for (default: 300)
-#   INTERVAL_MS         delay between op cycles in ms (default: 200)
-#   MONGO_URI           default: mongodb://root:root@localhost
+#   COMPOSE_FILE      docker-compose-sharded.yaml (default), or
+#                     docker-compose-sharded-with-pmm.yaml, or docker-compose-rs.yaml
+#   MONGO_SERVICE     compose service to connect through (default: mongos)
+#                     use rs101 for the plain replica set setup
+#   MONGO_URI         default: mongodb://root:root@localhost
+#                     use mongodb://root:root@localhost/?replicaSet=rs for the
+#                     plain replica set setup
+#   DURATION_SECONDS  how long to generate traffic for (default: 300)
+#   INTERVAL_MS       delay between op cycles in ms (default: 200)
 
 set -euo pipefail
 
 COMPOSE_FILE=${COMPOSE_FILE:-docker-compose-sharded.yaml}
-MONGOS_SERVICE=${MONGOS_SERVICE:-mongos}
+MONGO_SERVICE=${MONGO_SERVICE:-mongos}
 DURATION_SECONDS=${DURATION_SECONDS:-300}
 INTERVAL_MS=${INTERVAL_MS:-200}
 MONGO_URI=${MONGO_URI:-mongodb://root:root@localhost}
 
 echo "compose file:    $COMPOSE_FILE"
-echo "mongos service:  $MONGOS_SERVICE"
+echo "mongo service:   $MONGO_SERVICE"
+echo "mongo uri:       $MONGO_URI"
 echo "duration:        ${DURATION_SECONDS}s"
 echo "interval:        ${INTERVAL_MS}ms"
 echo
@@ -49,16 +63,23 @@ echo
 # Newer PSMDB images only ship mongosh, older ones only ship the legacy
 # `mongo` shell -- both understand the plain JS below, so just pick whichever
 # is present in the container instead of hardcoding one.
-MONGO_BIN=$(docker compose -f "$COMPOSE_FILE" exec -T "$MONGOS_SERVICE" bash -c 'command -v mongosh || command -v mongo')
+MONGO_BIN=$(docker compose -f "$COMPOSE_FILE" exec -T "$MONGO_SERVICE" bash -c 'command -v mongosh || command -v mongo')
 echo "using shell binary: $MONGO_BIN"
 echo
 
-docker compose -f "$COMPOSE_FILE" exec -T "$MONGOS_SERVICE" "$MONGO_BIN" "$MONGO_URI" --quiet <<EOF
-sh.enableSharding("test");
-try {
-    sh.shardCollection("test.opload", { _id: "hashed" });
-} catch (e) {
-    print("shardCollection: " + e);
+docker compose -f "$COMPOSE_FILE" exec -T "$MONGO_SERVICE" "$MONGO_BIN" "$MONGO_URI" --quiet <<EOF
+// isdbgrid is the magic string mongos (and only mongos) returns here --
+// use it to decide whether sharding setup is applicable at all.
+var isMongos = false;
+try { isMongos = (db.isMaster().msg === "isdbgrid"); } catch (e) {}
+
+if (isMongos) {
+    sh.enableSharding("test");
+    try {
+        sh.shardCollection("test.opload", { _id: "hashed" });
+    } catch (e) {
+        print("shardCollection: " + e);
+    }
 }
 
 var opdb = db.getSiblingDB("test");
@@ -70,6 +91,7 @@ var windowSize = 50;
 var ids = [];
 var i = 0;
 
+print((isMongos ? "mongos" : "replica set") + " detected");
 print("generating insert/update/delete traffic against test.opload for ${DURATION_SECONDS}s ...");
 
 while (new Date().getTime() < endTime) {
@@ -96,7 +118,7 @@ EOF
 
 echo
 echo "Load generation finished. To confirm opcountersRepl actually moved, check a"
-echo "shard secondary directly, e.g.:"
+echo "secondary directly, e.g.:"
 echo "  docker compose -f $COMPOSE_FILE exec -T rs102 \$MONGO_BIN --quiet --eval 'rs.secondaryOk(); db.serverStatus().opcountersRepl'"
-echo "and point your Grafana panel's service_name at the mongod members"
-echo "(rs102_<suffix>, rs103_<suffix>, rs202_<suffix>, rs203_<suffix>, ...) rather than the mongos service."
+echo "and point your Grafana panel's service_name at that secondary's mongod service"
+echo "(rs102_<suffix>, rs103_<suffix>, rs202_<suffix>, rs203_<suffix>, ...) rather than the mongos/primary service."
