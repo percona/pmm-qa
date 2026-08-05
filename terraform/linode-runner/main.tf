@@ -8,15 +8,21 @@
 # cloud-init.yaml.tftpl) -- the instance deletes itself after ttl_hours with
 # no external process required. extend.sh reschedules it on a live instance.
 
-resource "tls_private_key" "ssh" {
-  algorithm = "ED25519"
+# Controllers running behind a proxied-HTTPS-only network policy cannot
+# open a raw SSH (port 22) connection -- confirmed live, not a policy
+# oversight (see docs.md's "Why HTTPS-exec, not SSH" section). Every
+# command runs through a small bearer-token-authenticated HTTPS service
+# on the box instead (see cloud-init.yaml.tftpl). root_pass exists only
+# because the Linode API requires either it or authorized_keys; it is
+# never used to log in.
+resource "random_password" "root_pass" {
+  length  = 32
+  special = true
 }
 
-# 0600 by default; never commit this -- see .gitignore.
-resource "local_sensitive_file" "ssh_private_key" {
-  content         = tls_private_key.ssh.private_key_openssh
-  filename        = "${path.module}/runs/${var.run_id}/id_ed25519"
-  file_permission = "0600"
+resource "random_password" "exec_token" {
+  length  = 40
+  special = false
 }
 
 resource "random_string" "suffix" {
@@ -30,22 +36,23 @@ locals {
     "pmmqa-${var.role}-${var.run_id}-${random_string.suffix.result}",
     0, 63,
   )
-  # Linode firewall labels cap at 32 chars, well below the instance label's
-  # 63 -- truncate independently instead of prefixing "fw-" onto local.label.
+  # Linode firewall labels have a stricter 32-char limit than instance
+  # labels (63) -- a separate, more aggressively truncated value, not a
+  # prefix on the instance label, which was overflowing it.
   firewall_label = substr(
-    "fw-${var.role}-${var.run_id}-${random_string.suffix.result}",
+    "fw-${random_string.suffix.result}-${var.run_id}",
     0, 32,
   )
 }
 
 resource "linode_instance" "runner" {
-  label           = local.label
-  region          = var.region
-  type            = var.instance_type
-  image           = "linode/ubuntu24.04"
-  authorized_keys = [trimspace(tls_private_key.ssh.public_key_openssh)]
-  booted          = true
-  swap_size       = 512
+  label     = local.label
+  region    = var.region
+  type      = var.instance_type
+  image     = "linode/ubuntu24.04"
+  root_pass = random_password.root_pass.result
+  booted    = true
+  swap_size = 512
 
   # The pmm-qa-run tag is also how the self-destruct timer finds its own
   # instance ID at delete time (see cloud-init.yaml.tftpl) -- it must stay
@@ -61,6 +68,7 @@ resource "linode_instance" "runner" {
       run_id       = var.run_id
       ttl_seconds  = var.ttl_hours * 3600
       linode_token = var.linode_token
+      exec_token   = random_password.exec_token.result
     }))
   }
 }
@@ -71,16 +79,12 @@ resource "linode_firewall" "runner" {
   inbound_policy  = "DROP"
   outbound_policy = "ACCEPT"
 
+  # Only the exec-server's port is open. PMM Server itself binds an
+  # internal-only port (see docs.md) -- commands to bring it up, query it,
+  # and tear it down all go through the exec-server, never a direct
+  # connection to PMM's own port.
   inbound {
-    label    = "ssh"
-    action   = "ACCEPT"
-    ports    = "22"
-    protocol = "TCP"
-    ipv4     = [var.allowed_ssh_cidr]
-  }
-
-  inbound {
-    label    = "pmm-ui"
+    label    = "exec"
     action   = "ACCEPT"
     ports    = "443"
     protocol = "TCP"

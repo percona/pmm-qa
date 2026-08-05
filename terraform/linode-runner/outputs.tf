@@ -10,6 +10,7 @@ output "label" {
   value = local.label
 }
 
-output "ssh_private_key_path" {
-  value = local_sensitive_file.ssh_private_key.filename
+output "exec_token" {
+  value     = random_password.exec_token.result
+  sensitive = true
 }

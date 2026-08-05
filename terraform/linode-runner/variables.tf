@@ -35,6 +35,6 @@ variable "ttl_hours" {
 
 variable "allowed_ssh_cidr" {
   type        = string
-  description = "CIDR allowed to reach SSH (22) and the PMM UI (443) on the instance. Tighten this if you have a stable egress IP."
+  description = "CIDR allowed to reach the exec-server (443) on the instance. Tighten this if you have a stable egress IP. Named for historical reasons -- nothing here uses SSH anymore."
   default     = "0.0.0.0/0"
 }

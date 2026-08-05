@@ -11,7 +11,18 @@ Full implementation reference: [terraform/linode-runner/README.md](../../../terr
 
 ## Never code on the Linode VM
 
-The VM is purely an execution target — it runs Docker/Ansible, nothing else. All code changes (fixes, new tests, playbook edits) happen in this Claude Code environment, where they're tracked by git from the first keystroke. If a change needs to run on the box, **commit and push it to a branch first**, then point the box at that branch (`PMM_QA_REF=<branch> up.sh ...`, or `sync.sh <run_id> <branch>` on an already-running one). Never SSH in and edit files directly — anything written only on the VM's disk is gone the moment the instance is destroyed or self-destructs, with no way to recover it.
+The VM is purely an execution target — it runs Docker/Ansible, nothing else. All code changes (fixes, new tests, playbook edits) happen in this Claude Code environment, where they're tracked by git from the first keystroke. If a change needs to run on the box, **commit and push it to a branch first**, then point the box at that branch (`PMM_QA_REF=<branch> up.sh ...`, or `sync.sh <run_id> <branch>` on an already-running one). Never exec in and edit files directly — anything written only on the VM's disk is gone the moment the instance is destroyed or self-destructs, with no way to recover it.
+
+## Why HTTPS-exec, not SSH
+
+`run.sh` talks to the box over a small bearer-token-authenticated HTTPS service (`up.sh` provisions it via cloud-init), not SSH. This isn't a style choice — confirmed live, twice:
+
+- Raw SSH (port 22) never reaches the VM from a cloud-session environment, at **any** network access level (None/Trusted/Full/Custom) — the platform's own security proxy is HTTP/HTTPS-only, and that's true regardless of what the environment's network-access setting is configured to. No environment config fixes this.
+- Moving the exec-server to a non-443 port doesn't work either: the `CONNECT` tunnel itself succeeds, but the TLS handshake gets reset immediately after the ClientHello — something inspects traffic per-port and kills anything on a port that doesn't look like standard port-443 HTTPS, even through an already-established tunnel.
+
+So port 443 is the only port that reliably carries real traffic out of this kind of environment, and everything — provisioning, running commands, tearing down — goes through it via `run.sh`. One consequence: **PMM Server itself can't also bind host port 443** (see step 2) without conflicting with the exec-server, so it binds an internal-only port instead — see the UI caveat in step 4.
+
+The box must always be addressed by a hostname derived from its IP (`<ip-with-dashes>.nip.io`, which `run.sh`/`up.sh` already do for you) — the same proxy drops connections to a bare IP address outright, needing a hostname (SNI/Host) to route at all. Never hand-construct a `https://<ip>/...` URL against this box from the controller side.
 
 ## Pick a run_id
 
@@ -25,13 +36,11 @@ terraform/linode-runner/up.sh <role> <run_id>
 ```
 
 `role` is `test-runner`, `test-doctor`, or `fb-validator` (free text, just for the tag). This:
-- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open on SSH (22) and the PMM UI (443), tagged `pmm-qa-ephemeral`.
-- Waits for cloud-init to finish installing Docker + Ansible, and scheduling its own self-destruct timer (default 24h — see Cleanup below).
+- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443 (the exec-server — see "Why HTTPS-exec, not SSH" above), tagged `pmm-qa-ephemeral`.
+- Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or whatever `PMM_QA_REF` names (must already be pushed; see "Never code on the Linode VM" above).
 
-Requires a session/environment network policy that allows outbound SSH (raw TCP on port 22) to arbitrary hosts — a locked-down policy that only permits proxied HTTPS traffic will not be able to reach the VM at all (confirmed the hard way: not fixable by moving SSH to port 443, since such a policy inspects payloads, not just ports). Use a permissive network policy for the environment this skill runs in.
-
-Takes 2-4 minutes. Prints the VM's IP on success.
+Works from the **default** proxied-HTTPS environment — no special network policy needed, unlike the old SSH-based version of this skill. Takes 2-4 minutes. Prints the VM's IP on success.
 
 ## 2. Server (always first)
 
@@ -49,18 +58,20 @@ terraform/linode-runner/run.sh <run_id> -- "
   docker pull '$DOCKER_VERSION'
   docker rm -f pmm-server watchtower 2>/dev/null || true
   docker run -d --restart=always --name pmm-server --hostname pmm-server \
-    --network pmm-qa -p 443:8443 -p 4647:4647 -v pmm-data:/srv \
+    --network pmm-qa -p 8443:8443 -p 4647:4647 -v pmm-data:/srv \
     -e GF_SECURITY_ADMIN_PASSWORD='$ADMIN_PASSWORD' \
     $DOCKER_ENV_VARIABLE \
     '$DOCKER_VERSION'
 "
 ```
 
-Wait for **readyz**: `https://<linode-ip>/v1/server/readyz` → HTTP **200**, body **`{}`**:
+`-p 8443:8443`, not `443:8443` — host port 443 is the exec-server's (see "Why HTTPS-exec, not SSH"), so PMM binds an internal-only port instead. Client containers on the same `pmm-qa` docker network still reach it by container hostname (`pmm-server`) at its native port regardless of the host mapping — see step 3.
+
+Wait for **readyz**: HTTP **200**, body **`{}`**, checked from *inside* the box (this is loopback traffic on the VM, not a controller-to-VM connection, so it's unaffected by anything above):
 
 ```bash
 terraform/linode-runner/run.sh <run_id> -- "
-  until code=\$(curl -ksS -o /tmp/rz -w '%{http_code}' https://127.0.0.1/v1/server/readyz) \
+  until code=\$(curl -ksS -o /tmp/rz -w '%{http_code}' https://127.0.0.1:8443/v1/server/readyz) \
     && [ \"\$code\" = 200 ] && [ \"\$(tr -d '[:space:]' </tmp/rz)\" = '{}' ]; do
     sleep 5
   done
@@ -82,14 +93,11 @@ terraform/linode-runner/run.sh <run_id> -- "
 
 Pick `--database` from the ticket + [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md), or `pmm-framework --help` on the box.
 
-## 4. UI
+## 4. UI — currently blocked, known gap
 
-Local Playwright/Chromium, not a remote "computer use" browser — see `pmm-ui-evidence`:
+Local Playwright/Chromium (`pmm-ui-evidence`) needs to reach PMM's own UI directly from the controller over HTTPS — but PMM now binds an internal-only port (see step 2), precisely because host port 443 is already the exec-server's. There is no external port for the controller's browser to hit today.
 
-```bash
-PMM_URL="https://$(cat terraform/linode-runner/runs/<run_id>/ip)" \
-  node .claude/scripts/pmm-ui-login.js <TICKET>
-```
+Not silently worked around: this is an open gap, not something to route around by moving the exec-server to another port (already tried live — see "Why HTTPS-exec, not SSH") or by reverting PMM to host port 443 (breaks the exec-server that the box depends on for everything else). A shared-port design (an nginx SNI-passthrough router in front of both, so the exec-server and PMM's UI coexist on the one usable port) would close this, but hasn't been built. Until it is, treat verification steps that need a direct browser hit against the box's own UI as unsupported — API/CLI/log/DB-query based verification (as used for e.g. `pmm-encryption-rotation` checks) works fully today and doesn't hit this limitation.
 
 ## 5. FB / nightly workflow reproduction (FB Validator, Test Doctor)
 
@@ -115,4 +123,4 @@ Call this whether the run passed, failed, or was blocked — it's the primary, i
 
 None specific to the VM itself — it is a real kernel with real systemd, so playbooks that need `antmelekhin/docker-systemd`-style images work normally (this is the whole reason this setup exists instead of running inside the agent's own sandbox). If a setup still fails, it is a genuine `qa-integration` bug — report it, do not fork around it here.
 
-The controller's own network policy matters: a heavily locked-down session (proxied-HTTPS-only egress) cannot reach the VM over SSH at all — confirmed live, and not fixable by moving SSH to another port, since that class of policy inspects payloads rather than just filtering by port. Run this skill from a session/environment configured with a permissive network policy.
+Direct browser access to PMM's own UI from the controller doesn't work today — see the UI caveat in step 4. Everything else (provisioning, `pmm-framework`, `pmm-admin`, log/DB checks, `pmm-encryption-rotation`) works from the default network policy; no special environment configuration needed.

@@ -9,7 +9,7 @@
 #   up.sh fb-validator heal-4376 -var ttl_hours=6 -var region=us-east
 #   PMM_QA_REF=fix/some-branch up.sh fb-validator heal-4376
 #
-# On success, writes runs/<run_id>/{ip,ssh_key_path,role} and clones
+# On success, writes runs/<run_id>/{ip,exec_token,role} and clones
 # percona/pmm-qa (default ref: main; override with PMM_QA_REF) onto the box
 # with plain git -- never rsyncs this session's own working tree. Claude
 # never edits code on the VM: any change under test must already be
@@ -47,32 +47,47 @@ terraform -chdir="$MODULE_DIR" apply -auto-approve -input=false \
   "$@"
 
 IP=$(terraform -chdir="$MODULE_DIR" output -state="$STATE" -raw ip_address)
-KEY=$(terraform -chdir="$MODULE_DIR" output -state="$STATE" -raw ssh_private_key_path)
+TOKEN=$(terraform -chdir="$MODULE_DIR" output -state="$STATE" -raw exec_token)
 
 echo "$IP" >"$RUN_DIR/ip"
-echo "$KEY" >"$RUN_DIR/ssh_key_path"
+echo "$TOKEN" >"$RUN_DIR/exec_token"
+chmod 600 "$RUN_DIR/exec_token"
 echo "$ROLE" >"$RUN_DIR/role"
 
-SSH=(ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ConnectTimeout=10 -i "$KEY")
+HOST="$(echo "$IP" | tr '.' '-').nip.io"
 
-echo "Instance up: $IP -- waiting for cloud-init (Docker + Ansible) to finish..."
+echo "Instance up: $IP (reachable as https://$HOST) -- waiting for the exec-server to answer..."
+health_ready=0
+for _ in $(seq 1 30); do
+  if curl -k -sS -m 5 "https://$HOST/health" >/dev/null 2>&1; then
+    health_ready=1
+    break
+  fi
+  sleep 10
+done
+if [ "$health_ready" -ne 1 ]; then
+  echo "exec-server did not come up in 5 minutes -- check the instance manually (IP: $IP)." >&2
+  exit 1
+fi
+
+echo "exec-server reachable -- waiting for cloud-init (Docker + Ansible) to finish..."
 ready=0
 for _ in $(seq 1 60); do
-  if "${SSH[@]}" "root@$IP" 'test -f /var/lib/cloud/pmm-qa-cloud-init-done' 2>/dev/null; then
+  if "$MODULE_DIR/run.sh" "$RUN_ID" -- 'test -f /var/lib/cloud/pmm-qa-cloud-init-done' 2>/dev/null; then
     ready=1
     break
   fi
   sleep 10
 done
 if [ "$ready" -ne 1 ]; then
-  echo "cloud-init did not finish in 10 minutes -- check manually: ${SSH[*]} root@$IP" >&2
+  echo "cloud-init did not finish in 10 minutes -- check manually via run.sh $RUN_ID -- <cmd>" >&2
   exit 1
 fi
 
 echo "Cloning percona/pmm-qa @ $PMM_QA_REF onto the runner..."
-"${SSH[@]}" "root@$IP" "git clone --depth 1 --branch '$PMM_QA_REF' https://github.com/percona/pmm-qa.git /root/pmm-qa"
+"$MODULE_DIR/run.sh" "$RUN_ID" -- "git clone --depth 1 --branch '$PMM_QA_REF' https://github.com/percona/pmm-qa.git /root/pmm-qa"
 
 echo
-echo "Linode VM ready: run_id=$RUN_ID role=$ROLE ip=$IP ref=$PMM_QA_REF"
+echo "Linode VM ready: run_id=$RUN_ID role=$ROLE ip=$IP host=$HOST ref=$PMM_QA_REF"
 echo "Next:  terraform/linode-runner/run.sh $RUN_ID -- <remote command>"
 echo "Then:  terraform/linode-runner/down.sh $RUN_ID"

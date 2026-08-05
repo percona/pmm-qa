@@ -34,7 +34,93 @@ write_files:
       curl -fsS -X DELETE -H "Authorization: Bearer $token" \
         "https://api.linode.com/v4/linode/instances/$id"
 
+  # Controllers behind a proxied-HTTPS-only network policy cannot open a
+  # raw SSH connection to this box (confirmed live -- see docs.md). Every
+  # command from up.sh/run.sh/sync.sh/extend.sh goes through this small
+  # bearer-token-authenticated HTTPS service instead, on the one port
+  # (443) that egress policy actually allows. PMM Server itself binds an
+  # internal-only port so it never competes with this for host 443 --
+  # readyz checks, pmm-admin, and pmm-encryption-rotation all run as
+  # /exec commands, not direct connections to PMM's own port.
+  - path: /etc/pmm-qa/exec-token
+    permissions: "0600"
+    owner: root:root
+    content: |
+      ${exec_token}
+  - path: /opt/pmm-qa-exec-server.py
+    permissions: "0755"
+    owner: root:root
+    content: |
+      #!/usr/bin/env python3
+      import http.server, ssl, json, subprocess, os
+
+      TOKEN = open("/etc/pmm-qa/exec-token").read().strip()
+
+      class Handler(http.server.BaseHTTPRequestHandler):
+          def _unauthorized(self):
+              self.send_response(401)
+              self.end_headers()
+
+          def do_GET(self):
+              if self.path == "/health":
+                  self.send_response(200)
+                  self.send_header("Content-Type", "application/json")
+                  self.end_headers()
+                  self.wfile.write(b'{"status":"ok"}')
+              else:
+                  self.send_response(404)
+                  self.end_headers()
+
+          def do_POST(self):
+              if self.path != "/exec":
+                  self.send_response(404); self.end_headers(); return
+              if self.headers.get("Authorization", "") != f"Bearer {TOKEN}":
+                  self._unauthorized(); return
+              length = int(self.headers.get("Content-Length", 0))
+              body = json.loads(self.rfile.read(length) or b"{}")
+              cmd = body.get("cmd", "")
+              timeout = body.get("timeout", 600)
+              try:
+                  proc = subprocess.run(["bash", "-c", cmd], capture_output=True, text=True, timeout=timeout)
+                  resp = {"stdout": proc.stdout, "stderr": proc.stderr, "exit_code": proc.returncode}
+              except subprocess.TimeoutExpired as e:
+                  resp = {"stdout": e.stdout or "", "stderr": (e.stderr or "") + "\n[exec-server] command timed out", "exit_code": 124}
+              data = json.dumps(resp).encode()
+              self.send_response(200)
+              self.send_header("Content-Type", "application/json")
+              self.send_header("Content-Length", str(len(data)))
+              self.end_headers()
+              self.wfile.write(data)
+
+          def log_message(self, fmt, *args):
+              pass
+
+      httpd = http.server.HTTPServer(("0.0.0.0", 443), Handler)
+      ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+      ctx.load_cert_chain("/etc/pmm-qa/exec-cert.pem", "/etc/pmm-qa/exec-key.pem")
+      httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
+      httpd.serve_forever()
+  - path: /etc/systemd/system/pmm-qa-exec.service
+    permissions: "0644"
+    owner: root:root
+    content: |
+      [Unit]
+      Description=pmm-qa HTTPS exec server (SSH replacement for proxied-HTTPS-only controllers)
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/bin/python3 /opt/pmm-qa-exec-server.py
+      Restart=on-failure
+      RestartSec=2
+
+      [Install]
+      WantedBy=multi-user.target
+
 runcmd:
+  - openssl req -x509 -newkey rsa:2048 -keyout /etc/pmm-qa/exec-key.pem -out /etc/pmm-qa/exec-cert.pem -days 2 -nodes -subj "/CN=pmm-qa-exec"
+  - chmod 600 /etc/pmm-qa/exec-key.pem
+  - systemctl daemon-reload
+  - systemctl enable --now pmm-qa-exec
   - install -m 0755 -d /etc/apt/keyrings
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   - chmod a+r /etc/apt/keyrings/docker.asc
@@ -49,5 +135,8 @@ runcmd:
   - systemctl enable --now docker
   - ansible-galaxy collection install community.docker
   - systemd-run --on-active=${ttl_seconds} --unit=pmm-qa-self-destruct /usr/local/bin/pmm-qa-self-destruct.sh
-  # Marker up.sh polls for over SSH before cloning/running anything.
+  # Marker up.sh polls for (via a /exec command, once the exec-server itself
+  # answers /health) before cloning/running anything -- the exec-server
+  # comes up first so it's reachable, but "ready" means docker+ansible are
+  # actually installed, not just that the transport is up.
   - touch /var/lib/cloud/pmm-qa-cloud-init-done
