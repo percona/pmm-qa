@@ -10,6 +10,7 @@ import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
 import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
+import PostgresqlDashboards, { PostgresqlDashboardsType } from '@pages/dashboards/postgresql';
 
 const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
 const hasKnownNoDataMarker = (panelText: string) =>
@@ -23,6 +24,7 @@ export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard(this.page);
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
+  readonly pgsql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
     panelByExactName: (panelName: string) =>

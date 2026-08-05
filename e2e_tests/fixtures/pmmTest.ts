@@ -17,7 +17,6 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
-import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import UpdatesPage from '@pages/updates.page';
@@ -47,7 +46,6 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
-  vacuumDashboardPage: VacuumDashboard;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
 }>({
