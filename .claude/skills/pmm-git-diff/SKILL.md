@@ -25,10 +25,15 @@ Grafana PRs often change dashboard JSON under `grafana/public/` or packaged dash
 2. For each file, use a structural JSON diff tool (installed by the SessionStart hook):
 
 ```bash
+set -euo pipefail
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
 # gh pr diff has no positional path filter -- fetch base/head content directly instead:
-gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<base_sha>" --jq '.content' | base64 -d > base.json
-gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<head_sha>" --jq '.content' | base64 -d > head.json
-json-diff base.json head.json
+gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<base_sha>" --jq '.content' | base64 -d > "$tmp/base.json"
+gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<head_sha>" --jq '.content' | base64 -d > "$tmp/head.json"
+jq empty "$tmp/base.json" && jq empty "$tmp/head.json"   # fail closed if either fetch produced empty/invalid JSON
+json-diff "$tmp/base.json" "$tmp/head.json"
 ```
 
 3. Summarize **what panels/queries/alerts changed**, not every byte.

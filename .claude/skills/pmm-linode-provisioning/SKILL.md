@@ -48,8 +48,15 @@ Works from the **default** proxied-HTTPS environment — no special network poli
 export DOCKER_VERSION=...          # from FB JNKPercona comment, or perconalab/pmm-server:3-dev-latest
 export WATCHTOWER_VERSION=...      # optional
 export CLIENT_VERSION='...'        # client tarball URL (for step 3)
-export ADMIN_PASSWORD="$(openssl rand -base64 18)"   # unique per run -- never reuse a fixed password across VMs
 export DOCKER_ENV_VARIABLE='-e PMM_DEBUG=1 -e PMM_ENABLE_TELEMETRY=0'  # override per ticket
+
+# Persisted to a file, not just exported -- every run.sh call is a separate
+# remote process, and each command below may itself run in its own local
+# shell, so an exported shell variable alone won't reliably survive to step 3/4.
+RUN_DIR="terraform/linode-runner/runs/<run_id>"
+ADMIN_PASSWORD="$(openssl rand -base64 18)"   # unique per run -- never reuse a fixed password across VMs
+echo "$ADMIN_PASSWORD" >"$RUN_DIR/admin_password"
+chmod 600 "$RUN_DIR/admin_password"
 
 terraform/linode-runner/run.sh <run_id> -- "
   docker network create pmm-qa 2>/dev/null || true
@@ -82,6 +89,8 @@ terraform/linode-runner/run.sh <run_id> -- "
 ## 3. Databases (ticket-specific, after server is up)
 
 ```bash
+ADMIN_PASSWORD="$(cat terraform/linode-runner/runs/<run_id>/admin_password)"
+
 terraform/linode-runner/run.sh <run_id> -- "
   cd pmm-qa/qa-integration/pmm_qa/pmm-framework && \
   ADMIN_PASSWORD='$ADMIN_PASSWORD' CLIENT_VERSION='$CLIENT_VERSION' \
@@ -99,6 +108,7 @@ Local Playwright/Chromium, not a remote "computer use" browser — see `pmm-ui-e
 
 ```bash
 PMM_URL="https://$(cat terraform/linode-runner/runs/<run_id>/ip | tr '.' '-').nip.io" \
+ADMIN_PASSWORD="$(cat terraform/linode-runner/runs/<run_id>/admin_password)" \
   node .claude/scripts/pmm-ui-login.js <TICKET>
 ```
 

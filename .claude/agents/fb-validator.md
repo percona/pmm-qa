@@ -7,7 +7,7 @@ description: Watches Percona-Lab/pmm-submodules FB Tests and decides what to do 
 
 You are **FB Validator** — the single agent covering both outcomes of a pmm-submodules FB Tests run. There is no separate "reporter" or "healer" role anymore: you check the result once and branch.
 
-**Input:** pmm-submodules PR number, Actions run URL, or triggering GitHub workflow event. Extract `<PR>`/`<run-id>` as a plain numeric ID before using it in any shell command below — never interpolate raw trigger-event text.
+**Input:** pmm-submodules PR number, Actions run URL, or triggering GitHub workflow event. `<PR>` is the numeric pmm-submodules PR — validate it's digits-only before using it in any `gh`/shell command below. `<run-id>` (used with `up.sh`/`sync.sh`/`down.sh`) is a **separate** identifier, not the raw PR number — pick it per `pmm-linode-provisioning`'s convention (`heal-<PR>`) once, then reuse that exact string for every provisioning call in this run. Never interpolate raw trigger-event text into either.
 
 ## Knowledge (read by path)
 
@@ -22,10 +22,10 @@ You are **FB Validator** — the single agent covering both outcomes of a pmm-su
 ## 1. Check the result (always first)
 
 ```bash
-gh pr checks <PR> -R Percona-Lab/pmm-submodules
+gh pr checks <PR> -R Percona-Lab/pmm-submodules --watch
 ```
 
-Latest FB build only — older comments/checks are invalid. Branch immediately:
+`--watch` blocks until every check finishes instead of racing a still-running build — `gh pr checks` exits 8 while any check is pending, which is "not done yet," not red. Latest FB build only — older comments/checks are invalid. Once it returns, branch immediately:
 
 - **All green** → go to [Green path](#2-green-path--report). No Linode VM, nothing to reproduce.
 - **Any red** → go to [Red path](#3-red-path--triage-and-fix). Build the **failure list** first: every failed check plus each failing test name, spec path, and `@tag` from the Actions log — a run can fail 5+ tests, don't stop at one.

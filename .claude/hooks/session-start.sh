@@ -23,10 +23,21 @@ fi
 # --- terraform ----------------------------------------------------------
 if ! command -v terraform >/dev/null 2>&1; then
   ARCH=$(dpkg --print-architecture)
+  TF_VERSION="1.9.8"
+  TF_FILE="terraform_${TF_VERSION}_linux_${ARCH}.zip"
   TF_ZIP="$(mktemp)"
-  trap 'rm -f "$TF_ZIP"' EXIT
+  TF_SHASUMS="$(mktemp)"
+  trap 'rm -f "$TF_ZIP" "$TF_SHASUMS"' EXIT
   curl -fsSL -o "$TF_ZIP" \
-    "https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_${ARCH}.zip"
+    "https://releases.hashicorp.com/terraform/${TF_VERSION}/${TF_FILE}"
+  curl -fsSL -o "$TF_SHASUMS" \
+    "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_SHA256SUMS"
+  EXPECTED_SHA=$(grep " ${TF_FILE}\$" "$TF_SHASUMS" | awk '{print $1}')
+  ACTUAL_SHA=$(sha256sum "$TF_ZIP" | awk '{print $1}')
+  if [ -z "$EXPECTED_SHA" ] || [ "$EXPECTED_SHA" != "$ACTUAL_SHA" ]; then
+    echo "terraform archive checksum mismatch for $TF_FILE -- aborting install" >&2
+    exit 1
+  fi
   sudo unzip -o -q "$TF_ZIP" -d /usr/local/bin terraform
 fi
 
@@ -45,5 +56,4 @@ command -v json-diff >/dev/null 2>&1 || npm install -g json-diff >/dev/null 2>&1
 cd "$QA_ROOT/.claude/scripts"
 npm install >/dev/null
 
-chmod +x "$QA_ROOT"/terraform/linode-runner/*.sh \
-  "$QA_ROOT"/.claude/hooks/*.sh 2>/dev/null || true
+chmod +x "$QA_ROOT"/terraform/linode-runner/*.sh "$QA_ROOT"/.claude/hooks/*.sh

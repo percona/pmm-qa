@@ -16,9 +16,11 @@ This environment ships Chromium pre-installed with Playwright already pointed at
 ```bash
 PMM_HOST="https://$(cat terraform/linode-runner/runs/<run_id>/ip | tr '.' '-').nip.io"
 
-# ADMIN_PASSWORD stays exported from the provisioning step (pmm-linode-provisioning
-# step 2) -- it's unique per run, never a fixed literal.
-PMM_URL="$PMM_HOST" node .claude/scripts/pmm-ui-login.js PMM-14576
+# Read from the file pmm-linode-provisioning step 2 wrote -- it's unique per
+# run, never a fixed literal, and reading it from disk (not an exported shell
+# variable) survives even if this runs in a separate shell from provisioning.
+ADMIN_PASSWORD="$(cat terraform/linode-runner/runs/<run_id>/admin_password)"
+PMM_URL="$PMM_HOST" ADMIN_PASSWORD="$ADMIN_PASSWORD" node .claude/scripts/pmm-ui-login.js PMM-14576
 
 node .claude/scripts/pw-screenshot.js \
   "$PMM_HOST/graph/d/some-dashboard" \

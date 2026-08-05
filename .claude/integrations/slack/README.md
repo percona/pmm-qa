@@ -60,6 +60,13 @@ fired Routine session
   -> relay calls chat.postMessage with PMM_AI_SLACK_BOT_TOKEN (never leaves the relay)
 ```
 
+`/reply` must not be an open endpoint: anything able to reach it could post
+arbitrary messages as the bot to any channel. Authenticate the caller (a
+short-lived, per-run signed capability minted when the Routine fires, checked
+by the relay) and bind it to the `channel`/`thread_ts` it was minted for, so
+a fired session can only reply into the thread that triggered it. Not
+implemented yet — call this out explicitly when the relay is actually built.
+
 ## Channel -> routine routing table
 
 Deterministic, zero-LLM-cost routing lives in the relay itself, not inside
