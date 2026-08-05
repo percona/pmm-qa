@@ -47,8 +47,8 @@ jobs:
           RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
           if [ -z "$ROUTINE_TOKEN" ]; then
-            echo "TEST_DOCTOR_ROUTINE_TOKEN not configured yet -- skipping notify."
-            exit 0
+            echo "::error::TEST_DOCTOR_ROUTINE_TOKEN is not set -- Test Doctor was not notified of this failure." >&2
+            exit 1
           fi
           curl -fsS -X POST "https://api.anthropic.com/v1/claude_code/routines/${ROUTINE_ID}/fire" \
             -H "Authorization: Bearer ${ROUTINE_TOKEN}" \
