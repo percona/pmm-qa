@@ -14,7 +14,9 @@ works around the first limit; it doesn't try to work around the second
 - [ ] Write the relay process (see below) — not started.
 - [ ] Create the `PMM AI` Routine itself in Claude Code — **do not create
       this without asking first**, per standing instruction in this repo's
-      chat history.
+      chat history. Its prompt should just be "read `.claude/agents/router.md`
+      and follow it" — all the actual matching logic lives there, not in the
+      Routine's own prompt.
 - [ ] Provision `PMM_AI_SLACK_BOT_TOKEN` (and the app-level token for Socket
       Mode) once the app exists.
 
@@ -69,28 +71,20 @@ implemented yet — call this out explicitly when the relay is actually built.
 
 ## Channel -> routine routing table
 
-Deterministic, zero-LLM-cost routing lives in the relay itself, not inside
-one mega-prompt trying to guess intent across unrelated domains:
+Deterministic, zero-LLM-cost routing (which channel fired) lives in the
+relay itself; the actual message-to-agent matching happens one layer in, in
+[`.claude/agents/router.md`](../../agents/router.md) — the `PMM AI` Routine's
+own prompt is just "read `router.md` and follow it," not a mega-prompt
+trying to guess intent itself:
 
 | Channel (placeholder) | Routine | Notes |
 |---|---|---|
-| PMM QA channel(s) | `PMM AI` | General router — reads `AGENTS.md` + `.claude/agents/*.md`, matches the message to test-runner / investigator / fb-reporter by description, or just answers directly if it's a general question. |
-| Prod/support channel(s) | *(future — see below)* | Not yet built. |
+| PMM QA channel(s) | `PMM AI` | Fires `router.md`, which matches the mention to test-runner / investigator / fb-reporter by description, or just answers directly if it's a general question. |
+| Prod/support channel(s) | `PMM AI` (same Routine) | No separate agent needed here — a suspected customer-reported bug, or a "is this expected?" question, is one of `investigator`'s own direct-ask outcomes (`.claude/agents/investigator.md` workflow step 3b), not a distinct triage step in front of it. `router.md` sends it there like anything else that looks like a bug report. |
 
-Fill in real channel IDs once the app is installed and invited to them.
-
-## Future agent idea — not built yet
-
-For a prod/support channel specifically: something that reads a person's
-message in a thread and figures out which of two things is actually going
-on — they're unsure how to do something in PMM (a how-to question, no bug
-involved), or they're reporting what they believe is a bug and it needs to
-be reproduced and confirmed (or ruled out) before anyone treats it as real.
-Working name **"support-triage"** ("investigator" is now taken — see
-`.claude/agents/investigator.md` — and this could plausibly just hand off
-to it directly once built, the same way Investigator does, instead of
-reproducing anything itself).
-
-Not implemented. When it is, the channel-based routing table above is the
-mechanism to point that specific channel at it instead of the general
-`PMM AI` router.
+Fill in real channel IDs once the app is installed and invited to them. An
+earlier draft of this doc proposed a separate future "support-triage" agent
+for the prod/support case, sitting in front of Investigator to decide
+question-vs-bug first — dropped once Investigator grew that classification
+into its own direct-ask path; a second agent for "maybe it's not even a bug"
+would have just duplicated it.

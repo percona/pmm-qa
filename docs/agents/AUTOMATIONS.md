@@ -2,17 +2,18 @@
 
 Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this repo — committed, so anyone who opens `percona/pmm-qa` in Claude Code gets all agents automatically. No separate environment snapshot or dashboard config to keep in sync (unlike the earlier Cursor prototype this replaces).
 
-## The three agents
+## The four agents
 
 | Agent | Watches / invoked by | Trigger | Does | Never |
 |-------|----------------------|---------|------|-------|
-| [test-runner](../../.claude/agents/test-runner.md) | A named Jira ticket | Ad hoc — chat, a Slack `@mention` via Claude Tag, or a Jira Automation rule | Reads the ticket, provisions a throwaway Linode VM, runs the manual QA, hands off to `fb-reporter` for any linked submodules PR's evidence, posts a Developers-only Jira comment | Open PRs outside pmm-qa, post public Jira comments |
-| [investigator](../../.claude/agents/investigator.md) | **pmm-qa's own** scheduled CI on `main`, and `Percona-Lab/pmm-submodules` FB Tests going red | CI-triggered from both sources (see below), or asked directly | Extracts the failure, reproduces it hands-on on a throwaway VM, classifies **from what actually reproduced** (test bug vs. product regression), fixes + opens a PR if it's ours | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules`, classify without reproducing first |
+| [test-runner](../../.claude/agents/test-runner.md) | A named Jira ticket | Ad hoc — chat, a Jira Automation rule, or a Slack `@pmm-ai` mention routed here by `router` | Reads the ticket, provisions a throwaway Linode VM, runs the manual QA, hands off to `fb-reporter` for the linked submodules PR's evidence, posts a Developers-only Jira comment | Open PRs outside pmm-qa, post public Jira comments |
+| [investigator](../../.claude/agents/investigator.md) | **pmm-qa's own** scheduled CI on `main`, `Percona-Lab/pmm-submodules` FB Tests going red, or asked directly (including via `router`) | CI-triggered from both sources (see below), or asked directly | Extracts the failure (or the described scenario, for a question), reproduces it hands-on on a throwaway VM, classifies **from what actually reproduced** — test bug, blocked fix, product regression, not-a-bug, or genuine bug report, depending on how it was triggered — fixes + opens a PR if it's ours | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules`, classify or answer a question without reproducing first |
 | [fb-reporter](../../.claude/agents/fb-reporter.md) | Referenced by `test-runner`, or asked directly | N/A — read-and-followed in the caller's own session, or invoked directly | Gets a clean FB Tests screenshot for a ticket's linked submodules PR, retrying past flakiness (`gh run rerun --failed`, up to twice), attaches to Jira | Diagnose or fix a genuine (non-flaky) failure — that's `investigator`'s job |
+| [router](../../.claude/agents/router.md) | The `PMM AI` Routine, fired by a Slack `@pmm-ai` mention | Slack-only — see "PMM AI" below | Matches the mention to test-runner / investigator / fb-reporter by description and hands off, or answers directly if it's just a question | Guess a ticket key/PR number that wasn't in the message, do the matched agent's work itself |
 
 There's no separate "watcher" agent in front of Investigator. An earlier draft had one (detect the failure, hand off to a shared fixer) — dropped once it became clear the "detect" step was too thin to be its own agent: parsing a trigger payload and extracting a failure list is just Investigator's own first step, not a separable concern the way `fb-reporter`'s screenshot-and-retry job genuinely is.
 
-Why `fb-reporter` isn't spawned as a nested subagent from `test-runner`: whether a Claude Code Remote **Routine**-fired session can itself spawn a custom subagent via the Agent/Task tool isn't confirmed by Claude Code's own docs — `investigator` and `test-runner` both run as Routines, so neither risks depending on that. Instead, `test-runner`'s own instructions say to read `fb-reporter.md` directly and follow it in the same session — the same mechanical pattern already used for skills. `fb-reporter` is still a real agent (its own `name`/`description`), so a person in an ordinary interactive session (where subagent-spawning is confirmed to work) can invoke it directly, or just ask in natural language.
+Why `fb-reporter` (and `router`) isn't spawned as a nested subagent from whatever calls it: whether a Claude Code Remote **Routine**-fired session can itself spawn a custom subagent via the Agent/Task tool isn't confirmed by Claude Code's own docs — `investigator`, `test-runner`, and `PMM AI` all run as Routines, so none of them risk depending on that. Instead, the calling agent's own instructions say to read the target `.md` file directly and follow it in the same session — the same mechanical pattern already used for skills. Each is still a real agent (its own `name`/`description`), so a person in an ordinary interactive session (where subagent-spawning is confirmed to work) can invoke any of them directly, or just ask in natural language.
 
 ## Running Test Runner manually
 
@@ -20,13 +21,7 @@ In any Claude Code session on this repo, just ask in natural language — "pleas
 
 ## Running Test Runner from Slack
 
-**Confirmed gap vs. Cursor**: Cursor's dashboard could passively watch a channel for any matching message, no @mention needed. Claude Tag (the official Slack app) does not support that — it only responds to an explicit `@Claude` mention or a DM, with no configuration to make it watch silently. Every Slack trigger has to actually name it:
-
-```
-@Claude please act as test-runner on PMM-15196.
-```
-
-**Also confirmed**: Claude Tag pairs one Slack workspace to one Claude org — you cannot run a second Claude account's Tag bot in a workspace already paired to another account. If this project's automation needs to live under a different Claude account than the company's main enterprise one, Slack triggering for it needs its own workspace, or a small custom Slack app that relays into the Routine API trigger below (see [`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md) — design only, not built).
+Not Claude Tag (the official Slack app) — it pairs one Slack workspace to one Claude org, and this project's Claude identity isn't the one already paired to the team's workspace. Slack triggering here goes through the custom **`@pmm-ai`** app instead (design in [`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md), not built yet): someone mentions `@pmm-ai`, the relay fires the single `PMM AI` Routine, and that session reads [`router.md`](../../.claude/agents/router.md) and follows it — Router is the one that decides this particular mention means Test Runner, then reads `test-runner.md` and follows it in the same session. A mention never goes straight to Test Runner on its own; it always goes through Router first. See "PMM AI" below.
 
 ## Running Test Runner from Jira
 
@@ -56,6 +51,10 @@ Only one secret is needed:
 
 **Not fully wired up yet** — the pmm-qa side (`notify-investigator.yml`) is in place but needs `INVESTIGATOR_ROUTINE_TOKEN` added as a repo secret; the pmm-submodules side doesn't exist yet at all.
 
+Investigator also handles a third, structurally different case that isn't a CI/FB event at all: being asked a question or handed a suspected customer-reported bug directly (in chat, or routed from a Slack `@pmm-ai` mention via `router`). There's no known-failing test to dedup or reproduce there — just a described scenario — so the outcome menu is different too: reproduced-and-actually-expected (explain the right way, grounded in the reproduction and the code), reproduced-and-genuinely-a-bug (report it, no fix, not our repo), or didn't reproduce (ask for more detail). See `investigator.md` workflow step 3b. This is also why a separate "support-triage" agent, floated earlier for a prod/support Slack channel, was dropped — it would have just duplicated this.
+
+A second Investigator nuance worth calling out: when the FB source is the one that triggered it, a "test bug" fix isn't always a normal, ready-to-merge PR. Submodules tests occasionally get updated *ahead of* the upstream `percona/pmm`/`percona/grafana` PR that will actually introduce the behavior they now expect. Investigator checks for that (an open, not-yet-merged upstream PR touching the same area) before opening a PR — if one exists, it opens the fix as a **draft PR** noting what it's blocked on, instead of a normal one, since merging it before the upstream change lands would just break `main`.
+
 ## FB Reporter — no Routine of its own
 
 No trigger or Routine of its own — it's read-and-followed by `test-runner` (see "why not spawned as a nested subagent" above), or invoked directly by a person. Nothing to wire up here beyond the file itself existing.
@@ -64,10 +63,14 @@ No trigger or Routine of its own — it's read-and-followed by `test-runner` (se
 
 Claude Tag can't have a second identity in a workspace already paired to
 another Claude org, so mention-based Slack triggering for this project
-needs its own small app. Full design — manifest, Socket Mode relay, the
-channel-to-routine routing table, and how replies post as the bot instead
-of a person — is in
+needs its own small app, `@pmm-ai`. Full design — manifest, Socket Mode
+relay, the channel-to-routine routing table, and how replies post as the
+bot instead of a person — is in
 [`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md).
+The `PMM AI` Routine's own prompt is deliberately thin — "read
+[`router.md`](../../.claude/agents/router.md) and follow it" — all the
+actual mention-to-agent matching lives in that file, not duplicated into
+the Routine's prompt or into a mega-prompt trying to guess intent itself.
 Nothing here is deployed: the app isn't created in Slack yet, no relay
 process exists, and the `PMM AI` Routine itself hasn't been created either
 (routines only get created/changed here when explicitly asked for).
