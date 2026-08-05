@@ -13,19 +13,16 @@ Full implementation reference: [terraform/linode-runner/README.md](../../../terr
 
 The VM is purely an execution target — it runs Docker/Ansible, nothing else. All code changes (fixes, new tests, playbook edits) happen in this Claude Code environment, where they're tracked by git from the first keystroke. If a change needs to run on the box, **commit and push it to a branch first**, then point the box at that branch (`PMM_QA_REF=<branch> up.sh ...`, or `sync.sh <run_id> <branch>` on an already-running one). Never exec in and edit files directly — anything written only on the VM's disk is gone the moment the instance is destroyed or self-destructs, with no way to recover it.
 
-## Why HTTPS-exec, not SSH
+## Accessing the VM
 
-`run.sh` talks to the box over a small bearer-token-authenticated HTTPS service (`up.sh` provisions it via cloud-init), not SSH. This isn't a style choice — confirmed live, twice:
+There's no SSH on this box. `run.sh` runs commands over a small bearer-token-authenticated HTTPS service instead (`up.sh` provisions it via cloud-init) — you won't normally touch this directly, just use `run.sh`/`sync.sh`/`extend.sh`/`down.sh`.
 
-- Raw SSH (port 22) never reaches the VM from a cloud-session environment, at **any** network access level (None/Trusted/Full/Custom) — the platform's own security proxy is HTTP/HTTPS-only, and that's true regardless of what the environment's network-access setting is configured to. No environment config fixes this.
-- Moving the exec-server to a non-443 port doesn't work either: the `CONNECT` tunnel itself succeeds, but the TLS handshake gets reset immediately after the ClientHello — something inspects traffic per-port and kills anything on a port that doesn't look like standard port-443 HTTPS, even through an already-established tunnel.
+Always address the box by hostname, never its bare IP:
 
-So port 443 is the only port that reliably carries real traffic out of this kind of environment, and everything — provisioning, running commands, tearing down, *and* PMM's own UI — has to share it, since PMM Server also needs host 443 for its UI. Confirmed live this works: nginx's `stream` module multiplexes both onto port 443 by SNI, without decrypting either side's traffic (`ssl_preread` only reads the ClientHello) — a hostname starting with `exec-` routes to the exec-server, anything else routes to PMM. Both are reachable from the controller at the same time, on the same IP, on the same port.
-
-The box must always be addressed by a hostname derived from its IP, never the bare IP — the same proxy drops bare-IP connections outright, needing a hostname (SNI/Host) to route at all:
-
-- `exec-<ip-with-dashes>.nip.io` — the exec-server (`run.sh`/`up.sh` already construct this for you)
+- `exec-<ip-with-dashes>.nip.io` — the exec-server (`run.sh`/`up.sh` construct this for you)
 - `<ip-with-dashes>.nip.io` (no prefix) — PMM Server's own UI/API, once it's up (step 2)
+
+Both share port 443 (nginx routes by SNI hostname) and are reachable at the same time.
 
 ## Pick a run_id
 
@@ -39,7 +36,7 @@ terraform/linode-runner/up.sh <role> <run_id>
 ```
 
 `role` is `test-runner`, `test-doctor`, or `fb-validator` (free text, just for the tag). This:
-- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443 (nginx, multiplexing the exec-server and PMM's UI by SNI — see "Why HTTPS-exec, not SSH" above), tagged `pmm-qa-ephemeral`.
+- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443, tagged `pmm-qa-ephemeral`.
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or whatever `PMM_QA_REF` names (must already be pushed; see "Never code on the Linode VM" above).
 
@@ -68,7 +65,7 @@ terraform/linode-runner/run.sh <run_id> -- "
 "
 ```
 
-`-p 8443:8443`, not `443:8443` — host port 443 is nginx's, which routes to this port for any hostname that isn't `exec-`-prefixed (see "Why HTTPS-exec, not SSH"). The controller can still reach PMM's UI on port 443 externally (via the plain, unprefixed nip.io hostname — step 4) since nginx is the one actually holding that port; PMM itself never needs to. Client containers on the same `pmm-qa` docker network reach it by container hostname (`pmm-server`) at its native port regardless of the host mapping — see step 3.
+`-p 8443:8443`, not `443:8443` — host port 443 belongs to nginx, which forwards the plain (unprefixed) hostname here (see "Accessing the VM"). Client containers on the same `pmm-qa` docker network reach it by container hostname (`pmm-server`) regardless of the host mapping — see step 3.
 
 Wait for **readyz**: HTTP **200**, body **`{}`**, checked from *inside* the box (this is loopback traffic on the VM, not a controller-to-VM connection, so it's unaffected by anything above):
 
