@@ -7,7 +7,7 @@ Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this rep
 | Agent | Watches | Trigger | Does | Never |
 |-------|---------|---------|------|-------|
 | [test-runner](../../.claude/agents/test-runner.md) | A named Jira ticket | Ad hoc — Slack/Claude Code mention, or a Jira Automation rule | Reads the ticket, provisions a throwaway Linode VM, runs the manual QA, posts a Developers-only Jira comment | Open PRs outside pmm-qa, post public Jira comments |
-| [test-doctor](../../.claude/agents/test-doctor.md) | **pmm-qa's own** scheduled CI on `main` (`e2e-tests-matrix.yml`, `gssapi-psmdb-tests-matrix.yml`, `helm-tests.yml`, `integration-cli-tests.yml`) | CI-triggered — a step in those workflows fires it on failure | Triages whether a nightly break is a real regression upstream (`percona/pmm`/`percona/grafana`) or a pmm-qa test bug; reproduces + fixes the latter | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules`, act on a pmm-qa problem it hasn't confirmed reproduces |
+| [test-doctor](../../.claude/agents/test-doctor.md) | **pmm-qa's own** scheduled/nightly CI on `main` (`e2e-tests-matrix.yml`, `gssapi-psmdb-tests-matrix.yml`, `helm-tests.yml`, `integration-cli-tests.yml`, `nightly-e2e-tests-matrix.yml`) | CI-triggered — `notify-test-doctor.yml` watches all five via `workflow_run` and fires on the run's overall failure | Triages whether a nightly break is a real regression upstream (`percona/pmm`/`percona/grafana`) or a pmm-qa test bug; reproduces + fixes the latter | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules`, act on a pmm-qa problem it hasn't confirmed reproduces |
 | [fb-validator](../../.claude/agents/fb-validator.md) | `Percona-Lab/pmm-submodules` FB Tests (a repo we don't own) | Polling Routine (hourly — no event hook available for a third-party repo) | Green → screenshots + attaches evidence to Jira. Red → triages product vs test bug, reproduces, fixes pmm-qa | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules` |
 
 `test-doctor` and `fb-validator` are deliberately different mechanisms, not a style choice: `pmm-qa`'s own CI is a repo we control, so a workflow step can push an event directly (no polling delay, no wasted checks when nothing happened). `pmm-submodules` isn't ours, so the only option is a Routine that wakes up and asks "anything new?"
@@ -43,12 +43,15 @@ curl -X POST https://api.anthropic.com/v1/claude_code/routines/<routine_id>/fire
 
 ## Test Doctor — CI-triggered, not polled
 
-Since `e2e-tests-matrix.yml`, `gssapi-psmdb-tests-matrix.yml`, `helm-tests.yml`, and `integration-cli-tests.yml` all live in this repo, each gets a final job that fires Test Doctor's Routine on failure — see the `notify-test-doctor` job added to each. It needs two repo secrets:
+A single centralized watcher, [`.github/workflows/notify-test-doctor.yml`](../../.github/workflows/notify-test-doctor.yml), fires Test Doctor's Routine — not a job wired into each scheduled workflow. It listens via `on: workflow_run` for `e2e-tests-matrix.yml`, `gssapi-psmdb-tests-matrix.yml`, `helm-tests.yml`, `integration-cli-tests.yml` (all native GitHub Actions cron), plus `nightly-e2e-tests-matrix.yml` (dispatched daily by the Jenkins pipeline in `jenkins-pipelines`, not a GitHub cron, so it's matched by name instead of `event == 'schedule'`).
 
-- `TEST_DOCTOR_ROUTINE_ID` — from the routine's "Add an API trigger" screen
-- `TEST_DOCTOR_ROUTINE_TOKEN` — the one-time bearer token from that same screen
+`workflow_run.conclusion` is GitHub's own computed verdict for the whole run — not a hand-maintained `needs: [...] + if: failure()` job list. That distinction matters here: some of these pipelines pass their e2e-test step but fail overall when a later Launchable step errors collecting results, and a per-job `needs` list has to be kept in sync every time a job is added/renamed or it silently misses failures like that. `workflow_run` doesn't have that failure mode — adding a workflow to the watch list is one line in `notify-test-doctor.yml`'s `workflows:` array, nothing to touch in the workflow itself.
 
-**Not wired up yet** — the workflow steps are in place (see the diff on this branch) but the two secrets need to actually be added to the repo before they'll fire anything.
+Only one secret is needed:
+
+- `TEST_DOCTOR_ROUTINE_TOKEN` — the bearer token from the routine's "Add an API trigger" screen. The routine ID itself (`trig_01FhHBdz2yBibyVEfnG5gbQz`) is hardcoded in the watcher file — it isn't sensitive, only the token is.
+
+**Not wired up yet** — the workflow file is in place but the secret needs to actually be added to the repo before it fires anything.
 
 ## FB Validator — polling Routine
 
@@ -70,9 +73,9 @@ Test Runner, Test Doctor, and FB Validator all provision a throwaway Linode VM p
 
 ## Go-live checklist
 
-- [ ] `LINODE_TOKEN` available to sessions that need it — **no real secrets store exists yet** in the environment config; anything set there is plaintext-visible to every teammate with access to that environment. Set expectations accordingly, there's no better option today.
-- [ ] Atlassian MCP / GitHub connector attached to each Routine (an org-level restriction blocks attaching them via the API — do it from the claude.ai Routines UI)
+- [x] `LINODE_TOKEN` available to sessions that need it — **no real secrets store exists yet** in the environment config; anything set there is plaintext-visible to every teammate with access to that environment. Set expectations accordingly, there's no better option today.
+- [x] Atlassian Rovo / Slack connectors and API triggers attached to each Routine
 - [ ] GitHub connector specifically still pending org activation
 - [ ] `gh --version`, `terraform version`, `json-diff --version`, `ffmpeg -version` succeed after a fresh SessionStart hook run
-- [ ] `TEST_DOCTOR_ROUTINE_ID` / `TEST_DOCTOR_ROUTINE_TOKEN` added as repo secrets so the CI-trigger steps can actually fire
+- [ ] `TEST_DOCTOR_ROUTINE_TOKEN` added as a repo secret so `notify-test-doctor.yml` can actually fire
 - [ ] Jira Automation rule configured with Test Runner's API trigger URL/token

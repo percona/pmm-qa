@@ -1,0 +1,58 @@
+name: Notify Test Doctor
+
+# Centralized watcher for Test Doctor instead of a job wired into each
+# scheduled workflow's own `needs:` list. `workflow_run` reports the
+# *overall* conclusion GitHub itself computed for the completed run --
+# this is the fix for pipelines that pass their e2e-test step but still
+# fail overall once a later Launchable collection step errors: trusting
+# one job's `if: failure()` can miss that, but workflow_run.conclusion
+# can't, since it's not derived from any single job/step we enumerate
+# here. Adding a workflow to this watcher is a one-line change to
+# `workflows:` below -- no need to touch the workflow itself.
+on:
+  workflow_run:
+    workflows:
+      - "E2E tests Matrix"
+      - "PSMDB GSSAPI E2E Tests Matrix"
+      - "Helm tests"
+      - "PMM Integration Tests"
+      - "Nightly E2E tests Matrix (remote PMM Server)"
+    types: [completed]
+
+jobs:
+  notify-test-doctor:
+    name: Fire Test Doctor routine
+    runs-on: ubuntu-latest
+    # Nightly E2E tests Matrix is dispatched daily by the Jenkins pipeline
+    # (jenkins-pipelines repo) via workflow_dispatch -- there's no
+    # 'schedule' event to check for it, so any failed completed run
+    # notifies. For the other four, only their own unattended cron run
+    # (github.event.workflow_run.event == 'schedule') notifies -- a human's
+    # manual workflow_dispatch re-run while debugging doesn't re-trigger
+    # Test Doctor on itself.
+    if: >
+      github.event.workflow_run.conclusion == 'failure' &&
+      (
+        github.event.workflow_run.event == 'schedule' ||
+        github.event.workflow_run.name == 'Nightly E2E tests Matrix (remote PMM Server)'
+      )
+    steps:
+      - name: Fire Test Doctor routine
+        env:
+          # Not a secret -- routine IDs aren't sensitive, only the bearer
+          # token is. Update this if Test Doctor's routine is ever recreated.
+          ROUTINE_ID: trig_01FhHBdz2yBibyVEfnG5gbQz
+          ROUTINE_TOKEN: ${{ secrets.TEST_DOCTOR_ROUTINE_TOKEN }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          if [ -z "$ROUTINE_TOKEN" ]; then
+            echo "TEST_DOCTOR_ROUTINE_TOKEN not configured yet -- skipping notify."
+            exit 0
+          fi
+          curl -fsS -X POST "https://api.anthropic.com/v1/claude_code/routines/${ROUTINE_ID}/fire" \
+            -H "Authorization: Bearer ${ROUTINE_TOKEN}" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "anthropic-beta: experimental-cc-routine-2026-04-01" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\": \"Workflow '${WORKFLOW_NAME}' failed. Run: ${RUN_URL}\"}"
