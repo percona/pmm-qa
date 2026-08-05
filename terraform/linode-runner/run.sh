@@ -7,7 +7,11 @@
 # port 443 instead. The box must be addressed by its nip.io hostname,
 # never the bare IP: this environment's egress proxy only routes
 # connections that carry a hostname (SNI/Host), and drops bare-IP
-# connections outright -- also confirmed live.
+# connections outright -- also confirmed live. Nginx on the box routes by
+# that same SNI hostname (see cloud-init.yaml.tftpl's stream-router) to
+# either the exec-server or PMM Server on the one port (443) this
+# environment's egress reliably carries -- the "exec-" prefix here is
+# what picks the exec-server, not PMM's own UI.
 #
 # Usage:
 #   terraform/linode-runner/run.sh <run_id> -- <remote command...>
@@ -35,7 +39,7 @@ RUN_DIR="$MODULE_DIR/runs/$RUN_ID"
 }
 IP=$(cat "$RUN_DIR/ip")
 TOKEN=$(cat "$RUN_DIR/exec_token")
-HOST="$(echo "$IP" | tr '.' '-').nip.io"
+HOST="exec-$(echo "$IP" | tr '.' '-').nip.io"
 CMD="$*"
 
 BODY=$(python3 -c 'import json,sys; print(json.dumps({"cmd": sys.argv[1]}))' "$CMD")

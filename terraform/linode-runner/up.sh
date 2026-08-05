@@ -54,9 +54,9 @@ echo "$TOKEN" >"$RUN_DIR/exec_token"
 chmod 600 "$RUN_DIR/exec_token"
 echo "$ROLE" >"$RUN_DIR/role"
 
-HOST="$(echo "$IP" | tr '.' '-').nip.io"
+HOST="exec-$(echo "$IP" | tr '.' '-').nip.io"
 
-echo "Instance up: $IP (reachable as https://$HOST) -- waiting for the exec-server to answer..."
+echo "Instance up: $IP (exec-server reachable as https://$HOST) -- waiting for it to answer..."
 health_ready=0
 for _ in $(seq 1 30); do
   if curl -k -sS -m 5 "https://$HOST/health" >/dev/null 2>&1; then
@@ -87,7 +87,10 @@ fi
 echo "Cloning percona/pmm-qa @ $PMM_QA_REF onto the runner..."
 "$MODULE_DIR/run.sh" "$RUN_ID" -- "git clone --depth 1 --branch '$PMM_QA_REF' https://github.com/percona/pmm-qa.git /root/pmm-qa"
 
+PMM_HOST="$(echo "$IP" | tr '.' '-').nip.io"
 echo
-echo "Linode VM ready: run_id=$RUN_ID role=$ROLE ip=$IP host=$HOST ref=$PMM_QA_REF"
+echo "Linode VM ready: run_id=$RUN_ID role=$ROLE ip=$IP ref=$PMM_QA_REF"
+echo "  exec-server: https://$HOST (used by run.sh/sync.sh/extend.sh/down.sh)"
+echo "  PMM Server (once brought up):  https://$PMM_HOST (any hostname without the exec- prefix routes here)"
 echo "Next:  terraform/linode-runner/run.sh $RUN_ID -- <remote command>"
 echo "Then:  terraform/linode-runner/down.sh $RUN_ID"

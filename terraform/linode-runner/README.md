@@ -32,18 +32,20 @@ implementation reference.
   requires either it or `authorized_keys` at creation time.
 - **Addressed by hostname, never a bare IP.** The same proxy drops
   connections to a raw IP address outright — it needs a hostname (SNI/Host)
-  to route on, confirmed live. `run.sh`/`up.sh` always address the box as
-  `<ip-with-dashes>.nip.io`, which resolves to the instance's own IP with
-  zero DNS setup required.
-- **PMM Server binds an internal-only port.** Since host port 443 is
-  already the exec-server's, PMM Server itself binds `8443:8443` instead
-  of the usual `443:8443` (see `.claude/skills/pmm-linode-provisioning/SKILL.md`
-  step 2). Client containers on the same `pmm-qa` docker network are
-  unaffected — they reach it by container hostname regardless of the host
-  port mapping. The real cost: the controller's own browser (Playwright/
-  Chromium, for UI evidence) has no external port to reach PMM's UI on
-  today — an open gap, not silently worked around; see the
-  skill's step 4.
+  to route on, confirmed live. Every instance answers on two nip.io
+  hostnames sharing the same IP and port: `exec-<ip-with-dashes>.nip.io`
+  for the exec-server, and plain `<ip-with-dashes>.nip.io` for PMM. Zero
+  DNS setup required either way.
+- **Exec-server and PMM Server share port 443 via SNI, not a port each.**
+  PMM Server binds `8443:8443` (see
+  `.claude/skills/pmm-linode-provisioning/SKILL.md` step 2), not the usual
+  `443:8443`, since host port 443 belongs to nginx. nginx's `stream` module
+  (`ssl_preread`, no TLS termination — each backend still handles its own
+  TLS exactly as before) routes by the SNI hostname: `exec-`-prefixed goes
+  to the exec-server (on a loopback-only port), anything else goes to PMM.
+  Confirmed live: both are reachable from the controller at once, on the
+  same IP and port. A non-443 port for the exec-server was tried first and
+  rejected — also confirmed live, see "HTTPS-exec, not SSH" above.
 - **Self-destructing, not reaped.** No external cron/Routine scans the
   account for stale instances. `cloud-init.yaml.tftpl` schedules an on-box
   systemd timer that calls the Linode API on its own tag

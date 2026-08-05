@@ -20,9 +20,12 @@ The VM is purely an execution target — it runs Docker/Ansible, nothing else. A
 - Raw SSH (port 22) never reaches the VM from a cloud-session environment, at **any** network access level (None/Trusted/Full/Custom) — the platform's own security proxy is HTTP/HTTPS-only, and that's true regardless of what the environment's network-access setting is configured to. No environment config fixes this.
 - Moving the exec-server to a non-443 port doesn't work either: the `CONNECT` tunnel itself succeeds, but the TLS handshake gets reset immediately after the ClientHello — something inspects traffic per-port and kills anything on a port that doesn't look like standard port-443 HTTPS, even through an already-established tunnel.
 
-So port 443 is the only port that reliably carries real traffic out of this kind of environment, and everything — provisioning, running commands, tearing down — goes through it via `run.sh`. One consequence: **PMM Server itself can't also bind host port 443** (see step 2) without conflicting with the exec-server, so it binds an internal-only port instead — see the UI caveat in step 4.
+So port 443 is the only port that reliably carries real traffic out of this kind of environment, and everything — provisioning, running commands, tearing down, *and* PMM's own UI — has to share it, since PMM Server also needs host 443 for its UI. Confirmed live this works: nginx's `stream` module multiplexes both onto port 443 by SNI, without decrypting either side's traffic (`ssl_preread` only reads the ClientHello) — a hostname starting with `exec-` routes to the exec-server, anything else routes to PMM. Both are reachable from the controller at the same time, on the same IP, on the same port.
 
-The box must always be addressed by a hostname derived from its IP (`<ip-with-dashes>.nip.io`, which `run.sh`/`up.sh` already do for you) — the same proxy drops connections to a bare IP address outright, needing a hostname (SNI/Host) to route at all. Never hand-construct a `https://<ip>/...` URL against this box from the controller side.
+The box must always be addressed by a hostname derived from its IP, never the bare IP — the same proxy drops bare-IP connections outright, needing a hostname (SNI/Host) to route at all:
+
+- `exec-<ip-with-dashes>.nip.io` — the exec-server (`run.sh`/`up.sh` already construct this for you)
+- `<ip-with-dashes>.nip.io` (no prefix) — PMM Server's own UI/API, once it's up (step 2)
 
 ## Pick a run_id
 
@@ -36,7 +39,7 @@ terraform/linode-runner/up.sh <role> <run_id>
 ```
 
 `role` is `test-runner`, `test-doctor`, or `fb-validator` (free text, just for the tag). This:
-- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443 (the exec-server — see "Why HTTPS-exec, not SSH" above), tagged `pmm-qa-ephemeral`.
+- Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443 (nginx, multiplexing the exec-server and PMM's UI by SNI — see "Why HTTPS-exec, not SSH" above), tagged `pmm-qa-ephemeral`.
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or whatever `PMM_QA_REF` names (must already be pushed; see "Never code on the Linode VM" above).
 
@@ -65,7 +68,7 @@ terraform/linode-runner/run.sh <run_id> -- "
 "
 ```
 
-`-p 8443:8443`, not `443:8443` — host port 443 is the exec-server's (see "Why HTTPS-exec, not SSH"), so PMM binds an internal-only port instead. Client containers on the same `pmm-qa` docker network still reach it by container hostname (`pmm-server`) at its native port regardless of the host mapping — see step 3.
+`-p 8443:8443`, not `443:8443` — host port 443 is nginx's, which routes to this port for any hostname that isn't `exec-`-prefixed (see "Why HTTPS-exec, not SSH"). The controller can still reach PMM's UI on port 443 externally (via the plain, unprefixed nip.io hostname — step 4) since nginx is the one actually holding that port; PMM itself never needs to. Client containers on the same `pmm-qa` docker network reach it by container hostname (`pmm-server`) at its native port regardless of the host mapping — see step 3.
 
 Wait for **readyz**: HTTP **200**, body **`{}`**, checked from *inside* the box (this is loopback traffic on the VM, not a controller-to-VM connection, so it's unaffected by anything above):
 
@@ -93,11 +96,14 @@ terraform/linode-runner/run.sh <run_id> -- "
 
 Pick `--database` from the ticket + [references/SETUP-INVENTORY.md](references/SETUP-INVENTORY.md), or `pmm-framework --help` on the box.
 
-## 4. UI — currently blocked, known gap
+## 4. UI
 
-Local Playwright/Chromium (`pmm-ui-evidence`) needs to reach PMM's own UI directly from the controller over HTTPS — but PMM now binds an internal-only port (see step 2), precisely because host port 443 is already the exec-server's. There is no external port for the controller's browser to hit today.
+Local Playwright/Chromium, not a remote "computer use" browser — see `pmm-ui-evidence`. Use the **plain** nip.io hostname, no `exec-` prefix — that prefix is reserved for the exec-server; anything else routes through nginx to PMM:
 
-Not silently worked around: this is an open gap, not something to route around by moving the exec-server to another port (already tried live — see "Why HTTPS-exec, not SSH") or by reverting PMM to host port 443 (breaks the exec-server that the box depends on for everything else). A shared-port design (an nginx SNI-passthrough router in front of both, so the exec-server and PMM's UI coexist on the one usable port) would close this, but hasn't been built. Until it is, treat verification steps that need a direct browser hit against the box's own UI as unsupported — API/CLI/log/DB-query based verification (as used for e.g. `pmm-encryption-rotation` checks) works fully today and doesn't hit this limitation.
+```bash
+PMM_URL="https://$(cat terraform/linode-runner/runs/<run_id>/ip | tr '.' '-').nip.io" \
+  node .claude/scripts/pmm-ui-login.js <TICKET>
+```
 
 ## 5. FB / nightly workflow reproduction (FB Validator, Test Doctor)
 
@@ -123,4 +129,4 @@ Call this whether the run passed, failed, or was blocked — it's the primary, i
 
 None specific to the VM itself — it is a real kernel with real systemd, so playbooks that need `antmelekhin/docker-systemd`-style images work normally (this is the whole reason this setup exists instead of running inside the agent's own sandbox). If a setup still fails, it is a genuine `qa-integration` bug — report it, do not fork around it here.
 
-Direct browser access to PMM's own UI from the controller doesn't work today — see the UI caveat in step 4. Everything else (provisioning, `pmm-framework`, `pmm-admin`, log/DB checks, `pmm-encryption-rotation`) works from the default network policy; no special environment configuration needed.
+No special environment configuration needed — provisioning, `pmm-framework`, `pmm-admin`, log/DB checks, `pmm-encryption-rotation`, and direct browser access to PMM's UI all work from the default network policy.

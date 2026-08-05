@@ -8,6 +8,8 @@ packages:
   - python3-venv
   - python3-pip
   - ansible
+  - nginx
+  - libnginx-mod-stream
 
 # Self-destruct: the only cleanup mechanism other than an agent explicitly
 # calling down.sh. No external reaper/cron -- the instance deletes itself by
@@ -37,11 +39,14 @@ write_files:
   # Controllers behind a proxied-HTTPS-only network policy cannot open a
   # raw SSH connection to this box (confirmed live -- see docs.md). Every
   # command from up.sh/run.sh/sync.sh/extend.sh goes through this small
-  # bearer-token-authenticated HTTPS service instead, on the one port
-  # (443) that egress policy actually allows. PMM Server itself binds an
-  # internal-only port so it never competes with this for host 443 --
-  # readyz checks, pmm-admin, and pmm-encryption-rotation all run as
-  # /exec commands, not direct connections to PMM's own port.
+  # bearer-token-authenticated HTTPS service instead -- since the only port
+  # that egress policy reliably carries real traffic on is 443, and PMM
+  # Server also needs host 443 for its own UI, nginx's stream module
+  # multiplexes both onto that one port by SNI (see the stream-router
+  # write_files entry below): hostnames starting with "exec-" route here,
+  # on a loopback-only port nginx forwards to; everything else routes to
+  # PMM's own port. This exec-server itself never listens on a
+  # controller-reachable port directly.
   - path: /etc/pmm-qa/exec-token
     permissions: "0600"
     owner: root:root
@@ -95,11 +100,29 @@ write_files:
           def log_message(self, fmt, *args):
               pass
 
-      httpd = http.server.HTTPServer(("0.0.0.0", 443), Handler)
+      httpd = http.server.HTTPServer(("127.0.0.1", 8843), Handler)
       ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
       ctx.load_cert_chain("/etc/pmm-qa/exec-cert.pem", "/etc/pmm-qa/exec-key.pem")
       httpd.socket = ctx.wrap_socket(httpd.socket, server_side=True)
       httpd.serve_forever()
+  - path: /etc/nginx/stream-enabled/pmm-qa-sni-router.conf
+    permissions: "0644"
+    owner: root:root
+    content: |
+      # Routes by SNI, without terminating TLS (ssl_preread only reads the
+      # ClientHello, doesn't decrypt) -- both the exec-server and PMM Server
+      # keep handling their own TLS exactly as if this weren't here.
+      stream {
+        map $ssl_preread_server_name $pmm_qa_backend {
+          ~^exec-  127.0.0.1:8843;
+          default  127.0.0.1:8443;
+        }
+        server {
+          listen 443;
+          ssl_preread on;
+          proxy_pass $pmm_qa_backend;
+        }
+      }
   - path: /etc/systemd/system/pmm-qa-exec.service
     permissions: "0644"
     owner: root:root
@@ -121,6 +144,15 @@ runcmd:
   - chmod 600 /etc/pmm-qa/exec-key.pem
   - systemctl daemon-reload
   - systemctl enable --now pmm-qa-exec
+  # Ubuntu's nginx.conf only wires up conf.d/sites-enabled inside the http{}
+  # block -- stream{} is a top-level directive, so it needs its own include
+  # line added directly, not dropped into an existing include dir.
+  - mkdir -p /etc/nginx/stream-enabled
+  - sed -i '/^events {/i include /etc/nginx/stream-enabled/*.conf;' /etc/nginx/nginx.conf
+  - rm -f /etc/nginx/sites-enabled/default
+  - nginx -t
+  - systemctl enable --now nginx
+  - systemctl restart nginx
   - install -m 0755 -d /etc/apt/keyrings
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   - chmod a+r /etc/apt/keyrings/docker.asc
