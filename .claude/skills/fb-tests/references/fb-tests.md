@@ -64,7 +64,7 @@ Jenkins submodules build is separate: `continuous-integration/jenkins/pr-head` â
 
 ## Screenshot with the local Playwright/Chromium
 
-Use `.claude/scripts/pw-screenshot.js` (see `pmm-ui-evidence`) instead of any browser extension or manual capture.
+Use `.claude/scripts/pw-screenshot.js` (see `ui-evidence`) instead of any browser extension or manual capture.
 
 ### Screenshot only when all checks pass
 

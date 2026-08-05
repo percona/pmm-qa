@@ -1,11 +1,11 @@
 ---
-name: pmm-git-diff
+name: git-diff
 description: Read and summarize git diffs for percona/pmm and percona/grafana PRs linked to a PMM Jira ticket. Use before planning manual QA or when Test Runner needs PR scope. Includes JSON dashboard diff guidance.
 ---
 
 # PMM git diff
 
-Read `.claude/skills/pmm-repos/SKILL.md` for repo rules. Never clone `pmm-submodules`.
+Read `.claude/skills/repos/SKILL.md` for repo rules. Never clone `pmm-submodules`.
 
 ## Find and diff PRs
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # down.sh -- destroy the Linode VM for one run. Call this as the LAST step
-# of every agent workflow (test-runner, test-doctor, fb-validator), on every exit path --
-# success, failure, or blocked. This is the primary cleanup mechanism;
-# reap.sh is only the safety net for runs nobody ever called this on.
+# of every agent workflow (test-runner, test-doctor, investigator, fb-reporter),
+# on every exit path -- success, failure, or blocked. This is the primary
+# cleanup mechanism; the on-box self-destruct timer (cloud-init.yaml.tftpl)
+# is only the safety net for runs nobody ever called this on.
 #
 # Usage:
 #   LINODE_TOKEN=... terraform/linode-runner/down.sh <run_id>

@@ -1,5 +1,5 @@
 ---
-name: pmm-repos
+name: repos
 description: PMM GitHub repository map, gh CLI usage, and rules for which repos agents may change. Use when finding PRs for a ticket, reading diffs, or deciding where to open a fix PR.
 ---
 
@@ -9,7 +9,7 @@ description: PMM GitHub repository map, gh CLI usage, and rules for which repos 
 
 | Repo | Remote | Agent may open PR? |
 |------|--------|-------------------|
-| `percona/pmm-qa` | QA tests, provisioning | **Yes** (Test Doctor, Test Runner, FB Validator automation) |
+| `percona/pmm-qa` | QA tests, provisioning | **Yes** (Test Runner, Test Doctor, Investigator, FB Reporter) |
 | `percona/pmm` | PMM server monorepo | **No** (read/diff only) |
 | `percona/grafana` | Grafana UI | **No** (read/diff via `gh`) |
 | `Percona-Lab/pmm-submodules` | FB integration | **Never clone** — `gh` only |
@@ -17,7 +17,7 @@ description: PMM GitHub repository map, gh CLI usage, and rules for which repos 
 
 ## Cloud environment
 
-This session's checkout of `percona/pmm-qa` is what gets synced to the throwaway Linode VM (see `pmm-linode-provisioning`) — it is not a separate clone. Resolve paths from the repo root Claude Code already has open.
+This session's checkout of `percona/pmm-qa` is what gets synced to the throwaway Linode VM (see `linode-provisioning`) — it is not a separate clone. Resolve paths from the repo root Claude Code already has open.
 
 ## Find PRs by ticket
 

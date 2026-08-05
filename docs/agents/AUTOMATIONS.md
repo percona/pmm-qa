@@ -1,16 +1,17 @@
 # PMM — Claude Code agents (automations)
 
-Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this repo — committed, so anyone who opens `percona/pmm-qa` in Claude Code gets all three agents automatically. No separate environment snapshot or dashboard config to keep in sync (unlike the earlier Cursor prototype this replaces).
+Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this repo — committed, so anyone who opens `percona/pmm-qa` in Claude Code gets all agents automatically. No separate environment snapshot or dashboard config to keep in sync (unlike the earlier Cursor prototype this replaces).
 
-## The three agents
+## The four agents
 
-| Agent | Watches | Trigger | Does | Never |
-|-------|---------|---------|------|-------|
-| [test-runner](../../.claude/agents/test-runner.md) | A named Jira ticket | Ad hoc — Slack/Claude Code mention, or a Jira Automation rule | Reads the ticket, provisions a throwaway Linode VM, runs the manual QA, posts a Developers-only Jira comment | Open PRs outside pmm-qa, post public Jira comments |
-| [test-doctor](../../.claude/agents/test-doctor.md) | **pmm-qa's own** scheduled/nightly CI on `main` (`e2e-tests-matrix.yml`, `gssapi-psmdb-tests-matrix.yml`, `helm-tests.yml`, `integration-cli-tests.yml`, `nightly-e2e-tests-matrix.yml`) | CI-triggered — `notify-test-doctor.yml` watches all five via `workflow_run` and fires on the run's overall failure | Triages whether a nightly break is a real regression upstream (`percona/pmm`/`percona/grafana`) or a pmm-qa test bug; reproduces + fixes the latter | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules`, act on a pmm-qa problem it hasn't confirmed reproduces |
-| [fb-validator](../../.claude/agents/fb-validator.md) | `Percona-Lab/pmm-submodules` FB Tests (a repo we don't own) | Polling Routine (hourly — no event hook available for a third-party repo) | Green → screenshots + attaches evidence to Jira. Red → triages product vs test bug, reproduces, fixes pmm-qa | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules` |
+| Agent | Watches / invoked by | Trigger | Does | Never |
+|-------|----------------------|---------|------|-------|
+| [test-runner](../../.claude/agents/test-runner.md) | A named Jira ticket | Ad hoc — chat, a Slack `@mention` via Claude Tag, or a Jira Automation rule | Reads the ticket, provisions a throwaway Linode VM, runs the manual QA, hands off to `fb-reporter` for any linked submodules PR's evidence, posts a Developers-only Jira comment | Open PRs outside pmm-qa, post public Jira comments |
+| [test-doctor](../../.claude/agents/test-doctor.md) | **pmm-qa's own** scheduled CI on `main`, and `Percona-Lab/pmm-submodules` FB Tests going red | CI-triggered from both sources (see below) | Detects the failure, extracts what happened, hands off to `investigator` | Investigate, classify, or fix anything itself |
+| [investigator](../../.claude/agents/investigator.md) | Referenced by `test-doctor`, or asked directly | N/A — read-and-followed in the caller's own session, or invoked directly | Reproduces the failure hands-on on a throwaway VM, classifies **from what actually reproduced** (test bug vs. product regression), fixes + opens a PR if it's ours | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules`, classify without reproducing first |
+| [fb-reporter](../../.claude/agents/fb-reporter.md) | Referenced by `test-runner`, or asked directly | N/A — read-and-followed in the caller's own session, or invoked directly | Gets a clean FB Tests screenshot for a ticket's linked submodules PR, retrying past flakiness (`gh run rerun --failed`, up to twice), attaches to Jira | Diagnose or fix a genuine (non-flaky) failure — that's `test-doctor`/`investigator`'s job |
 
-`test-doctor` and `fb-validator` are deliberately different mechanisms, not a style choice: `pmm-qa`'s own CI is a repo we control, so a workflow step can push an event directly (no polling delay, no wasted checks when nothing happened). `pmm-submodules` isn't ours, so the only option is a Routine that wakes up and asks "anything new?"
+Why `investigator` and `fb-reporter` aren't spawned as nested subagents: whether a Claude Code Remote **Routine**-fired session can itself spawn a custom subagent via the Agent/Task tool isn't confirmed by Claude Code's own docs — `test-doctor` and `test-runner` both run as Routines, so neither risks depending on that. Instead, their own instructions say to read the other agent's `.md` file directly and follow it in the same session — the same mechanical pattern already used for skills. Both are still real agents (their own `name`/`description`), so a person in an ordinary interactive session (where subagent-spawning is confirmed to work) can invoke either directly, or just ask in natural language.
 
 ## Running Test Runner manually
 
@@ -24,7 +25,7 @@ In any Claude Code session on this repo, just ask in natural language — "pleas
 @Claude please act as test-runner on PMM-15196.
 ```
 
-**Also confirmed**: Claude Tag pairs one Slack workspace to one Claude org — you cannot run a second Claude account's Tag bot in a workspace already paired to another account. If this project's automation needs to live under a different Claude account than the company's main enterprise one, Slack triggering for it needs its own workspace, or a small custom Slack app that relays into the Routine API trigger below (see the open question in chat — worth scoping separately from this repo if you want to go that route).
+**Also confirmed**: Claude Tag pairs one Slack workspace to one Claude org — you cannot run a second Claude account's Tag bot in a workspace already paired to another account. If this project's automation needs to live under a different Claude account than the company's main enterprise one, Slack triggering for it needs its own workspace, or a small custom Slack app that relays into the Routine API trigger below (see [`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md) — design only, not built).
 
 ## Running Test Runner from Jira
 
@@ -41,27 +42,22 @@ curl -X POST https://api.anthropic.com/v1/claude_code/routines/<routine_id>/fire
 
 `<routine_id>` and `<token>` come from opening the Test Runner routine in the claude.ai Routines UI and clicking **"Add an API trigger"** — the token is shown once and can't be retrieved again. Configure a Jira Automation "Send web request" action with the above.
 
-## Test Doctor — CI-triggered, not polled
+## Test Doctor — event-triggered from both sources, no polling
 
-A single centralized watcher, [`.github/workflows/notify-test-doctor.yml`](../../.github/workflows/notify-test-doctor.yml), fires Test Doctor's Routine — not a job wired into each scheduled workflow. It listens via `on: workflow_run` for `e2e-tests-matrix.yml`, `gssapi-psmdb-tests-matrix.yml`, `helm-tests.yml`, `integration-cli-tests.yml` (all native GitHub Actions cron), plus `nightly-e2e-tests-matrix.yml` (dispatched daily by the Jenkins pipeline in `jenkins-pipelines`, not a GitHub cron, so it's matched by name instead of `event == 'schedule'`).
+`Percona-Lab/pmm-submodules` is also a Percona-owned repo, not a third party's — so unlike the earlier design, there's no need for an hourly polling Routine to catch FB Tests going red. Both of Test Doctor's sources push an event directly:
 
-`workflow_run.conclusion` is GitHub's own computed verdict for the whole run — not a hand-maintained `needs: [...] + if: failure()` job list. That distinction matters here: some of these pipelines pass their e2e-test step but fail overall when a later Launchable step errors collecting results, and a per-job `needs` list has to be kept in sync every time a job is added/renamed or it silently misses failures like that. `workflow_run` doesn't have that failure mode — adding a workflow to the watch list is one line in `notify-test-doctor.yml`'s `workflows:` array, nothing to touch in the workflow itself.
+- **pmm-qa's own scheduled CI**: [`.github/workflows/notify-test-doctor.yml`](../../.github/workflows/notify-test-doctor.yml), already in this repo, fires on `workflow_run` for `e2e-tests-matrix.yml`, `gssapi-psmdb-tests-matrix.yml`, `helm-tests.yml`, `integration-cli-tests.yml` (native GitHub Actions cron), plus `nightly-e2e-tests-matrix.yml` (dispatched daily by the Jenkins pipeline in `jenkins-pipelines`, matched by name since it's not a GitHub cron). It fires on the run's own computed `conclusion`, not any single job's pass/fail — some of these pipelines pass their e2e-test step but fail overall once a later Launchable step errors collecting results, and a hand-maintained per-job list would miss that.
+- **`Percona-Lab/pmm-submodules` FB Tests**: **needs a mirroring notify workflow added in that repo**, firing the same Test Doctor Routine with the submodules PR number + run URL. Not built yet — this is a go-live item, not something this repo alone can finish.
 
 Only one secret is needed:
 
 - `TEST_DOCTOR_ROUTINE_TOKEN` — the bearer token from the routine's "Add an API trigger" screen. The routine ID itself (`trig_01FhHBdz2yBibyVEfnG5gbQz`) is hardcoded in the watcher file — it isn't sensitive, only the token is.
 
-**Not wired up yet** — the workflow file is in place but the secret needs to actually be added to the repo before it fires anything.
+**Not fully wired up yet** — the pmm-qa side (`notify-test-doctor.yml`) is in place but needs `TEST_DOCTOR_ROUTINE_TOKEN` added as a repo secret; the pmm-submodules side doesn't exist yet at all.
 
-## FB Validator — polling Routine
+## Investigator and FB Reporter — no Routine of their own
 
-`Percona-Lab/pmm-submodules` isn't a repo we own, so there's no event to hook — a Routine polls hourly:
-
-```
-Read .claude/agents/fb-validator.md and act as that role. Check
-Percona-Lab/pmm-submodules for the latest FB Tests result since your last
-check. If nothing new finished, do nothing and exit.
-```
+Neither has its own trigger or Routine — they're read-and-followed by `test-doctor`/`test-runner` respectively (see "why not spawned as nested subagents" above), or invoked directly by a person. Nothing to wire up here beyond the two files themselves existing.
 
 ## PMM AI — custom Slack app (design only, not built yet)
 
@@ -81,7 +77,7 @@ Confirmed from the docs: a Routine's fired session runs under **its creator's pe
 
 ## Linode cost-safety net
 
-Test Runner, Test Doctor, and FB Validator all provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [pmm-linode-provisioning](../../.claude/skills/pmm-linode-provisioning/SKILL.md)). Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop is **not** a scheduled Routine — every instance carries its own on-box self-destruct timer (default 24h, see `terraform/linode-runner/README.md`) that deletes it via the Linode API with no external process involved. `extend.sh` pushes that timer back if a run needs more time.
+Test Runner, Test Doctor (via Investigator) all provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [linode-provisioning](../../.claude/skills/linode-provisioning/SKILL.md)) — FB Reporter never does, it only calls `gh`/Jira. Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop is **not** a scheduled Routine — every instance carries its own on-box self-destruct timer (default 24h, see `terraform/linode-runner/README.md`) that deletes it via the Linode API with no external process involved. `extend.sh` pushes that timer back if a run needs more time.
 
 ## Go-live checklist
 
@@ -90,4 +86,5 @@ Test Runner, Test Doctor, and FB Validator all provision a throwaway Linode VM p
 - [ ] GitHub connector specifically still pending org activation
 - [ ] `gh --version`, `terraform version`, `json-diff --version`, `ffmpeg -version` succeed after a fresh SessionStart hook run
 - [ ] `TEST_DOCTOR_ROUTINE_TOKEN` added as a repo secret so `notify-test-doctor.yml` can actually fire
+- [ ] Notify workflow added in `Percona-Lab/pmm-submodules` firing the same Test Doctor Routine on FB Tests red — the whole reason the old hourly-polling design is gone
 - [ ] Jira Automation rule configured with Test Runner's API trigger URL/token

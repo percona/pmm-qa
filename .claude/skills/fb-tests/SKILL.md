@@ -1,5 +1,5 @@
 ---
-name: pmm-fb-tests
+name: fb-tests
 description: Analyze Percona-Lab/pmm-submodules FB Tests via gh pr checks, JNKPercona build comments, flaky triage, and map failures to pmm-qa GitHub workflow runners. Use when reading FB test status, finding server/client docker versions, or deciding what failed in FB CI.
 ---
 
@@ -43,7 +43,7 @@ Extract `setup_services` / `tags_for_tests` or `services_list` / `cli_tag` from 
 
 Mark each failure: **relevant** (overlaps ticket) / **flaky** / **out of scope**. Only expand manual scope for **relevant** failures.
 
-## Green gate (FB Validator)
+## Green gate (FB Reporter)
 
 ```bash
 gh pr checks <PR> -R Percona-Lab/pmm-submodules 2>&1 | grep -E '\tfail\t'

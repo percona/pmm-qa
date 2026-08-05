@@ -9,7 +9,7 @@ input=$(cat)
 command=$(jq -r '.tool_input.command // empty' <<<"$input")
 
 if grep -qiE '\bgit\b.*\bclone\b.*pmm-submodules' <<<"$command"; then
-  echo "Blocked: cloning pmm-submodules is not allowed. Use 'gh pr checks' / 'gh api' against Percona-Lab/pmm-submodules instead (see .claude/skills/pmm-repos/SKILL.md)." >&2
+  echo "Blocked: cloning pmm-submodules is not allowed. Use 'gh pr checks' / 'gh api' against Percona-Lab/pmm-submodules instead (see .claude/skills/repos/SKILL.md)." >&2
   exit 2
 fi
 

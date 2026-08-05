@@ -1,5 +1,5 @@
 ---
-name: pmm-jira
+name: jira
 description: Read and write PMM tickets on perconadev.atlassian.net — fields, transitions, Developers-only comment visibility, FB screenshot field, attachments. Use when posting Jira comments, updating How to test, attaching FB evidence, or reading ticket context for PMM QA.
 ---
 

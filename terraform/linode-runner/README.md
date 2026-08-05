@@ -7,7 +7,7 @@ systemd, so the Docker/Ansible setups in `qa-integration/` (which is
 CI, instead of hitting the "container is not running" limits of a nested
 sandbox.
 
-See `.claude/skills/pmm-linode-provisioning/SKILL.md` for the agent-facing
+See `.claude/skills/linode-provisioning/SKILL.md` for the agent-facing
 workflow (including the "never code on the box" rule). This README is the
 implementation reference.
 
@@ -38,7 +38,7 @@ implementation reference.
   DNS setup required either way.
 - **Exec-server and PMM Server share port 443 via SNI, not a port each.**
   PMM Server binds `8443:8443` (see
-  `.claude/skills/pmm-linode-provisioning/SKILL.md` step 2), not the usual
+  `.claude/skills/linode-provisioning/SKILL.md` step 2), not the usual
   `443:8443`, since host port 443 belongs to nginx. nginx's `stream` module
   (`ssl_preread`, no TLS termination — each backend still handles its own
   TLS exactly as before) routes by the SNI hostname: `exec-`-prefixed goes
@@ -93,7 +93,7 @@ implementation reference.
 ```bash
 export LINODE_TOKEN=...
 
-# 1. Provision. role is free text (test-runner/test-doctor/fb-validator/smoketest/...),
+# 1. Provision. role is free text (test-runner/test-doctor/smoketest/...),
 #    run_id must be unique (a Jira key, a PR number, whatever you like).
 terraform/linode-runner/up.sh test-runner PMM-15196
 
@@ -109,7 +109,7 @@ terraform/linode-runner/down.sh PMM-15196
 Testing a fix that isn't on `main` yet? Push it to a branch first, then:
 
 ```bash
-PMM_QA_REF=my-fix-branch terraform/linode-runner/up.sh fb-validator heal-4376
+PMM_QA_REF=my-fix-branch terraform/linode-runner/up.sh test-doctor heal-4376
 # ...or on an already-running instance:
 terraform/linode-runner/sync.sh heal-4376 my-fix-branch
 ```

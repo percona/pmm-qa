@@ -41,7 +41,7 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
 | [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite) | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) |
 | [.agents/](.agents/) | Agent workflow prompts and MCP configuration for LLM-assisted test development | [README.md](.agents/README.md) · [workflows/](.agents/workflows/) |
-| [.claude/](.claude/) | Claude Code cloud agents (Test Runner, Test Doctor, FB Validator), their skills, and hooks | [docs/agents/AUTOMATIONS.md](docs/agents/AUTOMATIONS.md) · [agents/](.claude/agents/) · [skills/](.claude/skills/) |
+| [.claude/](.claude/) | Claude Code cloud agents (Test Runner, Test Doctor, Investigator, FB Reporter), their skills, and hooks | [docs/agents/AUTOMATIONS.md](docs/agents/AUTOMATIONS.md) · [agents/](.claude/agents/) · [skills/](.claude/skills/) |
 | [terraform/linode-runner/](terraform/linode-runner/) | Terraform module + scripts that give a cloud agent a throwaway Linode VM to run the **unmodified** `qa-integration/` provisioning on | [README.md](terraform/linode-runner/README.md) |
 | [.github/workflows/](.github/workflows/) | GitHub Actions pipelines | See [CI / Pipelines](#ci--pipelines) below |
 

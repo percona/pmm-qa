@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SessionStart hook -- installs gh, terraform, ffmpeg, json-diff, and the
 # Playwright helper scripts. Everything else (PMM, pmm-framework, Ansible)
-# runs on the Linode VM, not here -- see .claude/skills/pmm-linode-provisioning.
+# runs on the Linode VM, not here -- see .claude/skills/linode-provisioning.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then

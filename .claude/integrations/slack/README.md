@@ -74,7 +74,7 @@ one mega-prompt trying to guess intent across unrelated domains:
 
 | Channel (placeholder) | Routine | Notes |
 |---|---|---|
-| PMM QA channel(s) | `PMM AI` | General router — reads `AGENTS.md` + `.claude/agents/*.md`, matches the message to test-runner / test-doctor / fb-validator by description, or just answers directly if it's a general question. |
+| PMM QA channel(s) | `PMM AI` | General router — reads `AGENTS.md` + `.claude/agents/*.md`, matches the message to test-runner / test-doctor by description, or just answers directly if it's a general question. |
 | Prod/support channel(s) | *(future — see below)* | Not yet built. |
 
 Fill in real channel IDs once the app is installed and invited to them.
@@ -86,10 +86,10 @@ message in a thread and figures out which of two things is actually going
 on — they're unsure how to do something in PMM (a how-to question, no bug
 involved), or they're reporting what they believe is a bug and it needs to
 be reproduced and confirmed (or ruled out) before anyone treats it as real.
-Working name **"support-triage"** (rejected: "investigator" — open to a
-better name). Would reuse `pmm-linode-provisioning` the same way
-test-runner/test-doctor do, to actually attempt reproduction rather than
-guessing from the description alone.
+Working name **"support-triage"** ("investigator" is now taken — see
+`.claude/agents/investigator.md` — and this could plausibly just hand off
+to it directly once built, the same way Test Doctor does, instead of
+reproducing anything itself).
 
 Not implemented. When it is, the channel-based routing table above is the
 mechanism to point that specific channel at it instead of the general
