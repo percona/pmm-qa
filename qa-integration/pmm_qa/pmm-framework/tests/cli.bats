@@ -93,13 +93,15 @@ load helpers/test_helper
 }
 
 @test "resolves latest PSMDB patch without Python" {
+  # Same patch, two builds: only correct if 'patch-build' is compared as
+  # 'patch.build' rather than as one opaque, arithmetic-subtraction-prone
+  # token (see the "-" to "." conversion in latest_psmdb_version()).
   curl() {
-    printf '%s\n' \
-      '<option value="percona-server-mongodb-8.0-8.1|old">old</option>' \
-      '<option value="percona-server-mongodb-8.0-12.1|new">new</option>'
+    printf '%s' \
+      '{"success":true,"data":{"versions":["percona-server-mongodb-8.0.4-1","percona-server-mongodb-8.0.4-2"]}}'
   }
 
-  [[ $(latest_psmdb_version 8.0) == 8.0-12.1 ]]
+  [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
 }
 
 @test "selects the existing requests-capable interpreter for Ansible modules" {

@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
+import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
@@ -159,3 +160,37 @@ pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mock
     });
   }
 });
+
+pmmTest(
+  'PMM-T2263 Verify update notification remains snoozed after refresh @new-navigation',
+  async ({ helpPage, mocks, page }) => {
+    const snoozeDuration = Timeouts.ONE_MINUTE;
+    const updateVersion = `test-update-${Date.now()}`;
+    const snooze = await mocks.mockSnoozedUpdate(updateVersion);
+
+    await page.evaluate(
+      (duration) => localStorage.setItem('pmm-ui.dev.updateSnoozeDurationMs', String(duration)),
+      snoozeDuration,
+    );
+    await page.reload();
+
+    await expect(helpPage.buttons.remindMeLater).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    await helpPage.buttons.remindMeLater.click();
+    await expect(helpPage.buttons.remindMeLater).toBeHidden();
+    expect(snooze.snoozedAt).toBeGreaterThan(0);
+
+    await Promise.all([
+      page.waitForResponse(apiEndpoints.users.me),
+      page.waitForResponse(apiEndpoints.server.updates),
+      page.reload(),
+    ]);
+    await page.waitForFunction((delay) => performance.now() >= delay, Timeouts.TEN_SECONDS, {
+      timeout: Timeouts.FIFTEEN_SECONDS,
+    });
+    await expect(helpPage.buttons.remindMeLater).toBeHidden();
+
+    snooze.snoozedAt = Date.now() - snoozeDuration - 1;
+    await page.reload();
+    await expect(helpPage.buttons.remindMeLater).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+  },
+);
