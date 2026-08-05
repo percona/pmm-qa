@@ -159,6 +159,8 @@ dist
 !.claude/hooks/**
 !.claude/scripts/
 !.claude/scripts/**
+!.claude/integrations/
+!.claude/integrations/**
 !.claude/settings.json
 .claude/scripts/node_modules/
 .claude/scripts/.sessions/
