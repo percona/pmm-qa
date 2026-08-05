@@ -5,10 +5,12 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
 const realTimeTableTestId = 'realtime-overview-table';
+const sessionsTableTestId = 'rta-sessions';
 
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
+  readonly sessionsUrl = 'pmm-ui/rta/sessions';
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   toggles = {
     hideCommit: this.page.getByTestId('overview-table-hide-commit-toggle'),
@@ -41,6 +43,11 @@ export default class RealTimeAnalyticsPage extends BasePage {
       this.page.getByTestId(realTimeTableTestId).locator(`//tbody//tr[position()=${rowIndex}]`),
     rowByQueryText: (queryText: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
+    technologyForSession: (sessionName: string) =>
+      this.page
+        .getByTestId(sessionsTableTestId)
+        .locator('tr', { hasText: sessionName })
+        .getByTestId('technology'),
     userForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).getByTestId(/-user-cell$/),
   };
   buttons = {
@@ -62,6 +69,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
     stopAllSessions: this.page.getByTestId('open-stop-all-modal'),
   };
   elements = {
+    columnPinButtons: this.page.getByRole('button', { name: /^(Pin to (left|right)|Unpin)$/ }),
+    columnsMenu: this.page.getByRole('menu'),
     databaseColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Database', { exact: true }),
     detailsCommand: this.page.getByTestId('command-value'),
     detailsFullScan: this.page.getByTestId('full-scan-value'),
@@ -84,6 +93,10 @@ export default class RealTimeAnalyticsPage extends BasePage {
       .getByText('Query text', { exact: true }),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tbody tr'),
+    sessionsTable: this.page.getByTestId(sessionsTableTestId),
+    technologyColumnHeader: this.page
+      .getByTestId(sessionsTableTestId)
+      .getByText('Technology', { exact: true }),
     userColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('User', { exact: true }),
   };
   inputs = {

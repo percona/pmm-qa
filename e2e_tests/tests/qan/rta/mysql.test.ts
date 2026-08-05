@@ -163,6 +163,8 @@ pmmTest(
     });
 
     await pmmTest.step('Enable Hide COMMIT and verify the COMMIT row disappears', async () => {
+      await expect(queryAnalytics.rta.toggles.hideCommit).toHaveText('Hide transaction control');
+
       await queryAnalytics.rta.toggleHideCommit();
 
       await expect(queryAnalytics.rta.builders.rowByQueryText('COMMIT')).toHaveCount(0);
@@ -287,6 +289,45 @@ pmmTest(
 );
 
 pmmTest(
+  'Verify Elapsed time stays pinned and no column can be pinned by hand @rta',
+  async ({ page, queryAnalytics }) => {
+    await pmmTest.step('Mock RTA search response with a MySQL query', async () => {
+      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
+        route.fulfill({
+          body: JSON.stringify({
+            queries: [buildMySqlQuery({ queryId: '701', queryText: 'SELECT c FROM sbtest1 WHERE id=55' })],
+          }),
+          contentType: 'application/json',
+          status: 200,
+        }),
+      );
+      await page.reload();
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
+        timeout: Timeouts.TEN_SECONDS,
+      });
+    });
+
+    await pmmTest.step('Verify the elapsed time cell is still pinned', async () => {
+      await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
+
+      await expect(queryAnalytics.rta.builders.elapsedTimeForRow('1')).toHaveAttribute('data-pinned', 'true');
+    });
+
+    await pmmTest.step('Verify the Show/Hide columns menu offers no pin controls', async () => {
+      await queryAnalytics.rta.buttons.showHideColumns.click();
+
+      // Wait for the menu itself first: counting pin buttons on a page where the
+      // menu never opened would pass while asserting nothing.
+      await expect(queryAnalytics.rta.elements.columnsMenu).toBeVisible();
+      await expect(queryAnalytics.rta.elements.columnPinButtons).toHaveCount(0);
+
+      await page.keyboard.press('Escape');
+    });
+  },
+);
+
+pmmTest(
   'Verify elapsed time is rendered in compact seconds format @rta',
   async ({ page, queryAnalytics }) => {
     await pmmTest.step('Mock RTA search response with a two-second query', async () => {
@@ -368,6 +409,63 @@ pmmTest(
       await expect(queryAnalytics.rta.elements.detailsPane.getByTestId('collection-value')).toBeHidden();
 
       await queryAnalytics.rta.buttons.closeDetailsPane.click();
+    });
+  },
+);
+
+// The session list only names the technology when the running sessions span more
+// than one engine, so both are mocked here rather than relying on the
+// environment to monitor a MySQL and a MongoDB service at once.
+const buildSession = (overrides: { serviceId: string; serviceName: string; serviceType: string }) => ({
+  cluster_name: '',
+  collect_interval: '2s',
+  service_id: overrides.serviceId,
+  service_name: overrides.serviceName,
+  service_type: overrides.serviceType,
+  start_time: new Date().toISOString(),
+  status: 'SESSION_STATUS_RUNNING',
+});
+
+pmmTest(
+  'Verify the sessions list names the technology when engines are mixed @rta',
+  async ({ page, queryAnalytics }) => {
+    await pmmTest.step('Mock one MySQL and one MongoDB session', async () => {
+      await page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
+        route.fulfill({
+          body: JSON.stringify({
+            sessions: [
+              buildSession({
+                serviceId: 'mock-mysql-service',
+                serviceName: 'mock-mysql-service',
+                serviceType: 'SERVICE_TYPE_MYSQL_SERVICE',
+              }),
+              buildSession({
+                serviceId: 'mock-mongo-service',
+                serviceName: 'mock-mongo-service',
+                serviceType: 'SERVICE_TYPE_MONGODB_SERVICE',
+              }),
+            ],
+          }),
+          contentType: 'application/json',
+          status: 200,
+        }),
+      );
+
+      await page.goto(queryAnalytics.rta.sessionsUrl);
+
+      await expect(queryAnalytics.rta.elements.sessionsTable).toBeVisible({
+        timeout: Timeouts.TEN_SECONDS,
+      });
+    });
+
+    await pmmTest.step('Verify each session row names its technology', async () => {
+      await expect(queryAnalytics.rta.elements.technologyColumnHeader).toBeVisible();
+      await expect(queryAnalytics.rta.builders.technologyForSession('mock-mysql-service')).toHaveText(
+        'MySQL',
+      );
+      await expect(queryAnalytics.rta.builders.technologyForSession('mock-mongo-service')).toHaveText(
+        'MongoDB',
+      );
     });
   },
 );
