@@ -249,6 +249,15 @@ docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 pmm-admin
 
 echo "adding some data"
 docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017
+
+generate_traffic=${GENERATE_TRAFFIC:-yes}
+if [ $generate_traffic != "no" ]; then
+    echo "generating opcountersRepl traffic (insert/update/delete) against the sharded cluster"
+    COMPOSE_FILE=docker-compose-sharded-with-pmm.yaml bash ./generate_opcountersrepl_traffic.sh
+else
+    echo "skipping opcountersRepl traffic generation"
+fi
+
 tests=${TESTS:-yes}
 if [ $tests != "no" ]; then
     echo "running tests"
