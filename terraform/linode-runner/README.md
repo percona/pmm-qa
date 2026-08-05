@@ -54,13 +54,15 @@ implementation reference.
   more time — nothing external ever has to guess whether an instance is
   still legitimately in use.
 - **Firewall by default.** Every instance gets a `linode_firewall` allowing
-  only port 443 inbound (from `var.allowed_inbound_cidr`, default open) and
-  dropping everything else. That one port carries both the exec-server and
-  PMM Server's own UI/API (nginx routes by SNI hostname) — it is not
-  exec-server-only, so PMM itself is reachable by anyone who knows the
-  nip.io hostname while the instance is up. Tighten `allowed_inbound_cidr`
-  if you provision from a known static IP; this environment's own shared
-  egress proxy has no such stable IP to scope it to by default.
+  only port 443 inbound (from `var.allowed_inbound_cidr`, no Terraform
+  default -- `up.sh` passes it explicitly from `ALLOWED_INBOUND_CIDR`, open
+  unless you set that) and dropping everything else. That one port carries
+  both the exec-server and PMM Server's own UI/API (nginx routes by SNI
+  hostname) — it is not exec-server-only, so PMM itself is reachable by
+  anyone who knows the nip.io hostname while the instance is up. Set
+  `ALLOWED_INBOUND_CIDR` to your own IP/32 if you provision from a known
+  static IP; this environment's own shared egress proxy has no such stable
+  IP to scope it to by default.
 - **Git-cloned, never rsynced.** `up.sh` has the box `git clone` a specific
   ref of `percona/pmm-qa` (default `main`) directly from GitHub. It never
   copies this session's own working tree onto the VM — code changes have to

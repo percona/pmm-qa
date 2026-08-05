@@ -32,7 +32,12 @@ trap 'rm -rf "$tmp"' EXIT
 # gh pr diff has no positional path filter -- fetch base/head content directly instead:
 gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<base_sha>" --jq '.content' | base64 -d > "$tmp/base.json"
 gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<head_sha>" --jq '.content' | base64 -d > "$tmp/head.json"
-jq -e . "$tmp/base.json" >/dev/null && jq -e . "$tmp/head.json" >/dev/null   # fail closed if either fetch produced empty/invalid JSON -- unlike `jq empty`, `jq -e` rejects a zero-byte file
+for f in "$tmp/base.json" "$tmp/head.json"; do
+  if ! jq -e . "$f" >/dev/null; then
+    echo "invalid or empty dashboard JSON: $f" >&2
+    exit 1
+  fi
+done
 json-diff "$tmp/base.json" "$tmp/head.json"
 ```
 

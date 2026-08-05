@@ -35,6 +35,5 @@ variable "ttl_hours" {
 
 variable "allowed_inbound_cidr" {
   type        = string
-  description = "CIDR allowed to reach port 443 on the instance -- both the exec-server AND PMM Server's own UI/API share this port (nginx routes by SNI hostname, see cloud-init.yaml.tftpl), so this is not exec-server-only. Defaults open because this environment's own outbound traffic goes through a shared proxy with no stable, discoverable egress IP to scope it to. Tighten this if you provision from somewhere with a known static IP -- during the instance's lifetime, anyone who knows the nip.io hostname and the run's generated ADMIN_PASSWORD can otherwise reach PMM directly."
-  default     = "0.0.0.0/0"
+  description = "CIDR allowed to reach port 443 on the instance -- both the exec-server AND PMM Server's own UI/API share this port (nginx routes by SNI hostname, see cloud-init.yaml.tftpl), so this is not exec-server-only. No default: opening this to the whole internet (0.0.0.0/0) must be an explicit, visible choice at the call site (up.sh passes it via ALLOWED_INBOUND_CIDR), not a value silently baked in here. Tighten it if you provision from somewhere with a known static IP -- during the instance's lifetime, anyone who knows the nip.io hostname and the run's generated ADMIN_PASSWORD can otherwise reach PMM directly."
 }

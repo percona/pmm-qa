@@ -35,6 +35,12 @@ fi
 
 : "${LINODE_TOKEN:?LINODE_TOKEN must be set -- export it, never hardcode it}"
 PMM_QA_REF="${PMM_QA_REF:-main}"
+# No Terraform default for this -- it's an explicit, visible opt-in at this
+# call site instead of a value silently baked into variables.tf. Still
+# defaults to public here because this environment's own outbound traffic
+# goes through a shared proxy with no stable, discoverable egress IP to
+# scope it to; set ALLOWED_INBOUND_CIDR to your own IP/32 if you have one.
+ALLOWED_INBOUND_CIDR="${ALLOWED_INBOUND_CIDR:-0.0.0.0/0}"
 
 RUN_DIR="$MODULE_DIR/runs/$RUN_ID"
 if [ -f "$RUN_DIR/terraform.tfstate" ]; then
@@ -64,6 +70,7 @@ terraform -chdir="$MODULE_DIR" apply -auto-approve -input=false \
   -state="$STATE" \
   -var "role=$ROLE" \
   -var "run_id=$RUN_ID" \
+  -var "allowed_inbound_cidr=$ALLOWED_INBOUND_CIDR" \
   "$@"
 
 IP=$(terraform -chdir="$MODULE_DIR" output -state="$STATE" -raw ip_address)

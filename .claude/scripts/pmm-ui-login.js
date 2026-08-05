@@ -144,12 +144,21 @@ async function main() {
   // on the same pinned trust path as every other page request.
   const loginResult = await page.evaluate(
     async ({ pmmOrigin, adminPassword }) => {
-      const res = await fetch(`${pmmOrigin}/graph/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: "admin", password: adminPassword }),
-      });
-      return { ok: res.ok, status: res.status, text: await res.text() };
+      try {
+        // redirect: "error" -- a 307/308 on this specific response could
+        // otherwise carry the POST body (the admin password) to a
+        // different origin; the finalOrigin check above only covers the
+        // initial page navigation, not this separate request.
+        const res = await fetch(`${pmmOrigin}/graph/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user: "admin", password: adminPassword }),
+          redirect: "error",
+        });
+        return { ok: res.ok, status: res.status, text: await res.text() };
+      } catch (err) {
+        return { ok: false, status: 0, text: `request failed (redirect rejected or network error): ${err.message}` };
+      }
     },
     { pmmOrigin, adminPassword },
   );
