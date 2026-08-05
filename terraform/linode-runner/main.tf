@@ -124,11 +124,11 @@ resource "linode_firewall" "runner" {
   # and tear it down all go through the exec-server, never a direct
   # connection to PMM's own port.
   inbound {
-    label    = "exec"
+    label    = "https"
     action   = "ACCEPT"
     ports    = "443"
     protocol = "TCP"
-    ipv4     = [var.allowed_ssh_cidr]
+    ipv4     = [var.allowed_inbound_cidr]
   }
 
   linodes = [linode_instance.runner.id]

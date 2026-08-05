@@ -7,22 +7,27 @@ description: Capture PMM UI screenshots and screen recordings using the pre-inst
 
 This environment ships Chromium pre-installed with Playwright already pointed at it (`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`) — no separate browser install or "computer use" is needed. Three small helper scripts under `.claude/scripts/` (`npm install` run once by the SessionStart hook) do the driving:
 
-- `pmm-ui-login.js` — logs into PMM as `admin`, bypassing the Grafana login form and self-signed TLS on the Linode box, and saves a reusable Playwright storage state.
+- `pmm-ui-login.js` — logs into PMM as `admin`, pinning PMM's own cert (see below) instead of trusting any cert, and saves a reusable Playwright storage state.
 - `pw-screenshot.js` — generic one-off screenshot of any URL, optionally reusing a saved login session.
 - `pw-record.js` — screen recording via Playwright's own video capture, transcoded to `.mp4` with `ffmpeg` (installed by the SessionStart hook) for easier viewing/attaching.
+
+All three accept an optional `PMM_CERT_PATH` env var — set it to the cert `pmm-linode-provisioning` step 2 fetched (`terraform/linode-runner/runs/<run_id>/pmm_cert.pem`) whenever the URL is PMM's own, so the browser pins that exact cert (via Chromium's `--ignore-certificate-errors-spki-list`) instead of falling back to `ignoreHTTPSErrors`. Omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
 ## Log into PMM UI and screenshot
 
 ```bash
 PMM_HOST="https://$(cat terraform/linode-runner/runs/<run_id>/ip | tr '.' '-').nip.io"
 
-# Read from the file pmm-linode-provisioning step 2 wrote -- it's unique per
-# run, never a fixed literal, and reading it from disk (not an exported shell
-# variable) survives even if this runs in a separate shell from provisioning.
+# Read from the files pmm-linode-provisioning step 2 wrote -- unique per run,
+# never a fixed literal or trust-anything cert, and reading them from disk
+# (not exported shell variables) survives even if this runs in a separate
+# shell from provisioning.
 ADMIN_PASSWORD="$(cat terraform/linode-runner/runs/<run_id>/admin_password)"
-PMM_URL="$PMM_HOST" ADMIN_PASSWORD="$ADMIN_PASSWORD" node .claude/scripts/pmm-ui-login.js PMM-14576
+PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem"
+PMM_URL="$PMM_HOST" ADMIN_PASSWORD="$ADMIN_PASSWORD" PMM_CERT_PATH="$PMM_CERT_PATH" \
+  node .claude/scripts/pmm-ui-login.js PMM-14576
 
-node .claude/scripts/pw-screenshot.js \
+PMM_CERT_PATH="$PMM_CERT_PATH" node .claude/scripts/pw-screenshot.js \
   "$PMM_HOST/graph/d/some-dashboard" \
   "/tmp/PMM-14576-settings.png" \
   PMM-14576
@@ -35,7 +40,7 @@ Session name `PMM-14576` above — reuse the same ticket key for follow-up scree
 For a flow that's clearer as motion than a still (e.g. an alert firing, a dashboard panel updating):
 
 ```bash
-node .claude/scripts/pw-record.js \
+PMM_CERT_PATH="$PMM_CERT_PATH" node .claude/scripts/pw-record.js \
   "$PMM_HOST/graph/d/some-dashboard" \
   "/tmp/PMM-14576-alert-firing.mp4" \
   PMM-14576 \

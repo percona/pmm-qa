@@ -86,6 +86,13 @@ terraform/linode-runner/run.sh <run_id> -- "
 "
 ```
 
+Once ready, fetch PMM's own TLS cert over the already cert-pinned exec channel and save it locally — this lets step 4's browser scripts pin PMM's cert too instead of trusting any cert on the connection:
+
+```bash
+terraform/linode-runner/run.sh <run_id> -- "echo | openssl s_client -connect 127.0.0.1:8443 -servername pmm-server 2>/dev/null | openssl x509" \
+  >"terraform/linode-runner/runs/<run_id>/pmm_cert.pem"
+```
+
 ## 3. Databases (ticket-specific, after server is up)
 
 ```bash
@@ -109,8 +116,11 @@ Local Playwright/Chromium, not a remote "computer use" browser — see `pmm-ui-e
 ```bash
 PMM_URL="https://$(cat terraform/linode-runner/runs/<run_id>/ip | tr '.' '-').nip.io" \
 ADMIN_PASSWORD="$(cat terraform/linode-runner/runs/<run_id>/admin_password)" \
+PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
   node .claude/scripts/pmm-ui-login.js <TICKET>
 ```
+
+`PMM_CERT_PATH` pins the exact cert fetched in step 2 (via Chromium's `--ignore-certificate-errors-spki-list`, not a blanket "trust anything") instead of the script's `ignoreHTTPSErrors` fallback. Pass it to `pw-screenshot.js`/`pw-record.js` too when the URL is PMM's own — omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
 ## 5. FB / nightly workflow reproduction (FB Validator, Test Doctor)
 

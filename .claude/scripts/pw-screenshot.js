@@ -18,6 +18,7 @@
 const path = require("node:path");
 const fs = require("node:fs");
 const { chromium } = require("playwright");
+const { spkiPinFromCertFile } = require("./lib/spki-pin");
 
 async function main() {
   const [, , url, outputPath, sessionId] = process.argv;
@@ -31,7 +32,22 @@ async function main() {
   const width = Number(process.env.PMM_UI_WIDTH || 1920);
   const height = Number(process.env.PMM_UI_HEIGHT || 1080);
 
-  const contextOpts = { ignoreHTTPSErrors: true, viewport: { width, height } };
+  // PMM_CERT_PATH (see pmm-ui-login.js) pins PMM's own cert instead of
+  // trusting any cert -- optional since this script also screenshots
+  // non-PMM pages (e.g. a GitHub Actions run) with a real CA already.
+  const certPath = process.env.PMM_CERT_PATH;
+  const launchArgs = [];
+  let ignoreHTTPSErrors = true;
+  if (certPath) {
+    if (!fs.existsSync(certPath)) {
+      console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
+      process.exit(1);
+    }
+    launchArgs.push(`--ignore-certificate-errors-spki-list=${spkiPinFromCertFile(certPath)}`);
+    ignoreHTTPSErrors = false;
+  }
+
+  const contextOpts = { ignoreHTTPSErrors, viewport: { width, height } };
   if (sessionId) {
     if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(sessionId)) {
       console.error(`invalid sessionId '${sessionId}' (letters, digits, '_', '-' only)`);
@@ -48,7 +64,14 @@ async function main() {
     }
   }
 
-  const browser = await chromium.launch();
+  // Explicit executablePath: the pre-installed Chromium revision at
+  // /opt/pw-browsers can drift from what a freshly `npm install`-ed
+  // playwright expects (confirmed live), so don't rely on Playwright's own
+  // bundled-browser resolution to find it.
+  const browser = await chromium.launch({
+    executablePath: "/opt/pw-browsers/chromium",
+    args: launchArgs,
+  });
   const context = await browser.newContext(contextOpts);
   const page = await context.newPage();
 
