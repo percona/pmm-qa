@@ -51,3 +51,23 @@ pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api
     await expect(queryAnalytics.rta.elements.realTimeTable).toBeVisible();
   });
 });
+
+pmmTest(
+  'PMM-T2267 Verify RTA sessions page size is stored in the URL and restored after refresh @rta',
+  async ({ mocks, page, queryAnalytics }) => {
+    await mocks.mockRealTimeAnalyticsSessions();
+    await page.goto(queryAnalytics.rtaSessionsUrl);
+
+    const { rta } = queryAnalytics;
+    const initialSize = await rta.inputs.rowsLimit.textContent();
+    const selectedSize = initialSize === '10' ? '25' : '10';
+
+    await rta.inputs.rowsLimit.click();
+    await rta.builders.rowsPerPageOption(selectedSize).click();
+    await expect.poll(() => new URL(page.url()).searchParams.get('sessions.pageSize')).toBe(selectedSize);
+
+    await page.reload();
+    await expect(rta.inputs.rowsLimit).toHaveText(selectedSize);
+    await expect(rta.elements.sessionRows).toHaveCount(Number(selectedSize));
+  },
+);
