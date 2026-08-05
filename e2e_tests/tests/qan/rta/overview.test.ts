@@ -246,6 +246,9 @@ pmmTest(
   'PMM-T2265 Verify RTA overview table state is stored in the URL and restored after refresh @rta',
   async ({ page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
+    const expectedServiceIds = new URL(page.url()).searchParams.getAll('serviceIds');
+
+    expect(expectedServiceIds).toHaveLength(2);
 
     await rta.buttons.pauseRealTimeAnalytics.click();
     await rta.filterQueriesByText('db.runCommand');
@@ -259,8 +262,7 @@ pmmTest(
     await expect.poll(() => new URL(page.url()).searchParams.get('overview.pageSize')).toBe('10');
     await expect.poll(() => new URL(page.url()).searchParams.get('overview.sort')).not.toBeNull();
 
-    const urlBeforeReload = new URL(page.url());
-    const serviceIds = urlBeforeReload.searchParams.getAll('serviceIds');
+    expect(new URL(page.url()).searchParams.getAll('serviceIds')).toEqual(expectedServiceIds);
 
     await page.reload();
     await rta.elements.realTimeTable.waitFor({ state: 'visible' });
@@ -271,7 +273,7 @@ pmmTest(
     await expect(rta.elements.elapsedTimeColumnHeader).toHaveAccessibleName(
       /Elapsed time Sorted by Elapsed time descending/,
     );
-    expect(new URL(page.url()).searchParams.getAll('serviceIds')).toEqual(serviceIds);
+    expect(new URL(page.url()).searchParams.getAll('serviceIds')).toEqual(expectedServiceIds);
   },
 );
 
