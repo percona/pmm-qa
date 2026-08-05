@@ -23,6 +23,16 @@ set -euo pipefail
 
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_ID="${1:?usage: run.sh <run_id> -- <remote command...>}"
+case "$RUN_ID" in
+  ''|.|..|*/*)
+    echo "invalid run_id '$RUN_ID' -- must be a single path component (no '/', not '.' or '..')" >&2
+    exit 1
+    ;;
+esac
+if ! [[ "$RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "invalid run_id '$RUN_ID' -- letters, digits, '.', '_', '-' only" >&2
+  exit 1
+fi
 shift
 if [ "${1:-}" = "--" ]; then
   shift
@@ -42,9 +52,15 @@ TOKEN=$(cat "$RUN_DIR/exec_token")
 HOST="exec-$(echo "$IP" | tr '.' '-').nip.io"
 CMD="$*"
 
+CACERT="$RUN_DIR/exec_cert.pem"
+[ -f "$CACERT" ] || {
+  echo "run.sh: missing $CACERT -- run_id '$RUN_ID' was provisioned before certificate pinning was added; re-provision it." >&2
+  exit 1
+}
+
 BODY=$(python3 -c 'import json,sys; print(json.dumps({"cmd": sys.argv[1]}))' "$CMD")
 
-if ! RESP=$(curl -k -sS -m 620 -X POST "https://$HOST/exec" \
+if ! RESP=$(curl -sS -m 620 --cacert "$CACERT" -X POST "https://$HOST/exec" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d "$BODY"); then

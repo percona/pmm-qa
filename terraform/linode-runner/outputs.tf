@@ -14,3 +14,7 @@ output "exec_token" {
   value     = random_password.exec_token.result
   sensitive = true
 }
+
+output "exec_cert_pem" {
+  value = tls_self_signed_cert.exec.cert_pem
+}

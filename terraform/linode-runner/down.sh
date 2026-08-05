@@ -10,6 +10,16 @@ set -euo pipefail
 
 MODULE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RUN_ID="${1:?usage: down.sh <run_id>}"
+case "$RUN_ID" in
+  ''|.|..|*/*)
+    echo "invalid run_id '$RUN_ID' -- must be a single path component (no '/', not '.' or '..')" >&2
+    exit 1
+    ;;
+esac
+if ! [[ "$RUN_ID" =~ ^[A-Za-z0-9._-]+$ ]]; then
+  echo "invalid run_id '$RUN_ID' -- letters, digits, '.', '_', '-' only" >&2
+  exit 1
+fi
 RUN_DIR="$MODULE_DIR/runs/$RUN_ID"
 
 if [ ! -d "$RUN_DIR" ]; then

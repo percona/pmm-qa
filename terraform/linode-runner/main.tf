@@ -25,6 +25,44 @@ resource "random_password" "exec_token" {
   special = false
 }
 
+# Generated here, before the instance even boots, instead of by the box
+# itself at cloud-init time -- so run.sh can verify the exec-server's TLS
+# certificate against a CA it already knows, rather than skipping
+# verification entirely (curl -k). Can't scope dns_names to this specific
+# instance's nip.io hostname: the IP doesn't exist yet when this cert has
+# to be generated (it's baked into the same user_data the instance boots
+# from), and confirmed live that curl's --resolve trick to fake a real
+# hostname doesn't help either -- this environment's egress proxy resolves
+# the CONNECT target itself, so a made-up hostname just gets a 502 from
+# the proxy before curl's own --resolve override ever applies. A "*.nip.io"
+# wildcard sidesteps both problems: nip.io is real, publicly resolvable
+# DNS (so the proxy's own CONNECT resolution succeeds), and the wildcard
+# doesn't need to know the IP in advance. The hostname check this gives up
+# is broad (any nip.io subdomain matches), but the chain check is exact --
+# this specific run's uniquely generated private key -- which is the part
+# that actually stops an unrelated third party from impersonating this
+# box.
+resource "tls_private_key" "exec" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+resource "tls_self_signed_cert" "exec" {
+  private_key_pem = tls_private_key.exec.private_key_pem
+
+  subject {
+    common_name = "*.nip.io"
+  }
+  dns_names = ["*.nip.io"]
+
+  validity_period_hours = var.ttl_hours + 1
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth",
+  ]
+}
+
 resource "random_string" "suffix" {
   length  = 5
   special = false
@@ -69,6 +107,8 @@ resource "linode_instance" "runner" {
       ttl_seconds  = var.ttl_hours * 3600
       linode_token = var.linode_token
       exec_token   = random_password.exec_token.result
+      exec_cert    = tls_self_signed_cert.exec.cert_pem
+      exec_key     = tls_private_key.exec.private_key_pem
     }))
   }
 }

@@ -33,11 +33,16 @@ async function main() {
 
   const contextOpts = { ignoreHTTPSErrors: true, viewport: { width, height } };
   if (sessionId) {
-    const storageStatePath = path.join(
-      __dirname,
-      ".sessions",
-      `${sessionId}.json`,
-    );
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(sessionId)) {
+      console.error(`invalid sessionId '${sessionId}' (letters, digits, '_', '-' only)`);
+      process.exit(1);
+    }
+    const sessionsDir = path.join(__dirname, ".sessions");
+    const storageStatePath = path.join(sessionsDir, `${sessionId}.json`);
+    if (path.relative(sessionsDir, storageStatePath).startsWith("..")) {
+      console.error(`invalid sessionId '${sessionId}': resolves outside .sessions/`);
+      process.exit(1);
+    }
     if (fs.existsSync(storageStatePath)) {
       contextOpts.storageState = storageStatePath;
     }
