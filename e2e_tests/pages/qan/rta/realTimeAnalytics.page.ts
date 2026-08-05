@@ -265,8 +265,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   private apiRequest = (request: Request) => request.url().includes(this.apiEndpoint);
 
-  // Elapsed time is rendered in the compact form the overview uses, e.g. '1.5s'
-  // below ten seconds and '42s' above it.
+  // Elapsed time is rendered in the compact form the overview uses, e.g.
+  // '0.003s' below ten seconds and '42s' above it.
   private parseElapsedSeconds = (elapsedTime: null | string) =>
     Number.parseFloat((elapsedTime ?? '').replace(/[^\d.]/g, ''));
 }

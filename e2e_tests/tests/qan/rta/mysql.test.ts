@@ -309,7 +309,7 @@ pmmTest(
     await pmmTest.step('Verify the elapsed time cell uses the unit suffix, not the word', async () => {
       await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
 
-      await expect(queryAnalytics.rta.builders.elapsedTimeForRow('1')).toHaveText('2s');
+      await expect(queryAnalytics.rta.builders.elapsedTimeForRow('1')).toHaveText('2.000s');
     });
   },
 );
