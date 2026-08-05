@@ -251,7 +251,18 @@ do
 done
 echo "configuring pmm-agent on mongos instance"
 docker compose -f docker-compose-sharded.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=mongos_${random_number} mongos pmm-agent setup
-docker compose -f docker-compose-sharded.yaml exec -T mongos pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} mongos_${random_number} 127.0.0.1:27017
+# NOTE: on the mongos we must NOT run the per-collection collectors
+# (collstats/indexstats/dbstats). Against a router those run $collStats/$indexStats on
+# SHARDED collections, which return one row per shard per collection/index; the exporter
+# labels them only by (database, collection, key_name) with no shard label, so the two
+# shards produce duplicate series ("... was collected before with the same name and label
+# values"). A single duplicate makes the scrape parser reject the WHOLE mongos scrape,
+# dropping every mongodb_* metric for the router -- including the mongodb_ss_* serverStatus
+# family the MongoDB Router Summary dashboard needs (Command Operations, Connections,
+# Latencies, etc.). Disabling them here keeps the rich serverStatus/diagnosticdata metrics
+# while avoiding the cross-shard duplicates. The shard mongod services keep
+# --enable-all-collectors; they don't hit this because each shard only sees its own chunks.
+docker compose -f docker-compose-sharded.yaml exec -T mongos pmm-admin add mongodb --enable-all-collectors --disable-collectors=collstats,dbstats,indexstats --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} mongos_${random_number} 127.0.0.1:27017
 
 echo "adding some data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017
