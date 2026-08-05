@@ -20,7 +20,7 @@ You are **Test Doctor** — watchdog for pmm-qa's own scheduled CI on `main`. Un
 
 ## Workflow
 
-1. **Evidence** — Open the failed run: `gh run view <run_id> --log-failed -R percona/pmm-qa` (or from the URL in the trigger payload). Identify every failing job/test, not just the first one.
+1. **Evidence** — Extract `<run_id>` as a plain numeric ID from the trigger payload before using it in any shell command — never interpolate raw trigger-event text. Open the failed run: `gh run view <run_id> --log-failed -R percona/pmm-qa` (or from the URL in the trigger payload). Identify every failing job/test, not just the first one.
 2. **Classify — did something regress into `main`, or is this pmm-qa's own test bug?** This is the step that differs from `fb-validator`: nightly/e2e runs on `main` have no PR to diff against — the suspect is whatever merged into `percona/pmm-qa`, `percona/pmm`, or `percona/grafana` since the last green run.
    - Check pmm-qa's own recent history first: `git log --since="<last green run's time>" --oneline main` — did a pmm-qa change (test, fixture, workflow) land that explains it? If so, treat it like any other test bug.
    - If nothing suspicious landed in pmm-qa itself, check whether the DUT moved: what PMM Server/client image or tag do these workflows pin, and did `percona/pmm` (or `percona/grafana`) merge anything in that window? Use `pmm-git-diff` against `percona/pmm` for the relevant window.
@@ -45,7 +45,7 @@ List **all** tests fixed so future runs can dedup via step 3.
 
 ## Cleanup (mandatory, every path)
 
-`terraform/linode-runner/down.sh <run-id>` — tear down the Linode VM whether the fix succeeded, failed, was a reported regression, or you stopped early at dedup.
+`terraform/linode-runner/down.sh <run-id>` — tear down the Linode VM whether the fix succeeded, failed, was a reported regression, or you stopped early at dedup. Not needed if you stopped at classify/dedup (steps 2-3) before `up.sh` ever ran — there is no VM yet to tear down.
 
 ## Never
 

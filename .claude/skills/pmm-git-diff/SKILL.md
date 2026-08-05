@@ -25,8 +25,9 @@ Grafana PRs often change dashboard JSON under `grafana/public/` or packaged dash
 2. For each file, use a structural JSON diff tool (installed by the SessionStart hook):
 
 ```bash
-gh pr diff <n> --repo percona/grafana -- path/to/dashboard.json | json-diff /dev/stdin
-# or save base/head and compare:
+# gh pr diff has no positional path filter -- fetch base/head content directly instead:
+gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<base_sha>" --jq '.content' | base64 -d > base.json
+gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<head_sha>" --jq '.content' | base64 -d > head.json
 json-diff base.json head.json
 ```
 

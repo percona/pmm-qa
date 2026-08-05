@@ -14,11 +14,14 @@ This environment ships Chromium pre-installed with Playwright already pointed at
 ## Log into PMM UI and screenshot
 
 ```bash
-PMM_URL="https://<linode-ip>" ADMIN_PASSWORD='pmm3admin!' \
-  node .claude/scripts/pmm-ui-login.js PMM-14576
+PMM_HOST="https://$(cat terraform/linode-runner/runs/<run_id>/ip | tr '.' '-').nip.io"
+
+# ADMIN_PASSWORD stays exported from the provisioning step (pmm-linode-provisioning
+# step 2) -- it's unique per run, never a fixed literal.
+PMM_URL="$PMM_HOST" node .claude/scripts/pmm-ui-login.js PMM-14576
 
 node .claude/scripts/pw-screenshot.js \
-  "https://<linode-ip>/graph/d/some-dashboard" \
+  "$PMM_HOST/graph/d/some-dashboard" \
   "/tmp/PMM-14576-settings.png" \
   PMM-14576
 ```
@@ -31,7 +34,7 @@ For a flow that's clearer as motion than a still (e.g. an alert firing, a dashbo
 
 ```bash
 node .claude/scripts/pw-record.js \
-  "https://<linode-ip>/graph/d/some-dashboard" \
+  "$PMM_HOST/graph/d/some-dashboard" \
   "/tmp/PMM-14576-alert-firing.mp4" \
   PMM-14576 \
   20

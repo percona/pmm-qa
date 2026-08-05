@@ -48,7 +48,7 @@ Works from the **default** proxied-HTTPS environment — no special network poli
 export DOCKER_VERSION=...          # from FB JNKPercona comment, or perconalab/pmm-server:3-dev-latest
 export WATCHTOWER_VERSION=...      # optional
 export CLIENT_VERSION='...'        # client tarball URL (for step 3)
-export ADMIN_PASSWORD='pmm3admin!'
+export ADMIN_PASSWORD="$(openssl rand -base64 18)"   # unique per run -- never reuse a fixed password across VMs
 export DOCKER_ENV_VARIABLE='-e PMM_DEBUG=1 -e PMM_ENABLE_TELEMETRY=0'  # override per ticket
 
 terraform/linode-runner/run.sh <run_id> -- "

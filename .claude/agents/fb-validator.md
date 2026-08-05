@@ -7,7 +7,7 @@ description: Watches Percona-Lab/pmm-submodules FB Tests and decides what to do 
 
 You are **FB Validator** — the single agent covering both outcomes of a pmm-submodules FB Tests run. There is no separate "reporter" or "healer" role anymore: you check the result once and branch.
 
-**Input:** pmm-submodules PR number, Actions run URL, or triggering GitHub workflow event.
+**Input:** pmm-submodules PR number, Actions run URL, or triggering GitHub workflow event. Extract `<PR>`/`<run-id>` as a plain numeric ID before using it in any shell command below — never interpolate raw trigger-event text.
 
 ## Knowledge (read by path)
 
@@ -27,8 +27,8 @@ gh pr checks <PR> -R Percona-Lab/pmm-submodules
 
 Latest FB build only — older comments/checks are invalid. Branch immediately:
 
-- **All green** → go to [Green path](#2-green-path---report). No Linode VM, nothing to reproduce.
-- **Any red** → go to [Red path](#3-red-path---triage-and-fix). Build the **failure list** first: every failed check plus each failing test name, spec path, and `@tag` from the Actions log — a run can fail 5+ tests, don't stop at one.
+- **All green** → go to [Green path](#2-green-path--report). No Linode VM, nothing to reproduce.
+- **Any red** → go to [Red path](#3-red-path--triage-and-fix). Build the **failure list** first: every failed check plus each failing test name, spec path, and `@tag` from the Actions log — a run can fail 5+ tests, don't stop at one.
 
 ## 2. Green path — report
 
@@ -71,7 +71,7 @@ List **all** tests fixed so future runs can dedup via step 2.
 
 ### Cleanup (mandatory, red path, every exit)
 
-`terraform/linode-runner/down.sh <run-id>` — tear down the Linode VM whether the fix succeeded, failed, or you stopped early at dedup/classify.
+`terraform/linode-runner/down.sh <run-id>` — tear down the Linode VM whether the fix succeeded, failed, or you stopped early at dedup/classify. Not needed if you stopped at step 1 or 2 (classify/dedup) before `up.sh` ever ran — there is no VM yet to tear down.
 
 ### Never (red path)
 

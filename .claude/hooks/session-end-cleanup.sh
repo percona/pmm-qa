@@ -17,6 +17,9 @@ fi
 RUNNER_DIR="$CLAUDE_PROJECT_DIR/terraform/linode-runner"
 RUNS_DIR="$RUNNER_DIR/runs"
 
+# Scanning every run dir here (not just one this hook remembers starting) is
+# safe: each Claude Code cloud session gets its own isolated VM/working tree,
+# so runs/ never holds another session's in-flight state to collide with.
 [ -d "$RUNS_DIR" ] || exit 0
 
 shopt -s nullglob

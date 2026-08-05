@@ -21,7 +21,7 @@ Returns matrix jobs from `pmm-qa-fb-checks.yml` and Jenkins:
 
 All matrix checks share one **FB Tests** workflow run:
 
-```
+```text
 https://github.com/Percona-Lab/pmm-submodules/actions/runs/<run_id>
 ```
 

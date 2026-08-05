@@ -44,8 +44,8 @@ Format: `pmm-framework --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value
 
 ## Proxy / external / infra
 
-| # | Command | Playbook / script |
-|---|---------|-------------------|
+| # | Command | Playbook / script | Notes |
+|---|---------|-------------------|-------|
 | 25 | `pxc` | `pxc_proxysql_setup.yml` | PXC + ProxySQL |
 | 26 | `haproxy` | `haproxy_setup.yml` | HAProxy frontend |
 | 27 | `external` | `external_setup.yml` | Redis + Node exporter |

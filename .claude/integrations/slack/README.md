@@ -20,7 +20,7 @@ works around the first limit; it doesn't try to work around the second
 
 ## Architecture
 
-```
+```text
 Slack @mention
   -> Socket Mode (outbound websocket from our side -- no public endpoint,
      no Cloudflare Worker, no request-signature verification)
@@ -39,22 +39,26 @@ Socket Mode means the relay only needs an app-level token
 (`connections:write` scope, generated under **Basic Information > App-Level
 Tokens** after installing from the manifest) — no inbound URL to expose.
 
-### Reply-as-bot snippet
+Every Slack event arrives with an `envelope_id` that the relay must ack
+within 3 seconds, or Slack redelivers the same event — and Slack can also
+just retry on its own (e.g. a slow ack). The relay must dedup on Slack's
+event `event_id`/`client_msg_id` before firing the Routine, or a single
+retried delivery fires it twice for the same mention.
 
-Give the fired session's environment `PMM_AI_SLACK_BOT_TOKEN` (the bot
-OAuth token, `xoxb-...`, from installing the app) and have its prompt use
-this instead of the Slack MCP tools when the trigger came from this relay:
+### Reply-as-bot
 
-```bash
-curl -X POST https://slack.com/api/chat.postMessage \
-  -H "Authorization: Bearer $PMM_AI_SLACK_BOT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"channel": "<channel-id>", "thread_ts": "<ts>", "text": "..."}'
+`PMM_AI_SLACK_BOT_TOKEN` (the bot OAuth token, `xoxb-...`, from installing
+the app) stays in the relay process's own managed secret store — it is
+never provisioned into the fired Routine session's environment. Instead,
+the relay exposes a small local endpoint the fired session calls to post
+its reply, and the relay itself makes the `chat.postMessage` call with the
+token it already holds:
+
+```text
+fired Routine session
+  -> POST http://<relay-internal-endpoint>/reply {channel, thread_ts, text}
+  -> relay calls chat.postMessage with PMM_AI_SLACK_BOT_TOKEN (never leaves the relay)
 ```
-
-Same visibility caveat as `LINODE_TOKEN`: no real secrets store exists yet
-in the environment config, so this is plaintext-visible to any teammate
-with access to that environment.
 
 ## Channel -> routine routing table
 
