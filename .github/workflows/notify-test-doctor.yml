@@ -29,12 +29,13 @@ jobs:
     # notifies. For the other four, only their own unattended cron run
     # (github.event.workflow_run.event == 'schedule') notifies -- a human's
     # manual workflow_dispatch re-run while debugging doesn't re-trigger
-    # Test Doctor on itself. head_branch is also checked so a scheduled run
-    # against a PR branch (if one is ever configured) doesn't notify --
-    # this watcher is for main only.
+    # Test Doctor on itself. head_branch is also checked against the repo's
+    # actual default branch (not a hardcoded 'main') so a scheduled run
+    # against some other branch (if one is ever configured) doesn't notify --
+    # this watcher is for the default branch only.
     if: >
       github.event.workflow_run.conclusion == 'failure' &&
-      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_branch == github.event.repository.default_branch &&
       (
         github.event.workflow_run.event == 'schedule' ||
         github.event.workflow_run.name == 'Nightly E2E tests Matrix (remote PMM Server)'

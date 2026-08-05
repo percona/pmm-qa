@@ -14,17 +14,26 @@ if [ -z "${LINODE_TOKEN:-}" ]; then
   exit 0
 fi
 
+# Without our own session ID we can't safely tell our runs apart from a
+# concurrent session's sharing this same working tree -- skip rather than
+# risk tearing down someone else's active VM. The on-box self-destruct timer
+# is the real guarantee regardless (see cloud-init.yaml.tftpl).
+if [ -z "${CLAUDE_CODE_SESSION_ID:-}" ]; then
+  exit 0
+fi
+
 RUNNER_DIR="$CLAUDE_PROJECT_DIR/terraform/linode-runner"
 RUNS_DIR="$RUNNER_DIR/runs"
 
-# Scanning every run dir here (not just one this hook remembers starting) is
-# safe: each Claude Code cloud session gets its own isolated VM/working tree,
-# so runs/ never holds another session's in-flight state to collide with.
 [ -d "$RUNS_DIR" ] || exit 0
 
 shopt -s nullglob
 for run_dir in "$RUNS_DIR"/*/; do
   run_id=$(basename "$run_dir")
   [ -f "$run_dir/terraform.tfstate" ] || continue
+  # up.sh tags each run with the session that provisioned it -- only tear
+  # down our own; an untagged or differently-tagged run is left alone.
+  [ -f "$run_dir/session_id" ] || continue
+  [ "$(cat "$run_dir/session_id")" = "$CLAUDE_CODE_SESSION_ID" ] || continue
   timeout 90 "$RUNNER_DIR/down.sh" "$run_id" >>"$run_dir/session-end-cleanup.log" 2>&1 || true
 done

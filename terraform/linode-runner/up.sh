@@ -75,6 +75,13 @@ chmod 600 "$RUN_DIR/exec_token"
 echo "$ROLE" >"$RUN_DIR/role"
 terraform -chdir="$MODULE_DIR" output -state="$STATE" -raw exec_cert_pem >"$RUN_DIR/exec_cert.pem"
 
+# Tags this run with the Claude Code session that provisioned it, so
+# session-end-cleanup.sh only ever tears down its own runs -- not another
+# concurrent session's, if more than one happens to share this working tree.
+if [ -n "${CLAUDE_CODE_SESSION_ID:-}" ]; then
+  echo "$CLAUDE_CODE_SESSION_ID" >"$RUN_DIR/session_id"
+fi
+
 HOST="exec-$(echo "$IP" | tr '.' '-').nip.io"
 
 echo "Instance up: $IP (exec-server reachable as https://$HOST) -- waiting for it to answer..."
