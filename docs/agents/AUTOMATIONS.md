@@ -38,6 +38,23 @@ curl -X POST https://api.anthropic.com/v1/claude_code/routines/<routine_id>/fire
 
 `<routine_id>` and `<token>` come from opening the Test Runner routine in the claude.ai Routines UI and clicking **"Add an API trigger"** — the token is shown once and can't be retrieved again. Configure a Jira Automation "Send web request" action with the above.
 
+### Test Runner flow
+
+```mermaid
+flowchart LR
+    A1["You, in a Claude Code\nsession on this repo:\n'please test PMM-15196'"] --> C["Test Runner reads\nthe ticket + linked PRs"]
+    A2["Jira Automation rule fires\nthe Test Runner Routine"] -.->|"new session, from\nthe ticket key alone"| C
+    A3["PMM AI Routine fires from a\nSlack @pmm-ai mention"] -.->|"routed here by Router\n— see Router diagram below"| C
+    C --> D["Provisions a throwaway\nLinode VM"]
+    D --> E["Brings up PMM Server\n+ the databases the ticket needs"]
+    E --> F["Runs the manual QA steps\n(terminal + browser evidence)"]
+    F --> R["Reads fb-reporter.md,\nfollows it in this\nsame session"]
+    R --> G["Posts results as a\nDevelopers-only Jira comment"]
+    G --> H["Tears down the VM"]
+```
+
+A1 is interactive (agent-matching finds Test Runner by description); A2 and A3 both spin up a fresh session from nothing, but only A2 is Test Runner's own Routine firing directly — A3 is Router's Routine firing and then, within that same session, becoming Test Runner. The FB Reporter step is a direct file-read, not a nested subagent spawn — same reasoning as the Router diagram below.
+
 ## Investigator — event-triggered from both sources, no polling
 
 `Percona-Lab/pmm-submodules` is also a Percona-owned repo, not a third party's — so unlike an earlier design, there's no need for an hourly polling Routine to catch FB Tests going red. Both of Investigator's sources push an event directly:
@@ -55,9 +72,48 @@ Investigator also answers a question or a suspected customer-reported bug direct
 
 A second Investigator nuance worth calling out: when the FB source is the one that triggered it, a "test bug" fix isn't always a normal, ready-to-merge PR. Submodules tests occasionally get updated *ahead of* the upstream `percona/pmm`/`percona/grafana` PR that will actually introduce the behavior they now expect. Investigator checks for that (an open, not-yet-merged upstream PR touching the same area) before opening a PR — if one exists, it opens the fix as a **draft PR** noting what it's blocked on, instead of a normal one, since merging it before the upstream change lands would just break `main`.
 
+### Investigator flow
+
+```mermaid
+flowchart LR
+    A1["pmm-qa's own scheduled\nCI fails on main"] -.->|"notify-investigator.yml\nfires the Routine"| C
+    A2["pmm-submodules FB Tests\ngoes red"] -.->|"needs a notify workflow\nthere — not built yet"| C
+    A3["Someone asks directly:\na known failure, or a\nquestion / suspected bug"] --> C
+    A4["PMM AI Routine fires from a\nSlack @pmm-ai mention"] -.->|"routed here by Router\n— see Router diagram below"| C
+    C["Extract: a failure list + ref,\nor a described scenario"] --> D{"Already tracked?\n(open PR, or an existing\nJira ticket for a report)"}
+    D -->|"Yes"| E["Stop — link\nwhat's already there"]
+    D -->|"No"| F["Reproduce on a throwaway\nLinode VM — the failing\ncommand, or the scenario"]
+    F --> G{"What actually\nhappened?"}
+    G -->|"Didn't reproduce"| H["Flake, or not enough detail\n— say so, ask for more if\nthis was a secondhand report"]
+    G -->|"Described scenario is\nnot an actual bug"| O["Not a bug — explain\nthe right way, grounded"]
+    G -->|"CI failure / scenario-\ndescribed bug confirmed"| P{"Where does it\nactually live?"}
+    P -->|"Product"| L["Report it with\nevidence — no fix"]
+    P -->|"pmm-qa's test code"| I{"FB-triggered, and an open\nupstream PR explains the\nnew expectation?"}
+    I -->|"No"| J["Fix pmm-qa,\nopen a normal PR"]
+    I -->|"Yes"| K["Fix pmm-qa, open a\nDRAFT PR — blocked on\nthat upstream PR"]
+```
+
+No gate asking "was someone waiting for an answer" — that's already implied by which outcome you land on. "Described scenario is not an actual bug" only ever applies when someone described a scenario to check in the first place; a CI/FB failure that reproduces is never that outcome, it's always "confirmed bug." The only real fork is "where does it actually live?" (P) — test vs. product. The draft-PR branch (I → K) only applies when an FB-triggered test bug is anticipating a not-yet-merged upstream PR — merging it early would break `main`.
+
 ## FB Reporter — no Routine of its own
 
 No trigger or Routine of its own — it's read-and-followed by `test-runner` (see "why not spawned as a nested subagent" above), or invoked directly by a person. Nothing to wire up here beyond the file itself existing.
+
+### FB Reporter flow
+
+```mermaid
+flowchart LR
+    A1["Test Runner reads\nfb-reporter.md, follows it\nin the same session\n(every ticket has a PR)"] --> C
+    A2["Someone asks directly for\na specific submodules PR"] --> C
+    C["gh pr checks --watch\non the submodules PR"] --> D{"All green?"}
+    D -->|Yes| E["Screenshot the FB Tests\nrun, attach to Jira"]
+    D -->|"Some red"| F["gh run rerun --failed\non just the failed job(s)"]
+    F --> G{"Retried\ntwice yet?"}
+    G -->|"No"| C
+    G -->|"Yes, still red"| H["Stop — no screenshot.\nReport which tests are\nstill failing"]
+```
+
+The retry loop caps at 2 total re-checks. Still red after that stops here on purpose — diagnosing or fixing it is Investigator's job, not FB Reporter's.
 
 ## PMM AI — custom Slack app (design only, not built yet)
 
@@ -74,6 +130,26 @@ the Routine's prompt or into a mega-prompt trying to guess intent itself.
 Nothing here is deployed: the app isn't created in Slack yet, no relay
 process exists, and the `PMM AI` Routine itself hasn't been created either
 (routines only get created/changed here when explicitly asked for).
+
+### PMM AI / Router flow
+
+```mermaid
+flowchart LR
+    A["Someone @mentions\n@pmm-ai in Slack"] --> B["Relay picks up\nthe mention"]
+    B -.->|"fires the single\n'PMM AI' Routine"| C["Session reads router.md,\nfollows it"]
+    C --> D{"Router matches\nthe message"}
+    D -->|"Test Runner"| D1[["Session becomes Test Runner\n— see its own diagram above"]]
+    D -->|"Investigator"| D2[["Session becomes Investigator\n— see its own diagram above"]]
+    D -->|"FB Reporter"| D3[["Session becomes FB Reporter\n— see its own diagram above"]]
+    D -->|"Just a question"| D4["Router answers directly,\nno hand-off"]
+    D1 --> E["Reply goes back through\nthe relay's /reply endpoint"]
+    D2 --> E
+    D3 --> E
+    D4 --> E
+    E --> F["Relay posts in Slack\nas 'PMM AI'"]
+```
+
+The double-bordered boxes (D1–D3) are hand-offs, not sub-flows drawn twice — once matched, the rest is literally the diagram above for that agent. Only D4 (a plain question) skips all of that. A suspected customer bug report lands in D2 — Investigator's own question/suspected-bug branch, not a separate triage agent.
 
 ## Routine ownership — read before relying on this
 
