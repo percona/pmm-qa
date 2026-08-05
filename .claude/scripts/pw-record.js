@@ -39,22 +39,21 @@ async function main() {
 
   // PMM_CERT_PATH (see pmm-ui-login.js) pins PMM's own cert instead of
   // trusting any cert -- optional since this script can also record
-  // non-PMM pages with a real CA already.
+  // non-PMM pages with a real CA already, which strict verification (the
+  // default below) already handles fine.
   const certPath = process.env.PMM_CERT_PATH;
   const launchArgs = [];
-  let ignoreHTTPSErrors = true;
   if (certPath) {
     if (!fs.existsSync(certPath)) {
       console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
       process.exit(1);
     }
     launchArgs.push(`--ignore-certificate-errors-spki-list=${spkiPinFromCertFile(certPath)}`);
-    ignoreHTTPSErrors = false;
   }
 
   const videoDir = fs.mkdtempSync(path.join(os.tmpdir(), "pmm-qa-recording-"));
   const contextOpts = {
-    ignoreHTTPSErrors,
+    ignoreHTTPSErrors: false,
     viewport: { width, height },
     recordVideo: { dir: videoDir, size: { width, height } },
   };
