@@ -30,6 +30,12 @@ locals {
     "pmmqa-${var.role}-${var.run_id}-${random_string.suffix.result}",
     0, 63,
   )
+  # Linode firewall labels cap at 32 chars, well below the instance label's
+  # 63 -- truncate independently instead of prefixing "fw-" onto local.label.
+  firewall_label = substr(
+    "fw-${var.role}-${var.run_id}-${random_string.suffix.result}",
+    0, 32,
+  )
 }
 
 resource "linode_instance" "runner" {
@@ -60,7 +66,7 @@ resource "linode_instance" "runner" {
 }
 
 resource "linode_firewall" "runner" {
-  label = "fw-${local.label}"
+  label = local.firewall_label
 
   inbound_policy  = "DROP"
   outbound_policy = "ACCEPT"

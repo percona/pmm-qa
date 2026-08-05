@@ -19,6 +19,7 @@ fi
 
 : "${LINODE_TOKEN:?LINODE_TOKEN must be set}"
 
+export TF_VAR_linode_token="$LINODE_TOKEN"
 export TF_DATA_DIR="$RUN_DIR/.terraform"
 export TF_PLUGIN_CACHE_DIR="$MODULE_DIR/.plugin-cache"
 STATE="$RUN_DIR/terraform.tfstate"
