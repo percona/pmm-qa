@@ -63,6 +63,18 @@ Percona-Lab/pmm-submodules for the latest FB Tests result since your last
 check. If nothing new finished, do nothing and exit.
 ```
 
+## PMM AI — custom Slack app (design only, not built yet)
+
+Claude Tag can't have a second identity in a workspace already paired to
+another Claude org, so mention-based Slack triggering for this project
+needs its own small app. Full design — manifest, Socket Mode relay, the
+channel-to-routine routing table, and how replies post as the bot instead
+of a person — is in
+[`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md).
+Nothing here is deployed: the app isn't created in Slack yet, no relay
+process exists, and the `PMM AI` Routine itself hasn't been created either
+(routines only get created/changed here when explicitly asked for).
+
 ## Routine ownership — read before relying on this
 
 Confirmed from the docs: a Routine's fired session runs under **its creator's personal identity** — commits, PRs, and connector actions (Slack, Jira, GitHub) all appear as that person, using their connectors. There is no service-account or shared-identity option today. If the creator's connector auth lapses or they leave the team, the Routine breaks silently — there's no documented mitigation beyond recreating it under someone else's account. Sharing a session link is also one-way: a teammate can view the latest state, but it does not update live and isn't collaboratively editable — there's no "shared chat everyone works in together" mechanism.
