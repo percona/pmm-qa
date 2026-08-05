@@ -74,7 +74,7 @@ one mega-prompt trying to guess intent across unrelated domains:
 
 | Channel (placeholder) | Routine | Notes |
 |---|---|---|
-| PMM QA channel(s) | `PMM AI` | General router — reads `AGENTS.md` + `.claude/agents/*.md`, matches the message to test-runner / test-doctor by description, or just answers directly if it's a general question. |
+| PMM QA channel(s) | `PMM AI` | General router — reads `AGENTS.md` + `.claude/agents/*.md`, matches the message to test-runner / investigator / fb-reporter by description, or just answers directly if it's a general question. |
 | Prod/support channel(s) | *(future — see below)* | Not yet built. |
 
 Fill in real channel IDs once the app is installed and invited to them.
@@ -88,7 +88,7 @@ involved), or they're reporting what they believe is a bug and it needs to
 be reproduced and confirmed (or ruled out) before anyone treats it as real.
 Working name **"support-triage"** ("investigator" is now taken — see
 `.claude/agents/investigator.md` — and this could plausibly just hand off
-to it directly once built, the same way Test Doctor does, instead of
+to it directly once built, the same way Investigator does, instead of
 reproducing anything itself).
 
 Not implemented. When it is, the channel-based routing table above is the

@@ -1,6 +1,6 @@
 ---
 name: fb-reporter
-description: Given a pmm-submodules PR (usually the one linked to a Jira ticket Test Runner is already reporting on), gets a clean FB Tests screenshot for evidence — retrying just the failed jobs if the run looks flaky — and attaches it to the ticket's FB screenshot field. Does not diagnose or fix a genuine failure; that's Test Doctor/Investigator's job. Invoked by Test Runner as part of its own reporting step (read this file directly and follow it — see "Being invoked" below), or ask directly for a specific submodules PR.
+description: Given a pmm-submodules PR (usually the one linked to a Jira ticket Test Runner is already reporting on), gets a clean FB Tests screenshot for evidence — retrying just the failed jobs if the run looks flaky — and attaches it to the ticket's FB screenshot field. Does not diagnose or fix a genuine failure; that's Investigator's job. Invoked by Test Runner as part of its own reporting step (read this file directly and follow it — see "Being invoked" below), or ask directly for a specific submodules PR.
 ---
 
 # FB Reporter
@@ -32,12 +32,12 @@ Needs from whoever handed this to you: the pmm-submodules PR number and the Jira
    - `gh run rerun <run-id> --failed -R Percona-Lab/pmm-submodules` — re-runs only the failed jobs, not the whole matrix.
    - Wait for it to finish, re-check (step 1).
    - Retry at most **2 times total**. If it goes green on a retry, screenshot + attach as in step 2, and note in the attached comment/body that it took a retry to pass.
-4. **Still red after 2 retries** → this looks like a real failure, not flakiness. Do **not** attach a screenshot. Report back which tests are still failing (to Test Runner if invoked from there, or directly if asked ad hoc) and stop — diagnosing or fixing it is Test Doctor/Investigator's job, not yours.
+4. **Still red after 2 retries** → this looks like a real failure, not flakiness. Do **not** attach a screenshot. Report back which tests are still failing (to Test Runner if invoked from there, or directly if asked ad hoc) and stop — diagnosing or fixing it is Investigator's job, not yours.
 
 ## Never
 
 - Attach a screenshot when any check is red, retries or not
 - Post Jira **comments** — this only updates `customfield_10492` and its attachment; comments are Test Runner's or a human's
-- Retry more than twice — past that, it's Test Doctor/Investigator's job to look at, not another retry
+- Retry more than twice — past that, it's Investigator's job to look at, not another retry
 - Attempt to diagnose or fix a genuine failure — hand that off, don't investigate it yourself
 - Clone `pmm-submodules` — `gh` only

@@ -93,7 +93,7 @@ implementation reference.
 ```bash
 export LINODE_TOKEN=...
 
-# 1. Provision. role is free text (test-runner/test-doctor/smoketest/...),
+# 1. Provision. role is free text (test-runner/investigator/smoketest/...),
 #    run_id must be unique (a Jira key, a PR number, whatever you like).
 terraform/linode-runner/up.sh test-runner PMM-15196
 
@@ -109,7 +109,7 @@ terraform/linode-runner/down.sh PMM-15196
 Testing a fix that isn't on `main` yet? Push it to a branch first, then:
 
 ```bash
-PMM_QA_REF=my-fix-branch terraform/linode-runner/up.sh test-doctor heal-4376
+PMM_QA_REF=my-fix-branch terraform/linode-runner/up.sh investigator heal-4376
 # ...or on an already-running instance:
 terraform/linode-runner/sync.sh heal-4376 my-fix-branch
 ```

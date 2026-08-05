@@ -26,7 +26,7 @@ Both share port 443 (nginx routes by SNI hostname) and are reachable at the same
 
 ## Pick a run_id
 
-Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, or for Test Doctor — `heal-<submodules-pr>` when investigating an FB Tests red, `nightly-<workflow>-<date>` when investigating its own scheduled CI. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
+Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, or for Investigator — `heal-<submodules-pr>` when investigating an FB Tests red, `nightly-<workflow>-<date>` when investigating its own scheduled CI. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
 
 ## 1. Provision the VM
 
@@ -35,7 +35,7 @@ export LINODE_TOKEN=...   # already in this environment's secrets; never print i
 terraform/linode-runner/up.sh <role> <run_id>
 ```
 
-`role` is `test-runner` or `test-doctor` (free text, just for the tag). This:
+`role` is `test-runner` or `investigator` (free text, just for the tag). This:
 - Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443, tagged `pmm-qa-ephemeral`.
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or whatever `PMM_QA_REF` names (must already be pushed; see "Never code on the Linode VM" above).
@@ -122,7 +122,7 @@ PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
 
 `PMM_CERT_PATH` pins the exact cert fetched in step 2 (via Chromium's `--ignore-certificate-errors-spki-list`, not a blanket "trust anything") instead of the script's `ignoreHTTPSErrors` fallback. Pass it to `pw-screenshot.js`/`pw-record.js` too when the URL is PMM's own — omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
-## 5. FB / nightly workflow reproduction (Test Doctor, Investigator)
+## 5. FB / nightly workflow reproduction (Investigator)
 
 Follow `pmm-qa/.github/workflows/runner-e2e-tests-codeceptjs.yml`, `runner-e2e-tests-playwright.yml`, or `runner-integration-cli-tests.yml` for the exact steps — not Jenkins staging. If the fix under test lives on a branch, push it, then `up.sh`/`sync.sh` with `PMM_QA_REF` set to that branch — never patch it in by hand on the box.
 

@@ -9,7 +9,7 @@ description: PMM GitHub repository map, gh CLI usage, and rules for which repos 
 
 | Repo | Remote | Agent may open PR? |
 |------|--------|-------------------|
-| `percona/pmm-qa` | QA tests, provisioning | **Yes** (Test Runner, Test Doctor, Investigator, FB Reporter) |
+| `percona/pmm-qa` | QA tests, provisioning | **Yes** (Test Runner, Investigator, FB Reporter) |
 | `percona/pmm` | PMM server monorepo | **No** (read/diff only) |
 | `percona/grafana` | Grafana UI | **No** (read/diff via `gh`) |
 | `Percona-Lab/pmm-submodules` | FB integration | **Never clone** — `gh` only |
