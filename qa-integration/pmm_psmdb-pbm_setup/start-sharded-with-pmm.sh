@@ -244,6 +244,20 @@ do
     docker compose -f docker-compose-sharded-with-pmm.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}_${random_number} $node pmm-agent setup
     docker compose -f docker-compose-sharded-with-pmm.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --cluster=sharded --environment=mongo-sharded-dev --username=${pmm_user} --password=${pmm_pass} ${node}_${random_number} 127.0.0.1:27017
 done
+
+# Enable FTDC on the mongos so it exposes the serverStatus (mongodb_ss_*) metric family.
+# A mongos has no dbpath, so FTDC has no default diagnostic.data directory and starts
+# DISABLED -- and it refuses to enable until diagnosticDataCollectionDirectoryPath is set
+# ("FTDC cannot be enabled without setting the set parameter 'diagnosticDataCollectionDirectoryPath'
+# first"). The PMM exporter reads serverStatus out of getDiagnosticData, so without this the
+# MongoDB Router Summary serverStatus panels (Command Operations, Connections, Latencies,
+# Queued Operations, Reads & Writes) stay empty. Give FTDC a writable dir, then enable it
+# (order matters). Doing it at runtime here because the config-file setParameter is applied
+# before the dir exists and silently leaves FTDC off.
+echo "enabling FTDC on the mongos (needed for mongodb_ss_* / Router Summary)"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos bash -c 'mkdir -p /var/lib/mongo/mongos.diagnostic.data && chown -R mongod:mongod /var/lib/mongo/mongos.diagnostic.data'
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos mongo "mongodb://root:root@localhost/admin" --quiet --eval 'db.adminCommand({setParameter:1, diagnosticDataCollectionDirectoryPath:"/var/lib/mongo/mongos.diagnostic.data"}); db.adminCommand({setParameter:1, diagnosticDataCollectionEnabled:true});'
+
 echo "configuring pmm-agent on mongos instance"
 docker compose -f docker-compose-sharded-with-pmm.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=mongos_${random_number} mongos pmm-agent setup
 # NOTE: on the mongos we must NOT run the per-collection collectors
