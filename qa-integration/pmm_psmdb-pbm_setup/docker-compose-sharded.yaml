@@ -249,9 +249,20 @@ services:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - ./conf/datagen:/etc/datagen:ro
+      - ./conf/mongos:/etc/mongos
     privileged: true
     cgroup: host
-    command: "mongos --keyFile=/etc/keyfile --configdb rscfg/rscfg01:27017,rscfg02:27017,rscfg03:27017 --port 27017 --bind_ip 0.0.0.0"
+    environment:
+      - "PMM_AGENT_SERVER_ADDRESS=${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}"
+      - "PMM_AGENT_SERVER_USERNAME=admin"
+      - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
+      - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    # Run mongos as a proper systemd-managed service (see conf/mongos/mongos.service)
+    # instead of as the container's raw PID 1, so this container can also run
+    # its own local pmm-agent -- otherwise the router has to be registered
+    # "remotely" from another node's agent and ends up misattributed to that
+    # node's identity instead of its own (see start-sharded.sh).
+    entrypoint: bash -c "systemctl enable mongos && exec /usr/sbin/init"
     networks:
       - pmm-qa
       - pmm-ui-tests1

@@ -249,8 +249,9 @@ do
     docker compose -f docker-compose-sharded.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}._${random_number} $node pmm-agent setup
     docker compose -f docker-compose-sharded.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --replication-set=${rs} --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} --host=${node} --port=27017 ${node}_${random_number}
 done
-echo "configuring pmm-agent on primary rscfg01 for mongos instance"
-docker compose -f docker-compose-sharded.yaml exec -T rscfg01 pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} --host=mongos --port=27017 mongos_${random_number}
+echo "configuring pmm-agent on mongos instance"
+docker compose -f docker-compose-sharded.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=mongos_${random_number} mongos pmm-agent setup
+docker compose -f docker-compose-sharded.yaml exec -T mongos pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} mongos_${random_number} 127.0.0.1:27017
 
 echo "adding some data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017
