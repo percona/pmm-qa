@@ -1,7 +1,7 @@
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 
 export default class PostgresqlInstancesOverviewDashboard {
-  url = 'graph/d/mysql-instance-overview/mysql-instances-overview';
+  url = 'graph/d/postgresql-instance-overview/postgresql-instances-overview';
   metrics: GrafanaPanel[] = [
     { name: 'Databases monitored', type: 'stat' },
     { name: 'Executed queries', type: 'timeSeries' },
