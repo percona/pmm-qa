@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-start.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
       }
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/block-pmm-submodules-clone.sh"
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/block-pmm-submodules-clone.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
       }
@@ -26,7 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-end-cleanup.sh"
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-end-cleanup.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
       }
