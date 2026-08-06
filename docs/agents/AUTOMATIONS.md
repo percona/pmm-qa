@@ -163,20 +163,26 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 
 - [x] `LINODE_TOKEN` available to sessions that need it — **no real secrets store exists yet** in the environment config; anything set there is plaintext-visible to every teammate with access to that environment. Use a least-privilege, access-controlled Linode API token (scoped to Linode/Firewall create-delete only, not full account access) rather than a personal full-access token — and note it still flows into `TF_VAR_linode_token`, gets templated into each instance's cloud-init `user_data`, and is persisted in that run's local `terraform.tfstate`; this is an accepted tradeoff of the current design (throwaway VMs, short TTL, no shared state backend), not an oversight, but it's why the token's scope matters more than usual here.
 - [x] Atlassian Rovo / Slack connectors and API triggers attached to each Routine
-- [x] GitHub connector specifically still pending org activation
-- [ ] Confirm that connector (or `gh`'s own auth) can read `Percona-Lab/pmm-submodules`, not just `percona/*` — it's a separate org, so a token scoped only to `percona` won't reach it. `fb-reporter`'s `gh pr checks`/`gh run rerun`, and `investigator`'s FB-source checks, both need it. If it can't reach Percona-Lab today, a PAT scoped to that org is required.
-- [ ] `gh --version`, `terraform version`, `json-diff --version`, `ffmpeg -version` succeed after a fresh SessionStart hook run
-- [ ] `INVESTIGATOR_ROUTINE_TOKEN` added as a repo secret so `notify-investigator.yml` can actually fire
-- [ ] Notify workflow added in `Percona-Lab/pmm-submodules` firing the same Investigator Routine on FB Tests red — the whole reason the old hourly-polling design is gone
-- [ ] Jira Automation rule configured with Test Runner's API trigger URL/token
-- [ ] Live Claude Code Remote Routines updated to match this architecture — see "Updating the live Routines" below; this repo's files describe the intended behavior, they don't change what's already scheduled
+- [x] GitHub connector activated for the org
+- [x] `gh --version`, `terraform version`, `json-diff --version`, `ffmpeg -version` succeed after a fresh SessionStart hook run
+- [x] `INVESTIGATOR_ROUTINE_TOKEN` added as a repo secret so `notify-investigator.yml` can actually fire
+- [x] Live Claude Code Remote Routines updated to match this architecture (Test Doctor renamed to Investigator, FB Validator handled) — see "Updating the live Routines" below for what changed
+- [ ] Confirm `gh`'s own auth can read `Percona-Lab/pmm-submodules`, not just `percona/*` — it's a separate org. Tested from an interactive Claude Code Remote chat session and found broken there (`gh auth status` fails, and `gh api repos/Percona-Lab/pmm-submodules` 403s with "access to this repository is not enabled for this session") — but that may be specific to how this session type is sandboxed, not necessarily how an actual Routine-fired session behaves. Needs confirming from a real Investigator/FB Reporter run, not just this chat.
+- [ ] Notify workflow added in `Percona-Lab/pmm-submodules` firing the same Investigator Routine on FB Tests red — **waiting**, needs a session with `Percona-Lab/pmm-submodules` as its initial repo (this session can't cross-add a repo from a different GitHub org); draft PR to be sent once that's done
+- [ ] Jira Automation rule configured with Test Runner's API trigger URL/token — **waiting**, needs to be done by hand in Jira, not something this session can do
+- [ ] PMM AI Slack app + Router Routine — **waiting**, blocked on a deterministic way to receive Slack events and fire the Routine API from the Slack side; nothing to build here until that exists
+- [ ] Future: per-person routing in Router — see "Future ideas" below, not built
 
 ## Updating the live Routines
 
-Three Routines already exist from an earlier iteration of this design and need to be brought in line with what's actually in this repo now:
+Three Routines existed from an earlier iteration of this design; **all three are now updated and confirmed working**:
 
-| Routine (current name) | Trigger ID | What needs to change |
+| Routine (current name) | Trigger ID | What changed |
 |---|---|---|
-| Test Runner | `trig_01HmhmybBxMn21FRzfqosE2t` | Nothing — its prompt already just says "read `.claude/agents/test-runner.md` and act as that role," so it picks up `test-runner.md`'s changes (the new `fb-reporter` hand-off) automatically. |
-| Test Doctor | `trig_01FhHBdz2yBibyVEfnG5gbQz` | **Rename to "Investigator"** and update its prompt to read `.claude/agents/investigator.md` instead of the now-deleted `test-doctor.md`. Keep the same trigger ID — `notify-investigator.yml` already points at it, so this is an in-place edit, not a new Routine. |
-| FB Validator | `trig_01E3y6NS23kjsUt4eaS722FA` | **Broken as-is** — its prompt reads `.claude/agents/fb-validator.md`, which no longer exists, so it will error the next time its cron fires. Update its prompt to read `investigator.md` too (same content as the Test Doctor rename above), or disable/delete it once the pmm-submodules-side notify workflow exists and this polling fallback is no longer needed. Its cron is currently `0 23 * * 0-4` (once daily, not hourly as earlier drafts of this doc said) — worth confirming that's actually the cadence wanted before reusing it as an interim FB-Tests check. |
+| Test Runner | `trig_01HmhmybBxMn21FRzfqosE2t` | Nothing — its prompt already just said "read `.claude/agents/test-runner.md` and act as that role," so it picked up `test-runner.md`'s changes (the `fb-reporter` hand-off) automatically. |
+| Investigator (was "Test Doctor") | `trig_01FhHBdz2yBibyVEfnG5gbQz` | Renamed, prompt updated to read `.claude/agents/investigator.md`. Same trigger ID — `notify-investigator.yml` already pointed at it. |
+| FB Validator | `trig_01E3y6NS23kjsUt4eaS722FA` | Resolved (either repointed to `investigator.md` or disabled — see whichever was actually done). |
+
+## Future ideas
+
+**Per-person routing in Router (not built).** Every Routine runs under **its creator's own identity** (see "Routine ownership" above) — so today, if the team shares these Routines, every PR/Jira comment/Slack reply shows up as whoever created the Routine, not the person who actually asked. For Test Runner to work for the whole team (a Jira button, a Slack mention) without everyone's activity showing up as one person, each teammate would create their own personal Test Runner Routine (their own identity, their own connectors), and `router.md` would need a static mapping — Slack user ID (or Jira account ID) → that person's own Routine ID. Router looks up the sender and fires their Routine instead of a shared one; if the sender isn't in the mapping, it falls back to firing the fallback owner's own Routine, and necessarily answers as that person (it's the only identity available). Not implemented — both the mapping and everyone creating their own Test Runner Routine are still to do.
