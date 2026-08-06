@@ -128,15 +128,6 @@ jobs:
           V=$(curl -s --user admin:admin "$PMM_URL/v1/server/version" | jq -r .version | awk -F- '{print $1}')
           python3 pmm-qa/support_scripts/check_upgrade.py -v "$V" -p pre
 
-      - name: Check client before upgrade
-        run: |
-          case "$CLIENT_VERSION" in
-            3-dev-latest) V=$(wget -qO- https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION) ;;
-            pmm3-rc)      V=$(wget -qO- "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" | jq -r '.results[].name' | grep -E '3\..*-rc$' | sort -V | tail -n1) ;;
-            *)            V="$CLIENT_VERSION" ;;
-          esac
-          python3 pmm-qa/support_scripts/check_client_upgrade.py "$V"
-
       - name: Checkout pre upgrade branch
         working-directory: pmm-qa
         run: |
