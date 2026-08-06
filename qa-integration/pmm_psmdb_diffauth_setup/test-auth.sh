@@ -93,7 +93,7 @@ docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mgodatagen -
 tests=${TESTS:-yes}
 if [ $tests = "yes" ]; then
     echo "running tests"
-    output=$(docker compose -f docker-compose-pmm-psmdb.yml run test pytest -s --verbose test.py)
+    output=$(docker compose -f docker-compose-pmm-psmdb.yml --profile tests run test pytest -s --verbose test.py)
     else
     echo "skipping tests"
 fi

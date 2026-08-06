@@ -14,6 +14,11 @@ services:
     command: /bin/bash
 
   test:
+    # Only started when the "tests" profile is active, so `docker compose up -d`
+    # never launches it. The test suite runs via `docker compose run test ...`
+    # (which targets the service by name regardless of profile), gated on TESTS
+    # in test-auth.sh.
+    profiles: ["tests"]
     container_name: test
     hostname: test
     environment:

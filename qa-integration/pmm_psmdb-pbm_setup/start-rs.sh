@@ -51,8 +51,8 @@ tests=${TESTS:-yes}
 if [ $tests != "no" ]; then
     echo
     echo "running tests"
-    docker compose -f docker-compose-pmm.yaml run test pytest -s -x --verbose test.py
-    docker compose -f docker-compose-pmm.yaml run test chmod -R 777 .
+    docker compose -f docker-compose-pmm.yaml --profile tests run test pytest -s -x --verbose test.py
+    docker compose -f docker-compose-pmm.yaml --profile tests run test chmod -R 777 .
     else
     echo
     echo "skipping tests"
