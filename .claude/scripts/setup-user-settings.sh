@@ -6,83 +6,27 @@
 # (the PARENT of the clones), not at a repo, and $CLAUDE_PROJECT_DIR is unset
 # — so no project .claude/settings.json is ever loaded (verified live
 # 2026-08-06; CLAUDE.md/agents/skills DO load, settings.json does not).
-# User-scope settings load regardless of working directory, and the hooks
-# already self-locate via their /home/user/pmm-qa fallback. In sessions
-# where pmm-qa isn't cloned, the hook wrappers find no script and exit 0.
 #
-# Usage: set the cloud environment's setup script to run this file
-# (bash /home/user/pmm-qa/.claude/scripts/setup-user-settings.sh) if repos
-# are cloned before the setup script runs — otherwise paste this file's
-# body directly as the setup script; the heredoc fallback below is
-# self-contained. Copy-from-clone wins when available so the committed
-# settings stay the single source of truth.
-set -u
+# Usage: set the cloud environment's setup script to this file's body (it is
+# self-contained). Source of truth is .claude/settings.json on main: a local
+# clone wins when present, otherwise it's fetched from raw.githubusercontent
+# (in the default Trusted allowlist). The setup-script result is snapshot-
+# cached ~7 days, so settings changes on main reach environments on the next
+# cache rebuild.
+#
+# Must exit 0 — a non-zero setup script blocks session start.
 
 mkdir -p /root/.claude
 
 if [ -f /home/user/pmm-qa/.claude/settings.json ]; then
-  cp /home/user/pmm-qa/.claude/settings.json /root/.claude/settings.json
-  echo "user-scope settings copied from pmm-qa clone"
-  exit 0
+  cp /home/user/pmm-qa/.claude/settings.json /root/.claude/settings.json \
+    && echo "user-scope settings copied from pmm-qa clone"
+elif curl -fsSL --max-time 30 \
+    https://raw.githubusercontent.com/percona/pmm-qa/main/.claude/settings.json \
+    -o /root/.claude/settings.json; then
+  echo "user-scope settings fetched from percona/pmm-qa@main"
+else
+  echo "WARNING: could not obtain pmm-qa settings.json; hooks/permissions will be absent in multi-repo sessions" >&2
 fi
 
-cat > /root/.claude/settings.json <<'EOF'
-{
-  "permissions": {
-    "defaultMode": "acceptEdits",
-    "allow": [
-      "Bash",
-      "Read",
-      "Glob",
-      "Grep",
-      "Edit",
-      "Write",
-      "MultiEdit",
-      "NotebookEdit",
-      "WebFetch",
-      "WebSearch",
-      "Task",
-      "Agent",
-      "TodoWrite",
-      "mcp__github",
-      "mcp__claude_ai_Atlassian_Rovo",
-      "mcp__claude_ai_Slack",
-      "mcp__claude_ai_Claude_Code_Remote"
-    ]
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-start.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/block-pmm-submodules-clone.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-end-cleanup.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
-          }
-        ]
-      }
-    ]
-  }
-}
-EOF
-echo "user-scope settings written from embedded fallback"
+exit 0
