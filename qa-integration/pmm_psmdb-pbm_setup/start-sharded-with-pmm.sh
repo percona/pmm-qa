@@ -278,7 +278,7 @@ docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos mgodatagen
 generate_traffic=${GENERATE_TRAFFIC:-yes}
 if [ $generate_traffic != "no" ]; then
     echo "generating opcountersRepl traffic (insert/update/delete) against the sharded cluster"
-    COMPOSE_FILE=docker-compose-sharded-with-pmm.yaml bash ./generate_opcountersrepl_traffic.sh
+#    COMPOSE_FILE=docker-compose-sharded-with-pmm.yaml bash ./generate_opcountersrepl_traffic.sh
 else
     echo "skipping opcountersRepl traffic generation"
 fi
