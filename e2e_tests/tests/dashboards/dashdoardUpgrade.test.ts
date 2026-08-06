@@ -42,7 +42,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'PMM-T9999 - Verify MongoDB Router Summary after upgrade @post-upgrade',
+    'Verify MongoDB Router Summary after upgrade @post-upgrade',
     async ({ dashboard, page, urlHelper }) => {
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.routerSummary.url, {
@@ -54,6 +54,22 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       await dashboard.verifyMetricsPresent(dashboard.mongo.routerSummary.metrics);
       await dashboard.verifyAllPanelsHaveData(dashboard.mongo.routerSummary.noDataMetrics);
       await dashboard.verifyPanelValues(dashboard.mongo.routerSummary.metricsWithData);
+    },
+  );
+
+  pmmTest(
+    'PMM-T9999 Verify MongoDB Sharded Cluster Summary after upgrade @post-upgrade',
+    async ({ dashboard, page, urlHelper }) => {
+      await page.goto(
+        urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
+          from: 'now-1h',
+          refresh: '5s',
+        }),
+      );
+
+      await dashboard.verifyMetricsPresent(dashboard.mongo.shardedClusterSummary.metrics);
+      await dashboard.verifyAllPanelsHaveData(dashboard.mongo.shardedClusterSummary.noDataMetrics);
+      await dashboard.verifyPanelValues(dashboard.mongo.shardedClusterSummary.metricsWithData);
     },
   );
 });
