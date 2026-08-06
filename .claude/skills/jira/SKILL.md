@@ -87,7 +87,7 @@ Allowed domains). Use API **v2** — it speaks wiki markup directly, no ADF.
 
 ```bash
 J="https://perconadev.atlassian.net/rest/api/2"
-AUTH=(-u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Content-Type: application/json")
+AUTH=(--fail-with-body -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -H "Content-Type: application/json")
 
 # Read ticket (same fields as the connector path)
 curl -sS "${AUTH[@]}" "$J/issue/PMM-15188?fields=summary,description,status,customfield_10083,customfield_10492,comment"
@@ -98,7 +98,7 @@ curl -sS "${AUTH[@]}" -X POST "$J/issue/PMM-15188/comment" \
   -d '{"body":"h2. QA results\n...","visibility":{"type":"role","value":"Developers"}}'
 
 # Attach a screenshot (multipart, no JSON content-type)
-curl -sS -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -X POST \
+curl -sS --fail-with-body -u "$JIRA_EMAIL:$JIRA_API_TOKEN" -X POST \
   -H "X-Atlassian-Token: no-check" -F "file=@fb-checks.png" \
   "$J/issue/PMM-15188/attachments"
 
