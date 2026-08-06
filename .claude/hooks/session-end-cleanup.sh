@@ -13,7 +13,8 @@ if [ -z "${CLAUDE_CODE_SESSION_ID:-}" ]; then
   exit 0
 fi
 
-RUNNER_DIR="$CLAUDE_PROJECT_DIR/terraform/linode-runner"
+QA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+RUNNER_DIR="$QA_ROOT/terraform/linode-runner"
 RUNS_DIR="$RUNNER_DIR/runs"
 
 [ -d "$RUNS_DIR" ] || exit 0
