@@ -8,7 +8,7 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
-QA_ROOT="$CLAUDE_PROJECT_DIR"
+QA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 # --- gh CLI -----------------------------------------------------------
 if ! command -v gh >/dev/null 2>&1; then
