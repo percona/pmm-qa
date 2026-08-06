@@ -29,14 +29,14 @@ This file is the **single authoritative entry point** for AI agents working with
 
 ## Repository Map
 
-Each test suite has its own dependency manifest, lint config and runner. **Read the linked docs before contributing.** Most suites assume `pmm-framework.py` (under [qa-integration/](qa-integration/)) has already provisioned the required PMM Client and DB containers on the `pmm-qa` Docker network.
+Each test suite has its own dependency manifest, lint config and runner. **Read the linked docs before contributing.** Most suites assume `pmm-framework` (the bash CLI under [qa-integration/](qa-integration/)) has already provisioned the required PMM Client and DB containers on the `pmm-qa` Docker network.
 
 | Directory | Purpose | Docs / entry point |
 |-----------|---------|--------------------|
 | [cli/](cli/) | Playwright-runner CLI tests for `pmm-admin` (no browser) | [README.md](cli/README.md) · [playwright.config.ts](cli/playwright.config.ts) |
 | [codeceptjs-e2e/](codeceptjs-e2e/) | **Legacy** CodeceptJS UI e2e suite — do not add new coverage unless extending an area that exists only here | [README.md](codeceptjs-e2e/README.md) · [CONTRIBUTING.md](codeceptjs-e2e/CONTRIBUTING.md) |
 | [e2e_tests/](e2e_tests/) | **Active** Playwright UI e2e suite — preferred for all new UI tests | [README.md](e2e_tests/README.md) · [CONTRIBUTING.md](e2e_tests/CONTRIBUTING.md) · [playwright.config.ts](e2e_tests/playwright.config.ts) · [fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) |
-| [qa-integration/](qa-integration/) | `pmm-framework.py` + Ansible playbooks to provision PMM Clients and monitored DBs on the `pmm-qa` Docker network | [pmm_qa/README.md](qa-integration/pmm_qa/README.md) · [scripts/database_options.py](qa-integration/pmm_qa/scripts/database_options.py) |
+| [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) + Ansible playbooks to provision PMM Clients and monitored DBs on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [pmm_qa/README.md](qa-integration/pmm_qa/README.md) · [scripts/database_options.py](qa-integration/pmm_qa/scripts/database_options.py) |
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
 | [support_scripts/](support_scripts/) | Ad-hoc Python helpers for manual / CI debugging (not part of any suite) | [agent_status.py](support_scripts/agent_status.py) · [check_client_upgrade.py](support_scripts/check_client_upgrade.py) · [check_upgrade.py](support_scripts/check_upgrade.py) |
@@ -59,7 +59,7 @@ flowchart LR
     end
 
     subgraph Setup["qa-integration"]
-        framework["pmm-framework.py"]
+        framework["pmm-framework (bash)"]
         ansible["Ansible playbooks"]
         framework --> ansible
     end
@@ -82,7 +82,7 @@ flowchart LR
     Suites --> DUT["PMM Server + PMM Client (DUT)"]
 ```
 
-`pmm-framework.py` is the common provisioning step for most CI jobs: it stands up PMM Client containers and monitored DBs on a shared Docker network named `pmm-qa`, then the respective UI / CLI suite runs against that environment.
+`pmm-framework` (the bash CLI at [qa-integration/pmm_qa/pmm-framework/](qa-integration/pmm_qa/pmm-framework/)) is the common provisioning step for most CI jobs: it stands up PMM Client containers and monitored DBs on a shared Docker network named `pmm-qa`, then the respective UI / CLI suite runs against that environment.
 
 ## CI / Pipelines
 
