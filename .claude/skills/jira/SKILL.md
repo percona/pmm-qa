@@ -7,18 +7,34 @@ description: Read and write PMM tickets on perconadev.atlassian.net — fields, 
 
 ## Which access path to use
 
-- **Interactive session with a human present** → Atlassian MCP connector (below).
-- **Unattended run (Routine-fired session), or any session where a connector
-  call stalls on "This connector call requires your approval to proceed"** →
-  use the **REST fallback** (bottom of this file). Connector approval is
-  enforced host-side and is broken for Routine grants
-  ([claude-code#61015](https://github.com/anthropics/claude-code/issues/61015)):
-  an unattended run that hits it stalls forever. `curl` via Bash has no
-  approval gate. Don't retry a stalled connector call — switch paths.
+**ALWAYS use the REST fallback (`curl`, bottom of this file) for all Jira
+operations — do not call the Atlassian MCP connector tools.** Connector
+approval is enforced host-side and broken for Routine grants
+([claude-code#61015](https://github.com/anthropics/claude-code/issues/61015)):
+runs stall on "This connector call requires your approval to proceed" even
+with the connector attached. `curl` via Bash has no approval gate. The MCP
+tool documentation below is kept only for when this policy is lifted.
+
+**Fix check — at most once per session**, and only when you're actually about
+to do Jira work (skip entirely otherwise): WebFetch
+`https://github.com/anthropics/claude-code/issues/61015` and read the recent
+activity. The issue being *closed* is NOT the signal — it was already closed
+while still reproducing on 2026-08-06. Treat it as fixed only if there is
+maintainer or user confirmation **dated after 2026-08-06** that Routine runs
+no longer prompt on attached custom/org connectors. Don't re-check within the
+same session.
+
+- **Still broken / can't determine** → proceed with `curl`, say nothing.
+- **Genuinely fixed** → still complete the current task with `curl`, then
+  tell the human: *"claude-code#61015 looks fixed as of \<date/evidence\> —
+  revert the curl-first policy in `.claude/skills/jira/SKILL.md` (this
+  section) to switch back to the Atlassian connector."* Do not revert it
+  yourself — the human owns that change so the team remembers it happened.
 
 ## Read
 
-Use the Atlassian MCP connector (`getJiraIssue` / equivalent):
+Fields to fetch (via REST per the policy above; `getJiraIssue` is the
+connector equivalent, currently not to be used):
 
 | Field | ID | Notes |
 |-------|-----|-------|
@@ -30,7 +46,9 @@ Use the Atlassian MCP connector (`getJiraIssue` / equivalent):
 
 **Never post QA results as public comments.** Always restrict to **Developers** role.
 
-`addCommentToJiraIssue` (Atlassian MCP):
+Via REST (the current path), the key is `visibility` — see the fallback
+section below. On the connector path (when re-enabled), `addCommentToJiraIssue`
+spells it `commentVisibility`:
 
 ```json
 {
@@ -38,7 +56,7 @@ Use the Atlassian MCP connector (`getJiraIssue` / equivalent):
 }
 ```
 
-If the MCP tool cannot set visibility, **stop** and ask the human to paste with **Restrict to → Developers**.
+If neither path can set visibility, **stop** and ask the human to paste with **Restrict to → Developers**.
 
 ## Attachments
 
