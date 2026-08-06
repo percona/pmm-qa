@@ -40,4 +40,20 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       await dashboard.verifyPanelValues(dashboard.pgsql.instanceOverview.metricsWithData);
     },
   );
+
+  pmmTest(
+    'PMM-T9999 - Verify MongoDB Router Summary after upgrade @post-upgrade',
+    async ({ dashboard, page, urlHelper }) => {
+      await page.goto(
+        urlHelper.buildUrlWithParameters(dashboard.mongo.routerSummary.url, {
+          from: 'now-1h',
+          refresh: '5s',
+        }),
+      );
+
+      await dashboard.verifyMetricsPresent(dashboard.mongo.routerSummary.metrics);
+      await dashboard.verifyAllPanelsHaveData(dashboard.mongo.routerSummary.noDataMetrics);
+      await dashboard.verifyPanelValues(dashboard.mongo.routerSummary.metricsWithData);
+    },
+  );
 });
