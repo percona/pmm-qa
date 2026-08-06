@@ -41,8 +41,12 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
         `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
       ).stdout;
 
-      console.log(`PMM Admin version is: ${pmmAdminVersion}`);
-      console.log(`PMM Agent version is: ${pmmAgentVersion}`);
+      console.log(
+        `PMM Admin version is: ${pmmAdminVersion} for command: docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
+      );
+      console.log(
+        `PMM Agent version is: ${pmmAgentVersion} for command: docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
+      );
       console.log(`Expected version is: ${process.env.CLIENT_VERSION}`);
 
       expect(
