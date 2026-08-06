@@ -260,18 +260,17 @@ docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos mongo "mon
 
 echo "configuring pmm-agent on mongos instance"
 docker compose -f docker-compose-sharded-with-pmm.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=mongos_${random_number} mongos pmm-agent setup
-# NOTE: on the mongos we must NOT run the per-collection collectors
-# (collstats/indexstats/dbstats). Against a router those run $collStats/$indexStats on
-# SHARDED collections, which return one row per shard per collection/index; the exporter
-# labels them only by (database, collection, key_name) with no shard label, so the two
-# shards produce duplicate series ("... was collected before with the same name and label
-# values"). A single duplicate makes the scrape parser reject the WHOLE mongos scrape,
-# dropping every mongodb_* metric for the router -- including the mongodb_ss_* serverStatus
-# family the MongoDB Router Summary dashboard needs (Command Operations, Connections,
-# Latencies, etc.). Disabling them here keeps the rich serverStatus/diagnosticdata metrics
-# while avoiding the cross-shard duplicates. The shard mongod services keep
-# --enable-all-collectors; they don't hit this because each shard only sees its own chunks.
-docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos pmm-admin add mongodb --enable-all-collectors --disable-collectors=collstats,dbstats,indexstats --agent-password=mypass --cluster=sharded --environment=mongo-sharded-dev --username=${pmm_user} --password=${pmm_pass} mongos_${random_number} 127.0.0.1:27017
+# On the mongos, disable ONLY the indexstats collector. Against a router $indexStats runs on
+# SHARDED collections and returns one row per shard per index; the exporter labels them only
+# by (database, collection, key_name) with no shard label, so the two shards produce duplicate
+# series ("... was collected before with the same name and label values"), which spams the
+# pmm-agent log every scrape and drops the indexstats family (index access stats are
+# meaningless on a router anyway). Keep collstats/dbstats enabled -- they do NOT duplicate,
+# and dbstats provides mongodb_dbstats_fsUsedSize/fsTotalSize, which the "Disk Space
+# Utilization" gauge on the Router Summary needs. The shard mongod services keep
+# --enable-all-collectors; they don't hit the indexstats duplicate because each shard only
+# sees its own chunks.
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos pmm-admin add mongodb --enable-all-collectors --disable-collectors=indexstats --agent-password=mypass --cluster=sharded --environment=mongo-sharded-dev --username=${pmm_user} --password=${pmm_pass} mongos_${random_number} 127.0.0.1:27017
 
 echo "adding some data"
 docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017
