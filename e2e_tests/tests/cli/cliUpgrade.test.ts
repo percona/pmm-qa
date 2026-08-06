@@ -10,14 +10,10 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
       .stdout.split('\n')
       .filter((item) => !nonClientContainers.includes(item));
 
-    console.log(containers);
-
     for (const container of containers) {
       const pmmAdminStatus: string = cliHelper.execSilent(`docker exec ${container} pmm-admin status`).stdout;
       const pmmAdminList: string = cliHelper.execSilent(`docker exec ${container} pmm-admin list`).stdout;
 
-      console.log(pmmAdminStatus);
-      console.log(pmmAdminList);
       expect(
         pmmAdminStatus,
         `Agent status contains wrong status in ${container} container. Error in: ${pmmAdminStatus}`,
@@ -45,9 +41,9 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
         `docker exec ${container} sh -lc "pmm-admin status | grep pmm-admin | awk '{print $3}'"`,
       ).stdout;
 
-      console.log(pmmAdminVersion);
-      console.log(pmmAgentVersion);
-      console.log(process.env.CLIENT_VERSION);
+      console.log(`PMM Admin version is: ${pmmAdminVersion}`);
+      console.log(`PMM Agent version is: ${pmmAgentVersion}`);
+      console.log(`Expected version is: ${process.env.CLIENT_VERSION}`);
 
       expect(
         pmmAdminVersion,
