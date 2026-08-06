@@ -32,14 +32,14 @@ jobs:
     steps:
       - name: Fire Investigator routine
         env:
-          # Update this if Investigator's routine is ever recreated.
-          ROUTINE_ID: trig_01FhHBdz2yBibyVEfnG5gbQz
+          # Both secrets -- update if Investigator's routine is ever recreated.
+          ROUTINE_ID: ${{ secrets.INVESTIGATOR_ROUTINE_ID }}
           ROUTINE_TOKEN: ${{ secrets.INVESTIGATOR_ROUTINE_TOKEN }}
           WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
           RUN_URL: ${{ github.event.workflow_run.html_url }}
         run: |
-          if [ -z "$ROUTINE_TOKEN" ]; then
-            echo "::error::INVESTIGATOR_ROUTINE_TOKEN is not set -- Investigator was not notified of this failure." >&2
+          if [ -z "$ROUTINE_ID" ] || [ -z "$ROUTINE_TOKEN" ]; then
+            echo "::error::INVESTIGATOR_ROUTINE_ID / INVESTIGATOR_ROUTINE_TOKEN not set -- Investigator was not notified of this failure." >&2
             exit 1
           fi
           curl -fsS -X POST "https://api.anthropic.com/v1/claude_code/routines/${ROUTINE_ID}/fire" \
