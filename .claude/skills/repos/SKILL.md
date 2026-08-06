@@ -31,6 +31,16 @@ gh pr diff <n> --repo percona/pmm
 
 From pmm PR body — **submodules PR number ≠ pmm PR number**.
 
+## Cross-org access (`Percona-Lab/*`)
+
+`Percona-Lab/pmm-submodules` and `Percona-Lab/jenkins-pipelines` live in a **different org** than `percona/*`. Two things follow:
+
+- **Attach them early.** If a `Percona-Lab` repo isn't already in the session's scope, add it with `add_repo` at the start of the task rather than discovering it mid-run. Reads work through the agent proxy for public repos and through the GitHub MCP tools regardless.
+- **On a genuine 403** (`add_repo` or `gh` returns "access to this repository is not enabled for this session"): the Claude GitHub App isn't authorized on the `Percona-Lab` org for this session. Relay this to the user — an **admin must grant access in the Claude GitHub settings: https://claude.ai/admin-settings/claude-in-slack**. Do not retry the same repo in a loop.
+- **Never clone** `pmm-submodules` (a PreToolUse hook blocks it when loaded — but don't rely on that; use `gh`/MCP).
+
 ## Auth
 
-Private repos need GitHub access configured for the session (already wired via the environment's GitHub connector). Verify with `gh auth status` if a `gh` call fails unexpectedly.
+Do **not** use `gh auth status` as the access oracle: in these sessions it can report the `GH_TOKEN` **invalid** while `gh api` reads still succeed (reads are served through the agent proxy, not `gh`'s own token). Test access with the actual read you need (`gh api repos/<owner>/<repo>`), not with `gh auth status`.
+
+Because `gh`'s own token may be invalid, `gh` **write** operations (`gh pr create`, `gh pr comment`) can fail. Open PRs and post comments via the GitHub **MCP** tools (authenticated separately) or `git push` (proxy-authenticated) instead.
