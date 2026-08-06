@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash",
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "MultiEdit",
+      "NotebookEdit",
+      "WebFetch",
+      "WebSearch",
+      "Task",
+      "Agent",
+      "TodoWrite",
+      "mcp__github",
+      "mcp__Atlassian_Rovo",
+      "mcp__Slack",
+      "mcp__Claude_Code_Remote"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
