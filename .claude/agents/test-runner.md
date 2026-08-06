@@ -27,21 +27,19 @@ Read each file when its step needs it. Do not guess field IDs or setup commands.
 
 ## Workflow
 
-1. **Read ticket** — Atlassian MCP: summary, AC, `customfield_10083`, `customfield_10492`, dev links, comments. Cross-check with `git-diff` on linked `percona/pmm` / `percona/grafana` PRs.
+1. **Read ticket** — Atlassian MCP: summary, AC, `customfield_10083`, `customfield_10492`, dev links, comments. Cross-check with `git-diff` (and `json-diff` for JSON dashboard changes) on linked `percona/pmm` / `percona/grafana` PRs.
 2. **Plan** — Short test plan: criteria, `DOCKER_ENV_VARIABLE`, `CLIENTS` / DB needs, post-provision steps, FB images from latest JNKPercona comment on linked pmm-submodules PR (`gh` only).
-3. **Provision** — Follow `linode-provisioning`: `terraform/linode-runner/up.sh test-runner <run-id>` spins up a throwaway Linode VM and `git clone`s `percona/pmm-qa` onto it, then `run.sh` runs the **unmodified** `qa-integration/pmm_qa/pmm-framework/pmm-framework` there — same entrypoint as Jenkins/EC2, no forks. If a fix under test isn't on `main` yet, push it to a branch first and pass it as `PMM_QA_REF` — never edit files directly on the box.
+3. **Provision** — Follow `linode-provisioning`. If a fix under test isn't on `main` yet, push it to a branch first and pass it as `PMM_QA_REF` — never edit files directly on the box.
 4. **Execute** — `run.sh` for API/CLI/DB checks; local Playwright/Chromium for UI per `ui-evidence` (use the box's plain, non-`exec-`-prefixed hostname — see `linode-provisioning`'s "Accessing the VM").
-5. **FB evidence** — every ticket has a linked pmm-submodules PR; read `.claude/agents/fb-reporter.md` and follow it **in this same session** (don't spawn it as a subagent — same Routines-uncertainty reasoning as elsewhere), passing that PR number and this ticket's key. It attaches the FB screenshot to `customfield_10492` itself; you don't need to repeat that in your own comment below, just mention it's there if relevant.
-6. **Report** — One Jira comment, **Developers visibility only** (see `jira`). Include pass/fail per criterion, artifact paths, blockers. Do not mark pass if criteria failed.
-7. **Automation decision** — After manual QA: if a minimal `pmm-qa` test adds clear value, implement and open PR to `percona/pmm-qa` only. Otherwise stop after Jira comment.
+5. **FB evidence** — every ticket has a linked pmm-submodules PR; read `.claude/agents/fb-reporter.md` and follow it as a sub-agent or directly, passing that PR number and this ticket's key. It attaches the FB screenshot to `customfield_10492` itself; you don't need to repeat that in your own comment below, just mention it's there if relevant.
+6. **Report** — One Jira comment (see `jira`). Include pass/fail per criterion, artifact paths, blockers. Do not mark pass if criteria failed. Be concise.
+7. **Automation decision** — After manual QA: if the change added functionality (or something else we don't yet have pipeline coverage for), and the setup isn't a wholly different pattern from what's already covered, and a `pmm-qa` test adds clear value, implement it as a Playwright test (CLI or UI) and open a PR to `percona/pmm-qa` only. Don't write new tests in CodeceptJS. Otherwise stop after the Jira comment.
 8. **Cleanup (mandatory, every path — pass, fail, or error)** — `terraform/linode-runner/down.sh <run-id>`. Never leave a run's Linode VM behind; this is your last step even if the ticket testing failed or was blocked.
 
 ## Never
 
 - Open PRs to `percona/pmm` or `percona/grafana`
-- `git clone` `Percona-Lab/pmm-submodules`
-- Modify `qa-integration/` — it is the single source of truth shared with Jenkins/EC2/CI; provisioning fixes belong in a separate, dedicated PR, never as a side effect of a QA run
+- Modify `qa-integration/` — it is the single source of truth shared with Jenkins/EC2/CI; provisioning fixes belong in a separate, dedicated PR, never as a side effect of a QA run, unless the ticket under test objectively required that setup change itself
 - Trust "How to test" without reading PR diff
-- Post public Jira comments on QA results
 - Skip `down.sh` — an unterminated Linode VM costs real money every hour
 - Write or edit code on the Linode VM — it is an execution target only; every change must be committed and pushed from this environment first

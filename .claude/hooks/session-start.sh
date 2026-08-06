@@ -41,18 +41,13 @@ if ! command -v terraform >/dev/null 2>&1; then
   sudo unzip -o -q "$TF_ZIP" -d /usr/local/bin terraform
 fi
 
-# --- ffmpeg -----------------------------------------------------------
-# Playwright records its own .webm directly (no ffmpeg needed for capture);
-# this is only for pw-record.js's transcode to .mp4 for easier viewing/
-# attaching to Jira.
+# --- ffmpeg -- only for pw-record.js's .webm -> .mp4 transcode ---------
 command -v ffmpeg >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y ffmpeg)
 
 # --- json-diff (large Grafana dashboard JSON PR diffs) -------------------
 command -v json-diff >/dev/null 2>&1 || npm install -g json-diff >/dev/null 2>&1 || true
 
-# --- Playwright helper scripts (UI login / screenshots) -------------------
-# Browsers are already pre-installed and PLAYWRIGHT_BROWSERS_PATH already
-# points at them -- this only needs the `playwright` node module itself.
+# --- Playwright helper scripts -- browsers are pre-installed already ----
 cd "$QA_ROOT/.claude/scripts"
 npm install >/dev/null
 

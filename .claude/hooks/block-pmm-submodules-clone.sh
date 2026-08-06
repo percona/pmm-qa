@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# PreToolUse hook (matcher: Bash) -- deny any git clone of pmm-submodules.
-# Every agent/skill in this repo is instructed to use `gh` only against
-# Percona-Lab/pmm-submodules; this hook is the deterministic backstop for
-# when an agent forgets.
+# PreToolUse hook (matcher: Bash) -- deny any git clone of pmm-submodules;
+# the deterministic backstop for when an agent forgets to use `gh` instead.
 set -euo pipefail
 
 input=$(cat)
