@@ -17,44 +17,20 @@ description: PMM GitHub repository map, gh CLI usage, and rules for which repos 
 
 ## Cross-org access (`Percona-Lab/*`)
 
-These live in a **different owner org** than `percona/*`, and in a Claude Code
-Remote / web session that matters — attach the cross-org repo **early**, before
-you need it, and don't assume `gh` works:
+Different owner org than `percona/*`. GitHub **API** access (`gh api`,
+`gh run rerun`, MCP tools) works only for repos **attached at session/Routine
+creation** — verify with `gh api repos/<owner>/<repo>` before relying on it.
+In a session without the repo attached:
 
-- **`gh api` / `gh pr checks` and the `github` MCP tools are BLOCKED cross-org.**
-  A `percona/*`-seeded session gets `403 "access to this repository is not
-  enabled for this session"` from `gh`, and `Access denied: repository … is not
-  configured for this session` from the MCP tools. Even unauthenticated
-  `api.github.com` 403s through the proxy. This is not a `gh auth` bug — it's the
-  session's owner-tier scope (see the credentialed-attach note below).
-- **Anonymous git read works.** `add_repo` (`access:"read"`) reports the public
-  repo is already readable via the git proxy; `git ls-remote` and a shallow
-  `GIT_LFS_SKIP_SMUDGE=1 git clone --depth 1 …` succeed. Use `add_repo` /
-  `ls-remote` / a targeted fetch for file and diff reads — not a bare
-  `git clone …pmm-submodules`, which the PreToolUse hook deliberately blocks
-  (it would drag in the whole submodules tree).
-- **Credentialed attach is refused in v1.** `add_repo` with `access:"push"`
-  returns `cross-tier adds are not supported in v1: session already has repos
-  from owner(s) [percona]`. Mid-session, a session can hold credentialed access
-  to **one owner tier only**. To get PR/CI **API** access to `Percona-Lab/*`
-  (e.g. `gh run rerun <id> --failed -R Percona-Lab/pmm-submodules` for a red
-  FB run), the session/Routine must have that repo **selected at creation** —
-  multi-repo sessions are supported and the creation flow has no same-owner
-  restriction; keep `percona/pmm-qa` selected FIRST so its settings/hooks load
-  (see AUTOMATIONS.md "Multi-repo sessions across orgs"). Alternatively the
-  data can arrive in the trigger payload (e.g. the FB-Tests run URL +
-  conclusion that `notify-investigator.yml` passes in).
-- **Don't bother with a PAT.** The session's GitHub proxy replaces whatever
-  token `gh` sends (verified: a bogus `GH_TOKEN` still works on in-scope
-  repos) and 403s out-of-scope repos regardless of credential — API scope is
-  fixed at session creation, and no env-var token can widen it.
-- **In a multi-repo session, verify scope before relying on it**: run
-  `gh api repos/<owner>/<repo>` once per repo you plan to touch; a 403 with
-  "not enabled for this session" means it wasn't attached at creation.
-- If a cross-org `add_repo`/`gh` call fails with an access/authorization error,
-  **relay the exact message to the user** and point them at the admin grant
-  page (`https://claude.ai/admin-settings/claude-in-slack`); don't silently
-  fall back to guessing.
+- `gh`/MCP calls 403 with "not enabled for this session" — expected, not an
+  auth bug. Mid-session `add_repo` push access is refused (v1 cross-tier),
+  and a PAT env var can't widen scope (the proxy swaps credentials).
+- **Anonymous git read works** for public repos: `git ls-remote`, shallow
+  clone with `GIT_LFS_SKIP_SMUDGE=1` and `--depth 1`. Exception: cloning
+  pmm-submodules is blocked by the PreToolUse hook — use `gh` from a session
+  with the repo attached instead.
+- On an access/authorization error, relay the exact message to the user;
+  don't silently guess.
 
 ## Cloud environment
 
