@@ -172,6 +172,7 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 - [ ] Jira Automation rule configured with Test Runner's API trigger URL/token — **waiting**, needs to be done by hand in Jira, not something this session can do
 - [ ] PMM AI Slack app + Router Routine — **waiting**, blocked on a deterministic way to receive Slack events and fire the Routine API from the Slack side; nothing to build here until that exists
 - [ ] Per-person routing in Router — not built. Every Routine runs under **its creator's own identity** (see "Routine ownership" above), so today, sharing these Routines means every PR/Jira comment/Slack reply shows up as whoever created the Routine, not the person who actually asked. For the whole team to use Test Runner (Jira button, Slack mention) without everyone's activity showing up as one person, each teammate would create their own personal Test Runner Routine, and `router.md` would need a static mapping — Slack user ID (or Jira account ID) → that person's own Routine ID — falling back to the fallback owner's own Routine (and identity) for anyone not in the table.
+- [ ] Team-wide shared Claude Code environment created (or an existing one reused) with `LINODE_TOKEN` set once at the environment level — teammates using that shared environment don't need their own Linode token; they still each connect their own Jira/Atlassian connector so Jira comments post as them.
 
 ## Updating the live Routines
 

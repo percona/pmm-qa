@@ -35,10 +35,6 @@ export TF_PLUGIN_CACHE_DIR="$MODULE_DIR/.plugin-cache"
 export TF_VAR_linode_token="$LINODE_TOKEN"
 STATE="$RUN_DIR/terraform.tfstate"
 ROLE=$(cat "$RUN_DIR/role" 2>/dev/null || echo unknown)
-# Same default as up.sh -- the value itself doesn't matter for a destroy
-# (nothing about tearing the instance down depends on its ingress rule),
-# but the variable has no default in variables.tf, so terraform destroy
-# refuses to even load the config without one.
 ALLOWED_INBOUND_CIDR="${ALLOWED_INBOUND_CIDR:-0.0.0.0/0}"
 
 if [ -f "$STATE" ]; then
