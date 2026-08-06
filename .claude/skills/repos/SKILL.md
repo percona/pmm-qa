@@ -35,11 +35,22 @@ you need it, and don't assume `gh` works:
   (it would drag in the whole submodules tree).
 - **Credentialed attach is refused in v1.** `add_repo` with `access:"push"`
   returns `cross-tier adds are not supported in v1: session already has repos
-  from owner(s) [percona]`. A single session can hold credentialed access to
-  **one owner tier only**. To get PR/CI **API** access to `Percona-Lab/*`, the
-  Routine must fire a session **seeded with the `Percona-Lab` repo as its
-  initial source** — or the data must arrive in the trigger payload (e.g. the
-  FB-Tests run URL + conclusion that `notify-investigator.yml` passes in).
+  from owner(s) [percona]`. Mid-session, a session can hold credentialed access
+  to **one owner tier only**. To get PR/CI **API** access to `Percona-Lab/*`
+  (e.g. `gh run rerun <id> --failed -R Percona-Lab/pmm-submodules` for a red
+  FB run), the session/Routine must have that repo **selected at creation** —
+  multi-repo sessions are supported and the creation flow has no same-owner
+  restriction; keep `percona/pmm-qa` selected FIRST so its settings/hooks load
+  (see AUTOMATIONS.md "Multi-repo sessions across orgs"). Alternatively the
+  data can arrive in the trigger payload (e.g. the FB-Tests run URL +
+  conclusion that `notify-investigator.yml` passes in).
+- **Don't bother with a PAT.** The session's GitHub proxy replaces whatever
+  token `gh` sends (verified: a bogus `GH_TOKEN` still works on in-scope
+  repos) and 403s out-of-scope repos regardless of credential — API scope is
+  fixed at session creation, and no env-var token can widen it.
+- **In a multi-repo session, verify scope before relying on it**: run
+  `gh api repos/<owner>/<repo>` once per repo you plan to touch; a 403 with
+  "not enabled for this session" means it wasn't attached at creation.
 - If a cross-org `add_repo`/`gh` call fails with an access/authorization error,
   **relay the exact message to the user** and point them at the admin grant
   page (`https://claude.ai/admin-settings/claude-in-slack`); don't silently
