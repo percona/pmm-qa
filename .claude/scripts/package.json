@@ -1,0 +1,8 @@
+{
+  "name": "pmm-qa-claude-scripts",
+  "private": true,
+  "description": "Standalone Playwright helper scripts for the PMM QA Claude agents (UI login, screenshots). Not a test suite — no relation to e2e_tests/ or codeceptjs-e2e/.",
+  "dependencies": {
+    "playwright": "^1.56.0"
+  }
+}
