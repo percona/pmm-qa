@@ -171,7 +171,7 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 - [ ] Notify workflow added in `Percona-Lab/pmm-submodules` firing the same Investigator Routine on FB Tests red — **waiting**, needs a session with `Percona-Lab/pmm-submodules` as its initial repo (this session can't cross-add a repo from a different GitHub org); draft PR to be sent once that's done
 - [ ] Jira Automation rule configured with Test Runner's API trigger URL/token — **waiting**, needs to be done by hand in Jira, not something this session can do
 - [ ] PMM AI Slack app + Router Routine — **waiting**, blocked on a deterministic way to receive Slack events and fire the Routine API from the Slack side; nothing to build here until that exists
-- [ ] Future: per-person routing in Router — see "Future ideas" below, not built
+- [ ] Per-person routing in Router — not built. Every Routine runs under **its creator's own identity** (see "Routine ownership" above), so today, sharing these Routines means every PR/Jira comment/Slack reply shows up as whoever created the Routine, not the person who actually asked. For the whole team to use Test Runner (Jira button, Slack mention) without everyone's activity showing up as one person, each teammate would create their own personal Test Runner Routine, and `router.md` would need a static mapping — Slack user ID (or Jira account ID) → that person's own Routine ID — falling back to the fallback owner's own Routine (and identity) for anyone not in the table.
 
 ## Updating the live Routines
 
@@ -182,7 +182,3 @@ Three Routines existed from an earlier iteration of this design; **all three are
 | Test Runner | `trig_01HmhmybBxMn21FRzfqosE2t` | Nothing — its prompt already just said "read `.claude/agents/test-runner.md` and act as that role," so it picked up `test-runner.md`'s changes (the `fb-reporter` hand-off) automatically. |
 | Investigator (was "Test Doctor") | `trig_01FhHBdz2yBibyVEfnG5gbQz` | Renamed, prompt updated to read `.claude/agents/investigator.md`. Same trigger ID — `notify-investigator.yml` already pointed at it. |
 | FB Validator | `trig_01E3y6NS23kjsUt4eaS722FA` | Resolved (either repointed to `investigator.md` or disabled — see whichever was actually done). |
-
-## Future ideas
-
-**Per-person routing in Router (not built).** Every Routine runs under **its creator's own identity** (see "Routine ownership" above) — so today, if the team shares these Routines, every PR/Jira comment/Slack reply shows up as whoever created the Routine, not the person who actually asked. For Test Runner to work for the whole team (a Jira button, a Slack mention) without everyone's activity showing up as one person, each teammate would create their own personal Test Runner Routine (their own identity, their own connectors), and `router.md` would need a static mapping — Slack user ID (or Jira account ID) → that person's own Routine ID. Router looks up the sender and fires their Routine instead of a shared one; if the sender isn't in the mapping, it falls back to firing the fallback owner's own Routine, and necessarily answers as that person (it's the only identity available). Not implemented — both the mapping and everyone creating their own Test Runner Routine are still to do.
