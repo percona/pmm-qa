@@ -41,7 +41,7 @@ generate_traffic=${GENERATE_TRAFFIC:-yes}
 if [ $generate_traffic != "no" ]; then
     echo
     echo "generating opcountersRepl traffic (insert/update/delete) against the replica set"
-#    COMPOSE_FILE=docker-compose-rs.yaml MONGO_SERVICE=rs101 MONGO_URI="mongodb://root:root@localhost/?replicaSet=rs" bash ./generate_opcountersrepl_traffic.sh
+    COMPOSE_FILE=docker-compose-rs.yaml MONGO_SERVICE=rs101 MONGO_URI="mongodb://root:root@localhost/?replicaSet=rs" bash ./generate_opcountersrepl_traffic.sh
 else
     echo
     echo "skipping opcountersRepl traffic generation"
