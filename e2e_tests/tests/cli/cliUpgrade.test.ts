@@ -8,7 +8,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
     const containers: string[] = cliHelper
       .execSilent(`docker ps --format "{{.Names }}"`)
       .stdout.split('\n')
-      .filter((item) => !nonClientContainers.includes(item));
+      .filter((item) => item && !nonClientContainers.includes(item));
 
     for (const container of containers) {
       const pmmAdminStatus: string = cliHelper.execSilent(`docker exec ${container} pmm-admin status`).stdout;
@@ -29,7 +29,7 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
     const containers: string[] = cliHelper
       .execSilent(`docker ps --format "{{.Names }}"`)
       .stdout.split('\n')
-      .filter((item) => !nonClientContainers.includes(item));
+      .filter((item) => item && !nonClientContainers.includes(item));
 
     console.log(containers);
 
