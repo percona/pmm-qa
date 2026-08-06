@@ -143,6 +143,7 @@ dist
 /qa-integration/pmm_qa/artifacts/
 /qa-integration/pmm_qa/inventory/
 /qa-integration/pmm_qa/pmm_framework/
+/qa-integration/pmm_qa/virtenv/
 
 # Local-only k8s helper libs
 /k8s/lib/bats-assert/
