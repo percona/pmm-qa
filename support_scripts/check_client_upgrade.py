@@ -96,6 +96,19 @@ for i in range(len(containers)):
     admin_version = get_admin_version("psmdb-server")
     agent_version = get_agent_version("psmdb-server")
 
+  expected_version=arguments[1].replace("\\r\\n", "").replace("-rc", "")
+
+  if admin_version != expected_version:
+    print(f"admin version is: {admin_version} and expected version is: {expected_version} for service {containers[i]}")
+    errors.append(f"Version of pmm admin is not correct expected: {expected_version} actual: {admin_version} for service {containers[i]}")
+
+  if agent_version != expected_version:
+    print(f"agent version is: {agent_version} and expected version is: {expected_version} for service {containers[i]}")
+    errors.append(f"Version of pmm agent is not correct expected: {expected_version} actual: {agent_version} for service {containers[i]}")
+
+  if admin_version != agent_version:
+    errors.append(f"PMM admin version: {admin_version} does not equal PMM agent version {agent_version} for service {containers[i]}")
+
 if len(psContainerStatus) > 0:
     verify_agent_status(psContainerStatus, "Percona Server")
     verify_agent_status(psContainerList, "Percona Server")
@@ -130,20 +143,6 @@ if len(thirdMongoReplicaStatus) > 0:
 
 if len(errors) > 0:
   raise Exception("Some errors in pmm-admin status: ".join(errors))
-
-expected_version=arguments[1].replace("\\r\\n", "").replace("-rc", "")
-
-
-if admin_version != expected_version:
-  print(f"admin version is: {admin_version} and expected version is: {expected_version}")
-  errors.append(f"Version of pmm admin is not correct expected: {expected_version} actual: {admin_version}")
-
-if agent_version != expected_version:
-  print(f"agent version is: {agent_version} and expected version is: {expected_version}")
-  errors.append(f"Version of pmm agent is not correct expected: {expected_version} actual: {agent_version}")
-
-if admin_version != agent_version:
-  errors.append(f"PMM admin version: {admin_version} does not equal PMM agent version {agent_version}")
 
 if len(errors) > 0:
   raise Exception("Errors in pmm-admin and pmm-agent versions: ".join(errors))
