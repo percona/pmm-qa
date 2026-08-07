@@ -61,7 +61,10 @@ EOF
 # gzip: Linode caps decoded user_data at 16KB and cloud-init transparently
 # handles gzipped input; the embedded relay.js pushes the plain form past the cap
 USER_DATA=$(gzip -9 -c "$CLOUD_INIT" | { base64 -w0 2>/dev/null || base64; })
-ROOT_PASS=$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)
+# Keep the team's known root password across rebuilds: export RELAY_ROOT_PASS
+# (from the LastPass "PMM" folder) before running. Only generates a fresh one
+# when unset — and then you must save the printed value.
+ROOT_PASS=${RELAY_ROOT_PASS:-$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)}
 AUTH_KEYS="[]"
 [ -n "$PUBKEY_FILE" ] && AUTH_KEYS=$(jq -Rn --arg k "$(cat "$PUBKEY_FILE")" '[$k]')
 

@@ -42,9 +42,14 @@ works around the first limit; it doesn't try to work around the second
   server (the circular-secret problem). Restore is semi-automatic instead:
 
   ```bash
-  lpass show --notes 'Shared-PMM-QA/pmm-ai-relay.env' > .env
+  lpass show --notes 'Shared-PMM/pmm-ai-relay.env' > .env   # shared folder: "PMM"
+  export RELAY_ROOT_PASS='<root password, also in the PMM folder>'
   LINODE_TOKEN=... ./relay/deploy.sh .env   # rebuilds same ID/IP, or recreates
   ```
+
+  `RELAY_ROOT_PASS` keeps the server's known root password across rebuilds
+  (the Linode rebuild API requires setting one; without the variable a fresh
+  random one is generated and must be re-saved).
 
 - **Never delete the Linode — rebuild it** (`deploy.sh` does this): rebuild
   keeps the instance ID and IP. If someone does delete it, the released IP
