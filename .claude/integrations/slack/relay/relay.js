@@ -9,31 +9,32 @@ import path from "node:path";
 
 const { App } = pkg;
 
-// ROUTER_ROUTINE: {"id","token"} — the ONE central "PMM AI" Routine. Mentions
-//   from REGISTERED people fire it; it only decides which of the caller's own
-//   routines fits (or declines), then hands off via POST /route. The actual
-//   work runs on the CALLER's routine, billed to the caller.
-// People live as ONE SMALL JSON FILE EACH in PEOPLE_DIR (default
-// /opt/pmm-ai-relay/people/<name>.json), hot-reloaded on any change — adding
-// a teammate is dropping a file there, no restart, no .env editing:
+// Mentions from REGISTERED people fire the central owner's "router" routine;
+// it only decides which of the caller's own routines fits (or declines), then
+// hands off via POST /route. The actual work runs on the CALLER's routine,
+// billed to the caller.
+// ALL routine ids/tokens live in the per-person files — the .env holds names
+// only. People are ONE SMALL JSON FILE EACH in PEOPLE_DIR (default
+// /opt/pmm-ai-relay/people/<name>.json), hot-reloaded on any change:
 //   { "slack": "U0123", "jira": "<atlassian accountId>",
 //     "routines": { "test-runner": {"id":"trig_...","token":"sk-ant-..."},
-//                   "investigator": {"id":"trig_...","token":"sk-ant-..."} } }
-// Tokens never leave this server.
-// CHANNEL_ROUTINES: {"C0123":{"id","token"}} — every top-level human message in
-//   that channel fires the mapped Routine automatically (e.g. alerts channel ->
-//   Investigator running on the QA owner's account).
-// DEFAULT_ROUTINE: {"id","token"} — /jira fallback when ALLOW_FALLBACK=true.
-const ROUTER_ROUTINE = JSON.parse(process.env.ROUTER_ROUTINE || "null");
+//                   "investigator": {...}, "router": {...} } }
+// CENTRAL_OWNER: which person's file holds the central routines — the
+//   "router" entry (fired by registered mentions), the fallback test-runner
+//   for /jira, and whatever WATCHED_CHANNELS points at.
+// WATCHED_CHANNELS: {"C0123":"investigator"} — channel ID -> agent NAME,
+//   resolved from CENTRAL_OWNER's file; every top-level human message fires it.
 const PEOPLE_DIR = process.env.PEOPLE_DIR || "/opt/pmm-ai-relay/people";
-const CHANNEL_ROUTINES = JSON.parse(process.env.CHANNEL_ROUTINES || "{}");
-const DEFAULT_ROUTINE = JSON.parse(process.env.DEFAULT_ROUTINE || "null");
+const CENTRAL_OWNER = process.env.CENTRAL_OWNER || "";
+const WATCHED_CHANNELS = JSON.parse(process.env.WATCHED_CHANNELS || "{}");
 
 let bySlack = {};
 let byJira = {};
+let byName = {};
 function loadPeople() {
   const s = {};
   const j = {};
+  const n = {};
   let files = [];
   try {
     files = fs.readdirSync(PEOPLE_DIR).filter((f) => f.endsWith(".json"));
@@ -44,6 +45,7 @@ function loadPeople() {
     try {
       const p = JSON.parse(fs.readFileSync(path.join(PEOPLE_DIR, f), "utf8"));
       p.name = f.replace(/\.json$/, "");
+      n[p.name] = p;
       if (p.slack) s[p.slack] = p;
       if (p.jira) j[p.jira] = p;
     } catch (e) {
@@ -52,8 +54,13 @@ function loadPeople() {
   }
   bySlack = s;
   byJira = j;
-  console.log(`people loaded: ${files.length} file(s), ${Object.keys(s).length} with slack, ${Object.keys(j).length} with jira`);
+  byName = n;
+  console.log(`people loaded: ${files.length} file(s), central owner "${CENTRAL_OWNER}" ${byName[CENTRAL_OWNER] ? "found" : "MISSING"}`);
 }
+
+// Central routines resolve from the owner's file at call time, so they pick
+// up hot-reloaded token changes too.
+const centralRoutine = (agent) => byName[CENTRAL_OWNER]?.routines?.[agent] || null;
 loadPeople();
 let reloadTimer;
 try {
@@ -64,7 +71,7 @@ try {
 } catch (e) {
   console.error(`people watch failed (edits need a restart): ${e.message}`);
 }
-const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> DEFAULT_ROUTINE
+const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> central owner's test-runner
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
 const REPLY_SECRET = process.env.REPLY_SECRET;
@@ -152,11 +159,16 @@ async function fetchThreadHistory(client, channel, threadTs) {
   }
 }
 
-// Channel watch: every top-level human message in a mapped channel fires that
-// channel's Routine automatically (e.g. alerts channel -> Investigator).
+// Channel watch: every top-level human message in a watched channel fires the
+// mapped agent from the central owner's file (e.g. alerts channel -> investigator).
 app.event("message", async ({ event, body, client }) => {
-  const routine = CHANNEL_ROUTINES[event.channel];
-  if (!routine) return;
+  const agent = WATCHED_CHANNELS[event.channel];
+  if (!agent) return;
+  const routine = centralRoutine(agent);
+  if (!routine) {
+    console.error(`watched channel ${event.channel}: central owner has no "${agent}" routine`);
+    return;
+  }
   if (event.subtype || event.bot_id || event.thread_ts) return; // top-level human posts only
   if (!(await markSeen(client, event.channel, event.ts, body.event_id))) return;
 
@@ -175,8 +187,9 @@ app.event("message", async ({ event, body, client }) => {
 // the CALLER's own routines via POST /route — so the work is billed to, and
 // acts as, the person who asked. Tokens stay on this server.
 app.event("app_mention", async ({ event, body, client }) => {
-  if (!ROUTER_ROUTINE) return; // mention flow disabled
-  if (CHANNEL_ROUTINES[event.channel]) return; // watched channels are handled above
+  const ROUTER = centralRoutine("router");
+  if (!ROUTER) return; // mention flow disabled (no router in the central owner's file)
+  if (WATCHED_CHANNELS[event.channel]) return; // watched channels are handled above
   if (CHANNELS.length && !CHANNELS.includes(event.channel)) return;
   if (!(await markSeen(client, event.channel, event.ts, body.event_id))) return;
 
@@ -209,7 +222,7 @@ app.event("app_mention", async ({ event, body, client }) => {
     `reply briefly instead. ${replyInstructions(event.channel, threadTs)}`;
 
   try {
-    console.log(`router-fire for ${person.name}: ${await fire(ROUTER_ROUTINE, payload)}`);
+    console.log(`router-fire for ${person.name}: ${await fire(ROUTER, payload)}`);
   } catch (e) {
     console.error(e.message);
     await client.chat.postMessage({
@@ -272,7 +285,7 @@ http
           throw new Error("bad secret");
         const { accountId, text } = JSON.parse(raw);
         const person = byJira[accountId];
-        const routine = person?.routines?.["test-runner"] || (ALLOW_FALLBACK ? DEFAULT_ROUTINE : null);
+        const routine = person?.routines?.["test-runner"] || (ALLOW_FALLBACK ? centralRoutine("test-runner") : null);
         if (!routine) throw new Error(`no test-runner routine mapped for ${accountId}`);
         console.log(
           `jira-fire for ${person?.name || "fallback"}: ${await fire(routine, `Jira trigger (initiator ${accountId}):\n${text}`)}`,

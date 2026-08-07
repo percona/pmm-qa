@@ -2,7 +2,17 @@
   "slack": "U0123456789",
   "jira": "712020:00000000-0000-0000-0000-000000000000",
   "routines": {
-    "test-runner": { "id": "trig_...", "token": "sk-ant-oat01-..." },
-    "investigator": { "id": "trig_...", "token": "sk-ant-oat01-..." }
+    "test-runner": {
+      "id": "trig_...",
+      "token": "sk-ant-oat01-..."
+    },
+    "investigator": {
+      "id": "trig_...",
+      "token": "sk-ant-oat01-..."
+    },
+    "router": {
+      "id": "trig_...",
+      "token": "sk-ant-oat01-... (central owner only)"
+    }
   }
 }
