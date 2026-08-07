@@ -68,30 +68,27 @@ pmmTest('PMM-T2119 - Verify export logs button @new-navigation', async ({ helpPa
   });
 });
 
-pmmTest(
-  'PMM-T1830 - Verify downloading server diagnostics logs @new-navigation',
-  async ({ api, helpPage }) => {
-    const download = await helpPage.exportLogs();
-    const path = await download.path();
+pmmTest('PMM-T1830 - Verify downloading server diagnostics logs @menu', async ({ api, helpPage }) => {
+  const download = await helpPage.exportLogs();
+  const path = await download.path();
 
-    if (!path) {
-      throw new Error('Download path is null');
-    }
+  if (!path) {
+    throw new Error('Download path is null');
+  }
 
-    const entries = readZipArchive(path);
+  const entries = readZipArchive(path);
 
-    expect(entries).toContain('pmm-agent.yaml');
-    expect(entries).toContain('pmm-managed.log');
-    expect(entries).toContain('pmm-agent.log');
+  expect(entries).toContain('pmm-agent.yaml');
+  expect(entries).toContain('pmm-managed.log');
+  expect(entries).toContain('pmm-agent.log');
 
-    const version = await api.serverApi.getPmmVersion();
-    const forbiddenEntries = version.minor > 40 ? ['alertmanager.yml', 'alertmanager.base.yml'] : [];
+  const version = await api.serverApi.getPmmVersion();
+  const forbiddenEntries = version.minor > 40 ? ['alertmanager.yml', 'alertmanager.base.yml'] : [];
 
-    for (const entry of forbiddenEntries) {
-      expect(entries).not.toContain(entry);
-    }
-  },
-);
+  for (const entry of forbiddenEntries) {
+    expect(entries).not.toContain(entry);
+  }
+});
 
 pmmTest('PMM-T2120 - Verify start pmm tour button @new-navigation', async ({ helpPage }) => {
   await pmmTest.step('Verify starting PMM tour', async () => {

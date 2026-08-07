@@ -11,9 +11,10 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - Launch each subagent and **wait on its task completion notification** (or poll its transcript every 10–15s). Do **not** use long `Await` sleeps with regex patterns on terminal output.
 - Enforce gates strictly: no execution before `READY_TO_RUN`, no publish before `FINAL_REVIEW_PASS`, no tracker `done` before a PR exists.
 - Overlap only where gates allow: static review can start while PMM provisions; MCP locator checks begin after readyz passes.
-- Reuse one PMM environment per migration (`CLEAN_ENVIRONMENT=false` after the first `--prepare-only`).
-- Never edit `e2e_tests/.env` during migration; `run-migration-single-test.sh` exports `PMM_MIGRATION=1` and `PMM_UI_URL=http://127.0.0.1/`.
+- Reuse one Linode PMM environment per migration; never recreate it mid-workflow.
+- Never edit `e2e_tests/.env` during migration; pass the Linode `PMM_UI_URL` and generated `ADMIN_PASSWORD` explicitly to every command that needs them (`run-migration-single-test.sh`, `verify-migration-locator.mjs`, Playwright).
 - For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
+- If the workflow stops after step 3 (VM provisioned) without ever reaching step 5 (e.g. the writer/reviewer loop exhausts its retries on `REVIEW_FAILED`/`LOCATOR_FIX_REQUIRED` and the runner is never invoked), the parent — not the runner — destroys the VM with `terraform/linode-runner/down.sh <run-id>` before stopping. The runner owns cleanup for every path it does reach (step 8); this bullet only covers the case where it's never reached at all.
 
 ## 1. Select
 
@@ -47,21 +48,22 @@ The writer:
 
 Writer output: `MIGRATION_READY`, `BLOCKED`, or `STATIC_FAILED`.
 
-## 3. Provision once for review
+## 3. Provision once on Linode for review
 
-After `MIGRATION_READY`, provision the migration environment once:
+After `MIGRATION_READY`, follow `.claude/skills/linode-provisioning/SKILL.md` to create one throwaway VM with role `pmm-migration`, start PMM Server, and run the source-derived `setup_services` and `setup_client` provisioning there. Use a unique run ID such as `migration-<tracker-row>-<date>`.
+
+Then verify the remote environment from the migration worktree:
 
 ```bash
+RUN_DIR='terraform/linode-runner/runs/<run-id>'
+PMM_UI_URL="https://$(tr '.' '-' <"$RUN_DIR/ip").nip.io" \
+ADMIN_PASSWORD="$(cat "$RUN_DIR/admin_password")" \
 ./.claude/scripts/run-migration-single-test.sh \
   '<target-test-file>' \
-  '<setup-services>' \
-  <setup-client> \
   --prepare-only
 ```
 
-This starts Docker, PMM Server, optional standalone PMM Client, and optional `pmm-framework.py` services, then exits before Playwright execution.
-
-After this step, all later commands in this migration must reuse the same environment with `CLEAN_ENVIRONMENT=false`. If reuse cannot reach PMM, keep the tracker `in-progress`, record the blocker in Notes, and stop instead of recreating the environment.
+After this step, all later review and execution commands must reuse the same `PMM_UI_URL` and `ADMIN_PASSWORD`. If reuse cannot reach PMM, keep the tracker `in-progress`, record the blocker in Notes, and stop instead of recreating the environment.
 
 ## 4. Initial review and MCP verification
 
@@ -80,7 +82,7 @@ Non-locator findings return to the writer. Any changed code must be reviewed aga
 
 ## 5. Execute
 
-The runner executes the migrated scenarios or existing coverage against the prepared environment. Use `CLEAN_ENVIRONMENT=false` for every proof and regression command.
+The runner executes the migrated scenarios or existing coverage against the prepared environment, reusing the same `PMM_UI_URL`/`ADMIN_PASSWORD` for every proof and regression command.
 
 - For a new target file containing only migrated scenarios, run the complete file once.
 - For an appended existing target file, first run only the migrated scenarios, then run the complete target file.
@@ -115,6 +117,10 @@ Only after `FINAL_REVIEW_PASS`, the runner:
 
 For this workflow, `done` means the PR was opened successfully.
 
+## 8. Cleanup
+
+Run `terraform/linode-runner/down.sh <run-id>` on every terminal path after provisioning: success, test failure, review failure, publication failure, or blocker. Do not leave a billable VM running.
+
 ## Canonical sequence
 
 ```text
@@ -125,11 +131,12 @@ pending
 -> provision once
 -> initial review
 -> MCP locator verification
--> test execution or already-covered regression with CLEAN_ENVIRONMENT=false
+-> test execution or already-covered regression against the same Linode PMM environment
 -> final review
 -> retire source
 -> update workflow coverage
 -> e2e_tests graphify --update
 -> PR opened
 -> done
+-> destroy Linode VM
 ```

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Provision PMM and run one Playwright test file or an anchored grep-filtered subset.
+# Wait for an already-provisioned remote PMM (Linode VM) to be ready, then run one
+# Playwright test file or an anchored grep-filtered subset. Provisioning (server, DB,
+# client) happens on the VM via the linode-provisioning skill, not by this script.
 # Usage:
-#   run-migration-single-test.sh <tests/file.test.ts> [setup_services] [setup_client] [--prepare-only] [--grep regex]
+#   run-migration-single-test.sh <tests/file.test.ts> [--prepare-only] [--grep regex]
 set -Eeuo pipefail
 
 
@@ -69,38 +71,29 @@ done
 
 TEST_FILE="${POSITIONAL_ARGS[0]:-}"
 if [[ -z "$TEST_FILE" ]]; then
-  echo "usage: run-migration-single-test.sh <tests/file.test.ts> [setup_services] [setup_client] [--prepare-only] [--grep regex]" >&2
+  echo "usage: run-migration-single-test.sh <tests/file.test.ts> [--prepare-only] [--grep regex]" >&2
   exit 2
 fi
-
-SETUP_SERVICES="${POSITIONAL_ARGS[1]:-}"
-SETUP_CLIENT="${POSITIONAL_ARGS[2]:-false}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 E2E_DIR="$REPO_ROOT/e2e_tests"
-QA_DIR="$REPO_ROOT/qa-integration/pmm_qa"
-COMPOSE_FILE="$E2E_DIR/docker-compose.yml"
 
+if [[ -z "${PMM_UI_URL:-}" ]]; then
+  echo "ERROR: PMM_UI_URL must be set explicitly to the provisioned Linode PMM URL (see linode-provisioning skill)." >&2
+  exit 2
+fi
+if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
+  echo "ERROR: ADMIN_PASSWORD must be set explicitly (see terraform/linode-runner/runs/<run-id>/admin_password)." >&2
+  exit 2
+fi
 
-ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin-password}"
-DOCKER_VERSION="${DOCKER_VERSION:-perconalab/pmm-server:3-dev-latest}"
-CLEAN_ENVIRONMENT="${CLEAN_ENVIRONMENT:-true}"
-PMM_UI_URL="${PMM_UI_URL:-http://127.0.0.1/}"
 HEADLESS="${HEADLESS:-true}"
 WORKERS="${WORKERS:-1}"
-export ADMIN_PASSWORD DOCKER_VERSION PMM_MIGRATION=1 PMM_UI_URL HEADLESS WORKERS
+export ADMIN_PASSWORD PMM_MIGRATION=1 PMM_UI_URL HEADLESS WORKERS
 
-READYZ_URL="http://127.0.0.1/v1/server/readyz"
+READYZ_URL="${PMM_UI_URL%/}/v1/server/readyz"
 READYZ_BODY_FILE="${TMPDIR:-/tmp}/pmm-readyz-body.txt"
-
-cleanup_pmm_qa_containers() {
-  docker network inspect pmm-qa -f '{{range .Containers}}{{.Name}}{{"\n"}}{{end}}' 2>/dev/null |
-    while read -r name; do
-      [[ -z "$name" || "$name" == "pmm-server" ]] && continue
-      docker rm -f "$name" >/dev/null 2>&1 || true
-    done
-}
 
 readyz_once() {
   READYZ_HTTP_CODE=$(curl -ksS -o "$READYZ_BODY_FILE" -w '%{http_code}' --user "admin:${ADMIN_PASSWORD}" "$READYZ_URL" 2>/dev/null || echo "000")
@@ -133,12 +126,6 @@ wait_readyz() {
 
 cleanup() {
   local code=$?
-  if (( code != 0 )); then
-    echo "=== PMM compose status ===" >&2
-    docker compose -f "$COMPOSE_FILE" ps >&2 || true
-    echo "=== PMM compose logs ===" >&2
-    docker compose -f "$COMPOSE_FILE" logs --tail=200 >&2 || true
-  fi
   exit "$code"
 }
 trap cleanup EXIT
@@ -148,69 +135,15 @@ trap cleanup EXIT
   exit 2
 }
 
-bash "$SCRIPT_DIR/start-docker-microvm.sh"
-
-if [[ "$CLEAN_ENVIRONMENT" == "false" ]]; then
-  if ! readyz_once; then
-    echo "ERROR: CLEAN_ENVIRONMENT=false requires an existing prepared PMM environment. Run with --prepare-only first." >&2
+if ! readyz_once; then
+  wait_readyz || {
+    echo "ERROR: could not reach the provisioned PMM environment at ${PMM_UI_URL}. Provision it first via the linode-provisioning skill." >&2
     exit 2
-  fi
-elif [[ "$CLEAN_ENVIRONMENT" != "true" ]]; then
-  echo "ERROR: CLEAN_ENVIRONMENT must be true or false" >&2
-  exit 2
-fi
-
-if [[ "$CLEAN_ENVIRONMENT" == "true" ]]; then
-  docker network inspect pmm-qa >/dev/null 2>&1 || docker network create pmm-qa
-  cleanup_pmm_qa_containers
-
-  docker compose -f "$COMPOSE_FILE" down --volumes --remove-orphans || true
-  docker volume rm pmm-volume >/dev/null 2>&1 || true
-  docker volume inspect pmm-volume >/dev/null 2>&1 || docker volume create pmm-volume
-
-  cd "$E2E_DIR"
-  docker compose -f "$COMPOSE_FILE" up -d
-
-  wait_readyz
-
-  if [[ "$SETUP_CLIENT" == "true" ]]; then
-    cd "$QA_DIR"
-    sudo bash -x pmm3-client-setup.sh \
-      --pmm_server_ip 127.0.0.1 \
-      --client_version "${PMM_CLIENT_VERSION:-latest-tarball}" \
-      --admin_password "$ADMIN_PASSWORD" \
-      --use_metrics_mode no
-  elif [[ "$SETUP_CLIENT" != "false" ]]; then
-    echo "ERROR: setup_client must be true or false" >&2
-    exit 2
-  fi
-
-  if [[ -n "$SETUP_SERVICES" ]]; then
-    cd "$QA_DIR"
-    export IS_CURSOR_VM="${IS_CURSOR_VM:-1}"
-    export PMM_QA_NO_SYSTEMD="${PMM_QA_NO_SYSTEMD:-1}"
-    export DOCKER_HOST="${DOCKER_HOST:-unix:///var/run/docker.sock}"
-
-    if [[ ! -x virtenv/bin/python ]]; then
-      python3 -m venv virtenv
-      virtenv/bin/pip install --upgrade pip
-      virtenv/bin/pip install -r requirements.txt setuptools
-    fi
-
-    # The canonical interface currently accepts setup_services as one shell-like string.
-    read -r -a setup_args <<< "$SETUP_SERVICES"
-    virtenv/bin/python pmm-framework.py \
-      --verbosity-level=2 \
-      --pmm-server-password="$ADMIN_PASSWORD" \
-      "${setup_args[@]}"
-  fi
-elif [[ "$SETUP_CLIENT" != "true" && "$SETUP_CLIENT" != "false" ]]; then
-  echo "ERROR: setup_client must be true or false" >&2
-  exit 2
+  }
 fi
 
 if [[ "$PREPARE_ONLY" == "true" ]]; then
-  echo "PMM migration environment is ready. Reuse it with CLEAN_ENVIRONMENT=false."
+  echo "PMM environment at ${PMM_UI_URL} is ready."
   echo "PMM_UI_URL=${PMM_UI_URL} ADMIN_PASSWORD=***"
   exit 0
 fi
