@@ -1342,10 +1342,23 @@ module.exports = {
   },
 
   // acceptableDataCount - Defect in testing software, even when all tha tables are without data then condition are not met,
-  async verifyThatAllGraphsNoData(acceptableNaDataCount = 0) {
-    const numberOfNAElements = await I.grabNumberOfVisibleElements(this.fields.reportTitleWithNA);
-    const allGraphs = await I.grabNumberOfVisibleElements(this.fields.reportTitle);
-    const panelsWithData = allGraphs - numberOfNAElements;
+  // A panel only matches reportTitleWithNA once its "No data"/"N/A" text is rendered, so panels that are
+  // still loading are counted as "with data". Poll until they settle instead of asserting on a single sample.
+  async verifyThatAllGraphsNoData(acceptableNaDataCount = 0, timeoutInSeconds = 60) {
+    let numberOfNAElements = 0;
+    let allGraphs = 0;
+    let panelsWithData = 0;
+
+    // eslint-disable-next-line no-plusplus
+    for (let currentIteration = 0; currentIteration <= timeoutInSeconds; currentIteration++) {
+      numberOfNAElements = await I.grabNumberOfVisibleElements(this.fields.reportTitleWithNA);
+      allGraphs = await I.grabNumberOfVisibleElements(this.fields.reportTitle);
+      panelsWithData = allGraphs - numberOfNAElements;
+
+      if (panelsWithData <= acceptableNaDataCount) return;
+
+      await I.wait(1);
+    }
 
     I.say(`Number of no data and N/A elements is = ${numberOfNAElements}`);
     I.say(`Number of all graph elements is = ${allGraphs}`);
