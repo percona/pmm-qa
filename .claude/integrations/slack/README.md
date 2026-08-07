@@ -22,10 +22,42 @@ works around the first limit; it doesn't try to work around the second
       Per-person tokens live only in the server's `.env` + password manager.
 - [ ] Fill `/opt/pmm-ai-relay/.env` (Slack `xapp-`/`xoxb-` tokens, `PEOPLE`
       map) once the app is installed, then `systemctl restart pmm-ai-relay`.
-- [ ] `PMM AI` Router Routine — **now optional**: the Jira path routes
-      directly to per-person Test Runner Routines and watched channels route
-      directly to Investigator, so `router.md` only serves the free-text
-      mention flow. Create it only if that flow turns out to be wanted.
+- [ ] `PMM AI` Router Routine — **one central routine, not one per person**:
+      ALL mentions fire it (`ROUTER_ROUTINE` in the relay `.env`). Its prompt
+      is just "read `.claude/agents/router.md` and follow it" — router.md
+      evaluates whether the ask is appropriate, routes to the right agent
+      (investigator etc.), or declines off-topic cheaply. Replies post as the
+      bot via `/reply`, so mentions need no per-person identity; usage bills
+      to the routine's owner (today Davi, later a service account — swapping
+      is just changing `id`+`token` in the `.env`). The `PEOPLE` map is used
+      by `/jira` only, where Jira comments must post as the person who
+      clicked.
+
+## Operations
+
+- **`.env` storage**: keep the complete `/opt/pmm-ai-relay/.env` as a Secure
+  Note in the team's **LastPass shared folder** (Business). It is the only
+  state the relay has. Auto-fetching it on boot via the LastPass API is
+  deliberately NOT done — that would require a LastPass credential on the
+  server (the circular-secret problem). Restore is semi-automatic instead:
+
+  ```bash
+  lpass show --notes 'Shared-PMM-QA/pmm-ai-relay.env' > .env
+  LINODE_TOKEN=... ./relay/deploy.sh .env   # rebuilds same ID/IP, or recreates
+  ```
+
+- **Never delete the Linode — rebuild it** (`deploy.sh` does this): rebuild
+  keeps the instance ID and IP. If someone does delete it, the released IP
+  can be reassigned to a stranger while the Jira Automation rule keeps
+  POSTing `X-Relay-Secret` at it — so deletion means: recreate via
+  `deploy.sh`, **rotate `JIRA_RELAY_SECRET`**, and update the IP + secret in
+  the Jira Automation rule. The Slack side is immune (Socket Mode is an
+  outbound connection, not tied to the IP). Exposure is bounded either way:
+  the secret only allows firing routines, it exposes nobody's tokens.
+- **Follow-ups in Slack work**: a mention inside a thread fires a fresh
+  session, but the relay injects the thread history into the payload, so the
+  new session continues the conversation. The session URL in the relay log
+  also opens in claude.ai for direct continuation.
 
 ## Architecture
 

@@ -7,17 +7,22 @@ import crypto from "node:crypto";
 
 const { App } = pkg;
 
+// ROUTER_ROUTINE: {"id","token"} — the ONE central "PMM AI" Routine that ALL
+//   mentions fire (it reads router.md: evaluates the ask, routes to the right
+//   agent, or declines off-topic requests cheaply). Replies post as the bot,
+//   so mentions need no per-person identity. Unset => mention flow disabled.
 // PEOPLE: {"<name>":{"slack":"U0123","jira":"<atlassian accountId>","id":"trig_...","token":"sk-ant-oat01-..."}}
+//   used by /jira ONLY (Jira comments must post as the person who clicked);
 //   one entry per onboarded person, all four fields mandatory
 // CHANNEL_ROUTINES: {"C0123":{"id","token"}} — every top-level human message in
 //   that channel fires the mapped Routine (e.g. an alerts channel -> Investigator)
-// DEFAULT_ROUTINE: {"id","token"} — used only when ALLOW_FALLBACK=true
+// DEFAULT_ROUTINE: {"id","token"} — /jira fallback when ALLOW_FALLBACK=true
+const ROUTER_ROUTINE = JSON.parse(process.env.ROUTER_ROUTINE || "null");
 const PEOPLE = JSON.parse(process.env.PEOPLE || "{}");
 const CHANNEL_ROUTINES = JSON.parse(process.env.CHANNEL_ROUTINES || "{}");
 const DEFAULT_ROUTINE = JSON.parse(process.env.DEFAULT_ROUTINE || "null");
-const bySlack = Object.fromEntries(Object.values(PEOPLE).map((p) => [p.slack, p]));
 const byJira = Object.fromEntries(Object.values(PEOPLE).map((p) => [p.jira, p]));
-const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // false => unmapped mention gets "register first", zero tokens spent
+const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> DEFAULT_ROUTINE
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
 const REPLY_SECRET = process.env.REPLY_SECRET;
@@ -99,24 +104,17 @@ app.event("message", async ({ event, body, client }) => {
   }
 });
 
-// Mention flow (optional; disabled in practice while PEOPLE is empty and
-// ALLOW_FALLBACK=false — unmapped users get a zero-cost "register first" reply).
+// Mention flow: everything goes to the ONE central router Routine, which
+// evaluates the ask (router.md) and declines off-topic cheaply. Replies post
+// as the bot, so no per-person identity is involved here.
 app.event("app_mention", async ({ event, body, client }) => {
+  if (!ROUTER_ROUTINE) return; // mention flow disabled
   if (CHANNEL_ROUTINES[event.channel]) return; // watched channels are handled above
   if (CHANNELS.length && !CHANNELS.includes(event.channel)) return;
   if (!(await markSeen(client, event.channel, event.ts, body.event_id))) return;
 
   const threadTs = event.thread_ts || event.ts;
-  const routine = bySlack[event.user] || (ALLOW_FALLBACK ? DEFAULT_ROUTINE : null);
-  if (!routine) {
-    await client.chat.postMessage({
-      channel: event.channel,
-      thread_ts: threadTs,
-      text: `:lock: <@${event.user}> you're not registered with PMM AI yet — ask the QA team to add your Routine to the relay map.`,
-    });
-    return;
-  }
-
+  const routine = ROUTER_ROUTINE;
   const text = event.text.replace(/<@[^>]+>/g, "").trim();
 
   // Follow-ups: a mention inside a thread fires a FRESH session (routine runs
