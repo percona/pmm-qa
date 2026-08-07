@@ -95,7 +95,9 @@ const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 // the app is approved — Slack-bound actions (reactions, thread replies)
 // become log lines instead.
 const SLACK_READY =
-  /^xapp-/.test(process.env.SLACK_APP_TOKEN || "") && /^xoxb-/.test(process.env.SLACK_BOT_TOKEN || "");
+  /^xapp-/.test(process.env.SLACK_APP_TOKEN || "") &&
+  /^xoxb-/.test(process.env.SLACK_BOT_TOKEN || "") &&
+  !/FILL/i.test(`${process.env.SLACK_APP_TOKEN}${process.env.SLACK_BOT_TOKEN}`);
 const app = SLACK_READY
   ? new App({
       token: process.env.SLACK_BOT_TOKEN,
@@ -354,14 +356,21 @@ http.createServer(handler).listen(PORT, () => console.log(`HTTP endpoints (/repl
 try {
   https
     .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-    .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints on :${HTTPS_PORT} (self-signed)`));
+    .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints on :${HTTPS_PORT} (cert ${TLS_CERT})`));
 } catch (e) {
   console.error(`HTTPS listener disabled (no cert at ${TLS_CERT}): ${e.message}`);
 }
 
 if (app) {
-  await app.start();
-  console.log("PMM AI relay connected (Socket Mode)");
+  try {
+    await app.start();
+    console.log("PMM AI relay connected (Socket Mode)");
+  } catch (e) {
+    // A bad/expired Slack token must not take the whole relay down — the HTTP
+    // and HTTPS listeners are already serving, so log and stay up in HTTP-only
+    // mode (health/jira/route/reply keep working; Slack reactions/replies don't).
+    console.error(`Slack connect failed (${e.message}) — staying in HTTP-only mode`);
+  }
 } else {
-  console.log("PMM AI relay in DEGRADED mode (no Slack tokens): HTTP endpoints only");
+  console.log("PMM AI relay in HTTP-only mode (no valid Slack tokens)");
 }
