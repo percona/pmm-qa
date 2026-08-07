@@ -57,6 +57,34 @@ The last argument is dwell time in seconds (default 15) — how long it sits on 
 
 If the GitHub Actions page renders blank, the repo is private and the browser has no GitHub session — report this as a blocker rather than guessing at the screenshot content.
 
+## Behind an intercepting egress proxy (Claude Code cloud sessions)
+
+Handled automatically by `lib/proxy.js` — no flags to pass. Worth knowing when
+something still fails:
+
+- Chromium does not read `HTTPS_PROXY`, so the scripts pass it explicitly.
+- The proxy resets Chromium's **TLS 1.3** handshake (CONNECT succeeds, then the
+  ClientHello draws a TCP reset → `ERR_CONNECTION_RESET` on every URL,
+  `example.com` included). The scripts cap the browser-to-proxy leg at TLS 1.2,
+  which the proxy handles. Disabling ECH or post-quantum key agreement does not
+  help. Drop the cap once the proxy handles a 1.3 hello.
+- No extra CA work is needed: the proxy's CA is already trusted, so a
+  self-signed PMM cert arrives re-signed by it. `PMM_CERT_PATH` still matters
+  for the direct, no-proxy path.
+- Override with `PW_PROXY_SERVER`; set it empty to force a direct connection.
+
+## Grafana needs to settle before the screenshot
+
+`networkidle` fires while PMM is still showing its "Loading Percona Monitoring
+and Management" splash. `pw-screenshot.js` waits for the splash to clear and
+then settles for `PW_SETTLE_MS` (default 3000). Dashboards with panels need
+longer — use `PW_SETTLE_MS=15000`, or `PW_WAIT_SELECTOR` to wait on a specific
+element instead.
+
+Saved login sessions go stale (Grafana rotates auth tokens), and a stale one
+silently screenshots the **login page**. Always check the image; re-run
+`pmm-ui-login.js` and re-shoot if it looks wrong.
+
 ## Artifacts
 
 Name files with the ticket key (e.g. `PMM-15196-settings.png`). Save under `/tmp` and reference the path in Jira Developers-only comments when the role requires it.

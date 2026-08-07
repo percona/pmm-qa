@@ -22,6 +22,7 @@ const { execFile } = require("node:child_process");
 const { promisify } = require("node:util");
 const { chromium } = require("playwright");
 const { spkiPinFromCertFile } = require("./lib/spki-pin");
+const { proxyLaunchOptions } = require("./lib/proxy");
 
 const execFileAsync = promisify(execFile);
 
@@ -77,9 +78,11 @@ async function main() {
   // /opt/pw-browsers can drift from what a freshly `npm install`-ed
   // playwright expects (confirmed live), so don't rely on Playwright's own
   // bundled-browser resolution to find it.
+  const proxyOpts = proxyLaunchOptions();
   const browser = await chromium.launch({
     executablePath: "/opt/pw-browsers/chromium",
-    args: launchArgs,
+    args: [...launchArgs, ...proxyOpts.args],
+    proxy: proxyOpts.proxy,
   });
   const context = await browser.newContext(contextOpts);
   const page = await context.newPage();
