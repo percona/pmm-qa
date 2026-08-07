@@ -175,10 +175,10 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 - [ ] Request admin approval and install the app to the workspace
 - [ ] Generate the App-Level Token (`xapp-`): app page → Basic Information → App-Level Tokens → Generate, scope `connections:write`
 - [ ] Copy the Bot Token (`xoxb-`): app page → OAuth & Permissions → Bot User OAuth Token
-- [ ] Generate the PMM AI routine's API token: [claude.ai/code/routines](https://claude.ai/code/routines) → PMM AI → edit → Add another trigger → API → Generate token
-- [ ] Get the Test Runner routine's token: copy it from the current Jira Automation rule config, or Regenerate it in the routines UI
-- [ ] Paste the 4 tokens into a Claude session on this repo and ask it to finish the relay setup — it rebuilds the server with the completed `.env` baked in (no SSH, no LastPass CLI needed; the `.env` skeleton is `.claude/integrations/slack/relay/` + the copy already shared in chat)
-- [ ] Save the completed `.env` and the server root password in the LastPass **PMM** shared folder (web vault, Secure Note `pmm-ai-relay.env`)
+- [x] Generate the PMM AI routine's API token (done 2026-08-07, stored in the LastPass **PMM** note)
+- [x] Get the Test Runner routine's token (done 2026-08-07, stored in the LastPass **PMM** note)
+- [ ] Give a Claude session on this repo the 2 Slack app tokens + the routine tokens and root password from the LastPass note, and ask it to finish the relay setup — it rebuilds the server with the completed `.env` baked in (no SSH, no LastPass CLI needed)
+- [ ] Update the LastPass **PMM** Secure Note `pmm-ai-relay.env` with the final completed `.env` (after the app tokens exist)
 - [ ] `/invite @pmm-ai` into a test channel, mention it — expect 👀, then a reply
 - [ ] Update the **Jira Button automation** to the new request: POST `http://139.162.176.43:8787/jira`, header `X-Relay-Secret: <JIRA_RELAY_SECRET from the .env>`, body `{"accountId":"{{initiator.accountId}}","text":"<ticket key + what to do>"}`
 - [ ] Click the Jira button on a test ticket and confirm the run starts under your Test Runner
