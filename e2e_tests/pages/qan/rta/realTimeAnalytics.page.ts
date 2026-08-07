@@ -19,6 +19,8 @@ export default class RealTimeAnalyticsPage extends BasePage {
   // column position: Database and User are hidden by default and revealed on
   // demand (see showColumns), so positions are not stable.
   builders = {
+    columnToggle: (columnHeader: string) =>
+      this.page.getByRole('checkbox', { exact: true, name: columnHeader }),
     databaseForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).getByTestId(/-database-cell$/),
     detailsPaneCodeByText: (queryText: string) =>
       this.elements.detailsPane.locator('[data-testid="query-text"], code.language-mongodb', {
@@ -43,11 +45,14 @@ export default class RealTimeAnalyticsPage extends BasePage {
       this.page.getByTestId(realTimeTableTestId).locator(`//tbody//tr[position()=${rowIndex}]`),
     rowByQueryText: (queryText: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
+    serviceOption: (serviceId: string) => this.page.getByTestId(`service-option-${serviceId}`),
     technologyForSession: (sessionName: string) =>
       this.page
         .getByTestId(sessionsTableTestId)
         .locator('tr', { hasText: sessionName })
         .getByTestId('technology'),
+    technologyGroupHeader: (technology: string) =>
+      this.page.getByRole('listbox').locator('.MuiAutocomplete-groupLabel', { hasText: technology }),
     userForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).getByTestId(/-user-cell$/),
   };
   buttons = {
@@ -197,6 +202,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   openFilters = async () => {
     await this.buttons.filters.click();
+  };
+
+  // Opens the Cluster/Service picker of the overview.
+  openServicesDropdown = async () => {
+    await this.page.getByTitle('Open').click();
+    await expect(this.page.getByRole('listbox')).toBeVisible();
   };
 
   selectClusterService = async () => {

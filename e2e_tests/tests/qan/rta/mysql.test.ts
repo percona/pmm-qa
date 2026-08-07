@@ -355,67 +355,113 @@ pmmTest(
   },
 );
 
-pmmTest(
-  'Verify overview renders MongoDB and MySQL queries side by side @rta',
-  async ({ page, queryAnalytics }) => {
-    const mongoQueryText = '{ find: "mycollection", filter: { status: "active" } }';
-    const mySqlQueryText = 'SELECT c FROM sbtest1 WHERE id=7';
+pmmTest('Verify the overview picker refuses to mix technologies @rta', async ({ page, queryAnalytics }) => {
+  await pmmTest.step('Mock one MySQL and one MongoDB session', async () => {
+    await page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
+      route.fulfill({
+        body: JSON.stringify({
+          sessions: [
+            buildSession({
+              serviceId: 'mock-mysql-service',
+              serviceName: 'mock-mysql-service',
+              serviceType: 'SERVICE_TYPE_MYSQL_SERVICE',
+            }),
+            buildSession({
+              serviceId: 'mock-mongo-service',
+              serviceName: 'mock-mongo-service',
+              serviceType: 'SERVICE_TYPE_MONGODB_SERVICE',
+            }),
+          ],
+        }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    );
 
-    await pmmTest.step('Mock RTA search response with one query per engine', async () => {
-      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
+    await page.goto(queryAnalytics.rta.getUrlWithServices(['mock-mysql-service']));
+
+    await expect(queryAnalytics.rta.elements.realTimeTable).toBeVisible({
+      timeout: Timeouts.TEN_SECONDS,
+    });
+  });
+
+  await pmmTest.step('Verify the other technology is grouped and not selectable', async () => {
+    await queryAnalytics.rta.openServicesDropdown();
+
+    // A view of live queries shows one technology at a time, so picking a
+    // MySQL service leaves the MongoDB ones disabled.
+    await expect(queryAnalytics.rta.builders.serviceOption('mock-mysql-service')).not.toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await expect(queryAnalytics.rta.builders.serviceOption('mock-mongo-service')).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await expect(queryAnalytics.rta.builders.technologyGroupHeader('MySQL')).toBeVisible();
+    await expect(queryAnalytics.rta.builders.technologyGroupHeader('MongoDB')).toBeVisible();
+  });
+});
+
+pmmTest(
+  'Verify Database and User columns are not offered for MongoDB @rta',
+  async ({ page, queryAnalytics }) => {
+    await pmmTest.step('Watch a MongoDB service', async () => {
+      await page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
         route.fulfill({
           body: JSON.stringify({
-            queries: [
-              buildMongoDbQuery({ queryId: '301', queryText: mongoQueryText }),
-              buildMySqlQuery({ queryId: '302', queryText: mySqlQueryText }),
+            sessions: [
+              buildSession({
+                serviceId: 'mock-mongo-service',
+                serviceName: 'mock-mongo-service',
+                serviceType: 'SERVICE_TYPE_MONGODB_SERVICE',
+              }),
             ],
           }),
           contentType: 'application/json',
           status: 200,
         }),
       );
-      await page.reload();
+      await page.route(apiEndpoints.realtimeanalytics.queriesSearch, (route) =>
+        route.fulfill({
+          body: JSON.stringify({
+            queries: [
+              buildMongoDbQuery({
+                queryId: '801',
+                queryText: '{ find: "mycollection", filter: { status: "active" } }',
+              }),
+            ],
+          }),
+          contentType: 'application/json',
+          status: 200,
+        }),
+      );
 
-      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(2, {
+      await page.goto(queryAnalytics.rta.getUrlWithServices(['mock-mongo-service']));
+
+      await expect(queryAnalytics.rta.elements.realTimeTableRow).toHaveCount(1, {
         timeout: Timeouts.TEN_SECONDS,
       });
     });
 
-    await pmmTest.step('Verify each row resolves database and user from its own payload', async () => {
+    await pmmTest.step('Verify neither column can be revealed, and no COMMIT toggle', async () => {
       await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
-      await queryAnalytics.rta.showColumns('Database', 'User');
+      await queryAnalytics.rta.buttons.showHideColumns.click();
 
-      const mongoRow = queryAnalytics.rta.builders.rowByQueryText('find: "mycollection"');
-      const mySqlRow = queryAnalytics.rta.builders.rowByQueryText('SELECT c FROM sbtest1');
+      await expect(queryAnalytics.rta.elements.columnsMenu).toBeVisible();
+      await expect(queryAnalytics.rta.builders.columnToggle('Database')).toHaveCount(0);
+      await expect(queryAnalytics.rta.builders.columnToggle('User')).toHaveCount(0);
 
-      await expect(mongoRow).toContainText('admin');
-      await expect(mongoRow).toContainText('pmm-mongo');
-      await expect(mySqlRow).toContainText('sbtest');
-      await expect(mySqlRow).toContainText('sbtest@localhost');
-    });
+      await page.keyboard.press('Escape');
 
-    await pmmTest.step('Verify details pane switches payload-specific fields per engine', async () => {
-      await queryAnalytics.rta.builders.rowByQueryText('find: "mycollection"').click();
-      await expect(queryAnalytics.rta.elements.detailsPane).toBeVisible();
-
-      // MongoDB-only fields visible, MySQL-only fields absent.
-      await expect(queryAnalytics.rta.elements.detailsPane.getByTestId('collection-value')).toBeVisible();
-      await expect(queryAnalytics.rta.elements.detailsCommand).toBeHidden();
-
-      await queryAnalytics.rta.buttons.detailsNextQuery.click();
-
-      // And the other way around for the MySQL row.
-      await expect(queryAnalytics.rta.elements.detailsCommand).toBeVisible();
-      await expect(queryAnalytics.rta.elements.detailsPane.getByTestId('collection-value')).toBeHidden();
-
-      await queryAnalytics.rta.buttons.closeDetailsPane.click();
+      // Transaction-control statements are a MySQL concern.
+      await expect(queryAnalytics.rta.toggles.hideCommit).toHaveCount(0);
     });
   },
 );
 
-// The session list only names the technology when the running sessions span more
-// than one engine, so both are mocked here rather than relying on the
-// environment to monitor a MySQL and a MongoDB service at once.
+// Sessions are mocked rather than relying on the environment to monitor a MySQL
+// and a MongoDB service at once.
 const buildSession = (overrides: { serviceId: string; serviceName: string; serviceType: string }) => ({
   cluster_name: '',
   collect_interval: '2s',
@@ -427,7 +473,7 @@ const buildSession = (overrides: { serviceId: string; serviceName: string; servi
 });
 
 pmmTest(
-  'Verify the sessions list names the technology when engines are mixed @rta',
+  'Verify the sessions list names the technology of every session @rta',
   async ({ page, queryAnalytics }) => {
     await pmmTest.step('Mock one MySQL and one MongoDB session', async () => {
       await page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
