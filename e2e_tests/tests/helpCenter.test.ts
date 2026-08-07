@@ -68,7 +68,7 @@ pmmTest('PMM-T2119 - Verify export logs button @new-navigation', async ({ helpPa
 });
 
 pmmTest(
-  'PMM-T1830 - Verify downloading server diagnostics logs @new-navigation',
+  'PMM-T1830 - Verify downloading server diagnostics logs @menu',
   async ({ api, helpPage }) => {
     const download = await helpPage.exportLogs();
     const path = await download.path();
