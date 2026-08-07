@@ -138,46 +138,42 @@ existing QA account(s); the app is just the doorbell and the mailbox.
 
 ### PMM AI flow — three entry points, one relay
 
+Purple = the Slack app being requested. Everything else already exists and
+works without it.
+
+**1 — `@pmm-ai` mention** (the app delivers the mention and posts the replies):
+
 ```mermaid
-flowchart TB
-    subgraph SLACK["Slack — needs the '@pmm-ai' app approved"]
-        M["Registered person\n@mentions @pmm-ai"]
-        W["Any message in a\nwatched alerts channel"]
-        U["UNregistered person\n@mentions @pmm-ai"]
-    end
-    subgraph JIRA["Jira — no app needed"]
-        J["Person clicks the ticket's\naction button (one shared\nAutomation rule)"]
-    end
-    subgraph RELAY["Relay — pmm-ai-relay Linode ($5/mo), holds all routine tokens"]
-        R{"routing map\n(.env PEOPLE /\nCHANNEL_ROUTINES)"}
-        REPLY["/reply — posts the outcome\nback in the Slack thread\nas 'PMM AI', adds ✅"]
-    end
-    subgraph CLAUDE["Claude Code Routines (claude.ai)"]
-        ROUTER["'PMM AI' router Routine\n(central acct) — reads router.md,\nONLY evaluates & routes:\noff-topic → polite decline"]
-        OWN["The CALLER's own Routine\n(test-runner / investigator /...)\nruns & bills on THEIR account"]
-        INV["Investigator Routine\n(QA owner's account)"]
-        TR["Initiator's own\nTest Runner Routine"]
-    end
-    M --> R -->|"fire"| ROUTER
-    ROUTER -->|"hand-off via /route\n(tokens stay on the relay)"| OWN
-    W --> R -->|"fire"| INV
-    J -->|"POST /jira +\nX-Relay-Secret"| R -->|"fire"| TR
-    U --> R -->|"'not registered' reply,\nzero AI cost"| REPLY
-    OWN --> REPLY
-    ROUTER -.->|"decline / answer"| REPLY
-    INV --> REPLY
-    style SLACK fill:#611f69,color:#fff
-    style M color:#fff
-    style W color:#fff
-    style U color:#fff
+flowchart LR
+    A["@pmm-ai mention"]:::slack --> B{"Relay:\nsender registered?"}
+    B -->|no| C["Bot replies\n'not registered'\n(zero AI cost)"]:::slack
+    B -->|yes| D["PMM AI router Routine\nevaluates the ask only"]
+    D -->|off-topic| E["Bot replies,\npolitely declining"]:::slack
+    D -->|fits| F["Caller's OWN Routine\n(test-runner / investigator)\nruns on THEIR account"]
+    F --> G["Bot posts the outcome\nin the thread, adds ✅"]:::slack
+    classDef slack fill:#611f69,color:#fff
 ```
 
-Where the Slack app is needed: the purple box only — delivering mentions and
-watched-channel messages to the relay (over Socket Mode) and letting the
-relay react/reply as the bot. The Jira path works without it, and no AI or
-credentials live in the app itself. Test Runner posts its Jira results as
-the person who asked (their own Routine); Slack replies always appear as
-"PMM AI".
+**2 — watched alerts channel** (future; the app delivers the messages):
+
+```mermaid
+flowchart LR
+    A["New message in the\nwatched channel"]:::slack --> B["Relay"] --> C["Investigator Routine\n(QA owner's account)"] --> D["Bot posts findings\nin the thread"]:::slack
+    classDef slack fill:#611f69,color:#fff
+```
+
+**3 — Jira ticket button** (works with no Slack app at all):
+
+```mermaid
+flowchart LR
+    A["Person clicks the\nticket's action button"] --> B["One shared Automation rule\nPOST /jira + secret"] --> C["Relay maps the initiator\nto their own Test Runner"] --> D["QA runs on the\ninitiator's account"] --> E["Developers-only\nJira comment, as them"]
+```
+
+The app itself holds no credentials to anything outside Slack, has no public
+URL (Socket Mode — outbound connection only), and can only read channels it
+is invited to, react 👀/✅, and reply in threads. All routine tokens stay on
+the relay server; all AI work runs in Claude Code Routines on the team's own
+accounts.
 
 ## Routine ownership — read before relying on this
 
