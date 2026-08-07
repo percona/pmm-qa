@@ -94,6 +94,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@nightly`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
+- `@pmm-psmdb-integration`
 - `@pmm-valkey-integration`
 - `@post-release`
 - `@rta`

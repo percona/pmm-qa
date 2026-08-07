@@ -93,13 +93,15 @@ load helpers/test_helper
 }
 
 @test "resolves latest PSMDB patch without Python" {
+  # Same patch, two builds: only correct if 'patch-build' is compared as
+  # 'patch.build' rather than as one opaque, arithmetic-subtraction-prone
+  # token (see the "-" to "." conversion in latest_psmdb_version()).
   curl() {
-    printf '%s\n' \
-      '<option value="percona-server-mongodb-8.0-8.1|old">old</option>' \
-      '<option value="percona-server-mongodb-8.0-12.1|new">new</option>'
+    printf '%s' \
+      '{"success":true,"data":{"versions":["percona-server-mongodb-8.0.4-1","percona-server-mongodb-8.0.4-2"]}}'
   }
 
-  [[ $(latest_psmdb_version 8.0) == 8.0-12.1 ]]
+  [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
 }
 
 @test "selects the existing requests-capable interpreter for Ansible modules" {
@@ -111,6 +113,78 @@ load helpers/test_helper
   configure_ansible_python
 
   [[ $ANSIBLE_PYTHON_INTERPRETER == "$fake_python" ]]
+}
+
+@test "uses a PATH python that already has requests, without provisioning a venv" {
+  PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
+  # Invoked indirectly by name through configure_ansible_python's candidate
+  # loop, which shellcheck can't trace.
+  # shellcheck disable=SC2329
+  python3() { [[ $1 == -c ]]; }
+  # shellcheck disable=SC2329
+  python() { return 1; }
+
+  configure_ansible_python
+
+  [[ $ANSIBLE_PYTHON_INTERPRETER == python3 ]]
+  [[ ! -e $PMM_QA_ROOT/pmm_framework ]]
+}
+
+@test "reuses a previously-provisioned fallback venv instead of recreating it" {
+  PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
+  local venv_python=$PMM_QA_ROOT/pmm_framework/bin/python
+  mkdir -p "$(dirname "$venv_python")"
+  printf '#!/usr/bin/env bash\nexit 0\n' >"$venv_python"
+  chmod +x "$venv_python"
+
+  # shellcheck disable=SC2329
+  python3() { [[ $1 == -c ]] && return 1; echo "python3 should not be invoked to recreate an existing venv" >&2; return 1; }
+  # shellcheck disable=SC2329
+  python() { return 1; }
+
+  configure_ansible_python
+
+  [[ $ANSIBLE_PYTHON_INTERPRETER == "$venv_python" ]]
+}
+
+@test "provisions a venv with requests when nothing on PATH has it" {
+  PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
+  local venv_python=$PMM_QA_ROOT/pmm_framework/bin/python
+
+  # shellcheck disable=SC2329
+  python3() {
+    if [[ $1 == -c ]]; then
+      return 1
+    elif [[ $1 == -m && $2 == venv ]]; then
+      mkdir -p "$3/bin"
+      printf '#!/usr/bin/env bash\nexit 0\n' >"$3/bin/python"
+      chmod +x "$3/bin/python"
+      return 0
+    fi
+    return 1
+  }
+  # shellcheck disable=SC2329
+  python() { return 1; }
+
+  configure_ansible_python
+
+  [[ $ANSIBLE_PYTHON_INTERPRETER == "$venv_python" ]]
+  [[ -x $venv_python ]]
+}
+
+@test "leaves the interpreter unset when no Python is available at all" {
+  PMM_QA_ROOT=$BATS_TEST_TMPDIR/qa-root
+  mkdir -p "$BATS_TEST_TMPDIR/empty-path"
+  local real_path=$PATH
+  # Deliberately shadowing PATH to simulate no python3/python on it.
+  # shellcheck disable=SC2123
+  PATH=$BATS_TEST_TMPDIR/empty-path
+
+  configure_ansible_python
+  local result=${ANSIBLE_PYTHON_INTERPRETER:-}
+  PATH=$real_path
+
+  [[ -z $result ]]
 }
 
 @test "requires at least one database" {
