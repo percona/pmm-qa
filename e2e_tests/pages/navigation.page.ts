@@ -18,8 +18,8 @@ export default class LeftNavigation extends BasePage {
       alertGroups: { locator: this.page.getByTestId('navitem-alerts-groups') },
       alertRules: { locator: this.page.getByTestId('navitem-alerts-rules') },
       alertSettings: { locator: this.page.getByTestId('navitem-alerts-settings') },
+      alertStatus: { locator: this.page.getByTestId('navitem-alerts-status') },
       contactPoints: { locator: this.page.getByTestId('navitem-alerts-contact-points') },
-      firedAlerts: { locator: this.page.getByTestId('navitem-alerts-fired') },
       locator: this.page.getByTestId('navitem-alerts'),
       notificationPolicies: { locator: this.page.getByTestId('navitem-alerts-policies') },
       perconaAlertTemplates: { locator: this.page.getByTestId('navitem-alerts-templates') },
@@ -78,6 +78,7 @@ export default class LeftNavigation extends BasePage {
       otherDashboards: { locator: this.page.getByTestId('navitem-mongo-other-dashboards') },
       overview: { locator: this.page.getByTestId('navitem-mongo-overview') },
       summary: { locator: this.page.getByTestId('navitem-mongo-summary') },
+      unusedIndexes: { locator: this.page.getByTestId('navitem-mongo-unused-indexes') },
     },
     mysql: {
       commandHandler: { locator: this.page.getByTestId('navitem-mysql-command-handler-counters-compare') },

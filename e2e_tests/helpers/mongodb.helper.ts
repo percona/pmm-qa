@@ -24,6 +24,21 @@ export default class MongoDBHelper {
     });
   }
 
+  createIndexStats = async (dbName: string, collectionName: string) => {
+    const collection = this.client.db(dbName).collection(collectionName);
+
+    await collection.insertOne({ queried_field_qa: 'seed' });
+
+    const unusedIndex = await collection.createIndex({ unused_field_qa: 1 });
+    const usedIndex = await collection.createIndex({ queried_field_qa: 1 });
+
+    await collection.find({ queried_field_qa: 'seed' }).hint(usedIndex).toArray();
+
+    return { unusedIndex, usedIndex };
+  };
+
+  dropDatabase = async (dbName: string) => this.client.db(dbName).dropDatabase();
+
   /**
    * Ensures the collection has at least n documents. Used so a find with $where
    * (per-document delay) runs long enough without exceeding server JS time limit per doc.

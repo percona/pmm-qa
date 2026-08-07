@@ -142,15 +142,38 @@ dist
 # Local-only QA artifacts/inventory
 /qa-integration/pmm_qa/artifacts/
 /qa-integration/pmm_qa/inventory/
-/qa-integration/pmm_qa/virtenv/
 /qa-integration/pmm_qa/pmm_framework/
+/qa-integration/pmm_qa/virtenv/
 
 # Local-only k8s helper libs
 /k8s/lib/bats-assert/
 /k8s/lib/bats-support/
 
 # AI tools
-CLAUDE.md
-.claude
+.claude/*
+!.claude/agents/
+!.claude/agents/**
+!.claude/skills/
+!.claude/skills/**
+!.claude/hooks/
+!.claude/hooks/**
+!.claude/scripts/
+!.claude/scripts/**
+!.claude/integrations/
+!.claude/integrations/**
+!.claude/settings.json
+.claude/scripts/node_modules/
+.claude/scripts/.sessions/
 .cursor
 .cursorrules
+
+# Terraform (Linode ephemeral test runner) -- module + lock file are
+# committed; only per-run/generated state and secrets are ignored.
+terraform/linode-runner/runs/
+terraform/linode-runner/.plugin-cache/
+terraform/linode-runner/.terraform/
+terraform/linode-runner/*.tfstate
+terraform/linode-runner/*.tfstate.backup
+terraform/linode-runner/id_ed25519
+terraform/linode-runner/id_ed25519.pub
+terraform/linode-runner/*.pem
