@@ -3,6 +3,7 @@
 // Deployed on the pmm-ai-relay Linode by deploy.sh (same directory); config via /opt/pmm-ai-relay/.env
 import pkg from "@slack/bolt";
 import http from "node:http";
+import https from "node:https";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -77,6 +78,13 @@ const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
 const REPLY_SECRET = process.env.REPLY_SECRET;
 const REPLY_BASE_URL = process.env.REPLY_BASE_URL || "http://localhost:8787";
 const PORT = Number(process.env.REPLY_PORT || 8787);
+// Fired cloud sessions can only egress through an HTTPS CONNECT proxy, so
+// /route and /reply must be reachable over TLS. A self-signed cert is
+// generated at deploy time; sessions call with curl -k. Plain HTTP stays on
+// PORT for the Jira Automation rule.
+const HTTPS_PORT = Number(process.env.REPLY_HTTPS_PORT || 8443);
+const TLS_CERT = process.env.TLS_CERT || "/opt/pmm-ai-relay/tls/cert.pem";
+const TLS_KEY = process.env.TLS_KEY || "/opt/pmm-ai-relay/tls/key.pem";
 const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 
 // DEGRADED MODE: without real Slack tokens the relay still serves /health,
@@ -145,7 +153,7 @@ function replyInstructions(channel, threadTs) {
   const exp = Date.now() + CAP_TTL_MS;
   const cap = sign("reply", [channel, threadTs], exp);
   return (
-    `To reply in the Slack thread, POST ${REPLY_BASE_URL}/reply with JSON ` +
+    `To reply in the Slack thread, POST ${REPLY_BASE_URL}/reply (self-signed TLS — use curl -k) with JSON ` +
     `{"channel":"${channel}","thread_ts":"${threadTs}","cap":"${cap}","exp":${exp},"text":"<your reply>"}`
   );
 }
@@ -226,7 +234,7 @@ app?.event("app_mention", async ({ event, body, client }) => {
     `Slack mention from ${person.name} (${event.user}) in channel ${event.channel} (thread ${threadTs}):\n` +
     `${history}Current request:\n${text}\n\n` +
     `This caller has these personal routines available: ${agents.join(", ") || "(none)"}.\n` +
-    `If the request fits one of them, hand off by POSTing ${REPLY_BASE_URL}/route with JSON ` +
+    `If the request fits one of them, hand off by POSTing ${REPLY_BASE_URL}/route (self-signed TLS — use curl -k) with JSON ` +
     `{"user":"${event.user}","channel":"${event.channel}","thread_ts":"${threadTs}",` +
     `"agent":"<one of the available routines>","instruction":"<self-contained task for that agent>",` +
     `"cap":"${routeCap}","exp":${exp}} — the work then runs on the caller's own account.\n` +
@@ -245,8 +253,7 @@ app?.event("app_mention", async ({ event, body, client }) => {
   }
 });
 
-http
-  .createServer(async (req, res) => {
+const handler = async (req, res) => {
     let raw = "";
     for await (const c of req) raw += c;
 
@@ -338,8 +345,16 @@ http
     }
 
     res.writeHead(404).end();
-  })
-  .listen(PORT, () => console.log(`HTTP endpoints (/reply, /route, /jira) on :${PORT}`));
+};
+
+http.createServer(handler).listen(PORT, () => console.log(`HTTP endpoints (/reply, /route, /jira) on :${PORT}`));
+try {
+  https
+    .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
+    .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints on :${HTTPS_PORT} (self-signed)`));
+} catch (e) {
+  console.error(`HTTPS listener disabled (no cert at ${TLS_CERT}): ${e.message}`);
+}
 
 if (app) {
   await app.start();

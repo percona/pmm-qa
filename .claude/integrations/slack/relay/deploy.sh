@@ -68,7 +68,8 @@ fi
 
 cat >> "$CLOUD_INIT" <<'EOF'
 runcmd:
-  - mkdir -p /opt/pmm-ai-relay/people
+  - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls
+  - openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout /opt/pmm-ai-relay/tls/key.pem -out /opt/pmm-ai-relay/tls/cert.pem -subj "/CN=pmm-ai-relay" -addext "subjectAltName=IP:139.162.176.43"
   - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   - apt-get install -y nodejs
   - cd /opt/pmm-ai-relay && npm install @slack/bolt
