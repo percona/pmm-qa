@@ -193,6 +193,7 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 
 **Slack app + relay (in order):**
 
+- [x] Relay infrastructure verified end-to-end 2026-08-07 (Linode up, Let's Encrypt cert trusted through the session egress proxy, /health 200, /reply and /jira auth gates 403, davi.json loaded, crash-on-bad-token fixed)
 - [ ] Create the Slack app: [api.slack.com/apps](https://api.slack.com/apps) → Create New App → From a manifest → paste [`manifest.yaml`](../../.claude/integrations/slack/manifest.yaml)
 - [ ] Request admin approval and install the app to the workspace
 - [ ] Generate the App-Level Token (`xapp-`): app page → Basic Information → App-Level Tokens → Generate, scope `connections:write`

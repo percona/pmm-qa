@@ -94,15 +94,20 @@ to `139.162.176.43`).
 
 | Port | Scheme | Endpoints | Who calls it |
 |---|---|---|---|
-| **443** | HTTPS, self-signed (callers use `curl -k`) | `/health`, `/reply`, `/route` | Fired Claude Code sessions — they can only egress to a **hostname on 443** through their CONNECT proxy, so callbacks MUST use this |
+| **443** | HTTPS, **Let's Encrypt** cert (publicly trusted — no `-k` needed) | `/health`, `/reply`, `/route` | Fired Claude Code sessions — their egress proxy re-terminates TLS and validates the origin cert against public CAs, so the cert MUST be real (a self-signed cert is rejected with curl exit 35) |
 | 8787 | HTTP | `/jira` (also served on 443) | The Jira Automation rule (runs on Atlassian's servers, open egress) |
 
 `REPLY_BASE_URL` in the `.env` is `https://139-162-176-43.ip.linodeusercontent.com`
 and `relay.js` defaults `HTTPS_PORT` to 443. History: an earlier iteration
-used raw-IP:8443, which fired sessions could not reach (their proxy only
-tunnels HTTPS/443 to a hostname) — hence the move to hostname:443, verified
-by smoke test. No environment allowlist change is needed because qa-linode
-runs Full network access.
+used raw-IP:8443 with a self-signed cert, which fired sessions could not
+reach: their egress proxy re-terminates TLS and rejects a self-signed origin
+(curl exit 35). Fix = a real Let's Encrypt cert (HTTP-01 on port 80, which
+LE validates from the public internet, bypassing the proxy) on the free rDNS
+hostname, served on 443. **Verified end-to-end 2026-08-07**: /health returns
+200 through the session egress proxy with no `-k`, /reply and /jira reject
+bad credentials with 403. No environment allowlist change needed (qa-linode
+is Full network). The cert auto-renews via a certbot deploy-hook that
+restarts the relay.
 
 ## Architecture
 
