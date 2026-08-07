@@ -33,6 +33,15 @@ works around the first limit; it doesn't try to work around the second
       by `/jira` only, where Jira comments must post as the person who
       clicked.
 
+## Runbook
+
+| Operation | How |
+|---|---|
+| Onboard a person | They create their Routine(s) + API tokens in their claude.ai and send: slack ID, jira accountId, routine ids+tokens. Then either ask a Claude session on this repo to bake `people/<name>.json` into the server, or Lish → `nano /opt/pmm-ai-relay/people/<name>.json` → paste → save. Hot-reloaded, no restart. Mirror the file as a LastPass **PMM** note. |
+| First activation | When the Slack app tokens exist: hand them to a Claude session (final rebuild, service auto-starts) or Lish → edit `.env` → `touch /opt/pmm-ai-relay/.env.ready && systemctl restart pmm-ai-relay`. |
+| Code/config change | Rebuild via the Linode API (same instance/IP/root password): a Claude session on this repo can do it, or run `./relay/deploy.sh .env people_dir/` with the files from LastPass. |
+| Unregistered person clicks the Jira button | Relay answers 403; to notify them, the Jira Automation rule should use "Wait for response" + a condition `{{webResponse.status}} != 200` → Add comment telling the initiator to get onboarded. |
+
 ## Operations
 
 - **`.env` storage**: keep the complete `/opt/pmm-ai-relay/.env` as a Secure
