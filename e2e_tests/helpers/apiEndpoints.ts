@@ -14,6 +14,7 @@ const apiEndpoints = {
     scheduled: '/v1/backups/scheduled',
   },
   ha: {
+    nodes: '/v1/ha/nodes',
     status: '/v1/ha/status',
   },
   inventory: {
@@ -24,6 +25,9 @@ const apiEndpoints = {
   },
   platform: {
     connect: '/v1/platform:connect',
+  },
+  prometheus: {
+    query: '/prometheus/api/v1/query',
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',

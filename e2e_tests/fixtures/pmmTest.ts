@@ -17,9 +17,11 @@ import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
+import K8sHelper from '@helpers/k8s.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
+import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
 
@@ -30,6 +32,8 @@ const pmmTest = base.extend<{
   credentials: Credentials;
   dashboard: Dashboard;
   grafanaHelper: GrafanaHelper;
+  highAvailabilityPage: HighAvailabilityPage;
+  k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
   api: Api;
   qanStoredMetrics: QanStoredMetrics;
@@ -105,6 +109,12 @@ const pmmTest = base.extend<{
     const helpPage = new HelpPage(page);
 
     await use(helpPage);
+  },
+  highAvailabilityPage: async ({ page }, use) => await use(new HighAvailabilityPage(page)),
+  k8sHelper: async ({}, use) => {
+    const k8sHelper = new K8sHelper();
+
+    await use(k8sHelper);
   },
   leftNavigation: async ({ page }, use) => await use(new LeftNavigation(page)),
   mocks: async ({ page }, use) => {
