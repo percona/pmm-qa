@@ -85,6 +85,9 @@ const PORT = Number(process.env.REPLY_PORT || 8787);
 const HTTPS_PORT = Number(process.env.REPLY_HTTPS_PORT || 443);
 const TLS_CERT = process.env.TLS_CERT || "/opt/pmm-ai-relay/tls/cert.pem";
 const TLS_KEY = process.env.TLS_KEY || "/opt/pmm-ai-relay/tls/key.pem";
+// deploy points these at the Let's Encrypt live cert when issuance succeeds,
+// else at a self-signed fallback (relay still starts, but the egress proxy
+// will reject the self-signed origin cert — see README "Endpoints").
 const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 
 // DEGRADED MODE: without real Slack tokens the relay still serves /health,

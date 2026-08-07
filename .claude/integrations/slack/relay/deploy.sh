@@ -68,10 +68,19 @@ fi
 
 cat >> "$CLOUD_INIT" <<'EOF'
 runcmd:
-  - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls
+  - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls /etc/letsencrypt/renewal-hooks/deploy
+  # self-signed fallback so the HTTPS listener always starts (the egress proxy
+  # rejects it, but the relay stays up); Let's Encrypt overwrites it if issuance works
   - openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout /opt/pmm-ai-relay/tls/key.pem -out /opt/pmm-ai-relay/tls/cert.pem -subj "/CN=139-162-176-43.ip.linodeusercontent.com" -addext "subjectAltName=DNS:139-162-176-43.ip.linodeusercontent.com,IP:139.162.176.43"
   - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  - apt-get install -y nodejs
+  - apt-get install -y nodejs certbot
+  # HTTP-01 on port 80 (relay listens on 443/8787, so 80 is free); LE validates
+  # from the public internet, bypassing the session egress proxy entirely
+  - certbot certonly --standalone --non-interactive --agree-tos -m davi.travaglia@percona.com -d 139-162-176-43.ip.linodeusercontent.com --http-01-port 80 || echo "LE issuance failed - relay will run on self-signed (unreachable through proxy)"
+  - 'if [ -f /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem ]; then cp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem; cp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/privkey.pem /opt/pmm-ai-relay/tls/key.pem; fi'
+  # renewal: refresh the copied cert and restart the relay
+  - printf '#!/bin/sh\ncp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem\ncp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/privkey.pem /opt/pmm-ai-relay/tls/key.pem\nsystemctl restart pmm-ai-relay\n' > /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+  - chmod +x /etc/letsencrypt/renewal-hooks/deploy/relay.sh
   - cd /opt/pmm-ai-relay && npm install @slack/bolt
   - systemctl daemon-reload
   - systemctl enable --now pmm-ai-relay
