@@ -58,7 +58,9 @@ runcmd:
   - systemctl enable --now pmm-ai-relay
 EOF
 
-USER_DATA=$(b64 "$CLOUD_INIT")
+# gzip: Linode caps decoded user_data at 16KB and cloud-init transparently
+# handles gzipped input; the embedded relay.js pushes the plain form past the cap
+USER_DATA=$(gzip -9 -c "$CLOUD_INIT" | { base64 -w0 2>/dev/null || base64; })
 ROOT_PASS=$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)
 AUTH_KEYS="[]"
 [ -n "$PUBKEY_FILE" ] && AUTH_KEYS=$(jq -Rn --arg k "$(cat "$PUBKEY_FILE")" '[$k]')
