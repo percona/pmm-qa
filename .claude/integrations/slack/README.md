@@ -1,4 +1,4 @@
-# PMM AI — custom Slack app (design, not yet built)
+# PMM AI — custom Slack app + relay (built; app awaiting admin approval)
 
 Claude Tag (the official Slack app) pairs one Slack workspace to one Claude
 org — it can't run a second identity in a workspace already paired to
@@ -7,31 +7,27 @@ design (no passive channel watching). This is a small custom Slack app that
 works around the first limit; it doesn't try to work around the second
 (mention-only is what we actually want here).
 
-**Status: relay built and deployed (tokens pending).**
+**Status: relay built and deployed (Slack app tokens pending).**
 
 - [ ] Create the app from [`manifest.yaml`](manifest.yaml) in Slack — being
       done manually in the Slack UI; needs admin approval to install.
-- [x] Relay written and deployed — [`relay/relay.js`](relay/relay.js) runs on
-      the `pmm-ai-relay` Linode (g6-nanode-1, eu-central, 139.162.176.43,
-      $5/mo). Restore/redeploy: [`relay/deploy.sh`](relay/deploy.sh) with the
-      `.env` from the team password manager — it REBUILDS the existing Linode
-      (same ID/IP) or creates a fresh one. Entry points: Slack mention
-      (optional), watched channels (`CHANNEL_ROUTINES` → e.g. Investigator),
-      and `POST /jira` for the single Jira Automation rule (routes
-      `{{initiator.accountId}}` to that person's own Test Runner Routine).
-      Per-person tokens live only in the server's `.env` + password manager.
-- [ ] Fill `/opt/pmm-ai-relay/.env` (Slack `xapp-`/`xoxb-` tokens, `PEOPLE`
-      map) once the app is installed, then `systemctl restart pmm-ai-relay`.
-- [ ] `PMM AI` Router Routine — **one central routine, not one per person**:
-      ALL mentions fire it (`ROUTER_ROUTINE` in the relay `.env`). Its prompt
-      is just "read `.claude/agents/router.md` and follow it" — router.md
-      evaluates whether the ask is appropriate, routes to the right agent
-      (investigator etc.), or declines off-topic cheaply. Replies post as the
-      bot via `/reply`, so mentions need no per-person identity; usage bills
-      to the routine's owner (today Davi, later a service account — swapping
-      is just changing `id`+`token` in the `.env`). The `PEOPLE` map is used
-      by `/jira` only, where Jira comments must post as the person who
-      clicked.
+- [x] Relay written and deployed — [`relay/relay.js`](relay/relay.js) on the
+      `pmm-ai-relay` Linode (g6-nanode-1, eu-central, 139.162.176.43, $5/mo).
+      Entry points: registered mention → central owner's `router` routine →
+      `/route` hand-off to the caller's own routine; `WATCHED_CHANNELS`
+      (channel → agent name) → owner's routine; `POST /jira` → initiator's
+      own test-runner (404 `not_registered` when not onboarded).
+- [x] Config model: the `.env` holds names and secrets only — every routine
+      id/token lives in `people/<name>.json` (hot-reloaded);
+      `CENTRAL_OWNER=<name>` says whose file provides the central routines.
+      `ALLOW_FALLBACK` gates unregistered people identically on Slack and
+      Jira (true = they run on the owner's routines).
+- [x] `PMM AI` router Routine created (`trig_01MJNKVHiPqrZ3Ajv1fzUdQK`) —
+      prompt is just "read `.claude/agents/router.md` and follow it"; it only
+      evaluates and routes, never executes.
+- [ ] Fill the two Slack tokens in `/opt/pmm-ai-relay/.env` once the app is
+      installed, then `touch /opt/pmm-ai-relay/.env.ready && systemctl
+      restart pmm-ai-relay` (or hand the tokens to a Claude session).
 
 ## Runbook
 
