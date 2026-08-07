@@ -86,6 +86,24 @@ works around the first limit; it doesn't try to work around the second
   note stays small and rarely changes. Restore everything with
   `./relay/deploy.sh .env people_dir/` after dumping the notes back to files.
 
+## Endpoints (source of truth)
+
+The relay runs on the `pmm-ai-relay` Linode, reachable at the instance's free
+default rDNS hostname **`139-162-176-43.ip.linodeusercontent.com`** (resolves
+to `139.162.176.43`).
+
+| Port | Scheme | Endpoints | Who calls it |
+|---|---|---|---|
+| **443** | HTTPS, self-signed (callers use `curl -k`) | `/health`, `/reply`, `/route` | Fired Claude Code sessions — they can only egress to a **hostname on 443** through their CONNECT proxy, so callbacks MUST use this |
+| 8787 | HTTP | `/jira` (also served on 443) | The Jira Automation rule (runs on Atlassian's servers, open egress) |
+
+`REPLY_BASE_URL` in the `.env` is `https://139-162-176-43.ip.linodeusercontent.com`
+and `relay.js` defaults `HTTPS_PORT` to 443. History: an earlier iteration
+used raw-IP:8443, which fired sessions could not reach (their proxy only
+tunnels HTTPS/443 to a hostname) — hence the move to hostname:443, verified
+by smoke test. No environment allowlist change is needed because qa-linode
+runs Full network access.
+
 ## Architecture
 
 ```text
