@@ -17,11 +17,11 @@ Read this first for a migration run. It is a map, not a command cookbook. Query 
 
 ## Provisioning
 
-Use `.cursor/scripts/run-migration-single-test.sh` from repo root. Arguments are target test path relative to `e2e_tests/`, `setup_services`, `setup_client`, plus optional `--prepare-only` and `--grep`.
+Use `.claude/scripts/run-migration-single-test.sh` from repo root. Arguments are target test path relative to `e2e_tests/`, `setup_services`, `setup_client`, plus optional `--prepare-only` and `--grep`.
 
 Defaults: PMM server image `perconalab/pmm-server:3-dev-latest`, password `ADMIN_PASSWORD=admin-password`, UI URL `http://127.0.0.1/`. The script exports `PMM_MIGRATION=1` and local `PMM_UI_URL`; never edit `e2e_tests/.env` during migration.
 
-For MCP locator fallback, run `node .cursor/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
+For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
 
 ## Setup Precedence
 

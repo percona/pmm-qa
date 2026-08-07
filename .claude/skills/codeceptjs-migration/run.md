@@ -2,7 +2,7 @@
 
 Run exactly one migration at a time. One selected migration owns one PMM environment from review provisioning until PR creation. Do not clean or recreate that environment inside the workflow.
 
-Use WSL/Git Bash for `.cursor/scripts/*.sh`; keep shell scripts LF-only and run `bash -n .cursor/scripts/*.sh` after editing them.
+Use WSL/Git Bash for `.claude/scripts/*.sh`; keep shell scripts LF-only and run `bash -n .claude/scripts/*.sh` after editing them.
 
 ## Parent orchestration
 
@@ -13,7 +13,7 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - Overlap only where gates allow: static review can start while PMM provisions; MCP locator checks begin after readyz passes.
 - Reuse one PMM environment per migration (`CLEAN_ENVIRONMENT=false` after the first `--prepare-only`).
 - Never edit `e2e_tests/.env` during migration; `run-migration-single-test.sh` exports `PMM_MIGRATION=1` and `PMM_UI_URL=http://127.0.0.1/`.
-- For MCP locator fallback, run `node .cursor/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
+- For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
 
 ## 1. Select
 
@@ -52,7 +52,7 @@ Writer output: `MIGRATION_READY`, `BLOCKED`, or `STATIC_FAILED`.
 After `MIGRATION_READY`, provision the migration environment once:
 
 ```bash
-./.cursor/scripts/run-migration-single-test.sh \
+./.claude/scripts/run-migration-single-test.sh \
   '<target-test-file>' \
   '<setup-services>' \
   <setup-client> \

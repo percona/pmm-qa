@@ -4,8 +4,8 @@
  * MCP fallback when browser_navigate is unavailable.
  *
  * Usage:
- *   node .cursor/scripts/verify-migration-locator.mjs help-export-logs
- *   node .cursor/scripts/verify-migration-locator.mjs role-link "Export logs" /logs.zip
+ *   node .claude/scripts/verify-migration-locator.mjs help-export-logs
+ *   node .claude/scripts/verify-migration-locator.mjs role-link "Export logs" /logs.zip
  */
 import path from 'node:path';
 import { createRequire } from 'node:module';

@@ -164,7 +164,6 @@ dist
 !.claude/settings.json
 .claude/scripts/node_modules/
 .claude/scripts/.sessions/
-.cursor
 .cursorrules
 
 # Terraform (Linode ephemeral test runner) -- module + lock file are

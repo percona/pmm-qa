@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Syntax-check migration shell scripts. Run after editing any .cursor/scripts/*.sh file.
+# Syntax-check migration shell scripts. Run after editing any .claude/scripts/*.sh file.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -7,7 +7,7 @@ readonly: false
 
 # PMM CodeceptJS Migration Writer
 
-Follow `.cursor/skills/codeceptjs-migration/SKILL.md`, `run.md`, `mappings.md`, and `graphify.md`.
+Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md`, `mappings.md`, and `graphify.md`.
 
 Input: one tracker row, source path, optional target path, control worktree, migration worktree.
 

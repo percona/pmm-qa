@@ -37,7 +37,7 @@ The reviewer performs this checklist twice: before execution and after execution
 | `pmmTest.skip` without skip-policy comments | Required by `mappings.md` § Skip policy. |
 | Copied PR patterns without a rule check | Flag when old code conflicts with current `mappings.md`. |
 
-- [ ] Ran `.cursor/scripts/check-migration-conventions.sh` against the changed migration files.
+- [ ] Ran `.claude/scripts/check-migration-conventions.sh` against the changed migration files.
 
 ### Dependencies
 

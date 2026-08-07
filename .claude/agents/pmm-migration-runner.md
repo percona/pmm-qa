@@ -7,7 +7,7 @@ readonly: false
 
 # PMM Migration Runner and Publisher
 
-Follow `.cursor/skills/codeceptjs-migration/run.md` and `branch-workflow.md`.
+Follow `.claude/skills/codeceptjs-migration/run.md` and `branch-workflow.md`.
 
 Input: tracker row, source path, target path/mode, setup, migrated titles or already-covered titles, `READY_TO_RUN`, worktree paths, and the prepared PMM environment.
 
