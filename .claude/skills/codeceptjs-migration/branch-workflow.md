@@ -1,8 +1,31 @@
 # Branch and PR Workflow
 
-Migration code is created on a dedicated branch from `main`. The PR targets `main`.
+Migration code is created on a dedicated branch from the refreshed control branch. The PR targets `main`.
 
-## Branch
+## Control branch preflight
+
+Before starting a migration, update the control branch from `main` and resolve any conflicts:
+
+```bash
+git switch <control-branch>
+git fetch origin main
+git merge origin/main
+```
+
+Refresh only the Playwright target graph from `e2e_tests/`:
+
+```bash
+cd e2e_tests
+graphify . --update
+find graphify-out -type f ! -name graph.json ! -name manifest.json -delete
+cd ..
+git add e2e_tests/graphify-out/
+git commit -m "chore(graphify): refresh Playwright graph"
+```
+
+If the refresh produces no changes, do not create an empty commit. Keep this graph commit on the control branch; it must not appear in the migration PR. Never regenerate `codeceptjs-e2e/graphify-out/`.
+
+## Migration branch
 
 Recommended name:
 
@@ -10,23 +33,16 @@ Recommended name:
 migrate-<category>-<test-name>
 ```
 
-Before starting a migration, merge latest `main` into the current branch and resolve any conflicts:
+On control, change the selected tracker row to `in-progress` and commit that tracker-only change. Then create the migration branch from the refreshed control branch:
 
 ```bash
-git fetch origin main
-git merge origin/main
+git switch <control-branch>
+git add .claude/skills/codeceptjs-migration/tracker.md
+git commit -m "chore(migration): mark <test-name> in progress"
+git switch -c migrate-<category>-<test-name>
 ```
 
-Do not begin migration work until the merge is clean and committed.
-
-Before editing migration code, verify:
-
-```bash
-git fetch origin main
-git switch -c migrate-<category>-<test-name> origin/main
-```
-
-A separate control worktree owns tracker and target-graph maintenance when the tracker lives on a dedicated control branch. After the migration PR is opened, merge the frozen migration branch into control, then update `e2e_tests/graphify-out/` and the tracker there. The control branch may be ahead of `main` while the migration PR is open. If no separate control branch exists, update the tracker in the same migration branch.
+The control branch owns tracker and target-graph maintenance. The migration branch owns only migration code, source retirement, and required Playwright workflow changes.
 
 ## Before publication
 
@@ -53,33 +69,43 @@ Before committing, verify that the retired source no longer matches CodeceptJS t
 
 ## Workflow coverage
 
-When appending a scenario to an existing Playwright test file, update its title to use that file's execution tag (for example, replace `@menu` with `@new-navigation`). Reuse the existing Playwright job when its `setup_services` is sufficient; do not create a new job or retain the source tag solely for parity.
+Preserve every original CodeceptJS scenario tag in the migrated Playwright test. A destination execution tag may be added, but it must not replace or remove a source tag.
 
-If the migrated scenarios keep a tag used by an existing CodeceptJS workflow, add or update the matching Playwright runner job in the same workflow. Preserve the existing tag bucket and `setup_services` when the intent is to keep the workflow equivalent during partial migration.
+Leave existing CodeceptJS jobs and grep expressions unchanged, including when no active CodeceptJS scenario remains for a migrated tag.
 
-When no active CodeceptJS scenario uses a migrated tag, remove that tag from the CodeceptJS grep expression. Keep a combined CodeceptJS job when its other tag terms still have active scenarios:
+For Playwright coverage:
 
-```bash
-rg -n "Scenario\(|Data\(.*\)\.Scenario\(" codeceptjs-e2e/tests -g "*_test.js" | rg "<tag-a>|<tag-b>"
-```
+- append the migrated tag to an existing Playwright job when its `setup_services` is sufficient; or
+- create a Playwright job with the required setup when no compatible job exists.
 
-Skipped CodeceptJS scenarios (`Scenario.skip`, `xScenario`) do not block removing the old runner unless the migration explicitly chooses to preserve them as future coverage.
+Do not create a new Playwright job when an existing job provides the required setup.
 
 ## Commit and PR
 
-Inspect the final diff and include only migration-related code, source-retirement, and workflow changes; do not include target graph artifacts.
+Commit the migration changes on the migration branch:
 
 ```bash
 git status --short
 git diff --check
 git add <migration-related-files>
 git commit -m "migrate(<category>): <test-name> to Playwright"
-git push -u origin HEAD
 ```
 
-Open the PR:
+Before pushing, rebase only the migration commits onto current `origin/main`. Using the control branch as the old-base boundary excludes its graph and tracker commits from the PR:
 
 ```bash
+git fetch origin main
+git rebase --onto origin/main <control-branch> migrate-<category>-<test-name>
+git diff --check
+git diff --name-only origin/main...HEAD
+```
+
+The final diff must contain no tracker or `graphify-out/` files. If the rebase requires conflict resolution or changes migration behavior, repeat the applicable validation and final review before publication.
+
+Push and open the PR:
+
+```bash
+git push -u origin HEAD
 gh pr create \
   --base main \
   --head "$(git branch --show-current)" \
@@ -91,7 +117,7 @@ The PR body must include:
 
 - source path;
 - actual target path;
-- migrated scenarios;
+- migrated scenarios and preserved tags;
 - source and target files queried from existing graphs;
 - setup used;
 - static validation result;
@@ -113,11 +139,12 @@ Include the run URL in the tracker Notes. Do not wait for CI to finish before ma
 
 ## Tracker completion
 
-After the PR exists, on the control branch:
+After the PR exists, switch to the control branch and:
 
-1. merge the frozen migration branch;
-2. update `e2e_tests/graphify-out/` from the merged tree;
-3. update the row to `done` and record the PR URL or number, GitHub Actions run URL, actual target and setup, review, MCP, test, and graph-update results;
-4. commit and push only the tracker and target graph artifacts after the merge commit.
+1. update the row to `done`;
+2. record the PR URL or number, GitHub Actions run URL, actual target and setup, review, MCP, test, and pre-migration graph-refresh results; and
+3. commit and push only the tracker change.
 
-If the PR opened but the control-branch graph or tracker update failed, report publication as incomplete and do not claim completion.
+Do not merge the migration branch into control. After the migration PR merges into `main`, a later `main` merge into control brings in the migration normally.
+
+If the PR opened but the control-branch tracker update failed, report publication as incomplete and do not claim completion.

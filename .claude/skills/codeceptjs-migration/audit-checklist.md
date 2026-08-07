@@ -9,7 +9,7 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Every active executable scenario is migrated.
 - [ ] For `already-covered`, every active executable scenario is mapped to existing Playwright coverage.
 - [ ] Commented-out scenarios are excluded.
-- [ ] Scenario titles are preserved; appended scenarios use the destination Playwright test's execution tag instead of the source tag.
+- [ ] Scenario titles and every original CodeceptJS tag are preserved; a destination execution tag may be added but does not replace a source tag.
 - [ ] Data-driven rows and generated titles are preserved.
 
 ### Source fidelity
@@ -34,7 +34,7 @@ The reviewer performs this checklist twice: before execution and after execution
 | --- | --- |
 | `parseInt(x, 10)` | Use `parseInt(x)` for decimal version segments. |
 | `expect()` inside changed helpers | Only `readZipArchive`-style utilities belong in helpers; assertions stay inline in tests. |
-| `pmmTest.skip` without skip-policy comments | Required by `mappings.md` § Skip policy. |
+| `pmmTest.skip` without skip-policy comments | Required by `mappings.md` section Skip policy. |
 | Copied PR patterns without a rule check | Flag when old code conflicts with current `mappings.md`. |
 
 - [ ] Ran `.claude/scripts/check-migration-conventions.sh` against the changed migration files.
@@ -43,6 +43,7 @@ The reviewer performs this checklist twice: before execution and after execution
 
 - [ ] Source Graphify-linked files were independently inspected.
 - [ ] Target Graphify-linked files were independently inspected.
+- [ ] The target graph was refreshed and committed on control before the migration branch was created.
 - [ ] Missing or stale graph edges were accounted for.
 - [ ] Existing Playwright abstractions were reused where applicable.
 - [ ] Reuse changes follow `SKILL.md` section Minimal reuse diffs (expose in place; no duplicate public+private delegates).
@@ -93,8 +94,10 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] The final source and target dependency graphs were checked.
 - [ ] No required source dependency was omitted.
 - [ ] No target registration is missing.
-- [ ] Appended scenarios reuse an existing Playwright job when its setup is sufficient; no source tag or duplicate job remains solely for parity.
-- [ ] Migrated tags are removed from CodeceptJS grep expressions once no active CodeceptJS scenarios match them.
+- [ ] Every original CodeceptJS tag remains on the migrated Playwright scenarios.
+- [ ] Existing CodeceptJS jobs and grep expressions remain unchanged.
+- [ ] Each migrated tag is appended to a compatible existing Playwright job, or a new Playwright job provides the required setup.
+- [ ] The final migration PR excludes tracker and `graphify-out/` files after rebasing migration-only commits onto `main`.
 - [ ] No debug or temporary code remains.
 - [ ] No unrelated files or behavior are included.
 - [ ] Static validation still introduces zero new failures.

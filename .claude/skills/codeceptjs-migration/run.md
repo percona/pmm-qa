@@ -8,30 +8,31 @@ Use WSL/Git Bash for `.claude/scripts/*.sh`; keep shell scripts LF-only and run 
 
 The parent agent coordinates writer, reviewer, and runner subagents. To avoid idle time:
 
-- Launch each subagent and **wait on its task completion notification** (or poll its transcript every 10–15s). Do **not** use long `Await` sleeps with regex patterns on terminal output.
+- Launch each subagent and **wait on its task completion notification** (or poll its transcript every 10-15s). Do **not** use long `Await` sleeps with regex patterns on terminal output.
 - Enforce gates strictly: no execution before `READY_TO_RUN`, no publish before `FINAL_REVIEW_PASS`, no tracker `done` before a PR exists.
 - Overlap only where gates allow: static review can start while PMM provisions; MCP locator checks begin after readyz passes.
 - Reuse one Linode PMM environment per migration; never recreate it mid-workflow.
 - Never edit `e2e_tests/.env` during migration; pass the Linode `PMM_UI_URL` and generated `ADMIN_PASSWORD` explicitly to every command that needs them (`run-migration-single-test.sh`, `verify-migration-locator.mjs`, Playwright).
 - For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
-- If the workflow stops after step 3 (VM provisioned) without ever reaching step 5 (e.g. the writer/reviewer loop exhausts its retries on `REVIEW_FAILED`/`LOCATOR_FIX_REQUIRED` and the runner is never invoked), the parent — not the runner — destroys the VM with `terraform/linode-runner/down.sh <run-id>` before stopping. The runner owns cleanup for every path it does reach (step 8); this bullet only covers the case where it's never reached at all.
+- If the workflow stops after step 3 (VM provisioned) without ever reaching step 5 (e.g. the writer/reviewer loop exhausts its retries on `REVIEW_FAILED`/`LOCATOR_FIX_REQUIRED` and the runner is never invoked), the parent - not the runner - destroys the VM with `terraform/linode-runner/down.sh <run-id>` before stopping. The runner owns cleanup for every path it does reach (step 8); this bullet only covers the case where it is never reached at all.
 
-## 1. Select
-
-Select one `pending` tracker row and change it to `in-progress`.
+## 1. Select and prepare
 
 If another row is already `in-progress`, stop and report the conflict.
 
-Merge `origin/main` into the current branch and resolve conflicts per `branch-workflow.md` before migration work begins.
+Select the first `pending` tracker row that is not in B13. Always skip B13 rows. Then, on the control branch, merge `origin/main` and refresh and commit only `e2e_tests/graphify-out/`. Change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight and branch commands.
+
+Create the dedicated migration branch from the refreshed control branch after both control-only commits. Do not begin migration work until the control merge and target graph refresh are complete.
 
 ## Test-run mode
 
-The parent may explicitly designate a run as test-only (dry run). In that mode, skip only:
+The parent may explicitly designate a run as test-only (dry run). In that mode, use the existing graphs read-only and skip only:
 
 - the tracker `pending` -> `in-progress` -> `done` status writes and Notes updates;
-- Stage 7 (Publish): source retirement, `graphify . --update`, commit, push, and PR.
+- the control-branch target graph refresh and commit; and
+- Stage 7 (Publish): source retirement, rebase, commit, push, and PR.
 
-All other steps, including provisioning, review, `READY_TO_RUN`, execution, and `FINAL_REVIEW_PASS`, still apply unchanged. Test-run mode never skips a gate; it only skips the tracker/publish side effects.
+All other steps, including provisioning, review, `READY_TO_RUN`, execution, and `FINAL_REVIEW_PASS`, still apply unchanged. Test-run mode never skips a gate; it only skips tracker, graph-refresh, and publication side effects.
 
 ## 2. Discover and migrate
 
@@ -40,7 +41,7 @@ The writer:
 1. reads the source test;
 2. queries the existing `codeceptjs-e2e/graphify-out/graph.json` to find linked source files (no graph generation);
 3. opens and verifies the actual linked source files;
-4. queries the existing `e2e_tests/graphify-out/graph.json` to find reusable Playwright files (no graph generation);
+4. queries the refreshed `e2e_tests/graphify-out/graph.json` to find reusable Playwright files (no graph generation);
 5. opens and verifies the actual target candidates;
 6. derives environment setup from source behavior;
 7. migrates the test to native Playwright; and
@@ -69,7 +70,7 @@ After this step, all later review and execution commands must reuse the same `PM
 
 The reviewer independently:
 
-1. queries the existing source and target graphs to derive dependency lists (no graph generation);
+1. queries the existing source and refreshed target graphs to derive dependency lists (no graph generation);
 2. compares all source behavior with the migrated implementation;
 3. confirms nothing is missing or weakened;
 4. verifies every new or changed locator through MCP against the prepared PMM environment;
@@ -108,12 +109,13 @@ Only after `FINAL_REVIEW_PASS`, the runner:
 
 1. retires the selected CodeceptJS source according to repository discovery rules;
 2. updates workflow coverage per `branch-workflow.md`;
-3. checks that only migration-related code, source-retirement, and workflow files are included;
-4. commits and pushes the migration branch;
-5. opens a PR targeting `main` and attaches the E2E tests Matrix Actions run URL per `branch-workflow.md`;
-6. merges the frozen migration branch into control;
-7. runs `graphify . --update` from `e2e_tests/` on control, then deletes generated graph files except `graph.json` and `manifest.json`; and
-8. updates the tracker row to `done` with the PR link, then commits and pushes the tracker and target graph artifacts on control.
+3. commits the migration code, source retirement, and required Playwright workflow changes;
+4. rebases the migration-only commits onto current `origin/main` using the control branch as the old-base boundary;
+5. verifies that the final PR diff contains no tracker or `graphify-out/` files;
+6. pushes the migration branch, opens a PR targeting `main`, and attaches the E2E tests Matrix Actions run URL per `branch-workflow.md`; and
+7. updates the tracker row to `done` with the PR link and pre-migration graph-refresh result, then commits and pushes only the tracker change on control.
+
+Do not merge the migration branch into control. A later merge of `main` into control receives the migration after its PR merges.
 
 For this workflow, `done` means the PR was opened successfully.
 
@@ -125,8 +127,11 @@ Run `terraform/linode-runner/down.sh <run-id>` on every terminal path after prov
 
 ```text
 pending
+-> merge main into control
+-> refresh target graph on control
 -> in-progress
--> existing graph discovery (read-only)
+-> create migration branch from control
+-> refreshed graph discovery (read-only)
 -> migration
 -> provision once
 -> initial review
@@ -135,7 +140,7 @@ pending
 -> final review
 -> retire source
 -> update workflow coverage
--> e2e_tests graphify --update
+-> rebase migration-only commits onto main
 -> PR opened
 -> done
 -> destroy Linode VM

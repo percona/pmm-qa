@@ -8,10 +8,10 @@ it, and updates the row.
 
 Full procedure: `run.md`. This tracker only owns row selection and the two provisioning columns:
 
-- Pick the first row (top-to-bottom) with `status = pending`.
+- Pick the first row (top-to-bottom) with `status = pending`, always skipping B13 rows.
 - The `Env` column is the PLANNED provisioning; ALWAYS confirm it by reading the source test's
   `Before`/`BeforeSuite` hook + `Data(...)` before provisioning. Update the row if it differs.
-- `Setup` is only the planned `setup_services` argument set for the bash `pmm-framework` run on the Linode VM (see `context.md` § Provisioning). Source test confirmation wins over both tracker and tag mapping; broad tags such as `@settings` are not authoritative by themselves.
+- `Setup` is only the planned `setup_services` argument set for the bash `pmm-framework` run on the Linode VM (see `context.md` section Provisioning). Source test confirmation wins over both tracker and tag mapping; broad tags such as `@settings` are not authoritative by themselves.
   Empty `Setup` = no DB provisioning needed. `setup_client` is not tracked as a column; derive it from the source test hooks/custom steps each run and record the derived value in Notes.
 - Ordering is efficiency-first: consecutive rows share the same env bucket and provisioning shape;
   each migration still owns and destroys its Linode VM. Within a bucket, UI-only comes first and
@@ -21,7 +21,7 @@ Full procedure: `run.md`. This tracker only owns row selection and the two provi
 Everything else - best-fit target selection, source rename, branch/PR mechanics - is owned by
 `context.md` section 2a/2b and `branch-workflow.md`; see those instead of this file.
 
-After a migration PR is opened, merge its frozen branch into control before updating the row. Refresh the target graph and commit it with the tracker update on control; record the PR and graph-update result in Notes.
+Before creating a migration branch, merge `origin/main` into control and refresh and commit only `e2e_tests/graphify-out/`. Mark the selected row `in-progress` in a separate tracker-only commit, then create the migration branch from control. After its PR is opened, update the row on control and record the PR and pre-migration graph-refresh result in Notes. Do not merge the migration branch into control; a later merge from `main` receives it after the PR merges.
 
 ## Status legend
 

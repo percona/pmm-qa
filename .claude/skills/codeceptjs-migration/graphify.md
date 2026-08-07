@@ -1,28 +1,17 @@
 # Graphify Discovery
 
-Use the **existing** Graphify artifacts for discovery during migration. Do not generate or rebuild graphs while migrating.
+Refresh the Playwright target graph on control before creating a migration branch, then use both Graphify artifacts read-only during migration.
 
 ## Graph artifacts (read-only during migration)
 
 ```text
-codeceptjs-e2e/graphify-out/graph.json   # source side - read only; never regenerate during migration
-e2e_tests/graphify-out/graph.json        # target side - read during migration; update on control after publish
+codeceptjs-e2e/graphify-out/graph.json   # source side - always read only
+e2e_tests/graphify-out/graph.json        # target side - refreshed on control before migration
 ```
 
-## Do not generate graphs during migration
+## Pre-migration target graph update
 
-During writer, reviewer, and runner work (through `FINAL_REVIEW_PASS`):
-
-- do **not** run `graphify`, `/graphify`, or any graph build/extract command;
-- do **not** regenerate `graph.json`, `manifest.json`, or other `graphify-out/` artifacts;
-- do **not** update `codeceptjs-e2e/graphify-out/` as part of the migration workflow;
-- do **not** update `e2e_tests/graphify-out/` until the migration PR is open and its frozen branch has been merged into control.
-
-Query and inspect the existing JSON graphs only. When a node or edge is missing, follow actual imports and code; record a graph discrepancy. Never block migration waiting for a fresh graph build.
-
-## Post-migration target graph update (control branch)
-
-Only after `FINAL_REVIEW_PASS`, the migration PR is open, and the frozen migration branch is merged into control, the runner performs one incremental update of the **target** graph there:
+After merging `origin/main` into control and before creating the migration branch, perform one incremental update of the target graph:
 
 ```bash
 cd e2e_tests
@@ -31,10 +20,25 @@ find graphify-out -type f ! -name graph.json ! -name manifest.json -delete
 ```
 
 - Run from `e2e_tests/` so output stays in `e2e_tests/graphify-out/`.
-- Use `--update` only (incremental re-extract of new/changed files).
-- Keep only `graph.json` and `manifest.json`; delete generated reports, HTML, and `.graphify_*` sidecars after the update.
-- Commit updated `e2e_tests/graphify-out/` files with the tracker update on control; do not amend the migration PR with graph artifacts.
-- Do not regenerate the CodeceptJS source graph in this workflow.
+- Use `--update` only.
+- Keep only `graph.json` and `manifest.json`; delete generated reports, HTML, and `.graphify_*` sidecars.
+- Commit only updated `e2e_tests/graphify-out/` files on control.
+- Never regenerate the CodeceptJS source graph.
+- Create the migration branch from the refreshed control commit.
+
+The publication rebase in `branch-workflow.md` excludes this control-only graph commit from the migration PR.
+
+## Read-only during migration
+
+During writer, reviewer, and runner work (through `FINAL_REVIEW_PASS`):
+
+- do **not** run `graphify`, `/graphify`, or any graph build/extract command;
+- do **not** regenerate `graph.json`, `manifest.json`, or other `graphify-out/` artifacts;
+- do **not** update `codeceptjs-e2e/graphify-out/`;
+- do **not** update `e2e_tests/graphify-out/` again; and
+- do **not** include `graphify-out/` files in the migration PR.
+
+Query and inspect the existing JSON graphs only. When a node or edge is missing, follow actual imports and code; record a graph discrepancy. Never block migration waiting for a fresh graph build.
 
 ## Source discovery
 
@@ -83,7 +87,7 @@ Treat a graph as stale or incomplete when:
 - the tracker source exists on disk but is missing from the graph, including when the graph only contains an old renamed node such as `*_migrated.js`;
 - a graph path no longer exists;
 - an actual import or call is absent from the graph;
-- a new target file is not represented yet (expected until post-migration `--update`);
+- a new target file is not represented yet (expected until its merged PR reaches control through `main` and the next pre-migration refresh runs);
 - an edge conflicts with current code.
 
 Do not block a migration merely because the graph is incomplete when the dependency can be proven from actual code. Trust filesystem paths, source imports, and runtime registrations over graph output. Record the discrepancy in the handoff, for example: `source graph has leftNavigation_migrated.js but tracker source is leftNavigation_test.js`.
