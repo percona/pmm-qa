@@ -82,7 +82,7 @@ const PORT = Number(process.env.REPLY_PORT || 8787);
 // /route and /reply must be reachable over TLS. A self-signed cert is
 // generated at deploy time; sessions call with curl -k. Plain HTTP stays on
 // PORT for the Jira Automation rule.
-const HTTPS_PORT = Number(process.env.REPLY_HTTPS_PORT || 8443);
+const HTTPS_PORT = Number(process.env.REPLY_HTTPS_PORT || 443);
 const TLS_CERT = process.env.TLS_CERT || "/opt/pmm-ai-relay/tls/cert.pem";
 const TLS_KEY = process.env.TLS_KEY || "/opt/pmm-ai-relay/tls/key.pem";
 const CAP_TTL_MS = 2 * 60 * 60 * 1000;
