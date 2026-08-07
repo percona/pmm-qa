@@ -46,6 +46,7 @@ Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @pbm-nightl
   await dashboardPage.expandEachDashboardRow();
   await dashboardPage.verifyMetricsExistence(dashboardPage.mongodbBackupDetailsDashboard.metrics);
   I.click(dashboardPage.mongodbBackupDetailsDashboard.elements.refresh);
-  await dashboardPage.waitForGraphsToHaveData(1, 180);
-  await dashboardPage.verifyThereAreNoGraphsWithoutData();
+  const acceptableNaCount = current === 'BACKUP_MODE_PITR' ? 1 : 0;
+  await dashboardPage.waitForGraphsToHaveData(acceptableNaCount + 1, 180);
+  await dashboardPage.verifyThereAreNoGraphsWithoutData(acceptableNaCount);
 });
