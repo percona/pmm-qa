@@ -7,18 +7,25 @@ design (no passive channel watching). This is a small custom Slack app that
 works around the first limit; it doesn't try to work around the second
 (mention-only is what we actually want here).
 
-**Status: designed, nothing deployed yet.**
+**Status: relay built and deployed (tokens pending).**
 
-- [ ] Create the app from [`manifest.yaml`](manifest.yaml) in Slack — needs
-      admin approval to install (org policy), not yet requested.
-- [ ] Write the relay process (see below) — not started.
-- [ ] Create the `PMM AI` Routine itself in Claude Code — **do not create
-      this without asking first**, per standing instruction in this repo's
-      chat history. Its prompt should just be "read `.claude/agents/router.md`
-      and follow it" — all the actual matching logic lives there, not in the
-      Routine's own prompt.
-- [ ] Provision `PMM_AI_SLACK_BOT_TOKEN` (and the app-level token for Socket
-      Mode) once the app exists.
+- [ ] Create the app from [`manifest.yaml`](manifest.yaml) in Slack — being
+      done manually in the Slack UI; needs admin approval to install.
+- [x] Relay written and deployed — [`relay/relay.js`](relay/relay.js) runs on
+      the `pmm-ai-relay` Linode (g6-nanode-1, eu-central, 139.162.176.43,
+      $5/mo). Restore/redeploy: [`relay/deploy.sh`](relay/deploy.sh) with the
+      `.env` from the team password manager — it REBUILDS the existing Linode
+      (same ID/IP) or creates a fresh one. Entry points: Slack mention
+      (optional), watched channels (`CHANNEL_ROUTINES` → e.g. Investigator),
+      and `POST /jira` for the single Jira Automation rule (routes
+      `{{initiator.accountId}}` to that person's own Test Runner Routine).
+      Per-person tokens live only in the server's `.env` + password manager.
+- [ ] Fill `/opt/pmm-ai-relay/.env` (Slack `xapp-`/`xoxb-` tokens, `PEOPLE`
+      map) once the app is installed, then `systemctl restart pmm-ai-relay`.
+- [ ] `PMM AI` Router Routine — **now optional**: the Jira path routes
+      directly to per-person Test Runner Routines and watched channels route
+      directly to Investigator, so `router.md` only serves the free-text
+      mention flow. Create it only if that flow turns out to be wanted.
 
 ## Architecture
 
