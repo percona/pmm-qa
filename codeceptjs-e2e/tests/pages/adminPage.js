@@ -81,6 +81,14 @@ module.exports = {
     I.forceClick(this.fields.timePickerMenu);
     I.waitForVisible(timeRangeSelector, 30);
     I.click(timeRangeSelector);
+    I.usePlaywrightTo('Close time picker drawer', async ({ page }) => {
+      const drawerMask = page.locator('.rc-drawer-mask');
+
+      if (await drawerMask.isVisible()) {
+        await page.keyboard.press('Escape');
+        await drawerMask.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {});
+      }
+    });
   },
 
   async verifyTimeRange(timeRange) {

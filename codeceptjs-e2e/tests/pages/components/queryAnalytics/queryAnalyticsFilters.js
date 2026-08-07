@@ -89,10 +89,16 @@ class QueryAnalyticsFilters {
     I.waitForVisible(this.fields.filterBy, 10);
     I.fillField(this.fields.filterBy, filterName);
     I.usePlaywrightTo('Select QAN Filter', async ({ page }) => {
-      const locator = await page.locator(this.fields.filterByNameAndGroup(selectedFilter, groupName).value);
+      const locator = page.locator(this.fields.filterByNameAndGroup(selectedFilter, groupName).value);
+      const drawerMask = page.locator('.rc-drawer-mask');
+
+      if (await drawerMask.isVisible()) {
+        await page.keyboard.press('Escape');
+        await drawerMask.waitFor({ state: 'hidden', timeout: 5000 }).catch(() => {});
+      }
 
       await locator.waitFor({ state: 'attached' });
-      await locator.click();
+      await locator.click({ force: true });
     });
     queryAnalyticsPage.waitForLoaded();
     I.click(this.fields.filterBy);
