@@ -203,7 +203,7 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 - [ ] Update the LastPass **PMM** Secure Note `pmm-ai-relay.env` with the final completed `.env` (after the app tokens exist)
 - [ ] `/invite @pmm-ai` into a test channel, mention it — expect 👀, then a reply
 - [ ] Update the **Jira Button automation** to the new request: POST `http://139.162.176.43:8787/jira`, header `X-Relay-Secret: <JIRA_RELAY_SECRET from the .env>`, body `{"accountId":"{{initiator.accountId}}","text":"<ticket key + what to do>"}`, "Wait for response" ON
-- [ ] In the same rule, add a condition `{{webResponse.status}} != 200` → Add comment telling the initiator they are not onboarded yet
+- [ ] In the same rule, add a condition `{{webResponse.status}} == 404` → Add comment telling the initiator they are not onboarded yet (404 is ONLY not-registered; other errors mean relay/platform trouble, not a user problem)
 - [ ] Click the Jira button on a test ticket and confirm the run starts under your Test Runner
 
 **Later / optional:**

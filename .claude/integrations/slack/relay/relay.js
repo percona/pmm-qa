@@ -194,7 +194,11 @@ app.event("app_mention", async ({ event, body, client }) => {
   if (!(await markSeen(client, event.channel, event.ts, body.event_id))) return;
 
   const threadTs = event.thread_ts || event.ts;
-  const person = bySlack[event.user];
+  // ALLOW_FALLBACK gates BOTH entry points the same way: true lets an
+  // unregistered person run on the central owner's routines; false blocks.
+  let person = bySlack[event.user];
+  if (!person && ALLOW_FALLBACK && byName[CENTRAL_OWNER])
+    person = { ...byName[CENTRAL_OWNER], name: `${CENTRAL_OWNER} (fallback for ${event.user})` };
   if (!person) {
     await client.chat.postMessage({
       channel: event.channel,
@@ -261,7 +265,7 @@ http
       try {
         const { user, channel, thread_ts, agent, instruction, cap, exp } = JSON.parse(raw);
         if (!verify(cap, "route", [user, channel, thread_ts], exp)) throw new Error("bad capability");
-        const person = bySlack[user];
+        const person = bySlack[user] || (ALLOW_FALLBACK ? byName[CENTRAL_OWNER] : null); // same fallback as the mention path
         const routine = person?.routines?.[agent];
         if (!routine) throw new Error(`no "${agent}" routine mapped for ${user}`);
         const payload =
@@ -279,21 +283,37 @@ http
     // Jira Automation entry point: the single admin-configured rule POSTs here
     // with {"accountId":"{{initiator.accountId}}","text":"ticket + instruction"}.
     // Routes to the initiator's own test-runner routine.
+    // Distinct statuses so the Jira Automation rule can react precisely:
+    // 403 bad secret | 404 initiator not onboarded (the ONLY case that should
+    // trigger the "you're not registered" comment) | 502 downstream failure.
     if (req.method === "POST" && req.url === "/jira") {
+      if (!JIRA_RELAY_SECRET || req.headers["x-relay-secret"] !== JIRA_RELAY_SECRET) {
+        console.error("/jira rejected: bad secret");
+        res.writeHead(403).end("forbidden");
+        return;
+      }
+      let accountId, text;
       try {
-        if (!JIRA_RELAY_SECRET || req.headers["x-relay-secret"] !== JIRA_RELAY_SECRET)
-          throw new Error("bad secret");
-        const { accountId, text } = JSON.parse(raw);
-        const person = byJira[accountId];
-        const routine = person?.routines?.["test-runner"] || (ALLOW_FALLBACK ? centralRoutine("test-runner") : null);
-        if (!routine) throw new Error(`no test-runner routine mapped for ${accountId}`);
+        ({ accountId, text } = JSON.parse(raw));
+      } catch {
+        res.writeHead(400).end("bad_request");
+        return;
+      }
+      const person = byJira[accountId];
+      const routine = person?.routines?.["test-runner"] || (ALLOW_FALLBACK ? centralRoutine("test-runner") : null);
+      if (!routine) {
+        console.error(`/jira: initiator ${accountId} not onboarded`);
+        res.writeHead(404).end("not_registered");
+        return;
+      }
+      try {
         console.log(
           `jira-fire for ${person?.name || "fallback"}: ${await fire(routine, `Jira trigger (initiator ${accountId}):\n${text}`)}`,
         );
         res.writeHead(200).end("ok");
       } catch (e) {
-        console.error(`/jira rejected: ${e.message}`);
-        res.writeHead(403).end("forbidden");
+        console.error(`/jira fire failed: ${e.message}`);
+        res.writeHead(502).end("fire_failed");
       }
       return;
     }
