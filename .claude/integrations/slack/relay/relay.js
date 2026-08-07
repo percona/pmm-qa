@@ -118,9 +118,33 @@ app.event("app_mention", async ({ event, body, client }) => {
   }
 
   const text = event.text.replace(/<@[^>]+>/g, "").trim();
+
+  // Follow-ups: a mention inside a thread fires a FRESH session (routine runs
+  // have no memory), so inject the thread history as context — the new session
+  // picks up where the previous one left off. Needs channels:history.
+  let history = "";
+  if (event.thread_ts) {
+    try {
+      const r = await client.conversations.replies({
+        channel: event.channel,
+        ts: event.thread_ts,
+        limit: 30,
+      });
+      history =
+        "Earlier messages in this thread (oldest first):\n" +
+        r.messages
+          .slice(0, -1)
+          .map((m) => `- ${m.bot_id ? "PMM AI" : m.user}: ${m.text}`)
+          .join("\n") +
+        "\n\n";
+    } catch (e) {
+      console.error(`history fetch failed: ${e?.data?.error || e.message}`);
+    }
+  }
+
   const payload =
     `Slack mention from user ${event.user} in channel ${event.channel} (thread ${threadTs}):\n` +
-    `${text}\n\n${replyInstructions(event.channel, threadTs)}`;
+    `${history}Current request:\n${text}\n\n${replyInstructions(event.channel, threadTs)}`;
   try {
     console.log(`mention-fire ${routine.id} for ${event.user}: ${await fire(routine, payload)}`);
   } catch (e) {
