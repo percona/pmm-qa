@@ -40,8 +40,11 @@ works around the first limit; it doesn't try to work around the second
   CLI is entirely optional (and awkward on Windows) — the web vault plus
   copy/paste works for both saving and restoring, and the easiest init/restore
   of all is pasting the tokens into a Claude session on this repo and asking
-  it to rebuild the relay with the `.env` baked in (no SSH needed; Windows
-  PowerShell also has `ssh` built in if you prefer doing it by hand). It is the only
+  it to rebuild the relay with the `.env` baked in (no SSH needed). For manual
+  access the easiest path is the **Lish console** in the browser —
+  cloud.linode.com → pmm-ai-relay → Launch LISH Console → `root` + the
+  password from the PMM note — no SSH key or client required. (SSH also
+  works: the private key should live in the same PMM note.) It is the only
   state the relay has. Auto-fetching it on boot via the LastPass API is
   deliberately NOT done — that would require a LastPass credential on the
   server (the circular-secret problem). Restore is semi-automatic instead:
