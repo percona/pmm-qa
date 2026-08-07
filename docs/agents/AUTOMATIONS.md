@@ -21,7 +21,7 @@ In any Claude Code session on this repo, just ask in natural language — "pleas
 
 ## Running Test Runner from Slack
 
-Not Claude Tag (the official Slack app) — it pairs one Slack workspace to one Claude org, and this project's Claude identity isn't the one already paired to the team's workspace. Slack triggering here goes through the custom **`@pmm-ai`** app instead (design in [`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md), not built yet): someone mentions `@pmm-ai`, the relay fires the single `PMM AI` Routine, and that session reads [`router.md`](../../.claude/agents/router.md) and follows it — Router is the one that decides this particular mention means Test Runner, then reads `test-runner.md` and follows it in the same session. A mention never goes straight to Test Runner on its own; it always goes through Router first. See "PMM AI" below.
+Not Claude Tag (the official Slack app) — it pairs one Slack workspace to one Claude org, and this project's Claude identity isn't the one already paired to the team's workspace. Slack triggering here goes through the custom **`@pmm-ai`** app + relay instead (built — the app awaits admin approval; ops in [`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md)): a **registered** person mentions `@pmm-ai`, the relay fires the central `PMM AI` Routine, which reads [`router.md`](../../.claude/agents/router.md) and only *evaluates and routes* — if the ask fits one of the caller's own routines (e.g. their Test Runner), it hands off through the relay's `/route` endpoint and the work runs **on the caller's own account**; off-topic asks get a short decline, and unregistered users are answered by the relay itself at zero AI cost. A mention never goes straight to Test Runner; it always passes through Router first. See "PMM AI" below for the full picture.
 
 ## Running Test Runner from Jira
 
@@ -117,41 +117,67 @@ flowchart LR
 
 The retry loop caps at 2 total re-checks. Still red after that stops here on purpose — diagnosing or fixing it is Investigator's job, not FB Reporter's.
 
-## PMM AI — custom Slack app (design only, not built yet)
+## PMM AI — custom Slack app + relay (built; app awaiting Slack admin approval)
 
 Claude Tag can't have a second identity in a workspace already paired to
-another Claude org, so mention-based Slack triggering for this project
-needs its own small app, `@pmm-ai`. Full design — manifest, Socket Mode
-relay, the channel-to-routine routing table, and how replies post as the
-bot instead of a person — is in
-[`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md).
-The `PMM AI` Routine's own prompt is deliberately thin — "read
-[`router.md`](../../.claude/agents/router.md) and follow it" — all the
-actual mention-to-agent matching lives in that file, not duplicated into
-the Routine's prompt or into a mega-prompt trying to guess intent itself.
-Nothing here is deployed: the app isn't created in Slack yet, no relay
-process exists, and the `PMM AI` Routine itself hasn't been created either
-(routines only get created/changed here when explicitly asked for).
+another Claude org, so Slack triggering for this project uses its own small
+app, `@pmm-ai`, plus a relay on the `pmm-ai-relay` Linode. Everything is
+built and deployed except the Slack app itself, which needs workspace admin
+approval — created from
+[`.claude/integrations/slack/manifest.yaml`](../../.claude/integrations/slack/manifest.yaml)
+(Socket Mode, read-only events + `chat:write`/`reactions:write`; full ops
+docs in
+[`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md)).
 
-### PMM AI / Router flow
+**What the Slack app is and isn't** (the approval-relevant part): it holds no
+credentials to anything outside Slack, exposes no public URL (Socket Mode =
+outbound-only connection from our server), and can only read messages in
+channels it is explicitly invited to, react (👀 received / ✅ done), and
+reply in threads. All AI work happens in Claude Code Routines on the
+existing QA account(s); the app is just the doorbell and the mailbox.
+
+### PMM AI flow — three entry points, one relay
 
 ```mermaid
-flowchart LR
-    A["Someone @mentions\n@pmm-ai in Slack"] --> B["Relay picks up\nthe mention"]
-    B -.->|"fires the single\n'PMM AI' Routine"| C["Session reads router.md,\nfollows it"]
-    C --> D{"Router matches\nthe message"}
-    D -->|"Test Runner"| D1[["Session becomes Test Runner\n— see its own diagram above"]]
-    D -->|"Investigator"| D2[["Session becomes Investigator\n— see its own diagram above"]]
-    D -->|"FB Reporter"| D3[["Session becomes FB Reporter\n— see its own diagram above"]]
-    D -->|"Just a question"| D4["Router answers directly,\nno hand-off"]
-    D1 --> E["Reply goes back through\nthe relay's /reply endpoint"]
-    D2 --> E
-    D3 --> E
-    D4 --> E
-    E --> F["Relay posts in Slack\nas 'PMM AI'"]
+flowchart TB
+    subgraph SLACK["Slack — needs the '@pmm-ai' app approved"]
+        M["Registered person\n@mentions @pmm-ai"]
+        W["Any message in a\nwatched alerts channel"]
+        U["UNregistered person\n@mentions @pmm-ai"]
+    end
+    subgraph JIRA["Jira — no app needed"]
+        J["Person clicks the ticket's\naction button (one shared\nAutomation rule)"]
+    end
+    subgraph RELAY["Relay — pmm-ai-relay Linode ($5/mo), holds all routine tokens"]
+        R{"routing map\n(.env PEOPLE /\nCHANNEL_ROUTINES)"}
+        REPLY["/reply — posts the outcome\nback in the Slack thread\nas 'PMM AI', adds ✅"]
+    end
+    subgraph CLAUDE["Claude Code Routines (claude.ai)"]
+        ROUTER["'PMM AI' router Routine\n(central acct) — reads router.md,\nONLY evaluates & routes:\noff-topic → polite decline"]
+        OWN["The CALLER's own Routine\n(test-runner / investigator /...)\nruns & bills on THEIR account"]
+        INV["Investigator Routine\n(QA owner's account)"]
+        TR["Initiator's own\nTest Runner Routine"]
+    end
+    M --> R -->|"fire"| ROUTER
+    ROUTER -->|"hand-off via /route\n(tokens stay on the relay)"| OWN
+    W --> R -->|"fire"| INV
+    J -->|"POST /jira +\nX-Relay-Secret"| R -->|"fire"| TR
+    U --> R -->|"'not registered' reply,\nzero AI cost"| REPLY
+    OWN --> REPLY
+    ROUTER -.->|"decline / answer"| REPLY
+    INV --> REPLY
+    style SLACK fill:#611f69,color:#fff
+    style M color:#fff
+    style W color:#fff
+    style U color:#fff
 ```
 
-The double-bordered boxes (D1–D3) are hand-offs, not sub-flows drawn twice — once matched, the rest is literally the diagram above for that agent. Only D4 (a plain question) skips all of that. A suspected customer bug report lands in D2 — Investigator's own question/suspected-bug branch, not a separate triage agent.
+Where the Slack app is needed: the purple box only — delivering mentions and
+watched-channel messages to the relay (over Socket Mode) and letting the
+relay react/reply as the bot. The Jira path works without it, and no AI or
+credentials live in the app itself. Test Runner posts its Jira results as
+the person who asked (their own Routine); Slack replies always appear as
+"PMM AI".
 
 ## Routine ownership — read before relying on this
 
