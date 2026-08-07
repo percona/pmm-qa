@@ -79,11 +79,19 @@ const REPLY_BASE_URL = process.env.REPLY_BASE_URL || "http://localhost:8787";
 const PORT = Number(process.env.REPLY_PORT || 8787);
 const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 
-const app = new App({
-  token: process.env.SLACK_BOT_TOKEN,
-  appToken: process.env.SLACK_APP_TOKEN,
-  socketMode: true,
-});
+// DEGRADED MODE: without real Slack tokens the relay still serves /health,
+// /jira, /route and /reply so every non-Slack flow can be exercised before
+// the app is approved — Slack-bound actions (reactions, thread replies)
+// become log lines instead.
+const SLACK_READY =
+  /^xapp-/.test(process.env.SLACK_APP_TOKEN || "") && /^xoxb-/.test(process.env.SLACK_BOT_TOKEN || "");
+const app = SLACK_READY
+  ? new App({
+      token: process.env.SLACK_BOT_TOKEN,
+      appToken: process.env.SLACK_APP_TOKEN,
+      socketMode: true,
+    })
+  : null;
 
 const seen = new Map(); // event_id -> ts (fast in-memory dedup)
 setInterval(() => {
@@ -161,7 +169,7 @@ async function fetchThreadHistory(client, channel, threadTs) {
 
 // Channel watch: every top-level human message in a watched channel fires the
 // mapped agent from the central owner's file (e.g. alerts channel -> investigator).
-app.event("message", async ({ event, body, client }) => {
+app?.event("message", async ({ event, body, client }) => {
   const agent = WATCHED_CHANNELS[event.channel];
   if (!agent) return;
   const routine = centralRoutine(agent);
@@ -186,7 +194,7 @@ app.event("message", async ({ event, body, client }) => {
 // get a zero-cost reply). The router evaluates the ask and hands off to one of
 // the CALLER's own routines via POST /route — so the work is billed to, and
 // acts as, the person who asked. Tokens stay on this server.
-app.event("app_mention", async ({ event, body, client }) => {
+app?.event("app_mention", async ({ event, body, client }) => {
   const ROUTER = centralRoutine("router");
   if (!ROUTER) return; // mention flow disabled (no router in the central owner's file)
   if (WATCHED_CHANNELS[event.channel]) return; // watched channels are handled above
@@ -242,15 +250,26 @@ http
     let raw = "";
     for await (const c of req) raw += c;
 
+    if (req.method === "GET" && req.url === "/health") {
+      res.writeHead(200, { "Content-Type": "application/json" }).end(
+        JSON.stringify({ mode: app ? "full" : "degraded", people: Object.keys(byName), centralOwner: CENTRAL_OWNER }),
+      );
+      return;
+    }
+
     // Fired sessions reply in-thread through here; the bot token never leaves the relay.
     if (req.method === "POST" && req.url === "/reply") {
       try {
         const { channel, thread_ts, cap, exp, text } = JSON.parse(raw);
         if (!verify(cap, "reply", [channel, thread_ts], exp)) throw new Error("bad capability");
-        await app.client.chat.postMessage({ channel, thread_ts, text });
-        await app.client.reactions
-          .add({ channel, timestamp: thread_ts, name: "white_check_mark" })
-          .catch(() => {});
+        if (app) {
+          await app.client.chat.postMessage({ channel, thread_ts, text });
+          await app.client.reactions
+            .add({ channel, timestamp: thread_ts, name: "white_check_mark" })
+            .catch(() => {});
+        } else {
+          console.log(`DEGRADED /reply accepted for ${channel}/${thread_ts}: ${text}`);
+        }
         res.writeHead(200).end("ok");
       } catch (e) {
         console.error(`reply rejected: ${e.message}`);
@@ -322,5 +341,9 @@ http
   })
   .listen(PORT, () => console.log(`HTTP endpoints (/reply, /route, /jira) on :${PORT}`));
 
-await app.start();
-console.log("PMM AI relay connected (Socket Mode)");
+if (app) {
+  await app.start();
+  console.log("PMM AI relay connected (Socket Mode)");
+} else {
+  console.log("PMM AI relay in DEGRADED mode (no Slack tokens): HTTP endpoints only");
+}
