@@ -207,7 +207,7 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 
 **Later / optional:**
 
-- [ ] Onboard each teammate: they create their own Routine(s) + API token in their claude.ai and send slack ID, jira accountId, routine id+token — gets added to `PEOPLE` in the relay `.env`
+- [ ] Onboard each teammate: they create their own Routine(s) + API token in their claude.ai and send slack ID, jira accountId, routine id+token — becomes one small `people/<name>.json` on the relay (hot-reloaded, no restart; template in `.claude/integrations/slack/relay/person.example.json`), mirrored as a Secure Note in the LastPass PMM folder
 - [ ] (optional) Map an alerts channel to Investigator via `CHANNEL_ROUTINES` in the relay `.env`
 - [ ] Team-wide shared Claude Code environment with `LINODE_TOKEN` set once (see findings log)
 

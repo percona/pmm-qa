@@ -71,6 +71,15 @@ works around the first limit; it doesn't try to work around the second
   session, but the relay injects the thread history into the payload, so the
   new session continues the conversation. The session URL in the relay log
   also opens in claude.ai for direct continuation.
+- **Onboarding a person = one small file, no restart**: people live as one
+  JSON file each in `/opt/pmm-ai-relay/people/<name>.json`
+  ([template](relay/person.example.json)) and the relay hot-reloads the
+  directory on any change. To add someone: paste their file via Lish/`nano`
+  (or hand the fields to a Claude session on this repo, which rebuilds the
+  server with the file baked in). Backup: mirror each file as its own Secure
+  Note in the LastPass **PMM** folder (`pmm-ai-person-<name>`); the `.env`
+  note stays small and rarely changes. Restore everything with
+  `./relay/deploy.sh .env people_dir/` after dumping the notes back to files.
 
 ## Architecture
 

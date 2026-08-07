@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 # Deploy/restore the pmm-ai-relay Linode from this directory's relay.js.
 #
-#   ./deploy.sh /path/to/.env [ssh_pubkey_file]
+#   ./deploy.sh /path/to/.env [people_dir] [ssh_pubkey_file]
 #
-# Needs LINODE_TOKEN in the environment. The .env file (tokens — from the
-# team password manager, NEVER committed) is baked into cloud-init and the
-# service starts automatically. If a Linode labeled pmm-ai-relay exists it is
-# REBUILT (same ID, same IP — this is why the IP survives "recreation");
-# otherwise a new g6-nanode-1 is created in eu-central.
+# Needs LINODE_TOKEN in the environment. The .env file and the per-person
+# JSON files (both from the LastPass "PMM" folder, NEVER committed) are baked
+# into cloud-init and the service starts automatically. If a Linode labeled
+# pmm-ai-relay exists it is REBUILT (same ID, same IP — this is why the IP
+# survives "recreation"); otherwise a new g6-nanode-1 is created in eu-central.
 set -euo pipefail
 
-ENV_FILE=${1:?usage: deploy.sh /path/to/.env [ssh_pubkey_file]}
-PUBKEY_FILE=${2:-}
+ENV_FILE=${1:?usage: deploy.sh /path/to/.env [people_dir] [ssh_pubkey_file]}
+PEOPLE_DIR_IN=${2:-}
+PUBKEY_FILE=${3:-}
 HERE=$(cd "$(dirname "$0")" && pwd)
 LABEL=pmm-ai-relay
 
@@ -50,7 +51,24 @@ write_files:
     permissions: "0644"
     encoding: b64
     content: $(b64 "$UNIT")
+EOF
+
+# per-person files (people_dir arg): restored exactly as they were saved
+if [ -n "$PEOPLE_DIR_IN" ]; then
+  for f in "$PEOPLE_DIR_IN"/*.json; do
+    [ -e "$f" ] || continue
+    cat >> "$CLOUD_INIT" <<EOF
+  - path: /opt/pmm-ai-relay/people/$(basename "$f")
+    permissions: "0600"
+    encoding: b64
+    content: $(b64 "$f")
+EOF
+  done
+fi
+
+cat >> "$CLOUD_INIT" <<'EOF'
 runcmd:
+  - mkdir -p /opt/pmm-ai-relay/people
   - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   - apt-get install -y nodejs
   - cd /opt/pmm-ai-relay && npm install @slack/bolt

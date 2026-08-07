@@ -4,6 +4,8 @@
 import pkg from "@slack/bolt";
 import http from "node:http";
 import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 const { App } = pkg;
 
@@ -11,19 +13,57 @@ const { App } = pkg;
 //   from REGISTERED people fire it; it only decides which of the caller's own
 //   routines fits (or declines), then hands off via POST /route. The actual
 //   work runs on the CALLER's routine, billed to the caller.
-// PEOPLE: {"<name>":{"slack":"U0123","jira":"<atlassian accountId>",
-//          "routines":{"test-runner":{"id","token"},"investigator":{"id","token"},...}}}
-//   one entry per onboarded person; tokens never leave this server.
+// People live as ONE SMALL JSON FILE EACH in PEOPLE_DIR (default
+// /opt/pmm-ai-relay/people/<name>.json), hot-reloaded on any change — adding
+// a teammate is dropping a file there, no restart, no .env editing:
+//   { "slack": "U0123", "jira": "<atlassian accountId>",
+//     "routines": { "test-runner": {"id":"trig_...","token":"sk-ant-..."},
+//                   "investigator": {"id":"trig_...","token":"sk-ant-..."} } }
+// Tokens never leave this server.
 // CHANNEL_ROUTINES: {"C0123":{"id","token"}} — every top-level human message in
 //   that channel fires the mapped Routine automatically (e.g. alerts channel ->
 //   Investigator running on the QA owner's account).
 // DEFAULT_ROUTINE: {"id","token"} — /jira fallback when ALLOW_FALLBACK=true.
 const ROUTER_ROUTINE = JSON.parse(process.env.ROUTER_ROUTINE || "null");
-const PEOPLE = JSON.parse(process.env.PEOPLE || "{}");
+const PEOPLE_DIR = process.env.PEOPLE_DIR || "/opt/pmm-ai-relay/people";
 const CHANNEL_ROUTINES = JSON.parse(process.env.CHANNEL_ROUTINES || "{}");
 const DEFAULT_ROUTINE = JSON.parse(process.env.DEFAULT_ROUTINE || "null");
-const bySlack = Object.fromEntries(Object.entries(PEOPLE).map(([n, p]) => [p.slack, { name: n, ...p }]));
-const byJira = Object.fromEntries(Object.entries(PEOPLE).map(([n, p]) => [p.jira, { name: n, ...p }]));
+
+let bySlack = {};
+let byJira = {};
+function loadPeople() {
+  const s = {};
+  const j = {};
+  let files = [];
+  try {
+    files = fs.readdirSync(PEOPLE_DIR).filter((f) => f.endsWith(".json"));
+  } catch (e) {
+    console.error(`people dir unreadable (${PEOPLE_DIR}): ${e.message}`);
+  }
+  for (const f of files) {
+    try {
+      const p = JSON.parse(fs.readFileSync(path.join(PEOPLE_DIR, f), "utf8"));
+      p.name = f.replace(/\.json$/, "");
+      if (p.slack) s[p.slack] = p;
+      if (p.jira) j[p.jira] = p;
+    } catch (e) {
+      console.error(`people: skipping bad file ${f}: ${e.message}`); // one broken file never takes the relay down
+    }
+  }
+  bySlack = s;
+  byJira = j;
+  console.log(`people loaded: ${files.length} file(s), ${Object.keys(s).length} with slack, ${Object.keys(j).length} with jira`);
+}
+loadPeople();
+let reloadTimer;
+try {
+  fs.watch(PEOPLE_DIR, { persistent: false }, () => {
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(loadPeople, 500); // editors fire several events per save
+  });
+} catch (e) {
+  console.error(`people watch failed (edits need a restart): ${e.message}`);
+}
 const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> DEFAULT_ROUTINE
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
