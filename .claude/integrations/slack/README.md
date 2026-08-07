@@ -36,7 +36,12 @@ works around the first limit; it doesn't try to work around the second
 ## Operations
 
 - **`.env` storage**: keep the complete `/opt/pmm-ai-relay/.env` as a Secure
-  Note in the team's **LastPass shared folder** (Business). It is the only
+  Note in the team's **LastPass shared folder "PMM"** (Business). The `lpass`
+  CLI is entirely optional (and awkward on Windows) — the web vault plus
+  copy/paste works for both saving and restoring, and the easiest init/restore
+  of all is pasting the tokens into a Claude session on this repo and asking
+  it to rebuild the relay with the `.env` baked in (no SSH needed; Windows
+  PowerShell also has `ssh` built in if you prefer doing it by hand). It is the only
   state the relay has. Auto-fetching it on boot via the LastPass API is
   deliberately NOT done — that would require a LastPass credential on the
   server (the circular-secret problem). Restore is semi-automatic instead:
