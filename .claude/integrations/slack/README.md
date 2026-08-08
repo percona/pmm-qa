@@ -64,14 +64,15 @@ works around the first limit; it doesn't try to work around the second
   (the Linode rebuild API requires setting one; without the variable a fresh
   random one is generated and must be re-saved).
 
-- **Never delete the Linode — rebuild it** (`deploy.sh` does this): rebuild
-  keeps the instance ID and IP. If someone does delete it, the released IP
-  can be reassigned to a stranger while the Jira Automation rule keeps
-  POSTing `X-Relay-Secret` at it — so deletion means: recreate via
-  `deploy.sh`, **rotate `JIRA_RELAY_SECRET`**, and update the IP + secret in
-  the Jira Automation rule. The Slack side is immune (Socket Mode is an
-  outbound connection, not tied to the IP). Exposure is bounded either way:
-  the secret only allows firing routines, it exposes nobody's tokens.
+- **The IP `139.162.176.43` is a Reserved IP** (Frankfurt, tagged `pmm-ai`),
+  so it stays under the account and reattaches on rebuild — and, crucially,
+  it is NOT recycled to the pool if the Linode is deleted. That removes the
+  old "a stranger could inherit our endpoint" risk, and keeps the hostname
+  and Let's Encrypt cert valid across rebuilds. Prefer rebuild over delete
+  regardless (`deploy.sh` rebuilds in place); if the Linode is ever deleted,
+  recreate in the same region and reattach the reserved IP — no secret
+  rotation needed, since the address never left the account. (A reserved IP
+  bills a small flat hourly rate whether attached or not.)
 - **Follow-ups in Slack work**: a mention inside a thread fires a fresh
   session, but the relay injects the thread history into the payload, so the
   new session continues the conversation. The session URL in the relay log

@@ -193,6 +193,8 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 
 **Slack app + relay (in order):**
 
+- [x] Reserved the relay's public IP `139.162.176.43` (Frankfurt, tag `pmm-ai`) 2026-08-08 — survives delete/rebuild, so the hostname + Let's Encrypt cert stay valid and the endpoint can't be reassigned to a stranger
+- [ ] Use dedicated service credentials in the environment (both are plaintext-visible to env users): a **Jira service account** (e.g. "PMM QA Bot") for `JIRA_EMAIL`/`JIRA_API_TOKEN` so comments post neutrally, and a **restricted Linode PAT** (Linodes + Firewalls R/W only) for `LINODE_TOKEN`
 - [x] Relay infrastructure verified end-to-end 2026-08-07 (Linode up, Let's Encrypt cert trusted through the session egress proxy, /health 200, /reply and /jira auth gates 403, davi.json loaded, crash-on-bad-token fixed)
 - [x] Create the Slack app from `manifest.yaml` (done 2026-08-08)
 - [ ] Request admin approval and install the app to the workspace
