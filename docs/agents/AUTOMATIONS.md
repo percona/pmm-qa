@@ -194,7 +194,7 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 **Slack app + relay (in order):**
 
 - [x] Relay infrastructure verified end-to-end 2026-08-07 (Linode up, Let's Encrypt cert trusted through the session egress proxy, /health 200, /reply and /jira auth gates 403, davi.json loaded, crash-on-bad-token fixed)
-- [ ] Create the Slack app: [api.slack.com/apps](https://api.slack.com/apps) → Create New App → From a manifest → paste [`manifest.yaml`](../../.claude/integrations/slack/manifest.yaml)
+- [x] Create the Slack app from `manifest.yaml` (done 2026-08-08)
 - [ ] Request admin approval and install the app to the workspace
 - [ ] Generate the App-Level Token (`xapp-`): app page → Basic Information → App-Level Tokens → Generate, scope `connections:write`
 - [ ] Copy the Bot Token (`xoxb-`): app page → OAuth & Permissions → Bot User OAuth Token
@@ -209,9 +209,13 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 
 **Later / optional:**
 
-- [ ] Onboard each teammate: they create their own Routine(s) + API token in their claude.ai and send slack ID, jira accountId, routine id+token — becomes one small `people/<name>.json` on the relay (hot-reloaded, no restart; template in `.claude/integrations/slack/relay/person.example.json`), mirrored as a Secure Note in the LastPass PMM folder
+- [ ] Onboard each teammate: they create their own Routine(s) + API token in their claude.ai and send slack ID, jira accountId, routine id+token — becomes one small `people/<name>.json` on the relay (hot-reloaded, no restart; template in `.claude/integrations/slack/relay/person.example.json`), mirrored as a Secure Note in the LastPass PMM folder. They do NOT connect personal Slack/Jira MCP connectors — Slack replies go through the relay bot, Jira posts go through the shared REST token in the environment. Their routine must run in the shared team environment (or a personal one carrying the same env vars).
 - [ ] (optional) Map an alerts channel to Investigator via `CHANNEL_ROUTINES` in the relay `.env`
-- [ ] Team-wide shared Claude Code environment with `LINODE_TOKEN` set once (see findings log)
+- [ ] Team-wide shared Claude Code environment (admin creates at claude.ai/admin-settings so every teammate's routine runs identically). Exact config:
+  - **Network**: Full (current) — or Custom incl. `perconadev.atlassian.net` + the relay host.
+  - **Env vars (all plaintext-visible to env users → use least-privilege service credentials)**: `LINODE_TOKEN` (VM provisioning), `JIRA_EMAIL` + `JIRA_API_TOKEN` (curl-first Jira posting). **Remove `PMM_AI_SLACK_BOT_TOKEN`** — stale: the Slack bot token lives ONLY on the relay server, fired sessions never use it.
+  - **Setup script**: the `/root/.claude/settings.json` bootstrap (hooks + permissions for multi-repo sessions).
+  - **Identity note**: per-person GitHub identity works (each person's own routine). Jira posts, however, all use the shared `JIRA_API_TOKEN` = one identity, until connector bug #61015 is fixed and Jira can move back to the per-person connector.
 
 ## Findings log (reference — done items and long-form context)
 

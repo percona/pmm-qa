@@ -121,7 +121,7 @@ Slack @mention
      with `text` = channel ID + thread_ts + the mention's stripped message
   -> fired Claude Code Routine session does the actual work
      -> replies in-thread via Slack's Web API directly (chat.postMessage
-        with PMM_AI_SLACK_BOT_TOKEN), NOT the Slack MCP connector --
+        with the relay's SLACK_BOT_TOKEN), NOT the Slack MCP connector --
         the MCP connector posts as whoever authorized it (a person); this
         bot token makes replies show up as "PMM AI" instead.
 ```
@@ -138,9 +138,9 @@ retried delivery fires it twice for the same mention.
 
 ### Reply-as-bot
 
-`PMM_AI_SLACK_BOT_TOKEN` (the bot OAuth token, `xoxb-...`, from installing
-the app) stays in the relay process's own managed secret store — it is
-never provisioned into the fired Routine session's environment. Instead,
+`SLACK_BOT_TOKEN` (the bot OAuth token, `xoxb-...`, from installing the app)
+lives ONLY in the relay's own `.env` on the server — it is never put into any
+Claude environment or fired session. Instead,
 the relay exposes a small local endpoint the fired session calls to post
 its reply, and the relay itself makes the `chat.postMessage` call with the
 token it already holds:
@@ -148,7 +148,7 @@ token it already holds:
 ```text
 fired Routine session
   -> POST http://<relay-internal-endpoint>/reply {channel, thread_ts, text}
-  -> relay calls chat.postMessage with PMM_AI_SLACK_BOT_TOKEN (never leaves the relay)
+  -> relay calls chat.postMessage with SLACK_BOT_TOKEN (never leaves the relay)
 ```
 
 `/reply` must not be an open endpoint: anything able to reach it could post
