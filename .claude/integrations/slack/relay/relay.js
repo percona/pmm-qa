@@ -2,7 +2,6 @@
 // Deps: npm i @slack/bolt   (Node >= 20)
 // Deployed on the pmm-ai-relay Linode by deploy.sh (same directory); config via /opt/pmm-ai-relay/.env
 import pkg from "@slack/bolt";
-import http from "node:http";
 import https from "node:https";
 import crypto from "node:crypto";
 import fs from "node:fs";
@@ -76,12 +75,10 @@ const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
 const REPLY_SECRET = process.env.REPLY_SECRET;
-const REPLY_BASE_URL = process.env.REPLY_BASE_URL || "http://localhost:8787";
-const PORT = Number(process.env.REPLY_PORT || 8787);
-// Fired cloud sessions can only egress through an HTTPS CONNECT proxy, so
-// /route and /reply must be reachable over TLS. A self-signed cert is
-// generated at deploy time; sessions call with curl -k. Plain HTTP stays on
-// PORT for the Jira Automation rule.
+const REPLY_BASE_URL = process.env.REPLY_BASE_URL || "https://localhost";
+// HTTPS-only. Fired cloud sessions can only egress through an HTTPS CONNECT
+// proxy that validates the origin cert against public CAs, so the relay needs
+// a real (Let's Encrypt) cert and there is no plain-HTTP path.
 const HTTPS_PORT = Number(process.env.REPLY_HTTPS_PORT || 443);
 const TLS_CERT = process.env.TLS_CERT || "/opt/pmm-ai-relay/tls/cert.pem";
 const TLS_KEY = process.env.TLS_KEY || "/opt/pmm-ai-relay/tls/key.pem";
@@ -158,7 +155,7 @@ function replyInstructions(channel, threadTs) {
   const exp = Date.now() + CAP_TTL_MS;
   const cap = sign("reply", [channel, threadTs], exp);
   return (
-    `To reply in the Slack thread, POST ${REPLY_BASE_URL}/reply (self-signed TLS — use curl -k) with JSON ` +
+    `To reply in the Slack thread, POST ${REPLY_BASE_URL}/reply with JSON ` +
     `{"channel":"${channel}","thread_ts":"${threadTs}","cap":"${cap}","exp":${exp},"text":"<your reply>"}`
   );
 }
@@ -239,7 +236,7 @@ app?.event("app_mention", async ({ event, body, client }) => {
     `Slack mention from ${person.name} (${event.user}) in channel ${event.channel} (thread ${threadTs}):\n` +
     `${history}Current request:\n${text}\n\n` +
     `This caller has these personal routines available: ${agents.join(", ") || "(none)"}.\n` +
-    `If the request fits one of them, hand off by POSTing ${REPLY_BASE_URL}/route (self-signed TLS — use curl -k) with JSON ` +
+    `If the request fits one of them, hand off by POSTing ${REPLY_BASE_URL}/route with JSON ` +
     `{"user":"${event.user}","channel":"${event.channel}","thread_ts":"${threadTs}",` +
     `"agent":"<one of the available routines>","instruction":"<self-contained task for that agent>",` +
     `"cap":"${routeCap}","exp":${exp}} — the work then runs on the caller's own account.\n` +
@@ -352,14 +349,12 @@ const handler = async (req, res) => {
     res.writeHead(404).end();
 };
 
-http.createServer(handler).listen(PORT, () => console.log(`HTTP endpoints (/reply, /route, /jira) on :${PORT}`));
-try {
-  https
-    .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-    .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints on :${HTTPS_PORT} (cert ${TLS_CERT})`));
-} catch (e) {
-  console.error(`HTTPS listener disabled (no cert at ${TLS_CERT}): ${e.message}`);
-}
+// HTTPS only, on 443. Every caller (fired sessions AND the Jira Automation
+// rule) reaches a hostname over TLS with a valid Let's Encrypt cert — there is
+// no plain-HTTP path, so nothing here depends on curl -k.
+https
+  .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
+  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira) on :${HTTPS_PORT}`));
 
 if (app) {
   try {
@@ -369,8 +364,8 @@ if (app) {
     // A bad/expired Slack token must not take the whole relay down — the HTTP
     // and HTTPS listeners are already serving, so log and stay up in HTTP-only
     // mode (health/jira/route/reply keep working; Slack reactions/replies don't).
-    console.error(`Slack connect failed (${e.message}) — staying in HTTP-only mode`);
+    console.error(`Slack connect failed (${e.message}) — staying in endpoints-only mode`);
   }
 } else {
-  console.log("PMM AI relay in HTTP-only mode (no valid Slack tokens)");
+  console.log("PMM AI relay in endpoints-only mode (no valid Slack tokens)");
 }

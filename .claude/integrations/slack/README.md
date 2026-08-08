@@ -95,8 +95,7 @@ to `139.162.176.43`).
 
 | Port | Scheme | Endpoints | Who calls it |
 |---|---|---|---|
-| **443** | HTTPS, **Let's Encrypt** cert (publicly trusted — no `-k` needed) | `/health`, `/reply`, `/route` | Fired Claude Code sessions — their egress proxy re-terminates TLS and validates the origin cert against public CAs, so the cert MUST be real (a self-signed cert is rejected with curl exit 35) |
-| 8787 | HTTP | `/jira` (also served on 443) | The Jira Automation rule (runs on Atlassian's servers, open egress) |
+| **443** | HTTPS, **Let's Encrypt** cert (publicly trusted) | `/health`, `/reply`, `/route`, `/jira` | Fired Claude Code sessions AND the Jira Automation rule. The session egress proxy re-terminates TLS and validates the origin cert against public CAs, so the cert MUST be real (self-signed is rejected, curl exit 35). HTTPS-only — no plain-HTTP port. |
 
 `REPLY_BASE_URL` in the `.env` is `https://139-162-176-43.ip.linodeusercontent.com`
 and `relay.js` defaults `HTTPS_PORT` to 443. History: an earlier iteration
