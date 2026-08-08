@@ -19,6 +19,19 @@ const pgRole = {
   operator: '=',
   value: 'postgresql',
 };
+// MySQL Instances Overview has "refresh": false and the URLs below add no refresh interval, so every
+// panel query runs once, when the dashboard is opened. The assertions are therefore a single sample:
+// on a setup that was created moments earlier they see panels whose metrics have not been collected
+// yet and fail. These are the metrics behind the panels that fill in last; wait for the data itself
+// before sampling the UI.
+const mySQLWarmUpMetrics = [
+  'mysql_global_status_uptime',
+  'mysql_global_variables_innodb_buffer_pool_size',
+  'mysql_global_status_max_used_connections',
+  'mysql_global_status_threads_connected',
+  'mysql_global_status_threads_cached',
+  'mysql_global_status_queries',
+];
 
 Before(async ({ I, settingsAPI }) => {
   rbacPsUserId = await I.createUser(newPsUser.username, newPsUser.password);
@@ -50,8 +63,12 @@ Scenario('PMM-T1584 - Verify assigning Access role to user @rbac', async ({ I, u
 Scenario(
   'PMM-T1899 - Access Role based on Labels and Check Filtering of Metrics on Dashboard @rbac',
   async ({
-    I, dashboardPage, accessRolesPage, rolesApi,
+    I, dashboardPage, accessRolesPage, rolesApi, grafanaAPI,
   }) => {
+    for (const metric of mySQLWarmUpMetrics) {
+      await grafanaAPI.waitForMetric(metric, null, 180);
+    }
+
     await rolesApi.createRole(psRole);
     await rolesApi.createRole(pgRole);
 
