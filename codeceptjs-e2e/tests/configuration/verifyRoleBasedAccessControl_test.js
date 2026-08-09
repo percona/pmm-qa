@@ -19,11 +19,6 @@ const pgRole = {
   operator: '=',
   value: 'postgresql',
 };
-// MySQL Instances Overview has "refresh": false and the URLs below add no refresh interval, so every
-// panel query runs once, when the dashboard is opened. The assertions are therefore a single sample:
-// on a setup that was created moments earlier they see panels whose metrics have not been collected
-// yet and fail. These are the metrics behind the panels that fill in last; wait for the data itself
-// before sampling the UI.
 const mySQLWarmUpMetrics = [
   'mysql_global_status_uptime',
   'mysql_global_variables_innodb_buffer_pool_size',
