@@ -21,7 +21,12 @@
       "mcp__Claude_Code_Remote",
       "mcp__claude_ai_Atlassian_Rovo",
       "mcp__claude_ai_Slack",
-      "mcp__claude_ai_Claude_Code_Remote"
+      "mcp__claude_ai_Claude_Code_Remote",
+      "Bash(*linode-runner/up.sh *)",
+      "Bash(*linode-runner/run.sh *)",
+      "Bash(*linode-runner/sync.sh *)",
+      "Bash(*linode-runner/extend.sh *)",
+      "Bash(*linode-runner/down.sh *)"
     ]
   },
   "hooks": {
