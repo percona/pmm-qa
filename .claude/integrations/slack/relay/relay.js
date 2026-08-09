@@ -75,6 +75,13 @@ const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
 const REPLY_SECRET = process.env.REPLY_SECRET;
+if (!REPLY_SECRET) {
+  // sign() runs before either Slack handler's try block, so a missing secret
+  // would otherwise crash the process on the first mention with an opaque
+  // createHmac error. Fail loudly at startup instead.
+  console.error("REPLY_SECRET is required (used to sign /reply and /route capabilities). Set it in .env.");
+  process.exit(1);
+}
 const REPLY_BASE_URL = process.env.REPLY_BASE_URL || "https://localhost";
 // HTTPS-only. Fired cloud sessions can only egress through an HTTPS CONNECT
 // proxy that validates the origin cert against public CAs, so the relay needs
@@ -151,6 +158,18 @@ async function markSeen(client, channel, ts, eventId) {
   return true;
 }
 
+// Roll back the dedup marker when fire() fails, so a Slack redelivery (or the
+// next mention) can retry instead of hitting already_reacted and dropping the
+// request permanently. 👀 is only durable once the routine has actually started.
+async function unsee(client, channel, ts, eventId) {
+  seen.delete(eventId);
+  try {
+    await client.reactions.remove({ channel, timestamp: ts, name: "eyes" });
+  } catch (e) {
+    console.error(`reactions.remove: ${e?.data?.error || e.message}`);
+  }
+}
+
 function replyInstructions(channel, threadTs) {
   const exp = Date.now() + CAP_TTL_MS;
   const cap = sign("reply", [channel, threadTs], exp);
@@ -197,6 +216,7 @@ app?.event("message", async ({ event, body, client }) => {
     console.log(`channel-fire ${routine.id}: ${await fire(routine, payload)}`);
   } catch (e) {
     console.error(e.message);
+    await unsee(client, event.channel, event.ts, body.event_id); // let a redelivery retry
   }
 });
 
@@ -247,6 +267,7 @@ app?.event("app_mention", async ({ event, body, client }) => {
     console.log(`router-fire for ${person.name}: ${await fire(ROUTER, payload)}`);
   } catch (e) {
     console.error(e.message);
+    await unsee(client, event.channel, event.ts, body.event_id); // let a redelivery retry
     await client.chat.postMessage({
       channel: event.channel,
       thread_ts: threadTs,
@@ -255,9 +276,20 @@ app?.event("app_mention", async ({ event, body, client }) => {
   }
 });
 
+const MAX_BODY_BYTES = 64 * 1024; // relay payloads are tiny JSON; reject anything larger
 const handler = async (req, res) => {
+    req.setTimeout(15_000, () => req.destroy()); // don't let a slow client hold the socket open
     let raw = "";
-    for await (const c of req) raw += c;
+    let size = 0;
+    for await (const c of req) {
+      size += c.length;
+      if (size > MAX_BODY_BYTES) {
+        res.writeHead(413).end("payload too large");
+        req.destroy();
+        return;
+      }
+      raw += c;
+    }
 
     if (req.method === "GET" && req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" }).end(

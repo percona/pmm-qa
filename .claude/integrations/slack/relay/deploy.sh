@@ -16,7 +16,7 @@ PUBKEY_FILE=${3:-}
 HERE=$(cd "$(dirname "$0")" && pwd)
 LABEL=pmm-ai-relay
 
-b64() { base64 -w0 "$1" 2>/dev/null || base64 "$1"; }
+b64() { base64 < "$1" | tr -d '\n'; }  # single line on both GNU (-w0) and BSD base64
 
 UNIT=$(mktemp)
 cat > "$UNIT" <<'EOF'
