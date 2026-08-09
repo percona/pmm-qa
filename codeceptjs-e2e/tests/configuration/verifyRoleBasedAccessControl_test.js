@@ -19,14 +19,6 @@ const pgRole = {
   operator: '=',
   value: 'postgresql',
 };
-const mySQLWarmUpMetrics = [
-  'mysql_global_status_uptime',
-  'mysql_global_variables_innodb_buffer_pool_size',
-  'mysql_global_status_max_used_connections',
-  'mysql_global_status_threads_connected',
-  'mysql_global_status_threads_cached',
-  'mysql_global_status_queries',
-];
 
 Before(async ({ I, settingsAPI }) => {
   rbacPsUserId = await I.createUser(newPsUser.username, newPsUser.password);
@@ -58,12 +50,8 @@ Scenario('PMM-T1584 - Verify assigning Access role to user @rbac', async ({ I, u
 Scenario(
   'PMM-T1899 - Access Role based on Labels and Check Filtering of Metrics on Dashboard @rbac',
   async ({
-    I, dashboardPage, accessRolesPage, rolesApi, grafanaAPI,
+    I, dashboardPage, accessRolesPage, rolesApi,
   }) => {
-    for (const metric of mySQLWarmUpMetrics) {
-      await grafanaAPI.waitForMetric(metric, null, 180);
-    }
-
     await rolesApi.createRole(psRole);
     await rolesApi.createRole(pgRole);
 
