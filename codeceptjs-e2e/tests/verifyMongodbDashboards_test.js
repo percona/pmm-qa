@@ -63,10 +63,14 @@ Scenario(
   }) => {
     const mongoService = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101' });
 
+    // Pin service_name: sibling suites leave behind services that still report
+    // mongodb_mongod_replset_my_state (which populates the picker) but no
+    // mongodb_top_* metrics, and one of them always sorts ahead of rs101.
     I.amOnPage(
       I.buildUrlWithParams(dashboardPage.mongoDbCollectionsOverview.clearUrl, {
         from: 'now-5m',
         node_name: mongoService.node_name,
+        service_name: mongoService.service_name,
         refresh: '5s',
       }),
     );
