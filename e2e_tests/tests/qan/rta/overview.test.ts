@@ -184,6 +184,26 @@ pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnal
     await expect(queryAnalytics.rta.builders.hostForRow('1')).toContainText(sortedHostNames[1]);
     await expect(queryAnalytics.rta.builders.hostForLastRow()).toContainText(sortedHostNames[0]);
   });
+
+  await pmmTest.step('Filter by Host substring and verify only matching rows remain', async () => {
+    const rs101HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs101')) as string;
+    const rs102HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs102')) as string;
+    const [rs101HostSubstring] = rs101HostName.split('_');
+    const [rs102HostSubstring] = rs102HostName.split('_');
+
+    expect(rs101HostSubstring).not.toBe(rs101HostName);
+    expect(rs102HostSubstring).not.toBe(rs102HostName);
+
+    await queryAnalytics.rta.openFilters();
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostSubstring);
+    await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName)).toHaveCount(0);
+    await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName).first()).toBeVisible();
+
+    await queryAnalytics.rta.openFilters();
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostSubstring);
+    await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName)).toHaveCount(0);
+    await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName).first()).toBeVisible();
+  });
 });
 
 pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAnalytics }, testInfo) => {
