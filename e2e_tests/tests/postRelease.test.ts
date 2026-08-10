@@ -3,11 +3,17 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
-if (!process.env.PMM_SERVER_LATEST?.trim()) {
-  throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
-}
+// Resolved per test rather than at module scope: Playwright imports every spec
+// during collection, so a top-level throw here fails unrelated --grep runs too.
+const getExpectedVersion = () => {
+  const version = process.env.PMM_SERVER_LATEST?.trim();
 
-const expectedVersion = process.env.PMM_SERVER_LATEST.trim();
+  if (!version) {
+    throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
+  }
+
+  return version;
+};
 
 pmmTest.beforeEach(async ({ context, page }) => {
   await page.unroute(apiEndpoints.server.updates);
@@ -19,6 +25,8 @@ pmmTest.beforeEach(async ({ context, page }) => {
 pmmTest(
   'PMM-T2200 - Verify new release is available for upgrade @post-release',
   async ({ grafanaHelper, updatesPage }) => {
+    const expectedVersion = getExpectedVersion();
+
     await grafanaHelper.authorize();
 
     const updateInfo = await pmmTest.step('Check version service reports an update', async () => {
@@ -45,6 +53,8 @@ pmmTest(
 pmmTest(
   "PMM-T2201 - Verify What's new link and release notes @post-release",
   async ({ grafanaHelper, updatesPage }) => {
+    const expectedVersion = getExpectedVersion();
+
     await grafanaHelper.authorize();
     await updatesPage.openHomeForWhatsNew();
 
@@ -69,6 +79,8 @@ pmmTest(
 pmmTest(
   'PMM-T2202 - Verify PMM new version on percona.com/downloads @post-release @downloads',
   async ({ downloadsPage }) => {
+    const expectedVersion = getExpectedVersion();
+
     await downloadsPage.open();
     await downloadsPage.selectPmmProduct();
 
