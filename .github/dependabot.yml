@@ -4,6 +4,7 @@ multi-ecosystem-groups:
   all-dependencies:
     schedule:
       interval: monthly
+    open-pull-requests-limit: 1
     labels:
       - dependencies
 
@@ -16,7 +17,6 @@ updates:
     patterns:
       - "*"
     multi-ecosystem-group: all-dependencies
-    open-pull-requests-limit: 1
     groups:
       security-updates:
         applies-to: security-updates
