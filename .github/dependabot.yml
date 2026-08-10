@@ -1,10 +1,6 @@
 version: 2
 
 updates:
-  # All three JS suites are updated together: one accumulating PR per month for
-  # version updates, and one accumulating PR for security fixes. Security
-  # updates are alert-driven and ignore the schedule, so they need their own
-  # group — without `applies-to: security-updates` each alert opens its own PR.
   - package-ecosystem: npm
     directories:
       - /cli
