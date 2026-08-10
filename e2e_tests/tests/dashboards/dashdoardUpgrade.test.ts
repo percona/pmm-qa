@@ -92,8 +92,12 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
 
       const firstDashboard = await grafanaHelper.getDashboard(firstDashboardUid);
       const secondDashboard = await grafanaHelper.getDashboard(secondDashboardUid);
-      const firstUrl = (await grafanaHelper.getDashboard((await firstDashboard.json()).uid)).meta.url;
-      const secondUrl = (await grafanaHelper.getDashboard((await secondDashboard.json()).uid)).meta.url;
+
+      console.log(`First dashboard id is: ${JSON.stringify(await firstDashboard)}`);
+      console.log(`First dashboard id is: ${JSON.stringify(await firstDashboard)}`);
+
+      const firstUrl = (await grafanaHelper.getDashboard(await firstDashboard.uid)).meta.url;
+      const secondUrl = (await grafanaHelper.getDashboard(await secondDashboard.uid)).meta.url;
 
       await page.goto(firstUrl);
       await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);

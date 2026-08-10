@@ -3,10 +3,11 @@ import DashboardInterface from '@interfaces/dashboard';
 
 export default class MongodbShardedClusterSummary implements DashboardInterface {
   url = 'graph/d/mongodb-cluster-summary/mongodb-sharded-cluster-summary';
-  metrics: GrafanaPanel[] = [
+
+  metrics = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[]): GrafanaPanel[] => [
     { name: 'Config Servers', type: 'polyStat' },
     { name: 'Mongos Routers', type: 'polyStat' },
-    { name: 'Shard', type: 'polyStat' },
+    ...shardNames.map((name): GrafanaPanel => ({ name: `Shard - ${name}`, type: 'polyStat' })),
     { name: 'QPS of Services', type: 'gauge' },
     { name: 'Feature Compatibility Version', type: 'stat' },
     { name: 'Shards', type: 'stat' },
@@ -23,7 +24,7 @@ export default class MongodbShardedClusterSummary implements DashboardInterface 
     { name: 'Top Hottest Collections by Write', type: 'barGauge' },
     { name: 'Operations Per Shard', type: 'timeSeries' },
     { name: 'MongoDB Versions', type: 'table' },
-    { name: 'Node States', type: 'stateTime' },
+    ...nodeNames.map((name): GrafanaPanel => ({ name: `${name} Node States`, type: 'stateTime' })),
     { name: 'Current Connections Per Shard', type: 'timeSeries' },
     { name: 'Available Connections', type: 'timeSeries' },
     { name: 'Number of Collections in Shards', type: 'table' },
@@ -38,8 +39,16 @@ export default class MongodbShardedClusterSummary implements DashboardInterface 
     { name: 'Replication Lag by Shard', type: 'timeSeries' },
     { name: 'Oplog Range by Shard', type: 'timeSeries' },
     { name: 'Flow Control', type: 'timeSeries' },
-    { name: 'Oplog GB/Hour', type: 'timeSeries' },
+    ...serviceNames.map((name): GrafanaPanel => ({ name: `Oplog GB/Hour - ${name}`, type: 'timeSeries' })),
+    { name: 'Nodes Overview', type: 'table' },
   ];
-  noDataMetrics: string[] = [];
-  metricsWithData = this.metrics.filter((metric) => !this.noDataMetrics.includes(metric.name));
+
+  metricsWithData = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[] = []) =>
+    this.metrics(shardNames, nodeNames, serviceNames).filter(
+      (metric) => !this.noDataMetrics(shardNames, nodeNames, serviceNames).includes(metric.name),
+    );
+
+  noDataMetrics = (shardNames: string[] = [], nodeNames: string[] = [], serviceNames: string[]): string[] => [
+    ...serviceNames.map((name): string => `Oplog GB/Hour - ${name}`),
+  ];
 }
