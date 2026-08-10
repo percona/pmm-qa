@@ -187,6 +187,7 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 
 **Launch core (Jira button → Test Runner):**
 
+- [ ] **Before merging #1143 — hand-fix its `.claude/settings.json` linode-runner rules** (a human must do this: an agent is hard-blocked from editing its own permission file, see findings log). The five `Bash(*linode-runner/*.sh *)` entries match nothing, so merging as-is looks like the fix landed while changing nothing.
 - [ ] Merge [PR #1143](https://github.com/percona/pmm-qa/pull/1143)
 - [ ] After merge: make any trivial edit to the qa-linode environment's setup script (forces the settings cache to rebuild now instead of in ~7 days)
 - [ ] Merge [Percona-Lab/pmm-submodules#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511) (its secret is already in place)
@@ -226,6 +227,32 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 - [x] GitHub connector activated for the org
 - [x] `gh --version`, `terraform version`, `json-diff --version`, `ffmpeg -version` succeed after a fresh SessionStart hook run
 - [x] Connector permission prompts — understood, not repo-fixable: in web sessions the prompt is **enforced by the claude.ai host layer** — no `permissions.allow` spelling and no PreToolUse allow-hook can suppress it (all tested live 2026-08-06). Routine runs are governed by the Routine's own connector list instead (once #61015 is fixed). Consequently settings.json allowlists only `mcp__github`, the one MCP entry that verifiably works (project-provisioned server). Useful facts: settings/hook edits hot-reload mid-session; connector server names vary across sessions (`Atlassian_Rovo` vs `Atlassian-Rovo`); an agent cannot see whether a prompt fired — verification needs a human watching.
+- [ ] **Provisioning is blocked in Routine runs by the auto-mode classifier — needs a human-applied settings fix.** Hit live on 2026-08-10: Investigator fired on a red `E2E tests Matrix` run, got through dedup, then `terraform/linode-runner/up.sh investigator <run_id>` was denied ("Blocked by classifier"), so it could not reproduce and closed with no verdict. Mechanics, all observed in that run:
+  - The allowlist is not what adjudicated it. `permissions.allow` holds bare tool names, and a bare `"Bash"` entry does **not** count as a shell pre-authorization — the command still went to the classifier, which judged `terraform apply` (billable infra, firewall to `0.0.0.0/0`, irreversible) as needing a human. Ordinary `git`/`python3`/`grep` passed untouched, so this is content-based, not a blanket Bash denial. `defaultMode: acceptEdits` is irrelevant here: it auto-accepts *file edits*, not Bash.
+  - The rules currently in #1143 cannot work: `Bash(*linode-runner/up.sh *)` leads with `*`, but Bash rules are **prefix** matches, not globs. They have also never been active in a Routine — those runs read `/root/.claude/settings.json`, planted from `main`, which has no such entries.
+  - A path-prefix rule is fragile regardless: the shell cwd is the repo root but is not guaranteed stable (observed resetting to `/home/user` mid-session), and the README's own `PMM_QA_REF=<branch> up.sh …` form does not *start* with the script path. Hence the `autoMode.allow` entry below, which is path- and prefix-agnostic, is the primary lever; the `Bash(...)` rules are the cheap documented fast path.
+  - **An agent cannot apply this itself.** Editing `.claude/settings.json` is refused even with the user explicitly asking for it in-session — a hard boundary (self-escalation), not a soft prompt, and correctly so: an agent able to grant itself provisioning rights defeats the permission system. Do not expect a future agent run to fix this; a human edits the file.
+
+  Replacement for the five broken entries, plus the classifier lever (`"$defaults"` must stay, it inherits the built-in rules):
+
+  ```json
+  "Bash(terraform/linode-runner/up.sh:*)",
+  "Bash(terraform/linode-runner/run.sh:*)",
+  "Bash(terraform/linode-runner/sync.sh:*)",
+  "Bash(terraform/linode-runner/extend.sh:*)",
+  "Bash(terraform/linode-runner/down.sh:*)"
+  ```
+
+  ```json
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Provisioning, driving and tearing down this repository's throwaway QA VMs via terraform/linode-runner/up.sh, run.sh, sync.sh, extend.sh and down.sh -- at any path prefix, and including invocations led by environment assignments such as PMM_QA_REF=, ALLOWED_INBOUND_CIDR=, DOCKER_VERSION= or CLIENT_VERSION=. These are single-run, self-destructing Linode instances (on-box systemd TTL timer, default 24h) created by the test-runner and investigator agents and by this repo's scheduled Routines. Standing up one is the expected first step of any reproduction and down.sh destroying one is the mandatory last step; neither is an unusual or unintended side effect here."
+    ]
+  }
+  ```
+
+  Zero-cost verification after applying: run `terraform/linode-runner/up.sh` with no arguments. It exits on `ROLE="${1:?usage…}"` before `mkdir`, before terraform, before anything billable — a usage line instead of a denial means the rule works and nothing was created. Deliberately **not** recommended: `defaultMode: bypassPermissions` or `disableAutoMode`, either of which fixes this in one line and also switches off the thing that would stop a genuinely bad command in an unattended run.
 - [x] `INVESTIGATOR_ROUTINE_TOKEN` added as a repo secret so `notify-investigator.yml` can actually fire
 - [x] Live Claude Code Remote Routines updated to match this architecture (Test Doctor renamed to Investigator, FB Validator handled) — see "Updating the live Routines" below for what changed
 - [x] **Cross-org access to `Percona-Lab/*` — solved: attach the repo at session/Routine creation** (multi-repo, verified live 2026-08-06: `gh api` on both repos and `gh run rerun <id> --failed -R Percona-Lab/pmm-submodules` all work). Single-repo sessions stay blocked by design: mid-session `add_repo` is refused cross-tier, and a PAT env var can never widen scope (the proxy swaps credentials and enforces scope itself). Fallbacks in an unattached session: anonymous git read, or data passed in via the trigger payload. Details for agents live in the `repos` skill.
