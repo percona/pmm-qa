@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { locateOption } = require('./helper/locatorHelper');
+const httpsAgent = require('./helper/httpsAgent.js');
 
 const systemMessageText = '[role="alert"], [role="status"]';
 const systemMessageTextSuccess = '[role="alert"], [role="status"]';
@@ -82,6 +83,7 @@ module.exports = () => actor({
         Authorization: authHeader,
       },
       responseType: 'arraybuffer',
+      httpsAgent,
     });
 
     fs.writeFileSync(outputPath, response.data);
