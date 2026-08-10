@@ -37,7 +37,7 @@ pmmTest.describe('PMM Advisors tests for upgrade', () => {
     },
   );
 
-  pmmTest('Change advisors intervals after the upgrade @post-upgrade', async ({ advisorsPage, page }) => {
+  pmmTest('Verify advisors intervals after the upgrade @post-upgrade', async ({ advisorsPage, page }) => {
     await page.goto(advisorsPage.configurationUrl, { timeout: Timeouts.ONE_MINUTE });
     await advisorsPage.builders.advisorsGroupHeader(groupName).click({ timeout: Timeouts.ONE_MINUTE });
     await expect(advisorsPage.builders.advisorIntervalValue(advisorName)).toHaveText('Frequent', {

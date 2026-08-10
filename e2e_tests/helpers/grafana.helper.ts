@@ -233,7 +233,7 @@ export default class GrafanaHelper {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
-    expect(response.status()).toEqual(200);
+    expect(response.status(), `Get Dashboard api call fails with errror: ${response.statusText()}`).toEqual(200);
 
     return await response.json();
   };
