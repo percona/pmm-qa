@@ -95,10 +95,9 @@ test.describe('PMM Client CLI tests for MySQL', { tag: '@mysql' }, () => {
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/ms-specific-tests.bats#L134
    */
   test('PMM-T157 Adding MySQL with specified socket', async ({ }) => {
-    const serviceNames = mysqlHosts.map((_, index) => `mysql_socket${index + 1}`);
-
-    for (const serviceName of serviceNames) {
-      const output = await cli.exec(`sudo pmm-admin add mysql --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} --socket=/tmp/mysql-sockets/1/mysql.sock --service-name=${serviceName}`);
+    let n = 1;
+    for (let i = 0; i < mysqlHosts.length; i++) {
+      const output = await cli.exec(`sudo pmm-admin add mysql --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} --socket=/tmp/mysql-sockets/1/mysql.sock --service-name=mysql_socket${n++}`);
       await output.assertSuccess();
       await output.outContains('MySQL Service added.');
     }

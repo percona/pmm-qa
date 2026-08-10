@@ -106,10 +106,9 @@ test.describe('PMM Client CLI tests for PostgreSQL Data Base', { tag: '@pgsql' }
   test('run pmm-admin remove postgresql again', async ({}) => {
     const hosts = (await cli.exec('sudo pmm-admin list | grep "PostgreSQL" | awk -F" " \'{print $3}\''))
       .getStdOutLines();
-    const services = hosts.map((_, index) => `pgsql_${index + 1}`);
-
-    for (const service of services) {
-      const output = await cli.exec(`sudo pmm-admin remove postgresql ${service}`);
+    let n = 1;
+    for (let i = 0; i < hosts.length; i++) {
+      const output = await cli.exec(`sudo pmm-admin remove postgresql pgsql_${n++}`);
       await output.exitCodeEquals(1);
       await output.outContains('not found.');
     }
