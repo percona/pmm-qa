@@ -23,6 +23,7 @@ import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
 import AlertStatusPage from '@pages/alerts/alertStatus.page';
 import AdvisorsPage from '@pages/advisors/advisors.page';
+import TestState from '@helpers/upgradeState.helper';
 
 const pmmTest = base.extend<{
   advisorsPage: AdvisorsPage;
@@ -48,6 +49,7 @@ const pmmTest = base.extend<{
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
+  testState: TestState;
 }>({
   advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
@@ -145,6 +147,7 @@ const pmmTest = base.extend<{
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
+  testState: async ({}, use) => await use(new TestState()),
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
 
@@ -156,7 +159,6 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
-  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
 });
 
 export default pmmTest;

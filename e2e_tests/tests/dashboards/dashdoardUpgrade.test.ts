@@ -1,6 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
 import { GetService } from '@interfaces/inventory';
-import UpgradeState from '@helpers/upgradeState.helper';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM settings tests for upgrade', () => {
@@ -53,39 +52,42 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     expect(errorLogs.stderr, `Error found in grafana log after upgrade: ${errorLogs.stderr}`).toHaveLength(0);
   });
 
-  pmmTest('Verify duplicate dashboard do not break upgrade @pre-upgrade', async ({ grafanaHelper }) => {
-    const insightFolder = await grafanaHelper.getFolderDetailsByName('Insight');
-    const experimentalFolder = await grafanaHelper.getFolderDetailsByName('Experimental');
-    const firstCustomDashboard = await grafanaHelper.createCustomDashboard(
-      'test-dashboard',
-      insightFolder.id,
-      panelName,
-    );
-    const secondCustomDashboard = await grafanaHelper.createCustomDashboard(
-      'test-dashboard',
-      experimentalFolder.id,
-      panelName,
-    );
-    const firstDashboardUid = (await firstCustomDashboard.json()).uid;
-    const secondDashboardUid = (await secondCustomDashboard.json()).uid;
+  pmmTest(
+    'Verify duplicate dashboard do not break upgrade @pre-upgrade',
+    async ({ grafanaHelper, testState }) => {
+      const insightFolder = await grafanaHelper.getFolderDetailsByName('Insight');
+      const experimentalFolder = await grafanaHelper.getFolderDetailsByName('Experimental');
+      const firstCustomDashboard = await grafanaHelper.createCustomDashboard(
+        'test-dashboard',
+        insightFolder.id,
+        panelName,
+      );
+      const secondCustomDashboard = await grafanaHelper.createCustomDashboard(
+        'test-dashboard',
+        experimentalFolder.id,
+        panelName,
+      );
+      const firstDashboardUid = (await firstCustomDashboard.json()).uid;
+      const secondDashboardUid = (await secondCustomDashboard.json()).uid;
 
-    UpgradeState.save({
-      FIRST_DASHBOARD_UID: firstDashboardUid,
-      SECOND_DASHBOARD_UID: secondDashboardUid,
-    });
+      testState.save({
+        FIRST_DASHBOARD_UID: firstDashboardUid,
+        SECOND_DASHBOARD_UID: secondDashboardUid,
+      });
 
-    console.log(`First dashboard id is: ${firstDashboardUid}`);
-    console.log(`Second dashboard id is: ${secondDashboardUid}`);
+      console.log(`First dashboard id is: ${firstDashboardUid}`);
+      console.log(`Second dashboard id is: ${secondDashboardUid}`);
 
-    expect(firstDashboardUid.length).toBeGreaterThan(0);
-    expect(secondDashboardUid.length).toBeGreaterThan(0);
-  });
+      expect(firstDashboardUid.length).toBeGreaterThan(0);
+      expect(secondDashboardUid.length).toBeGreaterThan(0);
+    },
+  );
 
   pmmTest(
     'Verify duplicate dashboard do not break after upgrade @post-upgrade',
-    async ({ dashboard, grafanaHelper, page }) => {
-      const firstDashboardUid = UpgradeState.get('FIRST_DASHBOARD_UID');
-      const secondDashboardUid = UpgradeState.get('SECOND_DASHBOARD_UID');
+    async ({ dashboard, grafanaHelper, page, testState }) => {
+      const firstDashboardUid = testState.get('FIRST_DASHBOARD_UID');
+      const secondDashboardUid = testState.get('SECOND_DASHBOARD_UID');
 
       console.log(`First dashboard id is: ${firstDashboardUid}`);
       console.log(`Second dashboard id is: ${secondDashboardUid}`);
