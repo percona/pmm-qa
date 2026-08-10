@@ -31,6 +31,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);
       expect(page.url()).toContain(dashboardName);
       expect(page.url()).toContain((await customDashboard.json()).uid);
+      await page.goto((await grafanaHelper.getDashboard((await customDashboard.json()).uid)).meta.url);
     },
   );
 
@@ -69,11 +70,34 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
 
       cliHelper.execSilent(`export FIRST_DASHBOARD_UID=${(await firstCustomDashboard.json()).uid}`);
       cliHelper.execSilent(`export SECOND_DASHBOARD_UID=${(await secondCustomDashboard.json()).uid}`);
+      console.log(`First dashboard id is: ${(await firstCustomDashboard.json()).uid}`);
+      console.log(`Second dashboard id is: ${(await secondCustomDashboard.json()).uid}`);
       console.log(`First dashboard id is: ${cliHelper.execSilent('echo $FIRST_DASHBOARD_UID').stdout}`);
       console.log(`Second dashboard id is: ${cliHelper.execSilent('echo SECOND_DASHBOARD_UID').stdout}`);
 
-      expect(cliHelper.execSilent('echo $FIRST_DASHBOARD_UID').stdout).toBeGreaterThan(0);
-      expect(cliHelper.execSilent('echo $SECOND_DASHBOARD_UID').stdout).toBeGreaterThan(0);
+      expect(cliHelper.execSilent('echo $FIRST_DASHBOARD_UID').stdout.length).toBeGreaterThan(0);
+      expect(cliHelper.execSilent('echo $SECOND_DASHBOARD_UID').stdout.length).toBeGreaterThan(0);
+    },
+  );
+
+  pmmTest(
+    'Verify duplicate dashboard do not break after upgrade @post-upgrade',
+    async ({ cliHelper, dashboard, grafanaHelper, page }) => {
+      const firstDashboardUid = cliHelper.execSilent('echo $FIRST_DASHBOARD_UID').stdout;
+      const secondDashboardUid = cliHelper.execSilent('echo $SECOND_DASHBOARD_UID').stdout;
+      const firstDashboard = await grafanaHelper.getDashboard(firstDashboardUid);
+      const secondDashboard = await grafanaHelper.getDashboard(secondDashboardUid);
+      const firstUrl = (await grafanaHelper.getDashboard((await firstDashboard.json()).uid)).meta.url;
+      const secondUrl = (await grafanaHelper.getDashboard((await secondDashboard.json()).uid)).meta.url;
+
+      console.log(`First dashboard id is: ${firstDashboardUid}`);
+      console.log(`Second dashboard id is: ${secondDashboardUid}`);
+      await page.goto(firstUrl);
+      await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);
+      expect(page.url()).toContain(firstUrl);
+      await page.goto(secondUrl);
+      await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);
+      expect(page.url()).toContain(secondUrl);
     },
   );
 
@@ -157,3 +181,4 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     },
   );
 });
+

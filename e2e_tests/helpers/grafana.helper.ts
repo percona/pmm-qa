@@ -228,6 +228,16 @@ export default class GrafanaHelper {
     Authorization: `Basic ${this.getToken(username, password)}`,
   });
 
+  getDashboard = async (uid: string) => {
+    const response = await this.page.request.get(`graph/api/dashboards/uid/${uid}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return await response.json();
+  };
+
   getFolderDetailsByName = async (folderName: string): Promise<GrafanaFolder> => {
     const response = await this.page.request.get('graph/api/folders', {
       headers: GrafanaHelper.getAuthHeader(),
