@@ -88,18 +88,10 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     async ({ dashboard, grafanaHelper, page, testState }) => {
       const firstDashboardUid = testState.get('FIRST_DASHBOARD_UID');
       const secondDashboardUid = testState.get('SECOND_DASHBOARD_UID');
-
-      console.log(`First dashboard id is: ${firstDashboardUid}`);
-      console.log(`Second dashboard id is: ${secondDashboardUid}`);
-
       const firstDashboard = await grafanaHelper.getDashboard(firstDashboardUid);
       const secondDashboard = await grafanaHelper.getDashboard(secondDashboardUid);
-
-      console.log(`First dashboard id is: ${JSON.stringify(await firstDashboard)}`);
-      console.log(`First dashboard id is: ${JSON.stringify(await firstDashboard)}`);
-
-      const firstUrl = (await grafanaHelper.getDashboard(await firstDashboard.uid)).meta.url;
-      const secondUrl = (await grafanaHelper.getDashboard(await secondDashboard.uid)).meta.url;
+      const firstUrl = firstDashboard.meta.url;
+      const secondUrl = secondDashboard.meta.url;
 
       await page.goto(firstUrl);
       await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);
@@ -163,7 +155,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'PMM-T9999 Verify MongoDB Sharded Cluster Summary after upgrade @post-upgrade',
+    'Verify MongoDB Sharded Cluster Summary after upgrade @post-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const shardNames = ['rs1', 'rs2'];
       const nodeNames = ['rs1', 'rs2', 'rscfg'];
