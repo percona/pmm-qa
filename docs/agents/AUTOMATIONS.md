@@ -195,7 +195,8 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 **Slack app + relay (in order):**
 
 - [x] Reserved the relay's public IP `139.162.176.43` (Frankfurt, tag `pmm-ai`) 2026-08-08 — survives delete/rebuild, so the hostname + Let's Encrypt cert stay valid and the endpoint can't be reassigned to a stranger
-- [ ] Use dedicated service credentials in the environment (both are plaintext-visible to env users): a **Jira service account** (e.g. "PMM QA Bot") for `JIRA_EMAIL`/`JIRA_API_TOKEN` so comments post neutrally, and a **restricted Linode PAT** (Linodes + Firewalls R/W only) for `LINODE_TOKEN`
+- [ ] **Request a Jira service account from IT** (e.g. "PMM QA Bot", with only the PMM-project permissions the REST fallback needs: read issues, add Developers-restricted comments, add attachments, edit fields, transition) and use its `JIRA_EMAIL`/`JIRA_API_TOKEN` in the environment. **Blocking for team rollout**: env vars are shared across everyone in the environment, so without a service account every bot comment posts as *one real person's* identity (whoever's token is set) and per-person onboarding can't give each teammate their own Jira identity — it all collapses onto that one account. A service account keeps QA comments neutral and decouples them from any individual.
+- [ ] Use a **restricted Linode PAT** (Linodes + Firewalls R/W only, not a full-access personal token) for `LINODE_TOKEN` — also plaintext-visible to env users
 - [x] Relay infrastructure verified end-to-end 2026-08-07 (Linode up, Let's Encrypt cert trusted through the session egress proxy, /health 200, /reply and /jira auth gates 403, davi.json loaded, crash-on-bad-token fixed)
 - [x] Create the Slack app from `manifest.yaml` (done 2026-08-08)
 - [ ] Request admin approval and install the app to the workspace
