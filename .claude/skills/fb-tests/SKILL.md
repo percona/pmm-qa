@@ -1,6 +1,6 @@
 ---
 name: fb-tests
-description: Analyze Percona-Lab/pmm-submodules FB Tests via gh pr checks, JNKPercona build comments, flaky triage, and map failures to pmm-qa GitHub workflow runners. Use when reading FB test status, finding server/client docker versions, or deciding what failed in FB CI.
+description: Analyze Percona-Lab/pmm-submodules FB Tests via REST check-runs, JNKPercona build comments, flaky triage, and map failures to pmm-qa GitHub workflow runners. Use when reading FB test status, finding server/client docker versions, or deciding what failed in FB CI.
 ---
 
 # PMM FB Tests
@@ -9,8 +9,14 @@ description: Analyze Percona-Lab/pmm-submodules FB Tests via gh pr checks, JNKPe
 
 ## Collect checks
 
+`gh pr checks` is GraphQL-backed and **403s in these sessions** — use repo-scoped
+REST check-runs on the PR's head commit instead. `group_by(.name) | max_by(.started_at)`
+keeps only the **latest** run per check (so a passing rerun supersedes its old failure):
+
 ```bash
-gh pr checks <SUBMODULES_PR> -R Percona-Lab/pmm-submodules
+SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<SUBMODULES_PR> --jq .head.sha)
+gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
+  --jq '.check_runs | group_by(.name) | map(max_by(.started_at))[] | {name, status, conclusion}'
 ```
 
 - **Latest FB build only** — older comments/checks are invalid
@@ -46,10 +52,15 @@ Mark each failure: **relevant** (overlaps ticket) / **flaky** / **out of scope**
 ## Green gate (FB Reporter)
 
 ```bash
-gh pr checks <PR> -R Percona-Lab/pmm-submodules 2>&1 | grep -E '\tfail\t'
+SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<PR> --jq .head.sha)
+gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
+  --jq '[.check_runs | group_by(.name) | map(max_by(.started_at))[]
+         | select(.conclusion=="failure" or .conclusion=="timed_out")] | length'
 ```
 
-Any output → do **not** attach green screenshot to Jira.
+`> 0` → do **not** attach green screenshot to Jira. A latest-run `conclusion` of
+`cancelled`, `null`, or status `in_progress`/`queued` means the build isn't cleanly
+green either — rerun the failed jobs and re-check before calling it green.
 
 ## Detail
 
