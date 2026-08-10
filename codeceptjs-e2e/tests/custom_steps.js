@@ -4,8 +4,8 @@ const buildUrl = require('build-url');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const { Agent } = require('https');
 const { locateOption } = require('./helper/locatorHelper');
-const httpsAgent = require('./helper/httpsAgent.js');
 
 const systemMessageText = '[role="alert"], [role="status"]';
 const systemMessageTextSuccess = '[role="alert"], [role="status"]';
@@ -83,7 +83,7 @@ module.exports = () => actor({
         Authorization: authHeader,
       },
       responseType: 'arraybuffer',
-      httpsAgent,
+      httpsAgent: new Agent({ rejectUnauthorized: false, keepAlive: false }),
     });
 
     fs.writeFileSync(outputPath, response.data);

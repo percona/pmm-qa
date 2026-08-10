@@ -1,6 +1,6 @@
 const axios = require('axios');
+const https = require('https');
 const assert = require('assert');
-const httpsAgent = require('../tests/helper/httpsAgent.js');
 
 const BASE_URL = process.env.PMM_UI_URL || 'https://localhost';
 const AUTH = {
@@ -10,7 +10,8 @@ const AUTH = {
 const getAuth = () => Buffer.from(`${AUTH.username}:${AUTH.password}`).toString('base64');
 
 (async () => {
-  const config = { headers: { Authorization: `Basic ${getAuth()}` }, httpsAgent };
+  const agent = new https.Agent({ rejectUnauthorized: false, keepAlive: false });
+  const config = { headers: { Authorization: `Basic ${getAuth()}` }, httpsAgent: agent };
 
   const {
     data: { checks },

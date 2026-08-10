@@ -1,6 +1,6 @@
+const { Agent } = require('https');
 const { pageObjects, getChunks } = require('./codeceptConfigHelper');
 const bootstrapHook = require('./tests/helper/hooks.js');
-const httpsAgent = require('./tests/helper/httpsAgent.js');
 
 require('dotenv').config();
 
@@ -73,12 +73,8 @@ exports.config = {
     REST: {
       endpoint: process.env.PMM_UI_URL || pmmUrl,
       timeout: 60000,
-      // The helper only builds an agent from its own httpAgent option, and that
-      // option requires ca/key/cert - it throws without them. PMM Server's
-      // certificate is self-signed, so the agent is attached per request, which
-      // is the documented hook for exactly this.
       onRequest: (request) => {
-        request.httpsAgent = httpsAgent;
+        request.httpsAgent = new Agent({ rejectUnauthorized: false, keepAlive: false });
       },
     },
     Mailosaur: {

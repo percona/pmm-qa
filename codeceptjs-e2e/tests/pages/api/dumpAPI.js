@@ -6,7 +6,7 @@ const tar = require('tar');
 const path = require('path');
 const { pipeline } = require('stream/promises');
 const { readdirSync } = require('fs');
-const httpsAgent = require('../../helper/httpsAgent.js');
+const { Agent } = require('https');
 
 const outputDir = `${process.cwd()}/tests/output/`;
 const buildDumpDownloadUrl = (uid) => {
@@ -62,7 +62,7 @@ module.exports = {
       headers,
       responseType: 'stream',
       validateStatus: () => true,
-      httpsAgent,
+      httpsAgent: new Agent({ rejectUnauthorized: false, keepAlive: false }),
     });
 
     assert.strictEqual(
