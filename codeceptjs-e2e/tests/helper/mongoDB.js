@@ -142,7 +142,6 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<unknown>}
    */
   async mongoAddUser(username, password, roles = [{ db: 'admin', role: 'userAdminAnyDatabase' }]) {
-    // Admin.addUser() was removed in driver 6; createUser is the supported equivalent
     return await this.client.db().command({ createUser: username, pwd: password, roles });
   }
 
