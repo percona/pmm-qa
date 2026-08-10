@@ -27,7 +27,12 @@ const apiEndpoints = {
     connect: '/v1/platform:connect',
   },
   prometheus: {
-    query: '/prometheus/api/v1/query',
+    // Queries go through the Grafana datasource proxy rather than PMM's own
+    // /prometheus route: the proxy targets whatever metrics backend Grafana is
+    // configured with, so it works on standalone PMM and on HA, where
+    // /prometheus fronts an external VictoriaMetrics cluster.
+    datasourceProxy: '/graph/api/datasources/proxy/uid',
+    datasources: '/graph/api/datasources',
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',
