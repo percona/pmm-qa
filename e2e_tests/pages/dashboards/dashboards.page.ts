@@ -131,11 +131,11 @@ export default class Dashboards extends BasePage {
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
-    let noDataPanels: string[] = [];
     let missingMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      noDataPanels = await this.elements.noDataPanelName.allTextContents();
+      const noDataPanels = await this.elements.noDataPanelName.allTextContents();
+
       missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
 
       if (missingMetrics.length == 0) break;
