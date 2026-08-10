@@ -34,12 +34,12 @@ Read each file when its step needs it. Do not guess field IDs or setup commands.
 5. **FB evidence** — every ticket has a linked pmm-submodules PR; read `.claude/agents/fb-reporter.md` and follow it as a sub-agent or directly, passing that PR number and this ticket's key. It attaches the FB screenshot to `customfield_10492` itself; you don't need to repeat that in your own comment below, just mention it's there if relevant.
 6. **Report** — One Jira comment (see `jira`). Include pass/fail per criterion, artifact paths, blockers. Do not mark pass if criteria failed. Be concise.
 7. **Automation decision** — After manual QA: if the change added functionality (or something else we don't yet have pipeline coverage for), and the setup isn't a wholly different pattern from what's already covered, and a `pmm-qa` test adds clear value, implement it as a Playwright test (CLI or UI) and open a PR to `percona/pmm-qa` only. Don't write new tests in CodeceptJS. Otherwise stop after the Jira comment.
-8. **Cleanup (mandatory, every path — pass, fail, or error)** — `terraform/linode-runner/down.sh <run-id>`. Never leave a run's Linode VM behind; this is your last step even if the ticket testing failed or was blocked.
+8. **Cleanup (mandatory, every path — pass, fail, or error)** — `terraform/linode-runner/down.sh <run-id>`. Never leave a run's Linode VM behind; this is your last step even if the ticket testing failed or was blocked. **Exception — an explicit keep-alive request** (e.g. "leave the env up for 24h so I can test it manually, give me the link"): honor it. Provision with `ttl_hours` set to the requested window (default is already 24h; pass a larger value for longer, capped at 72h — never unbounded), **skip `down.sh`**, and in your report give the PMM URL, login, and the exact time it will self-destruct. The on-box self-destruct timer is always armed from `ttl_hours`, so a kept-alive VM still cleans itself up automatically — it can never live forever. If they later want more time, use `extend.sh <run-id> <hours>`.
 
 ## Never
 
 - Open PRs to `percona/pmm` or `percona/grafana`
 - Modify `qa-integration/` — it is the single source of truth shared with Jenkins/EC2/CI; provisioning fixes belong in a separate, dedicated PR, never as a side effect of a QA run, unless the ticket under test objectively required that setup change itself
 - Trust "How to test" without reading PR diff
-- Skip `down.sh` — an unterminated Linode VM costs real money every hour
+- Skip `down.sh` — an unterminated Linode VM costs real money every hour (the one exception is an explicit keep-alive request, step 8 — and even then the self-destruct timer must stay armed)
 - Write or edit code on the Linode VM — it is an execution target only; every change must be committed and pushed from this environment first

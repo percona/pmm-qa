@@ -57,6 +57,19 @@ The last argument is dwell time in seconds (default 15) — how long it sits on 
 
 If the GitHub Actions page renders blank, the repo is private and the browser has no GitHub session — report this as a blocker rather than guessing at the screenshot content.
 
+## Two things that silently produce a useless screenshot
+
+Proxy handling in cloud sessions is automatic — nothing to pass. These two are
+not:
+
+- **Dashboards need longer than the default settle.** Pass
+  `PW_SETTLE_MS=15000` for any dashboard with panels, or `PW_WAIT_SELECTOR` to
+  wait on a specific element; the 3000 ms default catches panels still
+  spinning.
+- **A stale login session screenshots the login page**, not an error — Grafana
+  rotates auth tokens. Always look at the image before attaching it; re-run
+  `pmm-ui-login.js` and re-shoot if it's wrong.
+
 ## Artifacts
 
 Name files with the ticket key (e.g. `PMM-15196-settings.png`). Save under `/tmp` and reference the path in Jira Developers-only comments when the role requires it.
