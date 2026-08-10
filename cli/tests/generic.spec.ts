@@ -7,7 +7,7 @@ const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
 
-test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () => {
+test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep pdpgsql_pmm | awk \'{print $NF}\'');
     await result.outContains('pdpgsql_pmm', 'PDPGSQL docker container should exist. please run pmm-framework with --database pdpgsql');

@@ -4,7 +4,7 @@ import * as cli from '@helpers/cli-helper';
 
 let mongoHosts: string[];
 
-test.describe('MongoDB CLI tests ', { tag: '@mongoDb' }, async () => {
+test.describe('MongoDB CLI tests', { tag: '@mongoDb' }, () => {
   test.beforeAll(async ({}) => {
     mongoHosts = (await cli.exec('sudo pmm-admin list | grep "MongoDB" | awk -F" " \'{print $3}\''))
       .getStdOutLines();

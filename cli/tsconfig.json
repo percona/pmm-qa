@@ -8,6 +8,9 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "baseUrl": ".",
+    // TypeScript 6 deprecates baseUrl, node10 resolution and the ES5 target;
+    // changing any of them alters module/emit semantics, so migrate separately.
+    "ignoreDeprecations": "6.0",
     "moduleResolution": "node",
     "module": "esnext",
     "lib": [

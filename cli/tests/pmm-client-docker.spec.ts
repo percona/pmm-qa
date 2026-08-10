@@ -3,7 +3,7 @@ import * as cli from '@helpers/cli-helper';
 import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { clientDockerImage, dockerImage } from '@root/helpers/constants';
 
-test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async () => {
+test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, () => {
   let iptablesCleanup: number | undefined;
   let adminVersion: number;
 
@@ -146,8 +146,9 @@ test.describe('PMM Client Docker CLI tests', { tag: '@client-docker' }, async ()
   });
 });
 
-test.describe('-promscrape.maxScapeSize tests', { tag: '@client-docker' }, async () => {
+test.describe('-promscrape.maxScapeSize tests', { tag: '@client-docker' }, () => {
   const defaultScrapeSize = '64';
+
   test.beforeAll(async () => {
     await (await cli.exec(`DOCKER_VERSION=${dockerImage} CLIENT_DOCKER_VERSION=${clientDockerImage} docker compose -f test-setup/docker-compose-scrape-intervals.yml up -d`)).assertSuccess();
     await expect(async () => {
