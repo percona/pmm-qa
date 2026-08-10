@@ -1,23 +1,23 @@
 version: 2
 
+multi-ecosystem-groups:
+  all-dependencies:
+    schedule:
+      interval: monthly
+    labels:
+      - dependencies
+
 updates:
   - package-ecosystem: npm
     directories:
       - /cli
       - /codeceptjs-e2e
       - /e2e_tests
-    schedule:
-      interval: monthly
-      time: "06:00"
-      timezone: Etc/UTC
+    patterns:
+      - "*"
+    multi-ecosystem-group: all-dependencies
     open-pull-requests-limit: 1
-    labels:
-      - dependencies
     groups:
-      all-dependencies:
-        applies-to: version-updates
-        patterns:
-          - "*"
       security-updates:
         applies-to: security-updates
         patterns:
