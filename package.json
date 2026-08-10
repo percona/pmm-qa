@@ -1,0 +1,10 @@
+{
+  "name": "pmm-qa-provisioning",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node provisioning/prebaked-poc/build.ts",
+    "setup": "node setup.ts",
+    "test:provisioning": "node --test --experimental-test-isolation=none provisioning/setup.test.ts provisioning/pmm-client.test.ts provisioning/prebaked-poc/setup.test.ts provisioning/prebaked-poc/engines/pxc/setup.test.ts provisioning/prebaked-poc/engines/psmdb/setup.test.ts provisioning/prebaked-poc/engines/pgsql/setup.test.ts provisioning/prebaked-poc/engines/pdpgsql/setup.test.ts provisioning/prebaked-poc/engines/valkey/setup.test.ts provisioning/prebaked-poc/engines/services/setup.test.ts provisioning/prebaked-poc/engines/minio/setup.test.ts"
+  }
+}
