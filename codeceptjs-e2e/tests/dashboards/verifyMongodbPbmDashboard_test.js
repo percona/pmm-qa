@@ -45,8 +45,5 @@ Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @pbm-nightl
   await dashboardPage.mongodbBackupDetailsDashboard.verifyPitrEnabledValue(current === 'BACKUP_MODE_PITR' ? 'ON' : 'OFF');
   await dashboardPage.expandEachDashboardRow();
   await dashboardPage.verifyMetricsExistence(dashboardPage.mongodbBackupDetailsDashboard.metrics);
-  // A PITR schedule enables oplog slicing without completing a PBM snapshot, so
-  // mongodb_pbm_backup_size_bytes{status="done"} has no series and "Last Successful
-  // Backup" is legitimately N/A. Snapshot mode does produce one, so stay strict there.
   await dashboardPage.verifyThereAreNoGraphsWithoutData(current === 'BACKUP_MODE_PITR' ? 1 : 0);
 });
