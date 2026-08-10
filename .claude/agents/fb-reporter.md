@@ -32,7 +32,7 @@ Needs from whoever handed this to you: the pmm-submodules PR number and the Jira
        --jq 'any(.check_runs[]; .status != "completed")' | grep -q true; do sleep 30; done
    ```
    Then read the latest run per check with the `group_by(.name) | max_by(.started_at)` query from `fb-tests`.
-2. **All green** → screenshot the FB Tests Actions run (not the PR checks page, local Playwright/Chromium per `ui-evidence`), attach to `customfield_10492` using the `jira` skill's REST attachment recipe (curl-first — the Atlassian connector stalls routine runs on the #61015 approval prompt). Done.
+2. **All green** → screenshot the FB Tests Actions run (not the PR checks page, local Playwright/Chromium per `ui-evidence`). Then, both via the `jira` skill's curl-first REST recipes (the Atlassian connector stalls routine runs on the #61015 approval prompt): (a) upload the PNG to the ticket with the attachment `POST`, and (b) `PUT` `customfield_10492` with the run URL + `!fb-test-<PR>-checks.png|width=900!` wiki markup so it renders inline — uploading alone does **not** populate the field. See `fb-tests` for the exact two calls. Done.
 3. **Any red** → this might be flakiness, not a real failure:
    - Identify the failed job(s) and their Actions run ID.
    - `gh run rerun <run-id> --failed -R Percona-Lab/pmm-submodules` — re-runs only the failed jobs, not the whole matrix.

@@ -51,16 +51,21 @@ Mark each failure: **relevant** (overlaps ticket) / **flaky** / **out of scope**
 
 ## Green gate (FB Reporter)
 
+Fail closed: only "green" when there's at least one check and **every** latest
+check completed with a success-ish conclusion. `cancelled`, `null`, still-running,
+or an empty set all read as not-green.
+
 ```bash
 SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<PR> --jq .head.sha)
-gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
-  --jq '[.check_runs | group_by(.name) | map(max_by(.started_at))[]
-         | select(.conclusion=="failure" or .conclusion=="timed_out")] | length'
+gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" --jq '
+  .check_runs | group_by(.name) | map(max_by(.started_at)) as $latest
+  | ($latest | length) as $n
+  | ([ $latest[] | select(.status=="completed" and (.conclusion|IN("success","skipped","neutral"))) ] | length) as $ok
+  | if $n>0 and $ok==$n then "green" else "not-green (\($ok)/\($n) clean)" end'
 ```
 
-`> 0` → do **not** attach green screenshot to Jira. A latest-run `conclusion` of
-`cancelled`, `null`, or status `in_progress`/`queued` means the build isn't cleanly
-green either — rerun the failed jobs and re-check before calling it green.
+Anything but `green` → do **not** attach the screenshot to Jira; rerun the failed
+jobs and re-check first.
 
 ## Detail
 

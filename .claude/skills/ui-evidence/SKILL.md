@@ -51,9 +51,7 @@ The last argument is dwell time in seconds (default 15) — how long it sits on 
 
 ## FB Actions run screenshot (FB Reporter, all checks green)
 
-1. Resolve the FB Actions run URL from the check-runs `details_url` (see `fb-tests`; `gh pr checks` 403s here):
-   `SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<PR> --jq .head.sha)` then
-   `gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" --jq '.check_runs[0].details_url'`.
+1. Resolve the FB Actions **run** URL with the `fb-tests` "Get the run URL for the latest FB build" recipe — it picks the run the FB matrix shares and strips the `/job/<id>` suffix, so you screenshot the whole run page, not one job (`gh pr checks` 403s here, so don't use it).
 2. `node .claude/scripts/pw-screenshot.js "<actions-run-url>" "/tmp/fb-test-<PR>-checks.png"`.
 3. Attach via `jira` (`customfield_10492`).
 

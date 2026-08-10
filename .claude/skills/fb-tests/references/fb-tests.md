@@ -36,9 +36,13 @@ https://github.com/Percona-Lab/pmm-submodules/actions/runs/<run_id>
 
 ### Get the run URL for the latest FB build
 
+Pick the run the FB matrix shares — the most common run URL across the
+github-actions checks — so a stray single-job workflow (notify, lint) can't win.
+`/job/<id>` is stripped so you land on the run page, not one job:
+
 ```bash
-CHECKS | jq -r 'select(.app.slug=="github-actions") | .details_url' \
-  | head -1 | sed 's|/job/.*||'
+CHECKS | jq -rs 'map(select(.app.slug=="github-actions")
+  | .details_url | sub("/job/[0-9]+$";"")) | group_by(.) | max_by(length)[0]'
 ```
 
 Then open: `https://github.com/Percona-Lab/pmm-submodules/actions/runs/<run_id>`
@@ -66,14 +70,20 @@ Use `.claude/scripts/pw-screenshot.js` (see `ui-evidence`) instead of any browse
 
 ### Screenshot only when all checks pass
 
+`CHECKS` emits one object per check, so slurp with `jq -s` and fail closed —
+"green" only if there's at least one check and every latest check completed success-ish:
+
 ```bash
-CHECKS | jq '[select(.conclusion=="failure" or .conclusion=="timed_out")] | length'
+CHECKS | jq -rs '
+  length as $n
+  | ([ .[] | select(.status=="completed" and (.conclusion|IN("success","skipped","neutral"))) ] | length) as $ok
+  | if $n>0 and $ok==$n then "green" else "not-green (\($ok)/\($n) clean)" end'
 ```
 
 | Result | Action |
 |--------|--------|
-| **`0`** | Screenshot + attach to Jira `customfield_10492` |
-| **`> 0`** | **No screenshot** — update Jira with text only (run URL, failed suites, relevant/flaky notes) |
+| **`green`** | Screenshot + attach to Jira `customfield_10492` |
+| **anything else** | **No screenshot** — update Jira with text only (run URL, failed suites, relevant/flaky notes) |
 
 Failures still matter for manual test planning; they just do not get a green screenshot in Jira.
 
@@ -81,8 +91,9 @@ Failures still matter for manual test planning; they just do not get a green scr
 
 ```bash
 SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/4376 --jq .head.sha)
-run_url=$(gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
-  --jq '.check_runs | map(select(.app.slug=="github-actions"))[0].details_url' | sed 's|/job/.*||')
+run_url=$(gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" --jq -r \
+  '.check_runs | map(select(.app.slug=="github-actions") | .details_url | sub("/job/[0-9]+$";""))
+   | group_by(.) | max_by(length)[0]')
 node .claude/scripts/pw-screenshot.js "$run_url" "/tmp/fb-test-PMM-14915-checks.png"
 ```
 
