@@ -12,7 +12,10 @@ pmmTest(
   'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-pxc-haproxy-integration',
   async ({ dashboard, page, urlHelper }) => {
     await page.goto(
-      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, { from: 'now-1h' }),
+      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, {
+        from: 'now-1h',
+        refresh: '5s',
+      }),
     );
     await dashboard.verifyMetricsPresent(dashboard.mysql.haproxyInstanceSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.haproxyInstanceSummary.noDataMetrics);
