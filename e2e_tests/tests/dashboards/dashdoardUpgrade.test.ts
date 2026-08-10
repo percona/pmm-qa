@@ -1,9 +1,37 @@
 import pmmTest from '@fixtures/pmmTest';
+import { GetService } from '@interfaces/inventory';
+import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM settings tests for upgrade', () => {
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
   });
+
+  pmmTest(
+    'PMM-T391 - Verify user is able to create and set custom home dashboard @pre-upgrade',
+    async ({ dashboard, grafanaHelper, page }) => {
+      const dashboardName = 'upgrade-dashboard';
+      const panelName = 'Monitored DB';
+      const folder = await grafanaHelper.getFolderDetailsByName('Insight');
+
+      await grafanaHelper.createFolder('upgrade-folder');
+
+      const customDashboard = await grafanaHelper.createCustomDashboard(
+        dashboardName,
+        folder.id,
+        `${panelName}`,
+        ['pmm-qa', 'tag-upgrade'],
+      );
+
+      await grafanaHelper.starDashboard((await customDashboard.json()).uid);
+      await grafanaHelper.setHomeDashboard((await customDashboard.json()).uid);
+
+      await page.goto('pmm-ui/graph/');
+      await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);
+      expect(page.url()).toContain(dashboardName);
+      expect(page.url()).toContain((await customDashboard.json()).uid);
+    },
+  );
 
   pmmTest(
     'PMM-T317 - Verify MySQL Instance Summary Dashboard after upgrade @post-upgrade',
@@ -59,7 +87,15 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
 
   pmmTest(
     'PMM-T9999 Verify MongoDB Sharded Cluster Summary after upgrade @post-upgrade',
-    async ({ dashboard, page, urlHelper }) => {
+    async ({ api, dashboard, page, urlHelper }) => {
+      const shardNames = ['rs1', 'rs2'];
+      const nodeNames = ['rs1', 'rs2', 'rscfg'];
+      const serviceNames = (await api.inventoryApi.getAllServicesDetailsByPartialName('rs')).map(
+        (service: GetService) => service.service_name,
+      );
+
+      console.log(dashboard.mongo.shardedClusterSummary.noDataMetrics(shardNames, nodeNames, serviceNames));
+
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
           from: 'now-1h',
@@ -67,9 +103,13 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
         }),
       );
 
-      await dashboard.verifyMetricsPresent(dashboard.mongo.shardedClusterSummary.metrics);
-      await dashboard.verifyAllPanelsHaveData(dashboard.mongo.shardedClusterSummary.noDataMetrics);
-      await dashboard.verifyPanelValues(dashboard.mongo.shardedClusterSummary.metricsWithData);
+      await dashboard.verifyMetricsPresent(
+        dashboard.mongo.shardedClusterSummary.metrics(shardNames, nodeNames, serviceNames),
+      );
+      await dashboard.verifyAllPanelsHaveData(
+        dashboard.mongo.shardedClusterSummary.noDataMetrics(shardNames, nodeNames, serviceNames),
+      );
+      await dashboard.verifyPanelValues(dashboard.mongo.shardedClusterSummary.metricsWithData(shardNames));
     },
   );
 });
