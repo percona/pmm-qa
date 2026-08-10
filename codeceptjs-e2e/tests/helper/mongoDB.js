@@ -8,7 +8,7 @@ class MongoDBHelper extends Helper {
     this.username = config.username;
     this.password = config.password;
     this.url = `mongodb://${config.username}:${encodeURIComponent(config.password)}@${config.host}:${config.port}/?authSource=admin`;
-    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
+    this.client = new MongoClient(this.url, { directConnection: true, connectTimeoutMS: 30000 });
   }
 
   /**
@@ -32,7 +32,7 @@ class MongoDBHelper extends Helper {
 
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin`;
 
-    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
+    this.client = new MongoClient(this.url, { directConnection: true, connectTimeoutMS: 30000 });
 
     return await this.client.connect();
   }
@@ -106,7 +106,7 @@ class MongoDBHelper extends Helper {
     const user = username || this.username;
     const pass = password || this.password;
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin`;
-    const client = new MongoClient(url, { connectTimeoutMS: 30000 });
+    const client = new MongoClient(url, { directConnection: true, connectTimeoutMS: 30000 });
 
     return await client.connect();
   }
@@ -142,7 +142,7 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<unknown>}
    */
   async mongoAddUser(username, password, roles = [{ db: 'admin', role: 'userAdminAnyDatabase' }]) {
-    return await this.client.db().command({ createUser: username, pwd: password, roles });
+    return await this.client.db('admin').command({ createUser: username, pwd: password, roles });
   }
 
   /**
@@ -151,7 +151,7 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<*>}
    */
   async mongoRemoveUser(username) {
-    return await this.client.db().command({ dropUser: username });
+    return await this.client.db('admin').command({ dropUser: username });
   }
 
   /**
