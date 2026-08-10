@@ -86,13 +86,15 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     async ({ dashboard, grafanaHelper, page }) => {
       const firstDashboardUid = UpgradeState.get('FIRST_DASHBOARD_UID');
       const secondDashboardUid = UpgradeState.get('SECOND_DASHBOARD_UID');
+
+      console.log(`First dashboard id is: ${firstDashboardUid}`);
+      console.log(`Second dashboard id is: ${secondDashboardUid}`);
+
       const firstDashboard = await grafanaHelper.getDashboard(firstDashboardUid);
       const secondDashboard = await grafanaHelper.getDashboard(secondDashboardUid);
       const firstUrl = (await grafanaHelper.getDashboard((await firstDashboard.json()).uid)).meta.url;
       const secondUrl = (await grafanaHelper.getDashboard((await secondDashboard.json()).uid)).meta.url;
 
-      console.log(`First dashboard id is: ${firstDashboardUid}`);
-      console.log(`Second dashboard id is: ${secondDashboardUid}`);
       await page.goto(firstUrl);
       await dashboard.verifyMetricsPresent([{ name: panelName, type: 'stat' }]);
       expect(page.url()).toContain(firstUrl);
