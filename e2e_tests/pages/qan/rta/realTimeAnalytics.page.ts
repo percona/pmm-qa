@@ -60,6 +60,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
   inputs = {
     clusterService: this.page.locator('input[name = "service"]'),
+    filterByHost: this.page.getByTitle('Filter by Host'),
     filterByQueryText: this.page.getByTitle('Filter by Query text'),
     realTimeServiceInput: this.page.getByTestId('realtime-service-input'),
   };
