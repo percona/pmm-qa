@@ -52,6 +52,32 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   });
 
   pmmTest(
+    'Verify duplicate dashboard do not break upgrade @pre-upgrade',
+    async ({ cliHelper, grafanaHelper }) => {
+      const insightFolder = await grafanaHelper.getFolderDetailsByName('Insight');
+      const experimentalFolder = await grafanaHelper.getFolderDetailsByName('Experimental');
+      const firstCustomDashboard = await grafanaHelper.createCustomDashboard(
+        'test-dashboard',
+        insightFolder.id,
+        panelName,
+      );
+      const secondCustomDashboard = await grafanaHelper.createCustomDashboard(
+        'test-dashboard',
+        experimentalFolder.id,
+        panelName,
+      );
+
+      cliHelper.execSilent(`export FIRST_DASHBOARD_UID=${(await firstCustomDashboard.json()).uid}`);
+      cliHelper.execSilent(`export SECOND_DASHBOARD_UID=${(await secondCustomDashboard.json()).uid}`);
+      console.log(`First dashboard id is: ${cliHelper.execSilent('echo $FIRST_DASHBOARD_UID').stdout}`);
+      console.log(`Second dashboard id is: ${cliHelper.execSilent('echo SECOND_DASHBOARD_UID').stdout}`);
+
+      expect(cliHelper.execSilent('echo $FIRST_DASHBOARD_UID').stdout).toBeGreaterThan(0);
+      expect(cliHelper.execSilent('echo $SECOND_DASHBOARD_UID').stdout).toBeGreaterThan(0);
+    },
+  );
+
+  pmmTest(
     'PMM-T317 - Verify MySQL Instance Summary Dashboard after upgrade @post-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
