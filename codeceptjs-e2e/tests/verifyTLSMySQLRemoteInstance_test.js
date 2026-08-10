@@ -1,5 +1,5 @@
 const assert = require('assert');
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 const { SERVICE_TYPE, AGENT_NAMES } = require('./helper/constants');
 
 const { adminPage } = inject();
@@ -223,7 +223,7 @@ Data(maxQueryLengthInstances).Scenario(
       serviceType, version, container, maxQueryLength,
     } = current;
     let details;
-    const remoteServiceName = `MaxQueryLength_remote_${serviceName}_${faker.random.alphaNumeric(3)}`;
+    const remoteServiceName = `MaxQueryLength_remote_${serviceName}_${faker.string.alphanumeric(3)}`;
 
     if (serviceType === 'mysql_ssl') {
       details = {

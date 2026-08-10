@@ -8,9 +8,7 @@ class MongoDBHelper extends Helper {
     this.username = config.username;
     this.password = config.password;
     this.url = `mongodb://${config.username}:${encodeURIComponent(config.password)}@${config.host}:${config.port}/?authSource=admin`;
-    this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, connectTimeoutMS: 30000,
-    });
+    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
   }
 
   /**
@@ -33,11 +31,8 @@ class MongoDBHelper extends Helper {
     if (password) this.password = password;
 
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin`;
-    this.client.s.url = this.url;
 
-    this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
-    });
+    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
 
     return await this.client.connect();
   }
@@ -57,11 +52,8 @@ class MongoDBHelper extends Helper {
     if (password) this.password = password;
 
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    this.client.s.url = this.url;
 
-    this.client = new MongoClient(this.url, {
-      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
-    });
+    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
 
     return await this.client.connect();
   }
@@ -93,7 +85,7 @@ class MongoDBHelper extends Helper {
     const user = username || this.username;
     const pass = password || this.password;
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000 });
+    const client = new MongoClient(url, { connectTimeoutMS: 30000 });
 
     return await client.connect();
   }
@@ -114,7 +106,7 @@ class MongoDBHelper extends Helper {
     const user = username || this.username;
     const pass = password || this.password;
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin`;
-    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000 });
+    const client = new MongoClient(url, { connectTimeoutMS: 30000 });
 
     return await client.connect();
   }
@@ -150,7 +142,8 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<unknown>}
    */
   async mongoAddUser(username, password, roles = [{ db: 'admin', role: 'userAdminAnyDatabase' }]) {
-    return this.client.db().admin().addUser(username, password, { roles });
+    // Admin.addUser() was removed in driver 6; createUser is the supported equivalent
+    return await this.client.db().command({ createUser: username, pwd: password, roles });
   }
 
   /**
@@ -159,7 +152,7 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<*>}
    */
   async mongoRemoveUser(username) {
-    return await this.client.db().admin().removeUser(username);
+    return await this.client.db().command({ dropUser: username });
   }
 
   /**
