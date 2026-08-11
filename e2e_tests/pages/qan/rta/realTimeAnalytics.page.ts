@@ -52,7 +52,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
     elapsedTimeColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
       .getByRole('columnheader', { name: /Elapsed time/ }),
-    hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByRole('columnheader', { name: /Host/ }),
+    hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
