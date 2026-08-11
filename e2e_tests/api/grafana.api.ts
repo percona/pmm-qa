@@ -47,6 +47,22 @@ export default class GrafanaApi {
     return await metric.json();
   };
 
+  getActiveTargetByExternalGroup = async (externalGroup: string) => {
+    const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
+    const response = await this.request.get('prometheus/api/v1/targets', { headers });
+
+    expect(
+      response.status(),
+      `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    const body = await response.json();
+
+    return body.data.activeTargets.find(
+      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
+    );
+  };
+
   waitForMetric = async (
     metricName: string,
     serviceName?: string,
