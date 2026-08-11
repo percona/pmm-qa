@@ -6,11 +6,9 @@ import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 /**
- * PMM HA cluster state, from both the HA REST API (what the sidebar badge
- * renders) and the metrics pmm-managed exports.
- *
- * `pmm_ha_leader_status` is 1 on the Raft leader and 0 on followers, and its
- * `node_id` matches the HA API's node name, so the two are directly comparable.
+ * PMM HA state from the HA REST API and from `pmm_ha_leader_status`, which is 1
+ * on the leader and 0 on followers. Its `node_id` matches the API's node name,
+ * so the two sources are directly comparable.
  */
 export default class HaApi {
   static readonly leaderStatusMetric = 'pmm_ha_leader_status';
@@ -20,11 +18,7 @@ export default class HaApi {
     this.prometheusApi = new PrometheusApi(request);
   }
 
-  /**
-   * The node where `pmm_ha_leader_status == 1`, or `undefined` when none or
-   * several claim it - after a failover the old leader's last sample lingers
-   * for a scrape.
-   */
+  /** `undefined` when none or several claim it, as happens for a scrape after a failover. */
   getLeaderFromMetrics = async (): Promise<string | undefined> => {
     const samples = await this.prometheusApi.instantQuery(`${HaApi.leaderStatusMetric} == 1`);
 
@@ -34,14 +28,10 @@ export default class HaApi {
   getLeaderNode = async (): Promise<HaNode | undefined> =>
     (await this.getNodes()).find((node) => node.role === HaNodeRole.leader);
 
-  /**
-   * `sum(pmm_ha_leader_status)` - the split-brain / missing-leader check from
-   * the HA alerting rules. Anything other than 1 is a broken cluster.
-   */
+  /** Anything other than 1 is a broken cluster: 0 is no leader, >1 is split-brain. */
   getLeaderStatusSum = async (): Promise<number | undefined> =>
     await this.prometheusApi.instantQueryValue(`sum(${HaApi.leaderStatusMetric})`);
 
-  /** Every node the HA API reports, sorted. */
   getNodeNames = async (): Promise<string[]> => (await this.getNodes()).map((node) => node.node_name).sort();
 
   getNodes = async (): Promise<HaNode[]> => {
@@ -57,10 +47,7 @@ export default class HaApi {
     return ((await response.json()) as HaNodesResponse).nodes ?? [];
   };
 
-  /**
-   * Every node exporting `pmm_ha_leader_status`, sorted to compare with
-   * {@link getNodeNames} - the metric should cover the cluster, not just the leader.
-   */
+  /** Sorted to compare with {@link getNodeNames}. */
   getNodesFromMetrics = async (): Promise<string[]> => {
     const samples = await this.prometheusApi.instantQuery(HaApi.leaderStatusMetric);
 
@@ -84,12 +71,9 @@ export default class HaApi {
   };
 
   /**
-   * Poll until exactly one node reports leadership, and until it differs from
-   * `previousLeader` when one is given.
-   *
-   * Metrics trail a failover by a scrape interval, and HAProxy points at the
-   * active leader, so killing that pod makes the API return 5xx until it
-   * re-points - both are polled through rather than failed on.
+   * Metrics trail a failover by a scrape, and HAProxy points at the active
+   * leader, so killing that pod makes the API 5xx until it re-points. Both are
+   * polled through rather than failed on.
    *
    * @param   previousLeader  leader to wait away from; omit to accept any leader
    */
@@ -122,9 +106,8 @@ export default class HaApi {
   };
 
   /**
-   * Poll `sum(pmm_ha_leader_status)` until it equals `expected`, tolerating the
-   * same mid-failover 5xx as {@link waitForLeaderInMetrics}. Returns the last
-   * value seen so the caller keeps the assertion and gets a normal diff.
+   * Tolerates the same mid-failover 5xx as {@link waitForLeaderInMetrics}, and
+   * returns the last value seen so the caller keeps the assertion.
    */
   waitForLeaderStatusSum = async (
     expected: number,

@@ -5,22 +5,18 @@ import { PrometheusQueryResponse, PrometheusSample } from '@interfaces/prometheu
 import apiEndpoints from '@helpers/apiEndpoints';
 
 /**
- * Reads metrics through the Grafana datasource proxy - the route Explore takes -
- * so tests can assert on PromQL without driving Explore.
+ * Metrics through the Grafana datasource proxy, the route Explore takes.
  *
- * PMM's own `/prometheus` route is deliberately avoided: it is served by vmproxy,
- * which on HA fronts a VictoriaMetrics cluster and rejects the single-node query
- * path with a 500.
+ * PMM's own `/prometheus` is deliberately avoided: it is served by vmproxy,
+ * which on HA fronts a VictoriaMetrics cluster and 500s on the single-node
+ * query path.
  */
 export default class PrometheusApi {
   private datasourceUid?: string;
 
   constructor(private request: APIRequestContext) {}
 
-  /**
-   * UID of the datasource Grafana queries. Looked up rather than hardcoded - it
-   * is generated per deployment - then cached for this client's lifetime.
-   */
+  /** Looked up rather than hardcoded - the UID is generated per deployment. */
   getDatasourceUid = async (): Promise<string> => {
     if (this.datasourceUid) return this.datasourceUid;
 
@@ -74,7 +70,7 @@ export default class PrometheusApi {
     return body.data.result;
   };
 
-  /** Value of a single-series query, or `undefined` when nothing matched. */
+  /** `undefined` when nothing matched. */
   instantQueryValue = async (query: string): Promise<number | undefined> => {
     const samples = await this.instantQuery(query);
 

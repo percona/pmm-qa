@@ -1,27 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import HaApi from '@api/ha.api';
-import K8sHelper from '@helpers/k8s.helper';
 import { Timeouts } from '@helpers/timeouts';
-
-// pmm-managed writes this line on every Raft promotion. Kubernetes holds no
-// leadership state of its own, so it is the only cluster-side signal - read
-// with `kubectl exec` because the container's stdout is supervisord.
-const leaderLogLine = 'I am the leader!';
-const pmmManagedLog = '/srv/logs/pmm-managed.log';
-
-/**
- * Epoch millis of this pod's last promotion, 0 if it never led. Timestamps are
- * the pod's own clock, so only compare them against the same pod's.
- */
-const lastPromotionTime = (k8sHelper: K8sHelper, podName: string): number => {
-  const line = k8sHelper
-    .execInPod(podName, `sh -c "grep -a '${leaderLogLine}' ${pmmManagedLog} | tail -1"`, { silent: true })
-    .stdout.trim();
-  const timestamp = /time="([^"]+)"/.exec(line)?.[1];
-
-  return timestamp ? Date.parse(timestamp) : 0;
-};
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -29,7 +9,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest(
   'PMM-T2233 Verify "pmm_ha_leader_status" metric correctly reflects the current leader status @pmm-ha',
-  async ({ api, highAvailabilityPage, k8sHelper, page }) => {
+  async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
     pmmTest.setTimeout(Timeouts.FIVE_MINUTES);
 
     // The failover is driven with kubectl, so UI-only runs have nothing to test.
@@ -86,7 +66,7 @@ pmmTest(
 
     await pmmTest.step('Baseline the promotion each node last logged', async () => {
       for (const node of await api.haApi.getNodeNames()) {
-        promotionsBeforeFailover.set(node, lastPromotionTime(k8sHelper, node));
+        promotionsBeforeFailover.set(node, haClusterHelper.lastPromotionTime(node));
       }
     });
 
@@ -116,7 +96,7 @@ pmmTest(
       // It has to be a *new* promotion: a node killed while leading never logs a
       // demotion, so the presence of the line alone proves nothing.
       await expect
-        .poll(() => lastPromotionTime(k8sHelper, newLeader), {
+        .poll(() => haClusterHelper.lastPromotionTime(newLeader), {
           message: `"${newLeader}" must log a promotion newer than the one it had before the failover`,
           timeout: Timeouts.ONE_MINUTE,
         })

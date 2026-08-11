@@ -17,9 +17,8 @@ interface LogOptions {
 }
 
 /**
- * Namespaced `kubectl` wrapper for tests that inspect or disturb the cluster a
- * PMM deployment runs on. Commands run through {@link CliHelper} with whatever
- * `KUBECONFIG` the runner has - this never authenticates on its own.
+ * Namespaced `kubectl` wrapper. Runs with whatever `KUBECONFIG` the runner has -
+ * this never authenticates on its own.
  */
 export default class K8sHelper {
   readonly namespace: string;
@@ -56,11 +55,7 @@ export default class K8sHelper {
 
   getPodNames = (labelSelector = ''): string[] => this.getPods(labelSelector).map((pod) => pod.name);
 
-  /**
-   * Pods in the namespace, flattened to the fields tests assert on.
-   *
-   * @param   labelSelector   `-l` selector; empty means every pod
-   */
+  /** @param labelSelector `-l` selector; empty means every pod */
   getPods = (labelSelector = ''): KubernetesPod[] => {
     const selector = labelSelector ? ` --selector=${labelSelector}` : '';
     const result = this.execSilent(`get pods${selector} --output=json`).assertSuccess();
@@ -89,10 +84,7 @@ export default class K8sHelper {
     return encoded ? Buffer.from(encoded, 'base64').toString('utf8') : '';
   };
 
-  /**
-   * Whether the runner can reach the namespace. HA jobs can be dispatched
-   * UI-only, and tests needing the cluster skip rather than fail there.
-   */
+  /** HA jobs can be dispatched UI-only; tests needing the cluster skip rather than fail. */
   isAvailable = (): boolean => this.execSilent('get pods --output=name').code === 0;
 
   waitForPodReady = (podName: string, timeout: Timeouts = Timeouts.FIVE_MINUTES): ExecReturn =>

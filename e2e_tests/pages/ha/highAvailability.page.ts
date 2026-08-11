@@ -3,17 +3,13 @@ import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { Locator } from '@playwright/test';
 
-/**
- * The "PMM HA" entry of the left navigation: the health badge and the "Leader:"
- * row underneath it, both rendered from `/v1/ha/nodes`.
- */
+/** The "PMM HA" entry of the left navigation, rendered from `/v1/ha/nodes`. */
 export default class HighAvailabilityPage extends BasePage {
   url = 'pmm-ui/help';
   builders = {};
   buttons = {
     haNavItem: this.page.getByTestId('navitem-high-availability'),
-    // Expands without navigating: the item itself links to its first child, the
-    // "Leader:" row, which has no url.
+    // Expands without navigating; the item itself links to a child with no url.
     haNavItemToggle: this.page.getByTestId('navitem-high-availability-toggle'),
     identifyNodes: this.page.getByTestId('navitem-high-availability-nodes'),
   };
@@ -36,10 +32,6 @@ export default class HighAvailabilityPage extends BasePage {
     await this.elements.leaderNavItem.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
   };
 
-  /**
-   * Name of the node the badge currently reports as the Raft leader. Matches
-   * the `node_id` label of `pmm_ha_leader_status`.
-   */
   getLeaderName = async (): Promise<string> =>
     await pmmTest.step('Read the current leader from the HA badge', async () => {
       await this.expandHaNavItem();
@@ -47,7 +39,6 @@ export default class HighAvailabilityPage extends BasePage {
       return (await this.elements.leaderNodeName.innerText()).trim();
     });
 
-  /** Leader name as a locator, for assertions that have to wait out a failover. */
   leaderNameLocator = (): Locator => this.elements.leaderNodeName;
 
   /**
