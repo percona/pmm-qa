@@ -69,13 +69,13 @@ export default class RemoteInstanceApi {
 
   buildRemoteInstanceDataBody = (instance: RemoteUpgradeInstance): AddRemoteInstance => {
     const body = {
-      add_node: { node_name: instance.serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' as const },
+      add_node: { node_name: instance.name, node_type: 'NODE_TYPE_REMOTE_NODE' as const },
       pmm_agent_id: 'pmm-server',
-      service_name: instance.serviceName,
+      service_name: instance.name,
       ...instance.connection,
     };
 
-    switch (instance.type) {
+    switch (instance.serviceType) {
       case 'mysql':
         return { mysql: { ...body, engine: 'DISCOVER_RDS_ENGINE_MYSQL', qan_mysql_perfschema: true } };
       case 'postgresql':
@@ -83,7 +83,7 @@ export default class RemoteInstanceApi {
       case 'mongodb':
         return { mongodb: { ...body, qan_mongodb_profiler: true, tls_skip_verify: true } };
       default:
-        throw new Error(`Unknown remote instance type: ${instance.type}`);
+        throw new Error(`Unknown remote instance type: ${instance.serviceType}`);
     }
   };
 }
