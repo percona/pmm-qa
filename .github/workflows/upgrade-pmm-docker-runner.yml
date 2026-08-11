@@ -112,6 +112,7 @@ jobs:
           COLLECTORS=/usr/local/percona/pmm/collectors
           
           git clone --depth 1 https://github.com/Percona-Lab/pmm-custom-queries
+          ls
           docker cp pmm-custom-queries/mysql/.      "$PS:$COLLECTORS/custom-queries/mysql/high-resolution/"
           docker cp pmm-custom-queries/postgresql/. "$PG:$COLLECTORS/custom-queries/postgresql/high-resolution/"
           
@@ -123,6 +124,7 @@ jobs:
           docker exec "$PG" pkill -f postgres_exporter
           docker exec "$PG" pkill -f node_exporter
           sleep 5
+          ls -la
 
       - name: Check packages before upgrade
         run: |
