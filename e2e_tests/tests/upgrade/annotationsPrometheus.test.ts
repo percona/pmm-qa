@@ -11,7 +11,7 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
 
   for (const service of services) {
     pmmTest(
-      `Adding annotation before upgrade at service Level for ${service.serviceType} @pre-annotations-prometheus-upgrade`,
+      `Adding annotation before upgrade at service Level for ${service.serviceType} @pre-upgrade`,
       async ({ api }) => {
         const details = (await api.inventoryApi.getAllServicesDetailsByPartialName(service.name)).find(
           (found) => !found.service_name.includes('ssl'),
@@ -31,7 +31,7 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
 
   for (const service of services) {
     pmmTest(
-      `Verify added Annotations at service level, also available post upgrade for ${service.serviceType} @post-client-upgrade @post-annotations-prometheus-upgrade`,
+      `Verify added Annotations at service level, also available post upgrade for ${service.serviceType} @post-client-upgrade @post-upgrade`,
       async ({ api }) => {
         const annotations = await api.annotationsApi.getAnnotationsByTag(tag);
 
