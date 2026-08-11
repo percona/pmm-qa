@@ -34,7 +34,7 @@ pmmTest.describe('PMM Alerts tests for upgrade', () => {
   );
 
   pmmTest(
-    'PMM-T577 - Verify user is able to see firing alerts after upgrade @post-upgrade',
+    'PMM-T577 - Verify user is able to see firing alerts after upgrade @post-upgrade @post-client-upgrade',
     async ({ alertStatusPage, page }) => {
       await page.goto(alertStatusPage.url);
       await expect(alertStatusPage.builders.firingAlert(upgradeRuleName)).toBeVisible({

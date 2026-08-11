@@ -100,7 +100,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'PMM-T317 - Verify MySQL Instance Summary Dashboard after upgrade @post-upgrade',
+    'PMM-T317 - Verify MySQL Instance Summary Dashboard after upgrade @post-upgrade @post-client-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
 
@@ -118,7 +118,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'PMM-T2049 - Verify PostgreSQL Instances Overview after upgrade @post-upgrade',
+    'PMM-T2049 - Verify PostgreSQL Instances Overview after upgrade @post-upgrade @post-client-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('pgsql');
 
@@ -136,7 +136,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'Verify MongoDB Router Summary after upgrade @post-upgrade',
+    'Verify MongoDB Router Summary after upgrade @post-upgrade @post-client-upgrade',
     async ({ dashboard, page, urlHelper }) => {
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.routerSummary.url, {
@@ -152,7 +152,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'Verify MongoDB Sharded Cluster Summary after upgrade @post-upgrade',
+    'Verify MongoDB Sharded Cluster Summary after upgrade @post-upgrade @post-client-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const shardNames = ['rs1', 'rs2'];
       const nodeNames = ['rs1', 'rs2', 'rscfg'];
