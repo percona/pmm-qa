@@ -59,7 +59,15 @@ while (true) {
         .find((id) => chunk && id !== chunk.shard);
 
       if (chunk && target) {
-        attempt('moveChunk', { moveChunk: ns, bounds: [chunk.min, chunk.max], to: target });
+        // _waitForDelete keeps the range deleter in step with the churn: without it the
+        // next move of a range back to its previous owner fails while orphans from the
+        // last one are still being cleaned up.
+        attempt('moveChunk', {
+          moveChunk: ns,
+          bounds: [chunk.min, chunk.max],
+          to: target,
+          _waitForDelete: true,
+        });
       }
     }
   } catch (e) {
