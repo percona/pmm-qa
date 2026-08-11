@@ -6,7 +6,7 @@ import { expect } from '@playwright/test';
 pmmTest.describe('PMM upgrade tests', () => {
   // pmmTest.describe.configure({ retries: 0 });
 
-  const pdpgsql = { host: '127.0.0.1', password: 'pmm', port: '5432', username: 'pmm' };
+  const pgsql = { host: '127.0.0.1', password: 'pmm', port: '5432', username: 'pmm' };
   const mongo = { host: '127.0.0.1', password: 'pmmpass', port: '27017', username: 'pmm' };
   const mysql = { host: '127.0.0.1', password: 'GRgrO9301RuF', port: '3306', username: 'root' };
   const services = [
@@ -41,7 +41,7 @@ pmmTest.describe('PMM upgrade tests', () => {
         const addCommand: Record<string, string> = {
           mongodb: `pmm-admin add mongodb --username=${mongo.username} --password="${mongo.password}" --port=${mongo.port} --host=${mongo.host} ${labels}`,
           mysql: `pmm-admin add mysql --password=${credentials.perconaServer.password} --port=${mysql.port} --host=${mysql.host} ${labels}`,
-          postgresql: `pmm-admin add postgresql --username=${pdpgsql.username} --password=${pdpgsql.password} --port=${mysql.port} --host=${mysql.host} ${labels}`,
+          postgresql: `pmm-admin add postgresql --username=${pgsql.username} --password=${pgsql.password} --port=${pgsql.port} --host=${pgsql.host} ${labels}`,
         };
 
         cliHelper
