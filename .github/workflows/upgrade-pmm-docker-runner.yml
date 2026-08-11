@@ -127,6 +127,8 @@ jobs:
           ls -la
           echo $PS
           echo $PG
+          docker exec $PG ls $COLLECTORS/custom-queries/postgresql/high-resolution/
+          docker exec $PS ls $COLLECTORS/custom-queries/postgresql/high-resolution/
 
       - name: Check packages before upgrade
         run: |
