@@ -42,7 +42,7 @@ on:
         type: string
       pmm_clients:
         description: 'Clients running to verify upgrade'
-        default: '--database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb'
+        default: '--database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb --database external'
         type: string
 
 env:
