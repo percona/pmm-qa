@@ -2,7 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM cli tests for upgrade', () => {
-  const nonClientContainers = ['ldap-server', 'minio'];
+  const nonClientContainers = ['ldap-server', 'minio', 'external_pmm', 'nginx', 'redis_container'];
 
   pmmTest('Verify PMM Agents statuses @pre-upgrade @post-upgrade', async ({ cliHelper }) => {
     const containers: string[] = cliHelper

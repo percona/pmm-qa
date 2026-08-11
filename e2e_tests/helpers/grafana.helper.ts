@@ -317,4 +317,17 @@ export default class GrafanaHelper {
       /* PMM may redirect mid-load; we don't care about the cancel */
     });
   };
+
+  changePassword = async (oldPassword: string, newPassword: string) => {
+    const response = await this.page.request.put('graph/api/user/password', {
+      data: { confirmNew: newPassword, newPassword, oldPassword },
+      headers: { Authorization: `Basic ${GrafanaHelper.getToken('admin', oldPassword)}` },
+      ignoreHTTPSErrors: true,
+    });
+
+    expect(
+      response.status(),
+      `Failed to change user account password! Response message is ${response.statusText()}`,
+    ).toEqual(200);
+  };
 }
