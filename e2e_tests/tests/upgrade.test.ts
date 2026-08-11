@@ -4,28 +4,45 @@ import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM upgrade tests', () => {
-  // pmmTest.describe.configure({ retries: 0 });
-
+  const redisServiceName = 'pmm-ui-tests-redis-external-remote';
   const pgsql = { host: '127.0.0.1', password: 'pmm', port: '5432', username: 'pmm' };
   const mongo = { host: '127.0.0.1', password: 'pmmpass', port: '27017', username: 'pmm' };
   const mysql = { host: '127.0.0.1', password: 'GRgrO9301RuF', port: '3306', username: 'root' };
-  const services = [
+  const services: RemoteUpgradeInstance[] = [
     {
-      containerName: 'ps_pmm_8_4_1',
+      connection: {
+        address: 'ps_pmm_8_4_1',
+        cluster: 'mysql_clstr',
+        password: 'GRgrO9301RuF',
+        port: '3306',
+        username: 'root',
+      },
       metric: 'mysql_global_status_max_used_connections',
       name: 'ps_pmm_',
       serviceType: 'mysql',
       upgradeService: 'mysql',
     },
     {
-      containerName: 'pgsql_pgss_pmm_17',
+      connection: {
+        address: 'pgsql_pgss_pmm_17',
+        cluster: 'pgsql_clstr',
+        password: 'pmm',
+        port: '5432',
+        username: 'pmm',
+      },
       metric: 'pg_stat_database_xact_rollback',
       name: 'pgsql_pgss_pmm',
       serviceType: 'postgresql',
       upgradeService: 'postgresql',
     },
     {
-      containerName: 'rs101',
+      connection: {
+        address: 'rs101',
+        cluster: 'mongo_clstr',
+        password: 'pbmpass',
+        port: '27017',
+        username: 'pbm',
+      },
       metric: 'mongodb_connections',
       name: 'rs101',
       serviceType: 'mongodb',
@@ -45,7 +62,7 @@ pmmTest.describe('PMM upgrade tests', () => {
         };
 
         cliHelper
-          .execSilent(`docker exec ${service.containerName} ${addCommand[service.serviceType]}`)
+          .execSilent(`docker exec ${service.connection.address} ${addCommand[service.serviceType]}`)
           .assertSuccess();
       },
     );
@@ -89,46 +106,6 @@ pmmTest.describe('PMM upgrade tests', () => {
     },
   );
 
-  const redisServiceName = 'pmm-ui-tests-redis-external-remote';
-  const remoteUpgradeInstances: RemoteUpgradeInstance[] = [
-    {
-      connection: {
-        address: 'ps_pmm_8_4_1',
-        cluster: 'mysql_clstr',
-        password: 'GRgrO9301RuF',
-        port: '3306',
-        username: 'root',
-      },
-      metric: 'mysql_global_status_max_used_connections',
-      serviceName: 'mysql_upgrade_service',
-      type: 'mysql',
-    },
-    {
-      connection: {
-        address: 'rs101',
-        cluster: 'mongo_clstr',
-        password: 'pbmpass',
-        port: '27017',
-        username: 'pbm',
-      },
-      metric: 'mongodb_connections',
-      serviceName: 'psmdb_upgrade_scervice',
-      type: 'mongodb',
-    },
-    {
-      connection: {
-        address: 'pdpgsql_pmm_17_1',
-        cluster: 'pgsql_clstr',
-        password: 'pmm',
-        port: '5432',
-        username: 'pmm',
-      },
-      metric: 'pg_stat_database_xact_rollback',
-      serviceName: 'postgres_upgrade_service',
-      type: 'postgresql',
-    },
-  ];
-
   pmmTest('Adding Redis as external Service before Upgrade @pre-upgrade', async ({ api, cliHelper }) => {
     await api.remoteInstanceApi.addRemoteInstance({
       external: {
@@ -150,11 +127,11 @@ pmmTest.describe('PMM upgrade tests', () => {
       .assertSuccess();
   });
 
-  for (const instance of remoteUpgradeInstances) {
+  for (const service of services) {
     pmmTest(
-      `PMM-T2074 - Verify user can create Remote Instance ${instance.type} before upgrade @pre-external-upgrade`,
+      `PMM-T2074 - Verify user can create Remote Instance ${service.serviceType} before upgrade @pre-upgrade`,
       async ({ api }) => {
-        const remoteInstance = api.remoteInstanceApi.buildRemoteInstanceDataBody(instance);
+        const remoteInstance = api.remoteInstanceApi.buildRemoteInstanceDataBody(service);
 
         await api.remoteInstanceApi.addRemoteInstance(remoteInstance);
       },
@@ -182,13 +159,13 @@ pmmTest.describe('PMM upgrade tests', () => {
       .toBe('up');
   });
 
-  for (const instance of remoteUpgradeInstances) {
+  for (const service of services) {
     pmmTest(
-      `PMM-T2073 - Verify Agents are RUNNING after Upgrade (API) for ${instance.type} @post-upgrade`,
+      `PMM-T2073 - Verify Agents are RUNNING after Upgrade (API) for ${service.serviceType} @post-upgrade`,
       async ({ api }) => {
         await expect
-          .poll(() => api.inventoryApi.verifyAgentsAreRunning(instance.serviceName), {
-            message: `One or more agents are not running for ${instance.serviceName}`,
+          .poll(() => api.inventoryApi.verifyAgentsAreRunning(`upgrade-${service.upgradeService}`), {
+            message: `One or more agents are not running for upgrade-${service.upgradeService}`,
             timeout: Timeouts.TWO_MINUTES,
           })
           .toBe(true);

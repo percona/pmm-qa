@@ -20,8 +20,9 @@ export interface RemoteUpgradeInstance {
     username: string;
   };
   metric: string;
-  serviceName: string;
-  type: 'mysql' | 'postgresql' | 'mongodb';
+  name: string;
+  serviceType: 'mysql' | 'postgresql' | 'mongodb';
+  upgradeService: string;
 }
 
 interface RemoteInstanceBody {
