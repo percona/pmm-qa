@@ -35,12 +35,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await dashboardPage.expandEachDashboardRow();
     await dashboardPage.verifyMetricsExistence(dashboardPage.mongoDbShardedClusterSummary.metrics);
-    // Chunks Move/Split Events read mongodb_mongos_sharding_changelog_10min_total, and the QA
-    // sharded setup never produces moveChunk/split entries: config.changelog holds only
-    // addShard/shardCollection/autoMerge events, and MongoDB 7.0+ dropped auto-splitting, so
-    // 3 chunks across 2 shards give the balancer nothing to migrate. Both panels are always
-    // empty here; they count on top of the 9 per-service Oplog GB/Hour panels.
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(11);
+    await dashboardPage.verifyThereAreNoGraphsWithoutData(9);
   },
 );
 
