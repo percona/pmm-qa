@@ -67,6 +67,7 @@ Scenario(
       I.buildUrlWithParams(dashboardPage.mongoDbCollectionsOverview.clearUrl, {
         from: 'now-5m',
         node_name: mongoService.node_name,
+        service_name: mongoService.service_name,
         refresh: '5s',
       }),
     );
