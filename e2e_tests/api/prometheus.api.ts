@@ -5,12 +5,12 @@ import { PrometheusQueryResponse, PrometheusSample } from '@interfaces/prometheu
 import apiEndpoints from '@helpers/apiEndpoints';
 
 /**
- * Reads metrics through the Grafana datasource proxy - the same route the
- * Explore page takes - so tests can assert on PromQL without driving Explore.
+ * Reads metrics through the Grafana datasource proxy - the route Explore takes -
+ * so tests can assert on PromQL without driving Explore.
  *
- * PMM's own `/prometheus` route is deliberately not used: it is served by
- * vmproxy, which on an HA deployment fronts an external VictoriaMetrics
- * cluster and rejects the plain single-node query path.
+ * PMM's own `/prometheus` route is deliberately avoided: it is served by vmproxy,
+ * which on HA fronts a VictoriaMetrics cluster and rejects the single-node query
+ * path with a 500.
  */
 export default class PrometheusApi {
   private datasourceUid?: string;
@@ -18,9 +18,8 @@ export default class PrometheusApi {
   constructor(private request: APIRequestContext) {}
 
   /**
-   * UID of the Prometheus-compatible datasource Grafana queries. Resolved from
-   * the datasource list because the UID is generated per deployment, and cached
-   * for the lifetime of this client.
+   * UID of the datasource Grafana queries. Looked up rather than hardcoded - it
+   * is generated per deployment - then cached for this client's lifetime.
    */
   getDatasourceUid = async (): Promise<string> => {
     if (this.datasourceUid) return this.datasourceUid;
@@ -49,11 +48,7 @@ export default class PrometheusApi {
     return metrics.uid;
   };
 
-  /**
-   * Run an instant PromQL query and return the raw samples.
-   *
-   * @param   query   PromQL expression, e.g. `sum(pmm_ha_leader_status)`
-   */
+  /** @param query PromQL expression, e.g. `sum(pmm_ha_leader_status)` */
   instantQuery = async (query: string): Promise<PrometheusSample[]> => {
     const datasourceUid = await this.getDatasourceUid();
     const response = await this.request.get(
@@ -79,10 +74,7 @@ export default class PrometheusApi {
     return body.data.result;
   };
 
-  /**
-   * Run an instant PromQL query that is expected to produce a single scalar and
-   * return its value, or `undefined` when the query matched no series.
-   */
+  /** Value of a single-series query, or `undefined` when nothing matched. */
   instantQueryValue = async (query: string): Promise<number | undefined> => {
     const samples = await this.instantQuery(query);
 

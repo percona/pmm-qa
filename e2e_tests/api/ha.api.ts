@@ -6,12 +6,11 @@ import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 /**
- * PMM HA cluster state, read both from the HA REST API (what the sidebar badge
- * renders) and from the `pmm_ha_*` metrics pmm-managed exports.
+ * PMM HA cluster state, from both the HA REST API (what the sidebar badge
+ * renders) and the metrics pmm-managed exports.
  *
- * `pmm_ha_leader_status` is 1 on the Raft leader and 0 on every follower, and
- * `node_id` carries the same node name the HA API reports, so the two sources
- * are directly comparable.
+ * `pmm_ha_leader_status` is 1 on the Raft leader and 0 on followers, and its
+ * `node_id` matches the HA API's node name, so the two are directly comparable.
  */
 export default class HaApi {
   static readonly leaderStatusMetric = 'pmm_ha_leader_status';
@@ -22,10 +21,9 @@ export default class HaApi {
   }
 
   /**
-   * Node name of the single series where `pmm_ha_leader_status == 1`, or
-   * `undefined` while no leader is exported or more than one node still claims
-   * leadership (the old leader's last sample lingers for one scrape after a
-   * failover).
+   * The node where `pmm_ha_leader_status == 1`, or `undefined` when none or
+   * several claim it - after a failover the old leader's last sample lingers
+   * for a scrape.
    */
   getLeaderFromMetrics = async (): Promise<string | undefined> => {
     const samples = await this.prometheusApi.instantQuery(`${HaApi.leaderStatusMetric} == 1`);
@@ -43,6 +41,9 @@ export default class HaApi {
   getLeaderStatusSum = async (): Promise<number | undefined> =>
     await this.prometheusApi.instantQueryValue(`sum(${HaApi.leaderStatusMetric})`);
 
+  /** Every node the HA API reports, sorted. */
+  getNodeNames = async (): Promise<string[]> => (await this.getNodes()).map((node) => node.node_name).sort();
+
   getNodes = async (): Promise<HaNode[]> => {
     const response = await this.request.get(apiEndpoints.ha.nodes, {
       headers: GrafanaHelper.getAuthHeader(),
@@ -57,13 +58,16 @@ export default class HaApi {
   };
 
   /**
-   * Node names reported by `pmm_ha_leader_status`, whatever their value. Used
-   * to confirm the metric covers the whole cluster and not just the leader.
+   * Every node exporting `pmm_ha_leader_status`, sorted to compare with
+   * {@link getNodeNames} - the metric should cover the cluster, not just the leader.
    */
   getNodesFromMetrics = async (): Promise<string[]> => {
     const samples = await this.prometheusApi.instantQuery(HaApi.leaderStatusMetric);
 
-    return samples.map((sample) => sample.metric.node_id).filter(Boolean);
+    return samples
+      .map((sample) => sample.metric.node_id)
+      .filter(Boolean)
+      .sort();
   };
 
   getStatus = async (): Promise<string> => {
@@ -80,14 +84,14 @@ export default class HaApi {
   };
 
   /**
-   * Poll the metrics until exactly one node reports leadership and, when
-   * `previousLeader` is given, until that node is no longer the leader.
+   * Poll until exactly one node reports leadership, and until it differs from
+   * `previousLeader` when one is given.
    *
-   * Metrics trail reality by a scrape interval, so a failover is only visible
-   * after the next scrape of the surviving nodes - hence the polling.
+   * Metrics trail a failover by a scrape interval, and HAProxy points at the
+   * active leader, so killing that pod makes the API return 5xx until it
+   * re-points - both are polled through rather than failed on.
    *
    * @param   previousLeader  leader to wait away from; omit to accept any leader
-   * @param   timeout         how long to keep polling
    */
   waitForLeaderInMetrics = async (
     previousLeader?: string,
@@ -95,11 +99,16 @@ export default class HaApi {
   ): Promise<string> => {
     const deadline = Date.now() + timeout;
     let lastSeen: string | undefined;
+    let lastError: unknown;
 
     while (Date.now() < deadline) {
-      lastSeen = await this.getLeaderFromMetrics();
+      try {
+        lastSeen = await this.getLeaderFromMetrics();
 
-      if (lastSeen && lastSeen !== previousLeader) return lastSeen;
+        if (lastSeen && lastSeen !== previousLeader) return lastSeen;
+      } catch (error) {
+        lastError = error;
+      }
 
       await new Promise((resolve) => setTimeout(resolve, Timeouts.FIVE_SECONDS));
     }
@@ -107,7 +116,35 @@ export default class HaApi {
     throw new Error(
       `No new leader was reported by "${HaApi.leaderStatusMetric}" within ${timeout}ms` +
         `${previousLeader ? ` (previous leader: ${previousLeader})` : ''}. ` +
-        `Last observed leader: ${lastSeen ?? 'none'}`,
+        `Last observed leader: ${lastSeen ?? 'none'}. ` +
+        `Last request error: ${lastError instanceof Error ? lastError.message : 'none'}`,
     );
+  };
+
+  /**
+   * Poll `sum(pmm_ha_leader_status)` until it equals `expected`, tolerating the
+   * same mid-failover 5xx as {@link waitForLeaderInMetrics}. Returns the last
+   * value seen so the caller keeps the assertion and gets a normal diff.
+   */
+  waitForLeaderStatusSum = async (
+    expected: number,
+    timeout: Timeouts = Timeouts.TWO_MINUTES,
+  ): Promise<number | undefined> => {
+    const deadline = Date.now() + timeout;
+    let lastSeen: number | undefined;
+
+    while (Date.now() < deadline) {
+      try {
+        lastSeen = await this.getLeaderStatusSum();
+
+        if (lastSeen === expected) return lastSeen;
+      } catch {
+        // Cluster is mid-failover; keep polling until the deadline.
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, Timeouts.FIVE_SECONDS));
+    }
+
+    return lastSeen;
   };
 }

@@ -11,7 +11,7 @@ It includes tests, shared fixtures, page objects, helpers, API clients, and test
 | `fixtures/`            | Shared Playwright fixtures. Tests use `pmmTest` from `@fixtures/pmmTest`.      |
 | `pages/`               | Page objects for PMM pages and Grafana dashboards.                             |
 | `components/`          | Reusable UI components, mostly dashboard panels.                               |
-| `helpers/`             | Shared helpers for API, URL, auth, CLI, metrics, mocks, MongoDB, and timeouts. |
+| `helpers/`             | Shared helpers for API, URL, auth, CLI, k8s, metrics, mocks, MongoDB, timeouts. |
 | `api/`                 | API clients used by UI and API tests.                                          |
 | `interfaces/`          | Shared TypeScript types.                                                       |
 | `testdata/`            | Test data used by specific scenarios.                                          |
@@ -40,6 +40,11 @@ WORKERS=1
 | `ADMIN_PASSWORD` | `admin`             | Password used to authenticate as PMM `admin`.          |
 | `HEADLESS`       | `true`              | Browser visibility; use `false` for a visible browser. |
 | `WORKERS`        | `1`                 | Playwright worker count.                               |
+
+`@pmm-ha` tests that drive the cluster (pod restarts) additionally need `kubectl` on
+the runner and a `KUBECONFIG` pointing at the PMM HA cluster. The namespace comes
+from `k8sNamespace` in [helpers/constants.ts](./helpers/constants.ts) (`pmm`).
+Tests that need the cluster skip themselves when the namespace is unreachable.
 
 ## Running Tests
 
@@ -83,15 +88,17 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 <!-- E2E-TAGS-START -->
 
+- `@alerting`
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
-- `@ha-settings`
+- `@fb-settings`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
 - `@new-navigation`
 - `@nightly`
+- `@pmm-ha`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`

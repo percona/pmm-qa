@@ -2,62 +2,64 @@ import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
 import { KubernetesPod, KubernetesPodResource, KubernetesResourceList } from '@interfaces/kubernetes';
 import { Timeouts } from '@helpers/timeouts';
+import { k8sNamespace } from '@helpers/constants';
+
+interface ExecInPodOptions {
+  container?: string;
+  /** Skip logging - kubectl warns about defaulted containers on every call. */
+  silent?: boolean;
+}
 
 interface LogOptions {
   container?: string;
+  sinceSeconds?: number;
   tailLines?: number;
 }
 
 /**
- * Thin wrapper around the `kubectl` CLI for tests that need to inspect or
- * disturb the cluster a PMM deployment runs on (HA above all).
- *
- * Every command is namespaced and executed through {@link CliHelper}, so the
- * cluster is reached with whatever `KUBECONFIG` the runner already has - the
- * helper never authenticates on its own. Use {@link isAvailable} to skip
- * cluster-level checks when the job runs without cluster access.
+ * Namespaced `kubectl` wrapper for tests that inspect or disturb the cluster a
+ * PMM deployment runs on. Commands run through {@link CliHelper} with whatever
+ * `KUBECONFIG` the runner has - this never authenticates on its own.
  */
 export default class K8sHelper {
   readonly namespace: string;
   private cliHelper = new CliHelper();
 
-  constructor(namespace = process.env.PMM_K8S_NAMESPACE || 'pmm') {
+  constructor(namespace: string = k8sNamespace) {
     this.namespace = namespace;
   }
 
   deletePod = (podName: string): ExecReturn => this.exec(`delete pod ${podName} --wait=false`);
 
-  /**
-   * Run a namespaced `kubectl` subcommand and return a handy {@link ExecReturn}.
-   *
-   * @param   args  everything that follows `kubectl --namespace <namespace>`
-   */
+  /** @param args everything that follows `kubectl --namespace <namespace>` */
   exec = (args: string): ExecReturn =>
     this.cliHelper.execute(`kubectl --namespace ${this.namespace} ${args}`);
 
-  execInPod = (podName: string, command: string, container?: string): ExecReturn =>
-    this.exec(`exec ${podName} ${container ? `-c ${container} ` : ''}-- ${command}`);
+  execInPod = (podName: string, command: string, options: ExecInPodOptions = {}): ExecReturn => {
+    const container = options.container ? `--container=${options.container} ` : '';
+    const args = `exec ${podName} ${container}-- ${command}`;
 
-  /**
-   * Same as {@link exec} but without logging - use it for `-o json` reads whose
-   * output would otherwise flood the report.
-   */
+    return options.silent ? this.execSilent(args) : this.exec(args);
+  };
+
+  /** {@link exec} without logging - for reads whose output would flood the report. */
   execSilent = (args: string): ExecReturn =>
     this.cliHelper.execSilent(`kubectl --namespace ${this.namespace} ${args}`);
 
   getLogs = (podName: string, options: LogOptions = {}): string => {
     const container = options.container ? ` --container=${options.container}` : '';
+    const since = options.sinceSeconds ? ` --since=${options.sinceSeconds}s` : '';
     const tail = options.tailLines ? ` --tail=${options.tailLines}` : '';
 
-    return this.execSilent(`logs ${podName}${container}${tail}`).assertSuccess().stdout;
+    return this.execSilent(`logs ${podName}${container}${since}${tail}`).assertSuccess().stdout;
   };
 
   getPodNames = (labelSelector = ''): string[] => this.getPods(labelSelector).map((pod) => pod.name);
 
   /**
-   * Pods in the namespace, flattened to the fields tests actually assert on.
+   * Pods in the namespace, flattened to the fields tests assert on.
    *
-   * @param   labelSelector   `-l` selector, empty means every pod in the namespace
+   * @param   labelSelector   `-l` selector; empty means every pod
    */
   getPods = (labelSelector = ''): KubernetesPod[] => {
     const selector = labelSelector ? ` --selector=${labelSelector}` : '';
@@ -88,9 +90,8 @@ export default class K8sHelper {
   };
 
   /**
-   * Whether the runner can talk to the namespace at all. HA jobs may run
-   * UI-only (no `kubeconfig_artifact_url` workflow input), and cluster-level tests are
-   * skipped in that case instead of failing the run.
+   * Whether the runner can reach the namespace. HA jobs can be dispatched
+   * UI-only, and tests needing the cluster skip rather than fail there.
    */
   isAvailable = (): boolean => this.execSilent('get pods --output=name').code === 0;
 

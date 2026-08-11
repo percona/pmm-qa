@@ -4,14 +4,16 @@ export enum HaNodeRole {
   unspecified = 'NODE_ROLE_UNSPECIFIED',
 }
 
+// grpc-gateway marshals with UseProtoNames, so the JSON is snake_case - not the
+// camelCase the PMM UI's own types use.
 export interface HaNode {
-  nodeName: string;
+  node_name: string;
   role: HaNodeRole;
   status: string;
 }
 
 export interface HaNodesResponse {
-  expectedNodes: number;
+  expected_nodes: number;
   nodes: HaNode[];
 }
 

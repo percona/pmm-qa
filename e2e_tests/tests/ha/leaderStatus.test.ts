@@ -1,7 +1,27 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import HaApi from '@api/ha.api';
+import K8sHelper from '@helpers/k8s.helper';
 import { Timeouts } from '@helpers/timeouts';
+
+// pmm-managed writes this line on every Raft promotion. Kubernetes holds no
+// leadership state of its own, so it is the only cluster-side signal - read
+// with `kubectl exec` because the container's stdout is supervisord.
+const leaderLogLine = 'I am the leader!';
+const pmmManagedLog = '/srv/logs/pmm-managed.log';
+
+/**
+ * Epoch millis of this pod's last promotion, 0 if it never led. Timestamps are
+ * the pod's own clock, so only compare them against the same pod's.
+ */
+const lastPromotionTime = (k8sHelper: K8sHelper, podName: string): number => {
+  const line = k8sHelper
+    .execInPod(podName, `sh -c "grep -a '${leaderLogLine}' ${pmmManagedLog} | tail -1"`, { silent: true })
+    .stdout.trim();
+  const timestamp = /time="([^"]+)"/.exec(line)?.[1];
+
+  return timestamp ? Date.parse(timestamp) : 0;
+};
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -10,13 +30,9 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest(
   'PMM-T2233 Verify "pmm_ha_leader_status" metric correctly reflects the current leader status @pmm-ha',
   async ({ api, highAvailabilityPage, k8sHelper, page }) => {
-    // A Raft election plus the scrape that publishes it, then the restarted pod
-    // rejoining, add up to more than the default per-test budget.
-    pmmTest.setTimeout(Timeouts.FIFTEEN_MINUTES);
+    pmmTest.setTimeout(Timeouts.FIVE_MINUTES);
 
-    // The failover is driven with kubectl, so the run needs cluster access.
-    // ha-e2e-tests.yml can be dispatched without a kubeconfig artifact URL for
-    // UI-only runs - skip rather than fail there.
+    // The failover is driven with kubectl, so UI-only runs have nothing to test.
     // eslint-disable-next-line playwright/no-skipped-test -- conditional on cluster access, never a permanent skip
     pmmTest.skip(
       !k8sHelper.isAvailable(),
@@ -42,23 +58,36 @@ pmmTest(
     await pmmTest.step(
       `Verify "${HaApi.leaderStatusMetric}" reports "${initialLeader}" as leader`,
       async () => {
-        const nodesInMetrics = await api.haApi.getNodesFromMetrics();
-        const clusterNodes = (await api.haApi.getNodes()).map((node) => node.nodeName);
+        const clusterNodes = await api.haApi.getNodeNames();
 
-        expect(nodesInMetrics, 'Every HA node must export the leader status metric').toEqual(
-          expect.arrayContaining(clusterNodes),
-        );
-        expect(await api.haApi.waitForLeaderInMetrics()).toEqual(initialLeader);
+        // Polled: a node that joined recently only shows up after the next scrape.
+        await expect
+          .poll(async () => await api.haApi.getNodesFromMetrics(), {
+            message: `Every HA node must export ${HaApi.leaderStatusMetric}`,
+            timeout: Timeouts.TWO_MINUTES,
+          })
+          .toEqual(clusterNodes);
+
+        expect(
+          await api.haApi.waitForLeaderInMetrics(),
+          'The leader in metrics must be the one the HA badge names',
+        ).toEqual(initialLeader);
       },
     );
 
     await pmmTest.step(`Verify sum(${HaApi.leaderStatusMetric}) equals 1`, async () => {
-      await expect
-        .poll(async () => await api.haApi.getLeaderStatusSum(), {
-          message: 'Exactly one node must hold the Raft leader lease',
-          timeout: Timeouts.TWO_MINUTES,
-        })
-        .toEqual(1);
+      expect(
+        await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES),
+        'Exactly one node must hold the Raft leader lease',
+      ).toEqual(1);
+    });
+
+    const promotionsBeforeFailover = new Map<string, number>();
+
+    await pmmTest.step('Baseline the promotion each node last logged', async () => {
+      for (const node of await api.haApi.getNodeNames()) {
+        promotionsBeforeFailover.set(node, lastPromotionTime(k8sHelper, node));
+      }
     });
 
     await pmmTest.step(`Restart the leader pod "${initialLeader}"`, async () => {
@@ -83,9 +112,19 @@ pmmTest(
       },
     );
 
+    await pmmTest.step(`Confirm "${newLeader}" logged a fresh promotion in its pod`, async () => {
+      // It has to be a *new* promotion: a node killed while leading never logs a
+      // demotion, so the presence of the line alone proves nothing.
+      await expect
+        .poll(() => lastPromotionTime(k8sHelper, newLeader), {
+          message: `"${newLeader}" must log a promotion newer than the one it had before the failover`,
+          timeout: Timeouts.ONE_MINUTE,
+        })
+        .toBeGreaterThan(promotionsBeforeFailover.get(newLeader) ?? 0);
+    });
+
     await pmmTest.step(`Verify the HA badge shows "${newLeader}" as the new leader`, async () => {
-      await highAvailabilityPage.expandHaNavItem();
-      // The sidebar refetches /v1/ha/nodes every 15s, so no reload is needed.
+      await highAvailabilityPage.reloadAndExpandHaNavItem();
       await expect(highAvailabilityPage.leaderNameLocator()).toHaveText(newLeader, {
         timeout: Timeouts.TWO_MINUTES,
       });
@@ -103,12 +142,10 @@ pmmTest(
           })
           .toBeTruthy();
 
-        await expect
-          .poll(async () => await api.haApi.getLeaderStatusSum(), {
-            message: `sum(${HaApi.leaderStatusMetric}) must stay 1 - 0 means no leader, >1 means split-brain`,
-            timeout: Timeouts.TWO_MINUTES,
-          })
-          .toEqual(1);
+        expect(
+          await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES),
+          `sum(${HaApi.leaderStatusMetric}) must stay 1 - 0 means no leader, >1 means split-brain`,
+        ).toEqual(1);
       },
     );
   },
