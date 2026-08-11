@@ -44,10 +44,12 @@ interface RemoteInstanceBody {
     node_type: 'NODE_TYPE_REMOTE_NODE';
   };
   metrics_mode?: number;
+  tls?: boolean;
   tls_certificate_file_password?: string;
   tls_ca?: string;
   tls_certificate_key?: string;
   tls_skip_verify?: boolean;
+  authentication_mechanism?: string;
   engine?: 'DISCOVER_RDS_ENGINE_MYSQL';
   qan_mysql_perfschema?: boolean;
   qan_postgresql_pgstatmonitor_agent?: boolean;
