@@ -22,6 +22,8 @@ services:
       - PMM_ENABLE_TELEMETRY=0
       - PMM_CLICKHOUSE_PASSWORD=pmm_password
       - PMM_CLICKHOUSE_USER=pmm
+      - PMM_CLICKHOUSE_DATASOURCE_USER=grafana
+      - PMM_CLICKHOUSE_DATASOURCE_PASSWORD=grafana
       - PMM_CLICKHOUSE_DATABASE=pmm
       - PMM_CLICKHOUSE_ADDR=external-clickhouse:9000
       - PMM_ENABLE_INTERNAL_PG_QAN=1
@@ -62,6 +64,9 @@ services:
       - CLICKHOUSE_USER=pmm
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
       - CLICKHOUSE_PASSWORD=pmm_password
+    volumes:
+      - ./clickhouse/config.d:/etc/clickhouse-server/config.d:ro
+      - ./clickhouse/users.d:/etc/clickhouse-server/users.d:ro
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:8123/ping || exit 1']
       interval: 5s
