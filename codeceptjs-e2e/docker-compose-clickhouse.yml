@@ -65,8 +65,10 @@ services:
       - CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT=1
       - CLICKHOUSE_PASSWORD=pmm_password
     volumes:
-      - ./clickhouse/config.d:/etc/clickhouse-server/config.d:ro
-      - ./clickhouse/users.d:/etc/clickhouse-server/users.d:ro
+      # Single files, not the directories: the image entrypoint writes its own
+      # users.d/default-user.xml on start and fails if that directory is read-only.
+      - ./clickhouse/config.d/access-control.xml:/etc/clickhouse-server/config.d/access-control.xml:ro
+      - ./clickhouse/users.d/datasource-user.xml:/etc/clickhouse-server/users.d/datasource-user.xml:ro
     healthcheck:
       test: ['CMD-SHELL', 'wget -qO /dev/null http://127.0.0.1:8123/ping || exit 1']
       interval: 5s
