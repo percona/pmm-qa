@@ -55,19 +55,31 @@ pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api
 pmmTest(
   'PMM-T2267 Verify RTA sessions page size is stored in the URL and restored after refresh @rta',
   async ({ mocks, page, queryAnalytics }) => {
-    await mocks.mockRealTimeAnalyticsSessions();
-    await page.goto(queryAnalytics.rtaSessionsUrl);
-
     const { rta } = queryAnalytics;
-    const initialSize = await rta.inputs.rowsLimit.textContent();
-    const selectedSize = initialSize === '10' ? '25' : '10';
 
-    await rta.inputs.rowsLimit.click();
-    await rta.builders.rowsPerPageOption(selectedSize).click();
-    await expect.poll(() => new URL(page.url()).searchParams.get('sessions.pageSize')).toBe(selectedSize);
+    await pmmTest.step('Set up mocked sessions', async () => {
+      await mocks.mockRealTimeAnalyticsSessions();
+      await page.goto(queryAnalytics.rtaSessionsUrl);
+    });
 
-    await page.reload();
-    await expect(rta.inputs.rowsLimit).toHaveText(selectedSize);
-    await expect(rta.elements.sessionRows).toHaveCount(Number(selectedSize));
+    const selectedSize = await pmmTest.step('Select a different page size', async () => {
+      const initialSize = await rta.inputs.rowsLimit.textContent();
+      const pageSize = initialSize === '10' ? '25' : '10';
+
+      await rta.inputs.rowsLimit.click();
+      await rta.builders.rowsPerPageOption(pageSize).click();
+
+      return pageSize;
+    });
+
+    await pmmTest.step('Verify page size in the URL', async () => {
+      await expect.poll(() => new URL(page.url()).searchParams.get('sessions.pageSize')).toBe(selectedSize);
+    });
+
+    await pmmTest.step('Reload and verify restored page size', async () => {
+      await page.reload();
+      await expect(rta.inputs.rowsLimit).toHaveText(selectedSize);
+      await expect(rta.elements.sessionRows).toHaveCount(Number(selectedSize));
+    });
   },
 );
