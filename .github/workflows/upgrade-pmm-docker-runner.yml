@@ -40,10 +40,11 @@ on:
       pre_upgrade_branch:
         description: 'Branch for pmm-qa repo to run tests before upgrade'
         type: string
-      pmm_clients:
-        description: 'Clients running to verify upgrade'
-        default: '--database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb --database external'
-        type: string
+      upgrade_type:
+        description: 'PMM Upgrade type'
+        default: 'docker'
+        type: choice
+        options: [ docker, UI ]
 
 env:
   ADMIN_PASSWORD: admin
@@ -55,8 +56,8 @@ env:
   CLIENT_REPOSITORY: ${{ inputs.client_repository || 'release' }}
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-  PMM_CLIENTS: ${{ inputs.pmm_clients || '' }}
   PRE_UPGRADE_BRANCH: ${{ inputs.pre_upgrade_branch || format('pmm-{0}', inputs.client_version) }}
+  UPGRADE_TYPE: ${{ inputs.upgrade_type || 'docker' }}
 
 jobs:
   upgrade-docker:
@@ -102,7 +103,7 @@ jobs:
           ./pmm-framework/pmm-framework --parallel \
             --client-version="$CLIENT_VERSION" \
             --pmm-server-password="$ADMIN_PASSWORD" \
-            $PMM_CLIENTS
+            --database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb --database external
 
       - name: Setup custom queries
         run: |
@@ -152,6 +153,7 @@ jobs:
           git checkout FETCH_HEAD
 
       - name: Docker upgrade (swap server image, keep volume)
+        if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
           docker stop pmm-server
           docker pull "$DOCKER_TAG_UPGRADE"

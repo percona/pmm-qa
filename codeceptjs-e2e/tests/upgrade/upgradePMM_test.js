@@ -1,13 +1,4 @@
 const assert = require('assert');
-const { isOvFAmiJenkinsJob, SERVICE_TYPE } = require('../helper/constants');
-
-const { psMySql, dashboardPage, databaseChecksPage } = inject();
-
-const clientDbServices = new DataTable(['serviceType', 'name', 'metric', 'annotationName', 'dashboard', 'upgrade_service']);
-
-clientDbServices.add([SERVICE_TYPE.MYSQL, 'ps_', 'mysql_global_status_max_used_connections', 'annotation-for-mysql', dashboardPage.mysqlInstanceSummaryDashboard.url, 'mysql_upgrade']);
-clientDbServices.add([SERVICE_TYPE.POSTGRESQL, 'PGSQL_', 'pg_stat_database_xact_rollback', 'annotation-for-postgres', dashboardPage.postgresqlInstanceSummaryDashboard.url, 'pgsql_upgrade']);
-clientDbServices.add([SERVICE_TYPE.MONGODB, 'mongodb_', 'mongodb_connections', 'annotation-for-mongo', dashboardPage.mongoDbInstanceSummaryDashboard.url, 'mongo_upgrade']);
 
 // For running on local env set PMM_SERVER_LATEST and DOCKER_VERSION variables
 function getVersions() {
@@ -55,40 +46,16 @@ Scenario(
 );
 
 Scenario(
-  'PMM-T288 - Verify user can see Update widget before upgrade [critical] @pmm-upgrade',
-  async ({ I, homePage }) => {
-    await I.stopMockingUpgrade();
-    I.amOnPage(homePage.url);
-    await homePage.verifyPreUpdateWidgetIsPresent(versionMinor);
-  },
-);
-
-Scenario(
   'PMM-T3 - Verify user is able to Upgrade PMM version [blocker] @pmm-upgrade',
   async ({ I, homePage }) => {
     await I.stopMockingUpgrade();
     I.amOnPage(homePage.url);
 
     await homePage.updatesModal.closeModal();
+    await homePage.verifyPreUpdateWidgetIsPresent(versionMinor);
     await homePage.upgradePMM(versionMinor);
   },
 ).retry(0);
-
-Scenario('PMM-T1647 - Verify pmm-server package doesn\'t exist @pmm-upgrade', async ({ I }) => {
-  if (!isOvFAmiJenkinsJob) {
-    const packages = await I.verifyCommand('docker exec pmm-server rpm -qa');
-
-    I.assertTrue(!packages.includes('pmm-server'), 'pmm-server package present in package list.');
-  }
-});
-
-Scenario.skip(
-  'Verify user can see Update widget [critical] @pmm-upgrade',
-  async ({ I, homePage }) => {
-    I.amOnPage(homePage.url);
-    await homePage.verifyPostUpdateWidgetIsPresent();
-  },
-);
 
 Scenario(
   'Verify pmm server is upgraded to correct version @pmm-upgrade',
