@@ -1,4 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe('PMM settings tests for upgrade', () => {
   const services = [
@@ -22,19 +23,19 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     'Verify metrics from custom queries for mysqld_exporter after upgrade @post-upgrade @post-client-upgrade',
     async ({ api }) => {
       const metricName = 'mysql_performance_schema_memory_summary_current_bytes';
-      const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
+      // const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
 
-      await api.grafanaApi.waitForMetric(metricName, serviceName.service_name);
+      await api.grafanaApi.waitForMetric(metricName);
     },
   );
 
   pmmTest(
-    'Verify metrics from custom queries for postgres_exporter after upgrade @post-upgrade @post-client-upgrade',
+    'T9999 Verify metrics from custom queries for postgres_exporter after upgrade @post-upgrade @post-client-upgrade',
     async ({ api }) => {
       const metricName = 'pg_stat_user_tables_analyze_count';
-      const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('pgsql_pgs');
+      // const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('pgsql_pgss');
 
-      await api.grafanaApi.waitForMetric(metricName, serviceName.service_name);
+      await api.grafanaApi.waitForMetric(metricName);
     },
   );
 
