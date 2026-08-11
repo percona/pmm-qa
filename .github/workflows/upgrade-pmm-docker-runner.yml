@@ -125,6 +125,8 @@ jobs:
           docker exec "$PG" pkill -f node_exporter
           sleep 5
           ls -la
+          echo $PS
+          echo $PG
 
       - name: Check packages before upgrade
         run: |
