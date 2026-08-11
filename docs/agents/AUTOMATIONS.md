@@ -62,13 +62,13 @@ A1 is interactive (agent-matching finds Test Runner by description); A2 and A3 b
 `Percona-Lab/pmm-submodules` is also a Percona-owned repo, not a third party's — so unlike an earlier design, there's no need for an hourly polling Routine to catch FB Tests going red. Both of Investigator's sources push an event directly:
 
 - **pmm-qa's own scheduled CI**: [`.github/workflows/notify-investigator.yml`](../../.github/workflows/notify-investigator.yml), already in this repo, fires on `workflow_run` for `e2e-tests-matrix.yml`, `gssapi-psmdb-tests-matrix.yml`, `helm-tests.yml`, `integration-cli-tests.yml` (native GitHub Actions cron), plus `nightly-e2e-tests-matrix.yml` (dispatched daily by the Jenkins pipeline in `jenkins-pipelines`, matched by name since it's not a GitHub cron). It fires on the run's own computed `conclusion`, not any single job's pass/fail — some of these pipelines pass their e2e-test step but fail overall once a later Launchable step errors collecting results, and a hand-maintained per-job list would miss that.
-- **`Percona-Lab/pmm-submodules` FB Tests**: **needs a mirroring notify workflow added in that repo**, firing the same Investigator Routine with the submodules PR number + run URL. Not built yet — this is a go-live item, not something this repo alone can finish (needs push access to that other repo).
+- **`Percona-Lab/pmm-submodules` FB Tests**: a mirroring notify workflow **now lives in that repo** ([#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511), merged), firing the same Investigator Routine with the submodules PR number + run URL.
 
 Only one secret is needed:
 
 - `INVESTIGATOR_ROUTINE_TOKEN` — the bearer token from the routine's "Add an API trigger" screen. The routine ID itself (`trig_01FhHBdz2yBibyVEfnG5gbQz`) is hardcoded in the watcher file — it isn't sensitive, only the token is.
 
-**Not fully wired up yet** — the pmm-qa side (`notify-investigator.yml`) is in place but needs `INVESTIGATOR_ROUTINE_TOKEN` added as a repo secret; the pmm-submodules side doesn't exist yet at all.
+**Both sides are wired up** — `notify-investigator.yml` is in this repo with `INVESTIGATOR_ROUTINE_TOKEN` set as a repo secret, and the pmm-submodules notify workflow ([#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511)) is merged.
 
 Investigator also answers a question or a suspected customer-reported bug directly (in chat, or routed from a Slack `@pmm-ai` mention via `router`) — this isn't a separate flow, just a different way into the **same** dedup → reproduce → classify pipeline as a CI/FB event: dedup checks for an existing Jira ticket instead of an open PR (there's no failing test to match against an open-PR marker), and reproduction walks the described scenario instead of re-running a failing command. Classification after that is the same tree either way — didn't reproduce (say so, ask for more detail), described scenario isn't an actual bug (explain the right way, grounded in the reproduction and the code, never a guess — this outcome only applies here, a CI/FB failure that reproduces is never "not a bug"), or a confirmed bug, which then routes to product (report, no fix) or pmm-qa's own test code (fix). See `investigator.md` workflow step 3. This is also why a separate "support-triage" agent, floated earlier for a prod/support Slack channel, was dropped — it would have just duplicated this.
 
@@ -79,7 +79,7 @@ A second Investigator nuance worth calling out: when the FB source is the one th
 ```mermaid
 flowchart LR
     A1["pmm-qa's own scheduled\nCI fails on main"] -.->|"notify-investigator.yml\nfires the Routine"| C
-    A2["pmm-submodules FB Tests\ngoes red"] -.->|"needs a notify workflow\nthere — not built yet"| C
+    A2["pmm-submodules FB Tests\ngoes red"] -.->|"notify workflow there\n(#4511, merged)"| C
     A3["Someone asks directly:\na known failure, or a\nquestion / suspected bug"] --> C
     A4["PMM AI Routine fires from a\nSlack @pmm-ai mention"] -.->|"routed here by Router\n— see Router diagram below"| C
     C["Extract: a failure list + ref,\nor a described scenario"] --> D{"Already tracked?\n(open PR, or an existing\nJira ticket for a report)"}
@@ -190,39 +190,39 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 - [x] ~~Before merging #1143 — hand-fix its `.claude/settings.json` linode-runner rules~~ — superseded: we since learned the real gate in Routine runs is the auto-mode classifier + multi-repo settings loading (see the classifier finding below), not those allow rules.
 - [x] Merge [PR #1143](https://github.com/percona/pmm-qa/pull/1143) — merged 2026-08-10
 - [x] After merge: made a trivial edit to the qa-linode environment's setup script — forced the settings cache to rebuild now instead of waiting ~7 days (done 2026-08-10)
-- [ ] Merge [Percona-Lab/pmm-submodules#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511) (its secret is already in place)
+- [x] [Percona-Lab/pmm-submodules#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511) merged — FB Tests red now fires Investigator
 
 **Slack app + relay (in order):**
 
 - [x] Reserved the relay's public IP `139.162.176.43` (Frankfurt, tag `pmm-ai`) 2026-08-08 — survives delete/rebuild, so the hostname + Let's Encrypt cert stay valid and the endpoint can't be reassigned to a stranger
 - [x] **Jira service account from IT** — done (2026-08-11): a dedicated "PMM QA Bot" account with only the PMM-project permissions the REST fallback needs (read issues, add Developers-restricted comments, add attachments, edit fields, transition); its `JIRA_EMAIL`/`JIRA_API_TOKEN` are set in the environment. This was blocking for team rollout — env vars are shared across everyone in the environment, so without a service account every bot comment would post as *one real person's* identity (whoever's token is set) and per-person onboarding couldn't give each teammate their own Jira identity. The service account keeps QA comments neutral and decoupled from any individual.
-- [ ] Use a **restricted Linode PAT** (Linodes + Firewalls R/W only, not a full-access personal token) for `LINODE_TOKEN` — also plaintext-visible to env users
+- [x] Restricted Linode PAT (Linodes + Firewalls R/W) set as `LINODE_TOKEN` (done)
 - [x] Relay infrastructure verified end-to-end 2026-08-07 (Linode up, Let's Encrypt cert trusted through the session egress proxy, /health 200, /reply and /jira auth gates 403, davi.json loaded, crash-on-bad-token fixed)
 - [x] Create the Slack app from `manifest.yaml` (done 2026-08-08)
-- [ ] Request admin approval and install the app to the workspace
-- [ ] Generate the App-Level Token (`xapp-`): app page → Basic Information → App-Level Tokens → Generate, scope `connections:write`
-- [ ] Copy the Bot Token (`xoxb-`): app page → OAuth & Permissions → Bot User OAuth Token
+- [ ] Get Slack admin approval + install the `@pmm-ai` app.
+- [ ] Generate the App-Level Token (`xapp-`, scope `connections:write`).
+- [ ] Copy the Bot Token (`xoxb-`).
 - [x] Generate the PMM AI routine's API token (done 2026-08-07, stored in the LastPass **PMM** note)
 - [x] Get the Test Runner routine's token (done 2026-08-07, stored in the LastPass **PMM** note)
-- [ ] Give a Claude session on this repo the 2 Slack app tokens + the routine tokens and root password from the LastPass note, and ask it to finish the relay setup — it rebuilds the server with the completed `.env` baked in (no SSH, no LastPass CLI needed)
-- [ ] Update the LastPass **PMM** Secure Note `pmm-ai-relay.env` with the final completed `.env` (after the app tokens exist)
-- [ ] `/invite @pmm-ai` into a test channel, mention it — expect 👀, then a reply
-- [ ] Update the **Jira Button automation** to the new request: POST `https://139-162-176-43.ip.linodeusercontent.com/jira`, header `X-Relay-Secret: <JIRA_RELAY_SECRET from the .env>`, body `{"accountId":"{{initiator.accountId}}","text":"<ticket key + what to do>"}`, "Wait for response" ON
-- [ ] In the same rule, add a condition `{{webResponse.status}} == 404` → Add comment telling the initiator they are not onboarded yet (404 is ONLY not-registered; other errors mean relay/platform trouble, not a user problem)
-- [ ] Click the Jira button on a test ticket and confirm the run starts under your Test Runner
+- [ ] Hand a session the 2 Slack tokens + routine tokens (from LastPass) to finish the relay `.env` and start it.
+- [ ] Save the completed `.env` to the LastPass **PMM** note.
+- [ ] `/invite @pmm-ai` to a channel and confirm 👀 → reply.
+- [ ] Point the Jira button automation at the relay's `POST /jira` (header `X-Relay-Secret`, body `accountId`+`text`, "Wait for response" on).
+- [ ] Add a `{{webResponse.status}} == 404` → "not onboarded" comment to that rule.
+- [ ] Click the Jira button on a test ticket and confirm it runs.
 
 **Jenkins access (staging builds from agents):**
 
 > A Jenkins MCP gateway already runs in prod (`https://jenkins-mcp.cd.percona.com/mcp`), auth via Percona SSO + Duo. It works as a claude.ai org connector in interactive sessions, but org connectors stall on the approval prompt inside Routines.
 
-- [ ] **Add the Jenkins connector in claude.ai admin** (org-owner): URL `https://jenkins-mcp.cd.percona.com/mcp`, client ID `jenkins-mcp` (Advanced settings), secret blank. Then each person connects it in their own claude.ai.
+- [x] Jenkins connector added in claude.ai admin (org-owner). Each person connects it in their own claude.ai when they need Jenkins interactively.
 - [ ] Check if [`percona/percona-cd-platform` #403](https://github.com/percona/percona-cd-platform/pull/403) is merged — it whitelists claude.ai's OAuth callback, which the connector needs.
 - [ ] **Try driving a `pmm3-*` build from a Routine yourself** (curl-first, like the `jira` skill). Needs the `autoMode.allow` classifier fix (findings log) in first; keep the relay's `ALLOW_FALLBACK` off so builds don't collapse onto one identity.
 - [ ] Send Anderson the writers-group names he asked for.
 
 **Later / optional:**
 
-- [ ] Onboard each teammate: **Slack member IDs + Jira accountIds for the whole team are already resolved** (2026-08-11, via the Slack API + Atlassian `lookupJiraAccountId` — nobody sends their own IDs; the `slack`/`jira` blocks of every `people/<name>.json` are pre-filled). The only per-person step left is each teammate creating their own Routine(s) + API token in their claude.ai and sending the **routine id+token**, which fills the `routines` block of their file on the relay (hot-reloaded, no restart; template in `.claude/integrations/slack/relay/person.example.json`), mirrored as a Secure Note in the LastPass PMM folder. They do NOT connect personal Slack/Jira MCP connectors — Slack replies go through the relay bot, Jira posts go through the shared REST token in the environment. Their routine runs in the **shared team environment** (network `Full`, already live — see next item). Pre-loading all 23 `people/*.json` at once is safe: the relay treats anyone with no routine yet as unregistered (zero-cost reply), so nothing fires for a person until their token lands.
+- [ ] Onboard teammates: everyone's Slack + Jira IDs are resolved and the 23 `people/*.json` are pre-filled — the only step left is each person creating a Routine + API token and sending the id+token to fill their `routines` block (relay hot-reloads; mirror in LastPass). Safe to pre-load all files now — routine-less people are treated as unregistered until their token lands.
 - [x] **Shared team environment — network set to `Full`** (decided 2026-08-11). One org-shared **Custom** env isn't possible yet ([claude-code#82284](https://github.com/anthropics/claude-code/issues/82284), tracked in the findings log); rather than maintain N per-person Custom copies we accept `Full` for the shared env now — wider egress, but acceptable given throwaway short-TTL VMs + least-privilege service credentials. Every teammate's Routine points at this one env.
   - **Env vars (all plaintext-visible to env users → use least-privilege service credentials)**: `LINODE_TOKEN` (VM provisioning), `JIRA_EMAIL` + `JIRA_API_TOKEN`, set once at the environment level.
   - **Setup script**: the `/root/.claude/settings.json` bootstrap (hooks + permissions for multi-repo sessions).
@@ -284,7 +284,7 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
   ```
 
 - [x] Repos added to Routine repository lists 2026-08-06: `pmm-qa`, `pmm`, `grafana`, `Percona-Lab/pmm-submodules`, `Percona-Lab/jenkins-pipelines` on both live Routines (Test Runner, Investigator) — enables cross-org `gh api`/CI re-runs in their runs. Note: these runs are now multi-repo sessions (root at `/home/user`), so their hooks/permissions come from the qa-linode setup script (item above), not project settings. **To do**: archive the throwaway `qa-settings-test` environment.
-- (tracked in checklist above) Notify workflow added in `Percona-Lab/pmm-submodules` firing the same Investigator Routine on FB Tests red — **PR open**: [Percona-Lab/pmm-submodules#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511), watches the real "FB Tests" workflow's `workflow_run` conclusion (confirmed against that repo's actual CI, not assumed), resolves the PR number with a commit-SHA fallback for when `workflow_run.pull_requests` is empty. Secret `INVESTIGATOR_ROUTINE_TOKEN` added in that repo 2026-08-06; only the merge of #4511 remains.
+- [x] Notify workflow in `Percona-Lab/pmm-submodules` firing the Investigator Routine on FB Tests red — **[#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511) merged**. Watches the real "FB Tests" `workflow_run` conclusion, resolves the PR number with a commit-SHA fallback when `workflow_run.pull_requests` is empty; secret `INVESTIGATOR_ROUTINE_TOKEN` in place.
 - [x] Jira Automation rule configured with Test Runner's API trigger URL/token — an action button fires it when a ticket moves to Ready for QA or In QA. Not per-person yet: it fires the one shared Test Runner Routine regardless of who clicked it (see "Per-person routing in Router" below).
 - (tracked in checklist above) PMM AI Slack app + relay — **built and deployed** (see [.claude/integrations/slack/](../../.claude/integrations/slack/README.md)): Socket Mode relay on the `pmm-ai-relay` Linode (`139.162.176.43`, eu-central, $5/mo, rebuild-never-delete), `PMM AI` router Routine created (`trig_01MJNKVHiPqrZ3Ajv1fzUdQK`, qa-linode, reads `router.md`, evaluate-and-route only). Entry points: `@mention` → router → hand-off to the caller's own routine via `/route`; `POST /jira` → initiator's own test-runner; watched channels (`CHANNEL_ROUTINES`) → Investigator on the QA owner's account. **Remaining**: (1) admin approves the Slack app (create from [`manifest.yaml`](../../.claude/integrations/slack/manifest.yaml) — final); (2) fill the 4 FILL-ME tokens in `/opt/pmm-ai-relay/.env` (instructions inline; keep the full file + root password in the LastPass **PMM** shared folder), `touch .env.ready`, `systemctl start pmm-ai-relay`; (3) `/invite @pmm-ai`, test that a mention gets 👀; (4) repoint the Jira Automation rule at `https://139-162-176-43.ip.linodeusercontent.com/jira` with the `X-Relay-Secret` header.
 - (tracked in checklist above) Per-person routing — **designed and implemented in the relay** (the token-storage question is settled: per-person routine tokens live only in the relay's `people/<name>.json` files (hot-reloaded) + the LastPass **PMM** folder — never in this repo, never in shared env vars; the relay `.env` holds config names only). `PEOPLE` maps each person → Slack ID + Jira accountId + their own routines (`test-runner`, `investigator`, …); unregistered mentions are rejected relay-side at zero cost; the central router hands off via `/route` so work runs on (and bills to) the caller's account. **Remaining**: onboard each teammate — they create their own Routine(s) in their claude.ai (prompt: "Read .claude/agents/<agent>.md and follow it", env qa-linode, API trigger + token) and send the 4 fields to whoever admins the relay `.env`.
