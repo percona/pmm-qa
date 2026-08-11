@@ -88,120 +88,120 @@ pmmTest.describe('PMM upgrade tests', () => {
       await grafanaHelper.changePassword(newPass, currentPass);
     },
   );
-});
 
-const redisServiceName = 'pmm-ui-tests-redis-external-remote';
-const remoteUpgradeInstances: RemoteUpgradeInstance[] = [
-  {
-    connection: {
-      address: 'ps_pmm_8_4_1',
-      cluster: 'mysql_clstr',
-      password: 'GRgrO9301RuF',
-      port: '3306',
-      username: 'root',
+  const redisServiceName = 'pmm-ui-tests-redis-external-remote';
+  const remoteUpgradeInstances: RemoteUpgradeInstance[] = [
+    {
+      connection: {
+        address: 'ps_pmm_8_4_1',
+        cluster: 'mysql_clstr',
+        password: 'GRgrO9301RuF',
+        port: '3306',
+        username: 'root',
+      },
+      metric: 'mysql_global_status_max_used_connections',
+      serviceName: 'mysql_upgrade_service',
+      type: 'mysql',
     },
-    metric: 'mysql_global_status_max_used_connections',
-    serviceName: 'mysql_upgrade_service',
-    type: 'mysql',
-  },
-  {
-    connection: {
-      address: 'rs101',
-      cluster: 'mongo_clstr',
-      password: 'pbmpass',
-      port: '27017',
-      username: 'pbm',
+    {
+      connection: {
+        address: 'rs101',
+        cluster: 'mongo_clstr',
+        password: 'pbmpass',
+        port: '27017',
+        username: 'pbm',
+      },
+      metric: 'mongodb_connections',
+      serviceName: 'psmdb_upgrade_scervice',
+      type: 'mongodb',
     },
-    metric: 'mongodb_connections',
-    serviceName: 'psmdb_upgrade_scervice',
-    type: 'mongodb',
-  },
-  {
-    connection: {
-      address: 'pdpgsql_pmm_17_1',
-      cluster: 'pgsql_clstr',
-      password: 'pmm',
-      port: '5432',
-      username: 'pmm',
+    {
+      connection: {
+        address: 'pdpgsql_pmm_17_1',
+        cluster: 'pgsql_clstr',
+        password: 'pmm',
+        port: '5432',
+        username: 'pmm',
+      },
+      metric: 'pg_stat_database_xact_rollback',
+      serviceName: 'postgres_upgrade_service',
+      type: 'postgresql',
     },
-    metric: 'pg_stat_database_xact_rollback',
-    serviceName: 'postgres_upgrade_service',
-    type: 'postgresql',
-  },
-];
+  ];
 
-pmmTest('Adding Redis as external Service before Upgrade @pre-upgrade', async ({ api, cliHelper }) => {
-  await api.remoteInstanceApi.addRemoteInstance({
-    external: {
-      add_node: { node_name: redisServiceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
-      address: 'external_pmm',
-      cluster: 'redis_external_exporter',
-      group: 'redis-remote',
-      listen_port: '42200',
-      metrics_path: '/metrics',
-      schema: 'http',
-      service_name: redisServiceName,
-    },
+  pmmTest('Adding Redis as external Service before Upgrade @pre-upgrade', async ({ api, cliHelper }) => {
+    await api.remoteInstanceApi.addRemoteInstance({
+      external: {
+        add_node: { node_name: redisServiceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
+        address: 'external_pmm',
+        cluster: 'redis_external_exporter',
+        group: 'redis-remote',
+        listen_port: '42200',
+        metrics_path: '/metrics',
+        schema: 'http',
+        service_name: redisServiceName,
+      },
+    });
+
+    cliHelper
+      .execSilent(
+        `docker exec external_pmm pmm-admin add external --listen-port=42200 --group="redis" --custom-labels="testing=redis" --service-name=${redisServiceName}-2`,
+      )
+      .assertSuccess();
   });
 
-  cliHelper
-    .execSilent(
-      `docker exec external_pmm pmm-admin add external --listen-port=42200 --group="redis" --custom-labels="testing=redis" --service-name=${redisServiceName}-2`,
-    )
-    .assertSuccess();
+  for (const instance of remoteUpgradeInstances) {
+    pmmTest(
+      `PMM-T2074 - Verify user can create Remote Instance ${instance.type} before upgrade @pre-external-upgrade`,
+      async ({ api }) => {
+        const remoteInstance = api.remoteInstanceApi.buildRemoteInstanceDataBody(instance);
+
+        await api.remoteInstanceApi.addRemoteInstance(remoteInstance);
+      },
+    );
+  }
+
+  pmmTest('Verify Redis as external Service Works After Upgrade @post-upgrade', async ({ api }) => {
+    const metricName = 'redis_uptime_in_seconds';
+
+    await api.grafanaApi.waitForMetric(metricName);
+    await api.grafanaApi.waitForMetric(metricName, `${redisServiceName}-2`);
+
+    const target = await api.grafanaApi.getActiveTargetByExternalGroup('redis-remote');
+    const expectedScrapeUrl = 'http://external_pmm:42200/metrics';
+
+    expect(
+      target.scrapeUrl,
+      `Active Target for external service Post Upgrade has wrong Address value, found ${target.scrapeUrl}`,
+    ).toEqual(expectedScrapeUrl);
+    await expect
+      .poll(async () => (await api.grafanaApi.getActiveTargetByExternalGroup('redis-remote'))?.health, {
+        message: 'Active Target for external service Post Upgrade health value is not up!',
+        timeout: Timeouts.ONE_MINUTE,
+      })
+      .toBe('up');
+  });
+
+  for (const instance of remoteUpgradeInstances) {
+    pmmTest(
+      `PMM-T2073 - Verify Agents are RUNNING after Upgrade (API) for ${instance.type} @post-upgrade`,
+      async ({ api }) => {
+        await expect
+          .poll(() => api.inventoryApi.verifyAgentsAreRunning(instance.serviceName), {
+            message: `One or more agents are not running for ${instance.serviceName}`,
+            timeout: Timeouts.TWO_MINUTES,
+          })
+          .toBe(true);
+      },
+    );
+  }
+
+  for (const service of services) {
+    pmmTest(
+      `PMM-T2071 - Verify Agents are Running and Metrics are being collected Pre and Post Upgrade (API) for upgrade-${service.upgradeService} @pre-upgrade @post-upgrade`,
+      async ({ api }) => {
+        await api.grafanaApi.waitForMetric(service.metric, `upgrade-${service.upgradeService}`);
+      },
+    );
+  }
 });
-
-for (const instance of remoteUpgradeInstances) {
-  pmmTest(
-    `PMM-T2074 - Verify user can create Remote Instance ${instance.type} before upgrade @pre-external-upgrade`,
-    async ({ api }) => {
-      const remoteInstance = api.remoteInstanceApi.buildRemoteInstanceDataBody(instance);
-
-      await api.remoteInstanceApi.addRemoteInstance(remoteInstance);
-    },
-  );
-}
-
-pmmTest('Verify Redis as external Service Works After Upgrade @post-upgrade', async ({ api }) => {
-  const metricName = 'redis_uptime_in_seconds';
-
-  await api.grafanaApi.waitForMetric(metricName);
-  await api.grafanaApi.waitForMetric(metricName, `${redisServiceName}-2`);
-
-  const target = await api.grafanaApi.getActiveTargetByExternalGroup('redis-remote');
-  const expectedScrapeUrl = 'http://external_pmm:42200/metrics';
-
-  expect(
-    target.scrapeUrl,
-    `Active Target for external service Post Upgrade has wrong Address value, found ${target.scrapeUrl}`,
-  ).toEqual(expectedScrapeUrl);
-  await expect
-    .poll(async () => (await api.grafanaApi.getActiveTargetByExternalGroup('redis-remote'))?.health, {
-      message: 'Active Target for external service Post Upgrade health value is not up!',
-      timeout: Timeouts.ONE_MINUTE,
-    })
-    .toBe('up');
-});
-
-for (const instance of remoteUpgradeInstances) {
-  pmmTest(
-    `PMM-T2073 - Verify Agents are RUNNING after Upgrade (API) for ${instance.type} @post-upgrade`,
-    async ({ api }) => {
-      await expect
-        .poll(() => api.inventoryApi.verifyAgentsAreRunning(instance.serviceName), {
-          message: `One or more agents are not running for ${instance.serviceName}`,
-          timeout: Timeouts.TWO_MINUTES,
-        })
-        .toBe(true);
-    },
-  );
-}
-
-for (const instance of remoteUpgradeInstances) {
-  pmmTest(
-    `PMM-T2071 - Verify Agents are Running and Metrics are being collected Pre and Post Upgrade (API) for ${instance.type} @pre-upgrade @post-upgrade`,
-    async ({ api }) => {
-      await api.grafanaApi.waitForMetric(instance.metric, instance.serviceName);
-    },
-  );
-}
