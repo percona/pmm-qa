@@ -18,9 +18,11 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 
 ## 1. Select and prepare
 
-If another row is already `in-progress`, stop and report the conflict.
+On the control branch, merge `origin/main`. If another row is already `in-progress`, stop and report the conflict.
 
-Select the first `pending` tracker row that is not in B13. Always skip B13 rows. Then, on the control branch, merge `origin/main` and refresh and commit only `e2e_tests/graphify-out/`. Change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight and branch commands.
+Before selecting a row, check the tracker for drift against the filesystem: list `codeceptjs-e2e/tests/**/*_test.js` and diff it against the tracker's `Source` column. Any file with no matching row is untracked drift - append it as a new `pending` row (Bucket/Env/Setup left blank pending confirmation from its `Before`/`BeforeSuite`/`Data(...)` hooks, Notes noting it was added by drift check) in its own tracker-only commit before proceeding. In test-run mode, report the drift without editing the tracker. Do not silently skip untracked files.
+
+Select the first `pending` tracker row that is not in B13. Always skip B13 rows. Refresh and commit only `e2e_tests/graphify-out/`, then change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight and branch commands.
 
 Create the dedicated migration branch from the refreshed control branch after both control-only commits. Do not begin migration work until the control merge and target graph refresh are complete.
 
