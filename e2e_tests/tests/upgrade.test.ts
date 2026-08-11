@@ -1,7 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import GrafanaHelper from '@helpers/grafana.helper';
+import { RemoteUpgradeInstance } from '@api/remoteInstance.api';
 import { Timeouts } from '@helpers/timeouts';
-import { AgentStatus } from '@interfaces/inventory';
 import { expect, Page } from '@playwright/test';
 
 pmmTest.describe('PMM upgrade tests for custom password', () => {
@@ -40,32 +40,17 @@ pmmTest.describe('PMM upgrade tests for custom password', () => {
           (agent: { agent_type: string }) => agent.agent_type === 'pmm-agent',
         )?.agent_id;
         const isOvfAmiJob = !!process.env.JOB_NAME && /ami|ovf/.test(process.env.JOB_NAME);
-        const address = isOvfAmiJob ? '127.0.0.1' : details.address;
+        const host = isOvfAmiJob ? '127.0.0.1' : details.address;
+        const remote = `--node-id=${details.node_id} --pmm-agent-id=${pmmAgentId} --port=${details.port} --host=${host}`;
+        const labels = `--agent-password=uitests --custom-labels="testing=upgrade" upgrade-${service.upgradeService}`;
 
-        switch (service.serviceType) {
-          case 'mysql':
-            cliHelper
-              .execute(
-                `docker exec ${service.containerName} pmm-admin add mysql --node-id=${details.node_id} --pmm-agent-id=${pmmAgentId} --port=${details.port} --password=${credentials.perconaServer.password} --host=${address} --query-source=perfschema --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${service.upgradeService}`,
-              )
-              .assertSuccess();
-            break;
-          case 'postgresql':
-            cliHelper
-              .execute(
-                `docker exec ${service.containerName} pmm-admin add postgresql --username=${pdpgsql.username} --password=${pdpgsql.password} --node-id=${details.node_id} --pmm-agent-id=${pmmAgentId} --port=${details.port} --host=${address} --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${service.upgradeService}`,
-              )
-              .assertSuccess();
-            break;
-          case 'mongodb':
-            cliHelper
-              .execute(
-                `docker exec ${service.containerName} pmm-admin add mongodb --username=${mongo.username} --password="${mongo.password}" --port=${mongo.port} --host=${mongo.host} --agent-password=uitests --custom-labels="testing=upgrade" upgrade-${service.upgradeService}`,
-              )
-              .assertSuccess();
-            break;
-          default:
-        }
+        const addCommand: Record<string, string> = {
+          mongodb: `pmm-admin add mongodb --username=${mongo.username} --password="${mongo.password}" --port=${mongo.port} --host=${mongo.host} ${labels}`,
+          mysql: `pmm-admin add mysql ${remote} --password=${credentials.perconaServer.password} --query-source=perfschema ${labels}`,
+          postgresql: `pmm-admin add postgresql --username=${pdpgsql.username} --password=${pdpgsql.password} ${remote} ${labels}`,
+        };
+
+        cliHelper.execute(`docker exec ${service.containerName} ${addCommand[service.serviceType]}`).assertSuccess();
       },
     );
   }
@@ -108,7 +93,7 @@ pmmTest.describe('PMM upgrade tests for custom password', () => {
 
 pmmTest.describe('PMM upgrade tests for external services', () => {
   const redisServiceName = 'pmm-ui-tests-redis-external-remote';
-  const remoteUpgradeInstances = [
+  const remoteUpgradeInstances: RemoteUpgradeInstance[] = [
     {
       connection: {
         address: 'ps_pmm_8_4_1',
@@ -118,7 +103,6 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
         username: 'root',
       },
       metric: 'mysql_global_status_max_used_connections',
-      qanFilter: 'mysql',
       serviceName: 'mysql_upgrade_service',
       type: 'mysql',
     },
@@ -131,7 +115,6 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
         username: 'pbm',
       },
       metric: 'mongodb_connections',
-      qanFilter: 'mongodb',
       serviceName: 'psmdb_upgrade_scervice',
       type: 'mongodb',
     },
@@ -144,68 +127,10 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
         username: 'pmm',
       },
       metric: 'pg_stat_database_xact_rollback',
-      qanFilter: 'postgresql',
       serviceName: 'postgres_upgrade_service',
       type: 'postgresql',
     },
   ];
-
-  type RemoteInstance = (typeof remoteUpgradeInstances)[number];
-
-  const buildAddBody = (instance: RemoteInstance) => {
-    const { address, cluster, password, port, username } = instance.connection;
-    const add_node = { node_name: instance.serviceName, node_type: 'NODE_TYPE_REMOTE_NODE' };
-
-    switch (instance.type) {
-      case 'mysql':
-        return {
-          mysql: {
-            add_node,
-            address,
-            cluster,
-            engine: 'DISCOVER_RDS_ENGINE_MYSQL',
-            password,
-            pmm_agent_id: 'pmm-server',
-            port,
-            qan_mysql_perfschema: true,
-            service_name: instance.serviceName,
-            username,
-          },
-        };
-      case 'postgresql':
-        return {
-          postgresql: {
-            add_node,
-            address,
-            cluster,
-            password,
-            pmm_agent_id: 'pmm-server',
-            port,
-            qan_postgresql_pgstatmonitor_agent: true,
-            service_name: instance.serviceName,
-            tls_skip_verify: true,
-            username,
-          },
-        };
-      case 'mongodb':
-        return {
-          mongodb: {
-            add_node,
-            address,
-            cluster,
-            password,
-            pmm_agent_id: 'pmm-server',
-            port,
-            qan_mongodb_profiler: true,
-            service_name: instance.serviceName,
-            tls_skip_verify: true,
-            username,
-          },
-        };
-      default:
-        throw new Error(`Unknown remote instance type: ${instance.type}`);
-    }
-  };
 
   const getRedisTarget = async (page: Page) => {
     const response = await page.request.get('prometheus/api/v1/targets', {
@@ -243,7 +168,9 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
     pmmTest(
       `PMM-T2074 - Verify user can create Remote Instance ${instance.type} before upgrade @pre-external-upgrade`,
       async ({ api }) => {
-        await api.inventoryApi.addRemoteService(buildAddBody(instance));
+        const remoteInstance = api.remoteInstanceApi.buildRemoteInstanceDataBody(instance);
+
+        await api.remoteInstanceApi.addRemoteInstance(remoteInstance);
       },
     );
   }
