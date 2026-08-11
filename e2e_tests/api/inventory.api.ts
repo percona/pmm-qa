@@ -1,4 +1,4 @@
-import { APIRequestContext, expect } from '@playwright/test';
+import { APIRequestContext, expect, Page } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
@@ -92,6 +92,15 @@ export default class InventoryApi {
 
     return service;
   };
+
+  verifyAgentsAreRunning = async (serviceName: string) =>
+    this.getServiceDetailsByPartialName(serviceName)
+      .then((service) =>
+        service.agents
+          .filter((agent) => agent.agent_type !== 'pmm-agent')
+          .every((agent) => agent.status === AgentStatus.running),
+      )
+      .catch(() => false);
 
   verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
     const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');

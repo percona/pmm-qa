@@ -24,6 +24,16 @@ export interface AddRemoteInstance {
     tls_ca?: string;
     tls_certificate_key?: string;
   };
+  external?: {
+    add_node: { node_name: string; node_type: 'NODE_TYPE_REMOTE_NODE' };
+    address: string;
+    cluster: string;
+    group: string;
+    listen_port: string;
+    metrics_path: string;
+    schema: string;
+    service_name: string;
+  };
 }
 export default class RemoteInstanceApi {
   constructor(private request: APIRequestContext) {}
