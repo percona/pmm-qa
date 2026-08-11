@@ -39,8 +39,6 @@ export default class GrafanaApi {
     };
     const metric = await this.request.post('graph/api/ds/query', { data: requestBody, headers });
 
-    console.log(await metric.json());
-
     expect(
       metric.status(),
       `Get datasource by name API call returned status code: ${metric.status()} with error message: ${metric.statusText()}`,

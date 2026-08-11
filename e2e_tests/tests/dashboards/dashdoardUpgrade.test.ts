@@ -75,9 +75,6 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
         SECOND_DASHBOARD_UID: secondDashboardUid,
       });
 
-      console.log(`First dashboard id is: ${firstDashboardUid}`);
-      console.log(`Second dashboard id is: ${secondDashboardUid}`);
-
       expect(firstDashboardUid.length).toBeGreaterThan(0);
       expect(secondDashboardUid.length).toBeGreaterThan(0);
     },
@@ -162,8 +159,6 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       const serviceNames = (await api.inventoryApi.getAllServicesDetailsByPartialName('rs')).map(
         (service: GetService) => service.service_name,
       );
-
-      console.log(dashboard.mongo.shardedClusterSummary.noDataMetrics(shardNames, nodeNames, serviceNames));
 
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.shardedClusterSummary.url, {
