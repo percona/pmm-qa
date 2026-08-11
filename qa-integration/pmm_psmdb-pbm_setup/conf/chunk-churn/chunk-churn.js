@@ -6,6 +6,7 @@
 
 const ns = process.env.CHURN_NAMESPACE || 'test.test';
 const intervalMs = Number(process.env.CHURN_INTERVAL_SECONDS || 120) * 1000;
+const maxChunks = Number(process.env.CHURN_MAX_CHUNKS || 64);
 const dbName = ns.slice(0, ns.indexOf('.'));
 const collName = ns.slice(ns.indexOf('.') + 1);
 const config = db.getSiblingDB('config');
@@ -32,6 +33,15 @@ function attempt(label, command) {
   }
 }
 
+// One split per cycle would otherwise grow the chunk count without bound; the
+// auto-merger alone does not keep up. Collapsing on a ceiling keeps it bounded
+// without ever having to skip a split, so the split events never pause.
+function mergeIfAboveCeiling(shards, filter) {
+  if (config.chunks.countDocuments(filter) <= maxChunks) return;
+
+  shards.forEach((shard) => attempt('mergeAllChunksOnShard', { mergeAllChunksOnShard: ns, shard }));
+}
+
 function sampleOne(collection, filter) {
   const stages = filter ? [{ $match: filter }, { $sample: { size: 1 } }] : [{ $sample: { size: 1 } }];
 
@@ -51,12 +61,12 @@ while (true) {
 
       if (doc) attempt('split', { split: ns, find: { _id: doc._id } });
 
-      const chunk = sampleOne(config.chunks, filter);
-      const target = config.shards
+      const shards = config.shards
         .find({}, { _id: 1 })
         .toArray()
-        .map((shard) => shard._id)
-        .find((id) => chunk && id !== chunk.shard);
+        .map((shard) => shard._id);
+      const chunk = sampleOne(config.chunks, filter);
+      const target = shards.find((id) => chunk && id !== chunk.shard);
 
       if (chunk && target) {
         // _waitForDelete keeps the range deleter in step with the churn: without it the
@@ -69,6 +79,8 @@ while (true) {
           _waitForDelete: true,
         });
       }
+
+      mergeIfAboveCeiling(shards, filter);
     }
   } catch (e) {
     print(`churn iteration failed: ${e.message}`);
