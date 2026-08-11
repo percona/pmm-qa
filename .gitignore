@@ -168,7 +168,8 @@ dist
 
 # Terraform (Linode ephemeral test runner) -- module + lock file are
 # committed; only per-run/generated state and secrets are ignored.
-terraform/linode-runner/runs/
+terraform/linode-runner/runs/*
+!terraform/linode-runner/runs/.gitkeep
 terraform/linode-runner/.plugin-cache/
 terraform/linode-runner/.terraform/
 terraform/linode-runner/*.tfstate
