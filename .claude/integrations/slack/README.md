@@ -9,8 +9,8 @@ works around the first limit; it doesn't try to work around the second
 
 **Status: relay built and deployed (Slack app tokens pending).**
 
-- [ ] Create the app from [`manifest.yaml`](manifest.yaml) in Slack — being
-      done manually in the Slack UI; needs admin approval to install.
+- [x] Create the app from [`manifest.yaml`](manifest.yaml) in Slack (done
+      2026-08-08) — still needs admin approval to install.
 - [x] Relay written and deployed — [`relay/relay.js`](relay/relay.js) on the
       `pmm-ai-relay` Linode (g6-nanode-1, eu-central, 139.162.176.43, $5/mo).
       Entry points: registered mention → central owner's `router` routine →
@@ -33,7 +33,7 @@ works around the first limit; it doesn't try to work around the second
 
 | Operation | How |
 |---|---|
-| Onboard a person | They create their Routine(s) + API tokens in their claude.ai and send: slack ID, jira accountId, routine ids+tokens. Then either ask a Claude session on this repo to bake `people/<name>.json` into the server, or Lish → `nano /opt/pmm-ai-relay/people/<name>.json` → paste → save. Hot-reloaded, no restart. Mirror the file as a LastPass **PMM** note. |
+| Onboard a person | Slack + Jira IDs are already resolved for the whole team and pre-filled in `people/<name>.json`, so they send **only their routine id(s)+token(s)**. Then either ask a Claude session on this repo to bake `people/<name>.json` into the server, or Lish → `nano /opt/pmm-ai-relay/people/<name>.json` → paste → save. Hot-reloaded, no restart. Mirror the file as a LastPass **PMM** note. |
 | First activation | When the Slack app tokens exist: hand them to a Claude session (final rebuild, service auto-starts) or Lish → edit `.env` → `touch /opt/pmm-ai-relay/.env.ready && systemctl restart pmm-ai-relay`. |
 | Code/config change | Rebuild via the Linode API (same instance/IP/root password): a Claude session on this repo can do it, or run `./relay/deploy.sh .env people_dir/` with the files from LastPass. |
 | Unregistered person clicks the Jira button | Relay answers **404 `not_registered`** (403 = bad secret, 502 = fire failure); the Jira Automation rule uses "Wait for response" + condition `{{webResponse.status}} == 404` → Add comment telling the initiator to get onboarded. |
