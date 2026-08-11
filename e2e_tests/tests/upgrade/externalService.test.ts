@@ -1,7 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
-import { services } from './customPassword.test';
+import { services } from '../../testdata/externalServices';
 
 pmmTest.describe('PMM upgrade tests for external services', () => {
   const redisServiceName = 'pmm-ui-tests-redis-external-remote';
