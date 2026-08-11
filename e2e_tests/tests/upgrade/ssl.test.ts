@@ -10,6 +10,7 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
   pmmTest(
     'PMM-T948 + PMM-T947 - Verify Adding MongoDB SSL service remotely via API before upgrade @pre-upgrade',
     async ({ api, cliHelper }) => {
+      console.log(cliHelper.execSilent('docker ps').stdout);
       console.log(`Finind inside of docker: \n ${cliHelper.execSilent(`docker exec ${container} find / -name "ca.crt"`).stdout}`);
       console.log(`Finind inside local machine: \n ${cliHelper.execSilent(`find / -name "ca.crt"`).stdout}`);
       const clientCert = cliHelper
