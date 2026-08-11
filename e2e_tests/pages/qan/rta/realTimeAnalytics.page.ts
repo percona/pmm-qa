@@ -5,34 +5,62 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
 const realTimeTableTestId = 'realtime-overview-table';
+const sessionsTableTestId = 'rta-sessions';
 
 export default class RealTimeAnalyticsPage extends BasePage {
   readonly url = 'pmm-ui/rta/overview';
   readonly refreshIntervals = ['1s', '2s', '3s', '4s', '5s'] as const;
+  readonly sessionsUrl = 'pmm-ui/rta/sessions';
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
+  toggles = {
+    hideCommit: this.page.getByTestId('overview-table-hide-commit-toggle'),
+  };
+  // Cells are addressed by their `query-<id>-<name>-cell` test id rather than by
+  // column position: Database and User are hidden by default and revealed on
+  // demand (see showColumns), so positions are not stable.
   builders = {
+    columnToggle: (columnHeader: string) =>
+      this.page.getByRole('checkbox', { exact: true, name: columnHeader }),
+    databaseForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).getByTestId(/-database-cell$/),
     detailsPaneCodeByText: (queryText: string) =>
       this.elements.detailsPane.locator('[data-testid="query-text"], code.language-mongodb', {
         hasText: queryText,
       }),
     elapsedTimeForQueryByText: (queryText: string) =>
-      this.builders.rowByQueryText(queryText).locator('//td[position()=4]'),
-    elapsedTimeForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=4]'),
+      this.builders.rowByQueryText(queryText).getByTestId(/-elapsed-time-cell$/),
+    elapsedTimeForRow: (rowIndex: string) =>
+      this.builders.rowByIndex(rowIndex).getByTestId(/-elapsed-time-cell$/),
     hostForLastRow: () =>
-      this.page.getByTestId(realTimeTableTestId).locator('tbody tr').last().locator('td').nth(1),
-    hostForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=2]'),
-    operationIdForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=3]'),
-    queryByRowIndex: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=1]'),
+      this.page
+        .getByTestId(realTimeTableTestId)
+        .locator('tbody tr')
+        .last()
+        .getByTestId(/-host-cell$/),
+    hostForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).getByTestId(/-host-cell$/),
+    operationIdForRow: (rowIndex: string) =>
+      this.builders.rowByIndex(rowIndex).getByTestId(/-operation-id-cell$/),
+    queryByRowIndex: (rowIndex: string) =>
+      this.builders.rowByIndex(rowIndex).getByTestId(/-query-text-cell$/),
     rowByIndex: (rowIndex: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`//tbody//tr[position()=${rowIndex}]`),
     rowByQueryText: (queryText: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
+    serviceOption: (serviceId: string) => this.page.getByTestId(`service-option-${serviceId}`),
+    technologyForSession: (sessionName: string) =>
+      this.page
+        .getByTestId(sessionsTableTestId)
+        .locator('tr', { hasText: sessionName })
+        .getByTestId('technology'),
+    technologyGroupHeader: (technology: string) =>
+      this.page.getByRole('listbox').locator('.MuiAutocomplete-groupLabel', { hasText: technology }),
+    userForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).getByTestId(/-user-cell$/),
   };
   buttons = {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),
     closeDetailsPane: this.page.getByTestId('details-pane-close-button'),
     detailsNextQuery: this.page.getByTestId('details-pane-next-button'),
     detailsPreviousQuery: this.page.getByTestId('details-pane-prev-button'),
+    detailsRawDataTab: this.page.getByTestId('details-pane-raw-data-tab'),
     export: this.page.getByTestId('overview-table-export-button'),
     filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
     nextPage: this.page.getByRole('button', { name: 'Go to next page' }),
@@ -41,22 +69,40 @@ export default class RealTimeAnalyticsPage extends BasePage {
     refresh: this.page.getByTestId('overview-table-refresh-button'),
     refreshIntervalDropdown: this.page.getByTestId('auto-refresh-button'),
     resumeRealTimeAnalytics: this.page.getByTestId('overview-table-resume-button'),
+    showHideColumns: this.page.getByRole('button', { name: 'Show/Hide columns' }),
     stopAgentsButton: this.page.getByTestId('stop-multiple-sessions-modal-stop'),
     stopAllSessions: this.page.getByTestId('open-stop-all-modal'),
   };
   elements = {
+    columnPinButtons: this.page.getByRole('button', { name: /^(Pin to (left|right)|Unpin)$/ }),
+    columnsMenu: this.page.getByRole('menu'),
+    databaseColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Database', { exact: true }),
+    detailsCommand: this.page.getByTestId('command-value'),
+    detailsFullScan: this.page.getByTestId('full-scan-value'),
     detailsOperationId: this.page.getByTestId('operation-id-value'),
     detailsPane: this.page.getByTestId('query-details-pane'),
+    detailsProgramName: this.page.getByTestId('program-name-value'),
+    detailsRawData: this.page.getByTestId('query-raw-data'),
+    detailsRowsExamined: this.page.getByTestId('rows-examined-value'),
+    detailsRowsSent: this.page.getByTestId('rows-sent-value'),
+    detailsState: this.page.getByTestId('state-value'),
+    detailsUsername: this.page.getByTestId('username-value'),
     elapsedTimeColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
       .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
+    noFilterResults: this.builders.rowByIndex('1').getByRole('alert').filter({ hasText: 'No data found' }),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
       .getByText('Query text', { exact: true }),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tbody tr'),
+    sessionsTable: this.page.getByTestId(sessionsTableTestId),
+    technologyColumnHeader: this.page
+      .getByTestId(sessionsTableTestId)
+      .getByText('Technology', { exact: true }),
+    userColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('User', { exact: true }),
   };
   inputs = {
     clusterService: this.page.locator('input[name = "service"]'),
@@ -75,6 +121,18 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   clickQueryTextHeader = async () => {
     await this.elements.queryTextColumnHeader.click();
+  };
+
+  /**
+   * Types into a text column filter (Database / User columns). Supports a
+   * comma-separated list of lazy (substring) matches, e.g. 'sbtest, orders'.
+   * Expects the column to be revealed already (see showColumns) and the filter
+   * row to be open already (see openFilters).
+   */
+  filterByColumnText = async (columnHeader: 'Database' | 'User', filterText: string) => {
+    await pmmTest.step(`Filter ${columnHeader} column by: ${filterText}`, async () => {
+      await this.page.getByTitle(`Filter by ${columnHeader}`).fill(filterText);
+    });
   };
 
   filterQueriesByText = async (queryText: string) => {
@@ -108,19 +166,13 @@ export default class RealTimeAnalyticsPage extends BasePage {
   getElapsedTimeForQueryByRow = async (rowIndex: string) => {
     await this.builders.elapsedTimeForRow(rowIndex).waitFor({ state: 'visible' });
 
-    const elapsedTime = await this.builders.elapsedTimeForRow(rowIndex).textContent();
-    const seconds = elapsedTime?.split(' ')[0];
-
-    return Number(seconds);
+    return this.parseElapsedSeconds(await this.builders.elapsedTimeForRow(rowIndex).textContent());
   };
 
   getElapsedTimeForQueryByText = async (queryText: string) => {
     await this.builders.elapsedTimeForQueryByText(queryText).waitFor({ state: 'visible' });
 
-    const elapsedTime = await this.builders.elapsedTimeForQueryByText(queryText).textContent();
-    const seconds = elapsedTime?.split(' ')[0];
-
-    return Number(seconds);
+    return this.parseElapsedSeconds(await this.builders.elapsedTimeForQueryByText(queryText).textContent());
   };
 
   getOperationIdByRow = async (rowIndex: string) => {
@@ -152,10 +204,34 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await this.buttons.filters.click();
   };
 
+  // Opens the Cluster/Service picker of the overview.
+  openServicesDropdown = async () => {
+    await this.page.getByTitle('Open').click();
+    await expect(this.page.getByRole('listbox')).toBeVisible();
+  };
+
   selectClusterService = async () => {
     await this.inputs.clusterService.click();
     await this.page.getByRole('option').first().click();
     await this.page.keyboard.press('Escape');
+  };
+
+  /**
+   * Reveals columns that the overview hides by default (Database, User) through
+   * the table's Show/Hide columns menu. Uses check() rather than click() so the
+   * requested columns end up visible even if some of them already are.
+   */
+  showColumns = async (...columns: ('Database' | 'User')[]) => {
+    await pmmTest.step(`Show columns: ${columns.join(', ')}`, async () => {
+      await this.buttons.showHideColumns.click();
+
+      for (const column of columns) {
+        await this.page.getByRole('checkbox', { exact: true, name: column }).check();
+      }
+
+      await this.page.keyboard.press('Escape');
+      await expect(this.page.getByRole('menu')).toBeHidden();
+    });
   };
 
   stopAllSessions = async () => {
@@ -163,6 +239,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
     await this.buttons.stopAllSessions.click();
     await this.buttons.stopAgentsButton.click();
     await this.buttons.stopAgentsButton.waitFor({ state: 'hidden', timeout: Timeouts.THREE_SECONDS });
+  };
+
+  toggleHideCommit = async () => {
+    await pmmTest.step('Toggle Hide COMMIT', async () => {
+      await this.toggles.hideCommit.click();
+    });
   };
 
   verifyRequestInterval = async (
@@ -206,4 +288,9 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
 
   private apiRequest = (request: Request) => request.url().includes(this.apiEndpoint);
+
+  // Elapsed time is rendered in the compact form the overview uses, e.g.
+  // '0.003s' below ten seconds and '42s' above it.
+  private parseElapsedSeconds = (elapsedTime: null | string) =>
+    Number.parseFloat((elapsedTime ?? '').replace(/[^\d.]/g, ''));
 }

@@ -226,7 +226,7 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
     const fileName = download.suggestedFilename();
     const csvPath = testInfo.outputPath(fileName);
 
-    expect(fileName).toMatch(/^mongodb_rta_export_\d{8}_\d{6}\.csv$/);
+    expect(fileName).toMatch(/^rta_export_\d{8}_\d{6}\.csv$/);
 
     await download.saveAs(csvPath);
 
