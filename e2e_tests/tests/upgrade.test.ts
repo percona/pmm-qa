@@ -57,7 +57,7 @@ pmmTest.describe('PMM upgrade tests', () => {
         const labels = `--agent-password=uitests --custom-labels="testing=upgrade" upgrade-${service.upgradeService}`;
         const addCommand: Record<string, string> = {
           mongodb: `pmm-admin add mongodb --username=${mongo.username} --password="${mongo.password}" --port=${mongo.port} --host=${mongo.host} ${labels}`,
-          mysql: `pmm-admin add mysql --password=${credentials.perconaServer.password} --port=${mysql.port} --host=${mysql.host} ${labels}`,
+          mysql: `pmm-admin add mysql --password=${credentials.perconaServer.password} --port=${mysql.port} --host=${mysql.host} --query-source=perfschema ${labels}`,
           postgresql: `pmm-admin add postgresql --username=${pgsql.username} --password=${pgsql.password} --port=${pgsql.port} --host=${pgsql.host} ${labels}`,
         };
 
