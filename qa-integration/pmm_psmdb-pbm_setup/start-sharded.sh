@@ -315,29 +315,32 @@ docker compose -f docker-compose-sharded.yaml exec -T rscfg01 pmm-admin add mong
 echo "adding some data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017
 
-echo "triggering chunk migrations and splits so the chunk-move/split dashboards have data"
-docker compose -f docker-compose-sharded.yaml exec -T mongos mongo "mongodb://root:root@localhost" --quiet --eval '
-    var coll = db.getSiblingDB("config").collections.findOne({ _id: "test.test" });
-    var shards = db.getSiblingDB("config").shards.find().toArray().map(function (s) { return s._id; });
-    db.getSiblingDB("config").chunks.find({ uuid: coll.uuid }).forEach(function (chunk) {
-        var target = shards.filter(function (s) { return s !== chunk.shard; })[0];
-        if (target) {
-            try {
-                sh.moveChunk("test.test", chunk.min, target);
-            } catch (e) {
-                print("moveChunk failed, skipping: " + e);
-            }
-        }
-    });
-    var doc = db.getSiblingDB("test").test.findOne();
-    if (doc) {
-        try {
-            sh.splitFind("test.test", { _id: doc._id });
-        } catch (e) {
-            print("splitFind failed, skipping: " + e);
-        }
+echo "writing chunk-activity generator so the chunk-move/split dashboards keep getting data"
+docker compose -f docker-compose-sharded.yaml exec -T mongos tee /tmp/keep_chunks_moving.js > /dev/null << 'JSEOF'
+var shards = db.getSiblingDB("config").shards.find().toArray().map(function (s) { return s._id; });
+var ins = db.getSiblingDB("test").test.insertOne({ ts: new Date() });
+shards.forEach(function (target) {
+    try {
+        sh.moveChunk("test.test", { _id: ins.insertedId }, target);
+    } catch (e) {
+        print("moveChunk to " + target + " failed, skipping: " + e);
     }
-'
+});
+try {
+    sh.splitFind("test.test", { _id: ins.insertedId });
+} catch (e) {
+    print("splitFind failed, skipping: " + e);
+}
+JSEOF
+docker compose -f docker-compose-sharded.yaml exec -T mongos tee /tmp/keep_chunks_moving.sh > /dev/null << 'SHEOF'
+#!/bin/bash
+while true; do
+    mongo "mongodb://root:root@localhost" --quiet /tmp/keep_chunks_moving.js > /tmp/keep_chunks_moving.log 2>&1
+    sleep 240
+done
+SHEOF
+echo "starting background chunk-activity generator"
+docker compose -f docker-compose-sharded.yaml exec -d mongos bash /tmp/keep_chunks_moving.sh
 
 tests=${TESTS:-yes}
 if [ $tests != "no" ]; then
