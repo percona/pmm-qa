@@ -36,7 +36,8 @@ Compose one compact message and POST it to the relay's `/slack/announce` endpoin
 
 ```bash
 curl -sS -X POST https://139-162-176-43.ip.linodeusercontent.com/slack/announce \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-GitHub-Token: ${GH_TOKEN:-$(gh auth token 2>/dev/null)}" \
+  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $(gh api user --jq .login 2>/dev/null)" \
+  -H "X-GitHub-Token: ${GH_TOKEN:-$(gh auth token 2>/dev/null)}" \
   -H "Content-Type: application/json" \
   -d @- <<JSON
 {"channel":"#qa-automation","text":$(jq -Rs . <<'TXT'

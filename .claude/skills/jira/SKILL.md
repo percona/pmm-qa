@@ -90,9 +90,9 @@ markup, no ADF) and returns its status + body verbatim. Build bodies with `jq`
 so newlines/quotes escape cleanly.
 
 ```bash
-GH="${GH_TOKEN:-$(gh auth token 2>/dev/null)}"
+GH="${GH_TOKEN:-$(gh auth token 2>/dev/null)}"; ACTOR="$(gh api user --jq .login 2>/dev/null)"
 J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY_BASE_URL/jira/$1" \
-        -H "X-Relay-Secret: $RELAY_KEY" -H "X-GitHub-Token: $GH" \
+        -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "X-GitHub-Token: $GH" \
         -H "Content-Type: application/json" -d "$2"; }
 
 # read — omit fieldsCsv for the default QA field set

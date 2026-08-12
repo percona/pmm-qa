@@ -40,8 +40,10 @@ for run_dir in "$RUNS_DIR"/*/; do
     base="${RELAY_BASE_URL:-$(cat "$run_dir/relay" 2>/dev/null)}"
     [ -n "$base" ] || continue
     gh_tok="${GH_TOKEN:-$(gh auth token 2>/dev/null || true)}"
+    actor="$(gh api user --jq .login 2>/dev/null || true)"
     curl -sS -m 120 -X POST "$base/linode/destroy" \
       -H "X-Relay-Secret: $RELAY_KEY" \
+      -H "X-Actor: $actor" \
       -H "X-GitHub-Token: $gh_tok" \
       -H "Content-Type: application/json" \
       -d "{\"run_id\":\"$run_id\"}" \

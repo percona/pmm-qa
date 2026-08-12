@@ -113,29 +113,49 @@ const TLS_KEY = process.env.TLS_KEY || "/opt/pmm-ai-relay/tls/key.pem";
 // will reject the self-signed origin cert — see README "Endpoints").
 const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 
-// Broker access control. Every /<service>/<action> call needs BOTH the shared
-// RELAY_KEY (possession) AND a verified GitHub identity (who you are) — a
-// leaked RELAY_KEY alone is useless without a team member's GitHub token. The
-// caller sends its GitHub token; the relay asks GitHub who it is (unspoofable),
-// then checks that login against RELAY_GH_ALLOW. Empty allowlist = any verified
-// GitHub user (identity still proven, just unrestricted) — set it to lock down.
+// Broker access control. Every /<service>/<action> call needs the shared
+// RELAY_KEY (possession) plus a caller identity checked against RELAY_GH_ALLOW
+// (the team roster). Empty allowlist = any identity accepted (audit only).
+//
+// Two modes, because a Claude Code session's GitHub token is a *proxy-brokered*
+// placeholder that only authenticates through the egress proxy — a standalone
+// relay calling GitHub with it gets 401. So:
+//   RELAY_IDENTITY_MODE=verify  → require X-GitHub-Token, verify it against
+//        GitHub /user (UNSPOOFABLE). Use this wherever callers hold a REAL
+//        GitHub token (non-proxy deploys, or a per-user PAT).
+//   RELAY_IDENTITY_MODE=assert (default) → the gate is RELAY_KEY (= shared-env
+//        membership, admin-controlled); the caller asserts its GitHub login in
+//        X-Actor (it got that login from `gh api user`, which the proxy really
+//        did verify). Roster-checked and logged. NOT cryptographically
+//        unspoofable at the relay boundary — an in-env attacker could forge
+//        X-Actor — but a bare leaked RELAY_KEY still needs a valid roster login.
+const IDENTITY_MODE = process.env.RELAY_IDENTITY_MODE || "assert";
 const GH_ALLOW = (process.env.RELAY_GH_ALLOW || "")
   .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+function rosterOk(login) {
+  return !GH_ALLOW.length || GH_ALLOW.includes(login.toLowerCase());
+}
 async function ghIdentity(req) {
-  const tok = req.headers["x-github-token"];
-  if (!tok) return { ok: false, code: 401, msg: "github_identity_required" };
-  let r;
-  try {
-    r = await fetch("https://api.github.com/user", {
-      headers: { Authorization: `Bearer ${tok}`, "User-Agent": "pmm-ai-relay", Accept: "application/vnd.github+json" },
-    });
-  } catch { return { ok: false, code: 502, msg: "github_unreachable" }; }
-  if (!r.ok) return { ok: false, code: 401, msg: "github_auth_failed" };
-  const login = String((await r.json()).login || "");
-  if (!login) return { ok: false, code: 401, msg: "github_auth_failed" };
-  if (GH_ALLOW.length && !GH_ALLOW.includes(login.toLowerCase()))
-    return { ok: false, code: 403, msg: "identity_not_authorized" };
-  return { ok: true, login };
+  if (IDENTITY_MODE === "verify") {
+    const tok = req.headers["x-github-token"];
+    if (!tok) return { ok: false, code: 401, msg: "github_identity_required" };
+    let r;
+    try {
+      r = await fetch("https://api.github.com/user", {
+        headers: { Authorization: `Bearer ${tok}`, "User-Agent": "pmm-ai-relay", Accept: "application/vnd.github+json" },
+      });
+    } catch { return { ok: false, code: 502, msg: "github_unreachable" }; }
+    if (!r.ok) return { ok: false, code: 401, msg: "github_auth_failed" };
+    const login = String((await r.json()).login || "");
+    if (!login) return { ok: false, code: 401, msg: "github_auth_failed" };
+    if (!rosterOk(login)) return { ok: false, code: 403, msg: "identity_not_authorized" };
+    return { ok: true, login, verified: true };
+  }
+  // assert mode
+  const actor = String(req.headers["x-actor"] || "").trim();
+  if (!actor) return { ok: false, code: 401, msg: "actor_required" };
+  if (!rosterOk(actor)) return { ok: false, code: 403, msg: "identity_not_authorized" };
+  return { ok: true, login: actor, verified: false };
 }
 
 // DEGRADED MODE: without real Slack tokens the relay still serves /health,
