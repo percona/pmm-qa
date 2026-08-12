@@ -196,7 +196,7 @@ Delivery reuses the **relay bot**, so no MCP connector is needed in the Routine 
 
 ## Secrets architecture — relay-brokered (built; prod cutover pending)
 
-> **Status (2026-08-12):** the broker (`/<service>/<action>`) is implemented and **validated end-to-end on a staging relay**: `/linode/provision` → `{ip, exec_token, exec_cert_pem}`; `/linode/destroy` → `ok` (works with the events-read Linode token); `/jira/read` → the ticket; and the identity gate rejects a missing `X-Actor` (401), a non-roster actor (403), and a wrong `RELAY_KEY` (403). Identity is a single mechanism (`X-Actor`, roster from the people files — no extra env vars). Remaining human step: prod cutover — set `RELAY_KEY` in the qa-linode env, add each teammate's `github` login to their people file, deploy the current relay to relay-1, and remove `LINODE_TOKEN`/`JIRA_*` from the shared env.
+> **Status (2026-08-12):** the broker (`/<service>/<action>`) is implemented and **validated end-to-end on a staging relay**: `/linode/provision` → `{ip, exec_token, exec_cert_pem}`; `/linode/destroy` → `ok` (works with the events-read Linode token); `/jira/read` → the ticket; and the identity gate rejects a missing `X-Actor` (401), a non-roster actor (403), and a wrong `RELAY_KEY` (403). Identity is a single mechanism (`X-Actor`, roster from the people files — no extra env vars). Remaining human step: prod cutover — an admin sets `RELAY_KEY` in the qa-linode shared env (Davi can't set shared-env vars), then a session deploys the current relay code, then `LINODE_TOKEN`/`JIRA_*` come off the shared env.
 
 **Problem.** The shared qa-linode environment stores `LINODE_TOKEN` and `JIRA_TOKEN` in plaintext — visible to everyone in it, flaggable by a secret scanner, and reusable by a prompt-injected run. Worse, that `LINODE_TOKEN` is enough to *rebuild* the relay via the Linode API (deploy is an API rebuild, not SSH — the relay has no SSH key and no exec-server), i.e. fully compromise it. So the relay is only a real vault once the token is out of the shared env.
 
@@ -236,10 +236,10 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 - [x] `LINODE_TOKEN` scoped to Linodes + Firewalls R/W **+ Events read-only** so `down.sh`/`/linode/destroy` works (the provider polls `/account/events`) (2026-08-12)
 - [x] `SessionEnd` hook rewired to `/linode/destroy` + keep-alive skip; `jira`/`linode-provisioning` skills and `pr-maintainer` call the new endpoints with `X-Actor` (2026-08-12)
 - [x] Identity settled on a single `X-Actor` mechanism, roster read from the people files — no `RELAY_GH_ALLOW`/`RELAY_IDENTITY_MODE` env vars (2026-08-12)
-- [ ] **Delete the stray `pmm-ai-id/test-6c3651be` branch** on `percona/pmm-qa` (left by a force-push test; the proxy blocks ref-delete, so it needs a non-proxy hand)
-- [ ] **Add each teammate's `github` login** to their `people/<name>.json` (the broker roster)
-- [ ] **Deploy the current relay to relay-1** (`139.162.176.43`) and set `RELAY_KEY` in its `.env`
-- [ ] **Set `RELAY_KEY` in the qa-linode environment** (the only new shared-env var)
+- [x] **Delete the stray `pmm-ai-id/test-6c3651be` branch** on `percona/pmm-qa` — done by Davi 2026-08-12 (proxy blocked ref-delete from a session)
+- [x] **Add each teammate's `github` login** to their `people/<name>.json` (the broker roster) — all 23 finalized and stored in LastPass 2026-08-12
+- [x] **Finalized relay `.env`** (identity-gated broker + `RELAY_KEY`) stored in the LastPass **PMM** note 2026-08-12
+- [ ] **Admin: set `RELAY_KEY` in the qa-linode shared environment**, then a session deploys the current relay code to `pmm-ai-relay` (`139.162.176.43`). *Blocked here:* Davi can't set shared-env vars, and the deploy stays unauthorized until the shared env carries `RELAY_KEY` — the relay's `.env` and the people files are already staged.
 - [ ] **Remove `LINODE_TOKEN` and `JIRA_*` from the shared env** — the last step; do it only after the relay is confirmed serving
 
 **Launch core (Jira button → Test Runner):**
@@ -255,7 +255,7 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 - [x] **Jira service account from IT** — done (2026-08-11): a dedicated "PMM QA Bot" account with only the PMM-project permissions the REST fallback needs (read issues, add Developers-restricted comments, add attachments, edit fields, transition); its `JIRA_EMAIL`/`JIRA_API_TOKEN` are set in the environment. This was blocking for team rollout — env vars are shared across everyone in the environment, so without a service account every bot comment would post as *one real person's* identity (whoever's token is set) and per-person onboarding couldn't give each teammate their own Jira identity. The service account keeps QA comments neutral and decoupled from any individual.
 - [x] Restricted Linode PAT (Linodes + Firewalls R/W) set as `LINODE_TOKEN` (done)
 - [x] **`LINODE_TOKEN` delete-path 401** — the provider's instance-delete lists `/v4/account/events`, which 401s a token without `events:read`. Fixed by granting the token **Events read-only** (alongside Linodes + Firewalls R/W) — standard provider requirement, kept over a terraform workaround (2026-08-12).
-- [ ] **GitHub App Actions scope** — grant the GitHub App installation on `percona/*` **Actions: Read and write** (`rerun-failed-jobs` answers `X-Accepted-Github-Permissions: actions=write`), hit live on 2026-08-12 in [run 31549464587](https://github.com/percona/pmm-qa/actions/runs/31549464587).
+- [ ] **GitHub App Actions scope** — grant the GitHub App installation on `percona/*` **Actions: Read and write** (`rerun-failed-jobs` answers `X-Accepted-Github-Permissions: actions=write`), hit live on 2026-08-12 in [run 31549464587](https://github.com/percona/pmm-qa/actions/runs/31549464587). **Owner:** a `percona` GitHub org owner/admin (IT) — org-app installation permissions can only be changed by an org owner at `github.com/organizations/percona/settings/installations`.
 - [x] Relay infrastructure verified end-to-end 2026-08-07 (Linode up, Let's Encrypt cert trusted through the session egress proxy, /health 200, /reply and /jira auth gates 403, davi.json loaded, crash-on-bad-token fixed)
 - [x] Create the Slack app from `manifest.yaml` (done 2026-08-08)
 - [ ] Get Slack admin approval + install the `@pmm-ai` app.
@@ -286,7 +286,7 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 - [x] `blocked` label created in `percona/pmm-qa` (the agent applies/removes it, doesn't create it).
 - [ ] Set `RELAY_KEY` in the relay `.env` and in the qa-linode environment, add each teammate's `github` login to their `people/*.json` (the roster), then redeploy the relay so `POST /slack/announce` is live. The Routine authenticates with `RELAY_KEY` + its `X-Actor` login.
 - [ ] `/invite @pmm-ai` into `#qa-automation`.
-- [x] Create the daily **PR Maintainer** Routine (done — it will error on `/slack/announce` until relay-1 runs the new code, `RELAY_KEY` is set, and the Slack app is live; harmless until then).
+- [x] Create the daily **PR Maintainer** Routine (done — it will error on `/slack/announce` until the relay runs the new code, `RELAY_KEY` is set, and the Slack app is live; harmless until then).
 
 **Later / optional:**
 
