@@ -74,7 +74,9 @@ try {
 const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> central owner's test-runner
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
-const RELAY_KEY = process.env.RELAY_KEY; // the shared-env → relay bearer; gates the broker endpoints (today /announce; /jira-comment and /provision to come)
+const RELAY_KEY = process.env.RELAY_KEY; // the shared-env → relay bearer; gates the broker endpoints (/announce, /jira-act; /provision to come)
+const JIRA_EMAIL = process.env.JIRA_EMAIL; // relay-side Jira service account, used by /jira-act
+const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN;
 const REPLY_SECRET = process.env.REPLY_SECRET;
 if (!REPLY_SECRET) {
   // sign() runs before either Slack handler's try block, so a missing secret
@@ -416,6 +418,66 @@ const handler = async (req, res) => {
       return;
     }
 
+    // Jira broker: agents perform a FIXED set of ops on an EXISTING PMM ticket
+    // using the relay's service-account token — the token never leaves here.
+    // Scoped to the PMM project; comment visibility is FORCED to Developers, so
+    // the caller can never post a public comment. No create, no delete.
+    if (req.method === "POST" && req.url === "/jira-act") {
+      if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) {
+        res.writeHead(403).end("forbidden");
+        return;
+      }
+      let m;
+      try { m = JSON.parse(raw); } catch { res.writeHead(400).end("bad_request"); return; }
+      const { op, issue, by } = m;
+      if (!JIRA_EMAIL || !JIRA_API_TOKEN) { res.writeHead(503).end("jira_not_configured"); return; }
+      if (!/^PMM-\d+$/.test(issue || "")) { res.writeHead(400).end("issue_must_be_a_PMM_key"); return; }
+      const base = "https://perconadev.atlassian.net/rest/api/2";
+      const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+      const jira = (path, init = {}) =>
+        fetch(`${base}${path}`, {
+          ...init,
+          headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) },
+        });
+      console.log(`jira-act ${op} ${issue} by ${by || "?"}`);
+      try {
+        let r;
+        if (op === "read") {
+          const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
+          r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);
+        } else if (op === "comment") {
+          // visibility is FORCED regardless of caller input — never public.
+          r = await jira(`/issue/${issue}/comment`, {
+            method: "POST",
+            body: JSON.stringify({ body: String(m.body || ""), visibility: { type: "role", value: "Developers" } }),
+          });
+        } else if (op === "field") {
+          r = await jira(`/issue/${issue}`, { method: "PUT", body: JSON.stringify({ fields: m.fields || {} }) });
+        } else if (op === "transitions") {
+          r = await jira(`/issue/${issue}/transitions`);
+        } else if (op === "transition") {
+          r = await jira(`/issue/${issue}/transitions`, { method: "POST", body: JSON.stringify({ transition: { id: String(m.transitionId) } }) });
+        } else if (op === "attach") {
+          const fd = new FormData();
+          fd.append("file", new Blob([Buffer.from(String(m.content_b64 || ""), "base64")]), String(m.filename || "evidence.png"));
+          r = await fetch(`${base}/issue/${issue}/attachments`, {
+            method: "POST",
+            headers: { Authorization: auth, "X-Atlassian-Token": "no-check" },
+            body: fd,
+          });
+        } else {
+          res.writeHead(400).end("unknown_op");
+          return;
+        }
+        const text = await r.text();
+        res.writeHead(r.status, { "Content-Type": "application/json" }).end(text || "{}");
+      } catch (e) {
+        console.error(`/jira-act failed: ${e.message}`);
+        res.writeHead(502).end("jira_upstream_error");
+      }
+      return;
+    }
+
     res.writeHead(404).end();
 };
 
@@ -424,7 +486,7 @@ const handler = async (req, res) => {
 // no plain-HTTP path, so nothing here depends on curl -k.
 https
   .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira /announce) on :${HTTPS_PORT}`));
+  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira /announce /jira-act) on :${HTTPS_PORT}`));
 
 if (app) {
   try {
