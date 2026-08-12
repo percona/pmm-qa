@@ -35,6 +35,8 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
       async ({ api }) => {
         const annotations = await api.annotationsApi.getAnnotationsByTag(tag);
 
+        console.log(`Available annotations are: \n ${JSON.stringify(annotations)}`);
+
         expect(
           annotations.some((annotation) => annotation.text === service.annotationName),
           `Annotation "${service.annotationName}" was not found post upgrade`,
