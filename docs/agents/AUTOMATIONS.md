@@ -184,6 +184,8 @@ Confirmed from the docs: a Routine's fired session runs under **its creator's pe
 
 Test Runner and Investigator both provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [linode-provisioning](../../.claude/skills/linode-provisioning/SKILL.md)) — FB Reporter never does, it only calls `gh`/Jira. Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop is **not** a scheduled Routine — every instance carries its own on-box self-destruct timer (default 24h, see `terraform/linode-runner/README.md`) that deletes it via the Linode API with no external process involved. `extend.sh` pushes that timer back if a run needs more time.
 
+**HA runs are the exception with no backstop.** When a change is HA-impacted, Test Runner (or Investigator reproducing an HA failure) also stands up a Linode LKE Kubernetes cluster via [linode-ha-provisioning](../../.claude/skills/linode-ha-provisioning/SKILL.md) — a multi-node cluster plus a LoadBalancer, billed by the hour. That cluster has **no on-box self-destruct timer** (there's no box to run one), so its only cleanup is the agent calling the skill's `destroy-lke.sh` on every exit path. Whether HA is even in scope is decided up front from the ticket and the diff — see the skill's `references/ha-impact.md`; most changes aren't HA-impacted and never create a cluster.
+
 ## PR Maintainer — daily PR digest
 
 A scheduled weekday Routine reads [`.claude/agents/pr-maintainer.md`](../../.claude/agents/pr-maintainer.md) and triages **every open `percona/pmm-qa` PR**, then posts one **PR Digest** to Slack `#qa-automation`. It is **read-only** — it never merges, closes, approves, or edits; it tells humans what's actionable.
