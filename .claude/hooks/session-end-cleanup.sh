@@ -3,7 +3,7 @@
 # Not the guarantee (SessionEnd doesn't reliably fire on an abandoned
 # session); the on-box self-destruct timer (cloud-init.yaml.tftpl) is what
 # actually guarantees cleanup. Two provisioning paths, torn down two ways:
-#   * relay-brokered (runs/<id>/relay present): POST /destroy to the relay
+#   * relay-brokered (runs/<id>/relay present): POST /linode/destroy to the relay
 #     with RELAY_KEY -- the LINODE_TOKEN lives only on the relay, never here.
 #   * legacy local state (terraform.tfstate + LINODE_TOKEN in env): down.sh.
 # A run carrying a keep-alive marker is left up on purpose (an explicit
