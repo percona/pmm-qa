@@ -8,8 +8,16 @@ const serviceTypes: AccessServiceType[] = ['mongodb', 'mysql', 'postgresql'];
 export default class StoredMetricsPage extends BasePage {
   readonly url = 'graph/d/pmm-qan/pmm-query-analytics';
   builders = {
+    paginationItem: (pageNumber: string) =>
+      this.grafanaIframe().getByRole('listitem', { exact: true, name: pageNumber }),
     serviceTypeCheckbox: (serviceType: string) =>
       this.grafanaIframe().getByTestId(`filter-checkbox-${serviceType}`),
+    serviceTypeFilter: (serviceType: string) =>
+      this.grafanaIframe().locator(`input[name="service_type;${serviceType}"]`),
+    serviceTypeLabel: (serviceType: string) =>
+      this.grafanaIframe()
+        .locator('label')
+        .filter({ has: this.builders.serviceTypeFilter(serviceType) }),
   };
   buttons = {};
   elements = {
@@ -21,7 +29,9 @@ export default class StoredMetricsPage extends BasePage {
     spinner: this.grafanaIframe().locator('//*[@data-testid="Spinner"]'),
     totalCount: this.grafanaIframe().locator('//*[@data-testid="qan-total-items"]'),
   };
-  inputs = {};
+  inputs = {
+    search: this.grafanaIframe().locator('input[name="search"]'),
+  };
   messages = {};
 
   verifyOnlyServiceTypeVisible = async (expected: AccessServiceType) => {
