@@ -15,7 +15,7 @@ The VM is purely an execution target — it runs Docker/Ansible, nothing else. A
 
 ## Accessing the VM
 
-There's no SSH on this box. `run.sh` runs commands over a small bearer-token-authenticated HTTPS service instead (the relay provisions it via cloud-init) — you won't normally touch this directly, just use `run.sh`/`sync.sh`/`extend.sh` (all session-side, via the local `exec_token`); teardown is the relay's `/destroy` (step 7).
+There's no SSH on this box. `run.sh` runs commands over a small bearer-token-authenticated HTTPS service instead (the relay provisions it via cloud-init) — you won't normally touch this directly, just use `run.sh`/`sync.sh`/`extend.sh` (all session-side, via the local `exec_token`); teardown is the relay's `/linode/destroy` (step 7).
 
 Always address the box by hostname, never its bare IP:
 
@@ -38,17 +38,22 @@ returns only *this run's* `{ip, exec_token, exec_cert_pem}` — everything
 `run.sh` needs to reach the box. The account token never enters this
 environment.
 
+**Identity:** every broker call also sends your **GitHub token**
+(`X-GitHub-Token`). The relay verifies it against GitHub and checks the login
+against its roster — so `RELAY_KEY` alone is not enough, the caller must be a
+known team member, and the identity can't be spoofed (no self-reported email).
+
 ```bash
 RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
 ROLE=<role>                           # test-runner or investigator (free text, tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
 mkdir -p "$RUN_DIR"
+GH="${GH_TOKEN:-$(gh auth token 2>/dev/null)}"   # your identity; the relay verifies it against GitHub
 
-# ttl_hours + pmm_qa_ref are optional; add "keep_alive":true handling below.
-curl -sS -m 600 --fail-with-body -X POST "$RELAY_BASE_URL/provision" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "Content-Type: application/json" \
-  -d "$(jq -n --arg r "$ROLE" --arg id "$RUN_ID" --arg by "${USER_EMAIL:-relay}" \
-        '{role:$r, run_id:$id, by:$by}')" >"$RUN_DIR/provision.json"
+# ttl_hours + pmm_qa_ref are optional; add keep-alive handling below.
+curl -sS -m 600 --fail-with-body -X POST "$RELAY_BASE_URL/linode/provision" \
+  -H "X-Relay-Secret: $RELAY_KEY" -H "X-GitHub-Token: $GH" -H "Content-Type: application/json" \
+  -d "$(jq -n --arg r "$ROLE" --arg id "$RUN_ID" '{role:$r, run_id:$id}')" >"$RUN_DIR/provision.json"
 
 # Unpack what the session-side helpers (run.sh/sync.sh/extend.sh) need locally,
 # and tag the run so the SessionEnd hook can tear down exactly our own VMs.
@@ -165,13 +170,13 @@ Reschedules the self-destruct timer on the live instance instead of losing it mi
 Teardown holds the account token, so it too goes through the relay:
 
 ```bash
-curl -sS -m 120 --fail-with-body -X POST "$RELAY_BASE_URL/destroy" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "Content-Type: application/json" \
-  -d "$(jq -n --arg id "<run_id>" --arg by "${USER_EMAIL:-relay}" '{run_id:$id, by:$by}')"
+curl -sS -m 120 --fail-with-body -X POST "$RELAY_BASE_URL/linode/destroy" \
+  -H "X-Relay-Secret: $RELAY_KEY" -H "X-GitHub-Token: ${GH_TOKEN:-$(gh auth token 2>/dev/null)}" \
+  -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"
 rm -rf "terraform/linode-runner/runs/<run_id>"   # drop the local run markers too
 ```
 
-Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `/destroy` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires. (For an explicit keep-alive run, skip `/destroy` — the `keep-alive` marker and the on-box timer handle it.)
+Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `/linode/destroy` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires. (For an explicit keep-alive run, skip destroy — the `keep-alive` marker and the on-box timer handle it.)
 
 ## Network policy — shared env is `Full` (tracking claude-code#82284)
 

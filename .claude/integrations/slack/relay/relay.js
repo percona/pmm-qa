@@ -15,14 +15,14 @@ const execFileP = promisify(execFile);
 // Slack Socket Mode can reject asynchronously on a background reconnect (e.g.
 // invalid_auth) OUTSIDE the try/catch around app.start(); unguarded that becomes
 // an unhandledRejection and takes the whole relay down, defeating the
-// endpoints-only fallback and killing /provision, /jira-act, /reply with it.
+// endpoints-only fallback and killing the /linode, /jira, /slack broker with it.
 // Keep the listeners serving and just log — a broken Slack must never stop the
 // HTTPS broker. (Sync bugs still crash, as they should.)
 process.on("unhandledRejection", (e) => {
   console.error(`unhandledRejection (relay stays up): ${e?.stack || e?.message || e}`);
 });
 // The relay's own copy of the linode-runner module (cloned by deploy.sh), used
-// by /provision + /destroy so the LINODE_TOKEN never leaves this box.
+// by /linode/provision + /linode/destroy so the LINODE_TOKEN never leaves this box.
 const RUNNER_DIR = process.env.RUNNER_DIR || "/opt/pmm-qa/terraform/linode-runner";
 
 // Mentions from REGISTERED people fire the central owner's "router" routine;
@@ -90,8 +90,8 @@ try {
 const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> central owner's test-runner
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
-const RELAY_KEY = process.env.RELAY_KEY; // the shared-env → relay bearer; gates the broker endpoints (/announce, /jira-act; /provision to come)
-const JIRA_EMAIL = process.env.JIRA_EMAIL; // relay-side Jira service account, used by /jira-act
+const RELAY_KEY = process.env.RELAY_KEY; // shared-env → relay bearer; gates every /<service>/<action> broker call (with GitHub identity)
+const JIRA_EMAIL = process.env.JIRA_EMAIL; // relay-side Jira service account, used by the /jira/<action> broker
 const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN;
 const REPLY_SECRET = process.env.REPLY_SECRET;
 if (!REPLY_SECRET) {

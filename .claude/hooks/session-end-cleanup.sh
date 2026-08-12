@@ -35,13 +35,16 @@ for run_dir in "$RUNS_DIR"/*/; do
   if [ -f "$run_dir/relay" ]; then
     # Relay-brokered: the token lives on the relay; ask it to destroy.
     # The marker file holds the relay base URL (RELAY_BASE_URL overrides it).
+    # Identity: the relay verifies X-GitHub-Token against GitHub.
     [ -n "${RELAY_KEY:-}" ] || continue
     base="${RELAY_BASE_URL:-$(cat "$run_dir/relay" 2>/dev/null)}"
     [ -n "$base" ] || continue
-    curl -sS -m 120 -X POST "$base/destroy" \
+    gh_tok="${GH_TOKEN:-$(gh auth token 2>/dev/null || true)}"
+    curl -sS -m 120 -X POST "$base/linode/destroy" \
       -H "X-Relay-Secret: $RELAY_KEY" \
+      -H "X-GitHub-Token: $gh_tok" \
       -H "Content-Type: application/json" \
-      -d "{\"run_id\":\"$run_id\",\"by\":\"session-end:$CLAUDE_CODE_SESSION_ID\"}" \
+      -d "{\"run_id\":\"$run_id\"}" \
       >>"$log" 2>&1 || true
   elif [ -f "$run_dir/terraform.tfstate" ] && [ -n "${LINODE_TOKEN:-}" ]; then
     # Legacy local-state path (LINODE_TOKEN still in this env).
