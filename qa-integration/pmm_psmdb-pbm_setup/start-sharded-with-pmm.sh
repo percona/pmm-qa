@@ -140,6 +140,74 @@ docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo --q
 EOF
 sleep 60
 echo
+echo "configuring root user on primary rscfg01 configserver replicaset"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo --quiet << EOF
+    db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] });
+EOF
+echo
+echo "configuring pbm and pmm roles on configserver replicaset rscfg"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo "mongodb://root:root@localhost/?replicaSet=rscfg" --quiet << EOF
+db.getSiblingDB("admin").createRole({
+    "role": "pbmAnyAction",
+    "privileges": [{
+        "resource": { "anyResource": true },
+	    "actions": [ "anyAction" ]
+        }],
+    "roles": []
+});
+db.getSiblingDB("admin").createRole({
+    role: "explainRole",
+    privileges: [{
+        resource: {
+            db: "",
+            collection: ""
+            },
+        actions: [
+            "listIndexes",
+            "listCollections",
+            "dbStats",
+            "dbHash",
+            "collStats",
+            "find"
+            ]
+        }],
+    roles:[]
+});
+EOF
+echo
+echo "creating pbm user for configserver replicaset rscfg"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo "mongodb://root:root@localhost/?replicaSet=rscfg" --quiet << EOF
+db.getSiblingDB("admin").createUser({
+    user: "${pbm_user}",
+    pwd: "${pbm_pass}",
+    "roles" : [
+        { "db" : "admin", "role" : "readWrite", "collection": "" },
+        { "db" : "admin", "role" : "backup" },
+        { "db" : "admin", "role" : "clusterMonitor" },
+        { "db" : "admin", "role" : "restore" },
+        { "db" : "admin", "role" : "pbmAnyAction" }
+    ]
+});
+EOF
+echo
+echo "creating pmm user for configserver replicaset rscfg"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo "mongodb://root:root@localhost/?replicaSet=rscfg" --quiet << EOF
+db.getSiblingDB("admin").createUser({
+    user: "${pmm_user}",
+    pwd: "${pmm_pass}",
+    roles: [
+        { role: "explainRole", db: "admin" },
+        { role: "clusterMonitor", db: "admin" },
+        { role: "read", db: "local" },
+        { "db" : "admin", "role" : "readWrite", "collection": "" },
+        { "db" : "admin", "role" : "backup" },
+        { "db" : "admin", "role" : "clusterMonitor" },
+        { "db" : "admin", "role" : "restore" },
+        { "db" : "admin", "role" : "pbmAnyAction" }
+    ]
+});
+EOF
+echo
 echo "adding shards and creating global mongo user"
 docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos mongo --quiet << EOF
 db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] });
