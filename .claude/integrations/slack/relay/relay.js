@@ -383,8 +383,11 @@ const handler = async (req, res) => {
       return;
     }
 
-    // Proactive channel post (e.g. the PR Maintainer's daily digest). Secret-
-    // gated; posts as the bot, which can only reach channels it was invited to.
+    // Bot posts a FRESH top-level message to a channel (starts a new thread) —
+    // the general path for any proactive post, e.g. the PR Maintainer digest.
+    // Distinct from /reply, which needs an HMAC cap bound to an EXISTING thread;
+    // this has no thread to bind to, so it's a plain secret-gated bearer call.
+    // The bot can still only reach channels it was invited to.
     if (req.method === "POST" && req.url === "/announce") {
       if (!ANNOUNCE_SECRET || req.headers["x-relay-secret"] !== ANNOUNCE_SECRET) {
         console.error("/announce rejected: bad secret");
