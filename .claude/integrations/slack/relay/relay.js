@@ -506,7 +506,9 @@ const handler = async (req, res) => {
         const rd = `${RUNNER_DIR}/runs/${run_id}`;
         const ip = fs.readFileSync(`${rd}/ip`, "utf8").trim();
         const exec_token = fs.readFileSync(`${rd}/exec_token`, "utf8").trim();
-        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ run_id, ip, exec_token }));
+        // exec_cert is the box's public self-signed cert (run.sh pins it); not a secret.
+        const exec_cert_pem = fs.readFileSync(`${rd}/exec_cert.pem`, "utf8");
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ run_id, ip, exec_token, exec_cert_pem }));
       } catch (e) {
         console.error(`/provision failed: ${e.message}`);
         res.writeHead(502).end("provision_failed");
