@@ -10,9 +10,9 @@ description: Read and write PMM tickets on perconadev.atlassian.net — fields, 
 **All Jira operations go through the relay's `/jira/<action>` broker** (curl,
 see "Operations" below). The relay holds the Jira service-account credentials
 (`JIRA_EMAIL` + `JIRA_API_TOKEN`); this environment holds only a scoped
-`RELAY_KEY`, the relay base URL (`RELAY_BASE_URL`, e.g.
-`https://139-162-176-43.ip.linodeusercontent.com`), and your GitHub token
-(`X-GitHub-Token`, which the relay verifies to identify you). The relay:
+`RELAY_KEY` and the relay base URL (`RELAY_BASE_URL`, e.g.
+`https://139-162-176-43.ip.linodeusercontent.com`). You identify yourself with
+`X-Actor` (your `gh api user` login), which the relay roster-checks. The relay:
 
 - accepts only existing `PMM-<number>` tickets — **no create, no delete**;
 - **forces** `visibility: Developers` on every comment — a public QA comment
@@ -82,17 +82,17 @@ Unless the user explicitly requested the Jira update, confirm before writing to 
 ## Operations (via the relay)
 
 `POST $RELAY_BASE_URL/jira/<action>` with headers `X-Relay-Secret: $RELAY_KEY`
-and `X-GitHub-Token: <your gh token>` (the relay verifies your identity against
-GitHub and records the verified login — no self-reported email). The action is
+and `X-Actor: <your gh login>` (from `gh api user`; the relay roster-checks it
+and records who acted — no self-reported email). The action is
 in the **URL path**; the JSON body carries `issue` (must be a `PMM-<number>`
 key) and any action args. The relay talks Jira REST **v2** upstream (wiki
 markup, no ADF) and returns its status + body verbatim. Build bodies with `jq`
 so newlines/quotes escape cleanly.
 
 ```bash
-GH="${GH_TOKEN:-$(gh auth token 2>/dev/null)}"; ACTOR="$(gh api user --jq .login 2>/dev/null)"
+ACTOR="$(gh api user --jq .login 2>/dev/null)"
 J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY_BASE_URL/jira/$1" \
-        -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "X-GitHub-Token: $GH" \
+        -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
         -H "Content-Type: application/json" -d "$2"; }
 
 # read — omit fieldsCsv for the default QA field set

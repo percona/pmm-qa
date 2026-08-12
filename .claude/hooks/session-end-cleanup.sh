@@ -4,7 +4,7 @@
 # session); the on-box self-destruct timer (cloud-init.yaml.tftpl) is what
 # actually guarantees cleanup. Two provisioning paths, torn down two ways:
 #   * relay-brokered (runs/<id>/relay present): POST /linode/destroy to the relay
-#     with RELAY_KEY -- the LINODE_TOKEN lives only on the relay, never here.
+#     with RELAY_KEY + X-Actor -- the LINODE_TOKEN lives only on the relay, never here.
 #   * legacy local state (terraform.tfstate + LINODE_TOKEN in env): down.sh.
 # A run carrying a keep-alive marker is left up on purpose (an explicit
 # "leave it running" request); its self-destruct timer still reaps it.
@@ -35,16 +35,14 @@ for run_dir in "$RUNS_DIR"/*/; do
   if [ -f "$run_dir/relay" ]; then
     # Relay-brokered: the token lives on the relay; ask it to destroy.
     # The marker file holds the relay base URL (RELAY_BASE_URL overrides it).
-    # Identity: the relay verifies X-GitHub-Token against GitHub.
+    # Identity: X-Actor (gh login) is roster-checked by the relay.
     [ -n "${RELAY_KEY:-}" ] || continue
     base="${RELAY_BASE_URL:-$(cat "$run_dir/relay" 2>/dev/null)}"
     [ -n "$base" ] || continue
-    gh_tok="${GH_TOKEN:-$(gh auth token 2>/dev/null || true)}"
     actor="$(gh api user --jq .login 2>/dev/null || true)"
     curl -sS -m 120 -X POST "$base/linode/destroy" \
       -H "X-Relay-Secret: $RELAY_KEY" \
       -H "X-Actor: $actor" \
-      -H "X-GitHub-Token: $gh_tok" \
       -H "Content-Type: application/json" \
       -d "{\"run_id\":\"$run_id\"}" \
       >>"$log" 2>&1 || true

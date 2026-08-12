@@ -38,23 +38,22 @@ returns only *this run's* `{ip, exec_token, exec_cert_pem}` — everything
 `run.sh` needs to reach the box. The account token never enters this
 environment.
 
-**Identity:** every broker call carries your GitHub identity. Send `X-Actor`
-(your login, from `gh api user` — the proxy verifies that) and `X-GitHub-Token`
-(your token). The relay checks the login against its roster (`RELAY_GH_ALLOW`);
-in `verify` mode it also re-checks the token against GitHub. So `RELAY_KEY`
-alone is not enough — the caller must be a known team member, and the audit
-records who acted (no self-reported email).
+**Identity:** every broker call carries your GitHub login in `X-Actor` (from
+`gh api user`, which the proxy verifies). The relay checks it against the team
+roster (the `github` logins in its people files) and records who acted — so the
+audit always names a real person, no self-reported email. `RELAY_KEY` is the
+possession gate; `X-Actor` is the identity.
 
 ```bash
 RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
 ROLE=<role>                           # test-runner or investigator (free text, tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
 mkdir -p "$RUN_DIR"
-GH="${GH_TOKEN:-$(gh auth token 2>/dev/null)}"; ACTOR="$(gh api user --jq .login 2>/dev/null)"
+ACTOR="$(gh api user --jq .login 2>/dev/null)"
 
 # ttl_hours + pmm_qa_ref are optional; add keep-alive handling below.
 curl -sS -m 600 --fail-with-body -X POST "$RELAY_BASE_URL/linode/provision" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "X-GitHub-Token: $GH" -H "Content-Type: application/json" \
+  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
   -d "$(jq -n --arg r "$ROLE" --arg id "$RUN_ID" '{role:$r, run_id:$id}')" >"$RUN_DIR/provision.json"
 
 # Unpack what the session-side helpers (run.sh/sync.sh/extend.sh) need locally,
@@ -174,7 +173,6 @@ Teardown holds the account token, so it too goes through the relay:
 ```bash
 curl -sS -m 120 --fail-with-body -X POST "$RELAY_BASE_URL/linode/destroy" \
   -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $(gh api user --jq .login 2>/dev/null)" \
-  -H "X-GitHub-Token: ${GH_TOKEN:-$(gh auth token 2>/dev/null)}" \
   -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"
 rm -rf "terraform/linode-runner/runs/<run_id>"   # drop the local run markers too
 ```

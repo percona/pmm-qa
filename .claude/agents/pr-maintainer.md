@@ -32,12 +32,11 @@ Judge "blocked" by *understanding* the PR, not by matching a fixed phrase — th
 
 ## 3. Post the digest
 
-Compose one compact message and POST it to the relay's `/slack/announce` endpoint (the bot must already be in `#qa-automation`; `RELAY_KEY` is in the environment, and the relay verifies your `X-GitHub-Token` identity):
+Compose one compact message and POST it to the relay's `/slack/announce` endpoint (the bot must already be in `#qa-automation`; `RELAY_KEY` is in the environment; `X-Actor` (your `gh api user` login) is your identity, roster-checked):
 
 ```bash
 curl -sS -X POST https://139-162-176-43.ip.linodeusercontent.com/slack/announce \
   -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $(gh api user --jq .login 2>/dev/null)" \
-  -H "X-GitHub-Token: ${GH_TOKEN:-$(gh auth token 2>/dev/null)}" \
   -H "Content-Type: application/json" \
   -d @- <<JSON
 {"channel":"#qa-automation","text":$(jq -Rs . <<'TXT'

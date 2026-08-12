@@ -47,10 +47,12 @@ const WATCHED_CHANNELS = JSON.parse(process.env.WATCHED_CHANNELS || "{}");
 let bySlack = {};
 let byJira = {};
 let byName = {};
+let ghRoster = new Set(); // github logins from people files (broker roster), lowercased
 function loadPeople() {
   const s = {};
   const j = {};
   const n = {};
+  const gh = new Set();
   let files = [];
   try {
     files = fs.readdirSync(PEOPLE_DIR).filter((f) => f.endsWith(".json"));
@@ -64,6 +66,7 @@ function loadPeople() {
       n[p.name] = p;
       if (p.slack) s[p.slack] = p;
       if (p.jira) j[p.jira] = p;
+      if (p.github) gh.add(String(p.github).toLowerCase()); // broker roster
     } catch (e) {
       console.error(`people: skipping bad file ${f}: ${e.message}`); // one broken file never takes the relay down
     }
@@ -71,6 +74,7 @@ function loadPeople() {
   bySlack = s;
   byJira = j;
   byName = n;
+  ghRoster = gh;
   console.log(`people loaded: ${files.length} file(s), central owner "${CENTRAL_OWNER}" ${byName[CENTRAL_OWNER] ? "found" : "MISSING"}`);
 }
 
@@ -114,48 +118,27 @@ const TLS_KEY = process.env.TLS_KEY || "/opt/pmm-ai-relay/tls/key.pem";
 const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 
 // Broker access control. Every /<service>/<action> call needs the shared
-// RELAY_KEY (possession) plus a caller identity checked against RELAY_GH_ALLOW
-// (the team roster). Empty allowlist = any identity accepted (audit only).
+// RELAY_KEY (possession) plus a caller identity. The caller sends its GitHub
+// login in X-Actor — it gets that login from `gh api user`, which the egress
+// proxy really verified — and the relay checks it against the roster (the
+// `github` logins in the people files it already loads; see ghRoster) and logs
+// it. No extra env var; the roster is the people directory.
 //
-// Two modes, because a Claude Code session's GitHub token is a *proxy-brokered*
-// placeholder that only authenticates through the egress proxy — a standalone
-// relay calling GitHub with it gets 401. So:
-//   RELAY_IDENTITY_MODE=verify  → require X-GitHub-Token, verify it against
-//        GitHub /user (UNSPOOFABLE). Use this wherever callers hold a REAL
-//        GitHub token (non-proxy deploys, or a per-user PAT).
-//   RELAY_IDENTITY_MODE=assert (default) → the gate is RELAY_KEY (= shared-env
-//        membership, admin-controlled); the caller asserts its GitHub login in
-//        X-Actor (it got that login from `gh api user`, which the proxy really
-//        did verify). Roster-checked and logged. NOT cryptographically
-//        unspoofable at the relay boundary — an in-env attacker could forge
-//        X-Actor — but a bare leaked RELAY_KEY still needs a valid roster login.
-const IDENTITY_MODE = process.env.RELAY_IDENTITY_MODE || "assert";
-const GH_ALLOW = (process.env.RELAY_GH_ALLOW || "")
-  .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+// Design note: this is env-membership-grade, not cryptographically unspoofable
+// at the relay boundary — a caller that already holds RELAY_KEY could forge
+// X-Actor. That's an accepted trade: the hard gate is possession of RELAY_KEY
+// (= membership of the admin-controlled shared env), and the whole broker
+// surface is bounded + audited, so the blast radius of a forged identity is the
+// short op list, never account access. (Unspoofable upgrade = the push-proof
+// handshake, documented in AUTOMATIONS.) Empty roster = any login accepted.
 function rosterOk(login) {
-  return !GH_ALLOW.length || GH_ALLOW.includes(login.toLowerCase());
+  return ghRoster.size === 0 || ghRoster.has(login.toLowerCase());
 }
-async function ghIdentity(req) {
-  if (IDENTITY_MODE === "verify") {
-    const tok = req.headers["x-github-token"];
-    if (!tok) return { ok: false, code: 401, msg: "github_identity_required" };
-    let r;
-    try {
-      r = await fetch("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${tok}`, "User-Agent": "pmm-ai-relay", Accept: "application/vnd.github+json" },
-      });
-    } catch { return { ok: false, code: 502, msg: "github_unreachable" }; }
-    if (!r.ok) return { ok: false, code: 401, msg: "github_auth_failed" };
-    const login = String((await r.json()).login || "");
-    if (!login) return { ok: false, code: 401, msg: "github_auth_failed" };
-    if (!rosterOk(login)) return { ok: false, code: 403, msg: "identity_not_authorized" };
-    return { ok: true, login, verified: true };
-  }
-  // assert mode
+function identity(req) {
   const actor = String(req.headers["x-actor"] || "").trim();
   if (!actor) return { ok: false, code: 401, msg: "actor_required" };
   if (!rosterOk(actor)) return { ok: false, code: 403, msg: "identity_not_authorized" };
-  return { ok: true, login: actor, verified: false };
+  return { ok: true, login: actor };
 }
 
 // DEGRADED MODE: without real Slack tokens the relay still serves /health,
@@ -570,7 +553,7 @@ const handler = async (req, res) => {
     if (bm) {
       const [, service, action] = bm;
       if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) { res.writeHead(403).end("forbidden"); return; }
-      const id = await ghIdentity(req);
+      const id = identity(req);
       if (!id.ok) { res.writeHead(id.code).end(id.msg); return; }
       let m;
       try { m = raw ? JSON.parse(raw) : {}; } catch { res.writeHead(400).end("bad_request"); return; }
