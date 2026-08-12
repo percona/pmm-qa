@@ -112,24 +112,20 @@ def build_variants_table(database_options: dict) -> str:
     return "\n".join(rows)
 
 
-def discover_e2e_tags() -> list[str]:
+def build_e2e_tags() -> str:
     tags = set()
     for test_file in E2E_TESTS.rglob("*.ts"):
         for line in test_file.read_text(encoding="utf-8").splitlines():
             if line.lstrip().startswith(("import ", "export ")):
                 continue
             tags.update(TAG_PATTERN.findall(line))
-    return sorted(tags, key=str.lower)
-
-
-def build_e2e_tags() -> str:
-    tags = discover_e2e_tags()
+    tags = sorted(tags, key=str.lower)
     if not tags:
         raise RuntimeError(f"Cannot find e2e tags in {E2E_TESTS}")
     return "\n".join(f"- `{tag}`" for tag in tags)
 
 
-def discover_cli_tags() -> list[str]:
+def build_cli_tags() -> str:
     tags = set()
     for test_file in CLI_TESTS.rglob("*.ts"):
         content = test_file.read_text(encoding="utf-8")
@@ -140,11 +136,7 @@ def discover_cli_tags() -> list[str]:
                 tags.add(match.group("double"))
             elif match.group("array"):
                 tags.update(TAG_PATTERN.findall(match.group("array")))
-    return sorted(tags, key=str.lower)
-
-
-def build_cli_tags() -> str:
-    tags = discover_cli_tags()
+    tags = sorted(tags, key=str.lower)
     if not tags:
         raise RuntimeError(f"Cannot find CLI tags in {CLI_TESTS}")
     return "\n".join(f"- `{tag}`" for tag in tags)
@@ -190,7 +182,7 @@ def check_generated_readmes(generated_readmes: dict[Path, str]) -> None:
 def generate() -> None:
     generated_readmes = build_generated_readmes()
     for readme, generated_content in generated_readmes.items():
-        readme.write_text(generated_content, encoding="utf-8")
+        readme.write_text(generated_content, encoding="utf-8", newline="\n")
     print("README generated sections updated")
 
 
