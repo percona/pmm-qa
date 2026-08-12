@@ -31,8 +31,8 @@ Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, or f
 ## 1. Provision the VM (via the relay)
 
 The `LINODE_TOKEN` no longer lives in this environment — it lives only on the
-relay. This env holds a single scoped `RELAY_KEY` and the relay's base URL
-(`RELAY_BASE_URL`, e.g. `https://139-162-176-43.ip.linodeusercontent.com`).
+relay. This env holds a **single** scoped var, `RELAY_KEY`. The relay's URL is a
+fixed public hostname (the reserved-IP box), so it's hardcoded, not an env var.
 The relay runs `up.sh` with its own token, keeps the Terraform state, and
 returns only *this run's* `{ip, exec_token, exec_cert_pem}` — everything
 `run.sh` needs to reach the box. The account token never enters this
@@ -45,6 +45,7 @@ audit always names a real person, no self-reported email. `RELAY_KEY` is the
 possession gate; `X-Actor` is the identity.
 
 ```bash
+RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
 RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
 ROLE=<role>                           # test-runner or investigator (free text, tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
@@ -52,7 +53,7 @@ mkdir -p "$RUN_DIR"
 ACTOR="$(gh api user --jq .login 2>/dev/null)"
 
 # ttl_hours + pmm_qa_ref are optional; add keep-alive handling below.
-curl -sS -m 600 --fail-with-body -X POST "$RELAY_BASE_URL/linode/provision" \
+curl -sS -m 600 --fail-with-body -X POST "$RELAY/linode/provision" \
   -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
   -d "$(jq -n --arg r "$ROLE" --arg id "$RUN_ID" '{role:$r, run_id:$id}')" >"$RUN_DIR/provision.json"
 
@@ -61,7 +62,7 @@ curl -sS -m 600 --fail-with-body -X POST "$RELAY_BASE_URL/linode/provision" \
 jq -r .ip            "$RUN_DIR/provision.json" >"$RUN_DIR/ip"
 jq -r .exec_token    "$RUN_DIR/provision.json" >"$RUN_DIR/exec_token"; chmod 600 "$RUN_DIR/exec_token"
 jq -r .exec_cert_pem "$RUN_DIR/provision.json" >"$RUN_DIR/exec_cert.pem"
-printf '%s' "$RELAY_BASE_URL"             >"$RUN_DIR/relay"        # marks this run relay-brokered
+printf '%s' "$RELAY"                      >"$RUN_DIR/relay"        # marks this run relay-brokered (holds the relay URL for the SessionEnd hook)
 printf '%s' "${CLAUDE_CODE_SESSION_ID:-}" >"$RUN_DIR/session_id"   # scopes the SessionEnd hook
 ```
 
@@ -171,7 +172,8 @@ Reschedules the self-destruct timer on the live instance instead of losing it mi
 Teardown holds the account token, so it too goes through the relay:
 
 ```bash
-curl -sS -m 120 --fail-with-body -X POST "$RELAY_BASE_URL/linode/destroy" \
+RELAY=https://139-162-176-43.ip.linodeusercontent.com
+curl -sS -m 120 --fail-with-body -X POST "$RELAY/linode/destroy" \
   -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $(gh api user --jq .login 2>/dev/null)" \
   -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"
 rm -rf "terraform/linode-runner/runs/<run_id>"   # drop the local run markers too

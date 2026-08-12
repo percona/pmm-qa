@@ -34,10 +34,10 @@ for run_dir in "$RUNS_DIR"/*/; do
   log="$run_dir/session-end-cleanup.log"
   if [ -f "$run_dir/relay" ]; then
     # Relay-brokered: the token lives on the relay; ask it to destroy.
-    # The marker file holds the relay base URL (RELAY_BASE_URL overrides it).
+    # The marker file holds the relay URL (written at provision time).
     # Identity: X-Actor (gh login) is roster-checked by the relay.
     [ -n "${RELAY_KEY:-}" ] || continue
-    base="${RELAY_BASE_URL:-$(cat "$run_dir/relay" 2>/dev/null)}"
+    base="$(cat "$run_dir/relay" 2>/dev/null)"
     [ -n "$base" ] || continue
     actor="$(gh api user --jq .login 2>/dev/null || true)"
     curl -sS -m 120 -X POST "$base/linode/destroy" \
