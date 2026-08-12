@@ -72,8 +72,9 @@ export default class HaApi {
 
   /**
    * Metrics trail a failover by a scrape, and HAProxy points at the active
-   * leader, so killing that pod makes the API 5xx until it re-points. Both are
-   * polled through rather than failed on.
+   * leader, so killing that pod makes the API 5xx until it re-points. `toPass`
+   * retries through both - `expect.poll` would propagate the request error out
+   * of its callback.
    *
    * @param   previousLeader  leader to wait away from; omit to accept any leader
    */
@@ -81,53 +82,30 @@ export default class HaApi {
     previousLeader?: string,
     timeout: Timeouts = Timeouts.FIVE_MINUTES,
   ): Promise<string> => {
-    const deadline = Date.now() + timeout;
-    let lastSeen: string | undefined;
-    let lastError: unknown;
+    let leader = '';
 
-    while (Date.now() < deadline) {
-      try {
-        lastSeen = await this.getLeaderFromMetrics();
+    await expect(async () => {
+      const current = (await this.getLeaderFromMetrics()) ?? '';
 
-        if (lastSeen && lastSeen !== previousLeader) return lastSeen;
-      } catch (error) {
-        lastError = error;
-      }
+      expect(current, `Exactly one node must report ${HaApi.leaderStatusMetric} == 1`).not.toEqual('');
+      expect(current, `Leadership must move off "${previousLeader}"`).not.toEqual(previousLeader);
 
-      await new Promise((resolve) => setTimeout(resolve, Timeouts.FIVE_SECONDS));
-    }
+      leader = current;
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
 
-    throw new Error(
-      `No new leader was reported by "${HaApi.leaderStatusMetric}" within ${timeout}ms` +
-        `${previousLeader ? ` (previous leader: ${previousLeader})` : ''}. ` +
-        `Last observed leader: ${lastSeen ?? 'none'}. ` +
-        `Last request error: ${lastError instanceof Error ? lastError.message : 'none'}`,
-    );
+    return leader;
   };
 
-  /**
-   * Tolerates the same mid-failover 5xx as {@link waitForLeaderInMetrics}, and
-   * returns the last value seen so the caller keeps the assertion.
-   */
+  /** Throws if the sum never settles; tolerates the same mid-failover 5xx. */
   waitForLeaderStatusSum = async (
     expected: number,
     timeout: Timeouts = Timeouts.TWO_MINUTES,
-  ): Promise<number | undefined> => {
-    const deadline = Date.now() + timeout;
-    let lastSeen: number | undefined;
-
-    while (Date.now() < deadline) {
-      try {
-        lastSeen = await this.getLeaderStatusSum();
-
-        if (lastSeen === expected) return lastSeen;
-      } catch {
-        // Cluster is mid-failover; keep polling until the deadline.
-      }
-
-      await new Promise((resolve) => setTimeout(resolve, Timeouts.FIVE_SECONDS));
-    }
-
-    return lastSeen;
+  ): Promise<void> => {
+    await expect(async () => {
+      expect(
+        await this.getLeaderStatusSum(),
+        `sum(${HaApi.leaderStatusMetric}) must be ${expected} - 0 means no leader, >1 means split-brain`,
+      ).toEqual(expected);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
   };
 }

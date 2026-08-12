@@ -56,10 +56,7 @@ pmmTest(
     );
 
     await pmmTest.step(`Verify sum(${HaApi.leaderStatusMetric}) equals 1`, async () => {
-      expect(
-        await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES),
-        'Exactly one node must hold the Raft leader lease',
-      ).toEqual(1);
+      await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
     });
 
     const promotionsBeforeFailover = new Map<string, number>();
@@ -122,10 +119,8 @@ pmmTest(
           })
           .toBeTruthy();
 
-        expect(
-          await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES),
-          `sum(${HaApi.leaderStatusMetric}) must stay 1 - 0 means no leader, >1 means split-brain`,
-        ).toEqual(1);
+        // Must stay 1 now that the restarted pod has rejoined as a follower.
+        await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
       },
     );
   },

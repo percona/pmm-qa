@@ -84,8 +84,28 @@ export default class K8sHelper {
     return encoded ? Buffer.from(encoded, 'base64').toString('utf8') : '';
   };
 
+  /** @param labelSelector `-l` selector; empty means every StatefulSet */
+  getStatefulSetNames = (labelSelector = ''): string[] => {
+    const selector = labelSelector ? ` --selector=${labelSelector}` : '';
+    const result = this.execSilent(
+      `get statefulsets${selector} --output=jsonpath={.items[*].metadata.name}`,
+    ).assertSuccess();
+
+    return result.stdout.trim().split(/\s+/).filter(Boolean);
+  };
+
+  getStatefulSetReplicas = (name: string): number =>
+    Number(
+      this.execSilent(`get statefulset ${name} --output=jsonpath={.spec.replicas}`)
+        .assertSuccess()
+        .stdout.trim(),
+    );
+
   /** HA jobs can be dispatched UI-only; tests needing the cluster skip rather than fail. */
   isAvailable = (): boolean => this.execSilent('get pods --output=name').code === 0;
+
+  scaleStatefulSet = (name: string, replicas: number): ExecReturn =>
+    this.exec(`scale statefulset ${name} --replicas=${replicas}`);
 
   waitForPodReady = (podName: string, timeout: Timeouts = Timeouts.FIVE_MINUTES): ExecReturn =>
     this.exec(`wait --for=condition=Ready pod/${podName} --timeout=${K8sHelper.toSeconds(timeout)}`);

@@ -1,5 +1,7 @@
 import K8sHelper from '@helpers/k8s.helper';
+import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
+import { expect } from '@playwright/test';
 
 const leaderLogLine = 'I am the leader!';
 const pmmManagedLog = '/srv/logs/pmm-managed.log';
@@ -44,6 +46,44 @@ export default class HaClusterHelper {
   };
 
   podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();
+
+  /** Looked up by label rather than hardcoded: the name is the Helm release name. */
+  statefulSetName = (): string => {
+    const names = this.k8sHelper.getStatefulSetNames(pmmServerPodSelector);
+
+    if (names.length !== 1) {
+      throw new Error(
+        `Expected exactly one StatefulSet matching "${pmmServerPodSelector}", got: ${
+          names.length ? names.join(', ') : 'none'
+        }`,
+      );
+    }
+
+    return names[0];
+  };
+
+  /**
+   * Waits for leadership to move, tolerating the election that {@link
+   * leaderFromPods} throws through: while Raft is voting no pod answers 200,
+   * and the pod being restarted cannot be `exec`ed into at all. `toPass` retries
+   * on that throw - `expect.poll` would propagate it out of the callback.
+   *
+   * @param   previousLeader  leader to wait away from; omit to accept any leader
+   */
+  waitForLeaderChange = async (
+    previousLeader?: string,
+    timeout: Timeouts = Timeouts.FIVE_MINUTES,
+  ): Promise<string> => {
+    let leader = '';
+
+    await expect(async () => {
+      leader = this.leaderFromPods();
+
+      expect(leader, `Leadership must move off "${previousLeader}"`).not.toEqual(previousLeader);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+
+    return leader;
+  };
 
   // Hits the pod directly rather than through HAProxy, which only ever routes
   // to whichever pod passes this same check.
