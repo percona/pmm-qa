@@ -52,6 +52,10 @@ export default class RealTimeAnalyticsPage extends BasePage {
     elapsedTimeColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
       .getByRole('columnheader', { name: /Elapsed time/ }),
+    elapsedTimeColumnHeaderLabel: this.page
+      .getByTestId(realTimeTableTestId)
+      .getByRole('columnheader', { name: /Elapsed time/ })
+      .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
     queryTextColumnHeader: this.page
@@ -74,7 +78,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
   messages = {};
 
   clickElapsedTimeHeader = async () => {
-    await this.elements.elapsedTimeColumnHeader.getByText('Elapsed time', { exact: true }).click();
+    await this.elements.elapsedTimeColumnHeaderLabel.click();
   };
 
   clickHostHeader = async () => {
