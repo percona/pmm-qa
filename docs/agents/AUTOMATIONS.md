@@ -236,7 +236,7 @@ Delivery reuses the **relay bot**, so no MCP connector is needed in the Routine 
 
 **PR Maintainer (daily PR digest):**
 
-- [ ] Create a `blocked` label in `percona/pmm-qa` — the agent applies/removes it but won't create it.
+- [x] `blocked` label created in `percona/pmm-qa` (the agent applies/removes it, doesn't create it).
 - [ ] Add `ANNOUNCE_SECRET` to the relay `.env` and to the qa-linode environment (the Routine reads it to auth to `/announce`), then redeploy the relay so `POST /announce` is live.
 - [ ] `/invite @pmm-ai` into `#qa-automation`.
 - [ ] Create the daily **PR Maintainer** Routine (prompt: "Read `.claude/agents/pr-maintainer.md` and follow it", shared env, weekday-morning schedule).
