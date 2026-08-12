@@ -315,16 +315,28 @@ docker compose -f docker-compose-sharded.yaml exec -T rscfg01 pmm-admin add mong
 echo "adding some data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017
 
-echo "triggering chunk migrations so the chunk-move dashboards have data"
+echo "triggering chunk migrations and splits so the chunk-move/split dashboards have data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mongo "mongodb://root:root@localhost" --quiet --eval '
     var coll = db.getSiblingDB("config").collections.findOne({ _id: "test.test" });
     var shards = db.getSiblingDB("config").shards.find().toArray().map(function (s) { return s._id; });
     db.getSiblingDB("config").chunks.find({ uuid: coll.uuid }).forEach(function (chunk) {
         var target = shards.filter(function (s) { return s !== chunk.shard; })[0];
         if (target) {
-            sh.moveChunk("test.test", chunk.min, target);
+            try {
+                sh.moveChunk("test.test", chunk.min, target);
+            } catch (e) {
+                print("moveChunk failed, skipping: " + e);
+            }
         }
     });
+    var doc = db.getSiblingDB("test").test.findOne();
+    if (doc) {
+        try {
+            sh.splitFind("test.test", { _id: doc._id });
+        } catch (e) {
+            print("splitFind failed, skipping: " + e);
+        }
+    }
 '
 
 tests=${TESTS:-yes}
