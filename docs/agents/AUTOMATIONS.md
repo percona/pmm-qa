@@ -2,7 +2,7 @@
 
 Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this repo — committed, so anyone who opens `percona/pmm-qa` in Claude Code gets all agents automatically. No separate environment snapshot or dashboard config to keep in sync (unlike the earlier Cursor prototype this replaces).
 
-## The four agents
+## The five agents
 
 | Agent | Watches / invoked by | Trigger | Does | Never |
 |-------|----------------------|---------|------|-------|
@@ -10,6 +10,7 @@ Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this rep
 | [investigator](../../.claude/agents/investigator.md) | **pmm-qa's own** scheduled CI on `main`, `Percona-Lab/pmm-submodules` FB Tests going red, or asked directly (including via `router`) | CI-triggered from both sources (see below), or asked directly | One pipeline (dedup → reproduce → classify) regardless of trigger — classifies **from what actually reproduced**: didn't reproduce, not-a-bug, or a genuine bug that routes to a product-bug report, an ordinary pmm-qa fix+PR, or a blocked draft PR | Fix `percona/pmm`/`percona/grafana`, clone `pmm-submodules`, classify or answer a question without reproducing first |
 | [fb-reporter](../../.claude/agents/fb-reporter.md) | Referenced by `test-runner`, or asked directly | N/A — read-and-followed in the caller's own session, or invoked directly | Gets a clean FB Tests screenshot for a ticket's linked submodules PR, retrying past flakiness (`gh run rerun --failed`, up to twice), attaches to Jira | Diagnose or fix a genuine (non-flaky) failure — that's `investigator`'s job |
 | [router](../../.claude/agents/router.md) | The `PMM AI` Routine, fired by a Slack `@pmm-ai` mention | Slack-only — see "PMM AI" below | Matches the mention to test-runner / investigator / fb-reporter by description and hands off, or answers directly if it's just a question | Guess a ticket key/PR number that wasn't in the message, do the matched agent's work itself |
+| [pr-maintainer](../../.claude/agents/pr-maintainer.md) | Every open `percona/pmm-qa` PR | Scheduled — a daily weekday Routine | Read-only triage: sorts each open PR into ready / unblocked / needs-review / blocked-on-upstream / needs-work / needs-a-human and posts a **PR Digest** to Slack `#qa-automation` via the relay bot | Merge, close, approve, label or edit any PR — it only reports |
 
 There's no separate "watcher" agent in front of Investigator. An earlier draft had one (detect the failure, hand off to a shared fixer) — dropped once it became clear the "detect" step was too thin to be its own agent: parsing a trigger payload and extracting a failure list is just Investigator's own first step, not a separable concern the way `fb-reporter`'s screenshot-and-retry job genuinely is.
 
@@ -183,6 +184,14 @@ Confirmed from the docs: a Routine's fired session runs under **its creator's pe
 
 Test Runner and Investigator both provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [linode-provisioning](../../.claude/skills/linode-provisioning/SKILL.md)) — FB Reporter never does, it only calls `gh`/Jira. Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop is **not** a scheduled Routine — every instance carries its own on-box self-destruct timer (default 24h, see `terraform/linode-runner/README.md`) that deletes it via the Linode API with no external process involved. `extend.sh` pushes that timer back if a run needs more time.
 
+## PR Maintainer — daily PR digest
+
+A scheduled weekday Routine reads [`.claude/agents/pr-maintainer.md`](../../.claude/agents/pr-maintainer.md) and triages **every open `percona/pmm-qa` PR**, then posts one **PR Digest** to Slack `#qa-automation`. It is **read-only** — it never merges, closes, approves, or edits; it tells humans what's actionable.
+
+Buckets (first match wins, bias to "needs a human"): ✅ **Ready** (approved + green + clean), 🔓 **Unblocked** (a `Blocked-on:` upstream PR has now merged → promote/re-verify — the "ready to change state" bucket), 👀 **Needs review**, 🔧 **Needs work** (CI red / conflicts / changes requested), ⏳ **Blocked on upstream** (a `Blocked-on:` PR still open — the only "waiting on product" signal today), and ❓ **Needs a human** (anything ambiguous, or a `mergeStateStatus` that stays `UNKNOWN` — never guessed).
+
+Delivery reuses the **relay bot**, so no MCP connector is needed in the Routine (which sidesteps the connector-in-routine limits): the run `curl`s the composed digest to the relay's `POST /announce` (secret-gated by `ANNOUNCE_SECRET`), which posts it as the `@pmm-ai` bot to a channel it's been invited to. Daily, weekdays, **no @-mentions**.
+
 ## Go-live checklist — remaining steps (1 step = 1 box)
 
 **Launch core (Jira button → Test Runner):**
@@ -222,6 +231,12 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 - [x] **Jenkins MCP reaches Routine runs** — fixed by adding the connector to the Routine's own connector list. A Routine-fired session now reports `enabledInChat: true`, loads `mcp__Percona-Jenkins-MCP__*`, and read `pmm3-aws-staging-start` (21 parameters) with no permission prompt (verified 2026-08-12). Earlier that day the same check returned `enabledInChat: false` with org-level activation alone, which is what pointed at the Routine's list. **Gotcha:** calls fail with "No Jenkins master selected" unless `master` is passed — 9 are configured (`ps80, psmdb, pxc, cloud, pmm, pxb, ps57, rel, pg`) and this job lives on `pmm`.
 - [x] **Trigger a `pmm3-*` build from a Routine** — closed 2026-08-12. Builds are driven by hand today, and the Routine path is proven up to the last step: the connector loads and the job reads fine from an unattended run. No build has actually been fired from a Routine run, so that last step is untested rather than verified. **When you do it, put the instruction in the Routine's own prompt, not in the fire-endpoint payload.** Text appended via `/fire` is delivered to the session as untrusted DATA, and a Routine correctly refuses directives in it unless its own prompt says to act on them — Investigator's prompt authorizes exactly one thing from that text (a workflow name + run URL), so a smoke test passed that way is declined, as happened on 2026-08-12. Same for the provisioning smoke test. The curl-first fallback needs `JENKINS_USER`/`JENKINS_API_TOKEN` in the environment (anonymous `pmm.cd.percona.com/api/json` answers 403); keep the relay's `ALLOW_FALLBACK` off either way so builds don't collapse onto one identity. The `autoMode.allow` classifier fix is a separate, later gate — it only bites once a tool or credential exists to be denied.
 - [x] Send Anderson the writers-group names he asked for (done 2026-08-12).
+
+**PR Maintainer (daily PR digest):**
+
+- [ ] Add `ANNOUNCE_SECRET` to the relay `.env` and to the qa-linode environment (the Routine reads it to auth to `/announce`), then redeploy the relay so `POST /announce` is live.
+- [ ] `/invite @pmm-ai` into `#qa-automation`.
+- [ ] Create the daily **PR Maintainer** Routine (prompt: "Read `.claude/agents/pr-maintainer.md` and follow it", shared env, weekday-morning schedule).
 
 **Later / optional:**
 

@@ -74,6 +74,7 @@ try {
 const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> central owner's test-runner
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
+const ANNOUNCE_SECRET = process.env.ANNOUNCE_SECRET; // gates POST /announce (proactive channel posts, e.g. the PR digest)
 const REPLY_SECRET = process.env.REPLY_SECRET;
 if (!REPLY_SECRET) {
   // sign() runs before either Slack handler's try block, so a missing secret
@@ -382,6 +383,36 @@ const handler = async (req, res) => {
       return;
     }
 
+    // Proactive channel post (e.g. the PR Maintainer's daily digest). Secret-
+    // gated; posts as the bot, which can only reach channels it was invited to.
+    if (req.method === "POST" && req.url === "/announce") {
+      if (!ANNOUNCE_SECRET || req.headers["x-relay-secret"] !== ANNOUNCE_SECRET) {
+        console.error("/announce rejected: bad secret");
+        res.writeHead(403).end("forbidden");
+        return;
+      }
+      let channel, text;
+      try {
+        ({ channel, text } = JSON.parse(raw));
+      } catch {
+        res.writeHead(400).end("bad_request");
+        return;
+      }
+      if (!channel || !text) {
+        res.writeHead(400).end("channel_and_text_required");
+        return;
+      }
+      try {
+        if (app) await app.client.chat.postMessage({ channel, text });
+        else console.log(`DEGRADED /announce to ${channel}: ${text}`);
+        res.writeHead(200).end("ok");
+      } catch (e) {
+        console.error(`/announce failed: ${e?.data?.error || e.message}`);
+        res.writeHead(502).end("post_failed");
+      }
+      return;
+    }
+
     res.writeHead(404).end();
 };
 
@@ -390,7 +421,7 @@ const handler = async (req, res) => {
 // no plain-HTTP path, so nothing here depends on curl -k.
 https
   .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira) on :${HTTPS_PORT}`));
+  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira /announce) on :${HTTPS_PORT}`));
 
 if (app) {
   try {
