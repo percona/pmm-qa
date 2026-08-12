@@ -11,6 +11,16 @@ import { promisify } from "node:util";
 
 const { App } = pkg;
 const execFileP = promisify(execFile);
+
+// Slack Socket Mode can reject asynchronously on a background reconnect (e.g.
+// invalid_auth) OUTSIDE the try/catch around app.start(); unguarded that becomes
+// an unhandledRejection and takes the whole relay down, defeating the
+// endpoints-only fallback and killing /provision, /jira-act, /reply with it.
+// Keep the listeners serving and just log — a broken Slack must never stop the
+// HTTPS broker. (Sync bugs still crash, as they should.)
+process.on("unhandledRejection", (e) => {
+  console.error(`unhandledRejection (relay stays up): ${e?.stack || e?.message || e}`);
+});
 // The relay's own copy of the linode-runner module (cloned by deploy.sh), used
 // by /provision + /destroy so the LINODE_TOKEN never leaves this box.
 const RUNNER_DIR = process.env.RUNNER_DIR || "/opt/pmm-qa/terraform/linode-runner";
