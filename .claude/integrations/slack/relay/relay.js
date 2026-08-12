@@ -113,6 +113,31 @@ const TLS_KEY = process.env.TLS_KEY || "/opt/pmm-ai-relay/tls/key.pem";
 // will reject the self-signed origin cert — see README "Endpoints").
 const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 
+// Broker access control. Every /<service>/<action> call needs BOTH the shared
+// RELAY_KEY (possession) AND a verified GitHub identity (who you are) — a
+// leaked RELAY_KEY alone is useless without a team member's GitHub token. The
+// caller sends its GitHub token; the relay asks GitHub who it is (unspoofable),
+// then checks that login against RELAY_GH_ALLOW. Empty allowlist = any verified
+// GitHub user (identity still proven, just unrestricted) — set it to lock down.
+const GH_ALLOW = (process.env.RELAY_GH_ALLOW || "")
+  .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
+async function ghIdentity(req) {
+  const tok = req.headers["x-github-token"];
+  if (!tok) return { ok: false, code: 401, msg: "github_identity_required" };
+  let r;
+  try {
+    r = await fetch("https://api.github.com/user", {
+      headers: { Authorization: `Bearer ${tok}`, "User-Agent": "pmm-ai-relay", Accept: "application/vnd.github+json" },
+    });
+  } catch { return { ok: false, code: 502, msg: "github_unreachable" }; }
+  if (!r.ok) return { ok: false, code: 401, msg: "github_auth_failed" };
+  const login = String((await r.json()).login || "");
+  if (!login) return { ok: false, code: 401, msg: "github_auth_failed" };
+  if (GH_ALLOW.length && !GH_ALLOW.includes(login.toLowerCase()))
+    return { ok: false, code: 403, msg: "identity_not_authorized" };
+  return { ok: true, login };
+}
+
 // DEGRADED MODE: without real Slack tokens the relay still serves /health,
 // /jira, /route and /reply so every non-Slack flow can be exercised before
 // the app is approved — Slack-bound actions (reactions, thread replies)
@@ -299,6 +324,120 @@ app?.event("app_mention", async ({ event, body, client }) => {
   }
 });
 
+// ---- Broker service handlers -------------------------------------------
+// Each takes (action, body, by) where `by` is the VERIFIED GitHub login, and
+// returns {status, body, json?} — the dispatch in handler() writes the
+// response. All privileged actions live here behind one auth gate.
+
+async function brokerLinode(action, m, by) {
+  if (!process.env.LINODE_TOKEN) return { status: 503, body: "linode_not_configured" };
+  if (action === "provision") {
+    const { role, run_id, ttl_hours, pmm_qa_ref } = m;
+    if (!/^[A-Za-z0-9._-]+$/.test(String(role || ""))) return { status: 400, body: "bad_role" };
+    if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) return { status: 400, body: "bad_run_id" };
+    const args = [`${RUNNER_DIR}/up.sh`, String(role), String(run_id)];
+    if (ttl_hours != null && Number.isFinite(Number(ttl_hours))) args.push("-var", `ttl_hours=${Number(ttl_hours)}`);
+    const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: `relay:${by}` };
+    console.log(`linode/provision ${role} ${run_id} (ttl=${ttl_hours ?? 24}) by ${by}`);
+    try {
+      await execFileP("bash", args, { env, timeout: 480000, maxBuffer: 10 * 1024 * 1024 });
+      const rd = `${RUNNER_DIR}/runs/${run_id}`;
+      const ip = fs.readFileSync(`${rd}/ip`, "utf8").trim();
+      const exec_token = fs.readFileSync(`${rd}/exec_token`, "utf8").trim();
+      const exec_cert_pem = fs.readFileSync(`${rd}/exec_cert.pem`, "utf8"); // public cert, run.sh pins it
+      return { status: 200, json: true, body: JSON.stringify({ run_id, ip, exec_token, exec_cert_pem }) };
+    } catch (e) {
+      const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
+      console.error(`linode/provision failed: ${e.message}\n${tail}`);
+      return { status: 502, json: true, body: JSON.stringify({ error: "provision_failed", detail: tail }) };
+    }
+  }
+  if (action === "destroy") {
+    const { run_id } = m;
+    if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) return { status: 400, body: "bad_run_id" };
+    console.log(`linode/destroy ${run_id} by ${by}`);
+    try {
+      await execFileP("bash", [`${RUNNER_DIR}/down.sh`, String(run_id)], { env: process.env, timeout: 240000, maxBuffer: 10 * 1024 * 1024 });
+      return { status: 200, body: "ok" };
+    } catch (e) {
+      const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
+      console.error(`linode/destroy failed: ${e.message}\n${tail}`);
+      return { status: 502, json: true, body: JSON.stringify({ error: "destroy_failed", detail: tail }) };
+    }
+  }
+  return { status: 400, body: "unknown_action" };
+}
+
+async function brokerJira(action, m, by) {
+  if (!JIRA_EMAIL || !JIRA_API_TOKEN) return { status: 503, body: "jira_not_configured" };
+  const issue = m.issue;
+  if (!/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
+  const base = "https://perconadev.atlassian.net/rest/api/2";
+  const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+  const jira = (path, init = {}) =>
+    fetch(`${base}${path}`, { ...init, headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) } });
+  console.log(`jira/${action} ${issue} by ${by}`);
+  let r;
+  try {
+    if (action === "read") {
+      const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
+      r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);
+    } else if (action === "comment") {
+      // visibility FORCED to Developers regardless of caller input — never public.
+      r = await jira(`/issue/${issue}/comment`, { method: "POST", body: JSON.stringify({ body: String(m.body || ""), visibility: { type: "role", value: "Developers" } }) });
+    } else if (action === "field") {
+      r = await jira(`/issue/${issue}`, { method: "PUT", body: JSON.stringify({ fields: m.fields || {} }) });
+    } else if (action === "transitions") {
+      r = await jira(`/issue/${issue}/transitions`);
+    } else if (action === "transition") {
+      r = await jira(`/issue/${issue}/transitions`, { method: "POST", body: JSON.stringify({ transition: { id: String(m.transitionId) } }) });
+    } else if (action === "attach") {
+      const fd = new FormData();
+      fd.append("file", new Blob([Buffer.from(String(m.content_b64 || ""), "base64")]), String(m.filename || "evidence.png"));
+      r = await fetch(`${base}/issue/${issue}/attachments`, { method: "POST", headers: { Authorization: auth, "X-Atlassian-Token": "no-check" }, body: fd });
+    } else {
+      return { status: 400, body: "unknown_action" };
+    }
+    return { status: r.status, json: true, body: (await r.text()) || "{}" };
+  } catch (e) {
+    console.error(`jira/${action} failed: ${e.message}`);
+    return { status: 502, body: "jira_upstream_error" };
+  }
+}
+
+async function brokerSlack(action, m, by) {
+  console.log(`slack/${action} by ${by}`);
+  try {
+    if (action === "announce") {
+      // fresh top-level message (starts a thread); the bot only reaches channels it was invited to.
+      const { channel, text } = m;
+      if (!channel || !text) return { status: 400, body: "channel_and_text_required" };
+      if (app) await app.client.chat.postMessage({ channel, text });
+      else console.log(`DEGRADED slack/announce ${channel}: ${text}`);
+      return { status: 200, body: "ok" };
+    }
+    if (action === "post") {
+      // reply into an existing thread by ts (no HMAC cap — this is the identity-gated broker path).
+      const { channel, thread_ts, text } = m;
+      if (!channel || !thread_ts || !text) return { status: 400, body: "channel_thread_ts_text_required" };
+      if (app) await app.client.chat.postMessage({ channel, thread_ts, text });
+      else console.log(`DEGRADED slack/post ${channel}/${thread_ts}: ${text}`);
+      return { status: 200, body: "ok" };
+    }
+    if (action === "history") {
+      const { channel, thread_ts, limit } = m;
+      if (!channel || !thread_ts) return { status: 400, body: "channel_and_thread_ts_required" };
+      if (!app) return { status: 503, body: "slack_degraded" };
+      const rr = await app.client.conversations.replies({ channel, ts: thread_ts, limit: Number(limit) || 50 });
+      return { status: 200, json: true, body: JSON.stringify({ messages: rr.messages.map((x) => ({ from: x.bot_id ? "PMM AI" : x.user, text: x.text, ts: x.ts })) }) };
+    }
+    return { status: 400, body: "unknown_action" };
+  } catch (e) {
+    console.error(`slack/${action} failed: ${e?.data?.error || e.message}`);
+    return { status: 502, body: "slack_upstream_error" };
+  }
+}
+
 const MAX_BODY_BYTES = 64 * 1024; // relay payloads are tiny JSON; reject anything larger
 const handler = async (req, res) => {
     req.setTimeout(15_000, () => req.destroy()); // don't let a slow client hold the socket open
@@ -401,151 +540,26 @@ const handler = async (req, res) => {
       return;
     }
 
-    // Bot posts a FRESH top-level message to a channel (starts a new thread) —
-    // the general path for any proactive post, e.g. the PR Maintainer digest.
-    // Distinct from /reply, which needs an HMAC cap bound to an EXISTING thread;
-    // this has no thread to bind to, so it's a plain secret-gated bearer call.
-    // The bot can still only reach channels it was invited to.
-    if (req.method === "POST" && req.url === "/announce") {
-      if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) {
-        console.error("/announce rejected: bad secret");
-        res.writeHead(403).end("forbidden");
-        return;
-      }
-      let channel, text;
-      try {
-        ({ channel, text } = JSON.parse(raw));
-      } catch {
-        res.writeHead(400).end("bad_request");
-        return;
-      }
-      if (!channel || !text) {
-        res.writeHead(400).end("channel_and_text_required");
-        return;
-      }
-      try {
-        if (app) await app.client.chat.postMessage({ channel, text });
-        else console.log(`DEGRADED /announce to ${channel}: ${text}`);
-        res.writeHead(200).end("ok");
-      } catch (e) {
-        console.error(`/announce failed: ${e?.data?.error || e.message}`);
-        res.writeHead(502).end("post_failed");
-      }
-      return;
-    }
-
-    // Jira broker: agents perform a FIXED set of ops on an EXISTING PMM ticket
-    // using the relay's service-account token — the token never leaves here.
-    // Scoped to the PMM project; comment visibility is FORCED to Developers, so
-    // the caller can never post a public comment. No create, no delete.
-    if (req.method === "POST" && req.url === "/jira-act") {
-      if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) {
-        res.writeHead(403).end("forbidden");
-        return;
-      }
-      let m;
-      try { m = JSON.parse(raw); } catch { res.writeHead(400).end("bad_request"); return; }
-      const { op, issue, by } = m;
-      if (!JIRA_EMAIL || !JIRA_API_TOKEN) { res.writeHead(503).end("jira_not_configured"); return; }
-      if (!/^PMM-\d+$/.test(issue || "")) { res.writeHead(400).end("issue_must_be_a_PMM_key"); return; }
-      const base = "https://perconadev.atlassian.net/rest/api/2";
-      const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
-      const jira = (path, init = {}) =>
-        fetch(`${base}${path}`, {
-          ...init,
-          headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) },
-        });
-      console.log(`jira-act ${op} ${issue} by ${by || "?"}`);
-      try {
-        let r;
-        if (op === "read") {
-          const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
-          r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);
-        } else if (op === "comment") {
-          // visibility is FORCED regardless of caller input — never public.
-          r = await jira(`/issue/${issue}/comment`, {
-            method: "POST",
-            body: JSON.stringify({ body: String(m.body || ""), visibility: { type: "role", value: "Developers" } }),
-          });
-        } else if (op === "field") {
-          r = await jira(`/issue/${issue}`, { method: "PUT", body: JSON.stringify({ fields: m.fields || {} }) });
-        } else if (op === "transitions") {
-          r = await jira(`/issue/${issue}/transitions`);
-        } else if (op === "transition") {
-          r = await jira(`/issue/${issue}/transitions`, { method: "POST", body: JSON.stringify({ transition: { id: String(m.transitionId) } }) });
-        } else if (op === "attach") {
-          const fd = new FormData();
-          fd.append("file", new Blob([Buffer.from(String(m.content_b64 || ""), "base64")]), String(m.filename || "evidence.png"));
-          r = await fetch(`${base}/issue/${issue}/attachments`, {
-            method: "POST",
-            headers: { Authorization: auth, "X-Atlassian-Token": "no-check" },
-            body: fd,
-          });
-        } else {
-          res.writeHead(400).end("unknown_op");
-          return;
-        }
-        const text = await r.text();
-        res.writeHead(r.status, { "Content-Type": "application/json" }).end(text || "{}");
-      } catch (e) {
-        console.error(`/jira-act failed: ${e.message}`);
-        res.writeHead(502).end("jira_upstream_error");
-      }
-      return;
-    }
-
-    // Provision broker: the relay runs the linode-runner up.sh with its own
-    // LINODE_TOKEN and keeps the terraform state, returning only {ip, exec_token}
-    // — a per-run, throwaway-VM-scoped credential. The account token never
-    // leaves here. Long op (~3 min): raise the socket timeout for this request.
-    if (req.method === "POST" && req.url === "/provision") {
+    // Broker: POST /<service>/<action> — one gate, one dispatch for every
+    // privileged action (linode/jira/slack). Requires BOTH the shared RELAY_KEY
+    // (possession) AND a verified GitHub identity (who you are): the caller's
+    // GitHub token is checked against GitHub itself, so `by` is unspoofable and
+    // an unknown identity is refused even with a valid RELAY_KEY. The old
+    // /announce, /jira-act, /provision, /destroy all live here now.
+    const bm = req.method === "POST" && /^\/(linode|jira|slack)\/([a-z-]+)$/.exec(req.url);
+    if (bm) {
+      const [, service, action] = bm;
       if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) { res.writeHead(403).end("forbidden"); return; }
+      const id = await ghIdentity(req);
+      if (!id.ok) { res.writeHead(id.code).end(id.msg); return; }
       let m;
-      try { m = JSON.parse(raw); } catch { res.writeHead(400).end("bad_request"); return; }
-      const { role, run_id, ttl_hours, pmm_qa_ref, by } = m;
-      if (!process.env.LINODE_TOKEN) { res.writeHead(503).end("linode_not_configured"); return; }
-      if (!/^[A-Za-z0-9._-]+$/.test(String(role || ""))) { res.writeHead(400).end("bad_role"); return; }
-      if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) { res.writeHead(400).end("bad_run_id"); return; }
-      req.setTimeout(600000);
-      const args = [`${RUNNER_DIR}/up.sh`, String(role), String(run_id)];
-      if (ttl_hours != null && Number.isFinite(Number(ttl_hours))) args.push("-var", `ttl_hours=${Number(ttl_hours)}`);
-      const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: String(by || "relay") };
-      console.log(`provision ${role} ${run_id} (ttl=${ttl_hours ?? 24}) by ${by || "?"}`);
-      try {
-        await execFileP("bash", args, { env, timeout: 480000, maxBuffer: 10 * 1024 * 1024 });
-        const rd = `${RUNNER_DIR}/runs/${run_id}`;
-        const ip = fs.readFileSync(`${rd}/ip`, "utf8").trim();
-        const exec_token = fs.readFileSync(`${rd}/exec_token`, "utf8").trim();
-        // exec_cert is the box's public self-signed cert (run.sh pins it); not a secret.
-        const exec_cert_pem = fs.readFileSync(`${rd}/exec_cert.pem`, "utf8");
-        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ run_id, ip, exec_token, exec_cert_pem }));
-      } catch (e) {
-        const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
-        console.error(`/provision failed: ${e.message}\n${tail}`);
-        res.writeHead(502, { "Content-Type": "application/json" })
-          .end(JSON.stringify({ error: "provision_failed", detail: tail }));
-      }
-      return;
-    }
-
-    // Destroy broker: tears down a run the relay provisioned (state lives here).
-    if (req.method === "POST" && req.url === "/destroy") {
-      if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) { res.writeHead(403).end("forbidden"); return; }
-      let m;
-      try { m = JSON.parse(raw); } catch { res.writeHead(400).end("bad_request"); return; }
-      const { run_id, by } = m;
-      if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) { res.writeHead(400).end("bad_run_id"); return; }
-      req.setTimeout(300000);
-      console.log(`destroy ${run_id} by ${by || "?"}`);
-      try {
-        await execFileP("bash", [`${RUNNER_DIR}/down.sh`, String(run_id)], { env: process.env, timeout: 240000, maxBuffer: 10 * 1024 * 1024 });
-        res.writeHead(200).end("ok");
-      } catch (e) {
-        const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
-        console.error(`/destroy failed: ${e.message}\n${tail}`);
-        res.writeHead(502, { "Content-Type": "application/json" })
-          .end(JSON.stringify({ error: "destroy_failed", detail: tail }));
-      }
+      try { m = raw ? JSON.parse(raw) : {}; } catch { res.writeHead(400).end("bad_request"); return; }
+      if (service === "linode") req.setTimeout(600000); // provision/destroy are long ops
+      const out =
+        service === "linode" ? await brokerLinode(action, m, id.login)
+        : service === "jira" ? await brokerJira(action, m, id.login)
+        : await brokerSlack(action, m, id.login);
+      res.writeHead(out.status, out.json ? { "Content-Type": "application/json" } : {}).end(out.body);
       return;
     }
 
@@ -557,7 +571,7 @@ const handler = async (req, res) => {
 // no plain-HTTP path, so nothing here depends on curl -k.
 https
   .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira /announce /jira-act /provision /destroy) on :${HTTPS_PORT}`));
+  .listen(HTTPS_PORT, () => console.log(`HTTPS up on :${HTTPS_PORT} — plumbing (/health /reply /route /jira) + broker /<linode|jira|slack>/<action> (RELAY_KEY + GitHub identity)`));
 
 if (app) {
   try {
