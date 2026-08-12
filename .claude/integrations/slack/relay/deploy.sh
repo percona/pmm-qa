@@ -15,6 +15,10 @@ PEOPLE_DIR_IN=${2:-}
 PUBKEY_FILE=${3:-}
 HERE=$(cd "$(dirname "$0")" && pwd)
 LABEL=${RELAY_LABEL:-pmm-ai-relay}
+# relay.js is pulled from the pmm-qa clone on the box (see runcmd), NOT baked
+# into cloud-init -- it outgrew Linode's 16KB user_data cap. REF picks the ref
+# that clone checks out (default main; set PMM_QA_REF to test a branch).
+REF=${PMM_QA_REF:-main}
 
 b64() { base64 < "$1" | tr -d '\n'; }  # single line on both GNU (-w0) and BSD base64
 
@@ -42,10 +46,6 @@ CLOUD_INIT=$(mktemp)
 cat > "$CLOUD_INIT" <<EOF
 #cloud-config
 write_files:
-  - path: /opt/pmm-ai-relay/relay.js
-    permissions: "0644"
-    encoding: b64
-    content: $(b64 "$HERE/relay.js")
   - path: /opt/pmm-ai-relay/.env
     permissions: "0600"
     encoding: b64
@@ -77,7 +77,9 @@ runcmd:
   # terraform + the pmm-qa module so /provision + /destroy can run linode-runner
   # here (the LINODE_TOKEN stays on this box, never in the shared Claude env)
   - curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/tf.zip && unzip -o /tmp/tf.zip -d /usr/local/bin && rm -f /tmp/tf.zip
-  - git clone --depth 1 https://github.com/percona/pmm-qa.git /opt/pmm-qa
+  - git clone --depth 1 --branch __PMM_QA_REF__ https://github.com/percona/pmm-qa.git /opt/pmm-qa || git clone --depth 1 https://github.com/percona/pmm-qa.git /opt/pmm-qa
+  # relay.js comes from the clone (not baked -- keeps user_data under 16KB)
+  - cp /opt/pmm-qa/.claude/integrations/slack/relay/relay.js /opt/pmm-ai-relay/relay.js
   # Derive this box's OWN hostname (Linode rDNS <ip-dashes>.ip.linodeusercontent.com)
   # so the same image works for any relay IP -- not pinned to one reserved IP.
   # One shell block so $HOST persists; certbot validates over public HTTP-01.
@@ -96,8 +98,12 @@ runcmd:
   - systemctl enable --now pmm-ai-relay
 EOF
 
+# Bake the chosen ref into the runcmd clone (heredoc above is single-quoted).
+sed -i "s|__PMM_QA_REF__|$REF|g" "$CLOUD_INIT"
+
 # gzip: Linode caps decoded user_data at 16KB and cloud-init transparently
-# handles gzipped input; the embedded relay.js pushes the plain form past the cap
+# handles gzipped input. relay.js is fetched from the clone (not baked) to stay
+# under that cap; only .env + the unit are baked here.
 USER_DATA=$(gzip -9 -c "$CLOUD_INIT" | { base64 -w0 2>/dev/null || base64; })
 # Keep the team's known root password across rebuilds: export RELAY_ROOT_PASS
 # (from the LastPass "PMM" folder) before running. Only generates a fresh one
