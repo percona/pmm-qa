@@ -229,6 +229,19 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 
 ## Go-live checklist — remaining steps (1 step = 1 box)
 
+**Relay broker — move secrets off the shared env:**
+
+- [x] Consolidated the broker to one `POST /<service>/<action>` dispatch (`/linode`, `/jira`, `/slack`), replacing `/announce`, `/jira-act`, `/provision`, `/destroy` (2026-08-12)
+- [x] `/linode/provision` → `{ip, exec_token, exec_cert_pem}`, `/linode/destroy`, `/jira/read` validated end-to-end on a staging relay; identity gate rejects no-`X-Actor` (401), non-roster actor (403), wrong `RELAY_KEY` (403) (2026-08-12)
+- [x] `versions.tf` `skip_instance_*_poll` so `down.sh`/`/linode/destroy` works with a Linodes+Firewalls-only token (2026-08-12)
+- [x] `SessionEnd` hook rewired to `/linode/destroy` + keep-alive skip; `jira`/`linode-provisioning` skills and `pr-maintainer` call the new endpoints with `X-Actor` (2026-08-12)
+- [x] Identity settled on a single `X-Actor` mechanism, roster read from the people files — no `RELAY_GH_ALLOW`/`RELAY_IDENTITY_MODE` env vars (2026-08-12)
+- [ ] **Delete the stray `pmm-ai-id/test-6c3651be` branch** on `percona/pmm-qa` (left by a force-push test; the proxy blocks ref-delete, so it needs a non-proxy hand)
+- [ ] **Add each teammate's `github` login** to their `people/<name>.json` (the broker roster)
+- [ ] **Deploy the current relay to relay-1** (`139.162.176.43`) and set `RELAY_KEY` in its `.env`
+- [ ] **Set `RELAY_KEY` in the qa-linode environment** (the only new shared-env var)
+- [ ] **Remove `LINODE_TOKEN` and `JIRA_*` from the shared env** — the last step; do it only after the relay is confirmed serving
+
 **Launch core (Jira button → Test Runner):**
 
 - [x] ~~Before merging #1143 — hand-fix its `.claude/settings.json` linode-runner rules~~ — superseded: we since learned the real gate in Routine runs is the auto-mode classifier + multi-repo settings loading (see the classifier finding below), not those allow rules.
