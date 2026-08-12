@@ -510,8 +510,10 @@ const handler = async (req, res) => {
         const exec_cert_pem = fs.readFileSync(`${rd}/exec_cert.pem`, "utf8");
         res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ run_id, ip, exec_token, exec_cert_pem }));
       } catch (e) {
-        console.error(`/provision failed: ${e.message}`);
-        res.writeHead(502).end("provision_failed");
+        const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
+        console.error(`/provision failed: ${e.message}\n${tail}`);
+        res.writeHead(502, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ error: "provision_failed", detail: tail }));
       }
       return;
     }
@@ -529,8 +531,10 @@ const handler = async (req, res) => {
         await execFileP("bash", [`${RUNNER_DIR}/down.sh`, String(run_id)], { env: process.env, timeout: 240000, maxBuffer: 10 * 1024 * 1024 });
         res.writeHead(200).end("ok");
       } catch (e) {
-        console.error(`/destroy failed: ${e.message}`);
-        res.writeHead(502).end("destroy_failed");
+        const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
+        console.error(`/destroy failed: ${e.message}\n${tail}`);
+        res.writeHead(502, { "Content-Type": "application/json" })
+          .end(JSON.stringify({ error: "destroy_failed", detail: tail }));
       }
       return;
     }
