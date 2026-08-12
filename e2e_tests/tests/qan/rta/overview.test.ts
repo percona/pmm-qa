@@ -187,6 +187,21 @@ pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnal
 });
 
 pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAnalytics }, testInfo) => {
+  const dynamicHeader = 'future_export_field';
+  const dynamicValue = 'future-export-value';
+
+  await page.route(`**${queryAnalytics.rta.apiEndpoint}`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { queries?: Record<string, unknown>[] };
+
+    for (const query of body.queries ?? []) {
+      query[dynamicHeader] = dynamicValue;
+    }
+
+    await route.fulfill({ body: JSON.stringify(body), contentType: 'application/json', response });
+  });
+  await page.reload();
+
   await pmmTest.step('Verify export is hidden while real-time updates are running', async () => {
     await expect(queryAnalytics.rta.buttons.pauseRealTimeAnalytics).toBeVisible();
     await expect(queryAnalytics.rta.buttons.export).toBeHidden();
@@ -232,13 +247,45 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
 
     const csvContent = await readFile(csvPath, 'utf8');
     const csvOperationIds = Array.from(csvContent.matchAll(/^"(\d+)",/gm), (match) => match[1]);
+    const headerRow = csvContent.split('\n')[0];
+    const headers = Array.from(headerRow.matchAll(/"([^"]*)"/g), (match) => match[1]);
 
-    expect(csvContent).toContain('operation_id');
-    expect(csvContent).toContain('elapsed_exec_time_sec');
-    expect(csvContent).toContain('plan_summary');
-    expect(csvContent).toContain('raw_query');
     expect(csvOperationIds).toHaveLength(uiOperationIds.length);
     expect(csvOperationIds).toEqual(uiOperationIds);
+
+    expect(headers).toEqual(
+      expect.arrayContaining([
+        'operation_id',
+        'elapsed_exec_time_sec',
+        'db_instance_address',
+        'client_address',
+        'database_name',
+        'service',
+        'user_name',
+        'collection',
+        'operation',
+        'plan_summary',
+        'client_app_name',
+        'operation_start_time',
+        'data_capture_time',
+        'raw_query',
+        'service_id',
+        'query_text',
+      ]),
+    );
+    expect(headers.every((header) => /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(header))).toBe(true);
+    expect(headers).toContain(dynamicHeader);
+    expect(csvContent).toContain(dynamicValue);
+    expect(headers).not.toContain('query_execution_duration');
+  });
+
+  await page.unroute(`**${queryAnalytics.rta.apiEndpoint}`);
+
+  await pmmTest.step('Verify export is disabled when no rows match the filter', async () => {
+    await queryAnalytics.rta.inputs.filterByQueryText.fill('no-such-rta-query');
+
+    await expect(queryAnalytics.rta.elements.noQueriesAvailable).toBeVisible();
+    await expect(queryAnalytics.rta.buttons.export).toBeDisabled();
   });
 });
 
