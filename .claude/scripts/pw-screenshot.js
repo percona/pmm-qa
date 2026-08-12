@@ -19,6 +19,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { chromium } = require("playwright");
 const { spkiPinFromCertFile } = require("./lib/spki-pin");
+const { proxyLaunchOptions } = require("./lib/proxy");
 
 async function main() {
   const [, , url, outputPath, sessionId] = process.argv;
@@ -67,14 +68,54 @@ async function main() {
   // /opt/pw-browsers can drift from what a freshly `npm install`-ed
   // playwright expects (confirmed live), so don't rely on Playwright's own
   // bundled-browser resolution to find it.
+  const proxyOpts = proxyLaunchOptions();
   const browser = await chromium.launch({
     executablePath: "/opt/pw-browsers/chromium",
-    args: launchArgs,
+    args: [...launchArgs, ...proxyOpts.args],
+    proxy: proxyOpts.proxy,
   });
   const context = await browser.newContext(contextOpts);
   const page = await context.newPage();
 
+  // Same stub pmm-ui-login.js installs: without it PMM pops an "Update to
+  // PMM x.y.z" modal over the page, which lands in the middle of every
+  // evidence screenshot. Never matches non-PMM URLs.
+  await page.route("**/v1/server/updates?force=**", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        installed: {},
+        last_check: new Date().toISOString(),
+        latest: {},
+        update_available: false,
+      }),
+    }),
+  );
+
   await page.goto(url, { waitUntil: "networkidle" });
+
+  // "networkidle" is not enough for Grafana: PMM serves an app shell that
+  // reports idle while still showing "Loading Percona Monitoring and
+  // Management", so a screenshot here captures the splash instead of the
+  // dashboard. Wait for something that only exists once the app has painted,
+  // then let panels settle.
+  const waitSelector = process.env.PW_WAIT_SELECTOR;
+  if (waitSelector) {
+    await page.waitForSelector(waitSelector, { timeout: 60000 });
+  } else {
+    await page
+      .waitForFunction(
+        () => !document.body.innerText.includes("Loading Percona Monitoring and Management"),
+        { timeout: 60000 },
+      )
+      .catch(() => {}); // non-PMM URLs never show the splash -- not an error
+  }
+  const settleMs = Number(process.env.PW_SETTLE_MS || 3000);
+  if (settleMs > 0) {
+    await page.waitForTimeout(settleMs);
+  }
+
   fs.mkdirSync(path.dirname(path.resolve(outputPath)), { recursive: true });
   await page.screenshot({ path: outputPath, fullPage: true });
 

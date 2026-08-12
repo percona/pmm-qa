@@ -21,7 +21,7 @@ In any Claude Code session on this repo, just ask in natural language — "pleas
 
 ## Running Test Runner from Slack
 
-Not Claude Tag (the official Slack app) — it pairs one Slack workspace to one Claude org, and this project's Claude identity isn't the one already paired to the team's workspace. Slack triggering here goes through the custom **`@pmm-ai`** app instead (design in [`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md), not built yet): someone mentions `@pmm-ai`, the relay fires the single `PMM AI` Routine, and that session reads [`router.md`](../../.claude/agents/router.md) and follows it — Router is the one that decides this particular mention means Test Runner, then reads `test-runner.md` and follows it in the same session. A mention never goes straight to Test Runner on its own; it always goes through Router first. See "PMM AI" below.
+Not Claude Tag (the official Slack app) — it pairs one Slack workspace to one Claude org, and this project's Claude identity isn't the one already paired to the team's workspace. Slack triggering here goes through the custom **`@pmm-ai`** app + relay instead (built — the app awaits admin approval; ops in [`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md)): a **registered** person mentions `@pmm-ai`, the relay fires the central `PMM AI` Routine, which reads [`router.md`](../../.claude/agents/router.md) and only *evaluates and routes* — if the ask fits one of the caller's own routines (e.g. their Test Runner), it hands off through the relay's `/route` endpoint and the work runs **on the caller's own account**; off-topic asks get a short decline, and unregistered users are answered by the relay itself at zero AI cost. A mention never goes straight to Test Runner; it always passes through Router first. See "PMM AI" below for the full picture.
 
 ## Running Test Runner from Jira
 
@@ -117,41 +117,63 @@ flowchart LR
 
 The retry loop caps at 2 total re-checks. Still red after that stops here on purpose — diagnosing or fixing it is Investigator's job, not FB Reporter's.
 
-## PMM AI — custom Slack app (design only, not built yet)
+## PMM AI — custom Slack app + relay (built; app awaiting Slack admin approval)
 
 Claude Tag can't have a second identity in a workspace already paired to
-another Claude org, so mention-based Slack triggering for this project
-needs its own small app, `@pmm-ai`. Full design — manifest, Socket Mode
-relay, the channel-to-routine routing table, and how replies post as the
-bot instead of a person — is in
-[`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md).
-The `PMM AI` Routine's own prompt is deliberately thin — "read
-[`router.md`](../../.claude/agents/router.md) and follow it" — all the
-actual mention-to-agent matching lives in that file, not duplicated into
-the Routine's prompt or into a mega-prompt trying to guess intent itself.
-Nothing here is deployed: the app isn't created in Slack yet, no relay
-process exists, and the `PMM AI` Routine itself hasn't been created either
-(routines only get created/changed here when explicitly asked for).
+another Claude org, so Slack triggering for this project uses its own small
+app, `@pmm-ai`, plus a relay on the `pmm-ai-relay` Linode. Everything is
+built and deployed except the Slack app itself, which needs workspace admin
+approval — created from
+[`.claude/integrations/slack/manifest.yaml`](../../.claude/integrations/slack/manifest.yaml)
+(Socket Mode, read-only events + `chat:write`/`reactions:write`; full ops
+docs in
+[`.claude/integrations/slack/README.md`](../../.claude/integrations/slack/README.md)).
 
-### PMM AI / Router flow
+**What the Slack app is and isn't** (the approval-relevant part): it holds no
+credentials to anything outside Slack, exposes no public URL (Socket Mode =
+outbound-only connection from our server), and can only read messages in
+channels it is explicitly invited to, react (👀 received / ✅ done), and
+reply in threads. All AI work happens in Claude Code Routines on the
+existing QA account(s); the app is just the doorbell and the mailbox.
+
+### PMM AI flow — three entry points, one relay
+
+Purple = the Slack app being requested. Everything else already exists and
+works without it.
+
+**1 — `@pmm-ai` mention** (the app delivers the mention and posts the replies):
 
 ```mermaid
 flowchart LR
-    A["Someone @mentions\n@pmm-ai in Slack"] --> B["Relay picks up\nthe mention"]
-    B -.->|"fires the single\n'PMM AI' Routine"| C["Session reads router.md,\nfollows it"]
-    C --> D{"Router matches\nthe message"}
-    D -->|"Test Runner"| D1[["Session becomes Test Runner\n— see its own diagram above"]]
-    D -->|"Investigator"| D2[["Session becomes Investigator\n— see its own diagram above"]]
-    D -->|"FB Reporter"| D3[["Session becomes FB Reporter\n— see its own diagram above"]]
-    D -->|"Just a question"| D4["Router answers directly,\nno hand-off"]
-    D1 --> E["Reply goes back through\nthe relay's /reply endpoint"]
-    D2 --> E
-    D3 --> E
-    D4 --> E
-    E --> F["Relay posts in Slack\nas 'PMM AI'"]
+    A["@pmm-ai mention"]:::slack --> B{"Relay:\nsender registered?"}
+    B -->|no| C["Bot replies\n'not registered'\n(zero AI cost)"]:::slack
+    B -->|yes| D["PMM AI router Routine\nevaluates the ask only"]
+    D -->|off-topic| E["Bot replies,\npolitely declining"]:::slack
+    D -->|fits| F["Caller's OWN Routine\n(test-runner / investigator)\nruns on THEIR account"]
+    F --> G["Bot posts the outcome\nin the thread, adds ✅"]:::slack
+    classDef slack fill:#611f69,color:#fff
 ```
 
-The double-bordered boxes (D1–D3) are hand-offs, not sub-flows drawn twice — once matched, the rest is literally the diagram above for that agent. Only D4 (a plain question) skips all of that. A suspected customer bug report lands in D2 — Investigator's own question/suspected-bug branch, not a separate triage agent.
+**2 — watched alerts channel** (future; the app delivers the messages):
+
+```mermaid
+flowchart LR
+    A["New message in the\nwatched channel"]:::slack --> B["Relay"] --> C["Investigator Routine\n(QA owner's account)"] --> D["Bot posts findings\nin the thread"]:::slack
+    classDef slack fill:#611f69,color:#fff
+```
+
+**3 — Jira ticket button** (works with no Slack app at all):
+
+```mermaid
+flowchart LR
+    A["Person clicks the\nticket's action button"] --> B["One shared Automation rule\nPOST /jira + secret"] --> C["Relay maps the initiator\nto their own Test Runner"] --> D["QA runs on the\ninitiator's account"] --> E["Developers-only\nJira comment, as them"]
+```
+
+The app itself holds no credentials to anything outside Slack, has no public
+URL (Socket Mode — outbound connection only), and can only read channels it
+is invited to, react 👀/✅, and reply in threads. All routine tokens stay on
+the relay server; all AI work runs in Claude Code Routines on the team's own
+accounts.
 
 ## Routine ownership — read before relying on this
 
@@ -161,23 +183,112 @@ Confirmed from the docs: a Routine's fired session runs under **its creator's pe
 
 Test Runner and Investigator both provision a throwaway Linode VM per run (`terraform/linode-runner/`, see [linode-provisioning](../../.claude/skills/linode-provisioning/SKILL.md)) — FB Reporter never does, it only calls `gh`/Jira. Primary cleanup is the agent calling `down.sh` as its last step, on every exit path. The backstop is **not** a scheduled Routine — every instance carries its own on-box self-destruct timer (default 24h, see `terraform/linode-runner/README.md`) that deletes it via the Linode API with no external process involved. `extend.sh` pushes that timer back if a run needs more time.
 
-## Go-live checklist
+## Go-live checklist — remaining steps (1 step = 1 box)
+
+**Launch core (Jira button → Test Runner):**
+
+- [x] ~~Before merging #1143 — hand-fix its `.claude/settings.json` linode-runner rules~~ — superseded: we since learned the real gate in Routine runs is the auto-mode classifier + multi-repo settings loading (see the classifier finding below), not those allow rules.
+- [x] Merge [PR #1143](https://github.com/percona/pmm-qa/pull/1143) — merged 2026-08-10
+- [x] After merge: made a trivial edit to the qa-linode environment's setup script — forced the settings cache to rebuild now instead of waiting ~7 days (done 2026-08-10)
+- [ ] Merge [Percona-Lab/pmm-submodules#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511) (its secret is already in place)
+
+**Slack app + relay (in order):**
+
+- [x] Reserved the relay's public IP `139.162.176.43` (Frankfurt, tag `pmm-ai`) 2026-08-08 — survives delete/rebuild, so the hostname + Let's Encrypt cert stay valid and the endpoint can't be reassigned to a stranger
+- [x] **Jira service account from IT** — done (2026-08-11): a dedicated "PMM QA Bot" account with only the PMM-project permissions the REST fallback needs (read issues, add Developers-restricted comments, add attachments, edit fields, transition); its `JIRA_EMAIL`/`JIRA_API_TOKEN` are set in the environment. This was blocking for team rollout — env vars are shared across everyone in the environment, so without a service account every bot comment would post as *one real person's* identity (whoever's token is set) and per-person onboarding couldn't give each teammate their own Jira identity. The service account keeps QA comments neutral and decoupled from any individual.
+- [ ] Use a **restricted Linode PAT** (Linodes + Firewalls R/W only, not a full-access personal token) for `LINODE_TOKEN` — also plaintext-visible to env users
+- [x] Relay infrastructure verified end-to-end 2026-08-07 (Linode up, Let's Encrypt cert trusted through the session egress proxy, /health 200, /reply and /jira auth gates 403, davi.json loaded, crash-on-bad-token fixed)
+- [x] Create the Slack app from `manifest.yaml` (done 2026-08-08)
+- [ ] Request admin approval and install the app to the workspace
+- [ ] Generate the App-Level Token (`xapp-`): app page → Basic Information → App-Level Tokens → Generate, scope `connections:write`
+- [ ] Copy the Bot Token (`xoxb-`): app page → OAuth & Permissions → Bot User OAuth Token
+- [x] Generate the PMM AI routine's API token (done 2026-08-07, stored in the LastPass **PMM** note)
+- [x] Get the Test Runner routine's token (done 2026-08-07, stored in the LastPass **PMM** note)
+- [ ] Give a Claude session on this repo the 2 Slack app tokens + the routine tokens and root password from the LastPass note, and ask it to finish the relay setup — it rebuilds the server with the completed `.env` baked in (no SSH, no LastPass CLI needed)
+- [ ] Update the LastPass **PMM** Secure Note `pmm-ai-relay.env` with the final completed `.env` (after the app tokens exist)
+- [ ] `/invite @pmm-ai` into a test channel, mention it — expect 👀, then a reply
+- [ ] Update the **Jira Button automation** to the new request: POST `https://139-162-176-43.ip.linodeusercontent.com/jira`, header `X-Relay-Secret: <JIRA_RELAY_SECRET from the .env>`, body `{"accountId":"{{initiator.accountId}}","text":"<ticket key + what to do>"}`, "Wait for response" ON
+- [ ] In the same rule, add a condition `{{webResponse.status}} == 404` → Add comment telling the initiator they are not onboarded yet (404 is ONLY not-registered; other errors mean relay/platform trouble, not a user problem)
+- [ ] Click the Jira button on a test ticket and confirm the run starts under your Test Runner
+
+**Jenkins access (staging builds from agents):**
+
+> A Jenkins MCP gateway already runs in prod (`https://jenkins-mcp.cd.percona.com/mcp`), auth via Percona SSO + Duo. It works as a claude.ai org connector in interactive sessions, but org connectors stall on the approval prompt inside Routines.
+
+- [ ] **Add the Jenkins connector in claude.ai admin** (org-owner): URL `https://jenkins-mcp.cd.percona.com/mcp`, client ID `jenkins-mcp` (Advanced settings), secret blank. Then each person connects it in their own claude.ai.
+- [ ] Check if [`percona/percona-cd-platform` #403](https://github.com/percona/percona-cd-platform/pull/403) is merged — it whitelists claude.ai's OAuth callback, which the connector needs.
+- [ ] **Try driving a `pmm3-*` build from a Routine yourself** (curl-first, like the `jira` skill). Needs the `autoMode.allow` classifier fix (findings log) in first; keep the relay's `ALLOW_FALLBACK` off so builds don't collapse onto one identity.
+- [ ] Send Anderson the writers-group names he asked for.
+
+**Later / optional:**
+
+- [ ] Onboard each teammate: **Slack member IDs + Jira accountIds for the whole team are already resolved** (2026-08-11, via the Slack API + Atlassian `lookupJiraAccountId` — nobody sends their own IDs; the `slack`/`jira` blocks of every `people/<name>.json` are pre-filled). The only per-person step left is each teammate creating their own Routine(s) + API token in their claude.ai and sending the **routine id+token**, which fills the `routines` block of their file on the relay (hot-reloaded, no restart; template in `.claude/integrations/slack/relay/person.example.json`), mirrored as a Secure Note in the LastPass PMM folder. They do NOT connect personal Slack/Jira MCP connectors — Slack replies go through the relay bot, Jira posts go through the shared REST token in the environment. Their routine runs in the **shared team environment** (network `Full`, already live — see next item). Pre-loading all 23 `people/*.json` at once is safe: the relay treats anyone with no routine yet as unregistered (zero-cost reply), so nothing fires for a person until their token lands.
+- [x] **Shared team environment — network set to `Full`** (decided 2026-08-11). One org-shared **Custom** env isn't possible yet ([claude-code#82284](https://github.com/anthropics/claude-code/issues/82284), tracked in the findings log); rather than maintain N per-person Custom copies we accept `Full` for the shared env now — wider egress, but acceptable given throwaway short-TTL VMs + least-privilege service credentials. Every teammate's Routine points at this one env.
+  - **Env vars (all plaintext-visible to env users → use least-privilege service credentials)**: `LINODE_TOKEN` (VM provisioning), `JIRA_EMAIL` + `JIRA_API_TOKEN`, set once at the environment level.
+  - **Setup script**: the `/root/.claude/settings.json` bootstrap (hooks + permissions for multi-repo sessions).
+  - **Identity note**: per-person GitHub identity works (each person's own routine). Jira posts, however, all use the shared `JIRA_API_TOKEN` = one identity, until connector bug #61015 is fixed and Jira can move back to the per-person connector.
+  - **When #82284 is fixed**: tighten this env from `Full` to **Custom** with the allowlist (`perconadev.atlassian.net`, `api.linode.com`, `*.nip.io`, `registry.terraform.io`, relay host `139-162-176-43.ip.linodeusercontent.com`, + "Also include default list"). The `linode-provisioning` skill checks the issue on each run and flags this automatically.
+- [ ] (optional) Map an alerts channel to Investigator via `CHANNEL_ROUTINES` in the relay `.env`
+
+## Findings log (reference — done items and long-form context)
 
 - [x] `LINODE_TOKEN` available to sessions that need it — **no real secrets store exists yet** in the environment config; anything set there is plaintext-visible to every teammate with access to that environment. Use a least-privilege, access-controlled Linode API token (scoped to Linode/Firewall create-delete only, not full account access) rather than a personal full-access token — and note it still flows into `TF_VAR_linode_token`, gets templated into each instance's cloud-init `user_data`, and is persisted in that run's local `terraform.tfstate`; this is an accepted tradeoff of the current design (throwaway VMs, short TTL, no shared state backend), not an oversight, but it's why the token's scope matters more than usual here.
-- [x] Atlassian Rovo / Slack connectors and API triggers attached to each Routine
+- [x] **Jira connector broken in Routine runs — workaround complete** ([claude-code#61015](https://github.com/anthropics/claude-code/issues/61015): approval demanded despite the connector being attached; closed upstream but still reproduced 2026-08-06 on PMM-15188). The `jira` skill is **curl-first** (REST, no approval gate); `JIRA_EMAIL` + `JIRA_API_TOKEN` added to the qa-linode environment 2026-08-06. Both connector rule spellings kept duplicated in settings.json so whichever the platform honors post-fix is already covered.
+- [x] **Org-shared environments can't be Custom — decided: `Full` for now, recheck automated in the `linode-provisioning` skill** ([claude-code#82284](https://github.com/anthropics/claude-code/issues/82284), still **open** upstream: shared/org cloud environments expose only Trusted/Full, no Custom/Allowed-domains, contrary to the documented field parity). We can't ship **one** org-shared Custom environment carrying our allowlist (`perconadev.atlassian.net`, `api.linode.com`, `*.nip.io`, `registry.terraform.io`, relay host). **Decision 2026-08-11**: use a shared `Full` env now rather than maintain N per-person Custom copies — wider egress, accepted given throwaway short-TTL VMs + least-privilege service credentials. **Recheck is now automated** — the `linode-provisioning` skill checks whether #82284 is resolved on each provisioning run and, if it is, tells the user to move the shared env from `Full` to Custom with the allowlist above (admin flips it at claude.ai/admin-settings). No manual periodic recheck needed.
 - [x] GitHub connector activated for the org
 - [x] `gh --version`, `terraform version`, `json-diff --version`, `ffmpeg -version` succeed after a fresh SessionStart hook run
+- [x] Connector permission prompts — understood, not repo-fixable: in web sessions the prompt is **enforced by the claude.ai host layer** — no `permissions.allow` spelling and no PreToolUse allow-hook can suppress it (all tested live 2026-08-06). Routine runs are governed by the Routine's own connector list instead (once #61015 is fixed). Consequently settings.json allowlists only `mcp__github`, the one MCP entry that verifiably works (project-provisioned server). Useful facts: settings/hook edits hot-reload mid-session; connector server names vary across sessions (`Atlassian_Rovo` vs `Atlassian-Rovo`); an agent cannot see whether a prompt fired — verification needs a human watching.
+- [ ] **Provisioning is blocked in Routine runs by the auto-mode classifier — needs a human-applied settings fix.** Hit live on 2026-08-10: Investigator fired on a red `E2E tests Matrix` run, got through dedup, then `terraform/linode-runner/up.sh investigator <run_id>` was denied ("Blocked by classifier"), so it could not reproduce and closed with no verdict. Mechanics, all observed in that run:
+  - The allowlist is not what adjudicated it. `permissions.allow` holds bare tool names, and a bare `"Bash"` entry does **not** count as a shell pre-authorization — the command still went to the classifier, which judged `terraform apply` (billable infra, firewall to `0.0.0.0/0`, irreversible) as needing a human. Ordinary `git`/`python3`/`grep` passed untouched, so this is content-based, not a blanket Bash denial. `defaultMode: acceptEdits` is irrelevant here: it auto-accepts *file edits*, not Bash.
+  - The rules currently in #1143 cannot work: `Bash(*linode-runner/up.sh *)` leads with `*`, but Bash rules are **prefix** matches, not globs. They have also never been active in a Routine — those runs read `/root/.claude/settings.json`, planted from `main`, which has no such entries.
+  - A path-prefix rule is fragile regardless: the shell cwd is the repo root but is not guaranteed stable (observed resetting to `/home/user` mid-session), and the README's own `PMM_QA_REF=<branch> up.sh …` form does not *start* with the script path. Hence the `autoMode.allow` entry below, which is path- and prefix-agnostic, is the primary lever; the `Bash(...)` rules are the cheap documented fast path.
+  - **An agent cannot apply this itself.** Editing `.claude/settings.json` is refused even with the user explicitly asking for it in-session — a hard boundary (self-escalation), not a soft prompt, and correctly so: an agent able to grant itself provisioning rights defeats the permission system. Do not expect a future agent run to fix this; a human edits the file.
+
+  Replacement for the five broken entries, plus the classifier lever (`"$defaults"` must stay, it inherits the built-in rules):
+
+  ```json
+  "Bash(terraform/linode-runner/up.sh:*)",
+  "Bash(terraform/linode-runner/run.sh:*)",
+  "Bash(terraform/linode-runner/sync.sh:*)",
+  "Bash(terraform/linode-runner/extend.sh:*)",
+  "Bash(terraform/linode-runner/down.sh:*)"
+  ```
+
+  ```json
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Provisioning, driving and tearing down this repository's throwaway QA VMs via terraform/linode-runner/up.sh, run.sh, sync.sh, extend.sh and down.sh -- at any path prefix, and including invocations led by environment assignments such as PMM_QA_REF=, ALLOWED_INBOUND_CIDR=, DOCKER_VERSION= or CLIENT_VERSION=. These are single-run, self-destructing Linode instances (on-box systemd TTL timer, default 24h) created by the test-runner and investigator agents and by this repo's scheduled Routines. Standing up one is the expected first step of any reproduction and down.sh destroying one is the mandatory last step; neither is an unusual or unintended side effect here."
+    ]
+  }
+  ```
+
+  Zero-cost verification after applying: run `terraform/linode-runner/up.sh` with no arguments. It exits on `ROLE="${1:?usage…}"` before `mkdir`, before terraform, before anything billable — a usage line instead of a denial means the rule works and nothing was created. Deliberately **not** recommended: `defaultMode: bypassPermissions` or `disableAutoMode`, either of which fixes this in one line and also switches off the thing that would stop a genuinely bad command in an unattended run.
 - [x] `INVESTIGATOR_ROUTINE_TOKEN` added as a repo secret so `notify-investigator.yml` can actually fire
 - [x] Live Claude Code Remote Routines updated to match this architecture (Test Doctor renamed to Investigator, FB Validator handled) — see "Updating the live Routines" below for what changed
-- [ ] Confirm `gh`'s own auth can read `Percona-Lab/pmm-submodules`, not just `percona/*` — it's a separate org. Tested from an interactive Claude Code Remote chat session and found broken there (`gh auth status` fails, and `gh api repos/Percona-Lab/pmm-submodules` 403s with "access to this repository is not enabled for this session") — but that may be specific to how this session type is sandboxed, not necessarily how an actual Routine-fired session behaves. Needs confirming from a real Investigator/FB Reporter run, not just this chat.
-- [ ] Notify workflow added in `Percona-Lab/pmm-submodules` firing the same Investigator Routine on FB Tests red — **PR open**: [Percona-Lab/pmm-submodules#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511), watches the real "FB Tests" workflow's `workflow_run` conclusion (confirmed against that repo's actual CI, not assumed), resolves the PR number with a commit-SHA fallback for when `workflow_run.pull_requests` is empty. Needs merging, then its own `INVESTIGATOR_ROUTINE_TOKEN` secret added in that repo (secrets aren't shared across repos/orgs, even with the same token value).
+- [x] **Cross-org access to `Percona-Lab/*` — solved: attach the repo at session/Routine creation** (multi-repo, verified live 2026-08-06: `gh api` on both repos and `gh run rerun <id> --failed -R Percona-Lab/pmm-submodules` all work). Single-repo sessions stay blocked by design: mid-session `add_repo` is refused cross-tier, and a PAT env var can never widen scope (the proxy swaps credentials and enforces scope itself). Fallbacks in an unattached session: anonymous git read, or data passed in via the trigger payload. Details for agents live in the `repos` skill.
+- [x] **Multi-repo sessions load no project settings** — they root at `/home/user` (the *parent* of the clones, `$CLAUDE_PROJECT_DIR` unset), so `settings.json` (hooks + permissions) loads from nowhere, though `CLAUDE.md`/agents/skills still load. **Fixed and verified end-to-end 2026-08-06**: the environment setup script below plants the committed settings at user scope (`/root/.claude/settings.json`), which cloud sessions honor — SessionStart tooling, clone guard, and allowlist all active in a fresh multi-repo session with zero prompts. **Applied to the qa-linode environment 2026-08-06.** Caveats: setup-script results are snapshot-cached ~7 days (touch the script to force a rebuild after settings changes on main); the allowlist applies to every session in that environment. Environment setup script (web-UI-only config; this snippet is the record):
+
+  ```bash
+  # pmm-qa: plant hooks+permissions as user-scope settings so they load in
+  # multi-repo sessions (which root at /home/user, loading no project settings)
+  mkdir -p /root/.claude
+  if [ -f /home/user/pmm-qa/.claude/settings.json ]; then
+    cp /home/user/pmm-qa/.claude/settings.json /root/.claude/settings.json
+  else
+    curl -fsSL --max-time 30 \
+      https://raw.githubusercontent.com/percona/pmm-qa/main/.claude/settings.json \
+      -o /root/.claude/settings.json || echo "WARN: pmm-qa settings fetch failed" >&2
+  fi
+  exit 0
+  ```
+
+- [x] Repos added to Routine repository lists 2026-08-06: `pmm-qa`, `pmm`, `grafana`, `Percona-Lab/pmm-submodules`, `Percona-Lab/jenkins-pipelines` on both live Routines (Test Runner, Investigator) — enables cross-org `gh api`/CI re-runs in their runs. Note: these runs are now multi-repo sessions (root at `/home/user`), so their hooks/permissions come from the qa-linode setup script (item above), not project settings. **To do**: archive the throwaway `qa-settings-test` environment.
+- (tracked in checklist above) Notify workflow added in `Percona-Lab/pmm-submodules` firing the same Investigator Routine on FB Tests red — **PR open**: [Percona-Lab/pmm-submodules#4511](https://github.com/Percona-Lab/pmm-submodules/pull/4511), watches the real "FB Tests" workflow's `workflow_run` conclusion (confirmed against that repo's actual CI, not assumed), resolves the PR number with a commit-SHA fallback for when `workflow_run.pull_requests` is empty. Secret `INVESTIGATOR_ROUTINE_TOKEN` added in that repo 2026-08-06; only the merge of #4511 remains.
 - [x] Jira Automation rule configured with Test Runner's API trigger URL/token — an action button fires it when a ticket moves to Ready for QA or In QA. Not per-person yet: it fires the one shared Test Runner Routine regardless of who clicked it (see "Per-person routing in Router" below).
-- [ ] PMM AI Slack app + Router Routine — **waiting**, blocked on a deterministic way to receive Slack events and fire the Routine API from the Slack side; nothing to build here until that exists
-- [ ] Per-person routing in Router — not built. Every Routine runs under **its creator's own identity** (see "Routine ownership" above), so today, sharing these Routines means every PR/Jira comment/Slack reply shows up as whoever created the Routine, not the person who actually asked. For the whole team to use Test Runner (Jira button, Slack mention) without everyone's activity showing up as one person, each teammate creates their own personal Test Runner Routine, and this needs three things:
-  1. Jira's action button re-pointed at the shared `PMM AI`/Router Routine instead of firing Test Runner's Routine directly — same entry point as Slack, so both go through the same per-person resolution instead of Jira being a special case.
-  2. A static mapping table in `router.md` — Slack user ID / Jira account ID → that person's own Routine ID — falling back to the fallback owner's own Routine (and identity) for anyone not in the table. **Safe to commit**: a Routine ID alone can't fire anything without its token (same reasoning as the single Investigator Routine ID above), so a public table of IDs keyed by person is fine.
-  3. Each person's own bearer **token never goes in this repo** — unlike the ID, this genuinely can't be public. Not yet decided where it lives instead: it has to be reachable by whatever fires the HTTP request on Router's behalf, without every teammate who can see "the token store" also being able to see and use everyone else's token (a shared CCR environment's plaintext-visible-to-all env vars, per the `LINODE_TOKEN` note above, would NOT satisfy that — it would just relocate the exposure from "public" to "everyone on the team," which isn't the same as per-person-scoped). Needs a real design decision before this gets built, not just a table.
-- [ ] Team-wide shared Claude Code environment created (or an existing one reused) with `LINODE_TOKEN` set once at the environment level — teammates using that shared environment don't need their own Linode token; they still each connect their own Jira/Atlassian connector so Jira comments post as them.
+- (tracked in checklist above) PMM AI Slack app + relay — **built and deployed** (see [.claude/integrations/slack/](../../.claude/integrations/slack/README.md)): Socket Mode relay on the `pmm-ai-relay` Linode (`139.162.176.43`, eu-central, $5/mo, rebuild-never-delete), `PMM AI` router Routine created (`trig_01MJNKVHiPqrZ3Ajv1fzUdQK`, qa-linode, reads `router.md`, evaluate-and-route only). Entry points: `@mention` → router → hand-off to the caller's own routine via `/route`; `POST /jira` → initiator's own test-runner; watched channels (`CHANNEL_ROUTINES`) → Investigator on the QA owner's account. **Remaining**: (1) admin approves the Slack app (create from [`manifest.yaml`](../../.claude/integrations/slack/manifest.yaml) — final); (2) fill the 4 FILL-ME tokens in `/opt/pmm-ai-relay/.env` (instructions inline; keep the full file + root password in the LastPass **PMM** shared folder), `touch .env.ready`, `systemctl start pmm-ai-relay`; (3) `/invite @pmm-ai`, test that a mention gets 👀; (4) repoint the Jira Automation rule at `https://139-162-176-43.ip.linodeusercontent.com/jira` with the `X-Relay-Secret` header.
+- (tracked in checklist above) Per-person routing — **designed and implemented in the relay** (the token-storage question is settled: per-person routine tokens live only in the relay's `people/<name>.json` files (hot-reloaded) + the LastPass **PMM** folder — never in this repo, never in shared env vars; the relay `.env` holds config names only). `PEOPLE` maps each person → Slack ID + Jira accountId + their own routines (`test-runner`, `investigator`, …); unregistered mentions are rejected relay-side at zero cost; the central router hands off via `/route` so work runs on (and bills to) the caller's account. **Remaining**: onboard each teammate — they create their own Routine(s) in their claude.ai (prompt: "Read .claude/agents/<agent>.md and follow it", env qa-linode, API trigger + token) and send the 4 fields to whoever admins the relay `.env`.
+- (tracked in checklist above) Team-wide shared Claude Code environment created (or an existing one reused) with `LINODE_TOKEN` set once at the environment level — teammates using that shared environment don't need their own Linode token; they still each connect their own Jira/Atlassian connector so Jira comments post as them.
 
 ## Updating the live Routines
 

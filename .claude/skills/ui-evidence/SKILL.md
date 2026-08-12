@@ -51,11 +51,24 @@ The last argument is dwell time in seconds (default 15) — how long it sits on 
 
 ## FB Actions run screenshot (FB Reporter, all checks green)
 
-1. Resolve run URL from `gh pr checks <PR> -R Percona-Lab/pmm-submodules` (see `fb-tests`).
+1. Resolve the FB Actions **run** URL with the `fb-tests` "Get the run URL for the latest FB build" recipe — it picks the run the FB matrix shares and strips the `/job/<id>` suffix, so you screenshot the whole run page, not one job (`gh pr checks` 403s here, so don't use it).
 2. `node .claude/scripts/pw-screenshot.js "<actions-run-url>" "/tmp/fb-test-<PR>-checks.png"`.
 3. Attach via `jira` (`customfield_10492`).
 
 If the GitHub Actions page renders blank, the repo is private and the browser has no GitHub session — report this as a blocker rather than guessing at the screenshot content.
+
+## Two things that silently produce a useless screenshot
+
+Proxy handling in cloud sessions is automatic — nothing to pass. These two are
+not:
+
+- **Dashboards need longer than the default settle.** Pass
+  `PW_SETTLE_MS=15000` for any dashboard with panels, or `PW_WAIT_SELECTOR` to
+  wait on a specific element; the 3000 ms default catches panels still
+  spinning.
+- **A stale login session screenshots the login page**, not an error — Grafana
+  rotates auth tokens. Always look at the image before attaching it; re-run
+  `pmm-ui-login.js` and re-shoot if it's wrong.
 
 ## Artifacts
 

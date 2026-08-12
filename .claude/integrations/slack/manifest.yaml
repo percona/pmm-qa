@@ -11,13 +11,26 @@ features:
 oauth_config:
   scopes:
     bot:
+      # mention flow
       - app_mentions:read
+      # reply in threads + "could not start" notices
       - chat:write
+      # 👀 seen-marker (durable dedup) and ✅ completion marker
+      - reactions:write
+      # thread history for follow-up mentions + watched public channels
+      - channels:history
+      # same, for private channels the bot is invited into
+      - groups:history
 
 settings:
   event_subscriptions:
     bot_events:
+      # someone @mentions the bot
       - app_mention
+      # watched-channel flow (CHANNEL_ROUTINES), public channels
+      - message.channels
+      # watched-channel flow, private channels
+      - message.groups
   interactivity:
     is_enabled: false
   org_deploy_enabled: false
