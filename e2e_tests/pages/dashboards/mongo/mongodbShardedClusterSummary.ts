@@ -11,7 +11,7 @@ export default class MongodbShardedClusterSummary implements DashboardInterface 
     { name: 'QPS of Services', type: 'gauge' },
     { name: 'Feature Compatibility Version', type: 'stat' },
     { name: 'Shards', type: 'stat' },
-    { name: 'Mongos', type: 'polyStat' },
+    { name: 'Mongos', type: 'stat' },
     { name: 'Draining Shards', type: 'stat' },
     { name: 'DBs', type: 'stat' },
     { name: 'Balancer Enabled', type: 'stat' },
