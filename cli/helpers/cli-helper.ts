@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 import ExecReturn from '@support/types/exec-return.class';
 import shell from 'shelljs';
-import { performance } from "node:perf_hooks";
+import { performance } from 'node:perf_hooks';
 
 /**
  * Shell(sh) echo().to() wrapper to use in tests with handy logs creation
@@ -12,6 +12,7 @@ import { performance } from "node:perf_hooks";
  */
 export async function createFile(pathToFile: string, content: string, stepTitle: string | null = null) {
   const stepName = stepTitle || `Create "${pathToFile}" file with content:\n"${content}"`;
+
   await test.step(stepName, async () => {
     console.log(`echo: "${content}" >> ${pathToFile}`);
     shell.echo(content).to(pathToFile);
@@ -58,6 +59,7 @@ export async function execSilent(command: string): Promise<ExecReturn> {
   const { stdout, stderr, code } = await test.step(`Run "${command}" command`, async () => {
     return shell.exec(command.replace(/(\r\n|\n|\r)/gm, ''), { silent: false });
   });
+
   return new ExecReturn(command, code, stdout, stderr);
 }
 
@@ -91,7 +93,7 @@ export async function getMetrics(
         throw new Error(`Failed to find '${serviceName}' service is in pmm-admin list output:\n${adminList}`);
       }
 
-      const listenPort = adminList.filter((item) => item.includes(serviceId))!
+      const listenPort = adminList.filter((item) => item.includes(serviceId))
         .find((item: string) => item.includes('_exporter'))!
         .split(' ').filter((item) => item.trim().length > 0)
         .at(-1) ?? '';
@@ -103,6 +105,7 @@ export async function getMetrics(
       return execute(`${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`);
     },
   );
+
   await output.assertSuccess();
   // TODO: parse into map(k => v) or json
   return output.stdout;
