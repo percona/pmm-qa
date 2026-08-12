@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
+import data from '@fixtures/dataTest';
 
 pmmTest.describe('PMM settings tests for upgrade', () => {
   const dashboardName = 'upgrade-dashboard';
@@ -100,22 +101,21 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'PMM-T317 - Verify MySQL Instance Summary Dashboard after upgrade @post-upgrade @post-client-upgrade',
+    'PMM-T319 - Open the MySQL Instances Overview dashboard after upgrade @post-upgrade @post-client-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
 
       console.log(`Mysql service name is: ${service_name}`);
 
       await page.goto(
-        urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceSummary.url, {
+        urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceOverview.url, {
           from: 'now-1h',
-          refresh: '5s',
           serviceName: service_name,
         }),
       );
-      await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstanceSummary.metrics);
-      await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInstanceSummary.noDataMetrics);
-      await dashboard.verifyPanelValues(dashboard.mysql.mysqlInstanceSummary.metricsWithData);
+      await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstanceOverview.metrics);
+      await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInstanceOverview.noDataMetrics);
+      await dashboard.verifyPanelValues(dashboard.mysql.mysqlInstanceOverview.metricsWithData);
     },
   );
 
