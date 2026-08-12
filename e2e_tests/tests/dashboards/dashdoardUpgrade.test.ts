@@ -104,6 +104,8 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     async ({ api, dashboard, page, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
 
+      console.log(`Mysql service name is: ${service_name}`);
+
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceSummary.url, {
           from: 'now-1h',
