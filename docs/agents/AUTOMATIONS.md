@@ -217,9 +217,10 @@ Test Runner and Investigator both provision a throwaway Linode VM per run (`terr
 > A Jenkins MCP gateway already runs in prod (`https://jenkins-mcp.cd.percona.com/mcp`), auth via Percona SSO + Duo. It works as a claude.ai org connector in interactive sessions, but org connectors stall on the approval prompt inside Routines.
 
 - [x] Jenkins connector added in claude.ai admin (org-owner). Each person connects it in their own claude.ai when they need Jenkins interactively.
-- [ ] Check if [`percona/percona-cd-platform` #403](https://github.com/percona/percona-cd-platform/pull/403) is merged — it whitelists claude.ai's OAuth callback, which the connector needs.
-- [ ] **Try driving a `pmm3-*` build from a Routine yourself** (curl-first, like the `jira` skill). Needs the `autoMode.allow` classifier fix (findings log) in first; keep the relay's `ALLOW_FALLBACK` off so builds don't collapse onto one identity.
-- [ ] Send Anderson the writers-group names he asked for.
+- [x] [`percona/percona-cd-platform` #403](https://github.com/percona/percona-cd-platform/pull/403) merged — claude.ai's OAuth callback is whitelisted, so the connector can complete its flow (reported 2026-08-12).
+- [x] **Drive a `pmm3-*` build interactively** — `pmm3-aws-staging-start` triggered by hand through the Jenkins MCP connector in an ordinary chat session (reported 2026-08-12). The interactive half of the gateway works end to end.
+- [ ] **Drive a `pmm3-*` build from a Routine** — still untested, and blocked one step earlier than expected: in a Routine-fired session `ListConnectors` reports Percona Jenkins MCP as `installState: connected, connected: true` but **`enabledInChat: false`**, so no `mcp__*` Jenkins tool is loaded and there is nothing to call (observed 2026-08-12 in an Investigator run). Routine sessions take their connectors from **the Routine's own connector list**, not from the org-level activation — add it there, then re-test on a fresh run, since connectors load at session start and do not appear mid-session. The curl-first fallback needs `JENKINS_USER`/`JENKINS_API_TOKEN` in the environment (anonymous `pmm.cd.percona.com/api/json` answers 403); keep the relay's `ALLOW_FALLBACK` off either way so builds don't collapse onto one identity. The `autoMode.allow` classifier fix is a separate, later gate — it only bites once a tool or credential exists to be denied.
+- [x] Send Anderson the writers-group names he asked for (done 2026-08-12).
 
 **Later / optional:**
 
