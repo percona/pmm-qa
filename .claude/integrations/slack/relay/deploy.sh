@@ -14,7 +14,7 @@ ENV_FILE=${1:?usage: deploy.sh /path/to/.env [people_dir] [ssh_pubkey_file]}
 PEOPLE_DIR_IN=${2:-}
 PUBKEY_FILE=${3:-}
 HERE=$(cd "$(dirname "$0")" && pwd)
-LABEL=pmm-ai-relay
+LABEL=${RELAY_LABEL:-pmm-ai-relay}
 
 b64() { base64 < "$1" | tr -d '\n'; }  # single line on both GNU (-w0) and BSD base64
 
@@ -69,18 +69,21 @@ fi
 cat >> "$CLOUD_INIT" <<'EOF'
 runcmd:
   - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls /etc/letsencrypt/renewal-hooks/deploy
-  # self-signed fallback so the HTTPS listener always starts (the egress proxy
-  # rejects it, but the relay stays up); Let's Encrypt overwrites it if issuance works
-  - openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout /opt/pmm-ai-relay/tls/key.pem -out /opt/pmm-ai-relay/tls/cert.pem -subj "/CN=139-162-176-43.ip.linodeusercontent.com" -addext "subjectAltName=DNS:139-162-176-43.ip.linodeusercontent.com,IP:139.162.176.43"
   - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   - apt-get install -y nodejs certbot
-  # HTTP-01 on port 80 (relay listens on 443/8787, so 80 is free); LE validates
-  # from the public internet, bypassing the session egress proxy entirely
-  - certbot certonly --standalone --non-interactive --agree-tos -m davi.travaglia@percona.com -d 139-162-176-43.ip.linodeusercontent.com --http-01-port 80 || echo "LE issuance failed - relay will run on self-signed (unreachable through proxy)"
-  - 'if [ -f /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem ]; then cp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem; cp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/privkey.pem /opt/pmm-ai-relay/tls/key.pem; fi'
-  # renewal: refresh the copied cert and restart the relay
-  - printf '#!/bin/sh\ncp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem\ncp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/privkey.pem /opt/pmm-ai-relay/tls/key.pem\nsystemctl restart pmm-ai-relay\n' > /etc/letsencrypt/renewal-hooks/deploy/relay.sh
-  - chmod +x /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+  # Derive this box's OWN hostname (Linode rDNS <ip-dashes>.ip.linodeusercontent.com)
+  # so the same image works for any relay IP -- not pinned to one reserved IP.
+  # One shell block so $HOST persists; certbot validates over public HTTP-01.
+  - |
+    PUBIP=$(curl -fsS --max-time 15 https://api.ipify.org || ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+    HOST="$(echo "$PUBIP" | tr '.' '-').ip.linodeusercontent.com"
+    echo "relay host: $HOST ($PUBIP)"
+    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout /opt/pmm-ai-relay/tls/key.pem -out /opt/pmm-ai-relay/tls/cert.pem -subj "/CN=$HOST" -addext "subjectAltName=DNS:$HOST,IP:$PUBIP"
+    certbot certonly --standalone --non-interactive --agree-tos -m davi.travaglia@percona.com -d "$HOST" --http-01-port 80 || echo "LE issuance failed - relay stays on self-signed"
+    if [ -f "/etc/letsencrypt/live/$HOST/fullchain.pem" ]; then cp "/etc/letsencrypt/live/$HOST/fullchain.pem" /opt/pmm-ai-relay/tls/cert.pem; cp "/etc/letsencrypt/live/$HOST/privkey.pem" /opt/pmm-ai-relay/tls/key.pem; fi
+    printf '#!/bin/sh\ncp /etc/letsencrypt/live/%s/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem\ncp /etc/letsencrypt/live/%s/privkey.pem /opt/pmm-ai-relay/tls/key.pem\nsystemctl restart pmm-ai-relay\n' "$HOST" "$HOST" > /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+    chmod +x /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+    if grep -q '^REPLY_BASE_URL=' /opt/pmm-ai-relay/.env; then sed -i "s#^REPLY_BASE_URL=.*#REPLY_BASE_URL=https://$HOST#" /opt/pmm-ai-relay/.env; else echo "REPLY_BASE_URL=https://$HOST" >> /opt/pmm-ai-relay/.env; fi
   - cd /opt/pmm-ai-relay && npm install @slack/bolt
   - systemctl daemon-reload
   - systemctl enable --now pmm-ai-relay
@@ -108,10 +111,10 @@ if [ -n "$ID" ]; then
   curl -sS --fail-with-body -X POST "${HDR[@]}" "$API/$ID/rebuild" -d "$BODY" | jq '{id,label,ipv4,status}'
 else
   echo "Creating new $LABEL"
-  BODY=$(jq -n --arg pass "$ROOT_PASS" --arg ud "$USER_DATA" --argjson keys "$AUTH_KEYS" \
-    '{label:"pmm-ai-relay", type:"g6-nanode-1", region:"eu-central", image:"linode/ubuntu24.04",
+  BODY=$(jq -n --arg pass "$ROOT_PASS" --arg ud "$USER_DATA" --argjson keys "$AUTH_KEYS" --arg label "$LABEL" \
+    '{label:$label, type:"g6-nanode-1", region:"eu-central", image:"linode/ubuntu24.04",
       root_pass:$pass, authorized_keys:$keys, backups_enabled:false,
-      tags:["pmm-ai","relay","do-not-delete"], metadata:{user_data:$ud}}')
+      tags:["pmm-ai","relay"], metadata:{user_data:$ud}}')
   curl -sS --fail-with-body -X POST "${HDR[@]}" "$API" -d "$BODY" | jq '{id,label,ipv4,status}'
 fi
 
