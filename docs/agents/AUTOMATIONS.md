@@ -201,10 +201,17 @@ Delivery reuses the **relay bot**, so no MCP connector is needed in the Routine 
 **Target.** Provider tokens live **only on the relay** (behind root, in its `.env`, put there by a human deploy sourcing from LastPass — never in the shared env, never in a routine). The shared env holds a single **`RELAY_KEY`** — not a provider token, just a bearer for the relay's own API. Every privileged action becomes a **narrow, rate-limited, audited** relay endpoint:
 
 - `/announce` — post to an allowed Slack channel (**built**).
-- `/jira-comment` — post/act on the PMM project as the service account (to build).
-- `/provision` + `/destroy` — create/destroy the standard throwaway VM, returning the per-run `exec_token` (to build; the big piece — the relay runs terraform).
+- `/jira` — the **full** set of Jira ops the agents use, scoped to the PMM project and forcing Developers-only visibility server-side: read a ticket, comment, edit fields (`customfield_10492` etc.), attach, transition (to build). A comment-only endpoint would strand the rest — see the coverage note.
+- `/provision` + `/destroy` — create/destroy the standard throwaway VM (+ its firewall), returning the per-run `exec_token` (to build; the big piece — the relay runs terraform).
 
-Interactive sessions and routines use the **same `RELAY_KEY`** — we dropped the per-fire cap idea because it adds nothing once the shared env holds a standing key anyway. The relay logs the caller's email (available in the session context) for attribution; hardening to server-side GitHub-identity verification is optional and later.
+Interactive sessions and routines use the **same `RELAY_KEY`** — we dropped the per-fire cap idea because it adds nothing once the shared env holds a standing key anyway.
+
+**Identity is an access control, not just a log.** The relay **verifies** the caller against the team roster before it acts — so a leaked `RELAY_KEY` alone, without a valid team identity, is **denied** (defense in depth: you need the key *and* a verified identity). The verifiable identity is **GitHub** (the session already has `gh` auth); the account email injected into the session context is for the audit log, not the gate.
+
+**Coverage — verified against the current code:**
+- **Linode: fully covered by `/provision` + `/destroy`.** `LINODE_TOKEN` is used *only* by `up.sh` (create) and `down.sh` (destroy) — 3 refs each; `run.sh`, `extend.sh`, `sync.sh` have **zero** `LINODE_TOKEN` refs and drive the VM through the per-run `exec_token` that `/provision` returns. So `run.sh` needs that `exec_token`, never the account token.
+- **Jira: needs the full `/jira` broker, not a comment endpoint.** The `jira` skill does read + comment (Developers-only) + attach + edit fields + transitions. All five must be behind `/jira` before `JIRA_TOKEN` leaves the env.
+- **Slack: covered** — `/announce` for proactive posts; in-thread replies already use the HMAC cap.
 
 **Why it's safe.** The tokens can't be stolen or scanned (never in the env); actions are bounded by the endpoints, not by the model's judgement; a leaked `RELAY_KEY` grants only those bounded ops, never account access. Residual: rebuilding the relay is an intentional insider action on the shared Linode account — accepted within the team.
 
