@@ -290,7 +290,6 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 
 **Later / optional:**
 
-- [ ] Onboard teammates: everyone's Slack + Jira IDs are resolved and the 23 `people/*.json` are pre-filled — the only step left is each person creating a Routine + API token and sending the id+token to fill their `routines` block (relay hot-reloads; mirror in LastPass). Safe to pre-load all files now — routine-less people are treated as unregistered until their token lands.
 - [x] **Shared team environment — network set to `Full`** (decided 2026-08-11). One org-shared **Custom** env isn't possible yet ([claude-code#82284](https://github.com/anthropics/claude-code/issues/82284), tracked in the findings log); rather than maintain N per-person Custom copies we accept `Full` for the shared env now — wider egress, but acceptable given throwaway short-TTL VMs + least-privilege service credentials. Every teammate's Routine points at this one env.
   - **Env vars (all plaintext-visible to env users → use least-privilege service credentials)**: `LINODE_TOKEN` (VM provisioning), `JIRA_EMAIL` + `JIRA_API_TOKEN`, set once at the environment level.
   - **Setup script**: the `/root/.claude/settings.json` bootstrap (hooks + permissions for multi-repo sessions).
