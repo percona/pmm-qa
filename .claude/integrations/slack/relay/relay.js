@@ -6,8 +6,14 @@ import https from "node:https";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 const { App } = pkg;
+const execFileP = promisify(execFile);
+// The relay's own copy of the linode-runner module (cloned by deploy.sh), used
+// by /provision + /destroy so the LINODE_TOKEN never leaves this box.
+const RUNNER_DIR = process.env.RUNNER_DIR || "/opt/pmm-qa/terraform/linode-runner";
 
 // Mentions from REGISTERED people fire the central owner's "router" routine;
 // it only decides which of the caller's own routines fits (or declines), then
@@ -478,6 +484,55 @@ const handler = async (req, res) => {
       return;
     }
 
+    // Provision broker: the relay runs the linode-runner up.sh with its own
+    // LINODE_TOKEN and keeps the terraform state, returning only {ip, exec_token}
+    // — a per-run, throwaway-VM-scoped credential. The account token never
+    // leaves here. Long op (~3 min): raise the socket timeout for this request.
+    if (req.method === "POST" && req.url === "/provision") {
+      if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) { res.writeHead(403).end("forbidden"); return; }
+      let m;
+      try { m = JSON.parse(raw); } catch { res.writeHead(400).end("bad_request"); return; }
+      const { role, run_id, ttl_hours, pmm_qa_ref, by } = m;
+      if (!process.env.LINODE_TOKEN) { res.writeHead(503).end("linode_not_configured"); return; }
+      if (!/^[A-Za-z0-9._-]+$/.test(String(role || ""))) { res.writeHead(400).end("bad_role"); return; }
+      if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) { res.writeHead(400).end("bad_run_id"); return; }
+      req.setTimeout(600000);
+      const args = [`${RUNNER_DIR}/up.sh`, String(role), String(run_id)];
+      if (ttl_hours != null && Number.isFinite(Number(ttl_hours))) args.push("-var", `ttl_hours=${Number(ttl_hours)}`);
+      const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: String(by || "relay") };
+      console.log(`provision ${role} ${run_id} (ttl=${ttl_hours ?? 24}) by ${by || "?"}`);
+      try {
+        await execFileP("bash", args, { env, timeout: 480000, maxBuffer: 10 * 1024 * 1024 });
+        const rd = `${RUNNER_DIR}/runs/${run_id}`;
+        const ip = fs.readFileSync(`${rd}/ip`, "utf8").trim();
+        const exec_token = fs.readFileSync(`${rd}/exec_token`, "utf8").trim();
+        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ run_id, ip, exec_token }));
+      } catch (e) {
+        console.error(`/provision failed: ${e.message}`);
+        res.writeHead(502).end("provision_failed");
+      }
+      return;
+    }
+
+    // Destroy broker: tears down a run the relay provisioned (state lives here).
+    if (req.method === "POST" && req.url === "/destroy") {
+      if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) { res.writeHead(403).end("forbidden"); return; }
+      let m;
+      try { m = JSON.parse(raw); } catch { res.writeHead(400).end("bad_request"); return; }
+      const { run_id, by } = m;
+      if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) { res.writeHead(400).end("bad_run_id"); return; }
+      req.setTimeout(300000);
+      console.log(`destroy ${run_id} by ${by || "?"}`);
+      try {
+        await execFileP("bash", [`${RUNNER_DIR}/down.sh`, String(run_id)], { env: process.env, timeout: 240000, maxBuffer: 10 * 1024 * 1024 });
+        res.writeHead(200).end("ok");
+      } catch (e) {
+        console.error(`/destroy failed: ${e.message}`);
+        res.writeHead(502).end("destroy_failed");
+      }
+      return;
+    }
+
     res.writeHead(404).end();
 };
 
@@ -486,7 +541,7 @@ const handler = async (req, res) => {
 // no plain-HTTP path, so nothing here depends on curl -k.
 https
   .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira /announce /jira-act) on :${HTTPS_PORT}`));
+  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira /announce /jira-act /provision /destroy) on :${HTTPS_PORT}`));
 
 if (app) {
   try {

@@ -70,7 +70,11 @@ cat >> "$CLOUD_INIT" <<'EOF'
 runcmd:
   - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls /etc/letsencrypt/renewal-hooks/deploy
   - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  - apt-get install -y nodejs certbot
+  - apt-get install -y nodejs certbot git unzip
+  # terraform + the pmm-qa module so /provision + /destroy can run linode-runner
+  # here (the LINODE_TOKEN stays on this box, never in the shared Claude env)
+  - curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/tf.zip && unzip -o /tmp/tf.zip -d /usr/local/bin && rm -f /tmp/tf.zip
+  - git clone --depth 1 https://github.com/percona/pmm-qa.git /opt/pmm-qa
   # Derive this box's OWN hostname (Linode rDNS <ip-dashes>.ip.linodeusercontent.com)
   # so the same image works for any relay IP -- not pinned to one reserved IP.
   # One shell block so $HOST persists; certbot validates over public HTTP-01.
