@@ -30,7 +30,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'T9999 Verify metrics from custom queries for postgres_exporter after upgrade @post-upgrade @post-client-upgrade',
+    'Verify metrics from custom queries for postgres_exporter after upgrade @post-upgrade @post-client-upgrade',
     async ({ api }) => {
       const metricName = 'pg_stat_user_tables_analyze_count';
       // const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('pgsql_pgss');
