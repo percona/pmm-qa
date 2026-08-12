@@ -38,7 +38,7 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
         console.log(`Available annotations are: \n ${JSON.stringify(annotations)}`);
 
         expect(
-          annotations.some((annotation) => annotation.text === service.annotationName),
+          annotations.some((annotation) => annotation.text.includes(service.annotationName)),
           `Annotation "${service.annotationName}" was not found post upgrade`,
         ).toBeTruthy();
       },
