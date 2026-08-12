@@ -25,6 +25,9 @@ Description=PMM AI Slack/Jira relay
 After=network-online.target
 
 [Service]
+# HOME is unset for systemd services; the Linode Terraform provider (run by
+# /provision -> up.sh) needs it to resolve its config path, so pin it to root's.
+Environment=HOME=/root
 EnvironmentFile=/opt/pmm-ai-relay/.env
 WorkingDirectory=/opt/pmm-ai-relay
 ExecStart=/usr/bin/node relay.js
