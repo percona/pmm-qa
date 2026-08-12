@@ -37,7 +37,7 @@ works around the first limit; it doesn't try to work around the second
 | First activation | When the Slack app tokens exist: hand them to a Claude session (final rebuild, service auto-starts) or Lish → edit `.env` → `touch /opt/pmm-ai-relay/.env.ready && systemctl restart pmm-ai-relay`. |
 | Code/config change | Rebuild via the Linode API (same instance/IP/root password): a Claude session on this repo can do it, or run `./relay/deploy.sh .env people_dir/` with the files from LastPass. |
 | Unregistered person clicks the Jira button | Relay answers **404 `not_registered`** (403 = bad secret, 502 = fire failure); the Jira Automation rule uses "Wait for response" + condition `{{webResponse.status}} == 404` → Add comment telling the initiator to get onboarded. |
-| PR Maintainer digest → Slack | The daily `pr-maintainer` Routine `curl`s its digest to `POST /announce` (`X-Relay-Secret: $ANNOUNCE_SECRET`, body `{channel,text}`); the relay posts it as the bot to `#qa-automation`. Invite the bot to that channel first, and set `ANNOUNCE_SECRET` in `.env`. |
+| PR Maintainer digest → Slack | The daily `pr-maintainer` Routine `curl`s its digest to `POST /announce` (`X-Relay-Secret: $RELAY_KEY`, body `{channel,text}`); the relay posts it as the bot to `#qa-automation`. Invite the bot to that channel first, and set `RELAY_KEY` in `.env`. `RELAY_KEY` is the shared-env → relay bearer, reused by every broker endpoint. |
 
 ## Operations
 

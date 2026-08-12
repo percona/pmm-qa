@@ -74,7 +74,7 @@ try {
 const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> central owner's test-runner
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
-const ANNOUNCE_SECRET = process.env.ANNOUNCE_SECRET; // gates POST /announce (proactive channel posts, e.g. the PR digest)
+const RELAY_KEY = process.env.RELAY_KEY; // the shared-env → relay bearer; gates the broker endpoints (today /announce; /jira-comment and /provision to come)
 const REPLY_SECRET = process.env.REPLY_SECRET;
 if (!REPLY_SECRET) {
   // sign() runs before either Slack handler's try block, so a missing secret
@@ -389,7 +389,7 @@ const handler = async (req, res) => {
     // this has no thread to bind to, so it's a plain secret-gated bearer call.
     // The bot can still only reach channels it was invited to.
     if (req.method === "POST" && req.url === "/announce") {
-      if (!ANNOUNCE_SECRET || req.headers["x-relay-secret"] !== ANNOUNCE_SECRET) {
+      if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) {
         console.error("/announce rejected: bad secret");
         res.writeHead(403).end("forbidden");
         return;

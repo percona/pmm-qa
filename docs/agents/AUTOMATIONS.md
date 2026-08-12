@@ -192,7 +192,23 @@ A scheduled weekday Routine reads [`.claude/agents/pr-maintainer.md`](../../.cla
 
 It **reads** each PR (not a keyword scan) and sorts it (first match wins; bias to "needs a human"): 🔓 **Unblocked** (carries the `blocked` label but the reason has now cleared → promote/re-verify; the agent removes the label), ⏳ **Blocked** (the agent *judges* the PR can't safely merge yet — most often waiting on another PR to land — and adds a `blocked` label), 🔧 **Needs work** (open review threads — whoever opened them — or changes requested), ✅ **Ready to merge** (approved, no open threads, not blocked), 👀 **Needs review** (waiting on a reviewer), and ❓ **Needs a human** (nothing fits cleanly). **CI checks are deliberately ignored** — an approved PR is ready regardless. The `blocked` label (add/remove) is the only thing it ever writes; it never merges, closes, approves, or edits.
 
-Delivery reuses the **relay bot**, so no MCP connector is needed in the Routine (which sidesteps the connector-in-routine limits): the run `curl`s the composed digest to the relay's `POST /announce` (secret-gated by `ANNOUNCE_SECRET`), which posts it as the `@pmm-ai` bot to a channel it's been invited to. Daily, weekdays, **no @-mentions**.
+Delivery reuses the **relay bot**, so no MCP connector is needed in the Routine (which sidesteps the connector-in-routine limits): the run `curl`s the composed digest to the relay's `POST /announce` (gated by the shared `RELAY_KEY`), which posts it as the `@pmm-ai` bot to a channel it's been invited to. Daily, weekdays, **no @-mentions**.
+
+## Secrets architecture — relay-brokered (target)
+
+**Problem.** The shared qa-linode environment stores `LINODE_TOKEN` and `JIRA_TOKEN` in plaintext — visible to everyone in it, flaggable by a secret scanner, and reusable by a prompt-injected run. Worse, that `LINODE_TOKEN` is enough to *rebuild* the relay via the Linode API (deploy is an API rebuild, not SSH — the relay has no SSH key and no exec-server), i.e. fully compromise it. So the relay is only a real vault once the token is out of the shared env.
+
+**Target.** Provider tokens live **only on the relay** (behind root, in its `.env`, put there by a human deploy sourcing from LastPass — never in the shared env, never in a routine). The shared env holds a single **`RELAY_KEY`** — not a provider token, just a bearer for the relay's own API. Every privileged action becomes a **narrow, rate-limited, audited** relay endpoint:
+
+- `/announce` — post to an allowed Slack channel (**built**).
+- `/jira-comment` — post/act on the PMM project as the service account (to build).
+- `/provision` + `/destroy` — create/destroy the standard throwaway VM, returning the per-run `exec_token` (to build; the big piece — the relay runs terraform).
+
+Interactive sessions and routines use the **same `RELAY_KEY`** — we dropped the per-fire cap idea because it adds nothing once the shared env holds a standing key anyway. The relay logs the caller's email (available in the session context) for attribution; hardening to server-side GitHub-identity verification is optional and later.
+
+**Why it's safe.** The tokens can't be stolen or scanned (never in the env); actions are bounded by the endpoints, not by the model's judgement; a leaked `RELAY_KEY` grants only those bounded ops, never account access. Residual: rebuilding the relay is an intentional insider action on the shared Linode account — accepted within the team.
+
+**Migration rule — do not lose capability.** Before a token leaves the env, its relay endpoint(s) must cover **every** operation the agents perform today — Jira: read, comment (Developers-only), edit fields, transition, attach; Linode: provision, exec (`run.sh`), extend, sync, destroy. A narrow endpoint that only posts a comment would strand the rest, so each token's migration waits behind full coverage. (Shareable one-pager: the "Secrets on the Relay" artifact.)
 
 ## Go-live checklist — remaining steps (1 step = 1 box)
 
@@ -237,7 +253,7 @@ Delivery reuses the **relay bot**, so no MCP connector is needed in the Routine 
 **PR Maintainer (daily PR digest):**
 
 - [x] `blocked` label created in `percona/pmm-qa` (the agent applies/removes it, doesn't create it).
-- [ ] Add `ANNOUNCE_SECRET` to the relay `.env` and to the qa-linode environment (the Routine reads it to auth to `/announce`), then redeploy the relay so `POST /announce` is live.
+- [ ] Add `RELAY_KEY` to the relay `.env` and to the qa-linode environment (the Routine reads it to auth to `/announce`), then redeploy the relay so `POST /announce` is live.
 - [ ] `/invite @pmm-ai` into `#qa-automation`.
 - [ ] Create the daily **PR Maintainer** Routine (prompt: "Read `.claude/agents/pr-maintainer.md` and follow it", shared env, weekday-morning schedule).
 
