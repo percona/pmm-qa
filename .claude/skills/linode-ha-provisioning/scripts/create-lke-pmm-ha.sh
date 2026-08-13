@@ -15,7 +15,7 @@ RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 CLUSTER_LABEL="${CLUSTER_LABEL:-pmm-ha-${RUN_ID}}"
 REGION="${REGION:-us-east}"
 K8S_VERSION="${K8S_VERSION:-}"         # resolved to the latest LKE offers below if unset (versions roll)
-NODE_TYPE="${NODE_TYPE:-g6-standard-4}"
+NODE_TYPE="${NODE_TYPE:-g6-standard-6}"  # 16GB/6vCPU — 8GB/4vCPU (standard-4) starves the 3-replica HA stack (pods stay Pending)
 NODE_COUNT="${NODE_COUNT:-3}"          # >=3 keeps a Raft quorum with one node down
 NAMESPACE="${NAMESPACE:-pmm}"
 
