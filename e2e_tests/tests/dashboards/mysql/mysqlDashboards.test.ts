@@ -7,6 +7,10 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 });
 
 const services = ['ps_pmm|mysql_pmm', 'pxc_node'];
+// Anchored: names end in a random suffix (ps_pmm_replication_8_0_<node>_<random>),
+// so an unanchored `_1`/`_2` also matches the other node whenever that suffix starts with 1/2.
+const sourceServiceRegex = '^ps_pmm_replication_.*_1(_\\d+)?$';
+const replicaServiceRegex = '^ps_pmm_replication_.*_2(_\\d+)?$';
 
 pmmTest(
   'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-pxc-haproxy-integration',
@@ -78,7 +82,7 @@ pmmTest(
   'PMM-T324 - Verify MySQL - MySQL User Details dashboard @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
-      'ps_pmm_replication_.*_1',
+      sourceServiceRegex,
       { replication_set: 'ps-async-replication' },
     );
 
@@ -144,7 +148,7 @@ pmmTest(
 pmmTest(
   'PMM-T2029 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
-    const service = await api.inventoryApi.getServiceDetailsByRegexAndParameters('ps_pmm_replication_.*_2', {
+    const service = await api.inventoryApi.getServiceDetailsByRegexAndParameters(replicaServiceRegex, {
       replication_set: 'ps-async-replication',
     });
 
