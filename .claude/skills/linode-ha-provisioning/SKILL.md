@@ -46,7 +46,7 @@ The call blocks while the cluster + operators + PMM + HAProxy + LoadBalancer com
 up (often 10–20 min; the relay allows up to 25) and returns only once the cluster
 is ready. `kubectl`/`helm` then work locally against `$KUBECONFIG`. Defaults (all
 overridable in the POST body): `region=us-east`, `node_type=g6-standard-4`,
-`node_count=3` (Raft quorum, tolerates one node down), `k8s_version=1.33`.
+`node_count=3` (Raft quorum, tolerates one node down); `k8s_version` defaults to the latest LKE offers (versions roll — a retired pin 400s).
 
 **Keep-alive:** add `"ttl_hours":<N>` to the POST body **and**
 `touch "$RUN_DIR/keep-alive"` — the marker keeps the SessionEnd hook from tearing

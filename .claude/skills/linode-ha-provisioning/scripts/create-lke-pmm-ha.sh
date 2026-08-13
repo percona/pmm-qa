@@ -14,7 +14,7 @@ set -euo pipefail
 RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 CLUSTER_LABEL="${CLUSTER_LABEL:-pmm-ha-${RUN_ID}}"
 REGION="${REGION:-us-east}"
-K8S_VERSION="${K8S_VERSION:-1.33}"
+K8S_VERSION="${K8S_VERSION:-}"         # resolved to the latest LKE offers below if unset (versions roll)
 NODE_TYPE="${NODE_TYPE:-g6-standard-4}"
 NODE_COUNT="${NODE_COUNT:-3}"          # >=3 keeps a Raft quorum with one node down
 NAMESPACE="${NAMESPACE:-pmm}"
@@ -58,6 +58,15 @@ done
 # One knob: LINODE_TOKEN (LKE Read/Write). linode-cli reads it as LINODE_CLI_TOKEN.
 [ -n "${LINODE_TOKEN:-}" ] || { echo "ERROR: set LINODE_TOKEN (Linode API token, LKE Read/Write)." >&2; exit 1; }
 export LINODE_CLI_TOKEN="$LINODE_TOKEN"
+
+# LKE only offers a rolling window of k8s versions (e.g. 1.33 was retired) and a
+# create with a retired one 400s. Pin via K8S_VERSION, else take the latest the
+# API currently offers.
+if [ -z "$K8S_VERSION" ]; then
+    K8S_VERSION=$(linode-cli lke versions-list --json | jq -r '[.[].id] | sort | last')
+    [ -n "$K8S_VERSION" ] && [ "$K8S_VERSION" != "null" ] || { echo "ERROR: could not resolve an LKE k8s version." >&2; exit 1; }
+    log "Resolved latest LKE k8s version: $K8S_VERSION"
+fi
 
 # --- create the cluster ------------------------------------------------------
 log "Creating LKE cluster '$CLUSTER_LABEL' ($NODE_COUNT x $NODE_TYPE, $REGION, k8s $K8S_VERSION)"
