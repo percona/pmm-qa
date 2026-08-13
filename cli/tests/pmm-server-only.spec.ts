@@ -120,8 +120,11 @@ test.describe(
     test('PMM-T526 Use Invalid Prometheus Custom Config File to Check if Container is unhealthy', async ({}) => {
       const containerName = 'PMM-T526';
       const httpPort = 84;
+      // The image ships a 720s health start-period to cover SEP provisioning's Grafana wait, and
+      // Docker withholds the unhealthy verdict for the whole of it. Override only that field, so the
+      // image's own healthcheck command still decides but its verdict lands in seconds.
       await cli.exec(
-        `docker run -d -p ${httpPort}:8080 -p 449:8443 --name ${containerName} ${DOCKER_IMAGE}`,
+        `docker run -d -p ${httpPort}:8080 -p 449:8443 --health-start-period=25s --name ${containerName} ${DOCKER_IMAGE}`,
       );
       stopList.push(containerName);
       removeList.push(containerName);
@@ -133,12 +136,12 @@ test.describe(
       ).assertSuccess();
       await cli.exec(`docker restart ${containerName}`);
 
-      await test.step(`Waiting for ${containerName} to be unhealthy(45 sec)`, async () => {
+      await test.step(`Waiting for ${containerName} to be unhealthy(90 sec)`, async () => {
         await expect(async () => {
           await (
             await cli.exec(`docker ps | grep ${containerName}`)
           ).outContains('unhealthy');
-        }).toPass({ intervals: [2_000], timeout: 45_000 });
+        }).toPass({ intervals: [2_000], timeout: 90_000 });
       });
     });
 
