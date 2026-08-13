@@ -4,7 +4,16 @@ ROOT=$(git rev-parse --show-toplevel)
 STAGED_FILES=$(git diff --cached --name-only)
 
 if echo "$STAGED_FILES" | grep -Eqx "qa-integration/pmm_qa/scripts/database_options.py|e2e_tests/tests/.*\.ts|cli/tests/.*\.ts"; then
-    python "$ROOT/support_scripts/generate_readme.py"
+    if python3 -c "" >/dev/null 2>&1; then
+        PYTHON=python3
+    elif python -c "" >/dev/null 2>&1; then
+        PYTHON=python
+    else
+        echo "Python 3 is required to update generated README sections" >&2
+        exit 1
+    fi
+
+    "$PYTHON" "$ROOT/support_scripts/generate_readme.py"
 fi
 
 if echo "$STAGED_FILES" | grep -qx "qa-integration/pmm_qa/scripts/database_options.py"; then
@@ -19,4 +28,4 @@ if echo "$STAGED_FILES" | grep -Eqx "cli/tests/.*\.ts"; then
     git add "$ROOT/cli/README.md"
 fi
 
-cd "$ROOT/e2e_tests" && npx lint-staged
+cd "$ROOT/e2e_tests" && node node_modules/lint-staged/bin/lint-staged.js
