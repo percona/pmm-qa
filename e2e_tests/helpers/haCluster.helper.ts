@@ -34,10 +34,12 @@ export default class HaClusterHelper {
     }
 
     // `kubectl wait` fails outright on pods the StatefulSet has not recreated yet.
+    // Scaling 0 -> 3 is the slow path at roughly two minutes, the pods being
+    // OrderedReady, so they come up one at a time.
     await expect
       .poll(() => this.k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
         message: `The HA cluster must have ${replicas} ready pods`,
-        timeout: Timeouts.TEN_MINUTES,
+        timeout: Timeouts.FIVE_MINUTES,
       })
       .toEqual(replicas);
 
@@ -45,7 +47,7 @@ export default class HaClusterHelper {
     // to re-run its health check and re-point first.
     await expect(async () => {
       expect(await haApi.getStatus()).toEqual('Enabled');
-    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
   /**

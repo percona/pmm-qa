@@ -25,8 +25,6 @@ pmmTest.afterEach(async ({ api, haClusterHelper }) => {
 pmmTest(
   'PMM-T2250 Verify the HA badge reflects the health of the PMM HA cluster @pmm-ha',
   async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
-    pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
-
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await api.haApi.getStatus()).toEqual('Enabled');
     });
@@ -55,7 +53,8 @@ pmmTest(
       const survivor = haClusterHelper.podNames()[0];
 
       for (let attempt = 0; haClusterHelper.leaderFromPods() !== survivor; attempt++) {
-        // Each failover is a coin flip between the two followers, so allow plenty.
+        // Each failover is a coin flip between the two followers, so allow plenty:
+        // at four attempts this failed roughly one run in sixteen.
         expect(attempt, `Leadership never landed on "${survivor}"`).toBeLessThan(8);
 
         k8sHelper.deletePod(haClusterHelper.leaderFromPods()).assertSuccess();
@@ -63,7 +62,7 @@ pmmTest(
         await expect
           .poll(() => k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
             message: `All ${expectedNodes} pods must rejoin before the next attempt`,
-            timeout: Timeouts.TEN_MINUTES,
+            timeout: Timeouts.FIVE_MINUTES,
           })
           .toEqual(expectedNodes);
       }

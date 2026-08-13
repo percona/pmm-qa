@@ -10,8 +10,6 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 pmmTest(
   'PMM-T2145 Verify the node status of PMM HA nodes on the Inventory Nodes page @pmm-ha',
   async ({ api, haClusterHelper, k8sHelper, nodesPage, page }) => {
-    pmmTest.setTimeout(Timeouts.TEN_MINUTES);
-
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await api.haApi.getStatus()).toEqual('Enabled');
     });
@@ -38,7 +36,7 @@ pmmTest(
           await expect(
             nodesPage.builders.nodeStatusCell(podName),
             `HA node "${podName}" is running, so the Nodes page must show it Up`,
-          ).toHaveText('Up', { timeout: Timeouts.TWO_MINUTES });
+          ).toHaveText('Up', { timeout: Timeouts.ONE_MINUTE });
 
           await expect(
             nodesPage.builders.nodeRoleLabel(podName),

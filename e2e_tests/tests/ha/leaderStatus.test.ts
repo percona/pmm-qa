@@ -11,8 +11,6 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 pmmTest(
   'PMM-T2233 Verify "pmm_ha_leader_status" metric correctly reflects the current leader status @pmm-ha',
   async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
-    pmmTest.setTimeout(Timeouts.FIVE_MINUTES);
-
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await api.haApi.getStatus()).toEqual('Enabled');
     });
@@ -43,7 +41,7 @@ pmmTest(
           .toEqual(clusterNodes);
 
         expect(
-          await api.haApi.waitForLeaderInMetrics(),
+          await api.haApi.waitForLeaderInMetrics(undefined, Timeouts.TWO_MINUTES),
           'The leader in metrics must be the one the HA badge names',
         ).toEqual(initialLeader);
       },
@@ -98,7 +96,7 @@ pmmTest(
       await expect
         .poll(() => haClusterHelper.lastPromotionTime(newLeader), {
           message: `"${newLeader}" must log a promotion newer than the one it had before the failover`,
-          timeout: Timeouts.ONE_MINUTE,
+          timeout: Timeouts.TWO_MINUTES,
         })
         .toBeGreaterThan(baseline);
     });
