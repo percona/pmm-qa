@@ -30,7 +30,6 @@ data(services).pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceSummary.url, {
         from: 'now-1h',
-        refresh: '5s',
         serviceName: service_name,
       }),
     );

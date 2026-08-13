@@ -73,6 +73,7 @@ export default class Dashboards extends BasePage {
     const collect = async () =>
       (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
     const itemCount = await this.elements.gridItems.count();
+    const indices = Array.from({ length: itemCount }, (_, i) => i);
 
     const visit = async (i: number) => {
       const item = this.elements.gridItems.nth(i);
@@ -88,17 +89,9 @@ export default class Dashboards extends BasePage {
       await collect();
     };
 
-    await collect();
-
-    for (let i = 0; i < itemCount; i++) {
+    for (const i of [...indices, ...indices.toReversed()]) {
       await visit(i);
     }
-
-    for (let i = itemCount - 1; i >= 0; i--) {
-      await visit(i);
-    }
-
-    await collect();
 
     return Array.from(collected);
   };
