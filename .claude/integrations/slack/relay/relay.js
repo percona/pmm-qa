@@ -6,7 +6,7 @@ import https from "node:https";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 
 const { App } = pkg;
@@ -353,6 +353,7 @@ const SAFE_ID = (v) => {
   v = String(v || "");
   return /^[A-Za-z0-9._-]+$/.test(v) && v !== "." && v !== ".." && !v.includes("..");
 };
+const readIf = (p) => { try { return fs.readFileSync(p, "utf8").trim(); } catch { return null; } };
 
 async function brokerLinode(action, m, by) {
   if (!process.env.LINODE_TOKEN) return { status: 503, body: "linode_not_configured" };
@@ -400,7 +401,18 @@ async function brokerLinode(action, m, by) {
     const ttlH = ttl_hours != null && Number.isFinite(Number(ttl_hours)) && Number(ttl_hours) > 0 ? Number(ttl_hours) : LKE_DEFAULT_TTL_H;
     const expiresEpoch = Math.floor(Date.now() / 1000) + Math.round(ttlH * 3600);
     const runDir = `${LKE_RUNS_DIR}/${run_id}`;
+    // An LKE HA build takes 10–20 min, but the kubeconfig only comes back in the
+    // final response and a silent long-held connection gets cut by intermediaries
+    // at ~5 min. So provisioning is ASYNC: kick off a detached build, return the
+    // run_id immediately, and let the caller poll /linode/lke-result. A dropped
+    // connection is then fully recoverable — all state lives in runDir on this box.
+    const started = readIf(`${runDir}/started`);
+    const statusNow = readIf(`${runDir}/status`);
+    if (started && !statusNow && Date.now() / 1000 - Number(started) < 2100) {
+      return { status: 409, json: true, body: JSON.stringify({ run_id, status: "provisioning", hint: "already running — poll /linode/lke-result" }) };
+    }
     fs.mkdirSync(runDir, { recursive: true });
+    for (const f of ["status", "summary.env"]) { try { fs.rmSync(`${runDir}/${f}`, { force: true }); } catch {} } // clear a prior terminal run so a same-id retry starts clean
     // Optional passthrough config — light validation, then handed to the script as env vars.
     const cfg = {};
     const pass = (k, envk, re) => { const v = m[k]; if (v != null && (!re || re.test(String(v)))) cfg[envk] = String(v); };
@@ -419,25 +431,40 @@ async function brokerLinode(action, m, by) {
       if (m[key]) { const p = `${runDir}/${fname}`; fs.writeFileSync(p, Buffer.from(String(m[key]), "base64")); cfg[envk] = p; }
     }
     const env = { ...process.env, LINODE_CLI_TOKEN: process.env.LINODE_TOKEN, RUN_ID: String(run_id), RUN_DIR: runDir, TTL_HOURS: String(ttlH), EXPIRES_EPOCH: String(expiresEpoch), CLAUDE_CODE_SESSION_ID: `relay:${by}`, ...cfg };
-    console.log(`linode/provision-lke ${run_id} (ttl=${ttlH}h, expires=${expiresEpoch}) by ${by}`);
-    try {
-      await execFileP("bash", [`${HA_DIR}/create-lke-pmm-ha.sh`], { env, timeout: 1_500_000, maxBuffer: 20 * 1024 * 1024 });
+    fs.writeFileSync(`${runDir}/started`, String(Math.floor(Date.now() / 1000)));
+    fs.writeFileSync(`${runDir}/expires_epoch`, String(expiresEpoch));
+    // Detached wrapper: cap the build at 35 min, tee to provision.log, and write a
+    // terminal `status` file (ready | failed:<code>) the poller reads. unref() so
+    // the build outlives both this request and a relay restart.
+    const wrapper =
+      'timeout 2100 bash "$0" >>"$RUN_DIR/provision.log" 2>&1; ec=$?; ' +
+      'if [ "$ec" -eq 0 ] && [ -s "$RUN_DIR/summary.env" ]; then echo ready >"$RUN_DIR/status"; ' +
+      'else echo "failed:$ec" >"$RUN_DIR/status"; fi';
+    const child = spawn("bash", ["-c", wrapper, `${HA_DIR}/create-lke-pmm-ha.sh`], { env, detached: true, stdio: "ignore" });
+    child.unref();
+    console.log(`linode/provision-lke ${run_id} started (ttl=${ttlH}h, expires=${expiresEpoch}) by ${by}`);
+    return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning", expires_epoch: expiresEpoch, ttl_hours: ttlH, poll: "/linode/lke-result" }) };
+  }
+  if (action === "lke-result") {
+    const { run_id } = m;
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    const runDir = `${LKE_RUNS_DIR}/${run_id}`;
+    if (!fs.existsSync(runDir)) return { status: 404, body: "unknown_run" };
+    const status = readIf(`${runDir}/status`);
+    const cluster_id = readIf(`${runDir}/cluster_id`);
+    const expiresEpoch = Number(readIf(`${runDir}/expires_epoch`)) || null;
+    if (status === "ready" && fs.existsSync(`${runDir}/summary.env`)) {
       const summary = {};
       for (const line of fs.readFileSync(`${runDir}/summary.env`, "utf8").split("\n")) { const i = line.indexOf("="); if (i > 0) summary[line.slice(0, i)] = line.slice(i + 1).trim(); }
       const kubeconfig_b64 = fs.readFileSync(`${runDir}/kubeconfig.yaml`).toString("base64");
-      const cluster_id = fs.readFileSync(`${runDir}/cluster_id`, "utf8").trim();
-      return { status: 200, json: true, body: JSON.stringify({ run_id, cluster_id, expires_epoch: expiresEpoch, ttl_hours: ttlH, external_ip: summary.external_ip, url: summary.url, kubeconfig_b64, passwords: summary }) };
-    } catch (e) {
-      const tail = String(e.stderr || e.stdout || e.message || "").slice(-2000);
-      console.error(`linode/provision-lke failed: ${e.message}\n${tail}`);
-      // Best-effort: if the cluster was created before the failure, delete it now so
-      // a broken run doesn't wait for the reaper's TTL to stop billing.
-      try {
-        const cid = fs.readFileSync(`${runDir}/cluster_id`, "utf8").trim();
-        if (cid) { console.error(`linode/provision-lke: tearing down partial cluster ${cid}`); await execFileP("bash", [`${HA_DIR}/destroy-lke.sh`, cid], { env, timeout: 240000 }).catch(() => {}); }
-      } catch {}
-      return { status: 502, json: true, body: JSON.stringify({ error: "provision_lke_failed", detail: tail }) };
+      return { status: 200, json: true, body: JSON.stringify({ run_id, status: "ready", cluster_id, expires_epoch: expiresEpoch, external_ip: summary.external_ip, url: summary.url, kubeconfig_b64, passwords: summary }) };
     }
+    if (status && status.startsWith("failed")) {
+      const tail = (readIf(`${runDir}/provision.log`) || "").slice(-2000);
+      return { status: 502, json: true, body: JSON.stringify({ run_id, status, cluster_id, error: "provision_lke_failed", detail: tail }) };
+    }
+    // still building — surface a coarse phase so the caller can log progress
+    return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning", phase: cluster_id ? "installing" : "creating-cluster", cluster_id, expires_epoch: expiresEpoch }) };
   }
   if (action === "destroy-lke") {
     const { run_id, cluster_id } = m;

@@ -29,22 +29,51 @@ ACTOR="$(gh api user --jq .login 2>/dev/null)"
 # ttl_hours optional (default 24). Overridable: node_count/node_type/region/
 # k8s_version/namespace, and for FB — pmm_chart/deps_chart, pmm_set/deps_set,
 # chart_version, or pmm_values_b64/deps_values_b64 (a values.yaml, base64). See "Custom charts".
-curl -sS -m 1800 --fail-with-body -X POST "$RELAY/linode/provision-lke" \
+# 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
+#    The cluster builds server-side on the relay; this call does NOT hold open.
+curl -sS -m 60 --fail-with-body -X POST "$RELAY/linode/provision-lke" \
   -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
-  -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')" >"$RUN_DIR/provision.json"
+  -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')" >"$RUN_DIR/provision-start.json"
 
-# Unpack: kubeconfig for kubectl, cluster_id marker for teardown, session tag.
-jq -r .kubeconfig_b64 "$RUN_DIR/provision.json" | base64 -d >"$RUN_DIR/kubeconfig.yaml"; chmod 600 "$RUN_DIR/kubeconfig.yaml"
-jq -r .cluster_id     "$RUN_DIR/provision.json" >"$RUN_DIR/lke"          # marks this run LKE-brokered (holds cluster_id)
+# Mark the run LKE-brokered NOW so teardown/reaper work even if we lose the poll.
 printf '%s' "$RELAY"                      >"$RUN_DIR/relay"              # relay URL for the SessionEnd hook
 printf '%s' "${CLAUDE_CODE_SESSION_ID:-}" >"$RUN_DIR/session_id"        # scopes the SessionEnd hook
-export KUBECONFIG="$PWD/$RUN_DIR/kubeconfig.yaml"
-jq -r '"URL: \(.url)\nadmin password: \(.passwords.pmm_admin_password)"' "$RUN_DIR/provision.json"
+: >"$RUN_DIR/lke"                                                       # marks this run LKE-brokered; destroy-lke keys by run_id
+
+# 2) Poll for the result — a dropped connection is recoverable (state is on the relay).
+deadline=$(( $(date +%s) + 2400 ))
+while :; do
+  code=$(curl -sS -m 60 -o "$RUN_DIR/provision.json" -w '%{http_code}' -X POST "$RELAY/linode/lke-result" \
+    -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
+    -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')")
+  case "$code" in
+    200) echo "cluster ready"; break;;
+    202) echo "provisioning… ($(jq -r '.phase // "?"' "$RUN_DIR/provision.json"))";;
+    502) echo "provisioning FAILED:"; jq -r '.detail // .' "$RUN_DIR/provision.json"; break;;
+    *)   echo "unexpected $code:"; cat "$RUN_DIR/provision.json";;
+  esac
+  [ "$(date +%s)" -lt "$deadline" ] || { echo "timed out waiting for cluster"; break; }
+  sleep 30
+done
+
+# 3) On success, unpack kubeconfig + cluster_id marker.
+if jq -e .kubeconfig_b64 "$RUN_DIR/provision.json" >/dev/null 2>&1; then
+  jq -r .kubeconfig_b64 "$RUN_DIR/provision.json" | base64 -d >"$RUN_DIR/kubeconfig.yaml"; chmod 600 "$RUN_DIR/kubeconfig.yaml"
+  jq -r .cluster_id     "$RUN_DIR/provision.json" >"$RUN_DIR/lke"       # holds cluster_id (teardown also works by run_id)
+  export KUBECONFIG="$PWD/$RUN_DIR/kubeconfig.yaml"
+  jq -r '"URL: \(.url)\nadmin password: \(.passwords.pmm_admin_password)"' "$RUN_DIR/provision.json"
+else
+  echo "no kubeconfig — tear the run down (step: Teardown) before retrying"
+fi
 ```
 
-The call blocks while the cluster + operators + PMM + HAProxy + LoadBalancer come
-up (often 10–20 min; the relay allows up to 25) and returns only once the cluster
-is ready. `kubectl`/`helm` then work locally against `$KUBECONFIG`. Defaults (all
+Provisioning is **async**: the first call returns a `run_id` at once, then you poll
+`/linode/lke-result` until `200` (ready — kubeconfig in the body), `502` (failed —
+`detail` has the log tail), or your deadline. This survives a dropped connection:
+the build runs on the relay (capped at 35 min) and all state lives in its run dir,
+so re-polling the same `run_id` always returns the current state. The cluster +
+operators + PMM + HAProxy + LoadBalancer usually take 10–20 min. `kubectl`/`helm`
+then work locally against `$KUBECONFIG`. Defaults (all
 overridable in the POST body): `region=us-east`, `node_type=g6-standard-4`,
 `node_count=3` (Raft quorum, tolerates one node down); `k8s_version` defaults to the latest LKE offers (versions roll — a retired pin 400s).
 
