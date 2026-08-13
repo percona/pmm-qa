@@ -105,6 +105,14 @@ until linode-cli lke kubeconfig-view "$CLUSTER_ID" --json \
 done
 export KUBECONFIG="$KUBECONFIG_FILE"
 log "KUBECONFIG: $KUBECONFIG"
+# Always capture pod state on exit (success OR failure) so a stuck bring-up is
+# debuggable from the run dir without the cluster still being alive.
+_diag() {
+    kubectl get pods -n "$NAMESPACE" -o wide >"$RUN_DIR/pods.txt" 2>&1 || true
+    kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp >"$RUN_DIR/events.txt" 2>&1 || true
+    kubectl describe pods -n "$NAMESPACE" >"$RUN_DIR/describe.txt" 2>&1 || true
+}
+trap _diag EXIT
 # Linode reports the pool "ready" before the nodes register with the k8s API
 # server, so `kubectl wait --all` would hit an empty list and fail immediately
 # ("no matching resources found"). Wait for the nodes to appear first, then wait
@@ -164,7 +172,22 @@ pmm_args=(); [ -n "$CHART_VERSION" ] && pmm_args+=(--version "$CHART_VERSION")
 log "Installing PMM HA from $PMM_CHART"
 helm install pmm-ha "$PMM_CHART" --namespace "$NAMESPACE" "${pmm_args[@]}"
 
-log "Waiting for HAProxy front end (up to 15m)..."
+# HAProxy fronts the PMM server, and its readiness gate depends on the backend
+# PMM pods coming up first — so wait for the PMM server StatefulSet to be Ready
+# before waiting on HAProxy, which both sequences the bring-up and makes a stuck
+# backend show up as a backend timeout (clearer than an opaque HAProxy timeout).
+log "Waiting for PMM server pods (up to 15m)..."
+pmm_deadline=$(( $(date +%s) + 900 ))
+until kubectl get pods -n "$NAMESPACE" -o name | grep -E 'pmm-ha-[0-9]|pmm-ha-server' | grep -qv haproxy; do
+    [ "$(date +%s)" -lt "$pmm_deadline" ] || { echo "ERROR: PMM server pods never appeared within 15m" >&2; exit 1; }
+    sleep 10
+done
+# shellcheck disable=SC2046
+kubectl wait --for=condition=ready \
+    $(kubectl get pods -n "$NAMESPACE" -o name | grep -E 'pmm-ha-[0-9]|pmm-ha-server' | grep -v haproxy) \
+    -n "$NAMESPACE" --timeout=20m || { echo "WARN: PMM server pods not Ready in 20m; see describe.txt"; }
+
+log "Waiting for HAProxy front end (up to 20m)..."
 haproxy_deadline=$(( $(date +%s) + 900 ))
 until kubectl get pods -n "$NAMESPACE" -o name | grep -q pmm-ha-haproxy; do
     [ "$(date +%s)" -lt "$haproxy_deadline" ] || { echo "ERROR: pmm-ha-haproxy pods never appeared within 15m" >&2; exit 1; }
@@ -175,7 +198,7 @@ done
 # shellcheck disable=SC2046
 kubectl wait --for=condition=ready \
     $(kubectl get pods -n "$NAMESPACE" -o name | grep pmm-ha-haproxy) \
-    -n "$NAMESPACE" --timeout=15m
+    -n "$NAMESPACE" --timeout=20m
 kubectl get pods -n "$NAMESPACE"
 
 # --- external access ---------------------------------------------------------

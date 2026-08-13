@@ -454,7 +454,7 @@ async function brokerLinode(action, m, by) {
     // at ~5 min. So provisioning is ASYNC: kick off a detached build, return the
     // run_id immediately, and let the caller poll /linode/lke-result. A dropped
     // connection is then fully recoverable — all state lives in runDir on this box.
-    if (claimRun(runDir, by, 2400).busy) {
+    if (claimRun(runDir, by, 3300).busy) {
       return { status: 409, json: true, body: JSON.stringify({ run_id, status: "provisioning", hint: "already running — poll /linode/lke-result" }) };
     }
     // Optional passthrough config — light validation, then handed to the script as env vars.
@@ -476,12 +476,12 @@ async function brokerLinode(action, m, by) {
     }
     const env = { ...process.env, LINODE_CLI_TOKEN: process.env.LINODE_TOKEN, RUN_ID: String(run_id), RUN_DIR: runDir, TTL_HOURS: String(ttlH), EXPIRES_EPOCH: String(expiresEpoch), CLAUDE_CODE_SESSION_ID: `relay:${by}`, ...cfg };
     fs.writeFileSync(`${runDir}/expires_epoch`, String(expiresEpoch));
-    // Detached wrapper: cap the build at 35 min, tee to provision.log, and write a
+    // Detached wrapper: cap the build at 50 min, tee to provision.log, and write a
     // terminal `status` file (ready | failed:<code>) the poller reads. `ready`
     // requires BOTH result artifacts so a partial run never reads ready. unref()
     // so the build outlives both this request and a relay restart.
     const wrapper =
-      'timeout 2100 bash "$0" >>"$RUN_DIR/provision.log" 2>&1; ec=$?; ' +
+      'timeout 3000 bash "$0" >>"$RUN_DIR/provision.log" 2>&1; ec=$?; ' +
       'if [ "$ec" -eq 0 ] && [ -s "$RUN_DIR/summary.env" ] && [ -s "$RUN_DIR/kubeconfig.yaml" ]; then echo ready >"$RUN_DIR/status"; ' +
       'else echo "failed:$ec" >"$RUN_DIR/status"; fi';
     const child = spawn("bash", ["-c", wrapper, `${HA_DIR}/create-lke-pmm-ha.sh`], { env, detached: true, stdio: "ignore" });
@@ -507,7 +507,9 @@ async function brokerLinode(action, m, by) {
     }
     if (status && status.startsWith("failed")) {
       const tail = (readIf(`${runDir}/provision.log`) || "").slice(-2000);
-      return { status: 502, json: true, body: JSON.stringify({ run_id, status, cluster_id, error: "provision_lke_failed", detail: tail }) };
+      const pods = readIf(`${runDir}/pods.txt`); // diagnostics the create script captures on exit
+      const describe = (readIf(`${runDir}/describe.txt`) || "").slice(-6000);
+      return { status: 502, json: true, body: JSON.stringify({ run_id, status, cluster_id, error: "provision_lke_failed", detail: tail, pods, describe }) };
     }
     // still building — surface a coarse phase so the caller can log progress
     return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning", phase: cluster_id ? "installing" : "creating-cluster", cluster_id, expires_epoch: expiresEpoch }) };
