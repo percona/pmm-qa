@@ -71,9 +71,15 @@ fi
 
 cat >> "$CLOUD_INIT" <<'EOF'
 runcmd:
-  - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls /etc/letsencrypt/renewal-hooks/deploy
+  - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls /opt/pmm-ai-relay/lke-runs /etc/letsencrypt/renewal-hooks/deploy
   - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  - apt-get install -y nodejs certbot git unzip
+  - apt-get install -y nodejs certbot git unzip jq python3-pip
+  # HA/LKE toolchain so /linode/provision-lke + /linode/destroy-lke can run the
+  # linode-ha-provisioning scripts here (the LINODE_TOKEN stays on this box).
+  # The reaper itself uses the Linode API directly, so it does not depend on these.
+  - pip3 install --break-system-packages linode-cli 2>/dev/null || pip3 install linode-cli
+  - curl -fsSL "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
+  - curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
   # terraform + the pmm-qa module so /linode/provision + /linode/destroy can run linode-runner
   # here (the LINODE_TOKEN stays on this box, never in the shared Claude env)
   - curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/tf.zip && unzip -o /tmp/tf.zip -d /usr/local/bin && rm -f /tmp/tf.zip

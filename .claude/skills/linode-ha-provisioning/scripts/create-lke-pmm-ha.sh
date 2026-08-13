@@ -19,6 +19,14 @@ NODE_TYPE="${NODE_TYPE:-g6-standard-4}"
 NODE_COUNT="${NODE_COUNT:-3}"          # >=3 keeps a Raft quorum with one node down
 NAMESPACE="${NAMESPACE:-pmm}"
 
+# TTL / self-destruct backstop. An LKE cluster has no on-box timer, so the
+# cluster's own tags carry its expiry: the relay reaper deletes any
+# `pmm-qa-ephemeral` cluster whose `expires-<epoch>` tag is in the past, even if
+# teardown is never called. EXPIRES_EPOCH is set by the relay; standalone runs
+# derive it from TTL_HOURS so the reaper still reaps a hand-run cluster.
+TTL_HOURS="${TTL_HOURS:-24}"
+EXPIRES_EPOCH="${EXPIRES_EPOCH:-$(( $(date +%s) + TTL_HOURS * 3600 ))}"
+
 # PMM admin password: env, first arg, or generated.
 PMM_PW="${PMM_PW:-${1:-$(openssl rand -base64 24 | tr -dc 'a-zA-Z0-9' | head -c 24)}}"
 
@@ -60,6 +68,7 @@ linode-cli lke cluster-create \
     --node_pools.type "$NODE_TYPE" \
     --node_pools.count "$NODE_COUNT" \
     --tags pmm-qa-ephemeral \
+    --tags "expires-${EXPIRES_EPOCH}" \
     --tags "$RUN_ID"
 
 log "Resolving cluster ID..."
@@ -159,6 +168,7 @@ done
 {
     echo "cluster_label=$CLUSTER_LABEL"
     echo "cluster_id=$CLUSTER_ID"
+    echo "expires_epoch=$EXPIRES_EPOCH"
     echo "external_ip=$EXTERNAL_IP"
     echo "url=https://$EXTERNAL_IP"
     echo "pmm_admin_password=$PMM_PW"
@@ -183,5 +193,7 @@ cat <<EOF
 
  TEARDOWN (mandatory -- LKE clusters bill by the hour):
    linode-cli lke cluster-delete $CLUSTER_ID
+ Backstop: tagged expires-$EXPIRES_EPOCH ($(date -u -d "@$EXPIRES_EPOCH" 2>/dev/null || date -u -r "$EXPIRES_EPOCH" 2>/dev/null)) --
+   the relay reaper deletes it after that even if teardown is skipped.
 ============================================================
 EOF

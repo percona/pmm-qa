@@ -24,6 +24,16 @@ process.on("unhandledRejection", (e) => {
 // The relay's own copy of the linode-runner module (cloned by deploy.sh), used
 // by /linode/provision + /linode/destroy so the LINODE_TOKEN never leaves this box.
 const RUNNER_DIR = process.env.RUNNER_DIR || "/opt/pmm-qa/terraform/linode-runner";
+// HA/LKE counterpart: the relay runs the linode-ha-provisioning scripts with its
+// own token (kubeconfig/passwords come back to the session; the LINODE_TOKEN never
+// leaves this box). An LKE cluster has no on-box self-destruct timer, so the reaper
+// below is its backstop — it deletes any `pmm-qa-ephemeral` cluster past the
+// `expires-<epoch>` tag the create script stamps on it.
+const HA_DIR = process.env.HA_DIR || "/opt/pmm-qa/.claude/skills/linode-ha-provisioning/scripts";
+const LKE_RUNS_DIR = process.env.LKE_RUNS_DIR || "/opt/pmm-ai-relay/lke-runs";
+const LKE_DEFAULT_TTL_H = Number(process.env.LKE_DEFAULT_TTL_HOURS || 24);
+const LKE_HARD_MAX_TTL_H = Number(process.env.LKE_HARD_MAX_TTL_HOURS || 48); // reaper backstop for an untagged/half-created cluster
+const LKE_REAP_INTERVAL_MS = Number(process.env.LKE_REAP_INTERVAL_MS || 15 * 60 * 1000);
 
 // Mentions from REGISTERED people fire the central owner's "router" routine;
 // it only decides which of the caller's own routines fits (or declines), then
@@ -368,8 +378,124 @@ async function brokerLinode(action, m, by) {
       return { status: 502, json: true, body: JSON.stringify({ error: "destroy_failed", detail: tail }) };
     }
   }
+  // HA path: stand up a throwaway LKE cluster with PMM in HA mode (Helm). Same
+  // token-on-the-relay model as the VM path; returns the kubeconfig + LB IP +
+  // generated passwords the session needs. The cluster is tagged with its expiry
+  // so the reaper reaps it even if teardown is never called.
+  if (action === "provision-lke") {
+    const { run_id, ttl_hours } = m;
+    if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) return { status: 400, body: "bad_run_id" };
+    const ttlH = ttl_hours != null && Number.isFinite(Number(ttl_hours)) && Number(ttl_hours) > 0 ? Number(ttl_hours) : LKE_DEFAULT_TTL_H;
+    const expiresEpoch = Math.floor(Date.now() / 1000) + Math.round(ttlH * 3600);
+    const runDir = `${LKE_RUNS_DIR}/${run_id}`;
+    fs.mkdirSync(runDir, { recursive: true });
+    // Optional passthrough config — light validation, then handed to the script as env vars.
+    const cfg = {};
+    const pass = (k, envk, re) => { const v = m[k]; if (v != null && (!re || re.test(String(v)))) cfg[envk] = String(v); };
+    pass("region", "REGION", /^[a-z0-9-]+$/);
+    pass("node_type", "NODE_TYPE", /^[a-z0-9-]+$/);
+    pass("node_count", "NODE_COUNT", /^[0-9]+$/);
+    pass("k8s_version", "K8S_VERSION", /^[0-9.]+$/);
+    pass("namespace", "NAMESPACE", /^[a-z0-9-]+$/);
+    pass("chart_version", "CHART_VERSION", /^[A-Za-z0-9._-]+$/);
+    pass("pmm_chart", "PMM_CHART");
+    pass("deps_chart", "DEPS_CHART");
+    pass("pmm_set", "PMM_SET");
+    pass("deps_set", "DEPS_SET");
+    // FB custom values files arrive base64-encoded and are written into the run dir.
+    for (const [key, fname, envk] of [["pmm_values_b64", "pmm-values.yaml", "PMM_VALUES"], ["deps_values_b64", "deps-values.yaml", "DEPS_VALUES"]]) {
+      if (m[key]) { const p = `${runDir}/${fname}`; fs.writeFileSync(p, Buffer.from(String(m[key]), "base64")); cfg[envk] = p; }
+    }
+    const env = { ...process.env, LINODE_CLI_TOKEN: process.env.LINODE_TOKEN, RUN_ID: String(run_id), RUN_DIR: runDir, TTL_HOURS: String(ttlH), EXPIRES_EPOCH: String(expiresEpoch), CLAUDE_CODE_SESSION_ID: `relay:${by}`, ...cfg };
+    console.log(`linode/provision-lke ${run_id} (ttl=${ttlH}h, expires=${expiresEpoch}) by ${by}`);
+    try {
+      await execFileP("bash", [`${HA_DIR}/create-lke-pmm-ha.sh`], { env, timeout: 1_500_000, maxBuffer: 20 * 1024 * 1024 });
+      const summary = {};
+      for (const line of fs.readFileSync(`${runDir}/summary.env`, "utf8").split("\n")) { const i = line.indexOf("="); if (i > 0) summary[line.slice(0, i)] = line.slice(i + 1).trim(); }
+      const kubeconfig_b64 = fs.readFileSync(`${runDir}/kubeconfig.yaml`).toString("base64");
+      const cluster_id = fs.readFileSync(`${runDir}/cluster_id`, "utf8").trim();
+      return { status: 200, json: true, body: JSON.stringify({ run_id, cluster_id, expires_epoch: expiresEpoch, ttl_hours: ttlH, external_ip: summary.external_ip, url: summary.url, kubeconfig_b64, passwords: summary }) };
+    } catch (e) {
+      const tail = String(e.stderr || e.stdout || e.message || "").slice(-2000);
+      console.error(`linode/provision-lke failed: ${e.message}\n${tail}`);
+      // Best-effort: if the cluster was created before the failure, delete it now so
+      // a broken run doesn't wait for the reaper's TTL to stop billing.
+      try {
+        const cid = fs.readFileSync(`${runDir}/cluster_id`, "utf8").trim();
+        if (cid) { console.error(`linode/provision-lke: tearing down partial cluster ${cid}`); await execFileP("bash", [`${HA_DIR}/destroy-lke.sh`, cid], { env, timeout: 240000 }).catch(() => {}); }
+      } catch {}
+      return { status: 502, json: true, body: JSON.stringify({ error: "provision_lke_failed", detail: tail }) };
+    }
+  }
+  if (action === "destroy-lke") {
+    const { run_id, cluster_id } = m;
+    let arg;
+    if (cluster_id != null) {
+      if (!/^[0-9]+$/.test(String(cluster_id))) return { status: 400, body: "bad_cluster_id" };
+      arg = String(cluster_id);
+    } else {
+      if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) return { status: 400, body: "bad_run_id" };
+      try { arg = fs.readFileSync(`${LKE_RUNS_DIR}/${run_id}/cluster_id`, "utf8").trim(); } catch {}
+      if (!arg) return { status: 404, body: "unknown_run" };
+    }
+    console.log(`linode/destroy-lke ${arg} by ${by}`);
+    try {
+      await execFileP("bash", [`${HA_DIR}/destroy-lke.sh`, arg], { env: { ...process.env, LINODE_CLI_TOKEN: process.env.LINODE_TOKEN }, timeout: 240000, maxBuffer: 10 * 1024 * 1024 });
+      return { status: 200, body: "ok" };
+    } catch (e) {
+      const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
+      console.error(`linode/destroy-lke failed: ${e.message}\n${tail}`);
+      return { status: 502, json: true, body: JSON.stringify({ error: "destroy_lke_failed", detail: tail }) };
+    }
+  }
   return { status: 400, body: "unknown_action" };
 }
+
+// LKE reaper — the LKE equivalent of the VM's on-box self-destruct timer. Lists
+// ephemeral clusters straight from the Linode API (so it survives relay restarts
+// and lost run state) and deletes any whose `expires-<epoch>` tag is in the past;
+// a cluster with no parseable expiry (a half-created run) falls back to
+// created + LKE_HARD_MAX_TTL_H. Never touches a cluster without the
+// `pmm-qa-ephemeral` tag. API-only: independent of linode-cli being configured.
+async function linodeApi(pathname, init = {}) {
+  return fetch(`https://api.linode.com/v4${pathname}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${process.env.LINODE_TOKEN}`, "Content-Type": "application/json", ...(init.headers || {}) },
+  });
+}
+async function reapLke() {
+  if (!process.env.LINODE_TOKEN) return;
+  const nowS = Math.floor(Date.now() / 1000);
+  const hardMax = LKE_HARD_MAX_TTL_H * 3600;
+  try {
+    let page = 1, pages = 1, checked = 0, reaped = 0;
+    do {
+      const r = await linodeApi(`/lke/clusters?page=${page}&page_size=100`);
+      if (!r.ok) { console.error(`lke-reaper: list page ${page} -> ${r.status} ${await r.text()}`); return; }
+      const j = await r.json();
+      pages = j.pages || 1;
+      for (const c of j.data || []) {
+        const tags = c.tags || [];
+        if (!tags.includes("pmm-qa-ephemeral")) continue; // only our throwaway clusters, ever
+        checked++;
+        let expiry = null;
+        for (const t of tags) { const mm = /^expires-(\d+)$/.exec(t); if (mm) { expiry = Number(mm[1]); break; } }
+        if (expiry == null) { const created = Date.parse(c.created || "") / 1000; expiry = Number.isFinite(created) ? created + hardMax : 0; }
+        if (nowS > expiry) {
+          const del = await linodeApi(`/lke/clusters/${c.id}`, { method: "DELETE" });
+          console.log(`lke-reaper: deleted cluster ${c.id} "${c.label}" (expiry ${expiry} < now ${nowS}) -> ${del.status}`);
+          if (del.ok) { reaped++; try { fs.rmSync(`${LKE_RUNS_DIR}/${c.label.replace(/^pmm-ha-/, "")}`, { recursive: true, force: true }); } catch {} }
+        }
+      }
+      page++;
+    } while (page <= pages);
+    if (checked) console.log(`lke-reaper: checked ${checked} ephemeral cluster(s), reaped ${reaped}`);
+  } catch (e) {
+    console.error(`lke-reaper error (relay stays up): ${e.message}`);
+  }
+}
+setInterval(reapLke, LKE_REAP_INTERVAL_MS).unref();
+setTimeout(reapLke, 60_000).unref(); // first sweep shortly after boot
 
 async function brokerJira(action, m, by) {
   if (!JIRA_EMAIL || !JIRA_API_TOKEN) return { status: 503, body: "jira_not_configured" };
@@ -557,7 +683,7 @@ const handler = async (req, res) => {
       if (!id.ok) { res.writeHead(id.code).end(id.msg); return; }
       let m;
       try { m = raw ? JSON.parse(raw) : {}; } catch { res.writeHead(400).end("bad_request"); return; }
-      if (service === "linode") req.setTimeout(600000); // provision/destroy are long ops
+      if (service === "linode") req.setTimeout(action.endsWith("-lke") ? 1_800_000 : 600000); // LKE (cluster + Helm) runs far longer than a VM
       const out =
         service === "linode" ? await brokerLinode(action, m, id.login)
         : service === "jira" ? await brokerJira(action, m, id.login)

@@ -2,8 +2,11 @@
 # SessionEnd hook -- best-effort teardown of this session's runner VMs.
 # Not the guarantee (SessionEnd doesn't reliably fire on an abandoned
 # session); the on-box self-destruct timer (cloud-init.yaml.tftpl) is what
-# actually guarantees cleanup. Two provisioning paths, torn down two ways:
-#   * relay-brokered (runs/<id>/relay present): POST /linode/destroy to the relay
+# actually guarantees cleanup. Three provisioning paths, torn down three ways:
+#   * relay-brokered LKE (runs/<id>/lke present): POST /linode/destroy-lke -- an
+#     LKE cluster has NO on-box timer, so the relay's TTL reaper is the real
+#     guarantee here; this is just the fast path.
+#   * relay-brokered VM (runs/<id>/relay present): POST /linode/destroy to the relay
 #     with RELAY_KEY + X-Actor -- the LINODE_TOKEN lives only on the relay, never here.
 #   * legacy local state (terraform.tfstate + LINODE_TOKEN in env): down.sh.
 # A run carrying a keep-alive marker is left up on purpose (an explicit
@@ -32,7 +35,20 @@ for run_dir in "$RUNS_DIR"/*/; do
   [ -f "$run_dir/keep-alive" ] && continue
 
   log="$run_dir/session-end-cleanup.log"
-  if [ -f "$run_dir/relay" ]; then
+  if [ -f "$run_dir/lke" ]; then
+    # HA/LKE run brokered by the relay. The token lives on the relay; ask it to
+    # delete the cluster. Fast path only — the relay's TTL reaper is the guarantee.
+    [ -n "${RELAY_KEY:-}" ] || continue
+    base="$(cat "$run_dir/relay" 2>/dev/null)"
+    [ -n "$base" ] || continue
+    actor="$(gh api user --jq .login 2>/dev/null || true)"
+    curl -sS -m 240 -X POST "$base/linode/destroy-lke" \
+      -H "X-Relay-Secret: $RELAY_KEY" \
+      -H "X-Actor: $actor" \
+      -H "Content-Type: application/json" \
+      -d "{\"run_id\":\"$run_id\"}" \
+      >>"$log" 2>&1 || true
+  elif [ -f "$run_dir/relay" ]; then
     # Relay-brokered: the token lives on the relay; ask it to destroy.
     # The marker file holds the relay URL (written at provision time).
     # Identity: X-Actor (gh login) is roster-checked by the relay.
