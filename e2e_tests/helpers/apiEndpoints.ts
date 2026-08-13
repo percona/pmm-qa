@@ -27,6 +27,7 @@ const apiEndpoints = {
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',
+    sessions: '/v1/realtimeanalytics/sessions',
     sessionsStart: '/v1/realtimeanalytics/sessions:start',
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },

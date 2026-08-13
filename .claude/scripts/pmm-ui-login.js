@@ -17,6 +17,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { chromium } = require("playwright");
 const { spkiPinFromCertFile } = require("./lib/spki-pin");
+const { proxyLaunchOptions } = require("./lib/proxy");
 
 async function main() {
   const sessionId = process.argv[2];
@@ -33,7 +34,14 @@ async function main() {
     process.exit(1);
   }
   const adminPassword = process.env.ADMIN_PASSWORD || "pmm3admin!";
-  const headed = process.env.PMM_UI_HEADED !== "0";
+  // Headed needs an X/Wayland display; a cloud agent container has none and
+  // Chromium dies with "The platform failed to initialize" rather than
+  // falling back. Default to whatever the environment can actually run, and
+  // let PMM_UI_HEADED force either way.
+  const headed =
+    process.env.PMM_UI_HEADED !== undefined
+      ? process.env.PMM_UI_HEADED !== "0"
+      : Boolean(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
   const width = Number(process.env.PMM_UI_WIDTH || 1920);
   const height = Number(process.env.PMM_UI_HEIGHT || 1200);
 
@@ -71,10 +79,12 @@ async function main() {
   // playwright expects (confirmed live -- an unpinned minor bump silently
   // wants a browser revision that isn't there), so don't rely on
   // Playwright's own bundled-browser resolution to find it.
+  const proxyOpts = proxyLaunchOptions();
   const browser = await chromium.launch({
     executablePath: "/opt/pw-browsers/chromium",
     headless: !headed,
-    args: launchArgs,
+    args: [...launchArgs, ...proxyOpts.args],
+    proxy: proxyOpts.proxy,
   });
   const context = await browser.newContext({
     ignoreHTTPSErrors: false,

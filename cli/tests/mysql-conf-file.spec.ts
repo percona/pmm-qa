@@ -6,7 +6,7 @@ const MYSQL_USER = 'root';
 const MYSQL_PASSWORD = 'GRgrO9301RuF';
 const ipPort = '127.0.0.1:3306';
 
-test.describe('Percona Server MySql (PS) Configuration file test', { tag: '@mysql-conf-file' }, async () => {
+test.describe('Percona Server MySql (PS) Configuration file test', { tag: '@mysql-conf-file' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep mysql_pmm | awk \'{print $NF}\'');
     await result.outContains('mysql_pmm', 'MYSQL docker container should exist. please run pmm-framework with --database mysql');

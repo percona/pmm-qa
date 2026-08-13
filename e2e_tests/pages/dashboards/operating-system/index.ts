@@ -5,6 +5,7 @@ const OperatingSystemDashboards = {
   nodeSummary: new NodeSummaryDashboard(),
 };
 
-export type OperatingSystemDashboardsType = typeof OperatingSystemDashboards & Record<string, DashboardInterface>;
+export type OperatingSystemDashboardsType = typeof OperatingSystemDashboards &
+  Record<string, DashboardInterface>;
 
 export default OperatingSystemDashboards;
