@@ -35,14 +35,27 @@ for (const configuration of configurations) {
         cliHelper.execSilent(configuration.command);
         await api.serverApi.waitForReady();
 
-        const configName = cliHelper.execSilent(
-          `docker exec ${configuration.containerName} cat /srv/logs/clickhouse-server.log | grep "config"`,
+        const startupLog = cliHelper.execSilent(
+          `docker exec ${configuration.containerName} grep -m1 "Processing configuration file" /srv/logs/clickhouse-server.log`,
+        );
+        const loadedConfig = startupLog.stdout.match(/Processing configuration file '([^']+)'/)?.[1] ?? '';
+
+        expect(
+          loadedConfig,
+          `ClickHouse reported no configuration file in /srv/logs/clickhouse-server.log: ${startupLog.stdout}`,
+        ).not.toBe('');
+
+        // ClickHouse is started with the fixed /etc/clickhouse-server/config.xml name, a symlink
+        // PMM points at the config PMM_CLICKHOUSE_CONFIG selects; builds before PMM-15309 pass the
+        // selected config directly. Resolving the reported path covers both.
+        const resolvedConfig = cliHelper.execSilent(
+          `docker exec ${configuration.containerName} readlink -f ${loadedConfig}`,
         );
 
         expect(
-          configName.stdout,
-          `Config name should be: ${configuration.configName} but actual value is: ${configName.stdout}`,
-        ).toContain(`${configuration.configName}.xml`);
+          resolvedConfig.stdout.trim(),
+          `Config name should be: ${configuration.configName} but actual value is: ${resolvedConfig.stdout}`,
+        ).toBe(`/etc/clickhouse-server/${configuration.configName}.xml`);
       },
     );
   });
