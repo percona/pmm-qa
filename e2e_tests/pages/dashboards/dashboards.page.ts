@@ -44,6 +44,7 @@ export default class Dashboards extends BasePage {
     imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   elements = {
+    collapseRow: this.grafanaIframe().getByLabel('Collapse row'), //.locator('[aria-label="Collapse row"]'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
@@ -68,6 +69,12 @@ export default class Dashboards extends BasePage {
   messages = {};
 
   readonly panels = () => Panels(this.page);
+
+  collapseAllRows = async () => {
+    for (const element of await this.elements.collapseRow.all()) {
+      await element.click();
+    }
+  };
 
   loadAllPanels = async () => {
     await this.waitForDashboardToLoad();
@@ -159,7 +166,12 @@ export default class Dashboards extends BasePage {
     // eslint-disable-next-line playwright/prefer-web-first-assertions -- the order might be different
     const availableMetrics = await this.elements.panelName.allTextContents();
 
-    expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
+    expect
+      .soft(
+        availableMetrics,
+        `Expected available metrics: \n${availableMetrics}\nto equal expected metrics: \n${expectedMetrics}`,
+      )
+      .toEqual(expect.arrayContaining(expectedMetricsNames));
   };
 
   verifyNamedPanelsHaveData = async (panelNames: string[]) => {
