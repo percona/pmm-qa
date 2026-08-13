@@ -9,19 +9,13 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 
 pmmTest(
   'PMM-T2140 Verify leader/follower labels are shown for PMM HA nodes on the Inventory Nodes page @pmm-ha',
-  async ({ api, haClusterHelper, k8sHelper, nodesPage, page }) => {
-    // The leader comes from the cluster, not /v1/ha/nodes: that is what the
-    // Nodes page renders from, so it would only prove the page echoes itself.
-    // eslint-disable-next-line playwright/no-skipped-test -- conditional on cluster access, never a permanent skip
-    pmmTest.skip(
-      !k8sHelper.isAvailable(),
-      `Namespace "${k8sHelper.namespace}" is not reachable with the current kubeconfig`,
-    );
-
+  async ({ api, haClusterHelper, nodesPage, page }) => {
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await api.haApi.getStatus()).toEqual('Enabled');
     });
 
+    // Not /v1/ha/nodes: that is what the Nodes page renders, so it would only
+    // prove the page echoes itself.
     const { leader, podNames } = await pmmTest.step('Read the leader from the cluster', async () => {
       const pods = haClusterHelper.podNames();
 

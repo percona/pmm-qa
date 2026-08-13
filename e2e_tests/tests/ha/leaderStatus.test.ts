@@ -13,13 +13,6 @@ pmmTest(
   async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
     pmmTest.setTimeout(Timeouts.FIVE_MINUTES);
 
-    // The failover is driven with kubectl, so UI-only runs have nothing to test.
-    // eslint-disable-next-line playwright/no-skipped-test -- conditional on cluster access, never a permanent skip
-    pmmTest.skip(
-      !k8sHelper.isAvailable(),
-      `Namespace "${k8sHelper.namespace}" is not reachable with the current kubeconfig`,
-    );
-
     await pmmTest.step('Verify HA mode is enabled', async () => {
       expect(await api.haApi.getStatus()).toEqual('Enabled');
     });

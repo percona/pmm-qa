@@ -1,5 +1,7 @@
 import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { KubernetesPod, KubernetesPodResource, KubernetesResourceList } from '@interfaces/kubernetes';
 import { Timeouts } from '@helpers/timeouts';
 import { k8sNamespace } from '@helpers/constants';
@@ -27,6 +29,22 @@ export default class K8sHelper {
   constructor(namespace: string = k8sNamespace) {
     this.namespace = namespace;
   }
+
+  /**
+   * Fails with kubectl's own error rather than skipping - a skipped cluster test
+   * reports a green run that proved nothing.
+   */
+  assertReachable = (): void => {
+    const result = this.execSilent('get pods --output=name');
+
+    if (result.code === 0) return;
+
+    throw new Error(
+      `Namespace "${this.namespace}" is not reachable, so the cluster tests cannot run.\n` +
+        `Kubeconfig: ${process.env.KUBECONFIG ?? join(homedir(), '.kube', 'config')}\n` +
+        `kubectl said: ${result.stderr.trim() || '(no stderr)'}`,
+    );
+  };
 
   deletePod = (podName: string): ExecReturn => this.exec(`delete pod ${podName} --wait=false`);
 
@@ -100,9 +118,6 @@ export default class K8sHelper {
         .assertSuccess()
         .stdout.trim(),
     );
-
-  /** HA jobs can be dispatched UI-only; tests needing the cluster skip rather than fail. */
-  isAvailable = (): boolean => this.execSilent('get pods --output=name').code === 0;
 
   scaleStatefulSet = (name: string, replicas: number): ExecReturn =>
     this.exec(`scale statefulset ${name} --replicas=${replicas}`);

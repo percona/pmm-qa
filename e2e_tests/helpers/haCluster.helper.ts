@@ -25,7 +25,7 @@ export default class HaClusterHelper {
    * killed mid-scale-down never reaches its cleanup, so the next one repairs.
    */
   ensureServing = async (haApi: HaApi, replicas: number = defaultReplicas): Promise<void> => {
-    if (!this.k8sHelper.isAvailable()) return;
+    this.k8sHelper.assertReachable();
 
     const statefulSet = this.statefulSetName();
 
