@@ -355,6 +355,31 @@ const SAFE_ID = (v) => {
 };
 const readIf = (p) => { try { return fs.readFileSync(p, "utf8").trim(); } catch { return null; } };
 
+// Atomic single-flight claim for a provisioning run dir. `started` doubles as an
+// O_EXCL lock: a concurrent kickoff for the same run_id fails the exclusive
+// create and is rejected as busy, unless the existing run is terminal (status
+// written) or stale (older than capSec, i.e. its build cap has elapsed), in
+// which case it is reclaimed. Also records the initiating actor so result reads
+// can be bound to it. Returns { busy:true } or { ok:true }.
+function claimRun(rd, by, capSec) {
+  fs.mkdirSync(rd, { recursive: true });
+  const now = Math.floor(Date.now() / 1000);
+  try {
+    fs.writeFileSync(`${rd}/started`, String(now), { flag: "wx" });
+  } catch (e) {
+    if (e.code !== "EEXIST") throw e;
+    const started = Number(readIf(`${rd}/started`)) || 0;
+    if (!readIf(`${rd}/status`) && now - started < capSec) return { busy: true };
+    fs.writeFileSync(`${rd}/started`, String(now)); // reclaim a terminal/stale run
+  }
+  for (const f of ["status", "summary.env"]) { try { fs.rmSync(`${rd}/${f}`, { force: true }); } catch {} }
+  fs.writeFileSync(`${rd}/actor`, String(by));
+  return { ok: true };
+}
+// Bind result reads to the initiating actor: a shared RELAY_KEY + a guessable
+// run_id must not let another roster user read someone else's creds/kubeconfig.
+const ownerOk = (rd, by) => { const o = readIf(`${rd}/actor`); return !o || o === String(by); };
+
 async function brokerLinode(action, m, by) {
   if (!process.env.LINODE_TOKEN) return { status: 503, body: "linode_not_configured" };
   if (action === "provision") {
@@ -365,17 +390,12 @@ async function brokerLinode(action, m, by) {
     // Same async model as provision-lke: a VM build can brush past the ~5-min
     // connection cut, and the exec creds only come back in the final response.
     // Kick off detached, return the run_id now, poll /linode/provision-result.
-    const started = readIf(`${rd}/started`);
-    const statusNow = readIf(`${rd}/status`);
-    if (started && !statusNow && Date.now() / 1000 - Number(started) < 900) {
+    if (claimRun(rd, by, 900).busy) {
       return { status: 409, json: true, body: JSON.stringify({ run_id, status: "provisioning", hint: "already running — poll /linode/provision-result" }) };
     }
-    fs.mkdirSync(rd, { recursive: true });
-    try { fs.rmSync(`${rd}/status`, { force: true }); } catch {} // clear a prior terminal run so a same-id retry starts clean
     const args = [`${RUNNER_DIR}/up.sh`, String(role), String(run_id)];
     if (ttl_hours != null && Number.isFinite(Number(ttl_hours))) args.push("-var", `ttl_hours=${Number(ttl_hours)}`);
     const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: `relay:${by}`, RUN_DIR: rd };
-    fs.writeFileSync(`${rd}/started`, String(Math.floor(Date.now() / 1000)));
     // Detached wrapper: cap at 12 min, tee to provision.log, write a terminal
     // status file. `ready` requires all three creds so a partial write never reads ready.
     const wrapper =
@@ -392,6 +412,7 @@ async function brokerLinode(action, m, by) {
     if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
     const rd = `${RUNNER_DIR}/runs/${run_id}`;
     if (!fs.existsSync(rd)) return { status: 404, body: "unknown_run" };
+    if (!ownerOk(rd, by)) return { status: 403, body: "not_your_run" };
     const status = readIf(`${rd}/status`);
     if (status === "ready") {
       const ip = readIf(`${rd}/ip`);
@@ -433,13 +454,9 @@ async function brokerLinode(action, m, by) {
     // at ~5 min. So provisioning is ASYNC: kick off a detached build, return the
     // run_id immediately, and let the caller poll /linode/lke-result. A dropped
     // connection is then fully recoverable — all state lives in runDir on this box.
-    const started = readIf(`${runDir}/started`);
-    const statusNow = readIf(`${runDir}/status`);
-    if (started && !statusNow && Date.now() / 1000 - Number(started) < 2100) {
+    if (claimRun(runDir, by, 2400).busy) {
       return { status: 409, json: true, body: JSON.stringify({ run_id, status: "provisioning", hint: "already running — poll /linode/lke-result" }) };
     }
-    fs.mkdirSync(runDir, { recursive: true });
-    for (const f of ["status", "summary.env"]) { try { fs.rmSync(`${runDir}/${f}`, { force: true }); } catch {} } // clear a prior terminal run so a same-id retry starts clean
     // Optional passthrough config — light validation, then handed to the script as env vars.
     const cfg = {};
     const pass = (k, envk, re) => { const v = m[k]; if (v != null && (!re || re.test(String(v)))) cfg[envk] = String(v); };
@@ -458,14 +475,14 @@ async function brokerLinode(action, m, by) {
       if (m[key]) { const p = `${runDir}/${fname}`; fs.writeFileSync(p, Buffer.from(String(m[key]), "base64")); cfg[envk] = p; }
     }
     const env = { ...process.env, LINODE_CLI_TOKEN: process.env.LINODE_TOKEN, RUN_ID: String(run_id), RUN_DIR: runDir, TTL_HOURS: String(ttlH), EXPIRES_EPOCH: String(expiresEpoch), CLAUDE_CODE_SESSION_ID: `relay:${by}`, ...cfg };
-    fs.writeFileSync(`${runDir}/started`, String(Math.floor(Date.now() / 1000)));
     fs.writeFileSync(`${runDir}/expires_epoch`, String(expiresEpoch));
     // Detached wrapper: cap the build at 35 min, tee to provision.log, and write a
-    // terminal `status` file (ready | failed:<code>) the poller reads. unref() so
-    // the build outlives both this request and a relay restart.
+    // terminal `status` file (ready | failed:<code>) the poller reads. `ready`
+    // requires BOTH result artifacts so a partial run never reads ready. unref()
+    // so the build outlives both this request and a relay restart.
     const wrapper =
       'timeout 2100 bash "$0" >>"$RUN_DIR/provision.log" 2>&1; ec=$?; ' +
-      'if [ "$ec" -eq 0 ] && [ -s "$RUN_DIR/summary.env" ]; then echo ready >"$RUN_DIR/status"; ' +
+      'if [ "$ec" -eq 0 ] && [ -s "$RUN_DIR/summary.env" ] && [ -s "$RUN_DIR/kubeconfig.yaml" ]; then echo ready >"$RUN_DIR/status"; ' +
       'else echo "failed:$ec" >"$RUN_DIR/status"; fi';
     const child = spawn("bash", ["-c", wrapper, `${HA_DIR}/create-lke-pmm-ha.sh`], { env, detached: true, stdio: "ignore" });
     child.unref();
@@ -477,6 +494,7 @@ async function brokerLinode(action, m, by) {
     if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
     const runDir = `${LKE_RUNS_DIR}/${run_id}`;
     if (!fs.existsSync(runDir)) return { status: 404, body: "unknown_run" };
+    if (!ownerOk(runDir, by)) return { status: 403, body: "not_your_run" };
     const status = readIf(`${runDir}/status`);
     const cluster_id = readIf(`${runDir}/cluster_id`);
     const expiresEpoch = Number(readIf(`${runDir}/expires_epoch`)) || null;
@@ -484,7 +502,8 @@ async function brokerLinode(action, m, by) {
       const summary = {};
       for (const line of fs.readFileSync(`${runDir}/summary.env`, "utf8").split("\n")) { const i = line.indexOf("="); if (i > 0) summary[line.slice(0, i)] = line.slice(i + 1).trim(); }
       const kubeconfig_b64 = fs.readFileSync(`${runDir}/kubeconfig.yaml`).toString("base64");
-      return { status: 200, json: true, body: JSON.stringify({ run_id, status: "ready", cluster_id, expires_epoch: expiresEpoch, external_ip: summary.external_ip, url: summary.url, kubeconfig_b64, passwords: summary }) };
+      const pods = readIf(`${runDir}/pods.txt`); // HA pod snapshot the create script captured (kubectl runs on the relay, not the caller)
+      return { status: 200, json: true, body: JSON.stringify({ run_id, status: "ready", cluster_id, expires_epoch: expiresEpoch, external_ip: summary.external_ip, url: summary.url, kubeconfig_b64, passwords: summary, pods }) };
     }
     if (status && status.startsWith("failed")) {
       const tail = (readIf(`${runDir}/provision.log`) || "").slice(-2000);
