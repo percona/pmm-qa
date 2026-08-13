@@ -1,9 +1,11 @@
 ---
-name: linode-provisioning
-description: Provision PMM Server and monitored databases on a throwaway Linode VM using Terraform and the unmodified qa-integration bash pmm-framework. Use when setting up PMM for manual QA or reproducing an FB test environment for a cloud agent run.
+name: linode-docker-provisioning
+description: Provision PMM Server and monitored databases as single-server Docker on a throwaway Linode VM, using Terraform and the unmodified qa-integration bash pmm-framework. This is the default PMM deployment for QA — use it for setting up PMM for manual QA or reproducing an FB test environment, unless the change needs HA (see test-scope / linode-ha-provisioning).
 ---
 
-# PMM provisioning (Linode)
+# PMM provisioning (Linode, single-server Docker)
+
+This is the **default** deployment for PMM QA: one PMM Server container on one Linode VM. For HA (Kubernetes / multiple replicas) use [`linode-ha-provisioning`](../linode-ha-provisioning/SKILL.md) instead; the [`test-scope`](../test-scope/SKILL.md) skill decides which a given change needs.
 
 Uses the **same** bash `qa-integration/pmm_qa/pmm-framework/pmm-framework` as Jenkins/EC2/CI — no wrapper scripts, no forked playbooks, no changes to `qa-integration/` ever. A real Linode VM (full kernel, full systemd, real Docker) replaces this session's own constrained sandbox for anything that needs to run containers — that sandbox is fine for reading code and talking to Jira/GitHub, but PMM + monitored databases need a real Docker host.
 

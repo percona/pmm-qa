@@ -47,9 +47,9 @@ log() { echo "[pmm-ha] $*"; }
 for cmd in linode-cli jq kubectl helm base64 openssl; do
     command -v "$cmd" >/dev/null 2>&1 || { echo "ERROR: '$cmd' is not installed." >&2; exit 1; }
 done
-: "${LINODE_CLI_TOKEN:=${LINODE_TOKEN:-}}"
-[ -n "$LINODE_CLI_TOKEN" ] || { echo "ERROR: set LINODE_TOKEN (or LINODE_CLI_TOKEN)." >&2; exit 1; }
-export LINODE_CLI_TOKEN
+# One knob: LINODE_TOKEN (LKE Read/Write). linode-cli reads it as LINODE_CLI_TOKEN.
+[ -n "${LINODE_TOKEN:-}" ] || { echo "ERROR: set LINODE_TOKEN (Linode API token, LKE Read/Write)." >&2; exit 1; }
+export LINODE_CLI_TOKEN="$LINODE_TOKEN"
 
 # --- create the cluster ------------------------------------------------------
 log "Creating LKE cluster '$CLUSTER_LABEL' ($NODE_COUNT x $NODE_TYPE, $REGION, k8s $K8S_VERSION)"

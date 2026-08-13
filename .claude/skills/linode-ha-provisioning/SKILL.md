@@ -1,26 +1,26 @@
 ---
 name: linode-ha-provisioning
-description: Decide whether a PMM change needs HA testing, and provision PMM in High Availability mode on a throwaway Linode LKE (Kubernetes) cluster via Helm. Use when a Jira ticket flags HA, or a diff touches leader-elected services, shared/externalised state, VictoriaMetrics scraping, Grafana clustering, or the pmm-ha Helm charts/operators.
+description: Provision PMM in High Availability mode on a throwaway Linode LKE (Kubernetes) cluster via Helm, and verify HA behaviour (leader election, failover, shared state). Use once a change is known to be HA-impacted — see the test-scope skill to decide that first. The Linode/LKE counterpart to linode-docker-provisioning.
 ---
 
 # PMM HA provisioning (Linode LKE)
 
-PMM's normal single-container deployment can't surface HA bugs: HA runs **N `pmm-managed` replicas with one elected leader** (Raft + memberlist gossip), state externalised to shared PostgreSQL, ClickHouse, and VictoriaMetrics behind HAProxy, all on Kubernetes. This skill decides when that matters and stands up a real HA cluster to test it.
+Stands up a real PMM HA cluster to test HA-specific behaviour that a single container can't surface: **N `pmm-managed` replicas with one elected leader** (Raft + memberlist gossip), state externalised to shared PostgreSQL, ClickHouse, and VictoriaMetrics behind HAProxy, on Kubernetes.
 
-This is the Kubernetes/LKE counterpart to [`linode-provisioning`](../linode-provisioning/SKILL.md) (single Docker VM). Same rules apply: **throwaway, short-lived, cleaned up on every path** — an LKE cluster bills by the hour. Agent-neutral: Test Runner is the primary caller, but Investigator can use it to reproduce an HA-specific FB/CI failure.
+This is the Kubernetes/LKE counterpart to [`linode-docker-provisioning`](../linode-docker-provisioning/SKILL.md) (the default single-VM Docker deployment). Same discipline: **throwaway, short-lived, torn down on every path** — an LKE cluster bills by the hour. Agent-neutral: Test Runner is the primary caller, Investigator can use it to reproduce an HA-specific FB/CI failure.
 
-## 1. First decide if HA is even in scope
+**Only run this when HA is actually in scope.** Whether a change needs HA testing is decided upstream, during planning, by the [`test-scope`](../test-scope/SKILL.md) skill (its `references/ha.md` holds the code-grounded criteria). Don't stand up a cluster speculatively.
 
-Read [references/ha-impact.md](references/ha-impact.md) and answer its two questions (ticket flags HA? diff touches the HA blast radius?). If **neither**, skip this skill — do the normal single-server run and don't create a cluster. Only continue below when HA is genuinely impacted.
+## Prerequisites
 
-## 2. Prerequisites
-
-On the box (a Linode VM from `linode-provisioning`, or any Docker/Linux host):
+On the box (a Linode VM from `linode-docker-provisioning`, or any Docker/Linux host):
 
 - `linode-cli`, `jq`, `kubectl`, `helm`, `base64`, `openssl`. Install kubectl+helm with `k8s/install_k8s_tools.sh --kubectl --helm`; `linode-cli` via `pip install linode-cli`.
-- `export LINODE_TOKEN=...` (already in this environment's secrets — never print it or write it to a file). The script reads it as `LINODE_CLI_TOKEN`.
+- A Linode API token with **Kubernetes (LKE): Read/Write** — the only scope the script's `linode-cli lke ...` calls need (nothing about Linodes, Firewalls, or NodeBalancers directly: the LoadBalancer is created in-cluster by LKE's own controller). Provide it as `LINODE_TOKEN`; the script hands it to `linode-cli` internally.
 
-## 3. Provision
+> **Relay note.** The single-VM path no longer keeps `LINODE_TOKEN` in the session — it brokers provisioning through the relay (see `linode-docker-provisioning`). LKE provisioning is **not yet** brokered that way, so today it needs an LKE-scoped token reachable by the box. Giving it a relay endpoint (so the account token stays on the relay here too) is the natural follow-up.
+
+## Provision
 
 ```bash
 RUN_ID="<jira-key-or-run-id>" \
@@ -33,21 +33,20 @@ Defaults (all overridable by env var): `REGION=us-east`, `NODE_TYPE=g6-standard-
 
 ### Custom charts / Feature Build
 
-To install from FB or custom Helm charts instead of the released Percona ones, override the chart source and image:
+To test an FB or custom Helm charts instead of the released Percona ones, override the image (and/or point the chart at a local FB path). The `pmm-ha` chart's image keys are `image.repository` / `image.tag`:
 
 ```bash
 RUN_ID=PMM-14744 \
-PMM_CHART=/path/to/fb/pmm-ha \                    # or a custom repo chart
-DEPS_CHART=/path/to/fb/pmm-ha-dependencies \
 PMM_SET="image.repository=perconalab/pmm-server,image.tag=<fb-tag>" \
   .claude/skills/linode-ha-provisioning/scripts/create-lke-pmm-ha.sh
+# or a whole custom chart:  PMM_CHART=/path/to/fb/pmm-ha DEPS_CHART=/path/to/fb/pmm-ha-dependencies
 ```
 
-The exact image key (`PMM_SET` / `DEPS_SET`, or a values file via `PMM_VALUES` / `DEPS_VALUES`) depends on the chart version — read that chart's `values.yaml`, don't assume. Get the FB server image from the latest JNKPercona comment on the ticket's linked `pmm-submodules` PR (`fb-tests` skill), the same source used for single-VM runs.
+`PMM_SET` / `DEPS_SET` take comma-separated `key=value`; `PMM_VALUES` / `DEPS_VALUES` take a values.yaml. Get the FB server image (repo + tag) from the latest JNKPercona comment on the ticket's linked `pmm-submodules` PR (`fb-tests` skill) — the same source single-VM runs use. If you override to a different chart version, re-check its `values.yaml` for the image key.
 
-## 4. Verify HA behaviour (not just "it's up")
+## Verify HA behaviour (not just "it's up")
 
-Standing up the cluster isn't the test. Exercise what the change actually touched (see `ha-impact.md`), e.g.:
+Standing up the cluster isn't the test. Exercise what the change actually touched (see `test-scope`'s `references/ha.md`), e.g.:
 
 - `kubectl get pods -n pmm` — replicas, operators, HAProxy all Ready.
 - Leader status: PMM's HA API / `pmm_ha_*` metrics; confirm exactly one leader.
@@ -55,11 +54,11 @@ Standing up the cluster isn't the test. Exercise what the change actually touche
 - Shared state: confirm data written on one replica is visible via another (it lives in the shared PG/ClickHouse/VM, not local `/srv`).
 - UI via the LoadBalancer IP (`ui-evidence`), using `summary.env` for the admin password.
 
-## 5. Teardown — mandatory, every path
+## Teardown — mandatory, every path
 
 ```bash
 RUN_ID="<run-id>" .claude/skills/linode-ha-provisioning/scripts/destroy-lke.sh
 # or: linode-cli lke cluster-delete "$(cat /tmp/pmm-ha/<RUN_ID>/cluster_id)"
 ```
 
-Delete the cluster whether the run passed, failed, or was blocked — this is the last step, always. Unlike the single-VM path there is **no on-box self-destruct timer** here: nothing cleans an LKE cluster up for you, so skipping teardown leaks a multi-node cluster + LoadBalancer that bills until someone notices. If you also created the box with `linode-provisioning`, `down.sh` that VM too — it does not delete the cluster.
+Delete the cluster whether the run passed, failed, or was blocked — this is the last step, always. Unlike the single-VM path there is **no on-box self-destruct timer** here: nothing cleans an LKE cluster up for you, so skipping teardown leaks a multi-node cluster + LoadBalancer that bills until someone notices. If you also created a box with `linode-docker-provisioning`, tear that down too — it does not delete the cluster.

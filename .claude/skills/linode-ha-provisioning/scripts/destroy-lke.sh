@@ -5,9 +5,8 @@
 #   RUN_ID=<id> destroy-lke.sh
 set -euo pipefail
 
-: "${LINODE_CLI_TOKEN:=${LINODE_TOKEN:-}}"
-[ -n "$LINODE_CLI_TOKEN" ] || { echo "ERROR: set LINODE_TOKEN (or LINODE_CLI_TOKEN)." >&2; exit 1; }
-export LINODE_CLI_TOKEN
+[ -n "${LINODE_TOKEN:-}" ] || { echo "ERROR: set LINODE_TOKEN (Linode API token, LKE Read/Write)." >&2; exit 1; }
+export LINODE_CLI_TOKEN="$LINODE_TOKEN"
 
 CLUSTER_ID="${1:-}"
 if [ -z "$CLUSTER_ID" ] && [ -n "${RUN_ID:-}" ]; then

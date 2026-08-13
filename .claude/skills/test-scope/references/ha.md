@@ -1,6 +1,6 @@
 # Does this change need HA testing?
 
-Decide **before** planning QA. Answer two questions; if **either** is yes, exercise the change on an HA deployment (this skill) in addition to the normal single-server run.
+The HA dimension of `test-scope`. Answer two questions; if **either** is yes, exercise the change on an HA deployment (`linode-ha-provisioning`) in addition to the normal single-server run.
 
 ## 1. Does the ticket say so?
 

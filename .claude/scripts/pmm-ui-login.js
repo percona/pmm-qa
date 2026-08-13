@@ -6,7 +6,7 @@
 //   PMM_URL='https://<linode-ip>'          node pmm-ui-login.js PMM-14576
 //   ADMIN_PASSWORD='...'                   (optional, defaults to 'pmm3admin!')
 //   PMM_CERT_PATH='runs/<run_id>/pmm_cert.pem'  (required -- pins PMM's own
-//     cert instead of trusting any cert; see pmm-linode-provisioning skill)
+//     cert instead of trusting any cert; see pmm-linode-docker-provisioning skill)
 //
 // Writes a reusable Playwright storage state to
 // .claude/scripts/.sessions/<SESSION_ID>.json — pass that file to a
@@ -60,11 +60,11 @@ async function main() {
   // any certificate on a connection that's about to carry the admin
   // password. PMM's cert can't be known before the box exists, but once
   // PMM is up, its cert is fetched over the already-pinned exec-server (see
-  // pmm-linode-provisioning's readyz step) and passed here via PMM_CERT_PATH.
+  // pmm-linode-docker-provisioning's readyz step) and passed here via PMM_CERT_PATH.
   const certPath = process.env.PMM_CERT_PATH;
   if (!certPath) {
     console.error(
-      "PMM_CERT_PATH is required -- fetch PMM's cert after readyz (see pmm-linode-provisioning skill) and pass it here.",
+      "PMM_CERT_PATH is required -- fetch PMM's cert after readyz (see pmm-linode-docker-provisioning skill) and pass it here.",
     );
     process.exit(1);
   }
