@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+# Deploy/restore the pmm-ai-relay Linode from this directory's relay.js.
+#
+#   ./deploy.sh /path/to/.env [people_dir] [ssh_pubkey_file]
+#
+# Needs LINODE_TOKEN in the environment. The .env file and the per-person
+# JSON files (both from the LastPass "PMM" folder, NEVER committed) are baked
+# into cloud-init and the service starts automatically. If a Linode labeled
+# pmm-ai-relay exists it is REBUILT (same ID, same IP — this is why the IP
+# survives "recreation"); otherwise a new g6-nanode-1 is created in eu-central.
+set -euo pipefail
+
+ENV_FILE=${1:?usage: deploy.sh /path/to/.env [people_dir] [ssh_pubkey_file]}
+PEOPLE_DIR_IN=${2:-}
+PUBKEY_FILE=${3:-}
+HERE=$(cd "$(dirname "$0")" && pwd)
+LABEL=pmm-ai-relay
+
+b64() { base64 < "$1" | tr -d '\n'; }  # single line on both GNU (-w0) and BSD base64
+
+UNIT=$(mktemp)
+cat > "$UNIT" <<'EOF'
+[Unit]
+Description=PMM AI Slack/Jira relay
+After=network-online.target
+
+[Service]
+EnvironmentFile=/opt/pmm-ai-relay/.env
+WorkingDirectory=/opt/pmm-ai-relay
+ExecStart=/usr/bin/node relay.js
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+CLOUD_INIT=$(mktemp)
+cat > "$CLOUD_INIT" <<EOF
+#cloud-config
+write_files:
+  - path: /opt/pmm-ai-relay/relay.js
+    permissions: "0644"
+    encoding: b64
+    content: $(b64 "$HERE/relay.js")
+  - path: /opt/pmm-ai-relay/.env
+    permissions: "0600"
+    encoding: b64
+    content: $(b64 "$ENV_FILE")
+  - path: /etc/systemd/system/pmm-ai-relay.service
+    permissions: "0644"
+    encoding: b64
+    content: $(b64 "$UNIT")
+EOF
+
+# per-person files (people_dir arg): restored exactly as they were saved
+if [ -n "$PEOPLE_DIR_IN" ]; then
+  for f in "$PEOPLE_DIR_IN"/*.json; do
+    [ -e "$f" ] || continue
+    cat >> "$CLOUD_INIT" <<EOF
+  - path: /opt/pmm-ai-relay/people/$(basename "$f")
+    permissions: "0600"
+    encoding: b64
+    content: $(b64 "$f")
+EOF
+  done
+fi
+
+cat >> "$CLOUD_INIT" <<'EOF'
+runcmd:
+  - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls /etc/letsencrypt/renewal-hooks/deploy
+  # self-signed fallback so the HTTPS listener always starts (the egress proxy
+  # rejects it, but the relay stays up); Let's Encrypt overwrites it if issuance works
+  - openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout /opt/pmm-ai-relay/tls/key.pem -out /opt/pmm-ai-relay/tls/cert.pem -subj "/CN=139-162-176-43.ip.linodeusercontent.com" -addext "subjectAltName=DNS:139-162-176-43.ip.linodeusercontent.com,IP:139.162.176.43"
+  - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  - apt-get install -y nodejs certbot
+  # HTTP-01 on port 80 (relay listens on 443/8787, so 80 is free); LE validates
+  # from the public internet, bypassing the session egress proxy entirely
+  - certbot certonly --standalone --non-interactive --agree-tos -m davi.travaglia@percona.com -d 139-162-176-43.ip.linodeusercontent.com --http-01-port 80 || echo "LE issuance failed - relay will run on self-signed (unreachable through proxy)"
+  - 'if [ -f /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem ]; then cp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem; cp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/privkey.pem /opt/pmm-ai-relay/tls/key.pem; fi'
+  # renewal: refresh the copied cert and restart the relay
+  - printf '#!/bin/sh\ncp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem\ncp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/privkey.pem /opt/pmm-ai-relay/tls/key.pem\nsystemctl restart pmm-ai-relay\n' > /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+  - chmod +x /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+  - cd /opt/pmm-ai-relay && npm install @slack/bolt
+  - systemctl daemon-reload
+  - systemctl enable --now pmm-ai-relay
+EOF
+
+# gzip: Linode caps decoded user_data at 16KB and cloud-init transparently
+# handles gzipped input; the embedded relay.js pushes the plain form past the cap
+USER_DATA=$(gzip -9 -c "$CLOUD_INIT" | { base64 -w0 2>/dev/null || base64; })
+# Keep the team's known root password across rebuilds: export RELAY_ROOT_PASS
+# (from the LastPass "PMM" folder) before running. Only generates a fresh one
+# when unset — and then you must save the printed value.
+ROOT_PASS=${RELAY_ROOT_PASS:-$(head -c 24 /dev/urandom | base64 | tr -d '/+=' | head -c 32)}
+AUTH_KEYS="[]"
+[ -n "$PUBKEY_FILE" ] && AUTH_KEYS=$(jq -Rn --arg k "$(cat "$PUBKEY_FILE")" '[$k]')
+
+API=https://api.linode.com/v4/linode/instances
+HDR=(-H "Authorization: Bearer $LINODE_TOKEN" -H "Content-Type: application/json")
+
+ID=$(curl -sS "${HDR[@]}" "$API" | jq -r ".data[] | select(.label==\"$LABEL\") | .id" | head -1)
+
+if [ -n "$ID" ]; then
+  echo "Rebuilding existing $LABEL (id $ID — IP is preserved)"
+  BODY=$(jq -n --arg pass "$ROOT_PASS" --arg ud "$USER_DATA" --argjson keys "$AUTH_KEYS" \
+    '{image:"linode/ubuntu24.04", root_pass:$pass, authorized_keys:$keys, metadata:{user_data:$ud}}')
+  curl -sS --fail-with-body -X POST "${HDR[@]}" "$API/$ID/rebuild" -d "$BODY" | jq '{id,label,ipv4,status}'
+else
+  echo "Creating new $LABEL"
+  BODY=$(jq -n --arg pass "$ROOT_PASS" --arg ud "$USER_DATA" --argjson keys "$AUTH_KEYS" \
+    '{label:"pmm-ai-relay", type:"g6-nanode-1", region:"eu-central", image:"linode/ubuntu24.04",
+      root_pass:$pass, authorized_keys:$keys, backups_enabled:false,
+      tags:["pmm-ai","relay","do-not-delete"], metadata:{user_data:$ud}}')
+  curl -sS --fail-with-body -X POST "${HDR[@]}" "$API" -d "$BODY" | jq '{id,label,ipv4,status}'
+fi
+
+echo "root password (save it): $ROOT_PASS"
+rm -f "$UNIT" "$CLOUD_INIT"
