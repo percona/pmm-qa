@@ -91,6 +91,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
+- `@menu`
 - `@new-navigation`
 - `@nightly`
 - `@pmm-ps-integration`
