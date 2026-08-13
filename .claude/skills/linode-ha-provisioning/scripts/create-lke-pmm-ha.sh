@@ -105,6 +105,12 @@ until linode-cli lke kubeconfig-view "$CLUSTER_ID" --json \
 done
 export KUBECONFIG="$KUBECONFIG_FILE"
 log "KUBECONFIG: $KUBECONFIG"
+# Linode reports the pool "ready" before the nodes register with the k8s API
+# server, so `kubectl wait --all` would hit an empty list and fail immediately
+# ("no matching resources found"). Wait for the nodes to appear first, then wait
+# for Ready.
+log "Waiting for $NODE_COUNT node(s) to register with the API server..."
+until [ "$(kubectl get nodes --no-headers 2>/dev/null | grep -c .)" -ge "$NODE_COUNT" ]; do sleep 10; done
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 kubectl get nodes
 
@@ -125,6 +131,9 @@ helm install pmm-operators "$DEPS_CHART" --namespace "$NAMESPACE" "${deps_args[@
 
 for op in victoria-metrics-operator altinity-clickhouse-operator pg-operator; do
     log "Waiting for operator: $op"
+    # Same empty-match race: the pod may not exist the instant helm returns, and
+    # `kubectl wait -l` errors on zero matches. Wait for it to appear, then Ready.
+    until kubectl get pod -l "app.kubernetes.io/name=$op" -n "$NAMESPACE" --no-headers 2>/dev/null | grep -q .; do sleep 5; done
     kubectl wait --for=condition=ready pod \
         -l "app.kubernetes.io/name=$op" -n "$NAMESPACE" --timeout=300s
 done
