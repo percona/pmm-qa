@@ -6,8 +6,34 @@ import https from "node:https";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 
 const { App } = pkg;
+const execFileP = promisify(execFile);
+
+// Slack Socket Mode can reject asynchronously on a background reconnect (e.g.
+// invalid_auth) OUTSIDE the try/catch around app.start(); unguarded that becomes
+// an unhandledRejection and takes the whole relay down, defeating the
+// endpoints-only fallback and killing the /linode, /jira, /slack broker with it.
+// Keep the listeners serving and just log — a broken Slack must never stop the
+// HTTPS broker. (Sync bugs still crash, as they should.)
+process.on("unhandledRejection", (e) => {
+  console.error(`unhandledRejection (relay stays up): ${e?.stack || e?.message || e}`);
+});
+// The relay's own copy of the linode-runner module (cloned by deploy.sh), used
+// by /linode/provision + /linode/destroy so the LINODE_TOKEN never leaves this box.
+const RUNNER_DIR = process.env.RUNNER_DIR || "/opt/pmm-qa/terraform/linode-runner";
+// HA/LKE counterpart: the relay runs the linode-ha-provisioning scripts with its
+// own token (kubeconfig/passwords come back to the session; the LINODE_TOKEN never
+// leaves this box). An LKE cluster has no on-box self-destruct timer, so the reaper
+// below is its backstop — it deletes any `pmm-qa-ephemeral` cluster past the
+// `expires-<epoch>` tag the create script stamps on it.
+const HA_DIR = process.env.HA_DIR || "/opt/pmm-qa/.claude/skills/linode-ha-provisioning/scripts";
+const LKE_RUNS_DIR = process.env.LKE_RUNS_DIR || "/opt/pmm-ai-relay/lke-runs";
+const LKE_DEFAULT_TTL_H = Number(process.env.LKE_DEFAULT_TTL_HOURS || 24);
+const LKE_HARD_MAX_TTL_H = Number(process.env.LKE_HARD_MAX_TTL_HOURS || 48); // reaper backstop for an untagged/half-created cluster
+const LKE_REAP_INTERVAL_MS = Number(process.env.LKE_REAP_INTERVAL_MS || 15 * 60 * 1000);
 
 // Mentions from REGISTERED people fire the central owner's "router" routine;
 // it only decides which of the caller's own routines fits (or declines), then
@@ -31,15 +57,21 @@ const WATCHED_CHANNELS = JSON.parse(process.env.WATCHED_CHANNELS || "{}");
 let bySlack = {};
 let byJira = {};
 let byName = {};
+let ghRoster = new Set(); // github logins from people files (broker roster), lowercased
 function loadPeople() {
   const s = {};
   const j = {};
   const n = {};
+  const gh = new Set();
   let files = [];
   try {
     files = fs.readdirSync(PEOPLE_DIR).filter((f) => f.endsWith(".json"));
   } catch (e) {
-    console.error(`people dir unreadable (${PEOPLE_DIR}): ${e.message}`);
+    // Fail closed: a transient read/permission fault must NOT drop the roster to
+    // empty, which rosterOk() treats as allow-any. Keep the last good roster and
+    // reserve the empty-roster fallback for a genuinely readable-but-empty dir.
+    console.error(`people dir unreadable (${PEOPLE_DIR}): ${e.message} — keeping previous roster`);
+    return;
   }
   for (const f of files) {
     try {
@@ -48,6 +80,7 @@ function loadPeople() {
       n[p.name] = p;
       if (p.slack) s[p.slack] = p;
       if (p.jira) j[p.jira] = p;
+      if (p.github) gh.add(String(p.github).toLowerCase()); // broker roster
     } catch (e) {
       console.error(`people: skipping bad file ${f}: ${e.message}`); // one broken file never takes the relay down
     }
@@ -55,6 +88,7 @@ function loadPeople() {
   bySlack = s;
   byJira = j;
   byName = n;
+  ghRoster = gh;
   console.log(`people loaded: ${files.length} file(s), central owner "${CENTRAL_OWNER}" ${byName[CENTRAL_OWNER] ? "found" : "MISSING"}`);
 }
 
@@ -74,6 +108,9 @@ try {
 const ALLOW_FALLBACK = process.env.ALLOW_FALLBACK === "true"; // /jira: unmapped initiator -> central owner's test-runner
 const CHANNELS = (process.env.CHANNEL_ALLOWLIST || "").split(",").filter(Boolean); // mention flow; empty => all channels
 const JIRA_RELAY_SECRET = process.env.JIRA_RELAY_SECRET;
+const RELAY_KEY = process.env.RELAY_KEY; // shared-env → relay bearer; gates every /<service>/<action> broker call (with GitHub identity)
+const JIRA_EMAIL = process.env.JIRA_EMAIL; // relay-side Jira service account, used by the /jira/<action> broker
+const JIRA_API_TOKEN = process.env.JIRA_API_TOKEN;
 const REPLY_SECRET = process.env.REPLY_SECRET;
 if (!REPLY_SECRET) {
   // sign() runs before either Slack handler's try block, so a missing secret
@@ -93,6 +130,30 @@ const TLS_KEY = process.env.TLS_KEY || "/opt/pmm-ai-relay/tls/key.pem";
 // else at a self-signed fallback (relay still starts, but the egress proxy
 // will reject the self-signed origin cert — see README "Endpoints").
 const CAP_TTL_MS = 2 * 60 * 60 * 1000;
+
+// Broker access control. Every /<service>/<action> call needs the shared
+// RELAY_KEY (possession) plus a caller identity. The caller sends its GitHub
+// login in X-Actor — it gets that login from `gh api user`, which the egress
+// proxy really verified — and the relay checks it against the roster (the
+// `github` logins in the people files it already loads; see ghRoster) and logs
+// it. No extra env var; the roster is the people directory.
+//
+// Design note: this is env-membership-grade, not cryptographically unspoofable
+// at the relay boundary — a caller that already holds RELAY_KEY could forge
+// X-Actor. That's an accepted trade: the hard gate is possession of RELAY_KEY
+// (= membership of the admin-controlled shared env), and the whole broker
+// surface is bounded + audited, so the blast radius of a forged identity is the
+// short op list, never account access. (Unspoofable upgrade = the push-proof
+// handshake, documented in AUTOMATIONS.) Empty roster = any login accepted.
+function rosterOk(login) {
+  return ghRoster.size === 0 || ghRoster.has(login.toLowerCase());
+}
+function identity(req) {
+  const actor = String(req.headers["x-actor"] || "").trim();
+  if (!actor) return { ok: false, code: 401, msg: "actor_required" };
+  if (!rosterOk(actor)) return { ok: false, code: 403, msg: "identity_not_authorized" };
+  return { ok: true, login: actor };
+}
 
 // DEGRADED MODE: without real Slack tokens the relay still serves /health,
 // /jira, /route and /reply so every non-Slack flow can be exercised before
@@ -280,6 +341,267 @@ app?.event("app_mention", async ({ event, body, client }) => {
   }
 });
 
+// ---- Broker service handlers -------------------------------------------
+// Each takes (action, body, by) where `by` is the VERIFIED GitHub login, and
+// returns {status, body, json?} — the dispatch in handler() writes the
+// response. All privileged actions live here behind one auth gate.
+
+// Path-safe id: the charset alone still admits "." and ".." — both valid path
+// segments that would escape a run directory when interpolated into a filesystem
+// path (write side and reaper delete side). Reject them explicitly.
+const SAFE_ID = (v) => {
+  v = String(v || "");
+  return /^[A-Za-z0-9._-]+$/.test(v) && v !== "." && v !== ".." && !v.includes("..");
+};
+
+async function brokerLinode(action, m, by) {
+  if (!process.env.LINODE_TOKEN) return { status: 503, body: "linode_not_configured" };
+  if (action === "provision") {
+    const { role, run_id, ttl_hours, pmm_qa_ref } = m;
+    if (!SAFE_ID(role)) return { status: 400, body: "bad_role" };
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    const args = [`${RUNNER_DIR}/up.sh`, String(role), String(run_id)];
+    if (ttl_hours != null && Number.isFinite(Number(ttl_hours))) args.push("-var", `ttl_hours=${Number(ttl_hours)}`);
+    const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: `relay:${by}` };
+    console.log(`linode/provision ${role} ${run_id} (ttl=${ttl_hours ?? 24}) by ${by}`);
+    try {
+      await execFileP("bash", args, { env, timeout: 480000, maxBuffer: 10 * 1024 * 1024 });
+      const rd = `${RUNNER_DIR}/runs/${run_id}`;
+      const ip = fs.readFileSync(`${rd}/ip`, "utf8").trim();
+      const exec_token = fs.readFileSync(`${rd}/exec_token`, "utf8").trim();
+      const exec_cert_pem = fs.readFileSync(`${rd}/exec_cert.pem`, "utf8"); // public cert, run.sh pins it
+      return { status: 200, json: true, body: JSON.stringify({ run_id, ip, exec_token, exec_cert_pem }) };
+    } catch (e) {
+      const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
+      console.error(`linode/provision failed: ${e.message}\n${tail}`);
+      return { status: 502, json: true, body: JSON.stringify({ error: "provision_failed", detail: tail }) };
+    }
+  }
+  if (action === "destroy") {
+    const { run_id } = m;
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    console.log(`linode/destroy ${run_id} by ${by}`);
+    try {
+      await execFileP("bash", [`${RUNNER_DIR}/down.sh`, String(run_id)], { env: process.env, timeout: 240000, maxBuffer: 10 * 1024 * 1024 });
+      return { status: 200, body: "ok" };
+    } catch (e) {
+      const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
+      console.error(`linode/destroy failed: ${e.message}\n${tail}`);
+      return { status: 502, json: true, body: JSON.stringify({ error: "destroy_failed", detail: tail }) };
+    }
+  }
+  // HA path: stand up a throwaway LKE cluster with PMM in HA mode (Helm). Same
+  // token-on-the-relay model as the VM path; returns the kubeconfig + LB IP +
+  // generated passwords the session needs. The cluster is tagged with its expiry
+  // so the reaper reaps it even if teardown is never called.
+  if (action === "provision-lke") {
+    const { run_id, ttl_hours } = m;
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    const ttlH = ttl_hours != null && Number.isFinite(Number(ttl_hours)) && Number(ttl_hours) > 0 ? Number(ttl_hours) : LKE_DEFAULT_TTL_H;
+    const expiresEpoch = Math.floor(Date.now() / 1000) + Math.round(ttlH * 3600);
+    const runDir = `${LKE_RUNS_DIR}/${run_id}`;
+    fs.mkdirSync(runDir, { recursive: true });
+    // Optional passthrough config — light validation, then handed to the script as env vars.
+    const cfg = {};
+    const pass = (k, envk, re) => { const v = m[k]; if (v != null && (!re || re.test(String(v)))) cfg[envk] = String(v); };
+    pass("region", "REGION", /^[a-z0-9-]+$/);
+    pass("node_type", "NODE_TYPE", /^[a-z0-9-]+$/);
+    pass("node_count", "NODE_COUNT", /^[0-9]+$/);
+    pass("k8s_version", "K8S_VERSION", /^[0-9.]+$/);
+    pass("namespace", "NAMESPACE", /^[a-z0-9-]+$/);
+    pass("chart_version", "CHART_VERSION", /^[A-Za-z0-9._-]+$/);
+    pass("pmm_chart", "PMM_CHART");
+    pass("deps_chart", "DEPS_CHART");
+    pass("pmm_set", "PMM_SET");
+    pass("deps_set", "DEPS_SET");
+    // FB custom values files arrive base64-encoded and are written into the run dir.
+    for (const [key, fname, envk] of [["pmm_values_b64", "pmm-values.yaml", "PMM_VALUES"], ["deps_values_b64", "deps-values.yaml", "DEPS_VALUES"]]) {
+      if (m[key]) { const p = `${runDir}/${fname}`; fs.writeFileSync(p, Buffer.from(String(m[key]), "base64")); cfg[envk] = p; }
+    }
+    const env = { ...process.env, LINODE_CLI_TOKEN: process.env.LINODE_TOKEN, RUN_ID: String(run_id), RUN_DIR: runDir, TTL_HOURS: String(ttlH), EXPIRES_EPOCH: String(expiresEpoch), CLAUDE_CODE_SESSION_ID: `relay:${by}`, ...cfg };
+    console.log(`linode/provision-lke ${run_id} (ttl=${ttlH}h, expires=${expiresEpoch}) by ${by}`);
+    try {
+      await execFileP("bash", [`${HA_DIR}/create-lke-pmm-ha.sh`], { env, timeout: 1_500_000, maxBuffer: 20 * 1024 * 1024 });
+      const summary = {};
+      for (const line of fs.readFileSync(`${runDir}/summary.env`, "utf8").split("\n")) { const i = line.indexOf("="); if (i > 0) summary[line.slice(0, i)] = line.slice(i + 1).trim(); }
+      const kubeconfig_b64 = fs.readFileSync(`${runDir}/kubeconfig.yaml`).toString("base64");
+      const cluster_id = fs.readFileSync(`${runDir}/cluster_id`, "utf8").trim();
+      return { status: 200, json: true, body: JSON.stringify({ run_id, cluster_id, expires_epoch: expiresEpoch, ttl_hours: ttlH, external_ip: summary.external_ip, url: summary.url, kubeconfig_b64, passwords: summary }) };
+    } catch (e) {
+      const tail = String(e.stderr || e.stdout || e.message || "").slice(-2000);
+      console.error(`linode/provision-lke failed: ${e.message}\n${tail}`);
+      // Best-effort: if the cluster was created before the failure, delete it now so
+      // a broken run doesn't wait for the reaper's TTL to stop billing.
+      try {
+        const cid = fs.readFileSync(`${runDir}/cluster_id`, "utf8").trim();
+        if (cid) { console.error(`linode/provision-lke: tearing down partial cluster ${cid}`); await execFileP("bash", [`${HA_DIR}/destroy-lke.sh`, cid], { env, timeout: 240000 }).catch(() => {}); }
+      } catch {}
+      return { status: 502, json: true, body: JSON.stringify({ error: "provision_lke_failed", detail: tail }) };
+    }
+  }
+  if (action === "destroy-lke") {
+    const { run_id, cluster_id } = m;
+    let arg;
+    if (cluster_id != null) {
+      if (!/^[0-9]+$/.test(String(cluster_id))) return { status: 400, body: "bad_cluster_id" };
+      arg = String(cluster_id);
+    } else {
+      if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+      try { arg = fs.readFileSync(`${LKE_RUNS_DIR}/${run_id}/cluster_id`, "utf8").trim(); } catch {}
+      if (!arg) return { status: 404, body: "unknown_run" };
+    }
+    console.log(`linode/destroy-lke ${arg} by ${by}`);
+    try {
+      await execFileP("bash", [`${HA_DIR}/destroy-lke.sh`, arg], { env: { ...process.env, LINODE_CLI_TOKEN: process.env.LINODE_TOKEN }, timeout: 240000, maxBuffer: 10 * 1024 * 1024 });
+      return { status: 200, body: "ok" };
+    } catch (e) {
+      const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
+      console.error(`linode/destroy-lke failed: ${e.message}\n${tail}`);
+      return { status: 502, json: true, body: JSON.stringify({ error: "destroy_lke_failed", detail: tail }) };
+    }
+  }
+  return { status: 400, body: "unknown_action" };
+}
+
+// LKE reaper — the LKE equivalent of the VM's on-box self-destruct timer. Lists
+// ephemeral clusters straight from the Linode API (so it survives relay restarts
+// and lost run state) and deletes any whose `expires-<epoch>` tag is in the past;
+// a cluster with no parseable expiry (a half-created run) falls back to
+// created + LKE_HARD_MAX_TTL_H. Never touches a cluster without the
+// `pmm-qa-ephemeral` tag. API-only: independent of linode-cli being configured.
+async function linodeApi(pathname, init = {}) {
+  return fetch(`https://api.linode.com/v4${pathname}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${process.env.LINODE_TOKEN}`, "Content-Type": "application/json", ...(init.headers || {}) },
+  });
+}
+async function reapLke() {
+  if (!process.env.LINODE_TOKEN) return;
+  const nowS = Math.floor(Date.now() / 1000);
+  const hardMax = LKE_HARD_MAX_TTL_H * 3600;
+  try {
+    let page = 1, pages = 1, checked = 0, reaped = 0;
+    do {
+      const r = await linodeApi(`/lke/clusters?page=${page}&page_size=100`);
+      if (!r.ok) { console.error(`lke-reaper: list page ${page} -> ${r.status} ${await r.text()}`); return; }
+      const j = await r.json();
+      pages = j.pages || 1;
+      for (const c of j.data || []) {
+        const tags = c.tags || [];
+        if (!tags.includes("pmm-qa-ephemeral")) continue; // only our throwaway clusters, ever
+        checked++;
+        let expiry = null;
+        for (const t of tags) { const mm = /^expires-(\d+)$/.exec(t); if (mm) { expiry = Number(mm[1]); break; } }
+        if (expiry == null) { const created = Date.parse(c.created || "") / 1000; expiry = Number.isFinite(created) ? created + hardMax : 0; }
+        if (nowS > expiry) {
+          const del = await linodeApi(`/lke/clusters/${c.id}`, { method: "DELETE" });
+          console.log(`lke-reaper: deleted cluster ${c.id} "${c.label}" (expiry ${expiry} < now ${nowS}) -> ${del.status}`);
+          if (del.ok) {
+            reaped++;
+            // Derive the run dir from the (Linode-controlled) label, but never let it
+            // escape LKE_RUNS_DIR before an rmSync(recursive).
+            try {
+              const base = path.resolve(LKE_RUNS_DIR);
+              const target = path.resolve(base, c.label.replace(/^pmm-ha-/, ""));
+              if (target.startsWith(base + path.sep)) fs.rmSync(target, { recursive: true, force: true });
+            } catch {}
+          }
+        }
+      }
+      page++;
+    } while (page <= pages);
+    if (checked) console.log(`lke-reaper: checked ${checked} ephemeral cluster(s), reaped ${reaped}`);
+  } catch (e) {
+    console.error(`lke-reaper error (relay stays up): ${e.message}`);
+  }
+}
+setInterval(reapLke, LKE_REAP_INTERVAL_MS).unref();
+setTimeout(reapLke, 60_000).unref(); // first sweep shortly after boot
+
+async function brokerJira(action, m, by) {
+  if (!JIRA_EMAIL || !JIRA_API_TOKEN) return { status: 503, body: "jira_not_configured" };
+  const issue = m.issue;
+  // Every action except `create` operates on an existing PMM issue.
+  if (action !== "create" && !/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
+  const base = "https://perconadev.atlassian.net/rest/api/2";
+  const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+  const jira = (path, init = {}) =>
+    fetch(`${base}${path}`, { ...init, headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) } });
+  console.log(`jira/${action} ${issue || m.summary || ""} by ${by}`);
+  let r;
+  try {
+    if (action === "create") {
+      // Create a PMM issue — Investigator files auto-detected bugs here. Project is
+      // FORCED to PMM; caller provides issuetype + summary (required) and optional
+      // description / extra fields. "Found by Automation" (customfield_10059)
+      // defaults to Yes on Bugs — every relay-brokered create is automation-
+      // originated — unless the caller sets customfield_10059 explicitly.
+      const fields = { ...(m.fields || {}), project: { key: "PMM" } };
+      if (m.summary) fields.summary = String(m.summary);
+      if (m.description) fields.description = String(m.description);
+      if (m.issuetype) fields.issuetype = { name: String(m.issuetype) };
+      if (!fields.summary || !fields.issuetype?.name) return { status: 400, body: "summary_and_issuetype_required" };
+      if (fields.issuetype.name === "Bug" && fields.customfield_10059 === undefined) fields.customfield_10059 = [{ value: "Yes" }];
+      r = await jira(`/issue`, { method: "POST", body: JSON.stringify({ fields }) });
+    } else if (action === "read") {
+      const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
+      r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);
+    } else if (action === "comment") {
+      // visibility FORCED to Developers regardless of caller input — never public.
+      r = await jira(`/issue/${issue}/comment`, { method: "POST", body: JSON.stringify({ body: String(m.body || ""), visibility: { type: "role", value: "Developers" } }) });
+    } else if (action === "field") {
+      r = await jira(`/issue/${issue}`, { method: "PUT", body: JSON.stringify({ fields: m.fields || {} }) });
+    } else if (action === "transitions") {
+      r = await jira(`/issue/${issue}/transitions`);
+    } else if (action === "transition") {
+      r = await jira(`/issue/${issue}/transitions`, { method: "POST", body: JSON.stringify({ transition: { id: String(m.transitionId) } }) });
+    } else if (action === "attach") {
+      const fd = new FormData();
+      fd.append("file", new Blob([Buffer.from(String(m.content_b64 || ""), "base64")]), String(m.filename || "evidence.png"));
+      r = await fetch(`${base}/issue/${issue}/attachments`, { method: "POST", headers: { Authorization: auth, "X-Atlassian-Token": "no-check" }, body: fd });
+    } else {
+      return { status: 400, body: "unknown_action" };
+    }
+    return { status: r.status, json: true, body: (await r.text()) || "{}" };
+  } catch (e) {
+    console.error(`jira/${action} failed: ${e.message}`);
+    return { status: 502, body: "jira_upstream_error" };
+  }
+}
+
+async function brokerSlack(action, m, by) {
+  console.log(`slack/${action} by ${by}`);
+  try {
+    if (action === "announce") {
+      // fresh top-level message (starts a thread); the bot only reaches channels it was invited to.
+      const { channel, text } = m;
+      if (!channel || !text) return { status: 400, body: "channel_and_text_required" };
+      if (app) await app.client.chat.postMessage({ channel, text });
+      else console.log(`DEGRADED slack/announce ${channel}: ${text}`);
+      return { status: 200, body: "ok" };
+    }
+    if (action === "post") {
+      // reply into an existing thread by ts (no HMAC cap — this is the identity-gated broker path).
+      const { channel, thread_ts, text } = m;
+      if (!channel || !thread_ts || !text) return { status: 400, body: "channel_thread_ts_text_required" };
+      if (app) await app.client.chat.postMessage({ channel, thread_ts, text });
+      else console.log(`DEGRADED slack/post ${channel}/${thread_ts}: ${text}`);
+      return { status: 200, body: "ok" };
+    }
+    if (action === "history") {
+      const { channel, thread_ts, limit } = m;
+      if (!channel || !thread_ts) return { status: 400, body: "channel_and_thread_ts_required" };
+      if (!app) return { status: 503, body: "slack_degraded" };
+      const rr = await app.client.conversations.replies({ channel, ts: thread_ts, limit: Number(limit) || 50 });
+      return { status: 200, json: true, body: JSON.stringify({ messages: rr.messages.map((x) => ({ from: x.bot_id ? "PMM AI" : x.user, text: x.text, ts: x.ts })) }) };
+    }
+    return { status: 400, body: "unknown_action" };
+  } catch (e) {
+    console.error(`slack/${action} failed: ${e?.data?.error || e.message}`);
+    return { status: 502, body: "slack_upstream_error" };
+  }
+}
+
 const MAX_BODY_BYTES = 64 * 1024; // relay payloads are tiny JSON; reject anything larger
 const handler = async (req, res) => {
     req.setTimeout(15_000, () => req.destroy()); // don't let a slow client hold the socket open
@@ -382,6 +704,29 @@ const handler = async (req, res) => {
       return;
     }
 
+    // Broker: POST /<service>/<action> — one gate, one dispatch for every
+    // privileged action (linode/jira/slack). Requires BOTH the shared RELAY_KEY
+    // (possession) AND a verified GitHub identity (who you are): the caller's
+    // GitHub token is checked against GitHub itself, so `by` is unspoofable and
+    // an unknown identity is refused even with a valid RELAY_KEY. The old
+    // /announce, /jira-act, /provision, /destroy all live here now.
+    const bm = req.method === "POST" && /^\/(linode|jira|slack)\/([a-z-]+)$/.exec(req.url);
+    if (bm) {
+      const [, service, action] = bm;
+      if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) { res.writeHead(403).end("forbidden"); return; }
+      const id = identity(req);
+      if (!id.ok) { res.writeHead(id.code).end(id.msg); return; }
+      let m;
+      try { m = raw ? JSON.parse(raw) : {}; } catch { res.writeHead(400).end("bad_request"); return; }
+      if (service === "linode") req.setTimeout(action.endsWith("-lke") ? 1_800_000 : 600000); // LKE (cluster + Helm) runs far longer than a VM
+      const out =
+        service === "linode" ? await brokerLinode(action, m, id.login)
+        : service === "jira" ? await brokerJira(action, m, id.login)
+        : await brokerSlack(action, m, id.login);
+      res.writeHead(out.status, out.json ? { "Content-Type": "application/json" } : {}).end(out.body);
+      return;
+    }
+
     res.writeHead(404).end();
 };
 
@@ -390,7 +735,7 @@ const handler = async (req, res) => {
 // no plain-HTTP path, so nothing here depends on curl -k.
 https
   .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-  .listen(HTTPS_PORT, () => console.log(`HTTPS endpoints (/health /reply /route /jira) on :${HTTPS_PORT}`));
+  .listen(HTTPS_PORT, () => console.log(`HTTPS up on :${HTTPS_PORT} — plumbing (/health /reply /route /jira) + broker /<linode|jira|slack>/<action> (RELAY_KEY + GitHub identity)`));
 
 if (app) {
   try {
