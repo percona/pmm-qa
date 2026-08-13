@@ -14,7 +14,8 @@ see "Operations" below). The relay holds the Jira service-account credentials
 below). You identify yourself with `X-Actor` (your `gh api user` login), which
 the relay roster-checks. The relay:
 
-- accepts only existing `PMM-<number>` tickets — **no create, no delete**;
+- operates on existing `PMM-<number>` tickets, **and can `create` a new PMM
+  issue** (project forced to `PMM`; still **no delete**);
 - **forces** `visibility: Developers` on every comment — a public QA comment
   is impossible on this path, regardless of what you send;
 - records the caller (`by`) for audit;
@@ -42,6 +43,7 @@ connector equivalent, currently not to be used):
 |-------|-----|-------|
 | How to test | `customfield_10083` | Verify against code, do not trust blindly |
 | FB test screenshots | `customfield_10492` | Wiki markup + attachments |
+| Found by Automation | `customfield_10059` | Multi-checkbox; set `[{"value":"Yes"}]`. The relay sets this to Yes automatically on Bugs it `create`s |
 | Development panel | — | Linked GitHub PRs |
 
 ## Write — comments (mandatory visibility)
@@ -96,6 +98,14 @@ J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY/jira/$1" \
         -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
         -H "Content-Type: application/json" -d "$2"; }
 
+# create — a new PMM issue (project is forced to PMM). issuetype + summary
+# required; description optional. On a Bug the relay auto-sets Found by
+# Automation (customfield_10059) = Yes unless you pass it yourself.
+J create "$(jq -n --arg s "PMM Server X breaks on Y" --arg d "Repro + evidence...\nSuspected PR: <url>" \
+      '{issuetype:"Bug", summary:$s, description:$d}')"
+# override / add fields (e.g. NOT automation-found):
+J create "$(jq -n --arg s "..." '{issuetype:"Bug", summary:$s, fields:{customfield_10059:[]}}')"
+
 # read — omit fieldsCsv for the default QA field set
 J read "$(jq -n --arg i PMM-15188 '{issue:$i}')"
 J read "$(jq -n --arg i PMM-15188 '{issue:$i,fieldsCsv:"summary,status"}')"
@@ -115,8 +125,8 @@ J attach "$(jq -n --arg i PMM-15188 --arg f fb-checks.png \
       --arg c "$(base64 -w0 fb-checks.png)" '{issue:$i,filename:$f,content_b64:$c}')"
 ```
 
-Available actions: `read`, `comment`, `field`, `transitions`, `transition`,
-`attach` — the full set the old direct-REST path had, minus create/delete
-(the relay refuses those by construction). The **mandatory Developers-only
-visibility rule** is enforced by the relay itself, so it holds even if a
-caller forgets it.
+Available actions: `create`, `read`, `comment`, `field`, `transitions`,
+`transition`, `attach` — the full set the old direct-REST path had **plus
+`create`** (project forced to `PMM`), minus delete (the relay refuses that by
+construction). The **mandatory Developers-only visibility rule** is enforced by
+the relay itself, so it holds even if a caller forgets it.

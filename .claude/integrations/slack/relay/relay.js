@@ -500,15 +500,29 @@ setTimeout(reapLke, 60_000).unref(); // first sweep shortly after boot
 async function brokerJira(action, m, by) {
   if (!JIRA_EMAIL || !JIRA_API_TOKEN) return { status: 503, body: "jira_not_configured" };
   const issue = m.issue;
-  if (!/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
+  // Every action except `create` operates on an existing PMM issue.
+  if (action !== "create" && !/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
   const base = "https://perconadev.atlassian.net/rest/api/2";
   const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
   const jira = (path, init = {}) =>
     fetch(`${base}${path}`, { ...init, headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) } });
-  console.log(`jira/${action} ${issue} by ${by}`);
+  console.log(`jira/${action} ${issue || m.summary || ""} by ${by}`);
   let r;
   try {
-    if (action === "read") {
+    if (action === "create") {
+      // Create a PMM issue — Investigator files auto-detected bugs here. Project is
+      // FORCED to PMM; caller provides issuetype + summary (required) and optional
+      // description / extra fields. "Found by Automation" (customfield_10059)
+      // defaults to Yes on Bugs — every relay-brokered create is automation-
+      // originated — unless the caller sets customfield_10059 explicitly.
+      const fields = { ...(m.fields || {}), project: { key: "PMM" } };
+      if (m.summary) fields.summary = String(m.summary);
+      if (m.description) fields.description = String(m.description);
+      if (m.issuetype) fields.issuetype = { name: String(m.issuetype) };
+      if (!fields.summary || !fields.issuetype?.name) return { status: 400, body: "summary_and_issuetype_required" };
+      if (fields.issuetype.name === "Bug" && fields.customfield_10059 === undefined) fields.customfield_10059 = [{ value: "Yes" }];
+      r = await jira(`/issue`, { method: "POST", body: JSON.stringify({ fields }) });
+    } else if (action === "read") {
       const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
       r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);
     } else if (action === "comment") {
