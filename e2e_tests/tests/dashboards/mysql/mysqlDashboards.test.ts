@@ -14,7 +14,6 @@ pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, {
         from: 'now-1h',
-        refresh: '5s',
       }),
     );
     await dashboard.verifyMetricsPresent(dashboard.mysql.haproxyInstanceSummary.metrics);
