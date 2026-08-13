@@ -361,22 +361,49 @@ async function brokerLinode(action, m, by) {
     const { role, run_id, ttl_hours, pmm_qa_ref } = m;
     if (!SAFE_ID(role)) return { status: 400, body: "bad_role" };
     if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    const rd = `${RUNNER_DIR}/runs/${run_id}`;
+    // Same async model as provision-lke: a VM build can brush past the ~5-min
+    // connection cut, and the exec creds only come back in the final response.
+    // Kick off detached, return the run_id now, poll /linode/provision-result.
+    const started = readIf(`${rd}/started`);
+    const statusNow = readIf(`${rd}/status`);
+    if (started && !statusNow && Date.now() / 1000 - Number(started) < 900) {
+      return { status: 409, json: true, body: JSON.stringify({ run_id, status: "provisioning", hint: "already running — poll /linode/provision-result" }) };
+    }
+    fs.mkdirSync(rd, { recursive: true });
+    try { fs.rmSync(`${rd}/status`, { force: true }); } catch {} // clear a prior terminal run so a same-id retry starts clean
     const args = [`${RUNNER_DIR}/up.sh`, String(role), String(run_id)];
     if (ttl_hours != null && Number.isFinite(Number(ttl_hours))) args.push("-var", `ttl_hours=${Number(ttl_hours)}`);
-    const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: `relay:${by}` };
-    console.log(`linode/provision ${role} ${run_id} (ttl=${ttl_hours ?? 24}) by ${by}`);
-    try {
-      await execFileP("bash", args, { env, timeout: 480000, maxBuffer: 10 * 1024 * 1024 });
-      const rd = `${RUNNER_DIR}/runs/${run_id}`;
-      const ip = fs.readFileSync(`${rd}/ip`, "utf8").trim();
-      const exec_token = fs.readFileSync(`${rd}/exec_token`, "utf8").trim();
-      const exec_cert_pem = fs.readFileSync(`${rd}/exec_cert.pem`, "utf8"); // public cert, run.sh pins it
-      return { status: 200, json: true, body: JSON.stringify({ run_id, ip, exec_token, exec_cert_pem }) };
-    } catch (e) {
-      const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
-      console.error(`linode/provision failed: ${e.message}\n${tail}`);
-      return { status: 502, json: true, body: JSON.stringify({ error: "provision_failed", detail: tail }) };
+    const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: `relay:${by}`, RUN_DIR: rd };
+    fs.writeFileSync(`${rd}/started`, String(Math.floor(Date.now() / 1000)));
+    // Detached wrapper: cap at 12 min, tee to provision.log, write a terminal
+    // status file. `ready` requires all three creds so a partial write never reads ready.
+    const wrapper =
+      'timeout 720 bash "$@" >>"$RUN_DIR/provision.log" 2>&1; ec=$?; ' +
+      'if [ "$ec" -eq 0 ] && [ -s "$RUN_DIR/ip" ] && [ -s "$RUN_DIR/exec_token" ] && [ -s "$RUN_DIR/exec_cert.pem" ]; then echo ready >"$RUN_DIR/status"; ' +
+      'else echo "failed:$ec" >"$RUN_DIR/status"; fi';
+    const child = spawn("bash", ["-c", wrapper, "_", ...args], { env, detached: true, stdio: "ignore" });
+    child.unref();
+    console.log(`linode/provision ${role} ${run_id} started (ttl=${ttl_hours ?? 24}) by ${by}`);
+    return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning", poll: "/linode/provision-result" }) };
+  }
+  if (action === "provision-result") {
+    const { run_id } = m;
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    const rd = `${RUNNER_DIR}/runs/${run_id}`;
+    if (!fs.existsSync(rd)) return { status: 404, body: "unknown_run" };
+    const status = readIf(`${rd}/status`);
+    if (status === "ready") {
+      const ip = readIf(`${rd}/ip`);
+      const exec_token = readIf(`${rd}/exec_token`);
+      const exec_cert_pem = fs.existsSync(`${rd}/exec_cert.pem`) ? fs.readFileSync(`${rd}/exec_cert.pem`, "utf8") : null;
+      return { status: 200, json: true, body: JSON.stringify({ run_id, status: "ready", ip, exec_token, exec_cert_pem }) };
     }
+    if (status && status.startsWith("failed")) {
+      const tail = (readIf(`${rd}/provision.log`) || "").slice(-1500);
+      return { status: 502, json: true, body: JSON.stringify({ run_id, status, error: "provision_failed", detail: tail }) };
+    }
+    return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning" }) };
   }
   if (action === "destroy") {
     const { run_id } = m;
