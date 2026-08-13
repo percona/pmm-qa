@@ -1,6 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import data from '@fixtures/dataTest';
 import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -10,9 +11,12 @@ const services = ['ps_pmm|mysql_pmm', 'pxc_node'];
 
 pmmTest(
   'PMM-T2103 Open the HAProxy Instance Summary Dashboard and verify Metrics are present and graphs are displayed @pmm-ps-pxc-haproxy-integration',
-  async ({ dashboard, page, urlHelper }) => {
+  async ({ api, dashboard, page, urlHelper }) => {
+    await api.grafanaApi.waitForMetric('haproxy_process_start_time_seconds', Timeouts.TWO_MINUTES);
     await page.goto(
-      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, { from: 'now-1h' }),
+      urlHelper.buildUrlWithParameters(dashboard.mysql.haproxyInstanceSummary.url, {
+        from: 'now-1h',
+      }),
     );
     await dashboard.verifyMetricsPresent(dashboard.mysql.haproxyInstanceSummary.metrics);
     await dashboard.verifyAllPanelsHaveData(dashboard.mysql.haproxyInstanceSummary.noDataMetrics);
@@ -28,7 +32,6 @@ data(services).pmmTest(
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceSummary.url, {
         from: 'now-1h',
-        refresh: '5s',
         serviceName: service_name,
       }),
     );
