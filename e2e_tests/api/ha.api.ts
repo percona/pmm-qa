@@ -71,10 +71,8 @@ export default class HaApi {
   };
 
   /**
-   * Metrics trail a failover by a scrape, and HAProxy points at the active
-   * leader, so killing that pod makes the API 5xx until it re-points. `toPass`
-   * retries through both - `expect.poll` would propagate the request error out
-   * of its callback.
+   * Metrics trail a failover by a scrape, and HAProxy 5xxs until it re-points at
+   * the new leader. `toPass`, not `expect.poll`, because that 5xx throws.
    *
    * @param   previousLeader  leader to wait away from; omit to accept any leader
    */

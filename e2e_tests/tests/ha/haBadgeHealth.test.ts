@@ -3,36 +3,23 @@ import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import { pmmServerPodSelector } from '@helpers/haCluster.helper';
 
-// The badge grades `expected_nodes` (a static 3, from PMM_HA_NODES) against the
-// nodes reporting alive, so scaling the StatefulSet down walks it through every
-// health level. Two thirds down is Critical, one third is Degraded.
+// The badge grades `expected_nodes` - static, from PMM_HA_NODES - against the
+// nodes reporting alive, so scaling down walks it through every health level.
 const healthByReplicas = [
   { expectedHealth: 'Degraded', replicas: 2 },
   { expectedHealth: 'Critical', replicas: 1 },
   { expectedHealth: 'Unreachable', replicas: 0 },
 ];
 const expectedNodes = 3;
-// Set by the test, restored by the afterEach hook so the cluster is put back
-// even when an assertion fails with the cluster scaled down.
 let statefulSet: string | undefined;
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
+  await haClusterHelper.ensureServing(api.haApi, expectedNodes);
 });
 
-pmmTest.afterEach(async ({ k8sHelper }) => {
-  if (!statefulSet) return;
-
-  k8sHelper.scaleStatefulSet(statefulSet, expectedNodes).assertSuccess();
-
-  // Polled rather than `kubectl wait`, which fails outright while the pods the
-  // StatefulSet is bringing back one by one do not exist yet.
-  await expect
-    .poll(() => k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
-      message: `The HA cluster must be left with ${expectedNodes} ready pods`,
-      timeout: Timeouts.TEN_MINUTES,
-    })
-    .toEqual(expectedNodes);
+pmmTest.afterEach(async ({ api, haClusterHelper }) => {
+  await haClusterHelper.ensureServing(api.haApi, expectedNodes);
 });
 
 pmmTest(
@@ -40,7 +27,6 @@ pmmTest(
   async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
     pmmTest.setTimeout(Timeouts.THIRTY_MINUTES);
 
-    // The cluster is scaled with kubectl, so UI-only runs have nothing to test.
     // eslint-disable-next-line playwright/no-skipped-test -- conditional on cluster access, never a permanent skip
     pmmTest.skip(
       !k8sHelper.isAvailable(),
@@ -67,6 +53,28 @@ pmmTest(
       ).toEqual(Array(expectedNodes).fill(true));
     });
 
+    // Scaling down removes the highest ordinals. Only the leader removes departing
+    // members from the Raft config, so if the leader is one of them the survivor is
+    // left alone in a 3-node config, never regains quorum and 503s indefinitely -
+    // Critical is reachable only with the surviving pod already leading.
+    await pmmTest.step('Move leadership onto the pod that survives the scale-down', async () => {
+      const survivor = haClusterHelper.podNames()[0];
+
+      for (let attempt = 0; haClusterHelper.leaderFromPods() !== survivor; attempt++) {
+        // Each failover is a coin flip between the two followers, so allow plenty.
+        expect(attempt, `Leadership never landed on "${survivor}"`).toBeLessThan(8);
+
+        k8sHelper.deletePod(haClusterHelper.leaderFromPods()).assertSuccess();
+        await haClusterHelper.waitForLeaderChange(undefined, Timeouts.FIVE_MINUTES);
+        await expect
+          .poll(() => k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
+            message: `All ${expectedNodes} pods must rejoin before the next attempt`,
+            timeout: Timeouts.TEN_MINUTES,
+          })
+          .toEqual(expectedNodes);
+      }
+    });
+
     await page.goto(highAvailabilityPage.url);
 
     await pmmTest.step('Verify the HA badge is Healthy', async () => {
@@ -81,10 +89,8 @@ pmmTest(
         k8sHelper.scaleStatefulSet(statefulSet as string, replicas).assertSuccess();
       });
 
-      // Deliberately no reload: at 0 replicas nothing serves the page, so the
-      // badge has to be read from the app already in the browser. Its own 15s
-      // refetch drives every transition, including the one into Unreachable,
-      // which the UI derives from the failing query rather than from a payload.
+      // Never reload: at 0 replicas nothing serves the page. The app's own 15s
+      // refetch drives every transition, Unreachable included.
       await pmmTest.step(`Verify the HA badge is ${expectedHealth}`, async () => {
         await expect(
           highAvailabilityPage.elements.badge,

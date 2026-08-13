@@ -3,8 +3,9 @@ import { expect } from '@playwright/test';
 import HaApi from '@api/ha.api';
 import { Timeouts } from '@helpers/timeouts';
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
+  await haClusterHelper.ensureServing(api.haApi);
 });
 
 pmmTest(
@@ -90,6 +91,15 @@ pmmTest(
     );
 
     await pmmTest.step(`Confirm "${newLeader}" logged a fresh promotion in its pod`, async () => {
+      const baseline = promotionsBeforeFailover.get(newLeader);
+
+      // Never default to 0 here - that passes on a promotion from an earlier election.
+      if (baseline === undefined) {
+        throw new Error(
+          `"${newLeader}" is not among the baselined HA nodes: ${[...promotionsBeforeFailover.keys()].join(', ')}`,
+        );
+      }
+
       // It has to be a *new* promotion: a node killed while leading never logs a
       // demotion, so the presence of the line alone proves nothing.
       await expect
@@ -97,7 +107,7 @@ pmmTest(
           message: `"${newLeader}" must log a promotion newer than the one it had before the failover`,
           timeout: Timeouts.ONE_MINUTE,
         })
-        .toBeGreaterThan(promotionsBeforeFailover.get(newLeader) ?? 0);
+        .toBeGreaterThan(baseline);
     });
 
     await pmmTest.step(`Verify the HA badge shows "${newLeader}" as the new leader`, async () => {
@@ -119,7 +129,6 @@ pmmTest(
           })
           .toBeTruthy();
 
-        // Must stay 1 now that the restarted pod has rejoined as a follower.
         await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
       },
     );

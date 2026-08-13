@@ -2,8 +2,9 @@ import pmmTest from '@fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { expect } from '@playwright/test';
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
+  await haClusterHelper.ensureServing(api.haApi);
 });
 
 pmmTest(

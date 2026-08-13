@@ -2,8 +2,9 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
+  await haClusterHelper.ensureServing(api.haApi);
 });
 
 pmmTest(
@@ -11,7 +12,6 @@ pmmTest(
   async ({ api, haClusterHelper, k8sHelper, nodesPage, page }) => {
     pmmTest.setTimeout(Timeouts.TEN_MINUTES);
 
-    // The restart is driven with kubectl, so UI-only runs have nothing to test.
     // eslint-disable-next-line playwright/no-skipped-test -- conditional on cluster access, never a permanent skip
     pmmTest.skip(
       !k8sHelper.isAvailable(),
@@ -22,8 +22,8 @@ pmmTest(
       expect(await api.haApi.getStatus()).toEqual('Enabled');
     });
 
-    // The leader comes from the pods, not /v1/ha/nodes: that is what the Nodes
-    // page renders from, so it would only prove the page echoes itself.
+    // Not /v1/ha/nodes: that is what the Nodes page renders, so it would only
+    // prove the page echoes itself.
     const { initialLeader, podNames } = await pmmTest.step('Read the leader from the cluster', async () => {
       const pods = haClusterHelper.podNames();
 
@@ -75,8 +75,7 @@ pmmTest(
     );
 
     await pmmTest.step(`Wait for "${initialLeader}" to rejoin the cluster`, async () => {
-      // Polled rather than `kubectl wait`, because the StatefulSet may not have
-      // recreated the pod yet and `wait` fails outright on a missing one.
+      // `kubectl wait` fails outright on a pod the StatefulSet has not recreated yet.
       await expect
         .poll(() => k8sHelper.getPods().find((pod) => pod.name === initialLeader)?.ready === true, {
           message: `Pod "${initialLeader}" must come back as a follower`,
@@ -86,8 +85,7 @@ pmmTest(
     });
 
     await pmmTest.step(`Verify the Nodes page shows "${newLeader}" leading and every node Up`, async () => {
-      // The page was served by the pod that was restarted, so its queries can be
-      // left holding a failed request instead of retrying.
+      // Its queries can be left holding the request that failed with the pod.
       await page.reload({ timeout: Timeouts.TWO_MINUTES });
       await verifyNodesTable(newLeader);
     });

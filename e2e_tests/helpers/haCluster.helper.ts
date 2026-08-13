@@ -1,5 +1,7 @@
 import K8sHelper from '@helpers/k8s.helper';
 import { Timeouts } from '@helpers/timeouts';
+// Type-only: keeps this helper free of a runtime dependency on the api layer.
+import type HaApi from '@api/ha.api';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { expect } from '@playwright/test';
 
@@ -8,6 +10,8 @@ const pmmManagedLog = '/srv/logs/pmm-managed.log';
 const pmmServerPort = 8_443;
 
 export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
+/** The `pmm-ha` chart default. */
+const defaultReplicas = 3;
 
 /**
  * PMM HA leadership asked of each pod directly, so tests can assert the UI and
@@ -15,6 +19,34 @@ export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
  */
 export default class HaClusterHelper {
   constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
+
+  /**
+   * Brings the cluster back to `replicas` ready and *reachable* nodes. A run
+   * killed mid-scale-down never reaches its cleanup, so the next one repairs.
+   */
+  ensureServing = async (haApi: HaApi, replicas: number = defaultReplicas): Promise<void> => {
+    if (!this.k8sHelper.isAvailable()) return;
+
+    const statefulSet = this.statefulSetName();
+
+    if (this.k8sHelper.getStatefulSetReplicas(statefulSet) !== replicas) {
+      this.k8sHelper.scaleStatefulSet(statefulSet, replicas).assertSuccess();
+    }
+
+    // `kubectl wait` fails outright on pods the StatefulSet has not recreated yet.
+    await expect
+      .poll(() => this.k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
+        message: `The HA cluster must have ${replicas} ready pods`,
+        timeout: Timeouts.TEN_MINUTES,
+      })
+      .toEqual(replicas);
+
+    // Ready pods, and even an elected leader, are not yet reachable: HAProxy has
+    // to re-run its health check and re-point first.
+    await expect(async () => {
+      expect(await haApi.getStatus()).toEqual('Enabled');
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+  };
 
   /**
    * Epoch millis of the pod's last promotion on its own clock, 0 if it never
@@ -47,7 +79,7 @@ export default class HaClusterHelper {
 
   podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();
 
-  /** Looked up by label rather than hardcoded: the name is the Helm release name. */
+  /** Looked up by label, not hardcoded: the name is the Helm release name. */
   statefulSetName = (): string => {
     const names = this.k8sHelper.getStatefulSetNames(pmmServerPodSelector);
 
@@ -63,10 +95,8 @@ export default class HaClusterHelper {
   };
 
   /**
-   * Waits for leadership to move, tolerating the election that {@link
-   * leaderFromPods} throws through: while Raft is voting no pod answers 200,
-   * and the pod being restarted cannot be `exec`ed into at all. `toPass` retries
-   * on that throw - `expect.poll` would propagate it out of the callback.
+   * `toPass`, not `expect.poll`: {@link leaderFromPods} throws mid-election, when
+   * no pod answers 200 and the restarting pod cannot be `exec`ed into at all.
    *
    * @param   previousLeader  leader to wait away from; omit to accept any leader
    */
