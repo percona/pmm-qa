@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, Locator, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
@@ -66,6 +66,40 @@ export default class Dashboards extends BasePage {
   messages = {};
 
   readonly panels = () => Panels(this.page);
+
+  collectTextsAcrossScroll = async (locator: Locator): Promise<string[]> => {
+    const frame = this.grafanaIframe();
+    const html = frame.locator('html');
+
+    const scrollTo = (el: Element, top: number) => {
+      el.scrollTop = top;
+    };
+
+    const getScrollHeight = (el: Element) => el.scrollHeight;
+    const getClientHeight = (el: Element) => el.clientHeight;
+    const collected = new Set<string>();
+
+    await html.evaluate(scrollTo, 0);
+
+    const step = await html.evaluate(getClientHeight);
+    let position = 0;
+    let scrollHeight = await html.evaluate(getScrollHeight);
+
+    while (position <= scrollHeight) {
+      await html.evaluate(scrollTo, position);
+      //eslint-disable-next-line playwright/no-wait-for-timeout -- panels mount/unmount as they enter/leave the viewport
+      await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+
+      (await locator.allTextContents()).forEach((text) => collected.add(text));
+
+      scrollHeight = await html.evaluate(getScrollHeight);
+      position += step;
+    }
+
+    await html.evaluate(scrollTo, 0);
+
+    return Array.from(collected);
+  };
 
   loadAllPanels = async () => {
     await this.waitForDashboardToLoad();
@@ -135,7 +169,7 @@ export default class Dashboards extends BasePage {
     let missingMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      noDataPanels = await this.elements.noDataPanelName.allTextContents();
+      noDataPanels = await this.collectTextsAcrossScroll(this.elements.noDataPanelName);
       missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
 
       if (missingMetrics.length == 0) break;
@@ -154,8 +188,7 @@ export default class Dashboards extends BasePage {
 
     await this.loadAllPanels();
 
-    // eslint-disable-next-line playwright/prefer-web-first-assertions -- the order might be different
-    const availableMetrics = await this.elements.panelName.allTextContents();
+    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
 
     expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
   };
