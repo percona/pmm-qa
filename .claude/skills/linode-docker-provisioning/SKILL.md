@@ -73,7 +73,7 @@ printf '%s' "${CLAUDE_CODE_SESSION_ID:-}" >"$RUN_DIR/session_id"   # scopes the 
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or pass `"pmm_qa_ref":"<branch>"` in the POST body (must already be pushed; see "Never code on the Linode VM" above).
 
-Works from the **default** proxied-HTTPS environment — no special network policy needed. Takes 2-4 minutes; the relay call blocks until the box is fully ready. After this, `run.sh`/`sync.sh`/`extend.sh`/`down.sh` are addressed exactly as before by `<run_id>` — they use the local `exec_token` + `exec_cert.pem`, never the account token.
+Works from the **default** proxied-HTTPS environment — no special network policy needed. Takes 2-4 minutes; the relay call blocks until the box is fully ready. After this, `run.sh`/`sync.sh`/`extend.sh` are addressed exactly as before by `<run_id>` — they use the local `exec_token` + `exec_cert.pem`, never the account token. **Teardown is the exception:** it goes through the relay's `/linode/destroy` (see Cleanup), not a local `down.sh`, since destroying the VM needs the account token that no longer lives in this environment.
 
 **Keep-alive:** for an explicit "leave it running" request, add `"ttl_hours":<N>` to the POST body **and** `touch "$RUN_DIR/keep-alive"` — the marker tells the SessionEnd hook to leave this VM up (its on-box self-destruct timer still reaps it after `ttl_hours`).
 

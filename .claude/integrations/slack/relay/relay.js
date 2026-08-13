@@ -67,7 +67,11 @@ function loadPeople() {
   try {
     files = fs.readdirSync(PEOPLE_DIR).filter((f) => f.endsWith(".json"));
   } catch (e) {
-    console.error(`people dir unreadable (${PEOPLE_DIR}): ${e.message}`);
+    // Fail closed: a transient read/permission fault must NOT drop the roster to
+    // empty, which rosterOk() treats as allow-any. Keep the last good roster and
+    // reserve the empty-roster fallback for a genuinely readable-but-empty dir.
+    console.error(`people dir unreadable (${PEOPLE_DIR}): ${e.message} — keeping previous roster`);
+    return;
   }
   for (const f of files) {
     try {
@@ -342,12 +346,20 @@ app?.event("app_mention", async ({ event, body, client }) => {
 // returns {status, body, json?} — the dispatch in handler() writes the
 // response. All privileged actions live here behind one auth gate.
 
+// Path-safe id: the charset alone still admits "." and ".." — both valid path
+// segments that would escape a run directory when interpolated into a filesystem
+// path (write side and reaper delete side). Reject them explicitly.
+const SAFE_ID = (v) => {
+  v = String(v || "");
+  return /^[A-Za-z0-9._-]+$/.test(v) && v !== "." && v !== ".." && !v.includes("..");
+};
+
 async function brokerLinode(action, m, by) {
   if (!process.env.LINODE_TOKEN) return { status: 503, body: "linode_not_configured" };
   if (action === "provision") {
     const { role, run_id, ttl_hours, pmm_qa_ref } = m;
-    if (!/^[A-Za-z0-9._-]+$/.test(String(role || ""))) return { status: 400, body: "bad_role" };
-    if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) return { status: 400, body: "bad_run_id" };
+    if (!SAFE_ID(role)) return { status: 400, body: "bad_role" };
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
     const args = [`${RUNNER_DIR}/up.sh`, String(role), String(run_id)];
     if (ttl_hours != null && Number.isFinite(Number(ttl_hours))) args.push("-var", `ttl_hours=${Number(ttl_hours)}`);
     const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: `relay:${by}` };
@@ -367,7 +379,7 @@ async function brokerLinode(action, m, by) {
   }
   if (action === "destroy") {
     const { run_id } = m;
-    if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) return { status: 400, body: "bad_run_id" };
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
     console.log(`linode/destroy ${run_id} by ${by}`);
     try {
       await execFileP("bash", [`${RUNNER_DIR}/down.sh`, String(run_id)], { env: process.env, timeout: 240000, maxBuffer: 10 * 1024 * 1024 });
@@ -384,7 +396,7 @@ async function brokerLinode(action, m, by) {
   // so the reaper reaps it even if teardown is never called.
   if (action === "provision-lke") {
     const { run_id, ttl_hours } = m;
-    if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) return { status: 400, body: "bad_run_id" };
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
     const ttlH = ttl_hours != null && Number.isFinite(Number(ttl_hours)) && Number(ttl_hours) > 0 ? Number(ttl_hours) : LKE_DEFAULT_TTL_H;
     const expiresEpoch = Math.floor(Date.now() / 1000) + Math.round(ttlH * 3600);
     const runDir = `${LKE_RUNS_DIR}/${run_id}`;
@@ -434,7 +446,7 @@ async function brokerLinode(action, m, by) {
       if (!/^[0-9]+$/.test(String(cluster_id))) return { status: 400, body: "bad_cluster_id" };
       arg = String(cluster_id);
     } else {
-      if (!/^[A-Za-z0-9._-]+$/.test(String(run_id || ""))) return { status: 400, body: "bad_run_id" };
+      if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
       try { arg = fs.readFileSync(`${LKE_RUNS_DIR}/${run_id}/cluster_id`, "utf8").trim(); } catch {}
       if (!arg) return { status: 404, body: "unknown_run" };
     }
@@ -484,7 +496,16 @@ async function reapLke() {
         if (nowS > expiry) {
           const del = await linodeApi(`/lke/clusters/${c.id}`, { method: "DELETE" });
           console.log(`lke-reaper: deleted cluster ${c.id} "${c.label}" (expiry ${expiry} < now ${nowS}) -> ${del.status}`);
-          if (del.ok) { reaped++; try { fs.rmSync(`${LKE_RUNS_DIR}/${c.label.replace(/^pmm-ha-/, "")}`, { recursive: true, force: true }); } catch {} }
+          if (del.ok) {
+            reaped++;
+            // Derive the run dir from the (Linode-controlled) label, but never let it
+            // escape LKE_RUNS_DIR before an rmSync(recursive).
+            try {
+              const base = path.resolve(LKE_RUNS_DIR);
+              const target = path.resolve(base, c.label.replace(/^pmm-ha-/, ""));
+              if (target.startsWith(base + path.sep)) fs.rmSync(target, { recursive: true, force: true });
+            } catch {}
+          }
         }
       }
       page++;

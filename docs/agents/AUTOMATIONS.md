@@ -285,7 +285,7 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 **PR Maintainer (daily PR digest):**
 
 - [x] `blocked` label created in `percona/pmm-qa` (the agent applies/removes it, doesn't create it).
-- [ ] Set `RELAY_KEY` in the relay `.env` and in the qa-linode environment, add each teammate's `github` login to their `people/*.json` (the roster), then redeploy the relay so `POST /slack/announce` is live. The Routine authenticates with `RELAY_KEY` + its `X-Actor` login.
+- [ ] Set `RELAY_KEY` in the qa-linode shared env and redeploy the relay so `POST /slack/announce` is live (the roster — every teammate's `github` login — is already in the people files; see the go-live checklist above). The Routine authenticates with `RELAY_KEY` + its `X-Actor` login.
 - [ ] `/invite @pmm-ai` into `#qa-automation`.
 - [x] Create the daily **PR Maintainer** Routine (done — it will error on `/slack/announce` until the relay runs the new code, `RELAY_KEY` is set, and the Slack app is live; harmless until then).
 

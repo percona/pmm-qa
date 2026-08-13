@@ -81,6 +81,8 @@ Example wiki body:
 
 Unless the user explicitly requested the Jira update, confirm before writing to production tickets.
 
+**One standing exception:** the Investigator agent `create`s a `Bug` (auto-flagged Found by Automation) for a product regression it has *reproduced* and classified — that autonomous create is the agent's defined job and its dedup step already guards against duplicates, so it needs no extra confirmation. Every other write — comments, transitions, field edits on existing tickets — still follows the confirm rule above.
+
 ## Operations (via the relay)
 
 `POST $RELAY/jira/<action>` (relay URL hardcoded below) with headers `X-Relay-Secret: $RELAY_KEY`

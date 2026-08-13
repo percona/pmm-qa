@@ -63,7 +63,7 @@ export LINODE_CLI_TOKEN="$LINODE_TOKEN"
 # create with a retired one 400s. Pin via K8S_VERSION, else take the latest the
 # API currently offers.
 if [ -z "$K8S_VERSION" ]; then
-    K8S_VERSION=$(linode-cli lke versions-list --json | jq -r '[.[].id] | sort | last')
+    K8S_VERSION=$(linode-cli lke versions-list --json | jq -r '.[].id' | sort -V | tail -n1)
     [ -n "$K8S_VERSION" ] && [ "$K8S_VERSION" != "null" ] || { echo "ERROR: could not resolve an LKE k8s version." >&2; exit 1; }
     log "Resolved latest LKE k8s version: $K8S_VERSION"
 fi
@@ -156,9 +156,16 @@ log "Installing PMM HA from $PMM_CHART"
 helm install pmm-ha "$PMM_CHART" --namespace "$NAMESPACE" "${pmm_args[@]}"
 
 log "Waiting for HAProxy front end (up to 15m)..."
-until kubectl get pods -n "$NAMESPACE" -o name | grep -q pmm-ha-haproxy; do sleep 10; done
+haproxy_deadline=$(( $(date +%s) + 900 ))
+until kubectl get pods -n "$NAMESPACE" -o name | grep -q pmm-ha-haproxy; do
+    [ "$(date +%s)" -lt "$haproxy_deadline" ] || { echo "ERROR: pmm-ha-haproxy pods never appeared within 15m" >&2; exit 1; }
+    sleep 10
+done
+# HA runs more than one HAProxy replica; leave the substitution UNQUOTED so each
+# pod name is a separate arg to kubectl wait (a quoted blob is one bad resource name).
+# shellcheck disable=SC2046
 kubectl wait --for=condition=ready \
-    "$(kubectl get pods -n "$NAMESPACE" -o name | grep pmm-ha-haproxy)" \
+    $(kubectl get pods -n "$NAMESPACE" -o name | grep pmm-ha-haproxy) \
     -n "$NAMESPACE" --timeout=15m
 kubectl get pods -n "$NAMESPACE"
 
