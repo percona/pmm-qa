@@ -41,7 +41,7 @@ All other steps, including provisioning, review, `READY_TO_RUN`, execution, and 
 The writer:
 
 1. reads the source test;
-2. queries the existing `codeceptjs-e2e/graphify-out/graph.json` to find linked source files (no graph generation);
+2. queries the existing source graph with `graphify query`/`graphify path`/`graphify explain`, or a targeted filter as described in `.claude/skills/graphify/references/query.md` (no graph generation and never loading the full `graph.json`); CodeceptJS fixture injection (`async ({ I, somePage }) => ...`) is not a static import, so graphify's AST pass will not have an edge for it — always also check the scenario's injected parameter names directly against `codeceptjs-e2e/tests/**/pages/*.js` regardless of what the graph shows;
 3. opens and verifies the actual linked source files;
 4. queries the refreshed `e2e_tests/graphify-out/graph.json` to find reusable Playwright files (no graph generation);
 5. opens and verifies the actual target candidates;

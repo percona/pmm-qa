@@ -40,6 +40,8 @@ During writer, reviewer, and runner work (through `FINAL_REVIEW_PASS`):
 
 Query and inspect the existing JSON graphs only. When a node or edge is missing, follow actual imports and code; record a graph discrepancy. Never block migration waiting for a fresh graph build.
 
+Query via the `graphify query`/`graphify path`/`graphify explain` CLI, or a targeted `python -c` filter over `graph.json` run through Bash (see `.claude/skills/graphify/references/query.md`). Never load a full `graph.json` into context with the Read tool — these files run into the hundreds of thousands of tokens, and a targeted query only costs the size of its filtered output.
+
 ## Source discovery
 
 Start from the selected CodeceptJS test and query `codeceptjs-e2e/graphify-out/graph.json` for reachable files that affect executable behavior. If the tracker source exists on disk but is missing from the graph, continue from the actual file and record the missing root as a graph discrepancy:

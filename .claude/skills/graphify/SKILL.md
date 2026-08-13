@@ -190,6 +190,20 @@ else:
 "
 ```
 
+Then enrich CodeceptJS runtime-injection dependencies. Resolve `GRAPHIFY_SKILL_DIR`
+to the directory containing this `SKILL.md`; the script is safe to run on every
+corpus and is idempotent with native Graphify support:
+
+```bash
+$(cat graphify-out/.graphify_python) \
+  "GRAPHIFY_SKILL_DIR/scripts/codeceptjs_injection_edges.py" \
+  graphify-out/.graphify_ast.json INPUT_PATH graphify-out/graph.json
+```
+
+This links `inject()` destructuring and CodeceptJS callback fixtures to providers
+declared in `steps.d.ts`. If `steps.d.ts` itself changed, use a full rebuild because
+an incremental fragment cannot safely replace edges owned by unchanged consumers.
+
 #### Part B - Semantic extraction (parallel subagents)
 
 **Fast path:** If detection found zero docs, papers, and images (code-only corpus), skip Part B entirely and go straight to Part C. AST handles code - there is nothing for semantic subagents to do. **First write an empty semantic file** so Part C's merge has its input (it reads `.graphify_semantic.json` unconditionally; without this a code-only run hits `FileNotFoundError`):

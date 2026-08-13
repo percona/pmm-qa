@@ -61,6 +61,10 @@ print('code_only:', code_only)
 "
 ```
 
+If any new/changed file is named `steps.d.ts`, stop the incremental flow and run a
+full build. The CodeceptJS injection registry can rebind unchanged consumers, whose
+old edges cannot be replaced safely from a changed-files-only fragment.
+
 If `code_only` is True: print `[graphify update] Code-only changes detected - skipping semantic extraction (no LLM needed)`, run only Step 3A (AST) on the changed files, skip Step 3B entirely (no subagents), then go straight to merge and Steps 4–8.
 
 If `code_only` is False (any changed file is a doc/paper/image/video): **first, if any changed file is in `new_files['video']`, run `references/transcribe.md` (Step 2.5) on those files, then rewrite `.graphify_detect.json` to move the resulting transcript paths into `files['document']` and drop `files['video']`** — otherwise raw `.mp4/.mp3` paths are fed to semantic subagents as unreadable media (#1392). Then run the full Steps 3A–3C pipeline as normal.
