@@ -142,6 +142,22 @@ terraform/linode-runner/down.sh <run_id>
 
 Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `down.sh` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires.
 
+## Network policy — shared env is `Full` (tracking claude-code#82284)
+
+The shared QA environment's network access is set to **`Full`**, not Custom — a deliberate interim choice. Org-shared environments can't be set to Custom yet ([claude-code#82284](https://github.com/anthropics/claude-code/issues/82284)), so rather than maintain one Custom copy per teammate we accept `Full` for the shared env; fine here because every VM is throwaway, short-TTL, and driven by least-privilege service credentials.
+
+On each provisioning run, cheaply check whether that's still necessary — if #82284 is fixed we want to tighten egress back to Custom:
+
+```bash
+gh api repos/anthropics/claude-code/issues/82284 --jq .state 2>/dev/null || true
+```
+
+If it reports `closed` (or the issue page shows it resolved), leave the user a note in your run summary — do **not** change anything yourself (the env's network level is admin-only, web-UI config):
+
+> ℹ️ **claude-code#82284 looks resolved** — the shared QA environment can move from `Full` to **Custom** now. Allowlist: `perconadev.atlassian.net`, `api.linode.com`, `*.nip.io`, `registry.terraform.io`, relay host `139-162-176-43.ip.linodeusercontent.com` (+ "Also include default list"). An admin flips this at claude.ai/admin-settings.
+
+If it's still `open`, say nothing — `Full` remains the intended state.
+
 ## Known limits
 
 None specific to the VM itself — it is a real kernel with real systemd, so playbooks that need `antmelekhin/docker-systemd`-style images work normally (this is the whole reason this setup exists instead of running inside the agent's own sandbox). If a setup still fails, it is a genuine `qa-integration` bug — report it, do not fork around it here.
