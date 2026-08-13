@@ -234,10 +234,14 @@ app?.event("app_mention", async ({ event, body, client }) => {
   const threadTs = event.thread_ts || event.ts;
   // ALLOW_FALLBACK gates BOTH entry points the same way: true lets an
   // unregistered person run on the central owner's routines; false blocks.
+  // A person with no routines yet (IDs pre-loaded, token not added) counts as
+  // unregistered here too — same zero-cost reply as the Jira path, so their
+  // mention never fires the central router by accident.
+  const mapped = (p) => p && Object.keys(p.routines || {}).length > 0;
   let person = bySlack[event.user];
-  if (!person && ALLOW_FALLBACK && byName[CENTRAL_OWNER])
+  if (!mapped(person) && ALLOW_FALLBACK && byName[CENTRAL_OWNER])
     person = { ...byName[CENTRAL_OWNER], name: `${CENTRAL_OWNER} (fallback for ${event.user})` };
-  if (!person) {
+  if (!mapped(person)) {
     await client.chat.postMessage({
       channel: event.channel,
       thread_ts: threadTs,

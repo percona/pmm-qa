@@ -14,7 +14,7 @@ const removeList: string[] = [];
 /**
  * TODO: investigate computability mode(the latest server with old client) and exclude tests if they do not work.
  */
-test.describe('PMM Server Configuration impacts on client tests', { tag: '@server-docker-generic' }, async () => {
+test.describe('PMM Server Configuration impacts on client tests', { tag: '@server-docker-generic' }, () => {
   test.afterEach(async () => {
     while (stopList.length > 0) {
       await (await cli.exec(`docker stop ${stopList.shift()}`)).assertSuccess();

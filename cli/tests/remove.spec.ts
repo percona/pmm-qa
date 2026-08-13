@@ -7,7 +7,7 @@ const PMM_CLIENT_IMAGE = clientDockerImage;
 const clientPassword = 'gfaks4d8OH';
 const services = ['mysql', 'mongodb', 'postgresql', 'proxysql', 'external', 'haproxy'];
 
-test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@service-removal' }, async () => {
+test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@service-removal' }, () => {
   test.beforeAll(async () => {
     const startCommand = `PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE} PMM_CLIENT_IMAGE=${PMM_CLIENT_IMAGE} docker compose -f test-setup/docker-compose-pmm-admin-remove.yml up -d`;
     await cli.exec(startCommand);

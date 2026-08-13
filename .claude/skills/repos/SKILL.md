@@ -36,12 +36,26 @@ In a session without the repo attached:
 
 This session's checkout of `percona/pmm-qa` is what gets synced to the throwaway Linode VM (see `linode-provisioning`) — it is not a separate clone. Resolve paths from the repo root Claude Code already has open.
 
+## gh in these sessions — repo-scoped REST only
+
+Cloud sessions serve **only** `gh api repos/{owner}/{repo}/...` (REST). Two whole
+classes of command 403 and just waste turns — never use them:
+- **Global search**: `gh search ...`, `gh api search/issues` → "not available: sessions are bound to their configured repositories".
+- **GraphQL-backed**: `gh pr diff`, `gh pr view`, `gh pr list --json`, `gh search prs` → "This GraphQL query is not enabled for this session".
+
+Use the REST equivalents (all verified working): `gh api repos/{o}/{r}/pulls/<n>`,
+`… -H "Accept: application/vnd.github.diff"` for the diff, `…/pulls/<n>/files`
+for changed files, `…/pulls?state=all` to list. See `git-diff` skill for the full recipes.
+
 ## Find PRs by ticket
 
+The ticket's **Development panel** already lists its linked PRs (see `jira` skill) —
+that's the authoritative source, use it first. Only if it's absent, list + filter REST-side:
+
 ```bash
-gh search prs "PMM-14915" --repo percona/pmm --json number,title,url
-gh search prs "PMM-14915" --repo percona/grafana --json number,title,url
-gh pr diff <n> --repo percona/pmm
+gh api "repos/percona/pmm/pulls?state=all&per_page=100" \
+  --jq '.[] | select((.title + " " + .head.ref) | test("PMM-14915")) | {number, title, url: .html_url}'
+gh api repos/percona/pmm/pulls/<n> -H "Accept: application/vnd.github.diff"   # replaces `gh pr diff`
 ```
 
 ## pmm-submodules PR

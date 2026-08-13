@@ -5,7 +5,7 @@ const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
 
-test.describe('PMM Client CLI tests for PostgreSQL Data Base', { tag: '@pgsql' }, async () => {
+test.describe('PMM Client CLI tests for PostgreSQL Data Base', { tag: '@pgsql' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep pdpgsql_pmm | awk \'{print $NF}\'');
     await result.outContains('pdpgsql_pmm', 'PDPGSQL docker container should exist. please run pmm-framework with --database pdpgsql');
@@ -19,6 +19,7 @@ test.describe('PMM Client CLI tests for PostgreSQL Data Base', { tag: '@pgsql' }
     const output = await cli.exec('sudo pmm-admin remove postgresql prerequisite');
     await output.assertSuccess();
   });
+
   /**
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/pgsql-specific-tests.bats#L10
    * @link https://github.com/percona/pmm-qa/blob/main/pmm-tests/pmm-2-0-bats-tests/pgsql-specific-tests.bats#L20
@@ -106,7 +107,7 @@ test.describe('PMM Client CLI tests for PostgreSQL Data Base', { tag: '@pgsql' }
     const hosts = (await cli.exec('sudo pmm-admin list | grep "PostgreSQL" | awk -F" " \'{print $3}\''))
       .getStdOutLines();
     let n = 1;
-    for (const host of hosts) {
+    for (let i = 0; i < hosts.length; i++) {
       const output = await cli.exec(`sudo pmm-admin remove postgresql pgsql_${n++}`);
       await output.exitCodeEquals(1);
       await output.outContains('not found.');
