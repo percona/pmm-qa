@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+#
+# pmm-framework -- provision databases and register them with a PMM Server.
+#
+#   ./pmm-framework --database ps=8.4 --database psmdb,SETUP_TYPE=sharding
+#   ./pmm-framework --parallel --pmm-server-ip 10.0.0.5 --database valkey=8
+#   ./pmm-framework --help
+#
+# This entrypoint is intentionally thin: it checks the Bash version, works out
+# where the repo lives, sources every module, then hands over to parse_args()
+# and run_database_setups(). All real behaviour lives in lib/ and setups/.
+#
+# Layout:
+#   lib/common.sh     logging, die(), small value helpers
+#   lib/config.sh     the database catalogue and value resolution
+#   lib/cli.sh        argument parsing and the --database spec grammar
+#   lib/docker.sh     finding the PMM Server
+#   lib/ansible.sh    running playbooks
+#   lib/runners.sh    running setup scripts, plus version/password helpers
+#   setups/*.sh       one function per database type, and the dispatch table
+#   lib/execution.sh  preflight and the sequential/parallel strategies
+#
+# See ARCHITECTURE.md for the call flow, a diagram, and how to add a database.
+
+set -euo pipefail
+
+# Bash 4.4 is the floor: expanding an empty array under `set -u` (setups with
+# no environment variables, such as DOCKERCLIENTS) errors on 4.3 and older,
+# and `inherit_errexit` below does not exist there either.
+if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4))); then
+  printf 'ERROR: pmm-framework requires Bash 4.4 or newer (found %s).\n' \
+    "$BASH_VERSION" >&2
+  exit 1
+fi
+
+# Let command substitutions inherit `set -e`, so a failing $(...) aborts the
+# run instead of silently yielding an empty value.
+shopt -s inherit_errexit
+
+# Anchor every path to this script rather than the caller's cwd, so the
+# framework can be invoked from anywhere:
+#   FRAMEWORK_DIR       .../qa-integration/pmm_qa/pmm-framework
+#   PMM_QA_ROOT         .../qa-integration/pmm_qa        (playbooks live here)
+#   QA_INTEGRATION_ROOT .../qa-integration               (setup scripts here)
+FRAMEWORK_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+PMM_QA_ROOT=$(cd "$FRAMEWORK_DIR/.." && pwd)
+QA_INTEGRATION_ROOT=$(cd "$PMM_QA_ROOT/.." && pwd)
+export FRAMEWORK_DIR PMM_QA_ROOT QA_INTEGRATION_ROOT
+
+# shellcheck source=lib/common.sh
+source "$FRAMEWORK_DIR/lib/common.sh"
+# shellcheck source=lib/config.sh
+source "$FRAMEWORK_DIR/lib/config.sh"
+# shellcheck source=lib/cli.sh
+source "$FRAMEWORK_DIR/lib/cli.sh"
+# shellcheck source=lib/docker.sh
+source "$FRAMEWORK_DIR/lib/docker.sh"
+# shellcheck source=lib/ansible.sh
+source "$FRAMEWORK_DIR/lib/ansible.sh"
+# shellcheck source=lib/runners.sh
+source "$FRAMEWORK_DIR/lib/runners.sh"
+# shellcheck source=setups/mysql.sh
+source "$FRAMEWORK_DIR/setups/mysql.sh"
+# shellcheck source=setups/postgresql.sh
+source "$FRAMEWORK_DIR/setups/postgresql.sh"
+# shellcheck source=setups/mongodb.sh
+source "$FRAMEWORK_DIR/setups/mongodb.sh"
+# shellcheck source=setups/services.sh
+source "$FRAMEWORK_DIR/setups/services.sh"
+# shellcheck source=setups/dispatch.sh
+source "$FRAMEWORK_DIR/setups/dispatch.sh"
+# shellcheck source=lib/execution.sh
+source "$FRAMEWORK_DIR/lib/execution.sh"
+
+parse_args "$@"
+
+# Checked up front so a missing tool fails in milliseconds. curl is not here:
+# only the PSMDB setups need it, so preflight checks for it conditionally.
+require_command docker
+require_command bash
+require_command ansible-playbook
+require_command ansible-galaxy
+
+run_database_setups

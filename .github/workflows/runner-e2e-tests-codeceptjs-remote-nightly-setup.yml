@@ -127,16 +127,11 @@ jobs:
           command: |
             cd pmm-qa/qa-integration/pmm_qa
             mkdir -m 777 -p /tmp/backup_data || true
-            python3 -m venv virtenv
-            . virtenv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
-            pip install setuptools
-            python pmm-framework.py \
+            ./pmm-framework/pmm-framework \
+              --parallel \
               --pmm-server-ip "${SERVER_IP}" \
               --pmm-server-password "${{ env.ADMIN_PASSWORD }}" \
               --client-version "${{ env.PMM_CLIENT_VERSION }}" \
-              --verbose \
               ${{ env.WIZARD_ARGS }}
           on_retry_command: |
             docker rm -f $(docker ps -a -q) || true

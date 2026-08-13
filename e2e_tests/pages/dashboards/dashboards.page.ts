@@ -6,12 +6,17 @@ import { Timeouts } from '@helpers/timeouts';
 import BasePage from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
+import { MongoDashboards, MongoDashboardsType } from '@pages/dashboards/mongo';
 import Panels from '@components/dashboards/panels';
 import HomeDashboard from '@pages/dashboards/home';
 import pmmTest from '@fixtures/pmmTest';
 import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
 
 const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
+// A viz legend entry reading "N/A" is a series name — a state timeline maps its
+// null state to that text — so it must not count as Grafana's own no-data indicator.
+const noDataMarkerXPath =
+  '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")][not(ancestor-or-self::*[starts-with(@data-testid, "data-testid VizLegend series")])]';
 const hasKnownNoDataMarker = (panelText: string) =>
   panelNoDataMarkers.some((marker) => panelText.includes(marker)) ||
   panelText
@@ -21,6 +26,7 @@ const hasKnownNoDataMarker = (panelText: string) =>
 
 export default class Dashboards extends BasePage {
   readonly home = new HomeDashboard(this.page);
+  readonly mongo: MongoDashboardsType = MongoDashboards;
   readonly mysql: MysqlDashboardsType = MysqlDashboards;
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
@@ -45,12 +51,8 @@ export default class Dashboards extends BasePage {
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
     loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
-    noDataPanel: this.page.locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
-    ),
-    noDataPanelName: this.grafanaIframe().locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
-    ),
+    noDataPanel: this.page.locator(noDataMarkerXPath),
+    noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
@@ -129,11 +131,11 @@ export default class Dashboards extends BasePage {
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
-    let noDataPanels: string[] = [];
     let missingMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      noDataPanels = await this.elements.noDataPanelName.allTextContents();
+      const noDataPanels = await this.elements.noDataPanelName.allTextContents();
+
       missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
 
       if (missingMetrics.length == 0) break;
