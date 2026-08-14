@@ -182,10 +182,15 @@ until kubectl get pods -n "$NAMESPACE" -o name | grep -E 'pmm-ha-[0-9]|pmm-ha-se
     [ "$(date +%s)" -lt "$pmm_deadline" ] || { echo "ERROR: PMM server pods never appeared within 15m" >&2; exit 1; }
     sleep 10
 done
+# Fail the build (set -e) if the PMM servers never become Ready — a degraded
+# cluster must NOT be published as ready. The EXIT trap has already captured
+# pods/describe for diagnosis. Pod names come from our own kubectl against this
+# cluster (not caller input); the unquoted substitution is intentional so each
+# pod name is a separate arg to kubectl wait.
 # shellcheck disable=SC2046
 kubectl wait --for=condition=ready \
     $(kubectl get pods -n "$NAMESPACE" -o name | grep -E 'pmm-ha-[0-9]|pmm-ha-server' | grep -v haproxy) \
-    -n "$NAMESPACE" --timeout=20m || { echo "WARN: PMM server pods not Ready in 20m; see describe.txt"; }
+    -n "$NAMESPACE" --timeout=20m
 
 log "Waiting for HAProxy front end (up to 20m)..."
 haproxy_deadline=$(( $(date +%s) + 900 ))

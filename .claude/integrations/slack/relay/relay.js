@@ -355,30 +355,36 @@ const SAFE_ID = (v) => {
 };
 const readIf = (p) => { try { return fs.readFileSync(p, "utf8").trim(); } catch { return null; } };
 
-// Atomic single-flight claim for a provisioning run dir. `started` doubles as an
-// O_EXCL lock: a concurrent kickoff for the same run_id fails the exclusive
-// create and is rejected as busy, unless the existing run is terminal (status
-// written) or stale (older than capSec, i.e. its build cap has elapsed), in
-// which case it is reclaimed. Also records the initiating actor so result reads
-// can be bound to it. Returns { busy:true } or { ok:true }.
+// Every per-run artifact a build can leave behind. A reclaim wipes ALL of them
+// so a replacement build never serves the previous run's creds/cluster/logs.
+const RUN_ARTIFACTS = ["status", "summary.env", "ip", "exec_token", "exec_cert.pem", "cluster_id", "kubeconfig.yaml", "provision.log", "pods.txt", "events.txt", "describe.txt", "expires_epoch"];
+// Atomic single-flight claim for a provisioning run dir, guarded by an exclusive
+// mkdir lock (mkdir is atomic) so two concurrent kickoffs for the same run_id
+// can't both claim/reclaim. Inside the lock we re-read state: a run is busy if a
+// build is in flight (started, no terminal status, younger than capSec);
+// otherwise it's a fresh dir or a terminal/stale run, which we reclaim by wiping
+// every prior artifact and recording the initiating actor. claimRun is fully
+// synchronous, so the lock is always released within the same tick.
+// Returns { busy:true } or { ok:true }.
 function claimRun(rd, by, capSec) {
   fs.mkdirSync(rd, { recursive: true });
-  const now = Math.floor(Date.now() / 1000);
+  try { fs.mkdirSync(`${rd}/.lock`); } catch (e) { if (e.code === "EEXIST") return { busy: true }; throw e; }
   try {
-    fs.writeFileSync(`${rd}/started`, String(now), { flag: "wx" });
-  } catch (e) {
-    if (e.code !== "EEXIST") throw e;
+    const now = Math.floor(Date.now() / 1000);
     const started = Number(readIf(`${rd}/started`)) || 0;
-    if (!readIf(`${rd}/status`) && now - started < capSec) return { busy: true };
-    fs.writeFileSync(`${rd}/started`, String(now)); // reclaim a terminal/stale run
+    if (fs.existsSync(`${rd}/started`) && !readIf(`${rd}/status`) && now - started < capSec) return { busy: true };
+    for (const f of RUN_ARTIFACTS) { try { fs.rmSync(`${rd}/${f}`, { force: true }); } catch {} }
+    fs.writeFileSync(`${rd}/started`, String(now));
+    fs.writeFileSync(`${rd}/actor`, String(by));
+    return { ok: true };
+  } finally {
+    try { fs.rmSync(`${rd}/.lock`, { recursive: true, force: true }); } catch {}
   }
-  for (const f of ["status", "summary.env"]) { try { fs.rmSync(`${rd}/${f}`, { force: true }); } catch {} }
-  fs.writeFileSync(`${rd}/actor`, String(by));
-  return { ok: true };
 }
 // Bind result reads to the initiating actor: a shared RELAY_KEY + a guessable
 // run_id must not let another roster user read someone else's creds/kubeconfig.
-const ownerOk = (rd, by) => { const o = readIf(`${rd}/actor`); return !o || o === String(by); };
+// A run with no recorded owner is treated as unauthorized, never world-readable.
+const ownerOk = (rd, by) => { const o = readIf(`${rd}/actor`); return o != null && o === String(by); };
 
 async function brokerLinode(action, m, by) {
   if (!process.env.LINODE_TOKEN) return { status: 503, body: "linode_not_configured" };
