@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
 import { expect } from '@playwright/test';
+import { serverVersionBelow } from '@helpers/version.helper';
 
 let sortedHostNames: string[];
 
@@ -245,6 +246,7 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
 pmmTest(
   'PMM-T2265 Verify RTA overview table state is stored in the URL and restored after refresh @rta',
   async ({ page, queryAnalytics }) => {
+    pmmTest.skip(serverVersionBelow('3.10.0'), 'RTA table URL-state persistence is available from PMM Server 3.10.0');
     const { rta } = queryAnalytics;
     const expectedServiceIds = new URL(page.url()).searchParams.getAll('serviceIds');
 
@@ -286,6 +288,7 @@ pmmTest(
 pmmTest(
   'PMM-T2266 Verify RTA elapsed-time decimal filter and URL restoration @rta',
   async ({ page, queryAnalytics }) => {
+    pmmTest.skip(serverVersionBelow('3.10.0'), 'RTA elapsed-time filter URL restoration is available from PMM Server 3.10.0');
     const { rta } = queryAnalytics;
     const durationParameterName = 'overview.f.queryExecutionDurationMs';
     let decimalMaximum = '';

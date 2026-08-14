@@ -2,6 +2,7 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { type NestedLocators } from '@pages/base.page';
 import { Timeouts } from '@helpers/timeouts';
+import { serverVersionBelow } from '@helpers/version.helper';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await grafanaHelper.authorize();
@@ -148,6 +149,7 @@ pmmTest('PMM-T2201 verify node persistence @new-navigation', async ({ leftNaviga
 pmmTest(
   'PMM-T2202 Traverse all the menu items in left menu sidebar @new-navigation',
   async ({ leftNavigation }) => {
+    pmmTest.skip(serverVersionBelow('3.10.0'), 'Left-menu traversal includes nav items added in PMM Server 3.10.0');
     await pmmTest.step('Traverse menu items', async () => {
       await leftNavigation.verifyAllMenuItems();
     });
