@@ -217,6 +217,20 @@ until [ -n "$EXTERNAL_IP" ]; do
     [ -n "$EXTERNAL_IP" ] || sleep 15
 done
 
+# --- PMM actually serving? (not just pods Ready) -----------------------------
+# Pods Ready doesn't guarantee the HTTP front end is reachable end-to-end (LB
+# wiring, HAProxy backends). This box (the relay) reaches the public LB IP
+# directly — no egress proxy here — so confirm PMM answers over the LoadBalancer
+# before publishing the run as ready. Fail the build (set -e) if it never does,
+# so the relay never reports `ready` for a cluster whose UI can't be opened.
+log "Verifying PMM answers on https://$EXTERNAL_IP (up to 10m)..."
+pmm_up_deadline=$(( $(date +%s) + 600 ))
+until curl -k -sf -m 10 -o /dev/null "https://$EXTERNAL_IP/v1/readyz"; do
+    [ "$(date +%s)" -lt "$pmm_up_deadline" ] || { echo "ERROR: PMM did not answer /v1/readyz on the LB within 10m" >&2; exit 1; }
+    sleep 10
+done
+log "PMM is serving (/v1/readyz 200)."
+
 # --- persist run artifacts ---------------------------------------------------
 {
     echo "cluster_label=$CLUSTER_LABEL"
