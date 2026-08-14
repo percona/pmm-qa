@@ -602,8 +602,15 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const newAdminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
+    const upgradedVersion = process.env.PMM_CLIENT_VERSION?.includes('http')
+      ? ''
+      : cli.execute('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION').stdout.trim();
+
     await newPid.outNotContains(oldPid.stdout);
     await newAdminStatus.outContains('Connected');
-    await newVersion.outContains(PMM_VERSION);
+    expect(newVersion.stdout.trim()).not.toEqual(oldVersion.stdout.trim());
+    if (upgradedVersion) {
+      await newVersion.outContains(upgradedVersion);
+    }
   });
 });
