@@ -103,7 +103,7 @@ Standing up the cluster isn't the test. Exercise what the change actually touche
 - Leader status: PMM's HA API / `pmm_ha_*` metrics; confirm exactly one leader.
 - **Leader failover** for leader-only work (backups, scheduler, checks, telemetry, cleaner, versionCache): delete the leader pod, confirm a new leader is elected and the singleton work resumes there once — not zero times, not on every replica.
 - Shared state: confirm data written on one replica is visible via another (it lives in the shared PG/ClickHouse/VM, not local `/srv`).
-- UI via the LoadBalancer IP (`ui-evidence`), using the admin password from the provision response (`.passwords.pmm_admin_password` in `provision.json`).
+- UI evidence (`ui-evidence` → "HA / LKE variant"): reach PMM by the hostname `.url` from `provision.json` (**not** the raw LB IP — the egress proxy refuses raw-IP HTTPS), log in with `PMM_UI_INSECURE=1` (self-signed cert) and `.passwords.pmm_admin_password`, and pass `PW_SCROLL=1` for the tall HA dashboards. Use the existing `pmm-ui-login.js` + `pw-screenshot.js` helpers — don't write a bespoke capture script.
 
 ## Teardown — mandatory, every path
 

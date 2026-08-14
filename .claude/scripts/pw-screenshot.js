@@ -5,6 +5,15 @@
 // Usage:
 //   node pw-screenshot.js <url> <output.png> [sessionId]
 //
+// Env knobs:
+//   PMM_UI_INSECURE=1   disable TLS verification (HA/LKE: self-signed cert
+//                       behind the egress MITM — pairs with pmm-ui-login.js's
+//                       same flag)
+//   PW_SCROLL=1         scroll the page top-to-bottom first to force Grafana's
+//                       virtualized panels to render before a fullPage shot
+//   PW_CLICK_TEXT='...' click an element by partial text before capturing
+//   PW_SETTLE_MS, PW_WAIT_SELECTOR, PMM_UI_WIDTH/HEIGHT   as before
+//
 // If <sessionId> is given and .claude/scripts/.sessions/<sessionId>.json
 // exists (written by pmm-ui-login.js), it is reused as the browser context's
 // storage state so PMM pages stay logged in.
@@ -33,13 +42,17 @@ async function main() {
   const width = Number(process.env.PMM_UI_WIDTH || 1920);
   const height = Number(process.env.PMM_UI_HEIGHT || 1080);
 
+  // PMM_UI_INSECURE=1 disables TLS verification (no pin) — for HA/LKE, where
+  // PMM's cert is self-signed and the egress gateway MITMs outbound TLS, so
+  // SPKI-pinning can't match. Strict pinning stays the default everywhere else.
+  const insecure = process.env.PMM_UI_INSECURE === "1";
   // PMM_CERT_PATH (see pmm-ui-login.js) pins PMM's own cert instead of
   // trusting any cert -- optional since this script also screenshots
   // non-PMM pages (e.g. a GitHub Actions run) with a real CA already, which
   // strict verification (the default below) already handles fine.
   const certPath = process.env.PMM_CERT_PATH;
   const launchArgs = [];
-  if (certPath) {
+  if (certPath && !insecure) {
     if (!fs.existsSync(certPath)) {
       console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
       process.exit(1);
@@ -47,7 +60,7 @@ async function main() {
     launchArgs.push(`--ignore-certificate-errors-spki-list=${spkiPinFromCertFile(certPath)}`);
   }
 
-  const contextOpts = { ignoreHTTPSErrors: false, viewport: { width, height } };
+  const contextOpts = { ignoreHTTPSErrors: insecure, viewport: { width, height } };
   if (sessionId) {
     if (!/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(sessionId)) {
       console.error(`invalid sessionId '${sessionId}' (letters, digits, '_', '-' only)`);
@@ -114,6 +127,31 @@ async function main() {
   const settleMs = Number(process.env.PW_SETTLE_MS || 3000);
   if (settleMs > 0) {
     await page.waitForTimeout(settleMs);
+  }
+
+  // PW_CLICK_TEXT: click an element by (partial) text before capturing — e.g. to
+  // open a collapsed row or expand a section on the dashboard.
+  const clickText = process.env.PW_CLICK_TEXT;
+  if (clickText) {
+    try {
+      await page.getByText(clickText, { exact: false }).first().click({ timeout: 8000 });
+      await page.waitForTimeout(2500);
+    } catch (e) {
+      console.error("click failed:", clickText, e.message);
+    }
+  }
+
+  // PW_SCROLL=1: Grafana virtualizes panels, so a fullPage shot of a tall HA
+  // dashboard misses panels that never scrolled into view. Scroll through to
+  // force lazy render, then return to the top before capturing.
+  if (process.env.PW_SCROLL === "1") {
+    const scrollH = await page.evaluate(() => document.body.scrollHeight);
+    for (let y = 0; y < scrollH; y += 700) {
+      await page.evaluate((yy) => window.scrollTo(0, yy), y);
+      await page.waitForTimeout(1000);
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(1500);
   }
 
   fs.mkdirSync(path.dirname(path.resolve(outputPath)), { recursive: true });
