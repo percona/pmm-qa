@@ -176,21 +176,20 @@ helm install pmm-ha "$PMM_CHART" --namespace "$NAMESPACE" "${pmm_args[@]}"
 # PMM pods coming up first — so wait for the PMM server StatefulSet to be Ready
 # before waiting on HAProxy, which both sequences the bring-up and makes a stuck
 # backend show up as a backend timeout (clearer than an opaque HAProxy timeout).
-log "Waiting for PMM server pods (up to 15m)..."
-pmm_deadline=$(( $(date +%s) + 900 ))
-until kubectl get pods -n "$NAMESPACE" -o name | grep -E 'pmm-ha-[0-9]|pmm-ha-server' | grep -qv haproxy; do
-    [ "$(date +%s)" -lt "$pmm_deadline" ] || { echo "ERROR: PMM server pods never appeared within 15m" >&2; exit 1; }
+# Wait for the PMM server StatefulSet to FULLY roll out before HAProxy. `rollout
+# status` blocks until readyReplicas == spec.replicas, so it covers the complete
+# expected replica set — not a one-time pod snapshot that can miss replicas
+# created later — and fails (set -e) on timeout, so a degraded cluster is never
+# published as ready. The EXIT trap has already captured pods/describe.
+log "Waiting for the PMM server StatefulSet to appear (up to 5m)..."
+pmm_sts=""
+pmm_appear_deadline=$(( $(date +%s) + 300 ))
+until pmm_sts="$(kubectl get statefulset -n "$NAMESPACE" -o name | grep -E '/pmm-ha$|/pmm-ha-server$' | head -1)"; [ -n "$pmm_sts" ]; do
+    [ "$(date +%s)" -lt "$pmm_appear_deadline" ] || { echo "ERROR: PMM server StatefulSet never appeared within 5m" >&2; exit 1; }
     sleep 10
 done
-# Fail the build (set -e) if the PMM servers never become Ready — a degraded
-# cluster must NOT be published as ready. The EXIT trap has already captured
-# pods/describe for diagnosis. Pod names come from our own kubectl against this
-# cluster (not caller input); the unquoted substitution is intentional so each
-# pod name is a separate arg to kubectl wait.
-# shellcheck disable=SC2046
-kubectl wait --for=condition=ready \
-    $(kubectl get pods -n "$NAMESPACE" -o name | grep -E 'pmm-ha-[0-9]|pmm-ha-server' | grep -v haproxy) \
-    -n "$NAMESPACE" --timeout=20m
+log "Waiting for $pmm_sts to roll out (all replicas Ready, up to 20m)..."
+kubectl rollout status "$pmm_sts" -n "$NAMESPACE" --timeout=20m
 
 log "Waiting for HAProxy front end (up to 20m)..."
 haproxy_deadline=$(( $(date +%s) + 900 ))
@@ -223,10 +222,12 @@ done
 # directly — no egress proxy here — so confirm PMM answers over the LoadBalancer
 # before publishing the run as ready. Fail the build (set -e) if it never does,
 # so the relay never reports `ready` for a cluster whose UI can't be opened.
-log "Verifying PMM answers on https://$EXTERNAL_IP (up to 10m)..."
+# Require an exact 200 — `curl -f` treats 3xx as success, so a redirect could
+# otherwise pass this gate without PMM actually serving. Check %{http_code}.
+log "Verifying PMM returns 200 from https://$EXTERNAL_IP/v1/readyz (up to 10m)..."
 pmm_up_deadline=$(( $(date +%s) + 600 ))
-until curl -k -sf -m 10 -o /dev/null "https://$EXTERNAL_IP/v1/readyz"; do
-    [ "$(date +%s)" -lt "$pmm_up_deadline" ] || { echo "ERROR: PMM did not answer /v1/readyz on the LB within 10m" >&2; exit 1; }
+until [ "$(curl -k -sS -m 10 -o /dev/null -w '%{http_code}' "https://$EXTERNAL_IP/v1/readyz" 2>/dev/null)" = "200" ]; do
+    [ "$(date +%s)" -lt "$pmm_up_deadline" ] || { echo "ERROR: PMM did not return 200 from /v1/readyz on the LB within 10m" >&2; exit 1; }
     sleep 10
 done
 log "PMM is serving (/v1/readyz 200)."

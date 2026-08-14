@@ -145,10 +145,19 @@ async function main() {
   // dashboard misses panels that never scrolled into view. Scroll through to
   // force lazy render, then return to the top before capturing.
   if (process.env.PW_SCROLL === "1") {
-    const scrollH = await page.evaluate(() => document.body.scrollHeight);
-    for (let y = 0; y < scrollH; y += 700) {
+    // Re-read scrollHeight each step: lazy panels expand the page as they render,
+    // so a height captured once up front would stop the loop short and miss lower
+    // panels. Continue until the bottom is reached and the height has settled.
+    // Cap the iterations so a page that keeps growing can't hang the shot.
+    let y = 0;
+    let prevH = -1;
+    for (let i = 0; i < 60; i++) {
+      const scrollH = await page.evaluate(() => document.body.scrollHeight);
+      if (y >= scrollH && scrollH === prevH) break;
+      prevH = scrollH;
       await page.evaluate((yy) => window.scrollTo(0, yy), y);
       await page.waitForTimeout(1000);
+      y += 700;
     }
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(1500);
