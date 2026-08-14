@@ -218,7 +218,12 @@ done
     echo "cluster_id=$CLUSTER_ID"
     echo "expires_epoch=$EXPIRES_EPOCH"
     echo "external_ip=$EXTERNAL_IP"
-    echo "url=https://$EXTERNAL_IP"
+    # The QA session reaches PMM through the agent egress proxy, which refuses raw-IP
+    # HTTPS but allows Linode's per-IP rDNS hostname. Hand back the hostname URL so
+    # the UI is actually openable (curl/Playwright still need -k / ignoreHTTPSErrors
+    # for PMM's self-signed cert).
+    echo "external_host=$(echo "$EXTERNAL_IP" | tr '.' '-').ip.linodeusercontent.com"
+    echo "url=https://$(echo "$EXTERNAL_IP" | tr '.' '-').ip.linodeusercontent.com"
     echo "pmm_admin_password=$PMM_PW"
     echo "postgres_password=$PG_PW"
     echo "grafana_password=$GF_PW"
