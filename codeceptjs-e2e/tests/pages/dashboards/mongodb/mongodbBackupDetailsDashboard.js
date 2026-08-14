@@ -48,11 +48,17 @@ class MongodbBackupDetailsDashboard {
   // series a completed snapshot produces shows up 30-60s after PBM finishes. Until it
   // does, this panel renders its noValue ("N/A"). Poll the panel instead of asserting
   // straight away, otherwise the result depends on where the scrape lands.
+  //
+  // Scroll back to the panel on every iteration: Grafana only re-runs a panel's query
+  // while it is inside the viewport, and callers reach this after walking the dashboard
+  // down to its last row. Refreshing with the panel off-screen leaves it stuck on the
+  // "N/A" it rendered at page load, whatever the metric does afterwards.
   async waitForLastSuccessfulBackupValue() {
     const I = actor();
 
     I.waitForVisible(this.elements.lastSuccessfulBackupValue, 15);
     await I.asyncWaitFor(async () => {
+      I.scrollTo(this.elements.lastSuccessfulBackupValue);
       I.click(this.elements.refresh);
       const actualValue = await I.grabTextFrom(this.elements.lastSuccessfulBackupValue);
 
