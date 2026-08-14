@@ -354,6 +354,23 @@ const SAFE_ID = (v) => {
   return /^[A-Za-z0-9._-]+$/.test(v) && v !== "." && v !== ".." && !v.includes("..");
 };
 const readIf = (p) => { try { return fs.readFileSync(p, "utf8").trim(); } catch { return null; } };
+// Index of a top-level JQL `ORDER BY` (outside any quoted string), or -1. Used to keep
+// the caller's WHERE clause and any sort clause separate when forcing `project = PMM`.
+const findOrderBy = (s) => {
+  let q = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) {
+      if (ch === "\\") { i++; continue; }
+      if (ch === q) q = null;
+    } else if (ch === '"' || ch === "'") {
+      q = ch;
+    } else if ((ch === "o" || ch === "O") && (i === 0 || /\s/.test(s[i - 1])) && /^order\s+by\b/i.test(s.slice(i))) {
+      return i;
+    }
+  }
+  return -1;
+};
 
 // Every per-run artifact a build can leave behind. A reclaim wipes ALL of them
 // so a replacement build never serves the previous run's creds/cluster/logs.
@@ -606,8 +623,9 @@ async function brokerJira(action, m, by) {
   if (action !== "create" && action !== "search" && !/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
   const base = "https://perconadev.atlassian.net/rest/api/2";
   const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+  const JIRA_TIMEOUT_MS = 30_000; // bound every Jira call so a hung upstream can't wedge the handler
   const jira = (path, init = {}) =>
-    fetch(`${base}${path}`, { ...init, headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) } });
+    fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(JIRA_TIMEOUT_MS), headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) } });
   console.log(`jira/${action} ${issue || m.summary || m.jql || ""} by ${by}`);
   let r;
   try {
@@ -630,13 +648,17 @@ async function brokerJira(action, m, by) {
       // of an interactively-authenticated MCP. Read-only, PMM-only. Uses the
       // enhanced /search/jql endpoint (classic /search is sunset on Jira Cloud).
       const raw = String(m.jql || "").trim();
-      const om = raw.match(/\border\s+by\b/i);
-      const where = om ? raw.slice(0, om.index).trim() : raw;
-      const order = om ? raw.slice(om.index) : "";
+      // Find ORDER BY only OUTSIDE quoted strings, so a value like `summary ~ "order by"`
+      // stays in the WHERE clause instead of being split as a sort clause. JQL quotes with
+      // ' or " and escapes with a backslash.
+      const oi = findOrderBy(raw);
+      const where = oi >= 0 ? raw.slice(0, oi).trim() : raw;
+      const order = oi >= 0 ? raw.slice(oi) : "";
       const jql = `project = PMM${where ? ` AND (${where})` : ""}${order ? ` ${order}` : ""}`;
-      const maxResults = Math.min(Math.max(Number(m.maxResults) || 20, 1), 100);
-      const fields = Array.isArray(m.fields) ? m.fields
-        : String(m.fields || "summary,status,issuetype,updated").split(",").map((s) => s.trim()).filter(Boolean);
+      const maxResults = Math.min(Math.max(Math.floor(Number(m.maxResults) || 20), 1), 100);
+      const fields = (Array.isArray(m.fields) ? m.fields
+        : String(m.fields || "summary,status,issuetype,updated").split(","))
+        .map((s) => String(s).trim()).filter(Boolean);
       r = await jira(`/search/jql`, { method: "POST", body: JSON.stringify({ jql, maxResults, fields }) });
     } else if (action === "read") {
       const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
@@ -653,7 +675,7 @@ async function brokerJira(action, m, by) {
     } else if (action === "attach") {
       const fd = new FormData();
       fd.append("file", new Blob([Buffer.from(String(m.content_b64 || ""), "base64")]), String(m.filename || "evidence.png"));
-      r = await fetch(`${base}/issue/${issue}/attachments`, { method: "POST", headers: { Authorization: auth, "X-Atlassian-Token": "no-check" }, body: fd });
+      r = await fetch(`${base}/issue/${issue}/attachments`, { method: "POST", signal: AbortSignal.timeout(JIRA_TIMEOUT_MS), headers: { Authorization: auth, "X-Atlassian-Token": "no-check" }, body: fd });
     } else {
       return { status: 400, body: "unknown_action" };
     }
