@@ -28,7 +28,10 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
 
     await queryAnalyticsPage.filters.selectFilterInGroupAtPosition(filter, randomFilterValue);
     I.assertTrue((await queryAnalyticsPage.data.getRowCount()) > 0, `No values for filter: "${filter}" were displayed`);
-    await queryAnalyticsPage.filters.selectFilterInGroupAtPosition(filter, randomFilterValue);
+    // Selecting re-sorts the group, so clicking the same position again would
+    // toggle a different value and leave this group's filter applied.
+    queryAnalyticsPage.filters.resetAllFilters();
+    queryAnalyticsPage.waitForLoaded();
   }
 
   const serverNodeName = homePage.pmmServerName;
@@ -49,6 +52,9 @@ Scenario('PMM-T269 - Verify QAN UI Elements are displayed @qan', async ({ I, que
 
   queryAnalyticsPage.filters.selectContainFilterInGroup(serviceFilter, 'Service Name');
   I.wait(3);
+  // The filter groups are virtualised, so a selected value that sits below the
+  // group's viewport is not rendered at all -- "Show selected" brings it back.
+  queryAnalyticsPage.filters.showSelectedFilters();
   const displayedServiceName = await I.grabTextFrom(queryAnalyticsPage.filters.fields.checkedFilters());
 
   I.assertContain(

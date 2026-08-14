@@ -17,7 +17,9 @@ class QueryAnalyticsFilters {
       filterLinkByNameAndGroup: (filterName, groupName) => this.fields.filterByNameAndGroup(filterName, groupName).find('a'),
       filterPercentageByNameAndGroup: (filterName, groupName) => this.fields.filterByNameAndGroup(filterName, groupName).find('//span').at(3),
       filterName: locate('//span[@class="checkbox-container__label-text"]'),
-      checkedFilters: () => this.fields.filterCheckboxes.find('//input[@type="checkbox" and @checked]//following-sibling::span[@class="checkbox-container__label-text"]'),
+      // ':checked' reads the live property; the 'checked' attribute React
+      // writes only reflects the state the input was mounted with.
+      checkedFilters: () => locate('div[data-testid*="filter-checkbox"] input[type="checkbox"]:checked ~ span.checkbox-container__label-text'),
       groupElementsCount: (groupName) => `//span[contains(text(), '${groupName}')]/following-sibling::span[contains(text(), 'Show all')]`,
     };
     this.buttons = {
