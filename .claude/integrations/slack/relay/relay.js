@@ -602,13 +602,13 @@ setTimeout(reapLke, 60_000).unref(); // first sweep shortly after boot
 async function brokerJira(action, m, by) {
   if (!JIRA_EMAIL || !JIRA_API_TOKEN) return { status: 503, body: "jira_not_configured" };
   const issue = m.issue;
-  // Every action except `create` operates on an existing PMM issue.
-  if (action !== "create" && !/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
+  // Every action except create/search operates on an existing PMM issue.
+  if (action !== "create" && action !== "search" && !/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
   const base = "https://perconadev.atlassian.net/rest/api/2";
   const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
   const jira = (path, init = {}) =>
     fetch(`${base}${path}`, { ...init, headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) } });
-  console.log(`jira/${action} ${issue || m.summary || ""} by ${by}`);
+  console.log(`jira/${action} ${issue || m.summary || m.jql || ""} by ${by}`);
   let r;
   try {
     if (action === "create") {
@@ -624,6 +624,20 @@ async function brokerJira(action, m, by) {
       if (!fields.summary || !fields.issuetype?.name) return { status: 400, body: "summary_and_issuetype_required" };
       if (fields.issuetype.name === "Bug" && fields.customfield_10059 === undefined) fields.customfield_10059 = [{ value: "Yes" }];
       r = await jira(`/issue`, { method: "POST", body: JSON.stringify({ fields }) });
+    } else if (action === "search") {
+      // JQL search, FORCED to the PMM project — lets callers (e.g. Investigator
+      // dedup) find existing tickets through the relay's service account instead
+      // of an interactively-authenticated MCP. Read-only, PMM-only. Uses the
+      // enhanced /search/jql endpoint (classic /search is sunset on Jira Cloud).
+      const raw = String(m.jql || "").trim();
+      const om = raw.match(/\border\s+by\b/i);
+      const where = om ? raw.slice(0, om.index).trim() : raw;
+      const order = om ? raw.slice(om.index) : "";
+      const jql = `project = PMM${where ? ` AND (${where})` : ""}${order ? ` ${order}` : ""}`;
+      const maxResults = Math.min(Math.max(Number(m.maxResults) || 20, 1), 100);
+      const fields = Array.isArray(m.fields) ? m.fields
+        : String(m.fields || "summary,status,issuetype,updated").split(",").map((s) => s.trim()).filter(Boolean);
+      r = await jira(`/search/jql`, { method: "POST", body: JSON.stringify({ jql, maxResults, fields }) });
     } else if (action === "read") {
       const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
       r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);
