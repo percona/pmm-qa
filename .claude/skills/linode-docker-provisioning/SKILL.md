@@ -49,7 +49,7 @@ possession gate; `X-Actor` is the identity.
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
 RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
-ROLE=<role>                           # test-runner or investigator (free text, tag only)
+ROLE=<role>                           # test-runner or investigator (safe id: [A-Za-z0-9._-], tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
 mkdir -p "$RUN_DIR"
 ACTOR="$(gh api user --jq .login 2>/dev/null)"
@@ -90,7 +90,9 @@ else
 fi
 ```
 
-`role` is `test-runner` or `investigator` (free text, just for the tag). The relay:
+`role` is `test-runner` or `investigator` — a tag only, but it must be a safe
+identifier (`[A-Za-z0-9._-]`, no spaces or `..`); the relay rejects anything else
+with `400 bad_role`. The relay:
 - Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443, tagged `pmm-qa-ephemeral`.
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or pass `"pmm_qa_ref":"<branch>"` in the POST body (must already be pushed; see "Never code on the Linode VM" above).
