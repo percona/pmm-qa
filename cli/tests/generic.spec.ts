@@ -595,6 +595,13 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
 
     await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
     await cli.exec(`docker exec ${containerName} pkill -f pmm-agent`);
+    // pkill returns once SIGTERM is delivered, not once the agent is gone. Starting the
+    // replacement before the old process exits leaves both in "ps" and makes the pid
+    // comparison below report a restart that did happen as one that did not.
+    await expect(async () => {
+      const pids = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
+      expect(pids.stdout, 'Old pmm-agent process is still running after SIGTERM!').not.toContain(oldPid.stdout);
+    }).toPass({ intervals: [500], timeout: 30_000 });
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
 
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
