@@ -17,10 +17,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
   if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
-    // An explicit build URL (feature build) or a release-candidate client carries the version of
-    // the branch/artifact it was built from, which may predate the latest bump on v3: the moment
-    // an RC branches, v3 VERSION already moves ahead to the next dev version. The server under test
-    // comes from that same build, so it is the only valid reference for the client's version.
+    // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
     PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
     if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
