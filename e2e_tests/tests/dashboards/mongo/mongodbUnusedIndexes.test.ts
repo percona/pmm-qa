@@ -12,7 +12,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 pmmTest(
   'PMM-T2262 Verify MongoDB Unused Indexes dashboard @nightly @dashboards @pmm-psmdb-integration',
   async ({ api, dashboard, mongoDbHelper, page, urlHelper }) => {
-    pmmTest.skip(serverVersionBelow('3.10.0'), 'MongoDB Unused Indexes dashboard is available from PMM Server 3.10.0');
+    pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), '3.10.0'), 'MongoDB Unused Indexes dashboard is available from PMM Server 3.10.0');
     const database = `pmm_qa_unused_indexes_${Date.now()}`;
     const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
     const unusedIndexes = dashboard.mongo.unusedIndexes;

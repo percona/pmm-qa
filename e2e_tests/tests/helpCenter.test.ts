@@ -164,8 +164,8 @@ pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mock
 
 pmmTest(
   'PMM-T2263 Verify update notification remains snoozed after refresh @new-navigation',
-  async ({ helpPage, mocks, page }) => {
-    pmmTest.skip(serverVersionBelow('3.10.0'), 'Update-notification snooze is available from PMM Server 3.10.0');
+  async ({ api, helpPage, mocks, page }) => {
+    pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), '3.10.0'), 'Update-notification snooze is available from PMM Server 3.10.0');
     const snoozeDuration = Timeouts.ONE_MINUTE;
     const updateVersion = `test-update-${Date.now()}`;
     const snooze = await mocks.mockSnoozedUpdate(updateVersion);

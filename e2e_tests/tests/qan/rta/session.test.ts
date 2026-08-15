@@ -55,8 +55,8 @@ pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api
 
 pmmTest(
   'PMM-T2267 Verify RTA sessions page size is stored in the URL and restored after refresh @rta',
-  async ({ mocks, page, queryAnalytics }) => {
-    pmmTest.skip(serverVersionBelow('3.10.0'), 'RTA sessions URL-state persistence is available from PMM Server 3.10.0');
+  async ({ api, mocks, page, queryAnalytics }) => {
+    pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), '3.10.0'), 'RTA sessions URL-state persistence is available from PMM Server 3.10.0');
     const { rta } = queryAnalytics;
 
     await pmmTest.step('Set up mocked sessions', async () => {
