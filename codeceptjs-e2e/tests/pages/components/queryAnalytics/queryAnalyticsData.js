@@ -154,17 +154,16 @@ class QueryAnalyticsData {
     I.waitForVisible(this.elements.queryRow(0), 30);
     I.waitForVisible(this.fields.searchBy, 30);
     I.wait(1);
-    I.clearField(this.fields.searchBy);
     I.click(this.fields.searchBy);
     I.fillField(this.fields.searchBy, value);
     I.pressKey('Enter');
+    queryAnalyticsPage.waitForLoaded();
   }
 
   click(value) {
     I.waitForVisible(this.elements.queryRow(0), 30);
     I.waitForVisible(this.fields.searchBy, 30);
     I.wait(1);
-    I.clearField(this.fields.searchBy);
     I.click(this.fields.searchBy);
     I.fillField(this.fields.searchBy, value);
   }
@@ -179,6 +178,7 @@ class QueryAnalyticsData {
     I.click(this.fields.searchBy);
     I.wait(1);
     I.clearField(this.fields.searchBy);
+    queryAnalyticsPage.waitForLoaded();
   }
 
   async getCountOfItems() {
