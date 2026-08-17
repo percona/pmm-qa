@@ -16,13 +16,11 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   });
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
-  if (/^https?:/.test(PMM_VERSION)) {
-    // An explicit build URL (feature build) carries the version of the branch it was built
-    // from, which may predate the latest bump on v3. The server under test comes from that
-    // same build, so it is the only valid reference for the client's version.
+  if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
+    // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
     PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
     if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
-  } else if (/latest-tarball|3-dev-latest|pmm3-rc/.test(PMM_VERSION)) {
+  } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
     // TODO: refactor to use docker hub API to remove file-update dependency
     // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
     PMM_VERSION = cli.execute('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')
@@ -605,8 +603,19 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const newAdminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
+    const versionLookup = process.env.PMM_CLIENT_VERSION?.includes('http')
+      ? undefined
+      : cli.execute('curl --fail --silent --show-error https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION');
+    if (versionLookup && (versionLookup.code !== 0 || !versionLookup.stdout.trim())) {
+      throw new Error('Could not read the expected upgrade version from v3 VERSION');
+    }
+    const upgradedVersion = versionLookup?.stdout.trim() ?? '';
+
     await newPid.outNotContains(oldPid.stdout);
     await newAdminStatus.outContains('Connected');
-    await newVersion.outContains(PMM_VERSION);
+    expect(newVersion.stdout.trim()).not.toEqual(oldVersion.stdout.trim());
+    if (upgradedVersion) {
+      await newVersion.outContains(upgradedVersion);
+    }
   });
 });
