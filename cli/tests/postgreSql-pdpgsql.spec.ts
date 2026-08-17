@@ -247,7 +247,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     await cli.waitForAgentRunning(containerName, serviceId);
 
     const metrics = await cli.getMetrics(changeAgentServiceName, 'pmm', 'mypass', containerName);
-    console.log(`Metrics are: ${metrics}`)
+    console.log(`Metrics are: ${metrics}`);
 
     await cli.exec(`docker exec ${containerName} psql -U postgres -c "ALTER USER pmm WITH PASSWORD '${newPassword}';"`);
     const restart = await cli.exec(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
@@ -255,15 +255,15 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     console.log(restart);
     await cli.exec('sleep 60');
     const newMetrics = await cli.getMetrics(changeAgentServiceName, 'pmm', 'mypass', containerName);
-    console.log(`new metrics are: ${newMetrics}`)
-    const pgExporterId  = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print $4}'`);
+    console.log(`new metrics are: ${newMetrics}`);
+    const pgExporterId = (await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgres_exporter | awk -F' ' '{print $4}'`)).stdout;
     console.log(`pg exporter id is: ${pgExporterId}`);
-    const pgStatMonitorId  = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $4}'`);
+    const pgStatMonitorId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $4}'`);
     console.log(`pg exporter id is: ${pgStatMonitorId.stdout}`);
     console.log(await cli.exec(`docker exec ${containerName} pmm-admin list`));
 
-    const changeAgentPassword = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --custom-labels=env=qa,owner=Peter`)
-    console.log(`change agent password is: ${changeAgentPassword.stdout}`)
-    throw new Error("Expected!");
+    const changeAgentPassword = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --custom-labels=env=qa,owner=Peter`);
+    console.log(`change agent password is: ${changeAgentPassword.stdout}`);
+    throw new Error('Expected!');
   });
 });
