@@ -30,8 +30,9 @@ command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
 [ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 
 # ttl_hours optional (default 24). Overridable: node_count/node_type/region/
-# k8s_version/namespace, and for FB — pmm_chart/deps_chart, pmm_set/deps_set,
-# chart_version, or pmm_values_b64/deps_values_b64 (a values.yaml, base64). See "Custom charts".
+# k8s_version/namespace, and for a specific release/RC/FB — pmm_chart/deps_chart,
+# chart_version (pin it — default is LATEST), pmm_set/deps_set, or
+# pmm_values_b64/deps_values_b64 (a values.yaml, base64). See "Choosing the chart".
 # 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
 #    The cluster builds server-side on the relay; this call does NOT hold open.
 curl -sS -m 60 --fail-with-body -X POST "$RELAY/linode/provision-lke" \
@@ -84,19 +85,55 @@ overridable in the POST body): `region=us-east`, `node_type=g6-standard-4`,
 `touch "$RUN_DIR/keep-alive"` — the marker keeps the SessionEnd hook from tearing
 it down; the cluster's `expires-<epoch>` tag (now + N h) still lets the reaper reap it.
 
-### Custom charts / Feature Build
+### Choosing the chart — do this first, don't assume "latest"
 
-Install from FB or custom Helm charts by adding fields to the POST body instead of env vars — the relay maps them to the script's `PMM_CHART`/`DEPS_CHART`/`PMM_SET`/`DEPS_SET`/`CHART_VERSION`, and `pmm_values_b64`/`deps_values_b64` (a `values.yaml` base64-encoded, written into the run dir on the relay). The `pmm-ha` chart's image keys are `image.repository` / `image.tag`:
+The relay installs two charts from the **Percona Helm repo**
+(`https://percona.github.io/percona-helm-charts/`): **`percona/pmm-ha`** (the PMM HA
+server) and **`percona/pmm-ha-dependencies`** (the operators). With no `chart_version`
+in the POST body it installs the **latest published** version of each — right only
+when you are testing *latest*. **Whenever you are testing a specific PMM release, RC,
+or FB, you must find and pin the matching chart version — the image tag alone does
+not change the chart.** Never skip the search and hope latest matches.
+
+Search the repo and match `appVersion` (the PMM version a chart ships) to the version
+under test:
 
 ```bash
--d "$(jq -n --arg id "$RUN_ID" --arg tag "<fb-tag>" '{
+# helm must be local: k8s/install_k8s_tools.sh --helm
+helm repo add percona https://percona.github.io/percona-helm-charts/ --force-update
+helm repo update percona
+helm search repo percona/pmm-ha --versions              # every published pmm-ha chart version
+helm search repo percona/pmm-ha-dependencies --versions
+helm show chart  percona/pmm-ha --version <chart-ver>   # its appVersion == the PMM version it ships
+helm show values percona/pmm-ha --version <chart-ver>   # the real image.* keys — read, don't assume
+```
+
+Pick the chart version whose `appVersion` matches the PMM version under test and pass
+it as `chart_version` (the relay applies `--version` to both charts). For an
+**unreleased** chart change, point `pmm_chart`/`deps_chart` at a chart path that
+exists **on the relay** instead of the `percona/*` repo name.
+
+### Feature Build — override the server image on top of the chart
+
+Once the chart version is chosen, swap only the PMM **server image** (e.g. an FB
+build) by adding fields to the POST body — the relay maps them to the script's
+`PMM_CHART`/`DEPS_CHART`/`PMM_SET`/`DEPS_SET`/`CHART_VERSION` and
+`pmm_values_b64`/`deps_values_b64` (a `values.yaml` base64-encoded). Overriding the
+image does **not** change the chart, so still pin `chart_version` above:
+
+```bash
+-d "$(jq -n --arg id "$RUN_ID" --arg tag "<fb-tag>" --arg cv "<chart-ver>" '{
   run_id:$id,
+  chart_version:$cv,
   pmm_set:("image.repository=perconalab/pmm-server,image.tag=" + $tag)
   # or: pmm_values_b64: (<base64 of a values.yaml>), deps_values_b64: (...)
 }')"
 ```
 
-The exact image key depends on the chart version — read that chart's `values.yaml`, don't assume. Get the FB server image (repo + tag) from the latest JNKPercona comment on the ticket's linked `pmm-submodules` PR (`fb-tests` skill), same source single-VM runs use. A chart path (`/path/to/fb/pmm-ha`) only works if it exists **on the relay**; for FB prefer `pmm_set`/`_b64` values over a local chart path.
+The exact image key depends on the chart version — read it with `helm show values`
+above, don't assume `image.repository`/`image.tag`. Get the FB server image (repo +
+tag) from the latest JNKPercona comment on the ticket's linked `pmm-submodules` PR
+(`fb-tests` skill), the same source single-VM runs use.
 
 ## Verify HA behaviour (not just "it's up")
 

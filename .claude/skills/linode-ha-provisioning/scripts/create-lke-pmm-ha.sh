@@ -130,6 +130,19 @@ if [[ "$DEPS_CHART" == percona/* || "$PMM_CHART" == percona/* ]]; then
     helm repo update
 fi
 
+# Make the chart version explicit in the log. An unset CHART_VERSION installs the
+# LATEST published chart -- correct for "latest" runs, wrong for a specific
+# release/RC/FB. Surface which chart actually gets deployed so a run that forgot to
+# pin is visible in the log tail (the relay returns it), not silently mismatched.
+if [ -n "$CHART_VERSION" ]; then
+    log "Chart version pinned: $CHART_VERSION ($PMM_CHART, $DEPS_CHART)"
+else
+    log "WARNING: no CHART_VERSION set -- installing LATEST $PMM_CHART / $DEPS_CHART. Pin chart_version when testing a specific release/RC/FB."
+    if [[ "$PMM_CHART" == percona/* ]]; then
+        log "Latest available: $(helm search repo "$PMM_CHART" -o json 2>/dev/null | jq -r '.[0] | "chart \(.version) → appVersion \(.app_version)"' 2>/dev/null || echo '?')"
+    fi
+fi
+
 deps_args=(); [ -n "$CHART_VERSION" ] && deps_args+=(--version "$CHART_VERSION")
 [ -n "$DEPS_VALUES" ] && deps_args+=(-f "$DEPS_VALUES")
 [ -n "$DEPS_SET" ] && deps_args+=(--set "$DEPS_SET")
