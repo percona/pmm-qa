@@ -29,6 +29,9 @@
 // Precedence: PW_PROXY_SERVER > HTTPS_PROXY > https_proxy. Set
 // PW_PROXY_SERVER='' to force a direct connection.
 
+const fs = require("node:fs");
+const { spkiPinsFromBundle } = require("./spki-pin");
+
 function resolveProxyServer() {
   const explicit = process.env.PW_PROXY_SERVER;
   if (explicit !== undefined) {
@@ -50,4 +53,28 @@ function proxyLaunchOptions() {
   };
 }
 
-module.exports = { proxyLaunchOptions };
+function caBundlePath() {
+  return process.env.CCR_CA_BUNDLE || "/root/.ccr/ca-bundle.crt";
+}
+
+// Chromium ships its own trust store and ignores the environment's CA bundle,
+// so a TLS-intercepted site fails cert validation. Pin the interception CAs
+// from that bundle to trust exactly them -- nothing broader.
+function interceptionCaPinArgs() {
+  const bundle = caBundlePath();
+  if (!fs.existsSync(bundle)) return [];
+  const pins = spkiPinsFromBundle(bundle);
+  return pins.length ? [`--ignore-certificate-errors-spki-list=${pins.join(",")}`] : [];
+}
+
+// Launch options that BYPASS the agent proxy for a direct egress connection.
+// The agent proxy is credential-scoped for github.com (repo-scoped REST only),
+// so a github web page navigated through it comes back as a 403 JSON. A bare
+// launch still inherits the system proxy, so force --no-proxy-server to take
+// the transparent egress-gateway path, which serves the real page. That path is
+// TLS-intercepted too, hence the CA pins.
+function directEgressLaunchOptions() {
+  return { args: ["--no-proxy-server", ...interceptionCaPinArgs()] };
+}
+
+module.exports = { proxyLaunchOptions, directEgressLaunchOptions };

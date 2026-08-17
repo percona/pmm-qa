@@ -12,6 +12,13 @@
 //   PW_SCROLL=1         scroll the page top-to-bottom first to force Grafana's
 //                       virtualized panels to render before a fullPage shot
 //   PW_CLICK_TEXT='...' click an element by partial text before capturing
+//   PW_NO_PROXY=1       reach the target with a DIRECT connection (no agent
+//                       proxy). Auto-enabled for github.com hosts: the agent's
+//                       GitHub credential proxy serves repo-scoped REST only, so
+//                       a github.com web page (e.g. an Actions run) comes back as
+//                       a 403 JSON through the proxy. Network egress is Full, so
+//                       the direct path renders the real page (public repos only
+//                       — the direct path carries no GitHub auth).
 //   PW_SETTLE_MS, PW_WAIT_SELECTOR, PMM_UI_WIDTH/HEIGHT   as before
 //
 // If <sessionId> is given and .claude/scripts/.sessions/<sessionId>.json
@@ -28,7 +35,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const { chromium } = require("playwright");
 const { spkiPinFromCertFile } = require("./lib/spki-pin");
-const { proxyLaunchOptions } = require("./lib/proxy");
+const { proxyLaunchOptions, directEgressLaunchOptions } = require("./lib/proxy");
 
 async function main() {
   const [, , url, outputPath, sessionId] = process.argv;
@@ -81,7 +88,16 @@ async function main() {
   // /opt/pw-browsers can drift from what a freshly `npm install`-ed
   // playwright expects (confirmed live), so don't rely on Playwright's own
   // bundled-browser resolution to find it.
-  const proxyOpts = proxyLaunchOptions();
+  // github.com is intercepted by the agent's GitHub credential proxy (repo-scoped
+  // REST only) — a web page navigated through it returns a 403 JSON, not HTML. So
+  // bypass the proxy for github.com hosts (or when PW_NO_PROXY=1) to take the
+  // direct egress path, which serves the real page. Direct = unauthenticated, fine
+  // for public repos (e.g. an FB Actions run on Percona-Lab/pmm-submodules).
+  let directEgress = process.env.PW_NO_PROXY === "1";
+  try {
+    directEgress = directEgress || /(^|\.)github\.com$/i.test(new URL(url).hostname);
+  } catch { /* non-URL arg: leave as-is */ }
+  const proxyOpts = directEgress ? directEgressLaunchOptions() : proxyLaunchOptions();
   const browser = await chromium.launch({
     executablePath: "/opt/pw-browsers/chromium",
     args: [...launchArgs, ...proxyOpts.args],
