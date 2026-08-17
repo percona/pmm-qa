@@ -13,7 +13,7 @@ This is the Kubernetes/LKE counterpart to [`linode-docker-provisioning`](../lino
 
 ## Prerequisites
 
-The `LINODE_TOKEN` does **not** live in this environment — it lives only on the relay, exactly as for the single-VM [`linode-docker-provisioning`](../linode-docker-provisioning/SKILL.md) path. This env holds one scoped var, `RELAY_KEY`; identity is your GitHub login in `X-Actor` (`gh api user`, which the egress proxy verifies), roster-checked by the relay. The relay runs `create-lke-pmm-ha.sh` with its own token, stamps the cluster with an `expires-<epoch>` tag (so the reaper can reap it — see Teardown), and returns `{cluster_id, external_ip, url, kubeconfig_b64, passwords}`.
+The `LINODE_TOKEN` does **not** live in this environment — it lives only on the relay, exactly as for the single-VM [`linode-docker-provisioning`](../linode-docker-provisioning/SKILL.md) path. This env holds one scoped var, `RELAY_KEY`; identity is your GitHub login in `X-Actor` — get it from the GitHub MCP `get_me` (`.login`) and `export ACTOR=<login>` (Routine sessions have no `gh`; `gh api user` is only a fallback where `gh` exists), roster-checked by the relay. The relay runs `create-lke-pmm-ha.sh` with its own token, stamps the cluster with an `expires-<epoch>` tag (so the reaper can reap it — see Teardown), and returns `{cluster_id, external_ip, url, kubeconfig_b64, passwords}`.
 
 You still need `kubectl` (and `helm`, for chart pokes) **locally** to drive the returned kubeconfig — the cluster's API server is a public HTTPS endpoint the sandbox can reach. Install with `k8s/install_k8s_tools.sh --kubectl --helm`. No `linode-cli` or token is needed on the session side. The relay's `LINODE_TOKEN` must carry **Kubernetes (LKE): Read/Write** for provision/destroy and the reaper (nothing about Linodes/Firewalls/NodeBalancers directly — LKE's own controller creates the LoadBalancer in-cluster).
 
@@ -24,7 +24,7 @@ RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (rese
 RUN_ID=<jira-key-or-run-id>                              # e.g. PMM-14744
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"           # session-side markers (same dir the SessionEnd hook scans)
 mkdir -p "$RUN_DIR"
-ACTOR="$(gh api user --jq .login 2>/dev/null)"
+ACTOR="${ACTOR:-$(gh api user --jq .login 2>/dev/null)}"   # from GitHub MCP get_me (.login); gh is a fallback
 
 # ttl_hours optional (default 24). Overridable: node_count/node_type/region/
 # k8s_version/namespace, and for FB — pmm_chart/deps_chart, pmm_set/deps_set,
@@ -108,7 +108,7 @@ Standing up the cluster isn't the test. Exercise what the change actually touche
 ## Teardown — mandatory, every path
 
 ```bash
-ACTOR="$(gh api user --jq .login 2>/dev/null)"
+ACTOR="${ACTOR:-$(gh api user --jq .login 2>/dev/null)}"   # from GitHub MCP get_me (.login); gh is a fallback
 curl -sS -m 240 -X POST "$RELAY/linode/destroy-lke" \
   -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
   -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')"

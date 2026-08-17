@@ -11,7 +11,8 @@ description: Read and write PMM tickets on perconadev.atlassian.net — fields, 
 see "Operations" below). The relay holds the Jira service-account credentials
 (`JIRA_EMAIL` + `JIRA_API_TOKEN`); this environment holds only a scoped
 `RELAY_KEY` (the relay URL is a fixed public hostname, hardcoded in the snippet
-below). You identify yourself with `X-Actor` (your `gh api user` login), which
+below). You identify yourself with `X-Actor` (your GitHub login — from the GitHub MCP
+`get_me`; `gh api user` only where `gh` exists), which
 the relay roster-checks. The relay:
 
 - operates on existing `PMM-<number>` tickets, **and can `create` a new PMM
@@ -89,7 +90,8 @@ Unless the user explicitly requested the Jira update, confirm before writing to 
 ## Operations (via the relay)
 
 `POST $RELAY/jira/<action>` (relay URL hardcoded below) with headers `X-Relay-Secret: $RELAY_KEY`
-and `X-Actor: <your gh login>` (from `gh api user`; the relay roster-checks it
+and `X-Actor: <your GitHub login>` (from the GitHub MCP `get_me`, or `gh api user`
+where `gh` exists; the relay roster-checks it
 and records who acted — no self-reported email). The action is
 in the **URL path**; the JSON body carries `issue` (must be a `PMM-<number>`
 key) and any action args. The relay talks Jira REST **v2** upstream (wiki
@@ -98,7 +100,7 @@ so newlines/quotes escape cleanly.
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
-ACTOR="$(gh api user --jq .login 2>/dev/null)"
+ACTOR="${ACTOR:-$(gh api user --jq .login 2>/dev/null)}"   # from GitHub MCP get_me (.login); gh is a fallback
 J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY/jira/$1" \
         -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
         -H "Content-Type: application/json" -d "$2"; }

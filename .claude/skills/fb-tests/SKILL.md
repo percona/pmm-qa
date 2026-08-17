@@ -5,13 +5,11 @@ description: Analyze Percona-Lab/pmm-submodules FB Tests via REST check-runs, JN
 
 # PMM FB Tests
 
-**pmm-submodules** — use `gh` only. **Never** `git clone` this repo.
+**pmm-submodules** — access via the **GitHub MCP tools** (`mcp__github__*`; see the `repos` skill's "GitHub access — MCP-first" tool map). Routine sessions have **no `gh`**, so the `gh api` recipes below are a fallback only where `gh` actually exists. **Never** `git clone` this repo.
 
 ## Collect checks
 
-`gh pr checks` is GraphQL-backed and **403s in these sessions** — use repo-scoped
-REST check-runs on the PR's head commit instead. `group_by(.name) | max_by(.started_at)`
-keeps only the **latest** run per check (so a passing rerun supersedes its old failure):
+Read checks with the GitHub MCP `pull_request_read` (`method: get_check_runs`, owner `Percona-Lab`, repo `pmm-submodules`, `pullNumber: <SUBMODULES_PR>`) — it resolves the head SHA for you and returns the check runs. `gh pr checks` is GraphQL-backed and **403s** anyway. Where `gh` exists, the repo-scoped REST recipe below is an equivalent fallback; `group_by(.name) | max_by(.started_at)` keeps only the **latest** run per check (so a passing rerun supersedes its old failure):
 
 ```bash
 SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<SUBMODULES_PR> --jq .head.sha)
