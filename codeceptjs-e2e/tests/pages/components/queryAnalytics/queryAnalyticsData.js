@@ -150,23 +150,25 @@ class QueryAnalyticsData {
     return await I.grabAttributeFrom(this.buttons.lastPage, 'title');
   }
 
+  // Search is debounced search-as-you-type, so clearing the field is itself a
+  // search: it reloads the overview, and the table -- header row and this input
+  // with it -- is unmounted while the spinner is up. fillField clears and types
+  // in one go, which never leaves the input to be re-found mid-reload.
   searchByValue(value, refresh = false) {
     I.waitForVisible(this.elements.queryRow(0), 30);
     I.waitForVisible(this.fields.searchBy, 30);
-    I.wait(1);
-    I.clearField(this.fields.searchBy);
-    I.click(this.fields.searchBy);
     I.fillField(this.fields.searchBy, value);
     I.pressKey('Enter');
+    I.wait(1);
+    queryAnalyticsPage.waitForLoaded();
   }
 
   click(value) {
     I.waitForVisible(this.elements.queryRow(0), 30);
     I.waitForVisible(this.fields.searchBy, 30);
-    I.wait(1);
-    I.clearField(this.fields.searchBy);
-    I.click(this.fields.searchBy);
     I.fillField(this.fields.searchBy, value);
+    I.wait(1);
+    queryAnalyticsPage.waitForLoaded();
   }
 
   async getSearchValue() {
