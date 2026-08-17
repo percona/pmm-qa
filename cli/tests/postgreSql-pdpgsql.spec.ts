@@ -29,7 +29,7 @@ const waitForAgentRunning = async (agentName = PgAgent.PGSTATMONITOR_AGENT) => {
   });
 };
 
-test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql' }, async () => {
+test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^pdpgsql_pmm_\'');
     await result.outContains('pdpgsql_pmm', 'PDPGSQL docker container should exist. please run pmm-framework with --database pdpgsql');
@@ -44,6 +44,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
    */
   test('PMM-T442 run pmm-admin add postgreSQL with pgstatmonitor', async ({}) => {
     const serviceName = 'pgstatmonitor_pg';
+
     await test.step('add pg with pgstatmonitor for monitoring', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${serviceName} ${ipPort}`);
       await output.assertSuccess();
@@ -59,6 +60,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
    */
   test('PMM-T442 run pmm-admin add postgreSQL with default query source', async ({}) => {
     const serviceName = 'default_query_source_pg';
+
     await test.step('add pg with default query source for monitoring', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${serviceName} ${ipPort}`);
       await output.assertSuccess();
@@ -74,6 +76,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
    */
   test('run pmm-admin add postgreSQL with default query source and metrics mode push', async ({}) => {
     const serviceName = 'default_query_source_push_metrics_pg';
+
     await test.step('add pg with default query source and metrics mode push for monitoring', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --metrics-mode=push ${serviceName} ${ipPort}`);
       await output.assertSuccess();
@@ -89,6 +92,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
    */
   test('run pmm-admin add postgreSQL with default query source and metrics mode pull', async ({}) => {
     const serviceName = 'default_query_source_pull_metrics_pg';
+
     await test.step('add pg with default query source and metrics mode pull for monitoring', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --metrics-mode=pull ${serviceName} ${ipPort}`);
       await output.assertSuccess();
@@ -104,6 +108,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
    */
   test('PMM-T963 run pmm-admin add postgresql with --agent-password flag', async ({}) => {
     const serviceName = 'pg_agent_password';
+
     await test.step('add pg with --agent-password for monitoring', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass ${serviceName} ${ipPort}`);
       await output.assertSuccess();
@@ -135,6 +140,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
 
   test('PMM-T1829 Verify turning off autodiscovery database for PostgreSQL', async ({}) => {
     const serviceName = 'autodiscovery_pg';
+
     await test.step('add pg with --agent-password for monitoring', async () => {
       const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} --agent-password=mypass --auto-discovery-limit=1 ${serviceName} ${ipPort}`);
       await output.assertSuccess();
@@ -174,23 +180,22 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     await output.outContains('postgres_exporter --auto-discover-databases ');
   });
 
-
-  test("PMM-T2221 - User can use connection timeout while using pmm-admin add", async ({ }) => {
+  test('PMM-T2221 - User can use connection timeout while using pmm-admin add', async ({ }) => {
     test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password=${PGSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
 
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
-    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`);
     await cli.exec('sleep 5');
     const dataSourceName = await cli.exec(` docker exec ${containerName} cat /var/log/pmm-agent.log | grep DATA_SOURCE_NAME | grep ${agentId.stdout} | grep connect_timeout=5`);
     await dataSourceName.assertSuccess();
   });
 
-  test("PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent", async ({ }) => {
+  test('PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent', async ({ }) => {
     test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
-    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${agentId.stdout} --connection-timeout=4s`);
@@ -200,10 +205,10 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     await dataSourceName.assertSuccess();
   });
 
-  test("PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent", async ({ }) => {
+  test('PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent', async ({ }) => {
     test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
-    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`)
+    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep postgres_exporter | awk -F' ' '{print $4}'`);
     await serviceId.exitCodeEquals(0);
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${agentId.stdout} --connection-timeout=0s`);
@@ -213,7 +218,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     await dataSourceName.assertSuccess();
   });
 
-  test("PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add", async ({ }) => {
+  test('PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add', async ({ }) => {
     test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root 2>/dev/null || true'`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc add dev lo root handle 1: prio'`);
@@ -222,7 +227,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     const output = await cli.exec(`docker exec ${containerName} bash -c "time pmm-admin add postgresql --connection-timeout=5s --query-source=pgstatmonitor --username=${PGSQL_USER} --password='${PGSQL_PASSWORD}' ${connectionTimeoutServiceName}_timeout ${ipPort}"`);
     await cli.exec(`docker exec ${containerName} bash -c 'tc qdisc del dev lo root'`);
 
-    await output.outContains('Connection check failed: dial tcp 127.0.0.1:5432: i/o timeout.')
+    await output.outContains('Connection check failed: dial tcp 127.0.0.1:5432: i/o timeout.');
     expect(
       output.durationMs,
       `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
