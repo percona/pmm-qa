@@ -34,7 +34,7 @@ In a session without the repo attached:
 
 ## Cloud environment
 
-This session's checkout of `percona/pmm-qa` is what gets synced to the throwaway Linode VM (see `linode-provisioning`) — it is not a separate clone. Resolve paths from the repo root Claude Code already has open.
+This session's checkout of `percona/pmm-qa` is what gets synced to the throwaway Linode VM (see `linode-docker-provisioning`) — it is not a separate clone. Resolve paths from the repo root Claude Code already has open.
 
 ## gh in these sessions — repo-scoped REST only
 
