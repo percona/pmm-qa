@@ -22,12 +22,7 @@
       "mcp__Claude_Code_Remote",
       "mcp__claude_ai_Atlassian_Rovo",
       "mcp__claude_ai_Slack",
-      "mcp__claude_ai_Claude_Code_Remote",
-      "Bash(*linode-runner/up.sh *)",
-      "Bash(*linode-runner/run.sh *)",
-      "Bash(*linode-runner/sync.sh *)",
-      "Bash(*linode-runner/extend.sh *)",
-      "Bash(*linode-runner/down.sh *)"
+      "mcp__claude_ai_Claude_Code_Remote"
     ]
   },
   "hooks": {
@@ -61,6 +56,22 @@
           }
         ]
       }
+    ]
+  },
+  "autoMode": {
+    "environment": [
+      "$defaults",
+      "Organization: Percona, an open-source database software company (github.com/percona and github.com/Percona-Lab). Primary use of Claude Code: software engineering across many teams and repositories. Some sessions additionally stand up and tear down throwaway test infrastructure for QA and CI; that is one workflow among many, not the primary use.",
+      "Source control: the Percona GitHub organizations github.com/percona and github.com/Percona-Lab, and every repository under them — two GitHub orgs but a single trust domain (one company). A repository not attached to a session was simply not selected at creation (cross-org repos can't be attached mid-session), not foreign. Percona has many more repositories than any one session touches.",
+      "Repository visibility: mixed across Percona — most repositories are public, some are private.",
+      "Cloud provider(s): Linode (Akamai). Used to create short-lived, self-destructing test instances and throwaway Kubernetes (LKE) clusters for QA and CI, through the Linode API at api.linode.com.",
+      "Trusted internal domains: *.linodeusercontent.com and *.ip.linodeusercontent.com — the automation relay and throwaway-cluster load balancers are reached at Linode reverse-DNS hostnames of the form <ip-with-dashes>.ip.linodeusercontent.com, whose address changes on every rebuild (sometimes daily), so the provider domain is trusted by wildcard rather than any fixed host. exec-*.nip.io — a throwaway instance's own exec service is reached at exec-<instance-ip>.nip.io, derived from that instance's IP and not knowable in advance; only the exec-prefixed host is trusted, not arbitrary nip.io names that map to any public IP. perconadev.atlassian.net — Percona's Jira. *.cd.percona.com — Percona's Jenkins CI.",
+      "Key internal services these sessions talk to: an automation relay that brokers infrastructure and ticketing actions (Linode VM and LKE provisioning/teardown, Jira, chat notifications) at a *.ip.linodeusercontent.com host whose address is not fixed; Percona Jenkins at pmm.cd.percona.com (and *.cd.percona.com); Percona Jira at perconadev.atlassian.net; Launchable at *.launchableinc.com; the Linode API at api.linode.com; the Terraform registry at registry.terraform.io; and Percona's public Docker Hub namespaces docker.io/percona and docker.io/perconalab.",
+      "Additional context: many of these are cloud (web) sessions that root at a parent directory above several cloned repositories, so the classifier's working-repo default may not resolve to a Percona repo — the Source control entry above states the trust domain explicitly. The test infrastructure these sessions create is single-run and self-destructing (Linode VMs carry an on-box TTL timer; throwaway LKE clusters carry an expiry tag a reaper enforces), so standing one up and destroying it are the ordinary first and last steps of a task, not unusual or irreversible side effects."
+    ],
+    "allow": [
+      "$defaults",
+      "Provisioning, driving and tearing down single-run, self-destructing test infrastructure is expected routine work here, not an unusual or unintended side effect. This covers: creating a throwaway Linode VM or a throwaway Linode Kubernetes (LKE) cluster to reproduce a failure or run a test; POSTing provision and teardown requests to the automation relay; running the session-side helper scripts that drive an already-provisioned instance over its exec service at exec-<ip>.nip.io; and any of the above led by environment-variable assignments such as PMM_QA_REF=, DOCKER_VERSION= or CLIENT_VERSION=. Narrowing a run's inbound exposure with ALLOWED_INBOUND_CIDR=<caller-ip>/32 is likewise routine; opening it to the whole internet (0.0.0.0/0) is a deliberate, visible choice made at the call site, not a widening this entry pre-approves. These instances self-destruct on their own (on-box TTL timer / expiry-tag reaper); standing one up is the normal first step of a reproduction and destroying it is the mandatory last step."
     ]
   }
 }
