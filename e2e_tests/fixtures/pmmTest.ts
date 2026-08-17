@@ -22,6 +22,7 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
+import { serverVersionBelow } from '@helpers/version.helper';
 
 const pmmTest = base.extend<{
   settingsPage: SettingsPage;
@@ -153,6 +154,13 @@ const pmmTest = base.extend<{
     await use(urlHelper);
   },
   vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
+});
+
+pmmTest.beforeEach(async ({ api }, testInfo) => {
+  const minVersion = testInfo.annotations.find((annotation) => annotation.type === 'min-pmm-version')?.description;
+  if (!minVersion) return;
+
+  pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), minVersion), `Requires PMM Server ${minVersion}+`);
 });
 
 export default pmmTest;

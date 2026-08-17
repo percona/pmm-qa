@@ -1,7 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import { serverVersionBelow } from '@helpers/version.helper';
 
 let rs101ServiceId: string;
 let rs102ServiceId: string;
@@ -55,8 +54,8 @@ pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api
 
 pmmTest(
   'PMM-T2267 Verify RTA sessions page size is stored in the URL and restored after refresh @rta',
-  async ({ api, mocks, page, queryAnalytics }) => {
-    pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), '3.10.0'), 'RTA sessions URL-state persistence is available from PMM Server 3.10.0');
+  { annotation: { type: 'min-pmm-version', description: '3.10.0' } },
+  async ({ mocks, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
 
     await pmmTest.step('Set up mocked sessions', async () => {

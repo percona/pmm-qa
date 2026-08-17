@@ -2,7 +2,6 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
-import { serverVersionBelow } from '@helpers/version.helper';
 
 pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
   await grafanaHelper.authorize();
@@ -164,8 +163,8 @@ pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mock
 
 pmmTest(
   'PMM-T2263 Verify update notification remains snoozed after refresh @new-navigation',
-  async ({ api, helpPage, mocks, page }) => {
-    pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), '3.10.0'), 'Update-notification snooze is available from PMM Server 3.10.0');
+  { annotation: { type: 'min-pmm-version', description: '3.10.0' } },
+  async ({ helpPage, mocks, page }) => {
     const snoozeDuration = Timeouts.ONE_MINUTE;
     const updateVersion = `test-update-${Date.now()}`;
     const snooze = await mocks.mockSnoozedUpdate(updateVersion);
