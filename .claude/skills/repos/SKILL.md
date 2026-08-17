@@ -12,6 +12,7 @@ description: PMM GitHub repository map, GitHub access (MCP-first), and rules for
 | `percona/pmm-qa` | QA tests, provisioning | **Yes** (Test Runner, Investigator, FB Reporter) |
 | `percona/pmm` | PMM server monorepo | **No** (read/diff only) |
 | `percona/grafana` | Grafana UI | **No** (read/diff only) |
+| `percona/percona-helm-charts` | Helm charts — `pmm`, `pmm-ha`, `pmm-ha-dependencies` (K8s/HA deploys) | **No** (read/diff only) |
 | `Percona-Lab/pmm-submodules` | FB integration | Different org — see **Cross-org access** below |
 | `Percona-Lab/jenkins-pipelines` | Jenkins defs | Different org — see **Cross-org access** below |
 

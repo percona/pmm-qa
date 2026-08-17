@@ -32,7 +32,7 @@ command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
 # ttl_hours optional (default 24). Overridable: node_count/node_type/region/
 # k8s_version/namespace, and for a specific release/RC/FB — pmm_chart/deps_chart,
 # chart_version (pin it — default is LATEST), pmm_set/deps_set, or
-# pmm_values_b64/deps_values_b64 (a values.yaml, base64). See "Choosing the chart".
+# pmm_values_b64/deps_values_b64 (a values.yaml, base64). See "Charts" below.
 # 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
 #    The cluster builds server-side on the relay; this call does NOT hold open.
 curl -sS -m 60 --fail-with-body -X POST "$RELAY/linode/provision-lke" \
@@ -85,15 +85,51 @@ overridable in the POST body): `region=us-east`, `node_type=g6-standard-4`,
 `touch "$RUN_DIR/keep-alive"` — the marker keeps the SessionEnd hook from tearing
 it down; the cluster's `expires-<epoch>` tag (now + N h) still lets the reaper reap it.
 
-### Choosing the chart — do this first, don't assume "latest"
+### Charts — first decide: is the chart part of what you're testing? (TWO repos)
 
-The relay installs two charts from the **Percona Helm repo**
-(`https://percona.github.io/percona-helm-charts/`): **`percona/pmm-ha`** (the PMM HA
-server) and **`percona/pmm-ha-dependencies`** (the operators). With no `chart_version`
-in the POST body it installs the **latest published** version of each — right only
-when you are testing *latest*. **Whenever you are testing a specific PMM release, RC,
-or FB, you must find and pin the matching chart version — the image tag alone does
-not change the chart.** Never skip the search and hope latest matches.
+An HA change routinely spans **two repos**, and the fix can be in either or **both**:
+
+- **`percona/pmm`** — the server image (Go, UI, dashboards). Delivered as the PMM/FB image.
+- **`percona/percona-helm-charts`** — the `pmm-ha` / `pmm-ha-dependencies` charts (env
+  wiring, downward-API values, operators, templating). Delivered as a **chart**.
+
+Before installing anything, read the ticket's linked PR(s) and check **both** repos.
+The chart half is often an **unmerged PR or branch** in `percona-helm-charts`, so a
+released chart won't have it yet — search for it:
+
+```bash
+# GitHub MCP: search_pull_requests "repo:percona/percona-helm-charts <PMM-key or feature>"
+#             + list_branches (HA GA work has landed on branches like PMM-HA-GA)
+```
+
+**If the change is (partly) in the chart, you MUST test against that chart — not the
+released one.** The relay always installs the *released* `percona/pmm-ha`; testing a
+chart change against it tests the wrong thing and yields false findings (e.g.
+concluding "the chart never sets `PMM_HA_NAMESPACE`" when the unmerged chart PR is
+exactly what adds it). After the relay brings the cluster up, swap in the PR-branch
+chart yourself against the returned `$KUBECONFIG`:
+
+```bash
+git clone -b <chart-branch> --depth 1 https://github.com/percona/percona-helm-charts /tmp/phc
+# keys per that chart's values.yaml — read it, don't assume
+helm upgrade --install pmm-ha /tmp/phc/charts/pmm-ha -n pmm --reuse-values \
+  --set image.repository=perconalab/pmm-server,image.tag=<fb-tag>
+kubectl rollout status statefulset/pmm-ha -n pmm --timeout=20m
+# if the dependencies chart also changed: helm upgrade pmm-operators /tmp/phc/charts/pmm-ha-dependencies ...
+```
+
+**Only if the chart is unchanged** (the fix lives entirely in the PMM image) do you
+test the released chart with an image override — read on.
+
+### Testing the released chart (image-only changes) — don't assume "latest"
+
+The relay installs from the **Percona Helm repo**
+(`https://percona.github.io/percona-helm-charts/`): **`percona/pmm-ha`** and
+**`percona/pmm-ha-dependencies`**. With no `chart_version` in the POST body it installs
+the **latest published** version of each — right only when you are testing *latest*.
+**Whenever you are testing a specific PMM release, RC, or FB, find and pin the matching
+chart version — the image tag alone does not change the chart.** Never skip the search
+and hope latest matches.
 
 Search the repo and match `appVersion` (the PMM version a chart ships) to the version
 under test:
@@ -109,9 +145,9 @@ helm show values percona/pmm-ha --version <chart-ver>   # the real image.* keys 
 ```
 
 Pick the chart version whose `appVersion` matches the PMM version under test and pass
-it as `chart_version` (the relay applies `--version` to both charts). For an
-**unreleased** chart change, point `pmm_chart`/`deps_chart` at a chart path that
-exists **on the relay** instead of the `percona/*` repo name.
+it as `chart_version` (the relay applies `--version` to both charts). If the chart
+itself is part of the change, don't use the released repo at all — go back to
+"Charts — first decide" and test the PR-branch chart.
 
 ### Feature Build — override the server image on top of the chart
 
