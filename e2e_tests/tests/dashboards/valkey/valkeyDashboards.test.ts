@@ -6,7 +6,9 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
 });
 
-for (const dashboardName in ValkeyDashboards) {
+const valkeyDashboardNames = Object.keys(ValkeyDashboards) as (keyof typeof ValkeyDashboards)[];
+
+for (const dashboardName of valkeyDashboardNames) {
   pmmTest(
     `PMM-T2087 - ${dashboardName} dashboard metrics @nightly @dashboards @pmm-valkey-integration`,
     async ({ api, dashboard, page, urlHelper }) => {

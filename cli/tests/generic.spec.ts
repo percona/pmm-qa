@@ -7,7 +7,7 @@ const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
 
-test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () => {
+test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep pdpgsql_pmm | awk \'{print $NF}\'');
     await result.outContains('pdpgsql_pmm', 'PDPGSQL docker container should exist. please run pmm-framework with --database pdpgsql');
@@ -16,7 +16,13 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
   });
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
-  if (/latest-tarball|3-dev-latest|pmm3-rc|https:/.test(PMM_VERSION)) {
+  if (/^https?:/.test(PMM_VERSION)) {
+    // An explicit build URL (feature build) carries the version of the branch it was built
+    // from, which may predate the latest bump on v3. The server under test comes from that
+    // same build, so it is the only valid reference for the client's version.
+    PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
+    if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
+  } else if (/latest-tarball|3-dev-latest|pmm3-rc/.test(PMM_VERSION)) {
     // TODO: refactor to use docker hub API to remove file-update dependency
     // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
     PMM_VERSION = cli.execute('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')
@@ -589,15 +595,18 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, async () =>
 
     await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
     await cli.exec(`docker exec ${containerName} pkill -f pmm-agent`);
+    await expect(async () => {
+      const pids = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
+      expect(pids.stdout, 'Old pmm-agent process is still running after SIGTERM!').not.toContain(oldPid.stdout);
+    }).toPass({ intervals: [500], timeout: 30_000 });
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
 
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
-    const latestVersion = (await cli.exec('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')).stdout.trim();
     const newAdminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
     await newPid.outNotContains(oldPid.stdout);
     await newAdminStatus.outContains('Connected');
-    await newVersion.outContains(latestVersion);
+    await newVersion.outContains(PMM_VERSION);
   });
 });
