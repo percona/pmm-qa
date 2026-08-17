@@ -58,13 +58,13 @@ async function main() {
   // non-PMM pages (e.g. a GitHub Actions run) with a real CA already, which
   // strict verification (the default below) already handles fine.
   const certPath = process.env.PMM_CERT_PATH;
-  const launchArgs = [];
+  const spkiPins = [];
   if (certPath && !insecure) {
     if (!fs.existsSync(certPath)) {
       console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
       process.exit(1);
     }
-    launchArgs.push(`--ignore-certificate-errors-spki-list=${spkiPinFromCertFile(certPath)}`);
+    spkiPins.push(spkiPinFromCertFile(certPath));
   }
 
   const contextOpts = { ignoreHTTPSErrors: insecure, viewport: { width, height } };
@@ -97,10 +97,12 @@ async function main() {
   try {
     directEgress = directEgress || /(^|\.)github\.com$/i.test(new URL(url).hostname);
   } catch { /* non-URL arg: leave as-is */ }
-  const proxyOpts = directEgress ? directEgressLaunchOptions() : proxyLaunchOptions();
+  const proxyOpts = directEgress
+    ? directEgressLaunchOptions({ spkiPins })
+    : proxyLaunchOptions({ spkiPins });
   const browser = await chromium.launch({
     executablePath: "/opt/pw-browsers/chromium",
-    args: [...launchArgs, ...proxyOpts.args],
+    args: proxyOpts.args,
     proxy: proxyOpts.proxy,
   });
   const context = await browser.newContext(contextOpts);
