@@ -83,6 +83,10 @@ export default class MongoDBHelper {
     await this.ensureCollectionHasDocuments(collectionName, dbName, numDocs);
 
     const collection = this.client.db(dbName).collection(collectionName);
+    // The collection is shared by the whole suite and only ever grows, so the $where runs for
+    // every document present, not just the numDocs this call asked for. Budget maxTimeMS from
+    // the real count, otherwise the server kills the query it was told to keep running.
+    const scannedDocs = Math.max(numDocs, await collection.countDocuments());
     const escapedLabel = queryLabel.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     const whereFn = [
       'function() {',
@@ -95,7 +99,14 @@ export default class MongoDBHelper {
 
     return collection
       .find({ $where: whereFn })
-      .maxTimeMS(delayMs * 3)
-      .toArray();
+      .maxTimeMS(scannedDocs * chunkMs * 3)
+      .toArray()
+      // Callers start these queries fire-and-forget, so a rejection would land as an unhandled
+      // rejection on whichever test is running by then, not on the one that started the query.
+      .catch((error: unknown) => {
+        console.log(`simulateLongRunningQuery("${queryLabel}") ended early: ${String(error)}`);
+
+        return [];
+      });
   };
 }
