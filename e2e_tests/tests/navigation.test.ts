@@ -147,7 +147,6 @@ pmmTest('PMM-T2201 verify node persistence @new-navigation', async ({ leftNaviga
 
 pmmTest(
   'PMM-T2202 Traverse all the menu items in left menu sidebar @new-navigation',
-  { annotation: { type: 'min-pmm-version', description: '3.10.0' } },
   async ({ leftNavigation }) => {
     await pmmTest.step('Traverse menu items', async () => {
       await leftNavigation.verifyAllMenuItems();

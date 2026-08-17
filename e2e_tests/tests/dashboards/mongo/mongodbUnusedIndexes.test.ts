@@ -10,7 +10,6 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 
 pmmTest(
   'PMM-T2262 Verify MongoDB Unused Indexes dashboard @nightly @dashboards @pmm-psmdb-integration',
-  { annotation: { type: 'min-pmm-version', description: '3.10.0' } },
   async ({ api, dashboard, mongoDbHelper, page, urlHelper }) => {
     const database = `pmm_qa_unused_indexes_${Date.now()}`;
     const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');

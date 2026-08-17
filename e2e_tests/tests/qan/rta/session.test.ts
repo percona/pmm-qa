@@ -54,7 +54,6 @@ pmmTest('PMM-T2182 Verify overview loads when session exists @rta', async ({ api
 
 pmmTest(
   'PMM-T2267 Verify RTA sessions page size is stored in the URL and restored after refresh @rta',
-  { annotation: { type: 'min-pmm-version', description: '3.10.0' } },
   async ({ mocks, page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
 

@@ -163,7 +163,6 @@ pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mock
 
 pmmTest(
   'PMM-T2263 Verify update notification remains snoozed after refresh @new-navigation',
-  { annotation: { type: 'min-pmm-version', description: '3.10.0' } },
   async ({ helpPage, mocks, page }) => {
     const snoozeDuration = Timeouts.ONE_MINUTE;
     const updateVersion = `test-update-${Date.now()}`;

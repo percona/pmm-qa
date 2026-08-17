@@ -244,7 +244,6 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
 
 pmmTest(
   'PMM-T2265 Verify RTA overview table state is stored in the URL and restored after refresh @rta',
-  { annotation: { type: 'min-pmm-version', description: '3.10.0' } },
   async ({ page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     const expectedServiceIds = new URL(page.url()).searchParams.getAll('serviceIds');
@@ -286,7 +285,6 @@ pmmTest(
 
 pmmTest(
   'PMM-T2266 Verify RTA elapsed-time decimal filter and URL restoration @rta',
-  { annotation: { type: 'min-pmm-version', description: '3.10.0' } },
   async ({ page, queryAnalytics }) => {
     const { rta } = queryAnalytics;
     const durationParameterName = 'overview.f.queryExecutionDurationMs';
