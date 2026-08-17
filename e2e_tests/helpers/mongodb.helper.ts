@@ -97,16 +97,17 @@ export default class MongoDBHelper {
       '}',
     ].join(' ');
 
-    return collection
-      .find({ $where: whereFn })
-      .maxTimeMS(scannedDocs * chunkMs * 3)
-      .toArray()
-      // Callers start these queries fire-and-forget, so a rejection would land as an unhandled
-      // rejection on whichever test is running by then, not on the one that started the query.
-      .catch((error: unknown) => {
-        console.log(`simulateLongRunningQuery("${queryLabel}") ended early: ${String(error)}`);
+    try {
+      return await collection
+        .find({ $where: whereFn })
+        .maxTimeMS(scannedDocs * chunkMs * 3)
+        .toArray();
+    } catch (error) {
+      // Callers start these queries fire-and-forget, so an escaping rejection would land as an
+      // unhandled rejection on whichever test runs by then, not the one that started the query.
+      console.log(`simulateLongRunningQuery("${queryLabel}") ended early: ${String(error)}`);
 
-        return [];
-      });
+      return [];
+    }
   };
 }
