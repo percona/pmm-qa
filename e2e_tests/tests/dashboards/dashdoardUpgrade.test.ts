@@ -105,8 +105,6 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     async ({ api, dashboard, page, urlHelper }) => {
       const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
 
-      console.log(`Mysql service name is: ${service_name}`);
-
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceOverview.url, {
           from: 'now-1h',
@@ -154,7 +152,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'Verify MongoDB Sharded Cluster Summary after upgrade @post-upgrade @post-client-upgrade',
+    'T9999 Verify MongoDB Sharded Cluster Summary after upgrade @post-upgrade @post-client-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
       const shardNames = ['rs1', 'rs2'];
       const nodeNames = ['rs1', 'rs2', 'rscfg'];
@@ -176,6 +174,42 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
         dashboard.mongo.shardedClusterSummary.noDataMetrics(shardNames, nodeNames, serviceNames),
       );
       await dashboard.verifyPanelValues(dashboard.mongo.shardedClusterSummary.metricsWithData(shardNames));
+    },
+  );
+
+  pmmTest(
+    'T8888 Verify MongoDB ReplSet Summary after upgrade @post-upgrade @post-client-upgrade',
+    async ({ api, dashboard, page, urlHelper }) => {
+      const services: GetService[] = await api.inventoryApi.getAllServicesDetailsByPartialName('rs');
+
+      await page.goto(
+        urlHelper.buildUrlWithParameters(dashboard.mongo.replSetSummary.url, {
+          from: 'now-1h',
+          refresh: '5s',
+        }),
+      );
+      await dashboard.collapseAllRows();
+
+      const metrics = dashboard.mongo.replSetSummary.metrics(
+        services.map((service) => service.service_name),
+        services.map((service) => service.node_name),
+      );
+
+      for (const metric of metrics) {
+        await dashboard.expandRow(metric.rowName);
+        await dashboard.waitForDashboardToLoad();
+        await dashboard.verifyRowMetricsPresent(metric.rowName, metric.metrics);
+        await dashboard.verifyRowPanelsHaveData(metric.rowName, []);
+        await dashboard.verifyRowPanelValues(
+          metric.rowName,
+          dashboard.mongo.replSetSummary.metricsWithDataForRow(
+            metric.rowName,
+            services.map((service) => service.service_name),
+            services.map((service) => service.node_name),
+          ),
+        );
+        await dashboard.collapseRow(metric.rowName);
+      }
     },
   );
 });
