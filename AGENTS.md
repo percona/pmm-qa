@@ -172,6 +172,8 @@ npx playwright test --grep @inventory
 
 ## Patterns and Conventions
 
+After substantive work, use the `skill-gardener` instructions in `.claude/skills/skill-gardener/SKILL.md` only when a reusable correction, repeated workflow, demonstrated improvement, or skill gap emerged. Agents that do not discover `.claude/skills/` automatically must read that file explicitly. Do nothing when there is no high-signal lesson.
+
 ### Do
 - Use the **Page Object Model** for Playwright browser tests — put selectors and actions in `pages/`
 - Use **`data-testid`** locators (stable, not CSS-class dependent)
