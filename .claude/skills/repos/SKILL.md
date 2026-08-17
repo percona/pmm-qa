@@ -29,15 +29,15 @@ Tool map (what replaces each old `gh` recipe):
 | Need | GitHub MCP tool | `gh` fallback (only if present) |
 |------|-----------------|-------------------------------|
 | Your GitHub login (for `X-Actor`) | `get_me` → `.login` | `gh api user --jq .login` |
-| List PRs | `list_pull_requests` / `search_pull_requests` | `gh api "repos/{o}/{r}/pulls?state=..."` |
+| List PRs (page through all before dedup) | `list_pull_requests` / `search_pull_requests` (`perPage: 100`, bump `page` until a short page) | `gh api --paginate "repos/{o}/{r}/pulls?state=..."` |
 | PR details / diff / files / commits | `pull_request_read` (`get` / `get_diff` / `get_files` / `get_commits`) | `gh api repos/{o}/{r}/pulls/<n>` (+ `Accept: …diff`) |
 | PR checks (CI) | `pull_request_read` (`get_check_runs`) | `gh api …/commits/<sha>/check-runs` |
 | Review threads/comments | `pull_request_read` (`get_review_comments` / `get_reviews`) | — |
 | File contents | `get_file_contents` | `gh api …/contents/<path>` |
 | Commit (files + status) | `get_commit` | `gh api …/commits/<sha>` |
-| Actions runs / jobs | `actions_list`, `actions_get` | `gh run list/view` (GraphQL `gh run` may 403) |
-| Failed-job logs | `get_job_logs` (`failed_only: true`) | `gh run view <id> --log-failed` |
-| Re-run failed jobs | `actions_run_trigger` (`rerun_failed_jobs`) | `gh run rerun <id> --failed` |
+| Actions runs / jobs | `actions_list`, `actions_get` | `gh run list/view -R {owner}/{repo}` (GraphQL `gh run` may 403) |
+| Failed-job logs | `get_job_logs` (`failed_only: true`) | `gh run view <id> --log-failed -R {owner}/{repo}` |
+| Re-run failed jobs | `actions_run_trigger` (`rerun_failed_jobs`) | `gh run rerun <id> --failed -R {owner}/{repo}` |
 | Issues | `issue_read`, `list_issues`, `search_issues` | `gh api …/issues/<n>` |
 
 Two whole classes of `gh` command **403 even where `gh` exists** (never use them):

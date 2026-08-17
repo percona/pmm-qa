@@ -56,7 +56,10 @@ RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
 ROLE=<role>                           # test-runner or investigator (safe id: [A-Za-z0-9._-], tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
 mkdir -p "$RUN_DIR"
-ACTOR="${ACTOR:-$(gh api user --jq .login 2>/dev/null)}"   # prefer ACTOR from GitHub MCP get_me; gh is a fallback
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 
 # ttl_hours + pmm_qa_ref are optional; add keep-alive handling below.
 # 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
@@ -203,11 +206,19 @@ Teardown holds the account token, so it too goes through the relay:
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com
-ACTOR="${ACTOR:-$(gh api user --jq .login 2>/dev/null)}"   # from GitHub MCP get_me (.login); gh is a fallback
-curl -sS -m 120 --fail-with-body -X POST "$RELAY/linode/destroy" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
-  -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"
-rm -rf "terraform/linode-runner/runs/<run_id>"   # drop the local run markers too
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
+# Drop the local run markers only after a confirmed destroy — otherwise the SessionEnd
+# hook (and the on-box timer) can still retry teardown of an un-destroyed VM.
+if curl -sS -m 120 --fail-with-body -X POST "$RELAY/linode/destroy" \
+     -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
+     -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"; then
+  rm -rf "terraform/linode-runner/runs/<run_id>"
+else
+  echo "destroy failed — keeping run markers so the SessionEnd hook / reaper can retry" >&2
+fi
 ```
 
 Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `/linode/destroy` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires. (For an explicit keep-alive run, skip destroy — the `keep-alive` marker and the on-box timer handle it.)

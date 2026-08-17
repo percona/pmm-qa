@@ -24,7 +24,10 @@ RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (rese
 RUN_ID=<jira-key-or-run-id>                              # e.g. PMM-14744
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"           # session-side markers (same dir the SessionEnd hook scans)
 mkdir -p "$RUN_DIR"
-ACTOR="${ACTOR:-$(gh api user --jq .login 2>/dev/null)}"   # from GitHub MCP get_me (.login); gh is a fallback
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 
 # ttl_hours optional (default 24). Overridable: node_count/node_type/region/
 # k8s_version/namespace, and for FB — pmm_chart/deps_chart, pmm_set/deps_set,
@@ -108,8 +111,11 @@ Standing up the cluster isn't the test. Exercise what the change actually touche
 ## Teardown — mandatory, every path
 
 ```bash
-ACTOR="${ACTOR:-$(gh api user --jq .login 2>/dev/null)}"   # from GitHub MCP get_me (.login); gh is a fallback
-curl -sS -m 240 -X POST "$RELAY/linode/destroy-lke" \
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
+curl -sS -m 240 --fail-with-body -X POST "$RELAY/linode/destroy-lke" \
   -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
   -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')"
 ```

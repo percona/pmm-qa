@@ -100,7 +100,10 @@ so newlines/quotes escape cleanly.
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
-ACTOR="${ACTOR:-$(gh api user --jq .login 2>/dev/null)}"   # from GitHub MCP get_me (.login); gh is a fallback
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 J() { curl -sS -m 90 --fail-with-body -X POST "$RELAY/jira/$1" \
         -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
         -H "Content-Type: application/json" -d "$2"; }
