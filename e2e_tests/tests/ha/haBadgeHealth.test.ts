@@ -70,12 +70,10 @@ pmmTest(
 
     await page.goto(highAvailabilityPage.url);
 
-    await pmmTest.step('Verify the HA badge is Healthy', async () => {
-      await expect(
-        highAvailabilityPage.elements.badge,
-        `All ${expectedNodes} nodes are alive, so the HA badge must be Healthy`,
-      ).toHaveText('Healthy', { timeout: Timeouts.TWO_MINUTES });
-    });
+    await expect(
+      highAvailabilityPage.elements.badge,
+      `All ${expectedNodes} nodes are alive, so the HA badge must be Healthy`,
+    ).toHaveText('Healthy', { timeout: Timeouts.TWO_MINUTES });
 
     for (const { expectedHealth, replicas } of healthByReplicas) {
       await pmmTest.step(`Scale the cluster to ${replicas} replicas`, async () => {
@@ -84,12 +82,10 @@ pmmTest(
 
       // Never reload: at 0 replicas nothing serves the page. The app's own 15s
       // refetch drives every transition, Unreachable included.
-      await pmmTest.step(`Verify the HA badge is ${expectedHealth}`, async () => {
-        await expect(
-          highAvailabilityPage.elements.badge,
-          `${expectedNodes - replicas} of ${expectedNodes} nodes are down, so the HA badge must be ${expectedHealth}`,
-        ).toHaveText(expectedHealth, { timeout: Timeouts.FIVE_MINUTES });
-      });
+      await expect(
+        highAvailabilityPage.elements.badge,
+        `${expectedNodes - replicas} of ${expectedNodes} nodes are down, so the HA badge must be ${expectedHealth}`,
+      ).toHaveText(expectedHealth, { timeout: Timeouts.FIVE_MINUTES });
     }
   },
 );

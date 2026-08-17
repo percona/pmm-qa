@@ -41,10 +41,10 @@ WORKERS=1
 | `HEADLESS`       | `true`              | Browser visibility; use `false` for a visible browser. |
 | `WORKERS`        | `1`                 | Playwright worker count.                               |
 
-`@pmm-ha` tests that drive the cluster (pod restarts) additionally need `kubectl` on
-the runner and a `KUBECONFIG` pointing at the PMM HA cluster. The namespace comes
-from `k8sNamespace` in [helpers/constants.ts](./helpers/constants.ts) (`pmm`).
-Tests that need the cluster skip themselves when the namespace is unreachable.
+`@pmm-ha` tests need `kubectl` on the runner and a `KUBECONFIG` pointing at the PMM HA
+cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.helper.ts)
+constructor — change it there, or pass one in. Nothing skips itself: an unreachable
+namespace fails the test with kubectl's own error.
 
 ## Running Tests
 

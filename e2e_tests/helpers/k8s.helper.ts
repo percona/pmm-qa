@@ -4,7 +4,6 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { KubernetesPod, KubernetesPodResource, KubernetesResourceList } from '@interfaces/kubernetes';
 import { Timeouts } from '@helpers/timeouts';
-import { k8sNamespace } from '@helpers/constants';
 
 interface ExecInPodOptions {
   container?: string;
@@ -26,7 +25,7 @@ export default class K8sHelper {
   readonly namespace: string;
   private cliHelper = new CliHelper();
 
-  constructor(namespace: string = k8sNamespace) {
+  constructor(namespace = 'pmm') {
     this.namespace = namespace;
   }
 

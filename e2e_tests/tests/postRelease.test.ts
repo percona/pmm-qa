@@ -15,6 +15,12 @@ const getExpectedVersion = () => {
   return version;
 };
 
+let expectedVersion: string;
+
+pmmTest.beforeAll(async () => {
+  expectedVersion = getExpectedVersion();
+});
+
 pmmTest.beforeEach(async ({ context, page }) => {
   await page.unroute(apiEndpoints.server.updates);
   await context.unroute(apiEndpoints.server.updates);
@@ -25,8 +31,6 @@ pmmTest.beforeEach(async ({ context, page }) => {
 pmmTest(
   'PMM-T2200 - Verify new release is available for upgrade @post-release',
   async ({ grafanaHelper, updatesPage }) => {
-    const expectedVersion = getExpectedVersion();
-
     await grafanaHelper.authorize();
 
     const updateInfo = await pmmTest.step('Check version service reports an update', async () => {
@@ -53,8 +57,6 @@ pmmTest(
 pmmTest(
   "PMM-T2201 - Verify What's new link and release notes @post-release",
   async ({ grafanaHelper, updatesPage }) => {
-    const expectedVersion = getExpectedVersion();
-
     await grafanaHelper.authorize();
     await updatesPage.openHomeForWhatsNew();
 
@@ -79,8 +81,6 @@ pmmTest(
 pmmTest(
   'PMM-T2202 - Verify PMM new version on percona.com/downloads @post-release @downloads',
   async ({ downloadsPage }) => {
-    const expectedVersion = getExpectedVersion();
-
     await downloadsPage.open();
     await downloadsPage.selectPmmProduct();
 
