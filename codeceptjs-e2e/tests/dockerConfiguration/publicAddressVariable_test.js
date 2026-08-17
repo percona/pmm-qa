@@ -13,9 +13,13 @@ publicIPs.add(['PMM-T1173', '127.0.0.1:8443']);
 publicIPs.add(['PMM-T1174', 'ec2-18-188-74-98.us-east-2.compute.amazonaws.com']);
 publicIPs.add(['PMM-T1174', 'ec2-18-188-74-98.us-east-2.compute.amazonaws.com:8443']);
 
+const waitForContainerHealthy = async (I, timeout = 300) => {
+  await I.verifyCommand(`timeout ${timeout} sh -c 'until [ "$(docker inspect -f "{{.State.Health.Status}}" ${contanerName})" = healthy ]; do sleep 2; done'`);
+};
+
 const runContainerWithPublicAddressVariable = async (I, publicAddress) => {
   await I.verifyCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_PUBLIC_ADDRESS=${publicAddress} --publish 8085:8080 --publish 8443:8443 --name ${contanerName} ${dockerVersion}`);
-  await I.wait(30);
+  await waitForContainerHealthy(I);
 };
 
 const runContainerWithPublicAddressVariableUpgrade = async (I, publicAddress) => {
