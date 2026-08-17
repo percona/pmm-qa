@@ -263,7 +263,7 @@ test.describe('Percona Distribution for PostgreSQL CLI tests', { tag: '@pdpgsql'
     console.log(await cli.exec(`docker exec ${containerName} pmm-admin list`));
 
     const changeAgentPassword = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --password=${newPassword} --custom-labels=env=qa,owner=Peter`)
-    console.log(`change agent password is: ${changeAgentPassword}`)
+    console.log(`change agent password is: ${changeAgentPassword.stdout}`)
     throw new Error("Expected!");
   });
 });
