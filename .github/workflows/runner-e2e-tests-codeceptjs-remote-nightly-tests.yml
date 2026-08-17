@@ -37,6 +37,10 @@ on:
         required: false
         default: '100%'
         type: string
+      installation_type:
+        required: false
+        default: 'docker'
+        type: string
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
@@ -64,6 +68,7 @@ jobs:
       TAGS_FOR_TESTS: ${{ inputs.tags_for_tests }}
       WORKERS: ${{ inputs.workers || 1 }}
       LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
+      INSTALLATION_TYPE: ${{ inputs.installation_type || 'docker' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       SUBSET_FILE_NAME: 'launchable-subset.json'
@@ -139,7 +144,7 @@ jobs:
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
 
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
           cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
           echo "$(cat launchable-subset.json)" || true
@@ -208,30 +213,41 @@ jobs:
               return (job.steps || []).find((step) => step.name === setupWaitStep);
             }
 
+            function isWaitingForTests(job) {
+              const step = findSetupWaitStep(job);
+              return step?.status === 'in_progress';
+            }
+
+            function finishedWaitingSuccessfully(job) {
+              const step = findSetupWaitStep(job);
+              return step?.status === 'completed' && step?.conclusion === 'success';
+            }
+
+            function setupJobFailed(job) {
+              return ['failure', 'cancelled'].includes(job.conclusion);
+            }
+
             while (true) {
               const jobs = await listJobs();
               const setupJobs = jobs.filter((job) => job.name.startsWith(setupPrefix) || job.name.includes(setupPrefix));
               const detailedSetupJobs = await Promise.all(setupJobs.map(getJob));
               const setupJobsWithWaitStep = detailedSetupJobs.filter(findSetupWaitStep);
-              const readySetupJobs = setupJobsWithWaitStep.filter((job) => findSetupWaitStep(job).status === 'in_progress');
-              const completedWaitStepJobs = setupJobsWithWaitStep.filter((job) => findSetupWaitStep(job).status === 'completed');
-              const completedBeforeReadyJobs = detailedSetupJobs.filter((job) => {
-                const step = findSetupWaitStep(job);
-                return job.status === 'completed' && (!step || step.status !== 'in_progress');
-              });
+              const readySetupJobs = setupJobsWithWaitStep.filter(isWaitingForTests);
+              const failedSetupJobs = detailedSetupJobs.filter(setupJobFailed);
+              const finishedEarlyJobs = setupJobsWithWaitStep.filter(finishedWaitingSuccessfully);
 
               core.info(`Setup jobs: discovered=${setupJobsWithWaitStep.length}/${expectedSetupJobs}, ready=${readySetupJobs.length}/${expectedSetupJobs}`);
               for (const job of setupJobsWithWaitStep) {
                 const step = findSetupWaitStep(job);
-                core.info(`- ${job.name}: job_status=${job.status}, step_status=${step.status}, conclusion=${job.conclusion || 'null'}`);
+                core.info(`- ${job.name}: job_status=${job.status}, step_status=${step.status}, step_conclusion=${step.conclusion || 'null'}, job_conclusion=${job.conclusion || 'null'}`);
               }
 
-              if (completedWaitStepJobs.length > 0) {
-                throw new Error(`Setup wait step completed before this test job started: ${completedWaitStepJobs.map((job) => job.name).join(', ')}`);
+              if (failedSetupJobs.length > 0) {
+                throw new Error(`Setup job(s) failed or were cancelled: ${failedSetupJobs.map((job) => `${job.name} (${job.conclusion})`).join(', ')}`);
               }
 
-              if (completedBeforeReadyJobs.length > 0) {
-                throw new Error(`Setup jobs completed before reaching an in-progress '${setupWaitStep}' step: ${completedBeforeReadyJobs.map((job) => job.name).join(', ')}`);
+              if (finishedEarlyJobs.length > 0) {
+                throw new Error(`Setup wait step completed before this test job was ready: ${finishedEarlyJobs.map((job) => job.name).join(', ')}`);
               }
 
               if (setupJobsWithWaitStep.length >= expectedSetupJobs && readySetupJobs.length >= expectedSetupJobs) {

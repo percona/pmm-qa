@@ -1,0 +1,5 @@
+---
+# Third-party image versions shared by setup playbooks. Bump the version here
+# rather than editing each playbook individually -- loaded into every
+# playbook run by run_playbook() in pmm-framework/lib/ansible.sh.
+busybox_image: busybox:1.37.0

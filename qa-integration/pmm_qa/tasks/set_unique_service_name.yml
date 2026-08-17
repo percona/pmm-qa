@@ -1,17 +1,15 @@
-- name: Install jq via appropriate package manager
-  become: true
-  block:
-    - name: Install jq on Debian/Ubuntu
-      apt:
-        name: jq
-        state: present
-      when: ansible_facts['os_family'] == 'Debian'
+- name: Ensure jq is available without host sudo
+  command: jq --version
+  changed_when: false
+  register: jq_check
+  failed_when: false
 
-    - name: Install jq on RHEL/CentOS/Alma/Rocky
-      dnf:
-        name: jq
-        state: present
-      when: ansible_facts['os_family'] == 'RedHat'
+- name: Fail when jq is missing
+  fail:
+    msg: >-
+      jq is required for unique service-name checks. Install it on the host
+      (for example brew install jq / apt install jq) without relying on Ansible sudo.
+  when: jq_check.rc != 0
 
 - name: Verify that service with expected name is not connected to pmm server
   shell: |

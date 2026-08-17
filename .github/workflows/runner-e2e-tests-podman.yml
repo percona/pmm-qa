@@ -118,7 +118,6 @@ jobs:
               /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
           curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key" | sudo apt-key add -
           sudo apt-get update
-          sudo apt-get -y upgrade
           sudo apt-get install -y clickhouse-client podman
           sudo curl -s https://raw.githubusercontent.com/datacharmer/dbdeployer/master/scripts/dbdeployer-install.sh | bash
           ls -la
@@ -222,12 +221,7 @@ jobs:
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
           export HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
-          python3 -m venv virtenv
-          . virtenv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install setuptools
-          python pmm-framework.py --pmm-server-ip=$HOST_IP --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          ./pmm-framework/pmm-framework --parallel --pmm-server-ip=$HOST_IP --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-qa/codeceptjs-e2e

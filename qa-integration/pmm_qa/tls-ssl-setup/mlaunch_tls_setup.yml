@@ -1,8 +1,6 @@
 ---
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     mongodb_version: "{{ lookup('vars', 'extra_mongodb_version', default=lookup('env','MONGODB_VERSION') | default('4.4', true) ) }}"
     mongodb_ssl_container: "{{ lookup('vars', 'extra_mongodb_ssl_container', default=lookup('env','MONGODB_SSL_CONTAINER') | default('mongodb_ssl', true) ) }}"

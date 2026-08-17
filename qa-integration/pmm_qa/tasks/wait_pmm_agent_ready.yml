@@ -1,0 +1,13 @@
+# Wait until pmm-agent is running and talking to PMM Server.
+# Expects: container_name
+- name: Wait until pmm-agent is ready in {{ container_name }}
+  shell: |
+    docker exec --user root {{ container_name }} sh -c '
+      pmm-admin status 2>/dev/null |
+        grep -Eq "Connected[[:space:]]*: true"
+    '
+  register: pmm_agent_ready
+  retries: "{{ pmm_agent_ready_retries | default(30) }}"
+  delay: "{{ pmm_agent_ready_delay | default(1) }}"
+  until: pmm_agent_ready.rc == 0
+  changed_when: false

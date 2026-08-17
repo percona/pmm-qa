@@ -7,7 +7,7 @@ const PMM_CLIENT_IMAGE = clientDockerImage;
 const clientPassword = 'gfaks4d8OH';
 const services = ['mysql', 'mongodb', 'postgresql', 'proxysql', 'external', 'haproxy'];
 
-test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@service-removal' }, async () => {
+test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@service-removal' }, () => {
   test.beforeAll(async () => {
     const startCommand = `PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE} PMM_CLIENT_IMAGE=${PMM_CLIENT_IMAGE} docker compose -f test-setup/docker-compose-pmm-admin-remove.yml up -d`;
     await cli.exec(startCommand);
@@ -37,9 +37,15 @@ test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@
     for (let i = 0; i < services.length; i++) {
       const output = await cli.exec(`docker exec pmm-client-remove pmm-admin remove ${services[i]}`);
       await output.exitCodeEquals(1);
-      await output.outContains(
+      const normalizedOutput = output.stdout.replace(/ +(?= )/g, '');
+      const serviceNotFoundMessages = [
         'could not find a service associated with the local node; please provide "Service ID" or "Service name"',
-      );
+        'We could not find a service associated with the local node. Please provide "Service ID" or "Service name".',
+      ];
+      expect(
+        serviceNotFoundMessages.some((message) => normalizedOutput.includes(message)),
+        `Stdout does not contain a known service-not-found message! Output: "${output.stdout}"`,
+      ).toBeTruthy();
     }
 
     // remove services - only one per each database type left

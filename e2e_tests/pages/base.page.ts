@@ -3,7 +3,7 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 import GrafanaHelper from '@helpers/grafana.helper';
 
-export type DropdownName = 'Service Name' | 'Node Name';
+export type DropdownName = 'Service Name' | 'Node Name' | 'Environment';
 
 export interface NestedLocators {
   [key: string]: NestedLocator | boolean | undefined;
@@ -32,6 +32,27 @@ export default abstract class BasePage {
     this.page = newPage;
 
     return newPage;
+  };
+
+  getVariableValues = async (dropDownName: DropdownName): Promise<string[]> => {
+    const frame = this.grafanaIframe();
+    const wrapper = frame.getByTestId('data-testid template variable').filter({ hasText: dropDownName });
+    const combobox = wrapper.getByRole('combobox');
+
+    await wrapper.click({ timeout: Timeouts.THIRTY_SECONDS });
+
+    const options = frame.getByRole('option');
+
+    await options.first().waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
+
+    const values = (await options.allTextContents())
+      .map((text) => text.trim())
+      .filter((text) => text.length > 0);
+
+    await this.page.keyboard.press('Escape');
+    await expect(combobox).toHaveAttribute('aria-expanded', 'false', { timeout: Timeouts.THIRTY_SECONDS });
+
+    return values;
   };
 
   protected grafanaIframe = () => this.page.frameLocator('//*[@id="grafana-iframe"]');

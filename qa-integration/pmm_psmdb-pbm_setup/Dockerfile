@@ -58,11 +58,17 @@ RUN set -ex; \
     fi
 
 ARG OL_VERSION
+# Keep this whole chain &&-joined to the last command: a trailing `;` makes the
+# RUN exit 0 even when a download failed, shipping an image that only breaks
+# much later, at test time.
 RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
-        dnf -y install pmm-client && \
-        curl -Lf -o /tmp/pmm-client.tar.gz $PMM_CLIENT_VERSION && \
+        curl -Lf --retry 5 --retry-delay 5 -o /tmp/pmm-client.tar.gz "$PMM_CLIENT_VERSION" && \
         cd /tmp && tar -xvf pmm-client.tar.gz --transform 's,^/*[^/]*,/pmm-client,S' && \
-        cd /tmp/pmm-client && ./install_tarball && cd ../ && rm -rf pmm* ;\
+        cd /tmp/pmm-client && ./install_tarball && cd / && \
+        install -D -m 0644 /tmp/pmm-client/config/pmm-agent.service /usr/lib/systemd/system/pmm-agent.service && \
+        ln -sf /usr/local/percona/pmm/bin/pmm-agent /usr/sbin/pmm-agent && \
+        ln -sf /usr/local/percona/pmm/bin/pmm-admin /usr/sbin/pmm-admin && \
+        rm -rf /tmp/pmm-client /tmp/pmm-client.tar.gz ; \
     elif [[ "$PMM_CLIENT_VERSION" =~ 3-dev-latest|latest ]]; then \
         dnf -y install pmm-client ; \
     elif [[ "$PMM_CLIENT_VERSION" = "pmm3-rc" ]]; then \
@@ -88,10 +94,10 @@ RUN if [[ "$PMM_CLIENT_VERSION" == http* ]]; then \
     sed -i '/ExecStart/a StandardError=file:/var/log/pmm-agent.log' /usr/lib/systemd/system/pmm-agent.service && \
     sed -i '/\[Service\]/a Environment="KRB5_CLIENT_KTNAME=/keytabs/mongodb.keytab"' /usr/lib/systemd/system/pmm-agent.service && \
     systemctl enable pmm-agent && \
-    curl -Lf -o /tmp/mgodatagen.tar.gz https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_x86_64.tar.gz && \
+    curl -Lf --retry 5 --retry-delay 5 -o /tmp/mgodatagen.tar.gz https://github.com/feliixx/mgodatagen/releases/download/v0.11.2/mgodatagen_0.11.2_Linux_x86_64.tar.gz && \
     tar -xf /tmp/mgodatagen.tar.gz -C /usr/bin && \
-    dnf clean all; \
-    rm -rf /var/cache/dnf /var/cache/dnf /data/db && mkdir -p /data/db;
+    dnf clean all && \
+    rm -rf /var/cache/dnf /data/db && mkdir -p /data/db
 
 COPY conf/sysconfig/mongod /etc/sysconfig/
 COPY keyfile /etc/keyfile

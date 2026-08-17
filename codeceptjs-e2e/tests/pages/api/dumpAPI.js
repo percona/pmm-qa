@@ -2,10 +2,11 @@ const { I, codeceptjsConfig } = inject();
 const assert = require('assert');
 const axios = require('axios');
 const fs = require('fs');
-const targz = require('tar.gz');
+const tar = require('tar');
 const path = require('path');
 const { pipeline } = require('stream/promises');
 const { readdirSync } = require('fs');
+const { Agent } = require('https');
 
 const outputDir = `${process.cwd()}/tests/output/`;
 const buildDumpDownloadUrl = (uid) => {
@@ -61,6 +62,7 @@ module.exports = {
       headers,
       responseType: 'stream',
       validateStatus: () => true,
+      httpsAgent: new Agent({ rejectUnauthorized: false, keepAlive: false }),
     });
 
     assert.strictEqual(
@@ -71,7 +73,8 @@ module.exports = {
 
     await fs.promises.mkdir(outputDir, { recursive: true });
     await pipeline(response.data, fs.createWriteStream(targzFile));
-    await targz().extract(targzFile, destnDir);
+    await fs.promises.mkdir(destnDir, { recursive: true });
+    await tar.x({ file: targzFile, cwd: destnDir });
 
     return true;
   },
@@ -81,7 +84,8 @@ module.exports = {
     const destnDir = `${sftpDir}/${uid}`;
 
     await I.asyncWaitFor(async () => fs.existsSync(targzFile), 60);
-    await targz().extract(targzFile, destnDir);
+    await fs.promises.mkdir(destnDir, { recursive: true });
+    await tar.x({ file: targzFile, cwd: destnDir });
   },
 
   async verifyDump(uid, sftDir) {

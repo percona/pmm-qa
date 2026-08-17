@@ -30,6 +30,9 @@ const remoteInstanceStatus = {
     pdpgsql_13_3: {
       enabled: true,
     },
+    pdpgsql_15: {
+      enabled: true,
+    },
     postgres_13_3_ssl: {
       enabled: false,
     },
@@ -191,6 +194,14 @@ module.exports = {
     },
     postgresql: {
       pdpgsql_13_3: {
+        host: (PMM_SERVER_OVF_AMI_SETUP === 'true' ? SERVER_HOST : 'postgres'),
+        server_port: DB_CONFIG.POSTGRES_SERVER_PORT,
+        host_server_port: DB_CONFIG.POSTGRES_HOST_SERVER_PORT,
+        username: 'postgres',
+        password: 'pmm-^*&@agent-password',
+        clusterName: 'pgsql_clstr',
+      },
+      pdpgsql_15: {
         host: (PMM_SERVER_OVF_AMI_SETUP === 'true' ? SERVER_HOST : 'postgres'),
         server_port: DB_CONFIG.POSTGRES_SERVER_PORT,
         host_server_port: DB_CONFIG.POSTGRES_HOST_SERVER_PORT,
@@ -527,7 +538,7 @@ module.exports = {
   services: {
     mysql: (remoteInstanceStatus.mysql.ps_5_7.enabled ? 'mysql_remote_new' : undefined),
     mongodb: (remoteInstanceStatus.mongodb.psmdb_4_2.enabled ? 'mongodb_remote_new' : undefined),
-    postgresql: (remoteInstanceStatus.postgresql.pdpgsql_13_3.enabled ? 'postgresql_remote_new' : undefined),
+    postgresql: (remoteInstanceStatus.postgresql.pdpgsql_15.enabled ? 'postgresql_remote_new' : undefined),
     proxysql: (remoteInstanceStatus.proxysql.proxysql_2_1_1.enabled ? 'proxysql_remote_new' : undefined),
     postgresGC: (remoteInstanceStatus.gc.gc_postgresql.enabled ? 'postgresql_GC_remote_new' : undefined),
     mysql_ssl: (remoteInstanceStatus.mysql.ms_8_0_ssl.enabled ? 'mysql_ssl_new' : undefined),

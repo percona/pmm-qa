@@ -12,7 +12,9 @@ export default class RealTimeAnalyticsPage extends BasePage {
   apiEndpoint = apiEndpoints.realtimeanalytics.queriesSearch;
   builders = {
     detailsPaneCodeByText: (queryText: string) =>
-      this.elements.detailsPane.locator('code.language-mongodb', { hasText: queryText }),
+      this.elements.detailsPane.locator('[data-testid="query-text"], code.language-mongodb', {
+        hasText: queryText,
+      }),
     elapsedTimeForQueryByText: (queryText: string) =>
       this.builders.rowByQueryText(queryText).locator('//td[position()=4]'),
     elapsedTimeForRow: (rowIndex: string) => this.builders.rowByIndex(rowIndex).locator('//td[position()=4]'),
@@ -25,13 +27,16 @@ export default class RealTimeAnalyticsPage extends BasePage {
       this.page.getByTestId(realTimeTableTestId).locator(`//tbody//tr[position()=${rowIndex}]`),
     rowByQueryText: (queryText: string) =>
       this.page.getByTestId(realTimeTableTestId).locator(`tr`, { hasText: queryText }),
+    rowsPerPageOption: (pageSize: string) => this.page.getByRole('option', { exact: true, name: pageSize }),
   };
   buttons = {
     allSessions: this.page.getByTestId('overview-table-all-sessions-button'),
     closeDetailsPane: this.page.getByTestId('details-pane-close-button'),
     detailsNextQuery: this.page.getByTestId('details-pane-next-button'),
     detailsPreviousQuery: this.page.getByTestId('details-pane-prev-button'),
+    export: this.page.getByTestId('overview-table-export-button'),
     filters: this.page.getByRole('button', { name: 'Show/Hide filters' }),
+    nextPage: this.page.getByRole('button', { name: 'Go to next page' }),
     openNewSessionModal: this.page.getByTestId('open-new-modal'),
     pauseRealTimeAnalytics: this.page.getByTestId('overview-table-pause-button'),
     refresh: this.page.getByTestId('overview-table-refresh-button'),
@@ -43,27 +48,37 @@ export default class RealTimeAnalyticsPage extends BasePage {
   elements = {
     detailsOperationId: this.page.getByTestId('operation-id-value'),
     detailsPane: this.page.getByTestId('query-details-pane'),
+    durationCells: this.page.getByTestId(realTimeTableTestId).locator('tbody tr td:nth-child(4)'),
     elapsedTimeColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
+      .getByRole('columnheader', { name: /Elapsed time/ }),
+    elapsedTimeColumnHeaderLabel: this.page
+      .getByTestId(realTimeTableTestId)
+      .getByRole('columnheader', { name: /Elapsed time/ })
       .getByText('Elapsed time', { exact: true }),
     hostColumnHeader: this.page.getByTestId(realTimeTableTestId).getByText('Host', { exact: true }),
-    mongoDbQuery: this.page.locator('.language-mongodb'),
     noQueriesAvailable: this.builders.rowByIndex('1').getByRole('alert', { name: 'No queries available' }),
     queryTextColumnHeader: this.page
       .getByTestId(realTimeTableTestId)
       .getByText('Query text', { exact: true }),
     realTimeTable: this.page.getByTestId(realTimeTableTestId),
     realTimeTableRow: this.page.getByTestId(realTimeTableTestId).locator('tbody tr'),
+    selectedSessionRows: this.page.locator('tbody input[aria-label="Toggle select row"]:checked'),
+    sessionRows: this.page.locator('tbody > tr'),
+    sessionRowSelectionCheckboxes: this.page.locator('tbody input[aria-label="Toggle select row"]'),
   };
   inputs = {
     clusterService: this.page.locator('input[name = "service"]'),
     filterByQueryText: this.page.getByTitle('Filter by Query text'),
+    maximumDuration: this.page.getByRole('textbox', { name: 'Max' }),
+    minimumDuration: this.page.getByRole('textbox', { name: 'Min' }),
     realTimeServiceInput: this.page.getByTestId('realtime-service-input'),
+    rowsLimit: this.page.getByRole('combobox', { name: 'Rows per page' }),
   };
   messages = {};
 
   clickElapsedTimeHeader = async () => {
-    await this.elements.elapsedTimeColumnHeader.click();
+    await this.elements.elapsedTimeColumnHeaderLabel.click();
   };
 
   clickHostHeader = async () => {
@@ -147,6 +162,12 @@ export default class RealTimeAnalyticsPage extends BasePage {
 
   openFilters = async () => {
     await this.buttons.filters.click();
+  };
+
+  openFiltersIfHidden = async () => {
+    if (!(await this.inputs.filterByQueryText.isVisible())) {
+      await this.openFilters();
+    }
   };
 
   selectClusterService = async () => {

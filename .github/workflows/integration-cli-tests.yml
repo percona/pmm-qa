@@ -379,7 +379,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@psmdb'
-      services_list: '--database psmdb=6.0,SETUP_TYPE=pss --verbose'
+      services_list: '--database psmdb=6.0,SETUP_TYPE=pss'
       test_name: 'PSMDB Replica 6.x'
 
   psmdb-7-replica-tests:
@@ -395,7 +395,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@psmdb'
-      services_list: '--database psmdb=7.0,SETUP_TYPE=pss --verbose'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=pss'
       test_name: 'PSMDB Replica 7.x'
 
   psmdb-8-tests:
@@ -411,7 +411,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@psmdb'
-      services_list: '--database psmdb=8.0,SETUP_TYPE=pss --verbose'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=pss'
       test_name: 'PSMDB Replica 8.x'
 
   psmdb-7-shard-tests:
@@ -427,7 +427,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@shard-psmdb'
-      services_list: '--database psmdb=7.0,SETUP_TYPE=sharding --verbose'
+      services_list: '--database psmdb=7.0,SETUP_TYPE=sharding'
       test_name: 'PSMDB Shard 7.x'
 
   psmdb-8-shard-tests:
@@ -443,7 +443,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || 'latest-tarball' }}
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       cli_tag: '@shard-psmdb'
-      services_list: '--database psmdb=8.0,SETUP_TYPE=sharding --verbose'
+      services_list: '--database psmdb=8.0,SETUP_TYPE=sharding'
       test_name: 'PSMDB Shard 8.x'
 
   haproxy-tests:

@@ -264,6 +264,34 @@ services:
       - rscfg02
       - rscfg03
 
+  chunk-churn:
+    image: replica_member/local
+    container_name: chunk-churn
+    hostname: chunk-churn
+    restart: unless-stopped
+    volumes:
+      - ./conf/chunk-churn:/etc/chunk-churn:ro
+    environment:
+      - "CHURN_NAMESPACE=${CHURN_NAMESPACE:-test.test}"
+      - "CHURN_INTERVAL_SECONDS=${CHURN_INTERVAL_SECONDS:-120}"
+      - "CHURN_MAX_CHUNKS=${CHURN_MAX_CHUNKS:-64}"
+    entrypoint:
+      - /bin/bash
+      - -c
+      - >-
+        uri="mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASS:-root}@mongos:27017/admin";
+        until mongosh "$$uri" --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; do sleep 10; done;
+        exec mongosh "$$uri" --quiet --file /etc/chunk-churn/chunk-churn.js
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
+    depends_on:
+      - build_member
+      - mongos
+
   minio:
     image: minio/minio
     container_name: minio

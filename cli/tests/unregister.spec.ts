@@ -1,7 +1,7 @@
 import { test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 
-test.describe('PMM Client "unregister" CLI tests', { tag: '@unregister' }, async () => {
+test.describe('PMM Client "unregister" CLI tests', { tag: '@unregister' }, () => {
   test.beforeAll(async ({}) => {
     const result1 = await cli.exec('sudo pmm-admin status');
     await result1.outContains('Running', 'pmm-client is not installed/connected locally, please run pmm3-client-setup script');
