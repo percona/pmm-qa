@@ -15,7 +15,7 @@ RUN_ID="${RUN_ID:-$(date +%Y%m%d-%H%M%S)}"
 CLUSTER_LABEL="${CLUSTER_LABEL:-pmm-ha-${RUN_ID}}"
 REGION="${REGION:-us-east}"
 K8S_VERSION="${K8S_VERSION:-}"         # resolved to the latest LKE offers below if unset (versions roll)
-NODE_TYPE="${NODE_TYPE:-g6-standard-4}"
+NODE_TYPE="${NODE_TYPE:-g6-standard-6}"  # 16GB/6vCPU — 8GB/4vCPU (standard-4) starves the 3-replica HA stack (pods stay Pending)
 NODE_COUNT="${NODE_COUNT:-3}"          # >=3 keeps a Raft quorum with one node down
 NAMESPACE="${NAMESPACE:-pmm}"
 
@@ -105,6 +105,20 @@ until linode-cli lke kubeconfig-view "$CLUSTER_ID" --json \
 done
 export KUBECONFIG="$KUBECONFIG_FILE"
 log "KUBECONFIG: $KUBECONFIG"
+# Always capture pod state on exit (success OR failure) so a stuck bring-up is
+# debuggable from the run dir without the cluster still being alive.
+_diag() {
+    kubectl get pods -n "$NAMESPACE" -o wide >"$RUN_DIR/pods.txt" 2>&1 || true
+    kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp >"$RUN_DIR/events.txt" 2>&1 || true
+    kubectl describe pods -n "$NAMESPACE" >"$RUN_DIR/describe.txt" 2>&1 || true
+}
+trap _diag EXIT
+# Linode reports the pool "ready" before the nodes register with the k8s API
+# server, so `kubectl wait --all` would hit an empty list and fail immediately
+# ("no matching resources found"). Wait for the nodes to appear first, then wait
+# for Ready.
+log "Waiting for $NODE_COUNT node(s) to register with the API server..."
+until [ "$(kubectl get nodes --no-headers 2>/dev/null | grep -c .)" -ge "$NODE_COUNT" ]; do sleep 10; done
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 kubectl get nodes
 
@@ -125,6 +139,9 @@ helm install pmm-operators "$DEPS_CHART" --namespace "$NAMESPACE" "${deps_args[@
 
 for op in victoria-metrics-operator altinity-clickhouse-operator pg-operator; do
     log "Waiting for operator: $op"
+    # Same empty-match race: the pod may not exist the instant helm returns, and
+    # `kubectl wait -l` errors on zero matches. Wait for it to appear, then Ready.
+    until kubectl get pod -l "app.kubernetes.io/name=$op" -n "$NAMESPACE" --no-headers 2>/dev/null | grep -q .; do sleep 5; done
     kubectl wait --for=condition=ready pod \
         -l "app.kubernetes.io/name=$op" -n "$NAMESPACE" --timeout=300s
 done
@@ -155,7 +172,26 @@ pmm_args=(); [ -n "$CHART_VERSION" ] && pmm_args+=(--version "$CHART_VERSION")
 log "Installing PMM HA from $PMM_CHART"
 helm install pmm-ha "$PMM_CHART" --namespace "$NAMESPACE" "${pmm_args[@]}"
 
-log "Waiting for HAProxy front end (up to 15m)..."
+# HAProxy fronts the PMM server, and its readiness gate depends on the backend
+# PMM pods coming up first — so wait for the PMM server StatefulSet to be Ready
+# before waiting on HAProxy, which both sequences the bring-up and makes a stuck
+# backend show up as a backend timeout (clearer than an opaque HAProxy timeout).
+# Wait for the PMM server StatefulSet to FULLY roll out before HAProxy. `rollout
+# status` blocks until readyReplicas == spec.replicas, so it covers the complete
+# expected replica set — not a one-time pod snapshot that can miss replicas
+# created later — and fails (set -e) on timeout, so a degraded cluster is never
+# published as ready. The EXIT trap has already captured pods/describe.
+log "Waiting for the PMM server StatefulSet to appear (up to 5m)..."
+pmm_sts=""
+pmm_appear_deadline=$(( $(date +%s) + 300 ))
+until pmm_sts="$(kubectl get statefulset -n "$NAMESPACE" -o name | grep -E '/pmm-ha$|/pmm-ha-server$' | head -1)"; [ -n "$pmm_sts" ]; do
+    [ "$(date +%s)" -lt "$pmm_appear_deadline" ] || { echo "ERROR: PMM server StatefulSet never appeared within 5m" >&2; exit 1; }
+    sleep 10
+done
+log "Waiting for $pmm_sts to roll out (all replicas Ready, up to 20m)..."
+kubectl rollout status "$pmm_sts" -n "$NAMESPACE" --timeout=20m
+
+log "Waiting for HAProxy front end (up to 20m)..."
 haproxy_deadline=$(( $(date +%s) + 900 ))
 until kubectl get pods -n "$NAMESPACE" -o name | grep -q pmm-ha-haproxy; do
     [ "$(date +%s)" -lt "$haproxy_deadline" ] || { echo "ERROR: pmm-ha-haproxy pods never appeared within 15m" >&2; exit 1; }
@@ -166,7 +202,7 @@ done
 # shellcheck disable=SC2046
 kubectl wait --for=condition=ready \
     $(kubectl get pods -n "$NAMESPACE" -o name | grep pmm-ha-haproxy) \
-    -n "$NAMESPACE" --timeout=15m
+    -n "$NAMESPACE" --timeout=20m
 kubectl get pods -n "$NAMESPACE"
 
 # --- external access ---------------------------------------------------------
@@ -180,13 +216,34 @@ until [ -n "$EXTERNAL_IP" ]; do
     [ -n "$EXTERNAL_IP" ] || sleep 15
 done
 
+# --- PMM actually serving? (not just pods Ready) -----------------------------
+# Pods Ready doesn't guarantee the HTTP front end is reachable end-to-end (LB
+# wiring, HAProxy backends). This box (the relay) reaches the public LB IP
+# directly — no egress proxy here — so confirm PMM answers over the LoadBalancer
+# before publishing the run as ready. Fail the build (set -e) if it never does,
+# so the relay never reports `ready` for a cluster whose UI can't be opened.
+# Require an exact 200 — `curl -f` treats 3xx as success, so a redirect could
+# otherwise pass this gate without PMM actually serving. Check %{http_code}.
+log "Verifying PMM returns 200 from https://$EXTERNAL_IP/v1/readyz (up to 10m)..."
+pmm_up_deadline=$(( $(date +%s) + 600 ))
+until [ "$(curl -k -sS -m 10 -o /dev/null -w '%{http_code}' "https://$EXTERNAL_IP/v1/readyz" 2>/dev/null)" = "200" ]; do
+    [ "$(date +%s)" -lt "$pmm_up_deadline" ] || { echo "ERROR: PMM did not return 200 from /v1/readyz on the LB within 10m" >&2; exit 1; }
+    sleep 10
+done
+log "PMM is serving (/v1/readyz 200)."
+
 # --- persist run artifacts ---------------------------------------------------
 {
     echo "cluster_label=$CLUSTER_LABEL"
     echo "cluster_id=$CLUSTER_ID"
     echo "expires_epoch=$EXPIRES_EPOCH"
     echo "external_ip=$EXTERNAL_IP"
-    echo "url=https://$EXTERNAL_IP"
+    # The QA session reaches PMM through the agent egress proxy, which refuses raw-IP
+    # HTTPS but allows Linode's per-IP rDNS hostname. Hand back the hostname URL so
+    # the UI is actually openable (curl/Playwright still need -k / ignoreHTTPSErrors
+    # for PMM's self-signed cert).
+    echo "external_host=$(echo "$EXTERNAL_IP" | tr '.' '-').ip.linodeusercontent.com"
+    echo "url=https://$(echo "$EXTERNAL_IP" | tr '.' '-').ip.linodeusercontent.com"
     echo "pmm_admin_password=$PMM_PW"
     echo "postgres_password=$PG_PW"
     echo "grafana_password=$GF_PW"

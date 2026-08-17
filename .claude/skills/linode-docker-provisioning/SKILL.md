@@ -49,31 +49,55 @@ possession gate; `X-Actor` is the identity.
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
 RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
-ROLE=<role>                           # test-runner or investigator (free text, tag only)
+ROLE=<role>                           # test-runner or investigator (safe id: [A-Za-z0-9._-], tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
 mkdir -p "$RUN_DIR"
 ACTOR="$(gh api user --jq .login 2>/dev/null)"
 
 # ttl_hours + pmm_qa_ref are optional; add keep-alive handling below.
-curl -sS -m 600 --fail-with-body -X POST "$RELAY/linode/provision" \
+# 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
+curl -sS -m 60 --fail-with-body -X POST "$RELAY/linode/provision" \
   -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
-  -d "$(jq -n --arg r "$ROLE" --arg id "$RUN_ID" '{role:$r, run_id:$id}')" >"$RUN_DIR/provision.json"
+  -d "$(jq -n --arg r "$ROLE" --arg id "$RUN_ID" '{role:$r, run_id:$id}')" >"$RUN_DIR/provision-start.json"
 
-# Unpack what the session-side helpers (run.sh/sync.sh/extend.sh) need locally,
-# and tag the run so the SessionEnd hook can tear down exactly our own VMs.
-jq -r .ip            "$RUN_DIR/provision.json" >"$RUN_DIR/ip"
-jq -r .exec_token    "$RUN_DIR/provision.json" >"$RUN_DIR/exec_token"; chmod 600 "$RUN_DIR/exec_token"
-jq -r .exec_cert_pem "$RUN_DIR/provision.json" >"$RUN_DIR/exec_cert.pem"
-printf '%s' "$RELAY"                      >"$RUN_DIR/relay"        # marks this run relay-brokered (holds the relay URL for the SessionEnd hook)
+# Mark the run relay-brokered NOW so the SessionEnd hook can tear it down even if we lose the poll.
+printf '%s' "$RELAY"                      >"$RUN_DIR/relay"        # relay URL for the SessionEnd hook
 printf '%s' "${CLAUDE_CODE_SESSION_ID:-}" >"$RUN_DIR/session_id"   # scopes the SessionEnd hook
+
+# 2) Poll for the result — a dropped connection is recoverable (state is on the relay).
+deadline=$(( $(date +%s) + 900 ))
+while :; do
+  code=$(curl -sS -m 60 -o "$RUN_DIR/provision.json" -w '%{http_code}' -X POST "$RELAY/linode/provision-result" \
+    -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" -H "Content-Type: application/json" \
+    -d "$(jq -n --arg id "$RUN_ID" '{run_id:$id}')")
+  case "$code" in
+    200) echo "VM ready"; break;;
+    202) echo "provisioning…";;
+    502) echo "provisioning FAILED:"; jq -r '.detail // .' "$RUN_DIR/provision.json"; break;;
+    *)   echo "unexpected $code:"; cat "$RUN_DIR/provision.json";;
+  esac
+  [ "$(date +%s)" -lt "$deadline" ] || { echo "timed out"; break; }
+  sleep 15
+done
+
+# 3) Unpack what the session-side helpers (run.sh/sync.sh/extend.sh) need locally.
+if jq -e .exec_token "$RUN_DIR/provision.json" >/dev/null 2>&1; then
+  jq -r .ip            "$RUN_DIR/provision.json" >"$RUN_DIR/ip"
+  jq -r .exec_token    "$RUN_DIR/provision.json" >"$RUN_DIR/exec_token"; chmod 600 "$RUN_DIR/exec_token"
+  jq -r .exec_cert_pem "$RUN_DIR/provision.json" >"$RUN_DIR/exec_cert.pem"
+else
+  echo "no exec creds — tear the run down (Cleanup) before retrying"
+fi
 ```
 
-`role` is `test-runner` or `investigator` (free text, just for the tag). The relay:
+`role` is `test-runner` or `investigator` — a tag only, but it must be a safe
+identifier (`[A-Za-z0-9._-]`, no spaces or `..`); the relay rejects anything else
+with `400 bad_role`. The relay:
 - Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443, tagged `pmm-qa-ephemeral`.
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or pass `"pmm_qa_ref":"<branch>"` in the POST body (must already be pushed; see "Never code on the Linode VM" above).
 
-Works from the **default** proxied-HTTPS environment — no special network policy needed. Takes 2-4 minutes; the relay call blocks until the box is fully ready. After this, `run.sh`/`sync.sh`/`extend.sh` are addressed exactly as before by `<run_id>` — they use the local `exec_token` + `exec_cert.pem`, never the account token. **Teardown is the exception:** it goes through the relay's `/linode/destroy` (see Cleanup), not a local `down.sh`, since destroying the VM needs the account token that no longer lives in this environment.
+Works from the **default** proxied-HTTPS environment — no special network policy needed. Provisioning is **async**: the first call returns a `run_id`, then you poll `/linode/provision-result` until `200` (ready — creds in the body) or `502` (failed). The build runs on the relay and all state lives in its run dir, so a dropped connection is recoverable by re-polling the same `run_id` (usually 2-4 min). After this, `run.sh`/`sync.sh`/`extend.sh` are addressed exactly as before by `<run_id>` — they use the local `exec_token` + `exec_cert.pem`, never the account token. **Teardown is the exception:** it goes through the relay's `/linode/destroy` (see Cleanup), not a local `down.sh`, since destroying the VM needs the account token that no longer lives in this environment.
 
 **Keep-alive:** for an explicit "leave it running" request, add `"ttl_hours":<N>` to the POST body **and** `touch "$RUN_DIR/keep-alive"` — the marker tells the SessionEnd hook to leave this VM up (its on-box self-destruct timer still reaps it after `ttl_hours`).
 

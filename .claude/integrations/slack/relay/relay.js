@@ -6,7 +6,7 @@ import https from "node:https";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 
 const { App } = pkg;
@@ -353,6 +353,55 @@ const SAFE_ID = (v) => {
   v = String(v || "");
   return /^[A-Za-z0-9._-]+$/.test(v) && v !== "." && v !== ".." && !v.includes("..");
 };
+const readIf = (p) => { try { return fs.readFileSync(p, "utf8").trim(); } catch { return null; } };
+// Index of a top-level JQL `ORDER BY` (outside any quoted string), or -1. Used to keep
+// the caller's WHERE clause and any sort clause separate when forcing `project = PMM`.
+const findOrderBy = (s) => {
+  let q = null;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) {
+      if (ch === "\\") { i++; continue; }
+      if (ch === q) q = null;
+    } else if (ch === '"' || ch === "'") {
+      q = ch;
+    } else if ((ch === "o" || ch === "O") && (i === 0 || /\s/.test(s[i - 1])) && /^order\s+by\b/i.test(s.slice(i))) {
+      return i;
+    }
+  }
+  return -1;
+};
+
+// Every per-run artifact a build can leave behind. A reclaim wipes ALL of them
+// so a replacement build never serves the previous run's creds/cluster/logs.
+const RUN_ARTIFACTS = ["status", "summary.env", "ip", "exec_token", "exec_cert.pem", "cluster_id", "kubeconfig.yaml", "provision.log", "pods.txt", "events.txt", "describe.txt", "expires_epoch"];
+// Atomic single-flight claim for a provisioning run dir, guarded by an exclusive
+// mkdir lock (mkdir is atomic) so two concurrent kickoffs for the same run_id
+// can't both claim/reclaim. Inside the lock we re-read state: a run is busy if a
+// build is in flight (started, no terminal status, younger than capSec);
+// otherwise it's a fresh dir or a terminal/stale run, which we reclaim by wiping
+// every prior artifact and recording the initiating actor. claimRun is fully
+// synchronous, so the lock is always released within the same tick.
+// Returns { busy:true } or { ok:true }.
+function claimRun(rd, by, capSec) {
+  fs.mkdirSync(rd, { recursive: true });
+  try { fs.mkdirSync(`${rd}/.lock`); } catch (e) { if (e.code === "EEXIST") return { busy: true }; throw e; }
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const started = Number(readIf(`${rd}/started`)) || 0;
+    if (fs.existsSync(`${rd}/started`) && !readIf(`${rd}/status`) && now - started < capSec) return { busy: true };
+    for (const f of RUN_ARTIFACTS) { try { fs.rmSync(`${rd}/${f}`, { force: true }); } catch {} }
+    fs.writeFileSync(`${rd}/started`, String(now));
+    fs.writeFileSync(`${rd}/actor`, String(by));
+    return { ok: true };
+  } finally {
+    try { fs.rmSync(`${rd}/.lock`, { recursive: true, force: true }); } catch {}
+  }
+}
+// Bind result reads to the initiating actor: a shared RELAY_KEY + a guessable
+// run_id must not let another roster user read someone else's creds/kubeconfig.
+// A run with no recorded owner is treated as unauthorized, never world-readable.
+const ownerOk = (rd, by) => { const o = readIf(`${rd}/actor`); return o != null && o === String(by); };
 
 async function brokerLinode(action, m, by) {
   if (!process.env.LINODE_TOKEN) return { status: 503, body: "linode_not_configured" };
@@ -360,22 +409,45 @@ async function brokerLinode(action, m, by) {
     const { role, run_id, ttl_hours, pmm_qa_ref } = m;
     if (!SAFE_ID(role)) return { status: 400, body: "bad_role" };
     if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    const rd = `${RUNNER_DIR}/runs/${run_id}`;
+    // Same async model as provision-lke: a VM build can brush past the ~5-min
+    // connection cut, and the exec creds only come back in the final response.
+    // Kick off detached, return the run_id now, poll /linode/provision-result.
+    if (claimRun(rd, by, 900).busy) {
+      return { status: 409, json: true, body: JSON.stringify({ run_id, status: "provisioning", hint: "already running — poll /linode/provision-result" }) };
+    }
     const args = [`${RUNNER_DIR}/up.sh`, String(role), String(run_id)];
     if (ttl_hours != null && Number.isFinite(Number(ttl_hours))) args.push("-var", `ttl_hours=${Number(ttl_hours)}`);
-    const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: `relay:${by}` };
-    console.log(`linode/provision ${role} ${run_id} (ttl=${ttl_hours ?? 24}) by ${by}`);
-    try {
-      await execFileP("bash", args, { env, timeout: 480000, maxBuffer: 10 * 1024 * 1024 });
-      const rd = `${RUNNER_DIR}/runs/${run_id}`;
-      const ip = fs.readFileSync(`${rd}/ip`, "utf8").trim();
-      const exec_token = fs.readFileSync(`${rd}/exec_token`, "utf8").trim();
-      const exec_cert_pem = fs.readFileSync(`${rd}/exec_cert.pem`, "utf8"); // public cert, run.sh pins it
-      return { status: 200, json: true, body: JSON.stringify({ run_id, ip, exec_token, exec_cert_pem }) };
-    } catch (e) {
-      const tail = String(e.stderr || e.stdout || e.message || "").slice(-1500);
-      console.error(`linode/provision failed: ${e.message}\n${tail}`);
-      return { status: 502, json: true, body: JSON.stringify({ error: "provision_failed", detail: tail }) };
+    const env = { ...process.env, PMM_QA_REF: pmm_qa_ref ? String(pmm_qa_ref) : "main", CLAUDE_CODE_SESSION_ID: `relay:${by}`, RUN_DIR: rd };
+    // Detached wrapper: cap at 12 min, tee to provision.log, write a terminal
+    // status file. `ready` requires all three creds so a partial write never reads ready.
+    const wrapper =
+      'timeout 720 bash "$@" >>"$RUN_DIR/provision.log" 2>&1; ec=$?; ' +
+      'if [ "$ec" -eq 0 ] && [ -s "$RUN_DIR/ip" ] && [ -s "$RUN_DIR/exec_token" ] && [ -s "$RUN_DIR/exec_cert.pem" ]; then echo ready >"$RUN_DIR/status"; ' +
+      'else echo "failed:$ec" >"$RUN_DIR/status"; fi';
+    const child = spawn("bash", ["-c", wrapper, "_", ...args], { env, detached: true, stdio: "ignore" });
+    child.unref();
+    console.log(`linode/provision ${role} ${run_id} started (ttl=${ttl_hours ?? 24}) by ${by}`);
+    return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning", poll: "/linode/provision-result" }) };
+  }
+  if (action === "provision-result") {
+    const { run_id } = m;
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    const rd = `${RUNNER_DIR}/runs/${run_id}`;
+    if (!fs.existsSync(rd)) return { status: 404, body: "unknown_run" };
+    if (!ownerOk(rd, by)) return { status: 403, body: "not_your_run" };
+    const status = readIf(`${rd}/status`);
+    if (status === "ready") {
+      const ip = readIf(`${rd}/ip`);
+      const exec_token = readIf(`${rd}/exec_token`);
+      const exec_cert_pem = fs.existsSync(`${rd}/exec_cert.pem`) ? fs.readFileSync(`${rd}/exec_cert.pem`, "utf8") : null;
+      return { status: 200, json: true, body: JSON.stringify({ run_id, status: "ready", ip, exec_token, exec_cert_pem }) };
     }
+    if (status && status.startsWith("failed")) {
+      const tail = (readIf(`${rd}/provision.log`) || "").slice(-1500);
+      return { status: 502, json: true, body: JSON.stringify({ run_id, status, error: "provision_failed", detail: tail }) };
+    }
+    return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning" }) };
   }
   if (action === "destroy") {
     const { run_id } = m;
@@ -400,7 +472,14 @@ async function brokerLinode(action, m, by) {
     const ttlH = ttl_hours != null && Number.isFinite(Number(ttl_hours)) && Number(ttl_hours) > 0 ? Number(ttl_hours) : LKE_DEFAULT_TTL_H;
     const expiresEpoch = Math.floor(Date.now() / 1000) + Math.round(ttlH * 3600);
     const runDir = `${LKE_RUNS_DIR}/${run_id}`;
-    fs.mkdirSync(runDir, { recursive: true });
+    // An LKE HA build takes 10–20 min, but the kubeconfig only comes back in the
+    // final response and a silent long-held connection gets cut by intermediaries
+    // at ~5 min. So provisioning is ASYNC: kick off a detached build, return the
+    // run_id immediately, and let the caller poll /linode/lke-result. A dropped
+    // connection is then fully recoverable — all state lives in runDir on this box.
+    if (claimRun(runDir, by, 3300).busy) {
+      return { status: 409, json: true, body: JSON.stringify({ run_id, status: "provisioning", hint: "already running — poll /linode/lke-result" }) };
+    }
     // Optional passthrough config — light validation, then handed to the script as env vars.
     const cfg = {};
     const pass = (k, envk, re) => { const v = m[k]; if (v != null && (!re || re.test(String(v)))) cfg[envk] = String(v); };
@@ -419,25 +498,44 @@ async function brokerLinode(action, m, by) {
       if (m[key]) { const p = `${runDir}/${fname}`; fs.writeFileSync(p, Buffer.from(String(m[key]), "base64")); cfg[envk] = p; }
     }
     const env = { ...process.env, LINODE_CLI_TOKEN: process.env.LINODE_TOKEN, RUN_ID: String(run_id), RUN_DIR: runDir, TTL_HOURS: String(ttlH), EXPIRES_EPOCH: String(expiresEpoch), CLAUDE_CODE_SESSION_ID: `relay:${by}`, ...cfg };
-    console.log(`linode/provision-lke ${run_id} (ttl=${ttlH}h, expires=${expiresEpoch}) by ${by}`);
-    try {
-      await execFileP("bash", [`${HA_DIR}/create-lke-pmm-ha.sh`], { env, timeout: 1_500_000, maxBuffer: 20 * 1024 * 1024 });
+    fs.writeFileSync(`${runDir}/expires_epoch`, String(expiresEpoch));
+    // Detached wrapper: cap the build at 50 min, tee to provision.log, and write a
+    // terminal `status` file (ready | failed:<code>) the poller reads. `ready`
+    // requires BOTH result artifacts so a partial run never reads ready. unref()
+    // so the build outlives both this request and a relay restart.
+    const wrapper =
+      'timeout 3000 bash "$0" >>"$RUN_DIR/provision.log" 2>&1; ec=$?; ' +
+      'if [ "$ec" -eq 0 ] && [ -s "$RUN_DIR/summary.env" ] && [ -s "$RUN_DIR/kubeconfig.yaml" ]; then echo ready >"$RUN_DIR/status"; ' +
+      'else echo "failed:$ec" >"$RUN_DIR/status"; fi';
+    const child = spawn("bash", ["-c", wrapper, `${HA_DIR}/create-lke-pmm-ha.sh`], { env, detached: true, stdio: "ignore" });
+    child.unref();
+    console.log(`linode/provision-lke ${run_id} started (ttl=${ttlH}h, expires=${expiresEpoch}) by ${by}`);
+    return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning", expires_epoch: expiresEpoch, ttl_hours: ttlH, poll: "/linode/lke-result" }) };
+  }
+  if (action === "lke-result") {
+    const { run_id } = m;
+    if (!SAFE_ID(run_id)) return { status: 400, body: "bad_run_id" };
+    const runDir = `${LKE_RUNS_DIR}/${run_id}`;
+    if (!fs.existsSync(runDir)) return { status: 404, body: "unknown_run" };
+    if (!ownerOk(runDir, by)) return { status: 403, body: "not_your_run" };
+    const status = readIf(`${runDir}/status`);
+    const cluster_id = readIf(`${runDir}/cluster_id`);
+    const expiresEpoch = Number(readIf(`${runDir}/expires_epoch`)) || null;
+    if (status === "ready" && fs.existsSync(`${runDir}/summary.env`)) {
       const summary = {};
       for (const line of fs.readFileSync(`${runDir}/summary.env`, "utf8").split("\n")) { const i = line.indexOf("="); if (i > 0) summary[line.slice(0, i)] = line.slice(i + 1).trim(); }
       const kubeconfig_b64 = fs.readFileSync(`${runDir}/kubeconfig.yaml`).toString("base64");
-      const cluster_id = fs.readFileSync(`${runDir}/cluster_id`, "utf8").trim();
-      return { status: 200, json: true, body: JSON.stringify({ run_id, cluster_id, expires_epoch: expiresEpoch, ttl_hours: ttlH, external_ip: summary.external_ip, url: summary.url, kubeconfig_b64, passwords: summary }) };
-    } catch (e) {
-      const tail = String(e.stderr || e.stdout || e.message || "").slice(-2000);
-      console.error(`linode/provision-lke failed: ${e.message}\n${tail}`);
-      // Best-effort: if the cluster was created before the failure, delete it now so
-      // a broken run doesn't wait for the reaper's TTL to stop billing.
-      try {
-        const cid = fs.readFileSync(`${runDir}/cluster_id`, "utf8").trim();
-        if (cid) { console.error(`linode/provision-lke: tearing down partial cluster ${cid}`); await execFileP("bash", [`${HA_DIR}/destroy-lke.sh`, cid], { env, timeout: 240000 }).catch(() => {}); }
-      } catch {}
-      return { status: 502, json: true, body: JSON.stringify({ error: "provision_lke_failed", detail: tail }) };
+      const pods = readIf(`${runDir}/pods.txt`); // HA pod snapshot the create script captured (kubectl runs on the relay, not the caller)
+      return { status: 200, json: true, body: JSON.stringify({ run_id, status: "ready", cluster_id, expires_epoch: expiresEpoch, external_ip: summary.external_ip, url: summary.url, kubeconfig_b64, passwords: summary, pods }) };
     }
+    if (status && status.startsWith("failed")) {
+      const tail = (readIf(`${runDir}/provision.log`) || "").slice(-2000);
+      const pods = readIf(`${runDir}/pods.txt`); // diagnostics the create script captures on exit
+      const describe = (readIf(`${runDir}/describe.txt`) || "").slice(-6000);
+      return { status: 502, json: true, body: JSON.stringify({ run_id, status, cluster_id, error: "provision_lke_failed", detail: tail, pods, describe }) };
+    }
+    // still building — surface a coarse phase so the caller can log progress
+    return { status: 202, json: true, body: JSON.stringify({ run_id, status: "provisioning", phase: cluster_id ? "installing" : "creating-cluster", cluster_id, expires_epoch: expiresEpoch }) };
   }
   if (action === "destroy-lke") {
     const { run_id, cluster_id } = m;
@@ -521,13 +619,14 @@ setTimeout(reapLke, 60_000).unref(); // first sweep shortly after boot
 async function brokerJira(action, m, by) {
   if (!JIRA_EMAIL || !JIRA_API_TOKEN) return { status: 503, body: "jira_not_configured" };
   const issue = m.issue;
-  // Every action except `create` operates on an existing PMM issue.
-  if (action !== "create" && !/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
+  // Every action except create/search operates on an existing PMM issue.
+  if (action !== "create" && action !== "search" && !/^PMM-\d+$/.test(issue || "")) return { status: 400, body: "issue_must_be_a_PMM_key" };
   const base = "https://perconadev.atlassian.net/rest/api/2";
   const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+  const JIRA_TIMEOUT_MS = 30_000; // bound every Jira call so a hung upstream can't wedge the handler
   const jira = (path, init = {}) =>
-    fetch(`${base}${path}`, { ...init, headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) } });
-  console.log(`jira/${action} ${issue || m.summary || ""} by ${by}`);
+    fetch(`${base}${path}`, { ...init, signal: AbortSignal.timeout(JIRA_TIMEOUT_MS), headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) } });
+  console.log(`jira/${action} ${issue || m.summary || m.jql || ""} by ${by}`);
   let r;
   try {
     if (action === "create") {
@@ -543,6 +642,24 @@ async function brokerJira(action, m, by) {
       if (!fields.summary || !fields.issuetype?.name) return { status: 400, body: "summary_and_issuetype_required" };
       if (fields.issuetype.name === "Bug" && fields.customfield_10059 === undefined) fields.customfield_10059 = [{ value: "Yes" }];
       r = await jira(`/issue`, { method: "POST", body: JSON.stringify({ fields }) });
+    } else if (action === "search") {
+      // JQL search, FORCED to the PMM project — lets callers (e.g. Investigator
+      // dedup) find existing tickets through the relay's service account instead
+      // of an interactively-authenticated MCP. Read-only, PMM-only. Uses the
+      // enhanced /search/jql endpoint (classic /search is sunset on Jira Cloud).
+      const raw = String(m.jql || "").trim();
+      // Find ORDER BY only OUTSIDE quoted strings, so a value like `summary ~ "order by"`
+      // stays in the WHERE clause instead of being split as a sort clause. JQL quotes with
+      // ' or " and escapes with a backslash.
+      const oi = findOrderBy(raw);
+      const where = oi >= 0 ? raw.slice(0, oi).trim() : raw;
+      const order = oi >= 0 ? raw.slice(oi) : "";
+      const jql = `project = PMM${where ? ` AND (${where})` : ""}${order ? ` ${order}` : ""}`;
+      const maxResults = Math.min(Math.max(Math.floor(Number(m.maxResults) || 20), 1), 100);
+      const fields = (Array.isArray(m.fields) ? m.fields
+        : String(m.fields || "summary,status,issuetype,updated").split(","))
+        .map((s) => String(s).trim()).filter(Boolean);
+      r = await jira(`/search/jql`, { method: "POST", body: JSON.stringify({ jql, maxResults, fields }) });
     } else if (action === "read") {
       const fields = m.fieldsCsv || "summary,description,status,customfield_10083,customfield_10492,comment";
       r = await jira(`/issue/${issue}?fields=${encodeURIComponent(fields)}`);
@@ -558,7 +675,7 @@ async function brokerJira(action, m, by) {
     } else if (action === "attach") {
       const fd = new FormData();
       fd.append("file", new Blob([Buffer.from(String(m.content_b64 || ""), "base64")]), String(m.filename || "evidence.png"));
-      r = await fetch(`${base}/issue/${issue}/attachments`, { method: "POST", headers: { Authorization: auth, "X-Atlassian-Token": "no-check" }, body: fd });
+      r = await fetch(`${base}/issue/${issue}/attachments`, { method: "POST", signal: AbortSignal.timeout(JIRA_TIMEOUT_MS), headers: { Authorization: auth, "X-Atlassian-Token": "no-check" }, body: fd });
     } else {
       return { status: 400, body: "unknown_action" };
     }

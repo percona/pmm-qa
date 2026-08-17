@@ -13,6 +13,8 @@ This environment ships Chromium pre-installed with Playwright already pointed at
 
 All three accept an optional `PMM_CERT_PATH` env var — set it to the cert `linode-docker-provisioning` step 2 fetched (`terraform/linode-runner/runs/<run_id>/pmm_cert.pem`) whenever the URL is PMM's own, so the browser pins that exact cert (via Chromium's `--ignore-certificate-errors-spki-list`) instead of falling back to `ignoreHTTPSErrors`. Omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
+On the **HA / LKE** path there is no exec-server to fetch a pinnable cert and PMM's cert is self-signed behind the egress MITM, so pinning can't match — pass **`PMM_UI_INSECURE=1`** to `pmm-ui-login.js` / `pw-screenshot.js` instead of `PMM_CERT_PATH` (see the HA variant below). Don't write a bespoke HA screenshot script — the same two helpers cover it.
+
 ## Log into PMM UI and screenshot
 
 ```bash
@@ -34,6 +36,27 @@ PMM_CERT_PATH="$PMM_CERT_PATH" node .claude/scripts/pw-screenshot.js \
 ```
 
 Session name `PMM-14576` above — reuse the same ticket key for follow-up screenshots (or a recording) so the login isn't repeated.
+
+## HA / LKE variant (self-signed cert, tall dashboards)
+
+Same two helpers, three differences: `PMM_UI_INSECURE=1` instead of a cert pin; reach PMM by the **hostname** `url` the relay's `lke-result` returned (never the raw LB IP — the egress proxy refuses raw-IP HTTPS); and pass `PW_SCROLL=1` so Grafana's virtualized HA panels render before the fullPage shot.
+
+```bash
+# from the linode-ha-provisioning run: $RUN_DIR/provision.json holds url + passwords
+PMM_URL="$(jq -r .url "$RUN_DIR/provision.json")"
+ADMIN_PASSWORD="$(jq -r .passwords.pmm_admin_password "$RUN_DIR/provision.json")"
+
+PMM_URL="$PMM_URL" ADMIN_PASSWORD="$ADMIN_PASSWORD" PMM_UI_INSECURE=1 \
+  node .claude/scripts/pmm-ui-login.js PMM-13860
+
+PMM_UI_INSECURE=1 PW_SCROLL=1 PW_SETTLE_MS=15000 \
+  node .claude/scripts/pw-screenshot.js \
+  "$PMM_URL/graph/d/pmm-ha-health-overview" \
+  "/tmp/PMM-13860-ha-overview.png" \
+  PMM-13860           # reuse the session for each dashboard
+```
+
+`PW_CLICK_TEXT='...'` clicks an element by partial text first (e.g. to expand a collapsed row). Login once, then one `pw-screenshot.js` per dashboard.
 
 ## Record a short clip instead of a screenshot
 
