@@ -41,7 +41,6 @@ Scenario('PMM-T84 - Verify Section Tabs and Metrics Section Elements [critical] 
 });
 
 Scenario('PMM-T85 - Verify SSH Key Section Elements @settings @grafana-pr', async ({ I, pmmSettingsPage, serverApi }) => {
-  /* The SSH Key tab is rendered only on AMI; elsewhere /settings/ssh-key redirects to /settings. */
   if (await serverApi.getDistributionMethod() !== 'DISTRIBUTION_METHOD_AMI') {
     return;
   }

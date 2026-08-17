@@ -25,7 +25,7 @@ const replicaServiceRegex = '^ps_pmm_replication_.*_2(_\\d+)?$';
 pmmTest(
   'PMM-T2030 - Verify QAN for PS Replica Instance @nightly @pmm-ps-integration',
   async ({ api, page, qanStoredMetrics, urlHelper }) => {
-    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(replicaServiceRegex);
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('^ps_pmm_replication_.*_2(_\\d+)?$');
 
     await page.goto(
       urlHelper.buildUrlWithParameters(qanStoredMetrics.url, {
