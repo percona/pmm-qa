@@ -10,6 +10,31 @@ let adminVersion: number;
 const connectionTimeoutServiceName = 'mysql_connection_timeout_service';
 const mysqldExporterMyCnfDir = () => (adminVersion < 9 ? 'agent_type_mysqld_exporter' : 'mysqld_exporter');
 
+const readMyCnf = () => {
+  const tempDir = cli.execute(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`).stdout.split(':')[1].trim();
+  const serviceId = cli.execute(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`).stdout.trim();
+
+  if (!serviceId) throw new Error(`Service "${connectionTimeoutServiceName}" is not in "pmm-admin list" output yet`);
+
+  const agentId = cli.execute(`docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep mysqld_exporter | awk -F' ' '{print $4}'`).stdout.trim();
+
+  if (!agentId) throw new Error(`No mysqld_exporter for service "${serviceId}" in "pmm-admin list" output yet`);
+
+  return cli.execute(`docker exec ${containerName} cat ${tempDir}/${mysqldExporterMyCnfDir()}/${agentId}/myCnf`).stdout;
+};
+
+/**
+ * pmm-admin returns as soon as the server has the agent; pmm-agent writes myCnf
+ * only once it receives the new state, so the file has to be polled for.
+ */
+const expectMyCnfToContain = async (expectedValue: string) => {
+  await test.step(`Verify mysqld_exporter myCnf contains ${expectedValue}`, async () => {
+    await expect(async () => {
+      expect(readMyCnf(), `myCnf of "${connectionTimeoutServiceName}" should contain ${expectedValue}`).toContain(expectedValue);
+    }).toPass({ intervals: [1_000], timeout: 60_000 });
+  });
+};
+
 test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@percona-server' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps --format \'{{.Names}}\' | grep \'^ps_pmm\'');
@@ -181,13 +206,8 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     test.skip(adminVersion < 8, 'This test is relevant for pmm-client version 3.8.0 and above');
     const output = await cli.exec(`docker exec ${containerName} pmm-admin add mysql --connection-timeout=5s --log-level="debug" --query-source=perfschema --username=${MYSQL_USER} --password=${MYSQL_PASSWORD} ${connectionTimeoutServiceName} ${ipPort}`);
     await output.exitCodeEquals(0);
-    await cli.exec('sleep 2');
 
-    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(':')[1].trim();
-    const serviceId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${connectionTimeoutServiceName} | awk -F' ' '{print $4}'`);
-    const agentId = await cli.exec(`docker exec ${containerName} pmm-admin list | grep ${serviceId.stdout} | grep mysqld_exporter | awk -F' ' '{print $4}'`);
-    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/${mysqldExporterMyCnfDir()}/${agentId.stdout}/myCnf`);
-    await myCnf.outContains('connect_timeout=5');
+    await expectMyCnfToContain('connect_timeout=5');
   });
 
   test('PMM-T2222 - User can change connection timeout using pmm-admin inventory change agent', async ({ }) => {
@@ -198,11 +218,8 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId.stdout} --connection-timeout=4s`);
     await chaneAgent.exitCodeEquals(0);
-    await cli.exec('sleep 5');
 
-    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(':')[1].trim();
-    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/${mysqldExporterMyCnfDir()}/${agentId.stdout}/myCnf`);
-    await myCnf.outContains('connect_timeout=4');
+    await expectMyCnfToContain('connect_timeout=4');
   });
 
   test('PMM-T2223 - User can clear connection timeout using pmm-admin inventory change agent', async ({ }) => {
@@ -213,11 +230,8 @@ test.describe('PMM Client CLI tests for Percona Server Database', { tag: '@perco
     await agentId.exitCodeEquals(0);
     const chaneAgent = await cli.exec(`docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${agentId.stdout} --connection-timeout=0s`);
     await chaneAgent.exitCodeEquals(0);
-    await cli.exec('sleep 5');
 
-    const tempDir = (await cli.exec(`docker exec ${containerName} cat /usr/local/percona/pmm/config/pmm-agent.yaml | grep tempdir`)).stdout.split(':')[1].trim();
-    const myCnf = await cli.exec(`docker exec ${containerName} cat ${tempDir}/${mysqldExporterMyCnfDir()}/${agentId.stdout}/myCnf`);
-    await myCnf.outContains('connect_timeout=2');
+    await expectMyCnfToContain('connect_timeout=2');
   });
 
   test('PMM-T2224 - Connection timeout is used when adding service with command: pmm-admin add', async ({ }) => {
