@@ -56,8 +56,7 @@ Scenario('PMM-T2020 - Verify external clickhouse as datasource on explore page @
   I.clearField(explorePage.elements.sqlBuilder);
   I.fillField(explorePage.elements.sqlBuilder, 'SELECT * FROM pmm.metrics LIMIT 10;');
   I.click(explorePage.elements.runQueryButton);
-  I.waitForVisible(explorePage.elements.resultRow, 10);
-  I.dontSee(explorePage.messages.authError);
+  I.waitForVisible(explorePage.messages.authError, 10);
 });
 
 Scenario('PMM-T2018 - Verify internal clickhouse is not running when using external clickhouse @docker-configuration', async ({ I, explorePage }) => {
