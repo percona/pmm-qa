@@ -23,7 +23,10 @@ the relay roster-checks. The relay:
 
 Do **not** call the Atlassian MCP connector tools (kept documented below only
 for reference), and do **not** hit `perconadev.atlassian.net` directly — the
-token isn't in this environment. Connector approval is also still broken for
+token isn't in this environment. This includes **searching for existing
+tickets**: use the relay `search` action (JQL), not the Atlassian Rovo search —
+the connector needs interactive auth that isn't there in a Routine/headless run,
+so it fails closed. The relay `search` is the supported dedup path. Connector approval is also still broken for
 Routine grants ([claude-code#61015](https://github.com/anthropics/claude-code/issues/61015)),
 so the connector path stays disabled; the relay path has no approval gate.
 
@@ -112,6 +115,12 @@ J create "$(jq -n --arg s "..." '{issuetype:"Bug", summary:$s, fields:{customfie
 J read "$(jq -n --arg i PMM-15188 '{issue:$i}')"
 J read "$(jq -n --arg i PMM-15188 '{issue:$i,fieldsCsv:"summary,status"}')"
 
+# search — JQL to find existing tickets (e.g. dedup before create). The project
+# is FORCED to PMM, so write only the rest of the clause. Read-only. ORDER BY ok;
+# maxResults<=100 (default 20); fields optional. Use THIS, never the Atlassian MCP.
+J search "$(jq -n --arg q 'text ~ "cannot add MySQL 8.4" AND statusCategory != Done ORDER BY updated DESC' \
+      '{jql:$q, maxResults:20, fields:"summary,status,issuetype,updated"}')"
+
 # comment — visibility is FORCED to Developers by the relay; you cannot post public
 J comment "$(jq -n --arg i PMM-15188 --arg b "h2. QA results"$'\n'"..." '{issue:$i,body:$b}')"
 
@@ -127,8 +136,9 @@ J attach "$(jq -n --arg i PMM-15188 --arg f fb-checks.png \
       --arg c "$(base64 -w0 fb-checks.png)" '{issue:$i,filename:$f,content_b64:$c}')"
 ```
 
-Available actions: `create`, `read`, `comment`, `field`, `transitions`,
+Available actions: `create`, `read`, `search`, `comment`, `field`, `transitions`,
 `transition`, `attach` — the full set the old direct-REST path had **plus
-`create`** (project forced to `PMM`), minus delete (the relay refuses that by
-construction). The **mandatory Developers-only visibility rule** is enforced by
+`create`** (project forced to `PMM`) **and `search`** (JQL, also PMM-scoped, so
+dedup goes through the relay instead of the Atlassian MCP), minus delete (the
+relay refuses that by construction). The **mandatory Developers-only visibility rule** is enforced by
 the relay itself, so it holds even if a caller forgets it.
