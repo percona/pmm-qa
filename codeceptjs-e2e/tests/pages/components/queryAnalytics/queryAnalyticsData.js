@@ -150,10 +150,8 @@ class QueryAnalyticsData {
     return await I.grabAttributeFrom(this.buttons.lastPage, 'title');
   }
 
-  // QAN searches as you type on a ~300ms debounce (percona/pmm#5537), so clearing a
-  // non-empty search field reloads the overview table, and the table unmounts its whole
-  // header — this input included — while loading. Let that reload finish before the field
-  // is touched again.
+  // QAN searches as you type on a ~300ms debounce
+  // Remove when bug is addressed: https://perconadev.atlassian.net/browse/PMM-15336
   waitForSearchReload() {
     I.wait(1);
     queryAnalyticsPage.waitForLoaded();
