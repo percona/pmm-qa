@@ -67,11 +67,11 @@ export default class CliHelper {
       .assertSuccess()
       .getStdOutLines();
 
-    console.log(`Admin list is: ${adminList}`);
+    console.log(`Admin list is: ${adminList.find((item: string | string[]) => String(item).trim().split(/\s+/).includes(options.serviceName))}`);
     // Get the last item in the split result
     const serviceId: string =
       adminList
-        .find((item: string | string[]) => item.includes(options.serviceName))
+        .find((item: string | string[]) => String(item).trim().split(/\s+/).includes(options.serviceName))
         ?.trim()
         .split(' ')
         .pop() ?? '';
