@@ -150,11 +150,22 @@ class QueryAnalyticsData {
     return await I.grabAttributeFrom(this.buttons.lastPage, 'title');
   }
 
+  // QAN searches as you type on a ~300ms debounce (percona/pmm#5537), so clearing a
+  // non-empty search field reloads the overview table, and the table unmounts its whole
+  // header — this input included — while loading. Let that reload finish before the field
+  // is touched again.
+  waitForSearchReload() {
+    I.wait(1);
+    queryAnalyticsPage.waitForLoaded();
+    I.waitForVisible(this.fields.searchBy, 30);
+  }
+
   searchByValue(value, refresh = false) {
     I.waitForVisible(this.elements.queryRow(0), 30);
     I.waitForVisible(this.fields.searchBy, 30);
     I.wait(1);
     I.clearField(this.fields.searchBy);
+    this.waitForSearchReload();
     I.click(this.fields.searchBy);
     I.fillField(this.fields.searchBy, value);
     I.pressKey('Enter');
@@ -165,6 +176,7 @@ class QueryAnalyticsData {
     I.waitForVisible(this.fields.searchBy, 30);
     I.wait(1);
     I.clearField(this.fields.searchBy);
+    this.waitForSearchReload();
     I.click(this.fields.searchBy);
     I.fillField(this.fields.searchBy, value);
   }
