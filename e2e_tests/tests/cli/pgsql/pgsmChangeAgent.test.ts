@@ -377,7 +377,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     'PMM-T2280 - Verify pmm-admin inventory change agent flag listen port @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       let commands = [
-        `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
+        `docker exec ${containerName} sed -i 's/listen-port: [0-9]\\+/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
         `docker restart ${containerName}`,
       ];
 
