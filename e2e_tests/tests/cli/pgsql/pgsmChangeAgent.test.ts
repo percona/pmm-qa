@@ -65,7 +65,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest(
-    'PMM-T9991 - Verify Change agent username and password @pgsm-pmm-integration',
+    'PMM-T2270 - Verify pmm-admin inventory change agent flags username and password @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
         `docker exec ${containerName} psql -U postgres -c "CREATE ROLE ${newUsername} WITH LOGIN PASSWORD '${newPassword}-Wrong';"`,
@@ -96,6 +96,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
+      await expect(async () => {
+        const metrics = cliHelper.getMetrics({
+          agentPassword: pgExporterPassword,
+          dockerContainer: containerName,
+          serviceName: serviceName,
+        });
+
+        expect(metrics).toContain('pg_up');
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
     },
   );
 

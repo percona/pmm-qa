@@ -67,7 +67,6 @@ export default class CliHelper {
       .assertSuccess()
       .getStdOutLines();
 
-    console.log(`Admin list is: ${adminList.find((item: string | string[]) => String(item).trim().split(/\s+/).includes(options.serviceName))}`);
     // Get the last item in the split result
     const serviceId: string =
       adminList
@@ -104,9 +103,6 @@ export default class CliHelper {
       );
     }
 
-    console.log(
-      `Getting metric command: ${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
-    );
     return this.execute(
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
