@@ -102,6 +102,9 @@ export default class CliHelper {
       );
     }
 
+    console.log(
+      `Getting metric command: ${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
+    );
     return this.execute(
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
