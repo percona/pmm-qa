@@ -4,7 +4,7 @@ This workspace contains environment setup assets for PMM. It is used to provisio
 
 ## Main Framework
 
-`pmm_qa/pmm-framework.py` is the setup runner used by QA jobs before tests start. GitHub Actions workflows pass setup arguments such as `--database ps`, `--database psmdb,SETUP_TYPE=pss`, or `--database pdpgsql` to this script. The script turns those arguments into the environment variables needed by the matching Ansible playbook or shell script, then creates the database containers/services that CLI, E2E, and CodeceptJS tests expect to find. This keeps CI setup consistent: workflows choose what environment they need, and `pmm-framework.py` decides which setup files to run.
+[`pmm_qa/pmm-framework/pmm-framework`](pmm_qa/pmm-framework/) is the setup runner used by QA jobs before tests start. GitHub Actions workflows pass setup arguments such as `--database ps`, `--database psmdb,SETUP_TYPE=pss`, or `--database pdpgsql` to this bash CLI. It turns those arguments into the environment variables needed by the matching Ansible playbook or shell script, then creates the database containers/services that CLI, E2E, and CodeceptJS tests expect to find. This keeps CI setup consistent: workflows choose what environment they need, and `pmm-framework` decides which setup files to run. See [pmm_qa/pmm-framework/README.md](pmm_qa/pmm-framework/README.md) and [ARCHITECTURE.md](pmm_qa/pmm-framework/ARCHITECTURE.md) for the CLI reference and internals.
 
 ## Available Setups:
 
