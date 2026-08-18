@@ -112,7 +112,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9992 - Verify Change agent custom labels @pgsm-pmm-integration',
+    'PMM-T2271 - Verify pmm-admin inventory change agent flag custom labels @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --custom-labels=env=qa_testing_pgexporter`,
@@ -131,9 +131,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent log level @pgsm-pmm-integration',
+    'PMM-T2272 - Verify pmm-admin inventory change agent flag log-level, debug, trace and json @pgsm-pmm-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
-      const commands = [
+      let commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --log-level=debug`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --log-level=debug`,
       ];
@@ -146,13 +146,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.hideRowDetails(pgExporterId);
       await agentsPage.showRowDetails(pgStatMonitorId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-    },
-  );
 
-  pmmTest(
-    'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
-    async ({ cliHelper }) => {
-      const commands = [
+      commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --debug --trace --json`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --debug --trace --json`,
       ];
