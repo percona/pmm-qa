@@ -25,7 +25,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     pgVersion = containerName.match(/\d+/)?.[0] ?? '';
     serviceName = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $2}'`,
+        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | grep 127.0.0.1:5432 | head -1 | awk -F' ' '{print $2}'`,
       )
       .stdout.trim();
     serviceId = cliHelper
