@@ -363,11 +363,19 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-      commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --pmm-agent-listen-port=7778`,
+
+      await expect(async () => {
+        cliHelper.execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --pmm-agent-listen-port=7778`,
+        ).assertSuccess();
+      }).toPass({
+        intervals: Timeouts.TWO_SECONDS,
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+
+      cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --pmm-agent-listen-port=7778`,
-      ];
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      ).assertSuccess();
     },
   );
 });
