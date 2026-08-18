@@ -66,6 +66,8 @@ export default class CliHelper {
     const adminList = this.execute(`${prefix || 'sudo '}pmm-admin list`)
       .assertSuccess()
       .getStdOutLines();
+
+    console.log(`Admin list is: ${adminList}`);
     // Get the last item in the split result
     const serviceId: string =
       adminList
