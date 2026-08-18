@@ -281,6 +281,7 @@ export default defineConfig([
             'verifyTotalQueryCount',
             'verifyRTAAgentStatus',
             'verifyAllMenuItems',
+            'waitForServiceStatus',
           ],
         },
       ],
