@@ -7,6 +7,10 @@ const serviceList = [
   { serviceName: '_2' },
 ];
 
+// The setup appends a random numeric suffix to each service name, so a plain
+// substring match on '_2' also hits ps_pmm_replication_8_0_1_20753. Anchor it.
+const serviceNameRegex = (nodeSuffix) => `^ps_pmm_replication_.*${nodeSuffix}(_\\d+)?$`;
+
 Feature('Integration tests for Percona Server (Replica) & PMM').retry(1);
 
 Before(async ({ I }) => {
@@ -18,11 +22,9 @@ Data(serviceList).Scenario(
   async ({
     I, dashboardPage, adminPage, inventoryAPI, current,
   }) => {
-    const { service_name } = await inventoryAPI.getServiceDetailsByPartialDetails(
-      {
-        service_name: current.serviceName,
-        replication_set: replicationSet,
-      },
+    const { service_name } = await inventoryAPI.getServiceDetailsByRegexAndParameters(
+      serviceNameRegex(current.serviceName),
+      { replication_set: replicationSet },
     );
 
     const url = I.buildUrlWithParams(dashboardPage.mysqlReplcationDashboard.clearUrl, {
@@ -50,11 +52,9 @@ Scenario(
   async ({
     I, queryAnalyticsPage, inventoryAPI,
   }) => {
-    const { service_name } = await inventoryAPI.getServiceDetailsByPartialDetails(
-      {
-        service_name: '_1',
-        replication_set: replicationSet,
-      },
+    const { service_name } = await inventoryAPI.getServiceDetailsByRegexAndParameters(
+      serviceNameRegex('_1'),
+      { replication_set: replicationSet },
     );
 
     I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-5m', refresh: '5s' }));

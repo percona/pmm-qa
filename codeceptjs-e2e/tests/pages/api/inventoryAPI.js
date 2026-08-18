@@ -117,6 +117,35 @@ module.exports = {
       .find((service) => regex.test(service.service_name));
   },
 
+  async getServiceDetailsByRegexAndParameters(regexPattern, details) {
+    const services = await this.apiGetServices();
+
+    assert.ok(
+      services.status === 200,
+      `Failed to getService. Response message is "${services.data.message}"`,
+    );
+
+    const regex = new RegExp(regexPattern);
+
+    const foundServices = services.data.services
+      .filter((service) => regex.test(service.service_name)
+        && Object.entries(details).every(([key, value]) => service[key] === value));
+
+    if (foundServices.length === 0) {
+      throw new Error(`Service matching "${regexPattern}" with details "${JSON.stringify(details)}" not found.`);
+    }
+
+    // Picking the first of several matches is how a test silently ends up asserting
+    // against the wrong instance -- make an ambiguous pattern fail instead.
+    assert.strictEqual(
+      foundServices.length,
+      1,
+      `Expected exactly one service matching "${regexPattern}" with details "${JSON.stringify(details)}", found ${foundServices.length}: ${foundServices.map(({ service_name }) => service_name).join(', ')}.`,
+    );
+
+    return foundServices[0];
+  },
+
   async getServiceDetailsByPartialDetails(details) {
     const services = await this.apiGetServices();
 
