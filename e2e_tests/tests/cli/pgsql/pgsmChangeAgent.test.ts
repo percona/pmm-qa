@@ -369,7 +369,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --pmm-agent-listen-port=7778`,
         ).assertSuccess();
       }).toPass({
-        intervals: Timeouts.TWO_SECONDS,
+        intervals: [Timeouts.TWO_SECONDS],
         timeout: Timeouts.THIRTY_SECONDS,
       });
 
