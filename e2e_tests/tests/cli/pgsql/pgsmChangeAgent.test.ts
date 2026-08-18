@@ -30,7 +30,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .stdout.trim();
     serviceId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
+        `docker exec ${containerName} pmm-admin list | grep pdpgsql_pmm | grep 127.0.0.1:5432 | head -1 | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
     socketServiceId = cliHelper
