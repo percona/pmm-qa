@@ -7,10 +7,6 @@ const serviceList = [
   { serviceName: '_2' },
 ];
 
-// The setup appends a random numeric suffix to each service name, so a plain
-// substring match on '_2' also hits ps_pmm_replication_8_0_1_20753. Anchor it.
-const serviceNameRegex = (nodeSuffix) => `^ps_pmm_replication_.*${nodeSuffix}(_\\d+)?$`;
-
 Feature('Integration tests for Percona Server (Replica) & PMM').retry(1);
 
 Before(async ({ I }) => {
@@ -23,7 +19,7 @@ Data(serviceList).Scenario(
     I, dashboardPage, adminPage, inventoryAPI, current,
   }) => {
     const { service_name } = await inventoryAPI.getServiceDetailsByRegexAndParameters(
-      serviceNameRegex(current.serviceName),
+      `^ps_pmm_replication_.*${current.serviceName}(_\\d+)?$`,
       { replication_set: replicationSet },
     );
 
@@ -53,7 +49,7 @@ Scenario(
     I, queryAnalyticsPage, inventoryAPI,
   }) => {
     const { service_name } = await inventoryAPI.getServiceDetailsByRegexAndParameters(
-      serviceNameRegex('_1'),
+      '^ps_pmm_replication_.*_1(_\\d+)?$',
       { replication_set: replicationSet },
     );
 
