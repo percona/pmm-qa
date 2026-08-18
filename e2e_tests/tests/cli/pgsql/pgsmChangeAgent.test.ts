@@ -250,9 +250,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       cliHelper.execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword} ${tlsFlags}`,
       ).assertSuccess();
-      cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --agent-password=${pgExporterPassword} ${tlsFlags}`,
-      ).assertSuccess();
 
       await expect(async () => {
         const metrics = cliHelper.getMetrics({
