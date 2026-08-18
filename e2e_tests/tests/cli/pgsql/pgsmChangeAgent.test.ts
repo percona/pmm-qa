@@ -14,7 +14,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let serviceId: string;
   let socketServiceId: string;
   let pgExporterId: string;
-  let pgExporterPort: string;
   let pgStatMonitorId: string;
   let pgExporterSocketId: string;
   let pgStatMonitorSocketId: string;
@@ -285,11 +284,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T2276 - Verify pmm-admin inventory change agent flag expose exporter @pgsm-pmm-integration',
     async ({ cliHelper }) => {
-      pgExporterPort = cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin list | grep ${pgExporterId} | awk -F' ' '{print $6}'`,
-        )
-        .stdout.trim();
+
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --expose-exporter`,
@@ -314,11 +309,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T2277 - Verify pmm-admin inventory change agent flag push metrics @pgsm-pmm-integration',
     async ({ cliHelper }) => {
-      pgExporterPort = cliHelper
-        .execSilent(
-          `docker exec ${containerName} pmm-admin list | grep ${pgExporterId} | awk -F' ' '{print $6}'`,
-        )
-        .stdout.trim();
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --push-metrics`,
