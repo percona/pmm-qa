@@ -150,11 +150,6 @@ jobs:
           retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
-            # Inner timeout must fire before timeout_minutes above: a step the
-            # action times out itself is killed via tree-kill, which cannot
-            # signal the root-owned `sudo` child and dies on EPERM, taking the
-            # whole retry loop with it. Self-terminating returns exit 124 and
-            # leaves the retry loop intact.
             sudo timeout -k 30 9m bash -x pmm3-client-setup.sh \
               --pmm_server_ip "${SERVER_IP}" \
               --client_version "${PMM_CLIENT_VERSION}" \
