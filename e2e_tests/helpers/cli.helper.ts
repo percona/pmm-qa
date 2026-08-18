@@ -63,7 +63,7 @@ export default class CliHelper {
   getMetrics = (options: getMetrics): string => {
     let { agentPassword, agentUser } = options;
     const prefix = options.dockerContainer ? `docker exec ${options.dockerContainer} ` : '';
-    const adminList = this.execute(`${prefix || 'sudo '}pmm-admin list`)
+    const adminList = this.execSilent(`${prefix || 'sudo '}pmm-admin list`)
       .assertSuccess()
       .getStdOutLines();
 
