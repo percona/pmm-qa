@@ -147,10 +147,10 @@ jobs:
           timeout_minutes: 10
           retry_wait_seconds: '10'
           max_attempts: 2
-          retry_on: 'error'
+          retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
-            sudo bash -x pmm3-client-setup.sh \
+            sudo timeout -k 30 9m bash -x pmm3-client-setup.sh \
               --pmm_server_ip "${SERVER_IP}" \
               --client_version "${PMM_CLIENT_VERSION}" \
               --admin_password "${ADMIN_PASSWORD}" \
@@ -163,11 +163,11 @@ jobs:
           timeout_minutes: 20
           retry_wait_seconds: '10'
           max_attempts: 2
-          retry_on: 'error'
+          retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
             mkdir -m 777 -p /tmp/backup_data || true
-            ./pmm-framework/pmm-framework \
+            timeout -k 30 19m ./pmm-framework/pmm-framework \
               --parallel \
               --pmm-server-ip "${SERVER_IP}" \
               --pmm-server-password "${ADMIN_PASSWORD}" \
