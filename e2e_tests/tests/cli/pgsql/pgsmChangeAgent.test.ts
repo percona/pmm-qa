@@ -157,7 +157,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
+    'PMM-T2273 - Verify pmm-admin inventory change agent flags for tls @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
 
@@ -194,9 +194,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
       cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
       cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
-      cliHelper.execSilent(
-        `docker exec ${containerName} cat /var/log/postgresql/postgresql-${pgVersion}-main.log`,
-      );
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
@@ -209,6 +206,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       commands.forEach((command) => cliHelper.execSilent(command));
       await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
+      await expect(async () => {
+        const metrics = cliHelper.getMetrics({
+          agentPassword: pgExporterId,
+          dockerContainer: containerName,
+          serviceName: serviceName,
+        });
+
+        expect(metrics).toContain('pg_up');
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
     },
   );
 
