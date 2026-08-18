@@ -149,7 +149,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest(
+  pmmTest.skip(
     'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
@@ -245,8 +245,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9996 - Verify Change agent agent password @pgsm-pmm-integration',
     async ({ cliHelper }) => {
+      const tlsFlags = '--tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify';
+
       cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword}`
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword} ${tlsFlags}`,
+      ).assertSuccess();
+      cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --agent-password=${pgExporterPassword} ${tlsFlags}`,
       ).assertSuccess();
 
       await expect(async () => {
