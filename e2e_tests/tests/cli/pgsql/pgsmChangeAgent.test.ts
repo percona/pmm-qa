@@ -259,7 +259,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9996 - Verify Change agent agent password @pgsm-pmm-integration',
+    'PMM-T2275 - Verify pmm-admin inventory change agent flag agent password @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       // const tlsFlags = '--tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify';
 
@@ -283,8 +283,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent expose exporter @pgsm-pmm-integration',
-    async ({ cliHelper, page }) => {
+    'PMM-T2276 - Verify pmm-admin inventory change agent flag expose exporter @pgsm-pmm-integration',
+    async ({ cliHelper }) => {
       pgExporterPort = cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin list | grep ${pgExporterId} | awk -F' ' '{print $6}'`,
@@ -296,19 +296,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         )
         .assertSuccess()
         .outContains('- enabled expose exporter');
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-      await cliHelper
-        .execSilent(
-          `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
-        )
-        .assertSuccess()
-        .outContains('pg_up');
+      await expect(async () => {
+        const metrics = cliHelper.getMetrics({
+          agentPassword: pgExporterPassword,
+          dockerContainer: containerName,
+          serviceName: serviceName,
+        });
+
+        expect(metrics).toContain('pg_up');
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
     },
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent push metrics @pgsm-pmm-integration',
+    'PMM-T9993 - Verify pmm-admin inventory change agent flag push metrics @pgsm-pmm-integration',
     async ({ cliHelper, page }) => {
       pgExporterPort = cliHelper
         .execSilent(
