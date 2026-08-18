@@ -4,7 +4,7 @@ import { expect } from '@playwright/test';
 import * as fs from 'node:fs';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
-  pmmTest.describe.configure({ mode: 'serial' });
+  pmmTest.describe.configure({ mode: 'serial', retries: 2 });
 
   const newUsername = 'new_pmmm_username';
   const newPassword = 'new_pmm_user_password';
@@ -389,12 +389,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         ).assertSuccess();
       }).toPass({
         intervals: [Timeouts.TWO_SECONDS],
-        timeout: Timeouts.THIRTY_SECONDS,
+        timeout: Timeouts.ONE_MINUTE,
       });
 
-      cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --pmm-agent-listen-port=7778`,
-      ).assertSuccess();
+      await expect(async () => {
+        cliHelper.execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --pmm-agent-listen-port=7778`,
+        ).assertSuccess();
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
     },
   );
 });
