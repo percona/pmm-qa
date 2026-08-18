@@ -25,6 +25,8 @@ import SettingsPage from '@pages/ha/settings.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
+import { serverVersionBelow } from '@helpers/version.helper';
+import { minPmmVersion } from '@helpers/versionGates';
 
 const pmmTest = base.extend<{
   settingsPage: SettingsPage;
@@ -166,6 +168,14 @@ const pmmTest = base.extend<{
     await use(urlHelper);
   },
   vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
+});
+
+pmmTest.beforeEach(async ({ api }, testInfo) => {
+  const testId = testInfo.title.match(/PMM-T\d+/)?.[0];
+  const minVersion = testId ? minPmmVersion[testId] : undefined;
+  if (!minVersion) return;
+
+  pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), minVersion), `Requires PMM Server ${minVersion}+`);
 });
 
 export default pmmTest;
