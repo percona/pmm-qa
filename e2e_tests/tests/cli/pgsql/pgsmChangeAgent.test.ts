@@ -376,32 +376,50 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T2280 - Verify pmm-admin inventory change agent flag listen port @pgsm-pmm-integration',
     async ({ cliHelper }) => {
-      console.log(cliHelper.execSilent(`docker exec ${containerName} cat usr/local/percona/pmm/config/pmm-agent.yaml`).stdout)
-      let commands = [
-        `docker exec ${containerName} sed -i 's/listen-port: [0-9]\\+/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
-        `docker restart ${containerName}`,
-        `sleep 60`,
-      ];
-
-
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-
-      console.log(cliHelper.execSilent(`docker exec ${containerName} cat usr/local/percona/pmm/config/pmm-agent.yaml`).stdout)
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} sed -i 's/listen-port: [0-9]\\+/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
+        )
+        .assertSuccess();
+      cliHelper.execSilent(`docker restart ${containerName}`).assertSuccess();
 
       await expect(async () => {
-        cliHelper.execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --pmm-agent-listen-port=7778`,
-        ).assertSuccess();
+        cliHelper
+          .execSilent(
+            `docker exec ${containerName} bash -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml >> /var/log/pmm-agent.log 2>&1 &'`,
+          )
+          .assertSuccess();
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
+
+      await expect(async () => {
+        cliHelper
+          .execSilent(`docker exec ${containerName} pmm-admin status`)
+          .assertSuccess();
       }).toPass({
         intervals: [Timeouts.TWO_SECONDS],
         timeout: Timeouts.ONE_MINUTE,
       });
 
       await expect(async () => {
-        cliHelper.execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --pmm-agent-listen-port=7778`,
-        ).assertSuccess();
+        cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --pmm-agent-listen-port=7778`,
+          )
+          .assertSuccess();
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
+
+      await expect(async () => {
+        cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --pmm-agent-listen-port=7778`,
+          )
+          .assertSuccess();
       }).toPass({
         intervals: [Timeouts.TWO_SECONDS],
         timeout: Timeouts.ONE_MINUTE,
