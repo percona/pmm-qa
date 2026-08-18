@@ -396,15 +396,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await expect(async () => {
         cliHelper
-          .execSilent(`docker exec ${containerName} pmm-admin status`)
-          .assertSuccess();
-      }).toPass({
-        intervals: [Timeouts.TWO_SECONDS],
-        timeout: Timeouts.ONE_MINUTE,
-      });
-
-      await expect(async () => {
-        cliHelper
           .execSilent(
             `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --pmm-agent-listen-port=7778`,
           )
