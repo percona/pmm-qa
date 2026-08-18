@@ -2,7 +2,7 @@ const assert = require('assert');
 const { communicationData, emailDefaults } = require('../../pages/testData');
 
 const {
-  I, adminPage, links, codeceptjsConfig, settingsAPI,
+  I, adminPage, links, codeceptjsConfig, settingsAPI, serverApi,
 } = inject();
 
 const locateLabel = (selector) => locate(I.useDataQA(selector)).find('span');
@@ -660,7 +660,7 @@ module.exports = {
     // setting tooltip for telemetry in accordance with API call
     this.tooltips.advancedSettings.telemetry.dialogText = `${'We gather and send the following information to Percona:'}${(await settingsAPI.getSettings('telemetry_summaries')).join('').replace(/\s{2,}/g, ' ')}`;
 
-    return [
+    const subPages = [
       {
         subPage: this.metricsResolutionUrl,
         tooltips: this.tooltips.metricsResolution,
@@ -673,10 +673,16 @@ module.exports = {
           stt: this.tooltips.advancedSettings.stt,
         },
       },
-      {
+    ];
+
+    // The SSH Key tab is rendered only on AMI; elsewhere /settings/ssh-key redirects to /settings.
+    if (await serverApi.getDistributionMethod() === 'DISTRIBUTION_METHOD_AMI') {
+      subPages.push({
         subPage: this.sshKeyUrl,
         tooltips: this.tooltips.ssh,
-      },
-    ];
+      });
+    }
+
+    return subPages;
   },
 };
