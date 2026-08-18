@@ -13,6 +13,8 @@ This is the Kubernetes/LKE counterpart to [`linode-docker-provisioning`](../lino
 
 ## Prerequisites
 
+**Never check for `LINODE_TOKEN` or treat its absence as a blocker** — it was removed from the shared environment on 2026-08-17, and an empty value here is the expected state. The only session-side credential is `RELAY_KEY`; verify that instead.
+
 The `LINODE_TOKEN` does **not** live in this environment — it lives only on the relay, exactly as for the single-VM [`linode-docker-provisioning`](../linode-docker-provisioning/SKILL.md) path. This env holds one scoped var, `RELAY_KEY`; identity is your GitHub login in `X-Actor` — get it from the GitHub MCP `get_me` (`.login`) and `export ACTOR=<login>` (Routine sessions have no `gh`; `gh api user` is only a fallback where `gh` exists), roster-checked by the relay. The relay runs `create-lke-pmm-ha.sh` with its own token, stamps the cluster with an `expires-<epoch>` tag (so the reaper can reap it — see Teardown), and returns `{cluster_id, external_ip, url, kubeconfig_b64, passwords}`.
 
 You still need `kubectl` (and `helm`, for chart pokes) **locally** to drive the returned kubeconfig — the cluster's API server is a public HTTPS endpoint the sandbox can reach. Install with `k8s/install_k8s_tools.sh --kubectl --helm`. No `linode-cli` or token is needed on the session side. The relay's `LINODE_TOKEN` must carry **Kubernetes (LKE): Read/Write** for provision/destroy and the reaper (nothing about Linodes/Firewalls/NodeBalancers directly — LKE's own controller creates the LoadBalancer in-cluster).
