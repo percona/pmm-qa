@@ -312,7 +312,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify pmm-admin inventory change agent flag push metrics @pgsm-pmm-integration',
+    'PMM-T2277 - Verify pmm-admin inventory change agent flag push metrics @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       pgExporterPort = cliHelper
         .execSilent(
@@ -350,7 +350,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent disable collectors @pgsm-pmm-integration',
+    'PMM-T2278 - Verify pmm-admin inventory change agent flag disable collectors @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       await cliHelper
         .execSilent(
@@ -362,8 +362,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent max exporter connections @pgsm-pmm-integration',
-    async ({ cliHelper, page }) => {
+    'PMM-T2279 - Verify pmm-admin inventory change agent flag max exporter connections @pgsm-pmm-integration',
+    async ({ cliHelper }) => {
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --max-exporter-connections=10`,
@@ -371,12 +371,15 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .assertSuccess()
         .outContains('- changed max exporter connections to 10');
 
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-      await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-      await cliHelper
-        .execSilent(`docker exec ${containerName} ps aux | grep postgres_exporter | grep -v grep`)
-        .assertSuccess()
-        .outContains('--max-connections=10');
+      await expect(async () => {
+        await cliHelper
+          .execSilent(`docker exec ${containerName} ps aux | grep postgres_exporter | grep -v grep`)
+          .assertSuccess()
+          .outContains('--max-connections=10');
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
     },
   );
 
