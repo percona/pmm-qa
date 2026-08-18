@@ -8,6 +8,11 @@ let serviceAccountUsername = '';
 const newServiceName = 'mysql_service_service_token1';
 const loadDatabase = 'pmm_t1883_load';
 
+// PMM-T1883 leaves a detached write loop running; stop it even when the scenario fails.
+After(async ({ I }) => {
+  await I.verifyCommand(`sudo docker exec $(docker ps | grep ps_pmm | awk '{print $NF}') pkill -f "${loadDatabase}.write_load" || true`);
+});
+
 Scenario('PMM-T1883 - Configuring pmm-agent to use service account @service-account', async ({
   I, codeceptjsConfig, serviceAccountsPage, dashboardPage, inventoryAPI, nodesOverviewPage, credentials,
 }) => {

@@ -80,31 +80,31 @@ export default class MongoDBHelper {
     } = options;
     const numDocs = Math.max(1, Math.ceil(delayMs / chunkMs));
 
-    await this.ensureCollectionHasDocuments(collectionName, dbName, numDocs);
-
-    const collection = this.client.db(dbName).collection(collectionName);
-    // The collection is shared by the whole suite and only ever grows, so the $where runs for
-    // every document present, not just the numDocs this call asked for. Budget maxTimeMS from
-    // the real count, otherwise the server kills the query it was told to keep running.
-    const scannedDocs = Math.max(numDocs, await collection.countDocuments());
-    const escapedLabel = queryLabel.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-    const whereFn = [
-      'function() {',
-      `  var __rtaLabel = "${escapedLabel}";`,
-      `  var end = new Date().getTime() + ${chunkMs};`,
-      '  while (new Date().getTime() < end) {}',
-      '  return true;',
-      '}',
-    ].join(' ');
-
     try {
+      await this.ensureCollectionHasDocuments(collectionName, dbName, numDocs);
+
+      const collection = this.client.db(dbName).collection(collectionName);
+      // The collection is shared by the whole suite and only ever grows, so the $where runs for
+      // every document present, not just the numDocs this call asked for. Budget maxTimeMS from
+      // the real count, otherwise the server kills the query it was told to keep running.
+      const scannedDocs = Math.max(numDocs, await collection.countDocuments());
+      const escapedLabel = queryLabel.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+      const whereFn = [
+        'function() {',
+        `  var __rtaLabel = "${escapedLabel}";`,
+        `  var end = new Date().getTime() + ${chunkMs};`,
+        '  while (new Date().getTime() < end) {}',
+        '  return true;',
+        '}',
+      ].join(' ');
+
       return await collection
         .find({ $where: whereFn })
         .maxTimeMS(scannedDocs * chunkMs * 3)
         .toArray();
     } catch (error) {
-      // Callers start these queries fire-and-forget, so an escaping rejection would land as an
-      // unhandled rejection on whichever test runs by then, not the one that started the query.
+      // Callers start these queries fire-and-forget, so an escaping rejection from any of these
+      // steps would land on whichever test runs by then, not the one that started the query.
       console.log(`simulateLongRunningQuery("${queryLabel}") ended early: ${String(error)}`);
 
       return [];
