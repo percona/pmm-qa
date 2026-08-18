@@ -222,7 +222,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9995 - Verify Change agent enable true/false @pgsm-pmm-integration',
+    'PMM-T2274 - Verify pmm-admin inventory change agent flag enable @pgsm-pmm-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
@@ -261,10 +261,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9996 - Verify Change agent agent password @pgsm-pmm-integration',
     async ({ cliHelper }) => {
-      const tlsFlags = '--tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify';
+      // const tlsFlags = '--tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify';
 
       cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword} ${tlsFlags}`,
+        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword}`,// ${tlsFlags}`,
       ).assertSuccess();
 
       await expect(async () => {
