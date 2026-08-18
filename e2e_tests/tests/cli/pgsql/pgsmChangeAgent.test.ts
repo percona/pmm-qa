@@ -250,17 +250,20 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --agent-password=${pgExporterPassword}`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command));
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
-      const metrics = cliHelper.getMetrics({
-        agentPassword: pgExporterPassword,
-        dockerContainer: containerName,
-        serviceName: serviceName,
+      await expect(async () => {
+        const metrics = cliHelper.getMetrics({
+          agentPassword: pgExporterPassword,
+          dockerContainer: containerName,
+          serviceName: serviceName,
+        });
+
+        expect(metrics).toContain('pg_up');
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
       });
-
-      expect(metrics).toContain('pg_up');
     },
   );
 
