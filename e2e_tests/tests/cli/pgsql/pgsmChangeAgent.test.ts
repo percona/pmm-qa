@@ -98,7 +98,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.ONE_MINUTE);
       await expect(async () => {
         const metrics = cliHelper.getMetrics({
-          agentPassword: pgExporterPassword,
+          agentPassword: pgExporterId,
           dockerContainer: containerName,
           serviceName: serviceName,
         });
