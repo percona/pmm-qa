@@ -2,14 +2,13 @@ import pmmTest from '@fixtures/pmmTest';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { expect } from '@playwright/test';
 
-pmmTest.beforeEach(async ({ grafanaHelper }) => {
+pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
+  await haClusterHelper.ensureServing(api.haApi);
 });
 
-// TODO: Reenable this test after HA workflow is created
-// eslint-disable-next-line playwright/no-skipped-test -- PMM-T2217 is intentionally skipped for the HA scenario.
-pmmTest.skip(
-  'PMM-T2217 Verify HA mode shows detailed error when enabling QAN for PMM Server @ha-settings',
+pmmTest(
+  'PMM-T2217 Verify HA mode shows detailed error when enabling QAN for PMM Server @pmm-ha',
   async ({ page, request, settingsPage }) => {
     await pmmTest.step('Verify HA mode is enabled', async () => {
       await settingsPage.haEnableCheck(request);

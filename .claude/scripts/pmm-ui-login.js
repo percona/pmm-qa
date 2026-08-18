@@ -5,8 +5,11 @@
 // Usage:
 //   PMM_URL='https://<linode-ip>'          node pmm-ui-login.js PMM-14576
 //   ADMIN_PASSWORD='...'                   (optional, defaults to 'pmm3admin!')
-//   PMM_CERT_PATH='runs/<run_id>/pmm_cert.pem'  (required -- pins PMM's own
-//     cert instead of trusting any cert; see pmm-linode-provisioning skill)
+//   PMM_CERT_PATH='runs/<run_id>/pmm_cert.pem'  (pins PMM's own cert instead of
+//     trusting any cert; see linode-docker-provisioning skill) — REQUIRED unless
+//   PMM_UI_INSECURE=1  (HA/LKE only: PMM's cert is self-signed behind the egress
+//     MITM so pinning can't match; disables TLS verification, keeps the
+//     origin-redirect guard)
 //
 // Writes a reusable Playwright storage state to
 // .claude/scripts/.sessions/<SESSION_ID>.json — pass that file to a
@@ -55,39 +58,48 @@ async function main() {
 
   const authToken = Buffer.from(`admin:${adminPassword}`).toString("base64");
 
-  // This script only ever targets PMM, so there's no legitimate case for an
-  // insecure fallback -- require the cert pin rather than silently trusting
-  // any certificate on a connection that's about to carry the admin
-  // password. PMM's cert can't be known before the box exists, but once
-  // PMM is up, its cert is fetched over the already-pinned exec-server (see
-  // pmm-linode-provisioning's readyz step) and passed here via PMM_CERT_PATH.
+  // Single-server (docker) path: PMM's cert is fetched over the already-pinned
+  // exec-server and pinned here (SPKI), so the admin password never rides an
+  // unverified connection. HA/LKE has no exec-server and PMM's cert is
+  // self-signed behind the egress MITM, so pinning can't match — PMM_UI_INSECURE=1
+  // opts out of the pin there. It's explicit and loud, and the origin-redirect
+  // refusal below stays as the compensating control against leaking the password
+  // to the wrong origin.
+  const insecure = process.env.PMM_UI_INSECURE === "1";
   const certPath = process.env.PMM_CERT_PATH;
-  if (!certPath) {
+  const spkiPins = [];
+  if (insecure) {
     console.error(
-      "PMM_CERT_PATH is required -- fetch PMM's cert after readyz (see pmm-linode-provisioning skill) and pass it here.",
+      "WARNING: PMM_UI_INSECURE=1 — TLS verification disabled (no SPKI pin). Use only for HA/LKE (self-signed cert behind the egress MITM).",
     );
-    process.exit(1);
+  } else {
+    if (!certPath) {
+      console.error(
+        "PMM_CERT_PATH is required -- fetch PMM's cert after readyz (see linode-docker-provisioning skill), or set PMM_UI_INSECURE=1 for HA/LKE.",
+      );
+      process.exit(1);
+    }
+    if (!fs.existsSync(certPath)) {
+      console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
+      process.exit(1);
+    }
+    spkiPins.push(spkiPinFromCertFile(certPath));
   }
-  if (!fs.existsSync(certPath)) {
-    console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
-    process.exit(1);
-  }
-  const launchArgs = [`--ignore-certificate-errors-spki-list=${spkiPinFromCertFile(certPath)}`];
 
   // Explicit executablePath: the pre-installed Chromium revision at
   // /opt/pw-browsers can drift from what a freshly `npm install`-ed
   // playwright expects (confirmed live -- an unpinned minor bump silently
   // wants a browser revision that isn't there), so don't rely on
   // Playwright's own bundled-browser resolution to find it.
-  const proxyOpts = proxyLaunchOptions();
+  const proxyOpts = proxyLaunchOptions({ spkiPins });
   const browser = await chromium.launch({
     executablePath: "/opt/pw-browsers/chromium",
     headless: !headed,
-    args: [...launchArgs, ...proxyOpts.args],
+    args: proxyOpts.args,
     proxy: proxyOpts.proxy,
   });
   const context = await browser.newContext({
-    ignoreHTTPSErrors: false,
+    ignoreHTTPSErrors: insecure,
     viewport: { width, height },
   });
   const page = await context.newPage();

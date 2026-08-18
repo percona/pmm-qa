@@ -1,6 +1,6 @@
 const { I } = inject();
 const assert = require('assert');
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 
 module.exports = {
   async createAlertRule(ruleObj, folder, templateName) {
