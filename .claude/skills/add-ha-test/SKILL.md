@@ -49,7 +49,7 @@ named the wrong leader.
 |---|---|
 | Sidebar badge, Inventory Nodes roles, anything rendering `/v1/ha/nodes` | `haClusterHelper.leaderFromPods()` |
 | `pmm_ha_leader_status` | `/v1/ha/nodes`, or the badge — different code paths off the same Raft state |
-| A failover actually happened | `haClusterHelper.lastPromotionTime()` before vs after |
+| A failover actually happened | `haClusterHelper.lastPromotionTime()` before vs after, on the same pod |
 
 `leaderFromPods()` asks each pod `/v1/server/leaderHealthCheck` directly:
 **200 on the leader, 400 on followers**. It bypasses HAProxy, so it is
@@ -58,18 +58,19 @@ HAProxy itself routes on, so it is a supported contract, not a scrape.
 
 ### Do not identify the leader from pod logs
 
-`pmm-managed.log` looks tempting and is a trap twice over:
+`pmm-managed.log` looks tempting and is a trap three times over:
 
 - **Losing leadership is not reliably logged.** A pod killed while leading never
   writes a demotion, so on a live cluster *every* pod's last leadership line is
   `I am the leader!`. "Last line wins" identifies all three as leader.
 - **`/srv` is a PVC**, so the log survives pod restarts and carries promotions
   from previous elections — even previous test runs.
+- **Timestamps are each pod's own clock**, so the newest promotion across pods
+  is not a leader oracle either. Ask `leaderFromPods()` for current leadership.
 
-Only the *newest promotion across pods* identifies a leader from logs, and
-`leaderFromPods()` is better in every way. Logs remain the right tool for one
-thing: proving a **new** promotion happened during your test
-(`lastPromotionTime` before vs after), which current-state checks cannot show.
+Logs remain the right tool for one thing: proving a **new** promotion happened
+during your test — `lastPromotionTime` before vs after *on the same pod*, which
+current-state checks cannot show.
 
 ## Read metrics through the Grafana datasource proxy
 

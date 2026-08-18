@@ -100,7 +100,7 @@ independent read paths off the same Raft state:
 
 | Metric | Meaning |
 |---|---|
-| `pmm_ha_leader_status{node_id}` | 1 on the leader, 0 on followers; `sum()` is 0 = no leader, >1 = split-brain |
+| `pmm_ha_leader_status{node_id}` | 1 on the leader, 0 on followers; once converged, `sum()` of 0 = no leader and >1 = split-brain — mid-failover scrapes transiently show either, so wait for `waitForLeaderStatusSum(1)` before classifying |
 | `pmm_ha_raft_term{node_id}` | Raft term; rapid growth = leader flapping |
 | `pmm_ha_up{node_id,role}` | 1 per live node, `role` is `voter`/`nonvoter` |
 
