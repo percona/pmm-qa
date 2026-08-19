@@ -8,7 +8,9 @@ class MongoDBHelper extends Helper {
     this.username = config.username;
     this.password = config.password;
     this.url = `mongodb://${config.username}:${encodeURIComponent(config.password)}@${config.host}:${config.port}/?authSource=admin`;
-    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
+    this.client = new MongoClient(this.url, {
+      useNewUrlParser: true, connectTimeoutMS: 30000,
+    });
   }
 
   /**
@@ -30,13 +32,14 @@ class MongoDBHelper extends Helper {
 
     if (password) this.password = password;
 
-    // directConnection: talk only to this seed and skip replica-set discovery.
-    // Members advertise internal docker addresses (rsNNN:27017) unreachable from
-    // the runner, so without this the driver can't select the primary.
-    this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin&directConnection=true`;
-    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000, directConnection: true });
+    this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${this.host}:${this.port}/?authSource=admin`;
+    this.client.s.url = this.url;
 
-    return await this._connect();
+    this.client = new MongoClient(this.url, {
+      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
+    });
+
+    return await this.client.connect();
   }
 
   async mongoConnectReplica(connection) {
@@ -54,32 +57,11 @@ class MongoDBHelper extends Helper {
     if (password) this.password = password;
 
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    this.client = new MongoClient(this.url, { connectTimeoutMS: 30000 });
+    this.client.s.url = this.url;
 
-    return await this._connect();
+    return await this.client.connect();
   }
 
-  /**
-   * Connects the current client, logging diagnostics on failure so CI logs show
-   * the target URL (password masked) and mongo container/port state.
-   * @returns {Promise<*>}
-   */
-  async _connect() {
-    try {
-      return await this.client.connect();
-    } catch (e) {
-      const safeUrl = String(this.url).replace(/(mongodb:\/\/[^:]+:)[^@]+@/, '$1***@');
-      console.error(`[mongoDB helper] connect FAILED for ${safeUrl}: ${e.message}`);
-      try {
-        const { execSync } = require('child_process');
-        const ps = execSync(
-          "docker ps --format '{{.Names}}\\t{{.Status}}\\t{{.Ports}}' | grep -iE 'rs[0-9]|mongo|psmdb' || true",
-        ).toString();
-        console.error(`[mongoDB helper] mongo containers:\n${ps}`);
-      } catch (_) { /* docker not available in this context */ }
-      throw e;
-    }
-  }
 
   /**
    * Disconnects from mongo shell
@@ -108,7 +90,7 @@ class MongoDBHelper extends Helper {
     const user = username || this.username;
     const pass = password || this.password;
     const url = `mongodb://${user}:${encodeURIComponent(pass)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
-    const client = new MongoClient(url, { connectTimeoutMS: 30000, directConnection: true });
+    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000 });
 
     return await client.connect();
   }
@@ -128,10 +110,8 @@ class MongoDBHelper extends Helper {
     } = parameters;
     const user = username || this.username;
     const pass = password || this.password;
-    // directConnection: use only this seed, skip replica-set discovery (members
-    // advertise internal docker addresses unreachable from the runner).
-    const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin&directConnection=true`;
-    const client = new MongoClient(url, { connectTimeoutMS: 30000, directConnection: true });
+    const url = `mongodb://${user}:${encodeURIComponent(pass)}@${this.host}:${port}/?authSource=admin`;
+    const client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000 });
 
     return await client.connect();
   }
