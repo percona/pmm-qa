@@ -219,13 +219,6 @@ Scenario(
   async ({
     I, queryAnalyticsPage,
   }) => {
-    // Re-anchor on a window that is already closed. The suite default is now-5m, whose
-    // last minutes are still being aggregated: Copy Link freezes it into absolute
-    // from/to, but re-querying that same absolute range seconds later returns more
-    // groups in a different load order, so the selected query moves to another page and
-    // never gets highlighted on the copied link. A window ending 5 minutes in the past
-    // returns byte-identical rows on every fetch, and starting it well before the suite
-    // keeps it at least as populated as now-5m was, so page 2 still exists.
     I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m', to: 'now-5m' }));
     queryAnalyticsPage.waitForLoaded();
 
