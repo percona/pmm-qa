@@ -21,6 +21,21 @@ load helpers/test_helper
   [[ -z ${CAPTURE_ENV[PREBAKED_PS_IMAGE]-} ]]
 }
 
+@test "PS passes TIME_ZONE through to the env map" {
+  parse_database_spec 'ps=8.0,TIME_ZONE=+00:00'
+  dispatch_setup
+
+  [[ $CAPTURE_TARGET == percona_server_for_mysql/percona-server-setup.yml ]]
+  [[ ${CAPTURE_ENV[TIME_ZONE]} == +00:00 ]]
+}
+
+@test "PS omits TIME_ZONE by default" {
+  parse_database_spec 'ps=8.0'
+  dispatch_setup
+
+  [[ -z ${CAPTURE_ENV[TIME_ZONE]-} ]]
+}
+
 @test "MySQL GR maps group replication and node values" {
   parse_database_spec 'mysql=8.4,SETUP_TYPE=gr'
   dispatch_setup

@@ -41,6 +41,7 @@ setup_ps() {
     [ENCRYPTED_CLIENT_CONFIG]="$(resolve_value PS ENCRYPTED_CLIENT_CONFIG DB_CONFIG)"
     [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
     [BACKUP]="$(resolve_value PS BACKUP DB_CONFIG)"
+    [TIME_ZONE]="$(resolve_value PS TIME_ZONE DB_CONFIG)"
   )
   run_playbook 'percona_server_for_mysql/percona-server-setup.yml' env_map
 }
