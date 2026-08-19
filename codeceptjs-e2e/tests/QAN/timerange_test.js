@@ -221,7 +221,6 @@ Scenario(
   }) => {
     I.amOnPage(I.buildUrlWithParams(queryAnalyticsPage.url, { from: 'now-30m', to: 'now-5m' }));
     queryAnalyticsPage.waitForLoaded();
-
     await I.waitForVisible(queryAnalyticsPage.data.buttons.nextPage);
     await I.click(queryAnalyticsPage.data.buttons.nextPage);
     await queryAnalyticsPage.data.selectRow(2);
