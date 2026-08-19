@@ -180,8 +180,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `ssl = on\nssl_cert_file = '/certs/${containerName}.crt'\nssl_key_file = '/certs/${containerName}.key'\n`,
       );
 
-      cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
+      cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`).assertSuccess();
+      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`).assertSuccess();
 
       const hbaPath = `/etc/postgresql/${pgVersion}/main/pg_hba.conf`;
       const hbaLines = `hostssl      all             all             127.0.0.1/32    scram-sha-256
@@ -191,8 +191,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       `;
 
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
-      cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`);
-      cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`);
+      cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`).assertSuccess();
+      cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`).assertSuccess();
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
@@ -203,7 +203,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
       await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
       await expect(async () => {
         const metrics = cliHelper.getMetrics({
