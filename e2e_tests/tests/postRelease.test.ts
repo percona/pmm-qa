@@ -3,20 +3,25 @@ import { expect } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
-// Do NOT throw at module top-level: Playwright imports every test file during
-// collection, so a top-level throw here aborts unrelated runs (e.g. @rta).
-// Validate lazily inside beforeEach, which only runs when these tests are selected.
-let expectedVersion = '';
-
-pmmTest.beforeEach(async ({ context, page }) => {
+// Resolved per test rather than at module scope: Playwright imports every spec
+// during collection, so a top-level throw here fails unrelated --grep runs too.
+const getExpectedVersion = () => {
   const version = process.env.PMM_SERVER_LATEST?.trim();
 
   if (!version) {
     throw new Error('PMM_SERVER_LATEST env var is required for @post-release tests');
   }
 
-  expectedVersion = version;
+  return version;
+};
 
+let expectedVersion: string;
+
+pmmTest.beforeAll(async () => {
+  expectedVersion = getExpectedVersion();
+});
+
+pmmTest.beforeEach(async ({ context, page }) => {
   await page.unroute(apiEndpoints.server.updates);
   await context.unroute(apiEndpoints.server.updates);
   await page.unroute(apiEndpoints.users.me);

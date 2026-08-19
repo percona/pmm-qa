@@ -1,8 +1,6 @@
 ---
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     modb_version: "{{ lookup('vars', 'extra_modb_version', default=lookup('env','MODB_VERSION') | default('4.4', true) ) }}"
     modb_tarball: "{{ lookup('vars', 'extra_modb_tarball', default=lookup('env','MODB_TARBALL') | default('', true) ) }}"

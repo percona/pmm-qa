@@ -1,6 +1,6 @@
 const assert = require('assert');
 const moment = require('moment/moment');
-const faker = require('faker');
+const { faker } = require('@faker-js/faker');
 const {
   SERVICE_TYPE,
   gssapi, isOvFAmiJenkinsJob,
@@ -415,7 +415,7 @@ Scenario(
     I, backupInventoryPage, backupAPI, inventoryAPI,
   }) => {
     const backupName = 'service_remove_backup';
-    const serviceName = `mongo-service-to-delete-${faker.datatype.number(2)}`;
+    const serviceName = `mongo-service-to-delete-${faker.number.int(2)}`;
 
     I.say(await I.verifyCommand(`docker exec rs101 pmm-admin add mongodb ${clientCredentialsFlags} --host=rs101 --port=27017 --service-name=${serviceName} --replication-set=rs --cluster=rs`));
     const { service_id } = await inventoryAPI.apiGetNodeInfoByServiceName(SERVICE_TYPE.MONGODB, serviceName);
@@ -528,7 +528,7 @@ Scenario(
   async ({
     I, backupInventoryPage, addInstanceAPI,
   }) => {
-    const serviceName = `mongo-binary-test-${faker.datatype.number(2)}`;
+    const serviceName = `mongo-binary-test-${faker.number.int(2)}`;
 
     await addInstanceAPI.addMongodb(serviceName, {
       host: 'rs101',

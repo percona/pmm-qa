@@ -3,8 +3,6 @@
 #   enables Percona testing repository
 
 - hosts: all
-  become: true
-  become_method: sudo
   vars:
     pdpgsql_version: "{{ lookup('vars', 'extra_pdpgsql_version', default=lookup('env','PDPGSQL_VERSION') | default('15', true) ) }}"
     pdpgsql_pgsm_container: "{{ lookup('vars', 'extra_pdpgsql_pgsm_container', default=lookup('env','PDPGSQL_PGSM_CONTAINER') | default('pdpgsql_pgsm', true) ) }}"
@@ -32,7 +30,7 @@
 
   - name: Prepare Container for PostgreSQL
     shell: >
-      sudo docker run -d --name={{ pdpgsql_pgsm_container }}
+      docker run -d --name={{ pdpgsql_pgsm_container }}
       -p {{ pdpgsql_pgsm_port }}:5432
       phusion/baseimage:jammy-1.0.1
   
