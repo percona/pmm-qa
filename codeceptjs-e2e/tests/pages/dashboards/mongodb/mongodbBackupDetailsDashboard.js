@@ -7,6 +7,14 @@ class MongodbBackupDetailsDashboard {
       lastSuccessfulBackupValue: locate('//section[contains(@data-testid, "Last Successful Backup")]//div[@data-testid="data-testid panel content"]//span'),
       refresh: locate('//button[contains(@data-testid, "RefreshPicker run button")]'),
     };
+    // Panels fed by the same low-resolution mongodb_pbm_* collectors as the
+    // Last Successful Backup stat, so they are empty for the same 30-60s after a
+    // backup finishes -- and they sit at the bottom of the dashboard.
+    this.lateMetricPanels = [
+      'Backup history',
+      'Backup Sizes',
+      'Backup Duration',
+    ];
     this.metrics = [
       'Backup Configured',
       'PITR Status',
@@ -64,6 +72,30 @@ class MongodbBackupDetailsDashboard {
 
       return actualValue !== 'N/A' && actualValue !== '';
     }, 120, 'Last Successful Backup panel still has no value');
+  }
+
+  // Same viewport rule as above, applied to the panels the previous wait scrolls away
+  // from. Grafana unmounts a panel that leaves the viewport and only re-runs its query
+  // when it comes back, so the bottom row keeps whatever it rendered on page load -- the
+  // "N/A" from before PBM published a status="done" sample -- through every refresh
+  // waitForLastSuccessfulBackupValue does at the top of the dashboard. Bring each one
+  // back into view and refresh it there, so an empty-panel check sees current state
+  // instead of a stale render.
+  async waitForLateMetricPanels() {
+    const I = actor();
+
+    for (const panel of this.lateMetricPanels) {
+      const panelSection = locate(`//section[contains(@data-testid, "${panel}")]`);
+      const noData = locate(`//section[contains(@data-testid, "${panel}")]//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="No Data") or (text()="-")]`);
+
+      I.waitForElement(panelSection, 30);
+      await I.asyncWaitFor(async () => {
+        I.scrollTo(panelSection);
+        I.click(this.elements.refresh);
+
+        return await I.grabNumberOfVisibleElements(noData) === 0;
+      }, 120, `${panel} panel still has no data`);
+    }
   }
 }
 

@@ -46,5 +46,6 @@ Data(backupTypes).Scenario('PMM-T2036 - Verify MongoDB PBM dashboard @pbm-nightl
   await dashboardPage.expandEachDashboardRow();
   await dashboardPage.verifyMetricsExistence(dashboardPage.mongodbBackupDetailsDashboard.metrics);
   await dashboardPage.mongodbBackupDetailsDashboard.waitForLastSuccessfulBackupValue();
+  await dashboardPage.mongodbBackupDetailsDashboard.waitForLateMetricPanels();
   await dashboardPage.verifyThereAreNoGraphsWithoutData();
 });
