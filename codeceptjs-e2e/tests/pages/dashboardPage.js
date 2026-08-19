@@ -1,6 +1,7 @@
 /* eslint-disable import/no-useless-path-segments */
 const { I, adminPage } = inject();
 const assert = require('assert');
+const { retryTo } = require('codeceptjs/effects');
 const { DashboardPanelMenu } = require('./dashboards/components/DashboardPanelMenu');
 const PmmHealthDashboard = require('./dashboards/experimental/pmmHealthDashboard');
 const HomeDashboard = require('./dashboards/homeDashboard');
@@ -1198,8 +1199,7 @@ module.exports = {
     for (const i in metrics) {
       I.pressKey('PageDown');
       await this.expandEachDashboardRow();
-      I.waitForElement(this.graphsLocator(metrics[i]), 5);
-      I.scrollTo(this.graphsLocator(metrics[i]));
+      await this.scrollToPanel(this.graphsLocator(metrics[i]));
     }
   },
 
@@ -1207,9 +1207,19 @@ module.exports = {
     for (const i in metrics) {
       I.pressKey('PageDown');
       await this.expandEachDashboardRow();
-      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 5);
-      I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
+      await this.scrollToPanel(this.graphsLocatorPartialMatch(metrics[i]));
     }
+  },
+
+  // Grafana renders a panel only once it scrolls into view, and a fully expanded
+  // dashboard blocks the browser's main thread for tens of seconds at a time, which
+  // stalls every element lookup - including ones for panels already on screen. Retry
+  // the lookup rather than betting the whole test on a single wait budget.
+  async scrollToPanel(locator) {
+    await retryTo(() => {
+      I.waitForElement(locator, 10);
+      I.scrollTo(locator);
+    }, 3);
   },
 
   openGraphDropdownMenu(metric) {
