@@ -3,7 +3,7 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 
-interface PmmVersion {
+export interface PmmVersion {
   major: number;
   minor: number;
   patch: number;
