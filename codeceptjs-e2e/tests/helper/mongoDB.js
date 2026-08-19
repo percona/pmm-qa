@@ -59,9 +59,12 @@ class MongoDBHelper extends Helper {
     this.url = `mongodb://${this.username}:${encodeURIComponent(this.password)}@${member1},${member2},${member3}/?authSource=admin&replicaSet=${replicaName}`;
     this.client.s.url = this.url;
 
+    this.client = new MongoClient(this.url, {
+      useNewUrlParser: true, useUnifiedTopology: true, connectTimeoutMS: 30000,
+    });
+
     return await this.client.connect();
   }
-
 
   /**
    * Disconnects from mongo shell
@@ -147,8 +150,7 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<unknown>}
    */
   async mongoAddUser(username, password, roles = [{ db: 'admin', role: 'userAdminAnyDatabase' }]) {
-    // addUser() was removed in driver 4.0; use the createUser command.
-    return this.client.db('admin').command({ createUser: username, pwd: password, roles });
+    return this.client.db().admin().addUser(username, password, { roles });
   }
 
   /**
@@ -157,8 +159,7 @@ class MongoDBHelper extends Helper {
    * @returns {Promise<*>}
    */
   async mongoRemoveUser(username) {
-    // removeUser() was removed in driver 4.0; use the dropUser command.
-    return await this.client.db('admin').command({ dropUser: username });
+    return await this.client.db().admin().removeUser(username);
   }
 
   /**
