@@ -25,7 +25,8 @@ import SettingsPage from '@pages/ha/settings.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
 import UpdatesPage from '@pages/updates.page';
 import DownloadsPage from '@pages/downloads.page';
-import { serverVersionBelow } from '@helpers/version.helper';
+import ServerApi from '@api/server.api';
+import { getServerVersion, serverVersionBelow } from '@helpers/version.helper';
 import { minPmmVersion } from '@helpers/versionGates';
 
 const pmmTest = base.extend<{
@@ -52,6 +53,7 @@ const pmmTest = base.extend<{
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
   vacuumDashboardPage: VacuumDashboard;
+  versionGate: undefined;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
 }>({
@@ -168,14 +170,24 @@ const pmmTest = base.extend<{
     await use(urlHelper);
   },
   vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
-});
+  // Registering this as a beforeEach hook would only gate the first spec file that imports this
+  // module, since the module is evaluated once and the hook attaches to the file loading at that
+  // moment. An auto fixture applies to every test instead.
+  versionGate: [
+    async ({ request }, use, testInfo) => {
+      const testId = testInfo.title.match(/PMM-T\d+/)?.[0];
+      const minVersion = testId ? minPmmVersion[testId] : undefined;
 
-pmmTest.beforeEach(async ({ api }, testInfo) => {
-  const testId = testInfo.title.match(/PMM-T\d+/)?.[0];
-  const minVersion = testId ? minPmmVersion[testId] : undefined;
-  if (!minVersion) return;
+      if (minVersion) {
+        const version = await getServerVersion(new ServerApi(request));
 
-  pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), minVersion), `Requires PMM Server ${minVersion}+`);
+        testInfo.skip(serverVersionBelow(version, minVersion), `Requires PMM Server ${minVersion}+`);
+      }
+
+      await use(undefined);
+    },
+    { auto: true },
+  ],
 });
 
 export default pmmTest;
