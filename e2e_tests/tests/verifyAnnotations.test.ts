@@ -116,7 +116,7 @@ for (const annotation of annotations) {
 }
 
 pmmTest(
-  'PMM-T878 - Verify user is not able to add an annotation for non-existing node name or service name and without service name @nightly  @dashboards',
+  'PMM-T878 - Verify user is not able to add an annotation for non-existing node name or service name and without service name @nightly  @dashboards @annotations',
   async ({ api, page, servicesPage }) => {
     await page.goto(servicesPage.url);
 
