@@ -124,7 +124,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": "haapi",
       "source_file": "api/ha.api.ts",
@@ -352,7 +352,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "execinpodoptions",
       "source_file": "helpers/k8s.helper.ts",
@@ -364,7 +364,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "logoptions",
       "source_file": "helpers/k8s.helper.ts",
@@ -376,7 +376,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "kubernetespod",
       "source_file": "interfaces/kubernetes.ts",
@@ -388,7 +388,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "kubernetespodresource",
       "source_file": "interfaces/kubernetes.ts",
@@ -400,7 +400,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "kubernetesresourcelist",
       "source_file": "interfaces/kubernetes.ts",
@@ -424,7 +424,7 @@
       "_callable": true,
       "_callable_class": true,
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "nodespage",
       "source_file": "pages/inventory/nodes.page.ts",
@@ -688,7 +688,7 @@
       "label": ".constructor()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "api/ha.api.ts",
@@ -699,7 +699,7 @@
       "label": ".getLeaderFromMetrics()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".getleaderfrommetrics()",
       "source_file": "api/ha.api.ts",
@@ -710,7 +710,7 @@
       "label": ".getLeaderNode()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".getleadernode()",
       "source_file": "api/ha.api.ts",
@@ -721,7 +721,7 @@
       "label": ".getLeaderStatusSum()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".getleaderstatussum()",
       "source_file": "api/ha.api.ts",
@@ -732,7 +732,7 @@
       "label": ".getNodeNames()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".getnodenames()",
       "source_file": "api/ha.api.ts",
@@ -743,7 +743,7 @@
       "label": ".getNodes()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".getnodes()",
       "source_file": "api/ha.api.ts",
@@ -754,7 +754,7 @@
       "label": ".getNodesFromMetrics()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".getnodesfrommetrics()",
       "source_file": "api/ha.api.ts",
@@ -765,7 +765,7 @@
       "label": ".waitForLeaderInMetrics()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".waitforleaderinmetrics()",
       "source_file": "api/ha.api.ts",
@@ -776,7 +776,7 @@
       "label": ".waitForLeaderStatusSum()",
       "_callable": true,
       "_origin": "ast",
-      "community": 20,
+      "community": 19,
       "file_type": "code",
       "norm_label": ".waitforleaderstatussum()",
       "source_file": "api/ha.api.ts",
@@ -2885,7 +2885,7 @@
     {
       "label": "inventory.api.ts",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "inventory.api.ts",
       "source_file": "api/inventory.api.ts",
@@ -2895,7 +2895,7 @@
     {
       "label": "inventory.ts",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "inventory.ts",
       "source_file": "interfaces/inventory.ts",
@@ -2905,7 +2905,7 @@
     {
       "label": "AgentStatus",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "agentstatus",
       "source_file": "interfaces/inventory.ts",
@@ -2925,7 +2925,7 @@
     {
       "label": "GetServices",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "getservices",
       "source_file": "interfaces/inventory.ts",
@@ -2935,7 +2935,7 @@
     {
       "label": "ServiceType",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "servicetype",
       "source_file": "interfaces/inventory.ts",
@@ -2945,7 +2945,7 @@
     {
       "label": "valkeyDashboards.test.ts",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "valkeydashboards.test.ts",
       "source_file": "tests/dashboards/valkey/valkeyDashboards.test.ts",
@@ -2955,7 +2955,7 @@
     {
       "label": "valkeyDashboardNames",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "valkeydashboardnames",
       "source_file": "tests/dashboards/valkey/valkeyDashboards.test.ts",
@@ -3285,7 +3285,7 @@
     {
       "label": "BasePage",
       "_origin": "ast",
-      "community": 19,
+      "community": 23,
       "file_type": "code",
       "norm_label": "basepage",
       "source_file": "pages/base.page.ts",
@@ -3295,7 +3295,7 @@
     {
       "label": ".constructor()",
       "_origin": "ast",
-      "community": 19,
+      "community": 23,
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "pages/base.page.ts",
@@ -3305,7 +3305,7 @@
     {
       "label": ".duplicateCurrentPage()",
       "_origin": "ast",
-      "community": 19,
+      "community": 23,
       "file_type": "code",
       "norm_label": ".duplicatecurrentpage()",
       "source_file": "pages/base.page.ts",
@@ -3315,7 +3315,7 @@
     {
       "label": ".getVariableValues()",
       "_origin": "ast",
-      "community": 19,
+      "community": 23,
       "file_type": "code",
       "norm_label": ".getvariablevalues()",
       "source_file": "pages/base.page.ts",
@@ -3325,7 +3325,7 @@
     {
       "label": ".grafanaIframe()",
       "_origin": "ast",
-      "community": 19,
+      "community": 23,
       "file_type": "code",
       "norm_label": ".grafanaiframe()",
       "source_file": "pages/base.page.ts",
@@ -3335,7 +3335,7 @@
     {
       "label": ".selectTimeRange()",
       "_origin": "ast",
-      "community": 19,
+      "community": 23,
       "file_type": "code",
       "norm_label": ".selecttimerange()",
       "source_file": "pages/base.page.ts",
@@ -3345,7 +3345,7 @@
     {
       "label": ".selectVariableValue()",
       "_origin": "ast",
-      "community": 19,
+      "community": 23,
       "file_type": "code",
       "norm_label": ".selectvariablevalue()",
       "source_file": "pages/base.page.ts",
@@ -3355,7 +3355,7 @@
     {
       "label": ".switchPage()",
       "_origin": "ast",
-      "community": 19,
+      "community": 23,
       "file_type": "code",
       "norm_label": ".switchpage()",
       "source_file": "pages/base.page.ts",
@@ -3375,7 +3375,7 @@
     {
       "label": "HelpPage",
       "_origin": "ast",
-      "community": 19,
+      "community": 8,
       "file_type": "code",
       "norm_label": "helppage",
       "source_file": "pages/helpCenter.page.ts",
@@ -3385,7 +3385,7 @@
     {
       "label": ".clickExternalLink()",
       "_origin": "ast",
-      "community": 19,
+      "community": 8,
       "file_type": "code",
       "norm_label": ".clickexternallink()",
       "source_file": "pages/helpCenter.page.ts",
@@ -3395,7 +3395,7 @@
     {
       "label": ".exportLogs()",
       "_origin": "ast",
-      "community": 19,
+      "community": 8,
       "file_type": "code",
       "norm_label": ".exportlogs()",
       "source_file": "pages/helpCenter.page.ts",
@@ -3415,7 +3415,7 @@
     {
       "label": "PortalRemoval",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "portalremoval",
       "source_file": "pages/portalRemoval.page.ts",
@@ -3425,7 +3425,7 @@
     {
       "label": ".openAdvancedSettings()",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": ".openadvancedsettings()",
       "source_file": "pages/portalRemoval.page.ts",
@@ -3965,7 +3965,7 @@
     {
       "label": "realtimeanalytics.api.ts",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "realtimeanalytics.api.ts",
       "source_file": "api/realtimeanalytics.api.ts",
@@ -3985,7 +3985,7 @@
     {
       "label": "settings.api.ts",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "settings.api.ts",
       "source_file": "api/settings.api.ts",
@@ -3995,7 +3995,7 @@
     {
       "label": "SettingsResponse",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "settingsresponse",
       "source_file": "api/settings.api.ts",
@@ -4005,7 +4005,7 @@
     {
       "label": "apiEndpoints.ts",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "apiendpoints.ts",
       "source_file": "helpers/apiEndpoints.ts",
@@ -4015,7 +4015,7 @@
     {
       "label": "apiEndpoints",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "apiendpoints",
       "source_file": "helpers/apiEndpoints.ts",
@@ -4035,7 +4035,7 @@
     {
       "label": "mocks.helper.ts",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "mocks.helper.ts",
       "source_file": "helpers/mocks.helper.ts",
@@ -4285,7 +4285,7 @@
     {
       "label": "advancedSettings.test.ts",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "advancedsettings.test.ts",
       "source_file": "tests/ha/advancedSettings.test.ts",
@@ -4295,7 +4295,7 @@
     {
       "label": "portalRemoval.test.ts",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "portalremoval.test.ts",
       "source_file": "tests/portalRemoval.test.ts",
@@ -4305,7 +4305,7 @@
     {
       "label": "CliHelper",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": "clihelper",
       "source_file": "helpers/cli.helper.ts",
@@ -4315,7 +4315,7 @@
     {
       "label": ".createFile()",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": ".createfile()",
       "source_file": "helpers/cli.helper.ts",
@@ -4325,7 +4325,7 @@
     {
       "label": ".execSilent()",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": ".execsilent()",
       "source_file": "helpers/cli.helper.ts",
@@ -4335,7 +4335,7 @@
     {
       "label": ".execute()",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": ".execute()",
       "source_file": "helpers/cli.helper.ts",
@@ -4345,7 +4345,7 @@
     {
       "label": ".getMetrics()",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": ".getmetrics()",
       "source_file": "helpers/cli.helper.ts",
@@ -4355,7 +4355,7 @@
     {
       "label": "VacuumDashboard",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": "vacuumdashboard",
       "source_file": "pages/dashboards/postgresql/vacuumDashboard.ts",
@@ -4365,7 +4365,7 @@
     {
       "label": ".vacuumAnalyzeTables()",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": ".vacuumanalyzetables()",
       "source_file": "pages/dashboards/postgresql/vacuumDashboard.ts",
@@ -4375,7 +4375,7 @@
     {
       "label": ".waitForLastAnalyzeValues()",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": ".waitforlastanalyzevalues()",
       "source_file": "pages/dashboards/postgresql/vacuumDashboard.ts",
@@ -4385,7 +4385,7 @@
     {
       "label": ".waitForLastVacuumValues()",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": ".waitforlastvacuumvalues()",
       "source_file": "pages/dashboards/postgresql/vacuumDashboard.ts",
@@ -4395,7 +4395,7 @@
     {
       "label": ".waitForValidDate()",
       "_origin": "ast",
-      "community": 23,
+      "community": 22,
       "file_type": "code",
       "norm_label": ".waitforvaliddate()",
       "source_file": "pages/dashboards/postgresql/vacuumDashboard.ts",
@@ -4685,7 +4685,7 @@
     {
       "label": "screenshots.global-setup.ts",
       "_origin": "ast",
-      "community": 21,
+      "community": 20,
       "file_type": "code",
       "norm_label": "screenshots.global-setup.ts",
       "source_file": "tests/standalone/screenshots.global-setup.ts",
@@ -5185,7 +5185,7 @@
     {
       "label": "data()",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "data()",
       "source_file": "fixtures/dataTest.ts",
@@ -5195,7 +5195,7 @@
     {
       "label": "mysqlApi.test.ts",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "mysqlapi.test.ts",
       "source_file": "tests/api/mysql/mysqlApi.test.ts",
@@ -5205,7 +5205,7 @@
     {
       "label": "metrics",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "code",
       "norm_label": "metrics",
       "source_file": "tests/api/mysql/mysqlApi.test.ts",
@@ -5215,7 +5215,7 @@
     {
       "label": "TODO: After upgrade to MySQL 8.4 metrics will be:",
       "_origin": "ast",
-      "community": 22,
+      "community": 21,
       "file_type": "rationale",
       "norm_label": "todo: after upgrade to mysql 8.4 metrics will be:",
       "source_file": "tests/api/mysql/mysqlApi.test.ts",
@@ -5225,7 +5225,7 @@
     {
       "label": "url.helper.ts",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "url.helper.ts",
       "source_file": "helpers/url.helper.ts",
@@ -5235,7 +5235,7 @@
     {
       "label": "BuildUrlParameters",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "buildurlparameters",
       "source_file": "helpers/url.helper.ts",
@@ -5245,7 +5245,7 @@
     {
       "label": "UrlHelper",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "urlhelper",
       "source_file": "helpers/url.helper.ts",
@@ -5255,7 +5255,7 @@
     {
       "label": ".buildUrlWithParameters()",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": ".buildurlwithparameters()",
       "source_file": "helpers/url.helper.ts",
@@ -6355,7 +6355,7 @@
     {
       "label": "cli.helper.ts",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "cli.helper.ts",
       "source_file": "helpers/cli.helper.ts",
@@ -6365,7 +6365,7 @@
     {
       "label": "getMetrics",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "getmetrics",
       "source_file": "helpers/cli.helper.ts",
@@ -6375,7 +6375,7 @@
     {
       "label": "k8s.helper.ts",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "k8s.helper.ts",
       "source_file": "helpers/k8s.helper.ts",
@@ -6385,7 +6385,7 @@
     {
       "label": "execReturn.ts",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "execreturn.ts",
       "source_file": "interfaces/execReturn.ts",
@@ -6395,7 +6395,7 @@
     {
       "label": "ExecReturn",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "execreturn",
       "source_file": "interfaces/execReturn.ts",
@@ -6405,7 +6405,7 @@
     {
       "label": ".assertSuccess()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".assertsuccess()",
       "source_file": "interfaces/execReturn.ts",
@@ -6415,7 +6415,7 @@
     {
       "label": ".constructor()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".constructor()",
       "source_file": "interfaces/execReturn.ts",
@@ -6425,7 +6425,7 @@
     {
       "label": ".exitCodeEquals()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".exitcodeequals()",
       "source_file": "interfaces/execReturn.ts",
@@ -6435,7 +6435,7 @@
     {
       "label": ".getErrors()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".geterrors()",
       "source_file": "interfaces/execReturn.ts",
@@ -6445,7 +6445,7 @@
     {
       "label": ".getStdOutLines()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".getstdoutlines()",
       "source_file": "interfaces/execReturn.ts",
@@ -6455,7 +6455,7 @@
     {
       "label": ".logError()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".logerror()",
       "source_file": "interfaces/execReturn.ts",
@@ -6465,7 +6465,7 @@
     {
       "label": ".outContains()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".outcontains()",
       "source_file": "interfaces/execReturn.ts",
@@ -6475,7 +6475,7 @@
     {
       "label": ".outContainsMany()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".outcontainsmany()",
       "source_file": "interfaces/execReturn.ts",
@@ -6485,7 +6485,7 @@
     {
       "label": ".outContainsNormalizedMany()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".outcontainsnormalizedmany()",
       "source_file": "interfaces/execReturn.ts",
@@ -6495,7 +6495,7 @@
     {
       "label": ".outEquals()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".outequals()",
       "source_file": "interfaces/execReturn.ts",
@@ -6505,7 +6505,7 @@
     {
       "label": ".outNotContains()",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": ".outnotcontains()",
       "source_file": "interfaces/execReturn.ts",
@@ -6515,7 +6515,7 @@
     {
       "label": "kubernetes.ts",
       "_origin": "ast",
-      "community": 8,
+      "community": 9,
       "file_type": "code",
       "norm_label": "kubernetes.ts",
       "source_file": "interfaces/kubernetes.ts",
@@ -6525,7 +6525,7 @@
     {
       "label": "dataTest.ts",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "datatest.ts",
       "source_file": "fixtures/dataTest.ts",
@@ -6535,7 +6535,7 @@
     {
       "label": "pmmTestDataType",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "pmmtestdatatype",
       "source_file": "fixtures/dataTest.ts",
@@ -6545,7 +6545,7 @@
     {
       "label": "credentials.helper.ts",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "credentials.helper.ts",
       "source_file": "helpers/credentials.helper.ts",
@@ -6555,7 +6555,7 @@
     {
       "label": "Credentials",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "credentials",
       "source_file": "helpers/credentials.helper.ts",
@@ -6575,7 +6575,7 @@
     {
       "label": "SettingsPage",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "settingspage",
       "source_file": "pages/ha/settings.page.ts",
@@ -6585,7 +6585,7 @@
     {
       "label": ".enableToggleAndApplyChanges()",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": ".enabletoggleandapplychanges()",
       "source_file": "pages/ha/settings.page.ts",
@@ -6595,7 +6595,7 @@
     {
       "label": "AgentsPage",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "agentspage",
       "source_file": "pages/inventory/agents.page.ts",
@@ -6605,7 +6605,7 @@
     {
       "label": ".verifyRTAAgentStatus()",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": ".verifyrtaagentstatus()",
       "source_file": "pages/inventory/agents.page.ts",
@@ -6615,7 +6615,7 @@
     {
       "label": "nodes.page.ts",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "nodes.page.ts",
       "source_file": "pages/inventory/nodes.page.ts",
@@ -6625,7 +6625,7 @@
     {
       "label": "services.page.ts",
       "_origin": "ast",
-      "community": 9,
+      "community": 23,
       "file_type": "code",
       "norm_label": "services.page.ts",
       "source_file": "pages/inventory/services.page.ts",
@@ -6635,7 +6635,7 @@
     {
       "label": "ServicesPage",
       "_origin": "ast",
-      "community": 9,
+      "community": 23,
       "file_type": "code",
       "norm_label": "servicespage",
       "source_file": "pages/inventory/services.page.ts",
@@ -6655,7 +6655,7 @@
     {
       "label": "TourPage",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": "tourpage",
       "source_file": "pages/tour.page.ts",
@@ -6665,7 +6665,7 @@
     {
       "label": ".getStepTitle()",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": ".getsteptitle()",
       "source_file": "pages/tour.page.ts",
@@ -6675,7 +6675,7 @@
     {
       "label": ".navigateForward()",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "file_type": "code",
       "norm_label": ".navigateforward()",
       "source_file": "pages/tour.page.ts",
@@ -7011,9 +7011,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page",
       "community": 1,
-      "norm_label": "realtimeanalytics.page.ts"
+      "norm_label": "realtimeanalytics.page.ts",
+      "id": "pages_qan_rta_realtimeanalytics_page"
     },
     {
       "label": "RealTimeAnalyticsPage",
@@ -7021,9 +7021,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L9",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
       "community": 10,
-      "norm_label": "realtimeanalyticspage"
+      "norm_label": "realtimeanalyticspage",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage"
     },
     {
       "label": ".clickElapsedTimeHeader()",
@@ -7031,9 +7031,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L81",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickelapsedtimeheader",
       "community": 10,
-      "norm_label": ".clickelapsedtimeheader()"
+      "norm_label": ".clickelapsedtimeheader()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickelapsedtimeheader"
     },
     {
       "label": ".clickHostHeader()",
@@ -7041,9 +7041,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L85",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickhostheader",
       "community": 10,
-      "norm_label": ".clickhostheader()"
+      "norm_label": ".clickhostheader()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickhostheader"
     },
     {
       "label": ".clickQueryTextHeader()",
@@ -7051,9 +7051,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L89",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickquerytextheader",
       "community": 10,
-      "norm_label": ".clickquerytextheader()"
+      "norm_label": ".clickquerytextheader()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickquerytextheader"
     },
     {
       "label": ".filterQueriesByText()",
@@ -7061,9 +7061,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L93",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_filterqueriesbytext",
       "community": 10,
-      "norm_label": ".filterqueriesbytext()"
+      "norm_label": ".filterqueriesbytext()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_filterqueriesbytext"
     },
     {
       "label": ".getApiRequestCount()",
@@ -7071,9 +7071,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L104",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getapirequestcount",
       "community": 10,
-      "norm_label": ".getapirequestcount()"
+      "norm_label": ".getapirequestcount()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getapirequestcount"
     },
     {
       "label": ".getElapsedTimeForQueryByRow()",
@@ -7081,9 +7081,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L121",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getelapsedtimeforquerybyrow",
       "community": 10,
-      "norm_label": ".getelapsedtimeforquerybyrow()"
+      "norm_label": ".getelapsedtimeforquerybyrow()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getelapsedtimeforquerybyrow"
     },
     {
       "label": ".getElapsedTimeForQueryByText()",
@@ -7091,9 +7091,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L130",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getelapsedtimeforquerybytext",
       "community": 10,
-      "norm_label": ".getelapsedtimeforquerybytext()"
+      "norm_label": ".getelapsedtimeforquerybytext()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getelapsedtimeforquerybytext"
     },
     {
       "label": ".getOperationIdByRow()",
@@ -7101,9 +7101,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L139",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getoperationidbyrow",
       "community": 10,
-      "norm_label": ".getoperationidbyrow()"
+      "norm_label": ".getoperationidbyrow()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getoperationidbyrow"
     },
     {
       "label": ".getUrlWithServices()",
@@ -7111,9 +7111,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L145",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_geturlwithservices",
       "community": 10,
-      "norm_label": ".geturlwithservices()"
+      "norm_label": ".geturlwithservices()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_geturlwithservices"
     },
     {
       "label": ".openDetailsForRow()",
@@ -7121,9 +7121,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L159",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_opendetailsforrow",
       "community": 10,
-      "norm_label": ".opendetailsforrow()"
+      "norm_label": ".opendetailsforrow()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_opendetailsforrow"
     },
     {
       "label": ".openFilters()",
@@ -7131,9 +7131,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L164",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfilters",
       "community": 10,
-      "norm_label": ".openfilters()"
+      "norm_label": ".openfilters()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfilters"
     },
     {
       "label": ".openFiltersIfHidden()",
@@ -7141,9 +7141,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L168",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfiltersifhidden",
       "community": 10,
-      "norm_label": ".openfiltersifhidden()"
+      "norm_label": ".openfiltersifhidden()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfiltersifhidden"
     },
     {
       "label": ".selectClusterService()",
@@ -7151,9 +7151,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L174",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_selectclusterservice",
       "community": 10,
-      "norm_label": ".selectclusterservice()"
+      "norm_label": ".selectclusterservice()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_selectclusterservice"
     },
     {
       "label": ".stopAllSessions()",
@@ -7161,9 +7161,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L180",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_stopallsessions",
       "community": 10,
-      "norm_label": ".stopallsessions()"
+      "norm_label": ".stopallsessions()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_stopallsessions"
     },
     {
       "label": ".verifyRequestInterval()",
@@ -7171,9 +7171,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L187",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_verifyrequestinterval",
       "community": 10,
-      "norm_label": ".verifyrequestinterval()"
+      "norm_label": ".verifyrequestinterval()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_verifyrequestinterval"
     },
     {
       "label": ".apiRequest()",
@@ -7181,9 +7181,9 @@
       "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
       "source_location": "L227",
       "_origin": "ast",
-      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_apirequest",
       "community": 10,
-      "norm_label": ".apirequest()"
+      "norm_label": ".apirequest()",
+      "id": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_apirequest"
     },
     {
       "label": "overview.test.ts",
@@ -7191,9 +7191,9 @@
       "source_file": "tests/qan/rta/overview.test.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "tests_qan_rta_overview_test",
       "community": 59,
-      "norm_label": "overview.test.ts"
+      "norm_label": "overview.test.ts",
+      "id": "tests_qan_rta_overview_test"
     }
   ],
   "links": [
@@ -23943,9 +23943,9 @@
       "source_location": "L9",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage"
     },
     {
       "relation": "method",
@@ -23954,9 +23954,9 @@
       "source_location": "L227",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_apirequest",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_apirequest"
     },
     {
       "relation": "method",
@@ -23965,9 +23965,9 @@
       "source_location": "L81",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickelapsedtimeheader",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickelapsedtimeheader"
     },
     {
       "relation": "method",
@@ -23976,9 +23976,9 @@
       "source_location": "L85",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickhostheader",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickhostheader"
     },
     {
       "relation": "method",
@@ -23987,9 +23987,9 @@
       "source_location": "L89",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickquerytextheader",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_clickquerytextheader"
     },
     {
       "relation": "method",
@@ -23998,9 +23998,9 @@
       "source_location": "L93",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_filterqueriesbytext",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_filterqueriesbytext"
     },
     {
       "relation": "method",
@@ -24009,9 +24009,9 @@
       "source_location": "L104",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getapirequestcount",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getapirequestcount"
     },
     {
       "relation": "method",
@@ -24020,9 +24020,9 @@
       "source_location": "L121",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getelapsedtimeforquerybyrow",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getelapsedtimeforquerybyrow"
     },
     {
       "relation": "method",
@@ -24031,9 +24031,9 @@
       "source_location": "L130",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getelapsedtimeforquerybytext",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getelapsedtimeforquerybytext"
     },
     {
       "relation": "method",
@@ -24042,9 +24042,9 @@
       "source_location": "L139",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getoperationidbyrow",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getoperationidbyrow"
     },
     {
       "relation": "method",
@@ -24053,9 +24053,9 @@
       "source_location": "L145",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_geturlwithservices",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_geturlwithservices"
     },
     {
       "relation": "method",
@@ -24064,9 +24064,9 @@
       "source_location": "L159",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_opendetailsforrow",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_opendetailsforrow"
     },
     {
       "relation": "method",
@@ -24075,9 +24075,9 @@
       "source_location": "L164",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfilters",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfilters"
     },
     {
       "relation": "method",
@@ -24086,9 +24086,9 @@
       "source_location": "L168",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfiltersifhidden",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfiltersifhidden"
     },
     {
       "relation": "method",
@@ -24097,9 +24097,9 @@
       "source_location": "L174",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_selectclusterservice",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_selectclusterservice"
     },
     {
       "relation": "method",
@@ -24108,9 +24108,9 @@
       "source_location": "L180",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_stopallsessions",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_stopallsessions"
     },
     {
       "relation": "method",
@@ -24119,9 +24119,9 @@
       "source_location": "L187",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_verifyrequestinterval",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_verifyrequestinterval"
     },
     {
       "relation": "calls",
@@ -24131,9 +24131,9 @@
       "source_location": "L97",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_filterqueriesbytext",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfilters",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfilters"
     },
     {
       "relation": "calls",
@@ -24143,9 +24143,9 @@
       "source_location": "L108",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_getapirequestcount",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_apirequest",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_apirequest"
     },
     {
       "relation": "calls",
@@ -24155,9 +24155,9 @@
       "source_location": "L170",
       "weight": 1.0,
       "_origin": "ast",
+      "confidence_score": 1.0,
       "source": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfiltersifhidden",
-      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfilters",
-      "confidence_score": 1.0
+      "target": "pages_qan_rta_realtimeanalytics_page_realtimeanalyticspage_openfilters"
     }
   ],
   "hyperedges": [
@@ -24191,5 +24191,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "38efa6bd5cad16b5cb8768e0682bb7fb7529cc57"
+  "built_at_commit": "7f7f5e2c7211f72e3cb0e199292a1970163a58b6"
 }
