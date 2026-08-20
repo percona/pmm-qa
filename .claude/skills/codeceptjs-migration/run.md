@@ -15,6 +15,7 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - Never edit `e2e_tests/.env` during migration. Use `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin` unless the local provisioning command selected different values, and pass the same pair to every review and execution command.
 - For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
 - Once step 3's provisioning command starts, if the workflow stops before the runner is invoked (including a provisioning failure or an exhausted writer/reviewer loop), the parent runs `node provisioning/setup.ts --teardown` before stopping. The runner owns cleanup for every path it reaches in step 8.
+- After each subagent phase (writer, provisioning, reviewer, runner) completes, invoke the `skill-gardener` skill in Capture mode against that step's observable actions before moving to the next phase. This is in addition to, not a replacement for, the automated post-skill review pass that fires once the whole `codeceptjs-migration` skill call ends.
 
 ## 1. Select and prepare
 
@@ -24,7 +25,7 @@ Before selecting a row, check the tracker for drift against the filesystem: list
 
 Select the first `pending` tracker row that is not in B13. Always skip B13 rows. Refresh and commit only `e2e_tests/graphify-out/`, then change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight and branch commands.
 
-Create the dedicated migration branch from the refreshed control branch after both control-only commits. Do not begin migration work until the control merge and target graph refresh are complete.
+Create the dedicated migration branch from `origin/main` after both control-only commits are made on control. Do not begin migration work until the control merge and both graph refreshes are complete.
 
 ## Test-run mode
 
@@ -141,8 +142,9 @@ Run `node provisioning/setup.ts --teardown` on every terminal path after provisi
 pending
 -> merge main into control
 -> refresh target graph on control
+-> refresh source graph on control
 -> in-progress
--> create migration branch from control
+-> create migration branch from origin/main
 -> refreshed graph discovery (read-only)
 -> migration
 -> provision once

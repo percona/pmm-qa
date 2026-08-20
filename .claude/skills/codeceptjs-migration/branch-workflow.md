@@ -1,6 +1,6 @@
 # Branch and PR Workflow
 
-Migration code is created on a dedicated branch from the refreshed control branch. The PR targets `main`.
+Migration code is created on a dedicated branch from `origin/main`. The PR targets `main`.
 
 ## Control branch preflight
 
@@ -12,7 +12,7 @@ git fetch origin main
 git merge origin/main
 ```
 
-Refresh only the Playwright target graph from `e2e_tests/`:
+Refresh the Playwright target graph from `e2e_tests/`:
 
 ```bash
 cd e2e_tests
@@ -23,7 +23,18 @@ git add e2e_tests/graphify-out/
 git commit -m "chore(graphify): refresh Playwright graph"
 ```
 
-If the refresh produces no changes, do not create an empty commit. Keep this graph commit on the control branch; it must not appear in the migration PR. Never regenerate `codeceptjs-e2e/graphify-out/`.
+Then refresh the CodeceptJS source graph from `codeceptjs-e2e/`:
+
+```bash
+cd codeceptjs-e2e
+graphify . --update
+find graphify-out -type f ! -name graph.json ! -name manifest.json -delete
+cd ..
+git add codeceptjs-e2e/graphify-out/
+git commit -m "chore(graphify): refresh CodeceptJS graph"
+```
+
+If a refresh produces no changes, do not create an empty commit for it. Keep both graph commits on the control branch; they must not appear in the migration PR. Refresh both graphs only during control preflight, before the migration branch exists. Never regenerate either graph during writer/reviewer/runner work.
 
 ## Migration branch
 
@@ -33,16 +44,17 @@ Recommended name:
 migrate-<category>-<test-name>
 ```
 
-On control, change the selected tracker row to `in-progress` and commit that tracker-only change. Then create the migration branch from the refreshed control branch:
+On control, change the selected tracker row to `in-progress` and commit that tracker-only change. Then create the migration branch from `origin/main`, not from control:
 
 ```bash
 git switch <control-branch>
 git add .claude/skills/codeceptjs-migration/tracker.md
 git commit -m "chore(migration): mark <test-name> in progress"
-git switch -c migrate-<category>-<test-name>
+git fetch origin main
+git switch -c migrate-<category>-<test-name> origin/main
 ```
 
-The control branch owns tracker and target-graph maintenance. The migration branch owns only migration code, source retirement, and required Playwright workflow changes.
+The control branch owns tracker and graph maintenance and never lends its history to a migration branch. The migration branch starts clean from `origin/main` and owns only migration code, source retirement, and required Playwright workflow changes.
 
 ## Before publication
 
@@ -91,11 +103,11 @@ git add <migration-related-files>
 git commit -m "migrate(<category>): <test-name> to Playwright"
 ```
 
-Before pushing, rebase only the migration commits onto current `origin/main`. Using the control branch as the old-base boundary excludes its graph and tracker commits from the PR:
+Before pushing, catch up with `origin/main` in case it moved since the branch was cut:
 
 ```bash
 git fetch origin main
-git rebase --onto origin/main <control-branch> migrate-<category>-<test-name>
+git rebase origin/main
 git diff --check
 git diff --name-only origin/main...HEAD
 ```

@@ -1,32 +1,38 @@
 # Graphify Discovery
 
-Refresh the Playwright target graph on control before creating a migration branch, then use both Graphify artifacts read-only during migration.
+Refresh both the CodeceptJS source graph and the Playwright target graph on control before creating a migration branch, then use both Graphify artifacts read-only during migration.
 
 ## Graph artifacts (read-only during migration)
 
 ```text
-codeceptjs-e2e/graphify-out/graph.json   # source side - always read only
-e2e_tests/graphify-out/graph.json        # target side - refreshed on control before migration
+codeceptjs-e2e/graphify-out/graph.json   # source side - refreshed on control during preflight; read-only during migration
+e2e_tests/graphify-out/graph.json        # target side - refreshed on control during preflight; read-only during migration
 ```
 
-## Pre-migration target graph update
+## Pre-migration graph updates
 
-After merging `origin/main` into control and before creating the migration branch, perform one incremental update of the target graph:
+After merging `origin/main` into control and before creating the migration branch, perform one incremental update of each graph:
 
 ```bash
 cd e2e_tests
 graphify . --update
 find graphify-out -type f ! -name graph.json ! -name manifest.json -delete
+cd ..
+
+cd codeceptjs-e2e
+graphify . --update
+find graphify-out -type f ! -name graph.json ! -name manifest.json -delete
+cd ..
 ```
 
-- Run from `e2e_tests/` so output stays in `e2e_tests/graphify-out/`.
+- Run each from its own root (`e2e_tests/` or `codeceptjs-e2e/`) so output stays in that directory's `graphify-out/`.
 - Use `--update` only.
 - Keep only `graph.json` and `manifest.json`; delete generated reports, HTML, and `.graphify_*` sidecars.
-- Commit only updated `e2e_tests/graphify-out/` files on control.
-- Never regenerate the CodeceptJS source graph.
-- Create the migration branch from the refreshed control commit.
+- Commit each graph's updated files on control in its own commit.
+- Refresh once on control during preflight; never regenerate either graph during migration (see "Read-only during migration").
+- Create the migration branch from `origin/main`, not from control.
 
-The publication rebase in `branch-workflow.md` excludes this control-only graph commit from the migration PR.
+Both graph commits stay on control only; since the migration branch is cut from `origin/main`, neither commit ever reaches the migration PR.
 
 ## Read-only during migration
 
