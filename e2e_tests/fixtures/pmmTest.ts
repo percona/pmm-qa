@@ -16,10 +16,14 @@ import PortalRemoval from '@pages/portalRemoval.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
+import RemoteInstancesPage from '@pages/inventory/remoteInstances.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
+import AgentHelper from '@helpers/agent.helper';
+import PgsqlHelper from '@helpers/pgsql.helper';
 import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
+import PostgresqlInstanceSummary from '@pages/dashboards/postgresql/postgresqlInstanceSummary';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
@@ -30,6 +34,7 @@ import { minPmmVersion } from '@helpers/versionGates';
 
 const pmmTest = base.extend<{
   settingsPage: SettingsPage;
+  agentHelper: AgentHelper;
   agentsPage: AgentsPage;
   cliHelper: CliHelper;
   credentials: Credentials;
@@ -40,6 +45,8 @@ const pmmTest = base.extend<{
   k8sHelper: K8sHelper;
   mongoDbHelper: MongoDBHelper;
   api: Api;
+  pgsqlHelper: PgsqlHelper;
+  postgresqlInstanceSummaryDashboard: PostgresqlInstanceSummary;
   qanStoredMetrics: QanStoredMetrics;
   urlHelper: UrlHelper;
   helpPage: HelpPage;
@@ -51,10 +58,12 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  remoteInstancesPage: RemoteInstancesPage;
   vacuumDashboardPage: VacuumDashboard;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
 }>({
+  agentHelper: async ({}, use) => await use(new AgentHelper()),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
@@ -138,11 +147,13 @@ const pmmTest = base.extend<{
     await use(mongoDbHelper);
   },
   nodesPage: async ({ page }, use) => await use(new NodesPage(page)),
+  pgsqlHelper: async ({}, use) => await use(new PgsqlHelper()),
   portalRemoval: async ({ page }, use) => {
     const portalRemoval = new PortalRemoval(page);
 
     await use(portalRemoval);
   },
+  postgresqlInstanceSummaryDashboard: async ({}, use) => await use(new PostgresqlInstanceSummary()),
   qanStoredMetrics: async ({ page }, use) => {
     const qanStoredMetrics = new QanStoredMetrics(page);
 
@@ -154,6 +165,7 @@ const pmmTest = base.extend<{
     await use(queryAnalytics);
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
+  remoteInstancesPage: async ({ page }, use) => await use(new RemoteInstancesPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
   settingsPage: async ({ page }, use) => await use(new SettingsPage(page)),
   tour: async ({ page }, use) => {
@@ -175,7 +187,10 @@ pmmTest.beforeEach(async ({ api }, testInfo) => {
   const minVersion = testId ? minPmmVersion[testId] : undefined;
   if (!minVersion) return;
 
-  pmmTest.skip(serverVersionBelow(await api.serverApi.getPmmVersion(), minVersion), `Requires PMM Server ${minVersion}+`);
+  pmmTest.skip(
+    serverVersionBelow(await api.serverApi.getPmmVersion(), minVersion),
+    `Requires PMM Server ${minVersion}+`,
+  );
 });
 
 export default pmmTest;

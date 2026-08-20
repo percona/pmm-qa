@@ -102,6 +102,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
+- `@pgsm-pmm-integration`
 - `@pmm-valkey-integration`
 - `@post-release`
 - `@rta`

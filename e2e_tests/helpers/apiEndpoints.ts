@@ -18,6 +18,7 @@ const apiEndpoints = {
     status: '/v1/ha/status',
   },
   inventory: {
+    agents: '/v1/inventory/agents',
     services: '/v1/inventory/services',
   },
   management: {
@@ -30,6 +31,9 @@ const apiEndpoints = {
     // The Grafana datasource proxy, not PMM's /prometheus route - see PrometheusApi.
     datasourceProxy: '/graph/api/datasources/proxy/uid',
     datasources: '/graph/api/datasources',
+  },
+  qan: {
+    getMetrics: '/v1/qan:getMetrics',
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',

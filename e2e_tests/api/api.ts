@@ -2,6 +2,7 @@ import InventoryApi from './inventory.api';
 import { APIRequestContext, Page } from '@playwright/test';
 import BackupsApi from '@api/backups.api';
 import GrafanaApi from '@api/grafana.api';
+import QanApi from '@api/qan.api';
 import RealTimeAnalyticsApi from '@api/realtimeanalytics.api';
 import SettingsApi from '@api/settings.api';
 import AccessControlApi from '@api/accessControl.api';
@@ -18,6 +19,7 @@ export default class Api {
   readonly haApi: HaApi;
   readonly inventoryApi: InventoryApi;
   readonly prometheusApi: PrometheusApi;
+  readonly qanApi: QanApi;
   readonly realTimeAnalyticsApi: RealTimeAnalyticsApi;
   readonly serverApi: ServerApi;
   readonly settingsApi: SettingsApi;
@@ -30,6 +32,7 @@ export default class Api {
     this.inventoryApi = new InventoryApi(request);
     this.prometheusApi = new PrometheusApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
+    this.qanApi = new QanApi(request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
     this.settingsApi = new SettingsApi(request);
     this.serverApi = new ServerApi(request);

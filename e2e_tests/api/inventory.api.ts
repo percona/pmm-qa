@@ -3,8 +3,27 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
+export interface AgentInventoryDetails {
+  agent_id?: string;
+  log_level?: string;
+  status?: string;
+}
+
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
+
+  getAgentById = async (agentId: string): Promise<Record<string, AgentInventoryDetails>> => {
+    const response = await this.request.get(`${apiEndpoints.inventory.agents}/${agentId}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(
+      response.status(),
+      `Get agent ${agentId} returned status code: ${response.status()} (${response.statusText()})`,
+    ).toEqual(200);
+
+    return (await response.json()) as Record<string, AgentInventoryDetails>;
+  };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
