@@ -17,7 +17,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   const mysqldExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
-    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_replication`).stdout.trim();
+    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_replication | grep _1`).stdout.trim();
     serviceName = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1 | awk -F' ' '{print $2}'`,
