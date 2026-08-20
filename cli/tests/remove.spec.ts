@@ -9,9 +9,6 @@ const services = ['mysql', 'mongodb', 'postgresql', 'proxysql', 'external', 'hap
 
 test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@service-removal' }, () => {
   test.beforeAll(async () => {
-    // The hook's own timeout defaults to the 120s test timeout, but the retries below
-    // can, worst case, run for the status wait (60s) plus 12 registrations x 30s each.
-    // Give the hook enough room to honour that budget instead of being cut off mid-retry.
     test.setTimeout(600_000);
     const startCommand = `PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE} PMM_CLIENT_IMAGE=${PMM_CLIENT_IMAGE} docker compose -f test-setup/docker-compose-pmm-admin-remove.yml up -d`;
     await cli.exec(startCommand);
@@ -35,13 +32,6 @@ test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@
       );
     }
 
-    // `pmm-admin status` reporting the agent as connected does not guarantee the next
-    // `add` will land: there is a short window right after the agent connects where an
-    // add fails with "pmm-agent is not connected to PMM Server". That failure registers
-    // nothing, so retrying until it succeeds is safe and leaves the node with exactly the
-    // two services per type the assertions below depend on. Without it a lost race leaves
-    // a single service of some type, and `remove <type>` then removes it instead of
-    // failing, breaking the first assertion.
     for (const addCommand of addCommands) {
       await expect(async () => {
         const output = await cli.exec(addCommand);
