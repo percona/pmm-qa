@@ -63,13 +63,14 @@ export default class CliHelper {
   getMetrics = (options: getMetrics): string => {
     let { agentPassword, agentUser } = options;
     const prefix = options.dockerContainer ? `docker exec ${options.dockerContainer} ` : '';
-    const adminList = this.execute(`${prefix || 'sudo '}pmm-admin list`)
+    const adminList = this.execSilent(`${prefix || 'sudo '}pmm-admin list`)
       .assertSuccess()
       .getStdOutLines();
+
     // Get the last item in the split result
     const serviceId: string =
       adminList
-        .find((item: string | string[]) => item.includes(options.serviceName))
+        .find((item: string | string[]) => String(item).trim().split(/\s+/).includes(options.serviceName))
         ?.trim()
         .split(' ')
         .pop() ?? '';
@@ -102,8 +103,25 @@ export default class CliHelper {
       );
     }
 
-    return this.execute(
+    return this.execSilent(
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
+  };
+
+  createTlsCertificates = (containerName: string): void => {
+    const prefix = `docker exec ${containerName}`;
+    const commands = [
+      `${prefix} apt install -y git`,
+      `${prefix} mkdir -p /certs`,
+      `${prefix} git clone https://github.com/OpenVPN/easy-rsa.git /easy-rsa`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki init-pki`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-cn=Percona --batch build-ca nopass`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full pmm-server nopass`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=server --subject-alt-name=DNS:${containerName} --batch build-server-full ${containerName} nopass`,
+      `${prefix} /easy-rsa/easyrsa3/easyrsa --pki-dir=/easy-rsa/easyrsa3/pki --req-ou=client --batch build-client-full pmm-test nopass`,
+      `${prefix} openssl dhparam -out /certs/dhparam.pem 2048`,
+    ];
+
+    commands.forEach((command) => this.execSilent(command).assertSuccess());
   };
 }
