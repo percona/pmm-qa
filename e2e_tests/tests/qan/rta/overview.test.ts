@@ -207,10 +207,10 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
     await expect(queryAnalytics.rta.buttons.export).toBeHidden();
   });
 
-  await pmmTest.step('Pause RTA, filter rows, and sort by host', async () => {
+  await pmmTest.step('Filter rows, pause RTA, and sort by host', async () => {
+    await queryAnalytics.rta.filterQueriesByText('db.runCommand');
     await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
     await expect(queryAnalytics.rta.buttons.export).toBeVisible();
-    await queryAnalytics.rta.filterQueriesByText('db.runCommand');
     await queryAnalytics.rta.clickHostHeader();
     await expect(queryAnalytics.rta.elements.realTimeTableRow.first()).toBeVisible();
   });
