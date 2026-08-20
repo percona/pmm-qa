@@ -178,6 +178,29 @@ above, don't assume `image.repository`/`image.tag`. Get the FB server image (rep
 tag) from the latest JNKPercona comment on the ticket's linked `pmm-submodules` PR
 (`fb-tests` skill), the same source single-VM runs use.
 
+### Scaling replicas — Helm, not `kubectl scale`
+
+`kubectl scale` changes the replica count but leaves the rendered manifest alone: the
+pods keep their old spec and `PMM_HA_PEERS` still names every original replica. Anything
+keyed to that peer list (stale-node cleanup, expected-node counts) therefore never sees
+the change. Drive replica counts through Helm, which re-renders the peer list and rolls
+every pod:
+
+```bash
+helm upgrade pmm-ha /tmp/phc/charts/pmm-ha -n pmm --reuse-values --set replicas=<n>
+kubectl rollout status statefulset/pmm-ha -n pmm --timeout=20m
+```
+
+Don't add `--wait`: the chart bundles a `prometheus-node-exporter` DaemonSet that can't
+schedule on every managed cluster (host-port conflict, node affinity), and one Pending
+pod holds the release open until it times out — leaving it `pending-upgrade`, which
+blocks the next upgrade until it reaches a terminal state. `kubectl rollout status` is
+the readiness signal that matters.
+
+`kubectl scale` still models one thing Helm can't: a replica that vanished *without* a
+config change, as a crash or eviction would. That's a different scenario from a
+scale-down, and the two can behave differently — don't use one to test the other.
+
 ## Verify HA behaviour (not just "it's up")
 
 Standing up the cluster isn't the test. Exercise what the change actually touched (see `test-scope`'s `references/ha.md`), e.g.:

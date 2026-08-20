@@ -91,7 +91,10 @@ not:
   spinning.
 - **A stale login session screenshots the login page**, not an error — Grafana
   rotates auth tokens. Always look at the image before attaching it; re-run
-  `pmm-ui-login.js` and re-shoot if it's wrong.
+  `pmm-ui-login.js` and re-shoot if it's wrong. Restarting, scaling, or upgrading
+  PMM invalidates that session *and* leaves a window where the capture is the
+  proxy's own 5xx page, so wait for the rollout to finish, log in again, then
+  shoot — the helper writes a file and exits 0 either way.
 
 ## Artifacts
 
