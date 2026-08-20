@@ -1,12 +1,10 @@
 ---
 name: add-ha-test
 description: >-
-  Write or debug Playwright e2e tests for PMM in High Availability mode —
-  anything under e2e_tests/tests/ha/ or tagged @pmm-ha. Use when automating a
-  PMM-Txxxx HA test case, when a test needs the Raft leader / failover /
-  leader-follower roles / pmm_ha_* metrics / the sidebar HA badge, when touching
-  k8s.helper.ts, haCluster.helper.ts, ha.api.ts, prometheus.api.ts or
-  pages/ha/**, when an @pmm-ha test fails.
+  Write or debug Playwright e2e tests for PMM in High Availability mode — the
+  test suite tagged @pmm-ha. Use when automating a PMM-Txxxx HA case, or 
+  when touching the HA helpers, api or pages that drive the Raft leader, failover 
+  and pmm_ha_* metrics.
 ---
 
 # Writing PMM HA e2e tests
