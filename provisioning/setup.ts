@@ -98,7 +98,7 @@ const HELP = `Usage: node provisioning/setup.ts [--db DESCRIPTOR] [--db DESCRIPT
   --db mlaunch-mongodb=VERSION,setup-type=single|pss
   --server-image IMAGE       default: perconalab/pmm-server:3-dev-latest
   --server-port PORT         host port mapped to the server's 8443 (default: 443)
-  --server-env KEY=VALUE     extra env for the server container, repeatable
+  --server-env KEY=VALUE     extra env for the server container, repeatable (PMM_DEBUG=1 by default)
   --watchtower               also run watchtower, for PMM's in-place upgrade flow
   --pmm-server HOST[:PORT]   use an existing PMM Server
   --admin-password PASSWORD  default: admin
@@ -447,6 +447,10 @@ export async function createServer(
   config: Pick<Config, 'serverImage' | 'adminPassword' | 'serverPort' | 'serverEnv' | 'watchtower'>,
   runner: Runner,
 ): Promise<void> {
+  const serverEnv = config.serverEnv.some((entry) => entry.startsWith('PMM_DEBUG='))
+    ? config.serverEnv
+    : ['PMM_DEBUG=1', ...config.serverEnv];
+
   await runner(CONTAINER_RUNTIME, ['rm', '-f', SERVER, WATCHTOWER], true, true);
   await runner(CONTAINER_RUNTIME, ['volume', 'rm', '-f', SERVER_VOLUME], true, true);
   await ensureNetwork(runner);
@@ -477,7 +481,7 @@ export async function createServer(
     'GF_SECURITY_ADMIN_USER=admin',
     '--env',
     `GF_SECURITY_ADMIN_PASSWORD=${config.adminPassword}`,
-    ...config.serverEnv.flatMap((entry) => ['--env', entry]),
+    ...serverEnv.flatMap((entry) => ['--env', entry]),
     '--volume',
     `${SERVER_VOLUME}:/srv`,
     config.serverImage,

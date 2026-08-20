@@ -202,6 +202,7 @@ After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` w
 | `ADMIN_PASSWORD` | `admin` | Grafana/PMM admin password |
 | `WORKERS` | `1` | Playwright parallel workers |
 | `HEADLESS` | `true` | Browser visibility (`false` for headed) |
+| `PMM_DEBUG` | `1` in local provisioning | Enable verbose PMM Server logging; override with `--server-env PMM_DEBUG=0` |
 | `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | PMM Server Docker image (local compose and `provisioning/`) |
 | `CLIENT_VERSION` | `latest-tarball` in `provisioning/` | PMM Client version or tarball URL for local provisioning |
 | `PMM_SERVER_LATEST` | — | Required for `@post-release` tests |

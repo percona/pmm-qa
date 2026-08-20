@@ -314,7 +314,31 @@ test('recreates and waits for PMM Server', async () => {
   assert.ok(calls.some((call) => call.join(' ').includes('volume rm -f pmm-data')));
   assert.ok(calls.some((call) => call.join(' ').includes('network create pmm-qa')));
   assert.ok(calls.some((call) => call.includes('GF_SECURITY_ADMIN_PASSWORD=secret')));
+  assert.ok(calls.some((call) => call.includes('PMM_DEBUG=1')));
   assert.equal(readinessChecks, 2);
+});
+
+test('allows the default server debug mode to be overridden', async () => {
+  const calls: string[][] = [];
+  const runner: Runner = async (file, args): Promise<CommandResult> => {
+    calls.push([file, ...args]);
+    return { code: 0, stdout: '', stderr: '' };
+  };
+
+  await createServer(
+    {
+      serverImage: 'perconalab/pmm-server:3-dev-latest',
+      adminPassword: 'admin',
+      serverPort: '443',
+      serverEnv: ['PMM_DEBUG=0'],
+      watchtower: false,
+    },
+    runner,
+  );
+
+  const run = calls.find((call) => call[1] === 'run');
+  assert.ok(run?.includes('PMM_DEBUG=0'));
+  assert.ok(!run?.includes('PMM_DEBUG=1'));
 });
 
 test('pulls the server image unless the local digest matches the registry', async () => {
