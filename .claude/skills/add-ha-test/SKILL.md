@@ -49,10 +49,10 @@ named the wrong leader.
 | `pmm_ha_leader_status` | `/v1/ha/nodes`, or the badge — different code paths off the same Raft state |
 | A failover actually happened | `haClusterHelper.lastPromotionTime()` before vs after, on the same pod |
 
-`leaderFromPods()` asks each pod `/v1/server/leaderHealthCheck` directly:
-**200 on the leader, 400 on followers**. It bypasses HAProxy, so it is
-independent of the aggregated API and of the LB. This is the same check
-HAProxy itself routes on, so it is a supported contract, not a scrape.
+`leaderFromPods()` asks each pod `/v1/server/leaderHealthCheck` directly, which
+is the same check HAProxy routes on — a supported contract, not a scrape, and
+independent of both the aggregated API and the LB. Status codes and the HAProxy
+backend they come from: [references/cluster-facts.md](references/cluster-facts.md).
 
 ### Do not identify the leader from pod logs
 
