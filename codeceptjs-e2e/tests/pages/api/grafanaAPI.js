@@ -531,17 +531,20 @@ module.exports = {
    * Fluent wait until an expression resolves at the 5-minute grid point that panels
    * pinning `interval: 5m` are read at.
    *
-   * Grafana aligns such a panel's range query down to a multiple of the step, which
-   * on a `now-5m` range leaves a single evaluation point at the 300s boundary at or
-   * before `now - 5m` — so between 5 and 10 minutes in the past. A service that
-   * started being monitored more recently than that has no sample within the
-   * datasource's 5 minute staleness lookback of that point and the panel renders
-   * "No data", however many samples have arrived since. These dashboards do not
-   * auto-refresh either, so re-reading the rendered page cannot recover it.
+   * Grafana aligns such a panel's range query onto the step's own grid, so on a
+   * `now-5m` range it is evaluated only at 300s wall-clock boundaries — the newest
+   * being the last one at or before `now`. A service whose first sample landed after
+   * that boundary has nothing to answer with (the datasource looks back 5 minutes
+   * from the boundary, i.e. to before the service existed) and the panel renders
+   * "No data" until the next boundary passes, however many samples arrived since.
+   * These dashboards do not auto-refresh either, so re-reading the rendered page
+   * cannot recover it — which is why a test can sit in the failure for its whole
+   * poll, and why whether it fails at all depends on where setup happened to fall
+   * against the 5-minute grid.
    *
-   * Waits for that evaluation point to carry as many series as a query at `now`
-   * does, so a node or service that only just started being monitored is waited
-   * for rather than silently tolerated as an empty panel.
+   * Waits for that boundary to carry as many series as a query at `now` does, so a
+   * node or service that only just started being monitored is waited for rather
+   * than silently tolerated as an empty panel.
    *
    * @param   expression          PromQL expression, ex.: min(mysql_global_status_uptime)
    * @param   timeOutInSeconds    time to wait for the evaluation point to catch up
@@ -556,19 +559,18 @@ module.exports = {
       return response.data.data.result.length;
     };
 
-    await I.say(`Wait up to ${timeOutInSeconds} seconds for "${expression}" to resolve where ${stepInSeconds}s-step panels are evaluated`);
+    await I.say(`Wait up to ${timeOutInSeconds} seconds for "${expression}" to resolve at the newest ${stepInSeconds}s boundary`);
 
     await I.asyncWaitFor(async () => {
       const expected = await seriesCount();
 
       if (expected === 0) return false;
 
-      const nowInSeconds = Math.floor(Date.now() / 1000);
-      const evaluatedAt = Math.floor((nowInSeconds - stepInSeconds) / stepInSeconds) * stepInSeconds;
-      const actual = await seriesCount(evaluatedAt);
+      const newestBoundary = Math.floor(Date.now() / 1000 / stepInSeconds) * stepInSeconds;
+      const actual = await seriesCount(newestBoundary);
 
       return actual >= expected;
-    }, timeOutInSeconds, `"${expression}" still resolves to fewer series where ${stepInSeconds}s-step panels are evaluated than at "now"`);
+    }, timeOutInSeconds, `"${expression}" still resolves to fewer series at the newest ${stepInSeconds}s boundary than at "now"`);
   },
 
   async checkMetricAbsent(metricName, refineBy) {
