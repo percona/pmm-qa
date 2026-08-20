@@ -69,19 +69,8 @@ pmmTest('PMM-T2119 - Verify export logs button @new-navigation', async ({ helpPa
 });
 
 pmmTest('PMM-T1830 - Verify downloading server diagnostics logs @menu', async ({ helpPage }) => {
-  let path: string | null = null;
-
-  await pmmTest.step('Download server diagnostics logs', async () => {
-    const download = await helpPage.exportLogs();
-
-    path = await download.path();
-  });
-
-  if (!path) {
-    throw new Error('Download path is null');
-  }
-
-  const entries = readZipArchive(path);
+  const download = await helpPage.exportLogs();
+  const entries = readZipArchive(await download.path());
 
   await pmmTest.step('Verify required log entries are present', async () => {
     expect(entries).toContain('pmm-agent.yaml');
