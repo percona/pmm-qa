@@ -6893,6 +6893,7 @@
     {
       "id": "e2e_tests_readme_k8shelper",
       "label": "K8sHelper (helpers/k8s.helper.ts)",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -6907,6 +6908,7 @@
     {
       "id": "e2e_tests_readme_playwright_config",
       "label": "playwright.config.ts",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -6920,6 +6922,7 @@
     {
       "id": "e2e_tests_readme_pmmtest_fixture",
       "label": "pmmTest fixture (@fixtures/pmmTest)",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -6933,6 +6936,7 @@
     {
       "id": "e2e_tests_readme_timeouts_helper",
       "label": "@helpers/timeouts",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -6946,6 +6950,7 @@
     {
       "id": "e2e_tests_readme_admin_password_var",
       "label": "ADMIN_PASSWORD environment variable",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -6959,6 +6964,7 @@
     {
       "id": "e2e_tests_readme_api_dir",
       "label": "api/ directory",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -6972,6 +6978,7 @@
     {
       "id": "e2e_tests_readme_components_dir",
       "label": "components/ directory",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -6985,6 +6992,7 @@
     {
       "id": "e2e_tests_readme_fixtures_dir",
       "label": "fixtures/ directory",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -6998,6 +7006,7 @@
     {
       "id": "e2e_tests_readme_headless_var",
       "label": "HEADLESS environment variable",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7011,6 +7020,7 @@
     {
       "id": "e2e_tests_readme_helpers_dir",
       "label": "helpers/ directory",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7024,6 +7034,7 @@
     {
       "id": "e2e_tests_readme_interfaces_dir",
       "label": "interfaces/ directory",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7037,6 +7048,7 @@
     {
       "id": "e2e_tests_readme_pages_dir",
       "label": "pages/ directory",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7050,6 +7062,7 @@
     {
       "id": "e2e_tests_readme_pmm_ha_tag",
       "label": "@pmm-ha tag",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7063,6 +7076,7 @@
     {
       "id": "e2e_tests_readme_pmm_ui_url_var",
       "label": "PMM_UI_URL environment variable",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7076,6 +7090,7 @@
     {
       "id": "e2e_tests_readme_testdata_dir",
       "label": "testdata/ directory",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7089,6 +7104,7 @@
     {
       "id": "e2e_tests_readme_tests_dir",
       "label": "tests/ directory",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7102,6 +7118,7 @@
     {
       "id": "e2e_tests_readme_workers_var",
       "label": "WORKERS environment variable",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7115,6 +7132,7 @@
     {
       "id": "e2e_tests_readme",
       "label": "PMM Playwright E2E Tests README",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7128,6 +7146,7 @@
     {
       "id": "e2e_tests_readme_cli_tests_workspace",
       "label": "CLI Tests workspace",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7141,6 +7160,7 @@
     {
       "id": "e2e_tests_readme_codeceptjs_workspace",
       "label": "CodeceptJS E2E Tests workspace",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7154,6 +7174,7 @@
     {
       "id": "e2e_tests_readme_contributing",
       "label": "CONTRIBUTING.md",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7167,6 +7188,7 @@
     {
       "id": "e2e_tests_readme_package_tests_workspace",
       "label": "Package Tests workspace",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -7180,6 +7202,7 @@
     {
       "id": "e2e_tests_readme_qa_integration_workspace",
       "label": "QA Integration workspace",
+      "_origin": "semantic",
       "author": null,
       "captured_at": null,
       "community": 7,
@@ -12714,30 +12737,6 @@
     },
     {
       "source": "pages_qan_rta_realtimeanalytics_page",
-      "target": "fixtures_pmmtest_pmmtest",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
-      "source_location": "L1",
-      "weight": 1.0
-    },
-    {
-      "source": "pages_qan_rta_realtimeanalytics_page",
-      "target": "helpers_apiendpoints_apiendpoints",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "pages/qan/rta/realTimeAnalytics.page.ts",
-      "source_location": "L4",
-      "weight": 1.0
-    },
-    {
-      "source": "pages_qan_rta_realtimeanalytics_page",
       "target": "helpers_timeouts_timeouts",
       "relation": "imports",
       "_origin": "ast",
@@ -13622,18 +13621,6 @@
       "context": "import",
       "source_file": "tests/qan/rta/navigation.test.ts",
       "source_location": "L3",
-      "weight": 1.0
-    },
-    {
-      "source": "tests_qan_rta_overview_test",
-      "target": "fixtures_pmmtest_pmmtest",
-      "relation": "imports",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "import",
-      "source_file": "tests/qan/rta/overview.test.ts",
-      "source_location": "L2",
       "weight": 1.0
     },
     {
@@ -23992,6 +23979,7 @@
       "source": "e2e_tests_readme_k8shelper",
       "target": "e2e_tests_readme_pmm_ha_tag",
       "relation": "conceptually_related_to",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24002,6 +23990,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_timeouts_helper",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24012,6 +24001,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_admin_password_var",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24022,6 +24012,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_headless_var",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24032,6 +24023,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_pmm_ui_url_var",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24042,6 +24034,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_workers_var",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24052,6 +24045,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_pmm_ha_tag",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24062,6 +24056,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_api_dir",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24072,6 +24067,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_components_dir",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24082,6 +24078,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_fixtures_dir",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24092,6 +24089,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_helpers_dir",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24102,6 +24100,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_interfaces_dir",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24112,6 +24111,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_pages_dir",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24122,6 +24122,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_playwright_config",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24132,6 +24133,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_testdata_dir",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24142,6 +24144,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_tests_dir",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24152,6 +24155,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_k8shelper",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24162,6 +24166,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_package_tests_workspace",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24172,6 +24177,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_qa_integration_workspace",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24182,6 +24188,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_contributing",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24192,6 +24199,7 @@
       "source": "e2e_tests_readme_fixtures_dir",
       "target": "e2e_tests_readme_pmmtest_fixture",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "README.md",
@@ -24202,6 +24210,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_cli_tests_workspace",
       "relation": "semantically_similar_to",
+      "_origin": "semantic",
       "confidence": "INFERRED",
       "confidence_score": 0.65,
       "source_file": "README.md",
@@ -24212,6 +24221,7 @@
       "source": "e2e_tests_readme_workers_var",
       "target": "e2e_tests_readme_playwright_config",
       "relation": "conceptually_related_to",
+      "_origin": "semantic",
       "confidence": "INFERRED",
       "confidence_score": 0.85,
       "source_file": "README.md",
@@ -24222,6 +24232,7 @@
       "source": "e2e_tests_readme",
       "target": "e2e_tests_readme_codeceptjs_workspace",
       "relation": "semantically_similar_to",
+      "_origin": "semantic",
       "confidence": "INFERRED",
       "confidence_score": 0.85,
       "source_file": "README.md",
@@ -24232,6 +24243,7 @@
       "source": "e2e_tests_readme_helpers_dir",
       "target": "e2e_tests_readme_k8shelper",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "source_file": "README.md",
@@ -24242,6 +24254,7 @@
       "source": "e2e_tests_readme_helpers_dir",
       "target": "e2e_tests_readme_timeouts_helper",
       "relation": "references",
+      "_origin": "semantic",
       "confidence": "INFERRED",
       "confidence_score": 0.95,
       "source_file": "README.md",
@@ -24280,5 +24293,5 @@
       "source_file": "README.md"
     }
   ],
-  "built_at_commit": "0d4212269a9b643aa4caf298d5a80e6cd76c75d6"
+  "built_at_commit": "7f50bfd47ffa39e60a4cedb39ba3d9d5e2c3c2c8"
 }
