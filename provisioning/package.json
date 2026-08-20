@@ -1,0 +1,11 @@
+{
+  "name": "pmm-qa-provisioning",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node images/build.ts",
+    "build:dockerclients": "npm run build -- ps && npm run build -- pdpgsql && npm run build -- psmdb",
+    "setup": "node setup.ts",
+    "test:provisioning": "node --test --experimental-test-isolation=none setup.test.ts pmm-client.test.ts images/setup.test.ts images/engines/pxc/setup.test.ts images/engines/psmdb/setup.test.ts images/engines/pgsql/setup.test.ts images/engines/pdpgsql/setup.test.ts images/engines/valkey/setup.test.ts images/engines/services/setup.test.ts images/engines/minio/setup.test.ts images/engines/mlaunch/setup.test.ts"
+  }
+}
