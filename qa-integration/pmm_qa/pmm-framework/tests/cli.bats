@@ -104,6 +104,32 @@ load helpers/test_helper
   [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
 }
 
+@test "skips a PSMDB patch whose RPMs have not reached the release repo" {
+  # percona.com announces a build before the yum repo carries it; the setup
+  # Dockerfile installs a pinned RPM, so the newest announced patch is only
+  # usable once the repo listing shows it.
+  curl() {
+    if [[ $* == *repo.percona.com* ]]; then
+      printf '%s\n' 'percona-server-mongodb-server-8.0.4-1.el9.x86_64.rpm'
+      return
+    fi
+    printf '%s' \
+      '{"success":true,"data":{"versions":["percona-server-mongodb-8.0.4-1","percona-server-mongodb-8.0.5-1"]}}'
+  }
+
+  [[ $(latest_psmdb_version 8.0 9) == 8.0.4-1 ]]
+}
+
+@test "keeps the newest PSMDB patch when the release repo cannot be read" {
+  curl() {
+    [[ $* == *repo.percona.com* ]] && return 22
+    printf '%s' \
+      '{"success":true,"data":{"versions":["percona-server-mongodb-8.0.4-1","percona-server-mongodb-8.0.5-1"]}}'
+  }
+
+  [[ $(latest_psmdb_version 8.0 9) == 8.0.5-1 ]]
+}
+
 @test "selects the existing requests-capable interpreter for Ansible modules" {
   local fake_python=$BATS_TEST_TMPDIR/python
   printf '#!/usr/bin/env bash\nexit 0\n' >"$fake_python"

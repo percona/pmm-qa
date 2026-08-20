@@ -17,17 +17,18 @@
 # registered default. The middle case is why this helper exists at all: the
 # compose scripts need a full version such as '8.0-12.1', so a spec version is
 # sent through latest_psmdb_version() (a network lookup) rather than used
-# as-is.
+# as-is. The spec's OL_VERSION goes with it, since which patches are
+# installable is per-EL-release.
 #
 # Shared by setup_psmdb and setup_ssl_psmdb.
 #
-# Reads:  PSMDB_VERSION, DB_VERSION, DB_TYPE
+# Reads:  PSMDB_VERSION, DB_VERSION, DB_TYPE, DB_CONFIG
 # Stdout: the resolved version
 psmdb_version() {
   if [[ -n ${PSMDB_VERSION:-} ]]; then
     printf '%s' "$PSMDB_VERSION"
   elif [[ -n $DB_VERSION ]]; then
-    latest_psmdb_version "$DB_VERSION"
+    latest_psmdb_version "$DB_VERSION" "$(resolve_value "$DB_TYPE" OL_VERSION DB_CONFIG)"
   else
     database_default_version "$DB_TYPE"
   fi
