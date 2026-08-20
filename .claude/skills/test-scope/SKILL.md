@@ -1,17 +1,17 @@
 ---
 name: test-scope
-description: "Decide PMM QA scope before provisioning: deployment mode, upgrade/DB/RBAC/backup dimensions, and causally linked regression checks. Use for planning what to exercise; do not use to judge whether direct evidence is deep enough."
+description: "Decide PMM QA scope: deployment mode, upgrade/DB/RBAC/backup dimensions, and causally linked regression checks. Use for planning what to exercise in local, existing, or newly provisioned environments; do not use to judge whether direct evidence is deep enough."
 ---
 
 # Test scope — what does this change need?
 
-Read this when planning QA, **before** provisioning. It turns a ticket + diff into a short list of what to actually exercise, and which provisioning skill each item implies. The goal is to catch the dimensions a plain single-server run would miss, without spinning up expensive environments a change doesn't need.
+Read this when planning QA. It turns a ticket + diff into a short list of what to actually exercise, and which environment or provisioning skill each item implies. The goal is to catch the dimensions a plain single-server run would miss, without spinning up expensive environments a change doesn't need.
 
 Inputs you already have by this point: the Jira ticket (summary, AC, labels/components, dev comments) and the `percona/pmm` / `percona/grafana` diff (`git-diff` skill).
 
 ## Default
 
-Unless a dimension below applies, the change is tested on the **default single-server Docker** deployment — `linode-docker-provisioning`. Most fixes (one exporter metric, a dashboard panel, a CLI flag, a UI page with no clustered state) live here and need nothing more.
+Unless a dimension below applies, test on a suitable local or existing **single-server Docker** deployment, or create one with `linode-docker-provisioning`. Most fixes (one exporter metric, a dashboard panel, a CLI flag, a UI page with no clustered state) live here and need nothing more.
 
 ## Dimensions to check
 
