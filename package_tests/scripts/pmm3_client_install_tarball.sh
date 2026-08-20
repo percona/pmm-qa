@@ -94,7 +94,15 @@ if [[ "$architecture" == "arm64" ]]; then
     # tarballs live on the downloads site with an -aarch64 suffix.
     tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/pmm-client-${version}-aarch64.tar.gz
 elif [[ "$architecture" == "amd64" ]]; then
-    tarball_url=https://downloads.percona.com/downloads/TESTING/pmm/${client_tar}
+    # Released amd64 tarballs are arch-suffixed on the downloads site too.
+    # TESTING/pmm/pmm-client-<version>.tar.gz is unversioned staging and gets
+    # overwritten: on 2026-08-20 it started serving an aarch64 build for 3.9.1,
+    # which installs without error and then dies with "exec format error". Keep
+    # it only as a fallback for versions the downloads site does not carry yet.
+    tarball_url=https://downloads.percona.com/downloads/pmm3/${version}/binary/tarball/pmm-client-${version}-x86_64.tar.gz
+    if [ -z "${fb}" ] && ! wget --spider -q "${tarball_url}"; then
+      tarball_url=https://downloads.percona.com/downloads/TESTING/pmm/${client_tar}
+    fi
 fi
 
 if [ -n "${fb}" ]; then
