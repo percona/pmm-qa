@@ -78,7 +78,7 @@ bash .claude/scripts/skill-gardener-counter.sh <skill> found|none
 
 Run it even when nothing qualified — `none` is what advances the counter toward retirement. Skipping it leaves the count unchanged, so the pass fires again on the next skill invocation and never retires.
 
-Decline a pass that arrives while Capture, Review, or Apply is already running, including one triggered by a skill this skill invoked itself. Finish the current pass first.
+Defer a pass that arrives while Capture, Review, or Apply is already running, including one triggered by a skill this skill invoked itself. Finish the current pass first.
 
 A pass that cannot run when it arrives is deferred, never dropped: writes may be unavailable, or the primary task may not be stable yet. Carry every deferred pass to the end of the turn and run it there, before the final response.
 
@@ -128,7 +128,7 @@ Prefer deletion, clarification, or one enforceable check over adding another gen
 3. Inspect the current target and implement the smallest change that addresses the evidence. If the target no longer exists, drop the lesson and say so — never recreate a deleted file. If it already carries the change, skip the edit and continue at step 6, so a re-run after an interruption is safe.
 4. Match the conventions of the file's siblings. Skills in this repository carry `name` and `description` frontmatter and nothing else; comment density and prose style follow the House style section of `CLAUDE.md`.
 5. Exercise the changed target once against a realistic trigger example before reporting it done.
-6. Remove applied or explicitly declined lessons from `.claude/skill-lessons.md` in the same change.
+6. Remove applied or explicitly declined lessons from `.claude/skill-lessons.md` in the same change. Delete the log if no entries remain.
 7. Leave unrelated lessons untouched.
 
 The archive is the target file's own git history, not the log — Apply lands the change in a tracked file before deleting the entry. Maintain no second archive or status ledger.
@@ -140,7 +140,7 @@ The gardener may improve itself, but `skill-gardener` follows the same evidence 
 - Stay silent while capturing unless logging fails, user input is required, the log is full, or a lesson's background research has resolved.
 - At handoff, mention captured lessons in one short line only when at least one was written. Report a resolved background research result once, in the same short form — target, proposed change, researched approach — and never again.
 - Never create raw command transcripts or telemetry logs; persist only sanitized, reusable lessons.
-- Never create empty logs, periodic reminders, counters, acknowledgement entries, backup files, or scheduled reviews.
+- Never create empty logs, periodic reminders, ad hoc counters, acknowledgement entries, backup files, or scheduled reviews.
 - Never let observation work delay, block, or expand the scope of the primary task.
 
 Concept adapted from Eoghan Henn's [Task Observer](https://github.com/rebelytics/one-skill-to-rule-them-all), licensed under CC BY 4.0.
