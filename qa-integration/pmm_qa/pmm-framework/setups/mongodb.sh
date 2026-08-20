@@ -17,18 +17,28 @@
 # registered default. The middle case is why this helper exists at all: the
 # compose scripts need a full version such as '8.0-12.1', so a spec version is
 # sent through latest_psmdb_version() (a network lookup) rather than used
-# as-is. The spec's OL_VERSION goes with it, since which patches are
-# installable is per-EL-release.
+# as-is. The spec's OL_VERSION and the yum channel the stack installs from go
+# with it, since a patch is only usable once that channel carries its RPMs --
+# and the two stacks default REPO differently (the diffauth compose uses
+# 'testing', pmm_psmdb-pbm_setup 'release').
 #
 # Shared by setup_psmdb and setup_ssl_psmdb.
 #
-# Reads:  PSMDB_VERSION, DB_VERSION, DB_TYPE, DB_CONFIG
+# Reads:  PSMDB_VERSION, DB_VERSION, DB_TYPE, DB_CONFIG, REPO
 # Stdout: the resolved version
 psmdb_version() {
+  local channel
+  if [[ $DB_TYPE == SSL_PSMDB ]]; then
+    channel=${REPO:-testing}
+  else
+    channel=${REPO:-release}
+  fi
+
   if [[ -n ${PSMDB_VERSION:-} ]]; then
     printf '%s' "$PSMDB_VERSION"
   elif [[ -n $DB_VERSION ]]; then
-    latest_psmdb_version "$DB_VERSION" "$(resolve_value "$DB_TYPE" OL_VERSION DB_CONFIG)"
+    latest_psmdb_version "$DB_VERSION" \
+      "$(resolve_value "$DB_TYPE" OL_VERSION DB_CONFIG)" "$channel"
   else
     database_default_version "$DB_TYPE"
   fi

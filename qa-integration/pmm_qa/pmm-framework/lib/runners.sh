@@ -74,7 +74,7 @@ version_is_greater() {
   return 1
 }
 
-# Are a PSMDB version's RPMs actually in the release yum repo?
+# Are a PSMDB version's RPMs actually in the yum repo the setup installs from?
 #
 # percona.com announces a build as soon as it is released, which can be days
 # before the psmdb-XY yum repo carries its packages. The PSMDB setup
@@ -86,14 +86,14 @@ version_is_greater() {
 # differently) reports 'published', so a probe that cannot answer never blocks
 # a setup that would otherwise have worked.
 #
-# Usage:  psmdb_rpms_published 8.0.28-12 9
+# Usage:  psmdb_rpms_published 8.0.28-12 9 release
 # Returns: 0 when installable (or unknown), 1 when the repo lacks it
 psmdb_rpms_published() {
-  local version=$1 el=$2 repo arch listing
+  local version=$1 el=$2 channel=$3 repo arch listing
   repo=psmdb-$(printf '%s' "$version" | awk -F. '{print $1 $2}')
   arch=$(uname -m)
   listing=$(curl --fail --silent --max-time 30 \
-    "https://repo.percona.com/$repo/yum/release/$el/RPMS/$arch/") || return 0
+    "https://repo.percona.com/$repo/yum/$channel/$el/RPMS/$arch/") || return 0
   grep -q 'percona-server-mongodb-server-' <<<"$listing" || return 0
   grep -q "percona-server-mongodb-server-$version\.el$el\." <<<"$listing"
 }
@@ -105,23 +105,24 @@ psmdb_rpms_published() {
 # endpoint the percona.com downloads page itself calls (Percona removed the
 # old products-api.php when the site was rebuilt on WordPress/Breakdance) for
 # every published patch of that series, then walks them newest-first and takes
-# the first one whose RPMs have reached the release repo (see
-# psmdb_rpms_published).
+# the first one whose RPMs have reached the yum channel the setup installs
+# from (see psmdb_rpms_published).
 #
 # 'latest' and '' pass through untouched -- they are meaningful to the setup
 # script as-is. `curl` is required for this (preflight checks for it only when
 # a PSMDB setup is requested).
 #
-# Usage:  version=$(latest_psmdb_version 8.0 9)   # -> 8.0.28-12
+# Usage:  version=$(latest_psmdb_version 8.0 9 release)   # -> 8.0.28-12
 # Stdout: the resolved version
 # Exits:  via die() when the API call fails or no patch matches
 latest_psmdb_version() {
-  local requested=$1 el=${2:-9}
+  local requested=$1 el=${2:-9} channel=${3:-release}
   if [[ $requested == latest || -z $requested ]]; then
     printf '%s' "$requested"
     return
   fi
   el=${el:-9}
+  channel=${channel:-release}
 
   local response candidate patch index best best_patch
   local -a candidates=() patches=() ordered=() taken=()
@@ -167,15 +168,15 @@ latest_psmdb_version() {
   done
 
   for candidate in "${ordered[@]}"; do
-    if psmdb_rpms_published "$candidate" "$el"; then
+    if psmdb_rpms_published "$candidate" "$el" "$channel"; then
       [[ $candidate == "${ordered[0]}" ]] ||
         log_warn "PSMDB ${ordered[0]} is announced but its el$el RPMs are not in the" \
-          "$requested release repo yet; using $candidate."
+          "$requested $channel repo yet; using $candidate."
       printf '%s' "$candidate"
       return
     fi
   done
-  die "No PSMDB $requested patch has el$el RPMs in the release repo" \
+  die "No PSMDB $requested patch has el$el RPMs in the $channel repo" \
     "(newest announced: ${ordered[0]})."
 }
 
