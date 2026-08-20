@@ -267,9 +267,9 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 - [ ] Hand a session the 2 Slack tokens + routine tokens (from LastPass) to finish the relay `.env` and start it.
 - [ ] Save the completed `.env` to the LastPass **PMM** note.
 - [ ] `/invite @pmm-ai` to a channel and confirm 👀 → reply.
-- [ ] Point the Jira button automation at the relay's `POST /jira` (header `X-Relay-Secret`, body `accountId`+`text`, "Wait for response" on).
-- [ ] Add a `{{webResponse.status}} == 404` → "not onboarded" comment to that rule.
-- [ ] Click the Jira button on a test ticket and confirm it runs.
+- [x] Point the Jira button automation at the relay's `POST /jira` (header `X-Relay-Secret`, body `accountId`+`text`, "Wait for response" on) (done 2026-08-17)
+- [x] Add a `{{webResponse.status}} == 404` → "not onboarded" comment to that rule (done 2026-08-17)
+- [x] Click the Jira button on a test ticket and confirm it runs (done 2026-08-17)
 
 **Jenkins access (staging builds from agents):**
 

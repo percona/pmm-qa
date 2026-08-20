@@ -40,11 +40,15 @@ returns only *this run's* `{ip, exec_token, exec_cert_pem}` — everything
 `run.sh` needs to reach the box. The account token never enters this
 environment.
 
-**Identity:** every broker call carries your GitHub login in `X-Actor` (from
-`gh api user`, which the proxy verifies). The relay checks it against the team
-roster (the `github` logins in its people files) and records who acted — so the
-audit always names a real person, no self-reported email. `RELAY_KEY` is the
-possession gate; `X-Actor` is the identity.
+**Identity:** every broker call carries your GitHub login in `X-Actor`. The relay
+checks it against the team roster (the `github` logins in its people files) and
+records who acted — so the audit always names a real person, no self-reported
+email. `RELAY_KEY` is the possession gate; `X-Actor` is the identity.
+
+**Get your login the portable way:** call the GitHub MCP `get_me` tool and read
+`.login`, then `export ACTOR=<that login>` before the block below. Routine-fired
+sessions have **no `gh` CLI**, so `gh api user` returns empty there and the relay
+would 401 on an empty actor — `gh` is only a fallback where it actually exists.
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com   # fixed prod relay (reserved IP)
@@ -52,7 +56,10 @@ RUN_ID=<run_id>                       # e.g. PMM-15196 (see "Pick a run_id")
 ROLE=<role>                           # test-runner or investigator (safe id: [A-Za-z0-9._-], tag only)
 RUN_DIR="terraform/linode-runner/runs/$RUN_ID"
 mkdir -p "$RUN_DIR"
-ACTOR="$(gh api user --jq .login 2>/dev/null)"
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
 
 # ttl_hours + pmm_qa_ref are optional; add keep-alive handling below.
 # 1) Kick off the build — returns immediately with {run_id, status:"provisioning"}.
@@ -199,10 +206,19 @@ Teardown holds the account token, so it too goes through the relay:
 
 ```bash
 RELAY=https://139-162-176-43.ip.linodeusercontent.com
-curl -sS -m 120 --fail-with-body -X POST "$RELAY/linode/destroy" \
-  -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $(gh api user --jq .login 2>/dev/null)" \
-  -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"
-rm -rf "terraform/linode-runner/runs/<run_id>"   # drop the local run markers too
+# X-Actor is your GitHub login — set ACTOR from the GitHub MCP get_me (.login) first.
+# gh is a fallback only where present; fail closed on an empty actor (the relay 401s it).
+command -v gh >/dev/null && ACTOR="${ACTOR:-$(gh api user --jq .login)}"
+[ -n "$ACTOR" ] || { echo "ACTOR unset — set it from the GitHub MCP get_me .login" >&2; exit 1; }
+# Drop the local run markers only after a confirmed destroy — otherwise the SessionEnd
+# hook (and the on-box timer) can still retry teardown of an un-destroyed VM.
+if curl -sS -m 120 --fail-with-body -X POST "$RELAY/linode/destroy" \
+     -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
+     -H "Content-Type: application/json" -d "$(jq -n --arg id "<run_id>" '{run_id:$id}')"; then
+  rm -rf "terraform/linode-runner/runs/<run_id>"
+else
+  echo "destroy failed — keeping run markers so the SessionEnd hook / reaper can retry" >&2
+fi
 ```
 
 Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `/linode/destroy` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires. (For an explicit keep-alive run, skip destroy — the `keep-alive` marker and the on-box timer handle it.)
@@ -213,9 +229,11 @@ The shared QA environment's network access is set to **`Full`**, not Custom — 
 
 On each provisioning run, cheaply check whether that's still necessary — if #82284 is fixed we want to tighten egress back to Custom:
 
-```bash
-gh api repos/anthropics/claude-code/issues/82284 --jq .state 2>/dev/null || true
-```
+Check the issue state with the GitHub MCP `issue_read` tool (owner `anthropics`,
+repo `claude-code`, issue `82284`) — it may 403 if that repo isn't attached to the
+session, which is fine, treat as "unknown, leave as-is". (`gh api
+repos/anthropics/claude-code/issues/82284 --jq .state` is a fallback only where
+`gh` exists.)
 
 If it reports `closed` (or the issue page shows it resolved), leave the user a note in your run summary — do **not** change anything yourself (the env's network level is admin-only, web-UI config):
 

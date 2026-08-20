@@ -67,7 +67,7 @@ async function main() {
   // to the wrong origin.
   const insecure = process.env.PMM_UI_INSECURE === "1";
   const certPath = process.env.PMM_CERT_PATH;
-  let launchArgs = [];
+  const spkiPins = [];
   if (insecure) {
     console.error(
       "WARNING: PMM_UI_INSECURE=1 — TLS verification disabled (no SPKI pin). Use only for HA/LKE (self-signed cert behind the egress MITM).",
@@ -83,7 +83,7 @@ async function main() {
       console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
       process.exit(1);
     }
-    launchArgs = [`--ignore-certificate-errors-spki-list=${spkiPinFromCertFile(certPath)}`];
+    spkiPins.push(spkiPinFromCertFile(certPath));
   }
 
   // Explicit executablePath: the pre-installed Chromium revision at
@@ -91,11 +91,11 @@ async function main() {
   // playwright expects (confirmed live -- an unpinned minor bump silently
   // wants a browser revision that isn't there), so don't rely on
   // Playwright's own bundled-browser resolution to find it.
-  const proxyOpts = proxyLaunchOptions();
+  const proxyOpts = proxyLaunchOptions({ spkiPins });
   const browser = await chromium.launch({
     executablePath: "/opt/pw-browsers/chromium",
     headless: !headed,
-    args: [...launchArgs, ...proxyOpts.args],
+    args: proxyOpts.args,
     proxy: proxyOpts.proxy,
   });
   const context = await browser.newContext({
