@@ -17,7 +17,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let pgStatMonitorId: string;
   let pgExporterSocketId: string;
   let pgStatMonitorSocketId: string;
+  let originalListenPort = '7777';
   const pgExporterPassword = 'newAgentPassword';
+  const originalUser = 'postgres';
+  const originalPassword = 'pass+this';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
@@ -57,10 +60,70 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep ${socketServiceId} | grep postgresql_pgstatmonitor_agent | awk -F' ' '{print $3}'`,
       )
       .stdout.trim();
+
+    const hbaPath = `/etc/postgresql/${pgVersion}/main/pg_hba.conf`;
+    const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
+    const yamlPath = '/usr/local/percona/pmm/config/pmm-agent.yaml';
+
+    [hbaPath, confPath, yamlPath].forEach((filePath) =>
+      cliHelper.execSilent(
+        `docker exec ${containerName} bash -c "[ -f ${filePath}.pmmqa.orig ] || cp ${filePath} ${filePath}.pmmqa.orig"`,
+      ),
+    );
+    originalListenPort =
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} bash -c "grep -oE 'listen-port: [0-9]+' ${yamlPath}.pmmqa.orig | grep -oE '[0-9]+' | head -1"`,
+        )
+        .stdout.trim() || '7777';
   });
 
   pmmTest.afterAll(async ({ cliHelper }) => {
-    cliHelper.execSilent(`docker exec ${containerName} psql -U postgres -c "DROP ROLE ${newUsername};"`);
+    const hbaPath = `/etc/postgresql/${pgVersion}/main/pg_hba.conf`;
+    const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
+    const yamlPath = '/usr/local/percona/pmm/config/pmm-agent.yaml';
+    const exporterAgents = [pgExporterId, pgExporterSocketId];
+    const pgStatMonitorAgents = [pgStatMonitorId, pgStatMonitorSocketId];
+    const changeAgent = (agentType: string, agentId: string, flags: string) =>
+      cliHelper.execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent ${agentType} ${agentId} ${flags}`,
+      );
+
+    [hbaPath, confPath, yamlPath].forEach((filePath) =>
+      cliHelper.execSilent(
+        `docker exec ${containerName} bash -c "[ -f ${filePath}.pmmqa.orig ] && cp ${filePath}.pmmqa.orig ${filePath} || true"`,
+      ),
+    );
+    cliHelper.execSilent(`docker restart ${containerName}`);
+
+    await expect(async () => {
+      cliHelper.execSilent(`docker exec ${containerName} pmm-admin status`).assertSuccess();
+    }).toPass({ intervals: [Timeouts.TWO_SECONDS], timeout: Timeouts.TWO_MINUTES });
+
+    for (const agentId of [...exporterAgents, ...pgStatMonitorAgents]) {
+      const agentType = exporterAgents.includes(agentId)
+        ? 'postgres-exporter'
+        : 'qan-postgresql-pgstatmonitor-agent';
+
+      changeAgent(agentType, agentId, `--username=${originalUser} --password=${originalPassword}`);
+      changeAgent(agentType, agentId, `--pmm-agent-listen-port=${originalListenPort}`);
+      changeAgent(agentType, agentId, '--tls=false --tls-skip-verify=false');
+      changeAgent(agentType, agentId, '--custom-labels=');
+      changeAgent(agentType, agentId, '--log-level=warn');
+      changeAgent(agentType, agentId, '--enable=true');
+    }
+
+    for (const agentId of exporterAgents) {
+      changeAgent('postgres-exporter', agentId, '--disable-collectors=');
+      changeAgent('postgres-exporter', agentId, '--max-exporter-connections=0');
+      changeAgent('postgres-exporter', agentId, '--expose-exporter=false');
+      changeAgent('postgres-exporter', agentId, '--push-metrics=false');
+      changeAgent('postgres-exporter', agentId, '--agent-password=');
+    }
+
+    cliHelper.execSilent(
+      `docker exec ${containerName} psql -U postgres -c "DROP ROLE IF EXISTS ${newUsername};"`,
+    );
   });
 
   pmmTest(
@@ -181,7 +244,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`).assertSuccess();
-      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`).assertSuccess();
+      cliHelper
+        .execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`)
+        .assertSuccess();
 
       const hbaPath = `/etc/postgresql/${pgVersion}/main/pg_hba.conf`;
       const hbaLines = `hostssl      all             all             127.0.0.1/32    scram-sha-256
@@ -192,7 +257,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       fs.writeFileSync('/tmp/hba.conf', hbaLines);
       cliHelper.execSilent(`docker cp /tmp/hba.conf ${containerName}:${hbaPath}`).assertSuccess();
-      cliHelper.execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`).assertSuccess();
+      cliHelper
+        .execSilent(`docker exec ${containerName} pg_ctlcluster ${pgVersion} main restart`)
+        .assertSuccess();
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
@@ -262,9 +329,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper }) => {
       // const tlsFlags = '--tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify';
 
-      cliHelper.execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword}`,// ${tlsFlags}`,
-      ).assertSuccess();
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword}`,
+        )
+        .assertSuccess();
 
       await expect(async () => {
         const metrics = cliHelper.getMetrics({
@@ -284,7 +353,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T2276 - Verify pmm-admin inventory change agent flag expose exporter @pgsm-pmm-integration',
     async ({ cliHelper }) => {
-
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --expose-exporter`,
