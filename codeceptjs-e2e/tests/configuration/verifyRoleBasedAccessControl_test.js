@@ -52,10 +52,11 @@ Scenario(
   async ({
     I, dashboardPage, accessRolesPage, rolesApi, grafanaAPI,
   }) => {
-    // The MySQL and PostgreSQL dashboards below carry panels that pin `interval: 5m`,
-    // which are read at the last 300s boundary rather than at "now" on a now-5m range.
-    // A service registered after that boundary shows "No data" on them until the next
-    // one passes, so wait the metrics out before asserting on what the panels render.
+    // The MySQL and PostgreSQL dashboards below carry panels that pin `interval: 5m`.
+    // On a now-5m range those are evaluated at a single 300s grid point 5-10 minutes
+    // in the past, so a service registered more recently than that renders "No data"
+    // on them no matter how many samples arrived since. Wait the metrics out before
+    // asserting on what the panels render.
     await grafanaAPI.waitForMetricAtDashboardStep('min(mysql_global_status_uptime)');
     await grafanaAPI.waitForMetricAtDashboardStep('sum(mysql_global_variables_innodb_buffer_pool_size)');
     await grafanaAPI.waitForMetricAtDashboardStep('avg by (node_name) (node_memory_MemTotal_bytes)');

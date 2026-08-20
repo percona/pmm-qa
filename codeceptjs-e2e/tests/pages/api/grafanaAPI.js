@@ -531,20 +531,23 @@ module.exports = {
    * Fluent wait until an expression resolves at the 5-minute grid point that panels
    * pinning `interval: 5m` are read at.
    *
-   * Grafana aligns a range query down to a multiple of the step, so on a `now-5m`
-   * dashboard such a panel is evaluated at the last 300s boundary rather than at
-   * "now". A service registered after that boundary renders "No data" on those
-   * panels until the next one passes, however many samples have arrived meanwhile,
-   * and no amount of re-reading the rendered dashboard changes it.
+   * Grafana aligns such a panel's range query down to a multiple of the step, which
+   * on a `now-5m` range leaves a single evaluation point at the 300s boundary at or
+   * before `now - 5m` — so between 5 and 10 minutes in the past. A service that
+   * started being monitored more recently than that has no sample within the
+   * datasource's 5 minute staleness lookback of that point and the panel renders
+   * "No data", however many samples have arrived since. These dashboards do not
+   * auto-refresh either, so re-reading the rendered page cannot recover it.
    *
-   * Waits for the aligned point to carry as many series as an unaligned query does,
-   * so a node or service that only just started monitoring is waited for too.
+   * Waits for that evaluation point to carry as many series as a query at `now`
+   * does, so a node or service that only just started being monitored is waited
+   * for rather than silently tolerated as an empty panel.
    *
    * @param   expression          PromQL expression, ex.: min(mysql_global_status_uptime)
-   * @param   timeOutInSeconds    time to wait for the grid point to catch up
+   * @param   timeOutInSeconds    time to wait for the evaluation point to catch up
    * @param   stepInSeconds       panel step to align to
    */
-  async waitForMetricAtDashboardStep(expression, timeOutInSeconds = 420, stepInSeconds = 300) {
+  async waitForMetricAtDashboardStep(expression, timeOutInSeconds = 600, stepInSeconds = 300) {
     const headers = { Authorization: `Basic ${await I.getAuth()}` };
     const seriesCount = async (time) => {
       const path = `prometheus/api/v1/query?query=${encodeURIComponent(expression)}${time ? `&time=${time}` : ''}`;
@@ -553,17 +556,19 @@ module.exports = {
       return response.data.data.result.length;
     };
 
-    await I.say(`Wait up to ${timeOutInSeconds} seconds for "${expression}" to resolve at the ${stepInSeconds}s grid point`);
+    await I.say(`Wait up to ${timeOutInSeconds} seconds for "${expression}" to resolve where ${stepInSeconds}s-step panels are evaluated`);
 
     await I.asyncWaitFor(async () => {
       const expected = await seriesCount();
 
       if (expected === 0) return false;
 
-      const aligned = Math.floor(Date.now() / 1000 / stepInSeconds) * stepInSeconds;
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+      const evaluatedAt = Math.floor((nowInSeconds - stepInSeconds) / stepInSeconds) * stepInSeconds;
+      const actual = await seriesCount(evaluatedAt);
 
-      return await seriesCount(aligned) >= expected;
-    }, timeOutInSeconds, `"${expression}" still resolves to fewer series at the ${stepInSeconds}s grid point than at "now"`);
+      return actual >= expected;
+    }, timeOutInSeconds, `"${expression}" still resolves to fewer series where ${stepInSeconds}s-step panels are evaluated than at "now"`);
   },
 
   async checkMetricAbsent(metricName, refineBy) {
