@@ -19,13 +19,10 @@ let pgsmServiceNameSocket: string;
 
 pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
 
-  pmmTest.beforeEach(async ({ api, cliHelper }) => {
+  pmmTest.beforeEach(async ({ grafanaHelper, cliHelper, api }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
     pgsmServiceName = (await api.inventoryApi.getServiceDetailsByPartialName('pdpgsql_')).service_name;
     pgsmServiceNameSocket = (await api.inventoryApi.getServiceDetailsByPartialName('socket_pdpgsql_')).service_name;
-  });
-
-  pmmTest.beforeEach(async ({ grafanaHelper }) => {
     await grafanaHelper.authorize();
   });
 
