@@ -11,7 +11,7 @@ Inputs you already have by this point: the Jira ticket (summary, AC, labels/comp
 
 ## Default
 
-Unless a dimension below applies, test on a suitable local or existing **single-server Docker** deployment, or create one with `linode-docker-provisioning`. Most fixes (one exporter metric, a dashboard panel, a CLI flag, a UI page with no clustered state) live here and need nothing more.
+Unless a dimension below applies, the change is tested on the **default single-server Docker** deployment — `linode-docker-provisioning`. Most fixes (one exporter metric, a dashboard panel, a CLI flag, a UI page with no clustered state) live here and need nothing more.
 
 ## Dimensions to check
 
