@@ -527,6 +527,45 @@ module.exports = {
     return response;
   },
 
+  /**
+   * Fluent wait until an expression resolves at the 5-minute grid point that panels
+   * pinning `interval: 5m` are read at.
+   *
+   * Grafana aligns a range query down to a multiple of the step, so on a `now-5m`
+   * dashboard such a panel is evaluated at the last 300s boundary rather than at
+   * "now". A service registered after that boundary renders "No data" on those
+   * panels until the next one passes, however many samples have arrived meanwhile,
+   * and no amount of re-reading the rendered dashboard changes it.
+   *
+   * Waits for the aligned point to carry as many series as an unaligned query does,
+   * so a node or service that only just started monitoring is waited for too.
+   *
+   * @param   expression          PromQL expression, ex.: min(mysql_global_status_uptime)
+   * @param   timeOutInSeconds    time to wait for the grid point to catch up
+   * @param   stepInSeconds       panel step to align to
+   */
+  async waitForMetricAtDashboardStep(expression, timeOutInSeconds = 420, stepInSeconds = 300) {
+    const headers = { Authorization: `Basic ${await I.getAuth()}` };
+    const seriesCount = async (time) => {
+      const path = `prometheus/api/v1/query?query=${encodeURIComponent(expression)}${time ? `&time=${time}` : ''}`;
+      const response = await I.sendGetRequest(path, headers);
+
+      return response.data.data.result.length;
+    };
+
+    await I.say(`Wait up to ${timeOutInSeconds} seconds for "${expression}" to resolve at the ${stepInSeconds}s grid point`);
+
+    await I.asyncWaitFor(async () => {
+      const expected = await seriesCount();
+
+      if (expected === 0) return false;
+
+      const aligned = Math.floor(Date.now() / 1000 / stepInSeconds) * stepInSeconds;
+
+      return await seriesCount(aligned) >= expected;
+    }, timeOutInSeconds, `"${expression}" still resolves to fewer series at the ${stepInSeconds}s grid point than at "now"`);
+  },
+
   async checkMetricAbsent(metricName, refineBy) {
     let response;
 

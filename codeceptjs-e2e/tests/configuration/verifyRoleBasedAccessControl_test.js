@@ -50,8 +50,16 @@ Scenario('PMM-T1584 - Verify assigning Access role to user @rbac', async ({ I, u
 Scenario(
   'PMM-T1899 - Access Role based on Labels and Check Filtering of Metrics on Dashboard @rbac',
   async ({
-    I, dashboardPage, accessRolesPage, rolesApi,
+    I, dashboardPage, accessRolesPage, rolesApi, grafanaAPI,
   }) => {
+    // The MySQL and PostgreSQL dashboards below carry panels that pin `interval: 5m`,
+    // which are read at the last 300s boundary rather than at "now" on a now-5m range.
+    // A service registered after that boundary shows "No data" on them until the next
+    // one passes, so wait the metrics out before asserting on what the panels render.
+    await grafanaAPI.waitForMetricAtDashboardStep('min(mysql_global_status_uptime)');
+    await grafanaAPI.waitForMetricAtDashboardStep('sum(mysql_global_variables_innodb_buffer_pool_size)');
+    await grafanaAPI.waitForMetricAtDashboardStep('avg by (node_name) (node_memory_MemTotal_bytes)');
+
     await rolesApi.createRole(psRole);
     await rolesApi.createRole(pgRole);
 
