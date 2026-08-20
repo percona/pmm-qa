@@ -104,6 +104,35 @@ load helpers/test_helper
   [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
 }
 
+@test "skips PSMDB patches whose RPMs are not in the release repository yet" {
+  # The downloads API lists a release before its RPMs leave 'testing', which is
+  # how 8.0.29-13 broke the member image build.
+  curl() {
+    printf '%s' \
+      '{"success":true,"data":{"versions":["percona-server-mongodb-8.0.4-2","percona-server-mongodb-8.0.29-13"]}}'
+  }
+  psmdb_rpms_published() {
+    [[ $1 != 8.0.29-13 ]]
+  }
+
+  [[ $(latest_psmdb_version 8.0) == 8.0.4-2 ]]
+}
+
+@test "reports a missing RPM as unpublished and anything else as published" {
+  curl() {
+    case " $* " in
+      *8.0.29-13*) printf '404' ;;
+      *) printf '200' ;;
+    esac
+  }
+
+  run psmdb_rpms_published 8.0.29-13 9
+  [[ $status -ne 0 ]]
+
+  run psmdb_rpms_published 8.0.28-12 9
+  [[ $status -eq 0 ]]
+}
+
 @test "selects the existing requests-capable interpreter for Ansible modules" {
   local fake_python=$BATS_TEST_TMPDIR/python
   printf '#!/usr/bin/env bash\nexit 0\n' >"$fake_python"

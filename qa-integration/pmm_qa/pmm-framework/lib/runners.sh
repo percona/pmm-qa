@@ -74,30 +74,55 @@ version_is_greater() {
   return 1
 }
 
-# Expand a PSMDB major version into its newest full version.
+# Whether a full PSMDB version's RPMs are published in the 'release' yum
+# repository the setup images install from.
+#
+# The downloads API lists a release as soon as its packages are built, which
+# can be well before they are promoted from 'testing' to 'release'. The member
+# image enables the release repo only, so picking such a version fails the
+# image build with 'No match for argument:
+# percona-server-mongodb-<version>.el<ol>' -- PSMDB 8.0.29-13 did exactly that.
+#
+# A missing RPM answers 404. Anything else, including a request that never
+# completes, counts as published, so a network hiccup degrades to picking the
+# newest version rather than failing the run.
+#
+# Usage:  psmdb_rpms_published 8.0.28-12 9
+psmdb_rpms_published() {
+  local version=$1 ol_version=$2 series code
+  series=$(printf '%s' "$version" | awk -F. '{print $1 $2}')
+  code=$(curl --silent --head --output /dev/null --write-out '%{http_code}' \
+    "https://repo.percona.com/psmdb-${series}/yum/release/${ol_version}/RPMS/x86_64/percona-server-mongodb-server-${version}.el${ol_version}.x86_64.rpm") ||
+    return 0
+  [[ $code != 404 ]]
+}
+
+# Expand a PSMDB major version into its newest installable full version.
 #
 # The PSMDB setup scripts want a complete version such as '8.0.26-11', but
 # specs name the major series ('8.0'). This asks the same admin-ajax.php
 # endpoint the percona.com downloads page itself calls (Percona removed the
 # old products-api.php when the site was rebuilt on WordPress/Breakdance) for
-# every published patch of that series, and picks the highest.
+# every published patch of that series, and picks the highest one whose RPMs
+# the image build can actually install (see psmdb_rpms_published).
 #
 # 'latest' and '' pass through untouched -- they are meaningful to the setup
-# script as-is. This is the only network call the framework makes, and the only
-# reason `curl` is required (preflight checks for it only when a PSMDB setup is
-# requested).
+# script as-is. These are the only network calls the framework makes, and the
+# only reason `curl` is required (preflight checks for it only when a PSMDB
+# setup is requested).
 #
-# Usage:  version=$(latest_psmdb_version 8.0)   # -> 8.0.26-11
+# Usage:  version=$(latest_psmdb_version 8.0 9)   # -> 8.0.28-12
 # Stdout: the resolved version
-# Exits:  via die() when the API call fails or no patch matches
+# Exits:  via die() when the API call fails or no patch is installable
 latest_psmdb_version() {
-  local requested=$1
+  local requested=$1 ol_version=${2:-9}
   if [[ $requested == latest || -z $requested ]]; then
     printf '%s' "$requested"
     return
   fi
 
-  local response latest='' latest_patch='' candidate patch
+  local response candidate patch best best_patch best_index index
+  local -a candidates=()
   response=$(curl --fail --silent --show-error \
     --data-urlencode 'action=percona_downloads' \
     --data-urlencode "product_id=percona-server-mongodb-$requested" \
@@ -107,16 +132,9 @@ latest_psmdb_version() {
 
   # The API answers with JSON; pull the quoted entries out of the 'versions'
   # array, strip the product prefix, and keep only entries for the requested
-  # series. Patches look like '<major.minor>.<patch>-<build>'; the trailing
-  # '-build' is turned into '.build' so version_is_greater can compare it as
-  # just another dotted component.
+  # series.
   while IFS= read -r candidate; do
-    patch=${candidate#"$requested."}
-    patch=${patch//-/.}
-    if [[ -z $latest ]] || version_is_greater "$patch" "$latest_patch"; then
-      latest=$candidate
-      latest_patch=$patch
-    fi
+    candidates+=("$candidate")
   done < <(
     printf '%s' "$response" |
       grep -Eo '"versions"[[:space:]]*:[[:space:]]*\[[^]]*\]' |
@@ -125,9 +143,32 @@ latest_psmdb_version() {
       sed 's/^percona-server-mongodb-//' |
       grep -E "^${requested//./\\.}\.[0-9]+(-[0-9]+)?$"
   )
-  [[ -n $latest ]] ||
+  ((${#candidates[@]})) ||
     die "Could not resolve the latest PSMDB patch for '$requested'."
-  printf '%s' "$latest"
+
+  # Newest first, returning the first one that is installable. Patches look
+  # like '<major.minor>.<patch>-<build>'; the trailing '-build' is turned into
+  # '.build' so version_is_greater can compare it as just another dotted
+  # component.
+  while ((${#candidates[@]})); do
+    best='' best_patch='' best_index=-1
+    for index in "${!candidates[@]}"; do
+      patch=${candidates[index]#"$requested."}
+      patch=${patch//-/.}
+      if [[ -z $best ]] || version_is_greater "$patch" "$best_patch"; then
+        best=${candidates[index]}
+        best_patch=$patch
+        best_index=$index
+      fi
+    done
+    if psmdb_rpms_published "$best" "$ol_version"; then
+      printf '%s' "$best"
+      return
+    fi
+    unset "candidates[best_index]"
+    candidates=("${candidates[@]}")
+  done
+  die "No PSMDB '$requested' patch is published in the release repository for el$ol_version."
 }
 
 # The PMM Server admin password for this run.

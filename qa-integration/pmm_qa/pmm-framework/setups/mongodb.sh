@@ -17,17 +17,19 @@
 # registered default. The middle case is why this helper exists at all: the
 # compose scripts need a full version such as '8.0-12.1', so a spec version is
 # sent through latest_psmdb_version() (a network lookup) rather than used
-# as-is.
+# as-is. The Oracle Linux release the member image is built on decides which
+# RPMs that lookup has to find, so it is passed along.
 #
 # Shared by setup_psmdb and setup_ssl_psmdb.
 #
 # Reads:  PSMDB_VERSION, DB_VERSION, DB_TYPE
 # Stdout: the resolved version
 psmdb_version() {
+  local ol_version=${1:-9}
   if [[ -n ${PSMDB_VERSION:-} ]]; then
     printf '%s' "$PSMDB_VERSION"
   elif [[ -n $DB_VERSION ]]; then
-    latest_psmdb_version "$DB_VERSION"
+    latest_psmdb_version "$DB_VERSION" "$ol_version"
   else
     database_default_version "$DB_TYPE"
   fi
@@ -43,8 +45,9 @@ psmdb_version() {
 #
 # SETUP_TYPE picks the script; 'shards' and 'sharding' are aliases.
 setup_psmdb() {
-  local version client setup_type script
-  version=$(psmdb_version)
+  local version client setup_type script ol_version
+  ol_version=$(resolve_value PSMDB OL_VERSION DB_CONFIG)
+  version=$(psmdb_version "$ol_version")
   client=$(resolved_client_version PSMDB DB_CONFIG)
   setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
   setup_type=${setup_type,,}
@@ -58,7 +61,7 @@ setup_psmdb() {
     [COMPOSE_PROFILES]="$(resolve_value PSMDB COMPOSE_PROFILES DB_CONFIG)"
     [MONGO_SETUP_TYPE]="$setup_type"
     [MONGO_STORAGE_ENGINE]="$(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG)"
-    [OL_VERSION]="$(resolve_value PSMDB OL_VERSION DB_CONFIG)"
+    [OL_VERSION]="$ol_version"
     [GSSAPI]="$(resolve_value PSMDB GSSAPI DB_CONFIG)"
     [TESTS]=no
     [CLEANUP]=no
