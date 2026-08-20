@@ -59,6 +59,25 @@ export default class mocksHelper {
     await this.page.route(apiEndpoints.management.services, fulfillNoServices);
   };
 
+  mockRealTimeAnalyticsSessions = async (): Promise<void> => {
+    const sessions = Array.from({ length: 26 }, (_, index) => ({
+      cluster_name: `mock-cluster-${String(index + 1).padStart(2, '0')}`,
+      collect_interval: '2s',
+      service_id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+      service_name: `mock-service-${String(index + 1).padStart(2, '0')}`,
+      start_time: '2026-01-01T00:00:00Z',
+      status: 'SESSION_STATUS_RUNNING',
+    }));
+
+    await this.page.route(apiEndpoints.realtimeanalytics.sessions, (route) =>
+      route.fulfill({
+        body: JSON.stringify({ sessions }),
+        contentType: 'application/json',
+        status: 200,
+      }),
+    );
+  };
+
   mockSnoozedUpdate = async (updateVersion: string): Promise<{ snoozedAt: number }> => {
     const state = { snoozedAt: 0, snoozedVersion: '' };
 

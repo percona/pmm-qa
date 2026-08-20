@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, Locator, test } from '@playwright/test';
 import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
@@ -13,6 +13,10 @@ import pmmTest from '@fixtures/pmmTest';
 import OperatingSystemDashboards, { OperatingSystemDashboardsType } from '@pages/dashboards/operating-system';
 
 const panelNoDataMarkers = ['None', 'No data', 'NO DATA', 'No Data', 'N/A'];
+// A viz legend entry reading "N/A" is a series name — a state timeline maps its
+// null state to that text — so it must not count as Grafana's own no-data indicator.
+const noDataMarkerXPath =
+  '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")][not(ancestor-or-self::*[starts-with(@data-testid, "data-testid VizLegend series")])]';
 const hasKnownNoDataMarker = (panelText: string) =>
   panelNoDataMarkers.some((marker) => panelText.includes(marker)) ||
   panelText
@@ -47,12 +51,8 @@ export default class Dashboards extends BasePage {
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
     loadingIndicator: this.grafanaIframe().getByLabel('data-testid Loading indicator', { exact: true }),
     loadingText: this.grafanaIframe().getByText('Loading plugin panel...', { exact: true }),
-    noDataPanel: this.page.locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]',
-    ),
-    noDataPanelName: this.grafanaIframe().locator(
-      '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data") or (@data-testid="data-testid Panel data error message")]//ancestor::section//h2',
-    ),
+    noDataPanel: this.page.locator(noDataMarkerXPath),
+    noDataPanelName: this.grafanaIframe().locator(`${noDataMarkerXPath}//ancestor::section//h2`),
     panelName: this.grafanaIframe().locator('//section[contains(@data-testid, "Panel header")]//h2'),
     qanGrid: this.grafanaIframe().locator('.query-analytics-grid'),
     qanTableLoading: this.grafanaIframe().getByTestId('table-loading'),
@@ -67,6 +67,36 @@ export default class Dashboards extends BasePage {
 
   readonly panels = () => Panels(this.page);
 
+  collectTextsAcrossScroll = async (locator: Locator): Promise<string[]> => {
+    const getScrollTop = (el: Element) => el.ownerDocument.scrollingElement?.scrollTop ?? 0;
+    const collected = new Set<string>();
+    const collect = async () =>
+      (await locator.allTextContents()).forEach((text) => collected.add(text.trim()));
+    const itemCount = await this.elements.gridItems.count();
+
+    const visit = async (i: number) => {
+      const item = this.elements.gridItems.nth(i);
+      const previousScrollTop = await item.evaluate(getScrollTop);
+
+      await item.scrollIntoViewIfNeeded();
+
+      if ((await item.evaluate(getScrollTop)) !== previousScrollTop) {
+        //eslint-disable-next-line playwright/no-wait-for-timeout -- virtualized panels need time to mount after scrolling
+        await this.page.waitForTimeout(Timeouts.HALF_SECOND);
+      }
+
+      await collect();
+    };
+
+    await collect();
+
+    for (let i = 0; i < itemCount; i++) {
+      await visit(i);
+    }
+
+    return Array.from(collected);
+  };
+
   loadAllPanels = async () => {
     await this.waitForDashboardToLoad();
 
@@ -78,6 +108,7 @@ export default class Dashboards extends BasePage {
         const item = this.elements.gridItems.nth(i);
 
         await item.scrollIntoViewIfNeeded();
+        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
 
         const expandButton = item.getByLabel('Expand row');
 
@@ -85,8 +116,6 @@ export default class Dashboards extends BasePage {
           await expandButton.click();
           await expectPanel(expandButton).toBeHidden();
         }
-
-        await expectPanel(item.locator(':scope > *')).not.toHaveCount(0);
       }
     });
 
@@ -131,12 +160,13 @@ export default class Dashboards extends BasePage {
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
-    let noDataPanels: string[] = [];
+    const expectedNoDataMetrics = noDataMetrics.map((metric) => metric.trim());
     let missingMetrics: string[] = [];
 
     for (let i = 0; i <= timeout; i += Timeouts.THIRTY_SECONDS) {
-      noDataPanels = await this.elements.noDataPanelName.allTextContents();
-      missingMetrics = Array.from(noDataPanels).filter((e) => !noDataMetrics.includes(e));
+      const noDataPanels = await this.collectTextsAcrossScroll(this.elements.noDataPanelName);
+
+      missingMetrics = noDataPanels.filter((metric) => !expectedNoDataMetrics.includes(metric));
 
       if (missingMetrics.length == 0) break;
 
@@ -150,14 +180,14 @@ export default class Dashboards extends BasePage {
   verifyMetricsPresent = async (expectedMetrics: GrafanaPanel[], serviceList?: GetService[]) => {
     expectedMetrics = serviceList ? replaceWildcards(expectedMetrics, serviceList) : expectedMetrics;
 
-    const expectedMetricsNames = expectedMetrics.map((e) => e.name);
+    const expectedMetricsNames = expectedMetrics.map((metric) => metric.name.trim());
 
     await this.loadAllPanels();
 
-    // eslint-disable-next-line playwright/prefer-web-first-assertions -- the order might be different
-    const availableMetrics = await this.elements.panelName.allTextContents();
+    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
+    const missingMetrics = expectedMetricsNames.filter((metric) => !availableMetrics.includes(metric));
 
-    expect.soft(availableMetrics).toEqual(expect.arrayContaining(expectedMetricsNames));
+    expect.soft(missingMetrics, `Missing dashboard panels: ${missingMetrics.join(', ')}`).toHaveLength(0);
   };
 
   verifyNamedPanelsHaveData = async (panelNames: string[]) => {

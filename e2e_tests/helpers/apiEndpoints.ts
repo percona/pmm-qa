@@ -14,6 +14,7 @@ const apiEndpoints = {
     scheduled: '/v1/backups/scheduled',
   },
   ha: {
+    nodes: '/v1/ha/nodes',
     status: '/v1/ha/status',
   },
   inventory: {
@@ -25,12 +26,20 @@ const apiEndpoints = {
   platform: {
     connect: '/v1/platform:connect',
   },
+  prometheus: {
+    // The Grafana datasource proxy, not PMM's /prometheus route - see PrometheusApi.
+    datasourceProxy: '/graph/api/datasources/proxy/uid',
+    datasources: '/graph/api/datasources',
+  },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',
+    sessions: '/v1/realtimeanalytics/sessions',
     sessionsStart: '/v1/realtimeanalytics/sessions:start',
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
+    // 200 only on the HA leader; HAProxy routes on it.
+    leaderHealthCheck: '/v1/server/leaderHealthCheck',
     readyz: '/v1/server/readyz',
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
