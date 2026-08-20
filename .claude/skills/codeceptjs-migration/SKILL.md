@@ -60,9 +60,13 @@ Inline in the test only when no suitable existing abstraction exists. Creating a
 
 ## Native Playwright rules
 
-- Use `pmmTest` and existing fixtures.
-- Use Playwright `Locator` objects for UI elements.
-- Keep Playwright assertions visible in test bodies.
+`playwright-practices.md` is authoritative for how migrated code is written: locator ladder,
+web-first assertions, the modern API to prefer over a CodeceptJS transliteration, removed APIs,
+structure, and the repository's deliberate deviations from upstream. Read it before migrating.
+Its `verifiedAgainst` version must match `e2e_tests/package.json`; `run.md` step 1 checks this.
+
+The rules below are migration-specific and are not repeated there:
+
 - Reuse existing POMs, helpers, components, API clients, fixtures, and test data.
 - When reusing existing code, follow section Minimal reuse diffs (expose in place; no duplicate delegates).
 - Port behavior, not CodeceptJS helper APIs.
@@ -71,9 +75,9 @@ Inline in the test only when no suitable existing abstraction exists. Creating a
 - Keep migration docs ASCII-only.
 - Add target registrations only when required.
 - Keep URLs in the repository's existing POM structure.
-- Use repository timeout constants when an explicit timeout is necessary.
 - Do not retain CodeceptJS `I.*` calls or recreate an actor abstraction.
-- Do not hide assertions inside POMs or helpers.
+- Do not hide assertions inside POMs or helpers; a CodeceptJS custom step that asserts becomes a
+  helper that returns a value plus an assertion in the test body.
 - Do not suppress `playwright/expect-expect` to compensate for hidden assertions.
 - Do not add comments of any kind in migrated test files (`*.test.ts`), except the required skip-policy comments in `mappings.md`.
 - If a lint rule fails in a test, refactor the test or move the behavior into an existing/new helper, POM, component, or API client where appropriate.
@@ -87,12 +91,16 @@ Before marking the tracker row `in-progress`, merge `origin/main` into control a
 
 ## Local provisioning rule
 
-Create one local Docker environment per migration through `provisioning/setup.ts`, reuse it through both reviews and execution, then tear it down through the same entry point. Do not use the Linode or `qa-integration` provisioners for this workflow. See `context.md` and `run.md`.
+Create one local Docker environment per migration through `provisioning/setup.ts`, reuse it through both reviews and execution, then tear it down through the same entry point. It starts in the background as soon as the environment bucket is confirmed, so it provisions while the writer migrates. Do not use the Linode or `qa-integration` provisioners for this workflow. See `context.md` and `run.md`.
 
 ## Agent responsibilities
 
 - `pmm-migration-writer`: graph discovery, migration, and static validation.
 - `pmm-migration-reviewer`: independent completeness review, MCP locator verification, locator-only corrections, and final review.
 - `pmm-migration-runner`: execution, failure evidence, publication, PR creation, and tracker completion.
+
+Each of the three appends its own row to this migration's timeline in
+`.claude/migration-observations/` before returning. `skill-gardener` reads those rows to audit the
+workflow and to fill in `parallelization-ledger.md`.
 
 The canonical sequence is defined in `run.md`.

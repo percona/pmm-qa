@@ -8,16 +8,42 @@ fi
 
 failures=0
 
+# Patterns below are POSIX ERE. Prefer ripgrep, fall back to grep -E, and refuse to run rather
+# than report a pass that checked nothing: a missing matcher used to exit 0 through `|| true`.
+if command -v rg >/dev/null 2>&1; then
+  search() { rg -n --with-filename "$1" -- "$2"; }
+elif echo | grep -Eq '[[:space:]]*' 2>/dev/null; then
+  search() { grep -En --with-filename -- "$1" "$2"; }
+else
+  echo "error: neither rg nor a working grep -E is available; cannot check conventions" >&2
+  exit 2
+fi
+
 report_matches() {
   local label=$1
   local pattern=$2
   local file=$3
   local matches
 
-  matches=$(rg -n --with-filename --pcre2 "$pattern" -- "$file" || true)
+  matches=$(search "$pattern" "$file" || true)
   if [[ -n $matches ]]; then
     printf '%s\n' "$matches" | sed "s#^#$label: #" >&2
     failures=1
+  fi
+}
+
+# Reported but not fatal: the pattern is discouraged rather than banned, and predates this check
+# in enough places that failing on it would block migrations over lines they did not write.
+report_advisory() {
+  local label=$1
+  local pattern=$2
+  local file=$3
+  local matches
+
+  matches=$(search "$pattern" "$file" || true)
+  if [[ -n $matches ]]; then
+    printf '%s
+' "$matches" | sed "s#^#advisory: $label: #" >&2
   fi
 }
 
@@ -44,6 +70,11 @@ for file in "$@"; do
   fi
 
   report_matches 'SafeOmission requires parseInt(versionPart)' 'parseInt[[:space:]]*\([^,()]+,[[:space:]]*10[[:space:]]*\)' "$file"
+  report_matches 'practices: use toHaveCSS instead of getComputedStyle' 'getComputedStyle' "$file"
+  report_advisory 'practices: prefer narrowing the locator over nth/first/last' '\.(nth[[:space:]]*\(|first[[:space:]]*\(\)|last[[:space:]]*\(\))' "$file"
+  report_matches 'practices: use a web-first assertion, not a manual predicate' 'expect[[:space:]]*\([[:space:]]*await[^)]*\.(isVisible|isHidden|isEnabled|isDisabled|isChecked|count)[[:space:]]*\(' "$file"
+  report_matches 'practices: page.accessibility was removed in Playwright 1.57' 'page[[:space:]]*\.[[:space:]]*accessibility' "$file"
+  report_matches 'practices: backgroundPages() is deprecated' 'backgroundPages[[:space:]]*\(' "$file"
   if [[ $file == */e2e_tests/helpers/* || $file == e2e_tests/helpers/* ]]; then
     report_matches 'helpers must not hide expect()' 'expect[[:space:]]*\(' "$file"
   fi

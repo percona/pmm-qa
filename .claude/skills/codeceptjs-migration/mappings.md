@@ -1,5 +1,9 @@
 # MappingsAI
 
+Call-level translation only. `playwright-practices.md` governs the idiom a mapping lands in; where
+a row below could be written more than one way, that file decides. Section PreferModernApi lists
+the cases where the obvious transliteration is no longer the right target.
+
 ## Helpers
 
 DoNotMigrateHelpers;MapToExistingPlaywrightHelpers.
@@ -8,7 +12,7 @@ DoNotMigrateHelpers;MapToExistingPlaywrightHelpers.
 `PostgresqlDBHelper`->`@helpers/cli.helper.ts`;RunPsqlViaDockerExec.
 `Mailosaur`->npm`mailosaur`.
 `apiHelper.js`/`REST`->`@api/api.ts`(e.g.`api.settingsApi.getSettings()`).
-`LocalStorageHelper`->`await page.evaluate(() => window.localStorage.setItem(...))`.
+`LocalStorageHelper`->`page.localStorage`/`page.sessionStorage`(1.61);not`evaluate`.
 `FileHelper`/`FileSystem`->Node`fs`/`path`.
 `ChaiWrapper`(`assert`)->`expect()`.
 `linksHelper.js`->Inline/POM/`@helpers/apiEndpoints.ts`.
@@ -39,7 +43,7 @@ Legacy remote-instance tests route from `client_container` to a database through
 `I.grabTextFromAll(locator)`->`await locator.allTextContents()`.
 `I.grabAttributeFrom(locator,attr)`->`await locator.getAttribute(attr)`.
 `I.seeAttributesOnElements(locator,{ attr: val })`->`await expect(locator).toHaveAttribute(attr,val)`.
-`I.seeCssPropertiesOnElements(locator,{ color: val })`->`const c=await locator.evaluate(el => getComputedStyle(el).color); expect(c).toBe(val)`.
+`I.seeCssPropertiesOnElements(locator,{ color: val })`->`await expect(locator).toHaveCSS('color',val)`;`{ pseudo: '::before' }`ForPseudoElements.
 `I.waitForFile(path,t)`/`I.seeFile(path)`->`expect(fs.existsSync(path)).toBe(true)`.
 `I.seeInThisFile(text)`->`expect(fs.readFileSync(path,'utf-8')).toContain(text)`.
 `tryTo(...)`->ExplicitConditionalLogicOr`try/catch`OnlyWhenIgnoringFailure.
@@ -53,7 +57,7 @@ Legacy remote-instance tests route from `client_container` to a database through
 `verifyPopUpMessage(message, t=30)` / `verifyWarning(message, t=10)` / `getPopUpLocator` / `getSuccessPopUpLocator` / `getClosePopUpButtonLocator` -> POM `messages` locator first; create `@components/notification.component.ts` only when reused across pages.
 
 - If a component is created, keep it **dumb**: it exposes the locator (`[role="alert"],[role="status"]`) and a `close()` method (click `[aria-label="Close alert"]`). It does NOT assert.
-- The `expect(pom.messages.successPopUp).toContainText(message)` or `expect(component.message).toContainText(message)` call MUST be written inline in the test body - never hidden inside the POM/component. This is a `NoExpectsInHelpers` case (see `SKILL.md` section Helpers).
+- The `expect(pom.messages.successPopUp).toContainText(message)` or `expect(component.message).toContainText(message)` call MUST be written inline in the test body - never hidden inside the POM/component. This is a `NoExpectsInHelpers` case (see `SKILL.md` section Native Playwright rules and `playwright-practices.md` section Web-first assertions).
 - `verifyWarning` asserts on `[data-testid="data-testid Alert warning"]` instead of the generic alert locator.
 
 `verifyInvisible(sel, t)` -> `await expect(locator).toBeHidden({ timeout })`.
@@ -77,6 +81,19 @@ Hiding `expect` inside a helper violates `NoExpectsInHelpers` and triggers the `
 `cleanupClickhouse()` -> `@helpers/cli.helper.ts`: `docker exec pmm-server clickhouse-client --database pmm --password clickhouse --query "TRUNCATE TABLE metrics"`.
 
 Any custom step not listed above: read `codeceptjs-e2e/tests/custom_steps.js` to determine the logic before migrating (do not inline it into the test - map it to `@helpers` or `@components`).
+
+## PreferModernApi
+
+The CodeceptJS source predates most of these. When a mapping above would produce the left column,
+write the right column instead. Full table and versions in `playwright-practices.md`.
+
+`getComputedStyle`Via`evaluate`->`toHaveCSS`.
+`toHaveClass(/partial/)`Or`[class*="..."]`Selector->`toContainClass`.
+`evaluate`On`localStorage`/`sessionStorage`->`page.localStorage`/`page.sessionStorage`.
+ManualConsole/RequestListeners->`page.consoleMessages()`/`page.pageErrors()`/`page.requests()`.
+LongStructuralDOMAssertionChain->`toMatchAriaSnapshot()`.
+ManualTruthinessWaitLoop->`locator.waitForFunction()`Or`expect.poll`.
+NeverIntroduce:`page.accessibility`,`backgroundPages()`,`?`/`[]`GlobsIn`page.route()`,`-gv`.
 
 ## Skip policy
 

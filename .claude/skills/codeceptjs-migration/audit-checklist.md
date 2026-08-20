@@ -49,6 +49,21 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Reuse changes follow `SKILL.md` section Minimal reuse diffs (expose in place; no duplicate public+private delegates).
 - [ ] New fixtures, POMs, API clients, or endpoints are registered.
 
+### Playwright practices
+
+Against `playwright-practices.md`. Check the changed files, not the whole repository.
+
+- [ ] `verifiedAgainst` in `playwright-practices.md` matches `@playwright/test` in `e2e_tests/package.json`.
+- [ ] Locators follow the priority ladder; CSS is confined to MUI/Grafana internals and XPath to positional cells and the Grafana iframe.
+- [ ] Each new `nth()`, `first()`, or `last()` is deliberate indexing or a positional cell, not a strict-mode workaround. Advisories on pre-existing lines are not blockers.
+- [ ] Every POM entry is a `Locator` object, not a selector string.
+- [ ] No manual-predicate assertion (`expect(await x.isVisible()).toBe(true)`) and no hand-rolled polling loop.
+- [ ] `toHaveCount`, `toBeHidden`, `toHaveCSS`, `toContainClass` used where they apply; non-locator assertions carry a message.
+- [ ] Where section PreferModernApi applies, the modern API was used rather than the literal CodeceptJS transliteration.
+- [ ] No removed or deprecated API introduced (`page.accessibility`, `backgroundPages()`, `?`/`[]` route globs, `-gv`).
+- [ ] The documented deviations were preserved, not "corrected": tags stay inside the title string, explicit `Timeouts.X` on assertions that need longer than the default.
+- [ ] `playwright.config.ts` and the pinned Playwright version are unchanged.
+
 ### Playwright quality
 
 - [ ] No CodeceptJS `I.*` calls remain.
@@ -81,6 +96,7 @@ Unverified locators: 0
 New TypeScript failures: 0
 New ESLint failures: 0
 Migration convention violations: 0
+Playwright practice violations: 0
 Result: READY_TO_RUN
 ```
 
@@ -98,6 +114,7 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] Existing CodeceptJS jobs and grep expressions remain unchanged.
 - [ ] Each migrated tag is appended to a compatible existing Playwright job, or a new Playwright job provides the required setup.
 - [ ] The final migration PR excludes tracker and `graphify-out/` files after cherry-picking `migration-start..control` onto the fresh `origin/main`-based publish branch.
+- [ ] Runtime and locator fixes still satisfy section Playwright practices.
 - [ ] No debug or temporary code remains.
 - [ ] No unrelated files or behavior are included.
 - [ ] Static validation still introduces zero new failures.

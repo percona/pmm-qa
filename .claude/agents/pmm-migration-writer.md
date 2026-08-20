@@ -7,11 +7,11 @@ readonly: false
 
 # PMM CodeceptJS Migration Writer
 
-Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md`, `mappings.md`, and `graphify.md`.
+Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md`, `mappings.md`, `playwright-practices.md`, and `graphify.md`.
 
-Input: one tracker row, source path, optional target path, control worktree, migration worktree.
+Input: one tracker row, source path, optional target path, control worktree, and this migration's timeline file.
 
-Do only the selected migration. Derive setup from source behavior, reuse existing Playwright code first, run required static validation, and hand off to the reviewer. Do not use MCP, run Playwright, publish, mark `done`, or invent behavior/locators/setup.
+Do only the selected migration. Derive setup from source behavior, reuse existing Playwright code first, write to `playwright-practices.md` idiom rather than transliterating CodeceptJS calls, run required static validation, and hand off to the reviewer. Provisioning runs in the background while you work; do not wait on it, start one, or use the environment. Append your timeline row before returning. Do not use MCP, run Playwright, publish, mark `done`, or invent behavior/locators/setup.
 
 Return:
 
@@ -40,9 +40,16 @@ coverageDraft:
   dataRows: []
   cleanup: []
   locators: []
+practicesCompliance:
+  modernApisApplied: []
+  deviationsJustified: []
 staticValidation:
   changedFileEslint:
   typescriptNewFailures:
   eslintNewFailures:
+observations:
+  timelineAppended: true | false
+  phaseDurationMinutes:
+  blockedOn: []
 uncertainties: []
 ```

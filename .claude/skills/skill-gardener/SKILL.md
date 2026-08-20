@@ -43,7 +43,9 @@ If a correction is both, put the preference in memory and the file change in the
    - an existing skill or agent caused or failed to prevent a concrete mistake;
    - the same manual workflow or workaround appeared at least twice;
    - a technique produced demonstrably better accuracy, safety, or efficiency;
-   - the user explicitly asks to preserve the lesson.
+   - the user explicitly asks to preserve the lesson;
+   - observable redundant or avoidable work appeared in a single run, visible in the tool sequence
+     rather than inferred.
 3. Audit the observable tool and command sequence for repeated searches or reads, avoidable failed retries, unnecessary setup or dependencies, serial calls that were safe to run together, and custom commands an existing helper or native tool could replace. Do not infer hidden reasoning or optimize away verification, safety checks, or required evidence.
 4. Reject observations that are one-off preferences, task facts, generic advice, tool failures unrelated to method, speculation, or already covered by current instructions.
 5. Read `.claude/skill-lessons.md` if it exists. Search for the same target and lesson before writing.
@@ -70,7 +72,7 @@ If the repository is unavailable or the log cannot be written, include the forma
 
 ## Automated review passes
 
-`.claude/hooks/skill-gardener-review.sh` invokes Capture after another skill finishes, and retires itself for that skill after three consecutive passes that find nothing. When a pass triggered this way ends, record the outcome:
+`.claude/hooks/skill-gardener-review.sh` invokes Capture after another skill finishes, and retires itself for that skill after three consecutive passes that find nothing. It fires on the `Skill` tool call, so a skill that loads inline and then does its work through follow-up calls is not covered by it; `codeceptjs-migration` is one such skill and has `.claude/hooks/migration-phase-observe.sh` instead, which requests a pass after each of its subagent phases. Advance the counter the same way for either hook. When a pass triggered this way ends, record the outcome:
 
 ```bash
 bash .claude/scripts/skill-gardener-counter.sh <skill> found|none
@@ -132,6 +134,22 @@ Prefer deletion, clarification, or one enforceable check over adding another gen
 7. Leave unrelated lessons untouched.
 
 The archive is the target file's own git history, not the log — Apply lands the change in a tracked file before deleting the entry. Maintain no second archive or status ledger.
+
+## The migration workflow's own records
+
+`codeceptjs-migration` owns two files this skill reads but does not own:
+
+- `.claude/migration-observations/<row>-<slug>.md` — a per-migration phase timeline written by the
+  migration agents. It exists because a subagent's internals never reach the parent, so without it
+  there is no observable sequence to audit for those phases. Read it; never create or maintain it.
+- `.claude/skills/codeceptjs-migration/parallelization-ledger.md` — candidates for overlapping
+  workflow steps. Record a parallelization observation by updating the matching row there instead
+  of opening a lesson, and open a lesson only once the accumulated evidence supports a verdict.
+  A verdict needs timing data from at least two migrations.
+
+This is a named exception for that one skill, not a general licence: keep no ledger, counter, or
+archive of this skill's own, and the ban on raw command transcripts and telemetry logs is
+unchanged.
 
 The gardener may improve itself, but `skill-gardener` follows the same evidence and approval rules as every other target.
 
