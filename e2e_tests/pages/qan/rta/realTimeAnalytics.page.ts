@@ -69,6 +69,7 @@ export default class RealTimeAnalyticsPage extends BasePage {
   };
   inputs = {
     clusterService: this.page.locator('input[name = "service"]'),
+    filterByHost: this.page.getByTitle('Filter by Host'),
     filterByQueryText: this.page.getByTitle('Filter by Query text'),
     maximumDuration: this.page.getByRole('textbox', { name: 'Max' }),
     minimumDuration: this.page.getByRole('textbox', { name: 'Min' }),
