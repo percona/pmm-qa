@@ -1,10 +1,22 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
+
+  getNodeName = async (nodeId: string): Promise<string> => {
+    const response = await this.request.get(`${apiEndpoints.management.nodes}/${nodeId}`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+    const nodes = Object.values((await response.json()) as Record<string, GetNode>).flat();
+    const node = nodes.find((node: GetNode) => node.node_id === nodeId);
+
+    if (!node) throw new Error(`Node with id ${nodeId} is not present`);
+
+    return node.node_name;
+  };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
@@ -46,6 +58,25 @@ export default class InventoryApi {
     expect(filteredServices.length, `Service matching regex: ${regex} is not present`).toBeGreaterThan(0);
 
     return filteredServices[0];
+  };
+
+  getServiceDetailsByTypeAndPartialName = async (
+    serviceType: ServiceType,
+    partialServiceName: string,
+    excludeSubstring?: string,
+  ): Promise<GetService> => {
+    const services = (await this.getServicesByType(serviceType)).filter((service: GetService) =>
+      service.service_name.includes(partialServiceName),
+    );
+    const service = excludeSubstring
+      ? services.find((service: GetService) => !service.service_name.includes(excludeSubstring))
+      : services.at(0);
+
+    if (!service) {
+      throw new Error(`Service ${partialServiceName} of type ${serviceType} is not present`);
+    }
+
+    return service;
   };
 
   getServices = async (): Promise<GetServices> => {
