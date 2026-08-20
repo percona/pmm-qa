@@ -14,11 +14,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let serviceId: string;
   let mysqldExporterId: string;
   let mysqldPerfschemaAgentId: string;
-  let pgExporterPort: string;
-  const pgExporterPassword = 'newAgentPassword';
+  const mysqldExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
-    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_`).stdout.trim();
+    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_replication`).stdout.trim();
     serviceName = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1 | awk -F' ' '{print $2}'`,
@@ -152,12 +151,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest('PMM-T2275 - Verify pmm-admin inventory change agent flag agent password @pmm-ps-integration', async ({ cliHelper }) => {
     cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --agent-password=${pgExporterPassword}`,
+      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --agent-password=${mysqldExporterPassword}`,
     );
 
     await expect(async () => {
       const metrics = cliHelper.getMetrics({
-        agentPassword: pgExporterPassword,
+        agentPassword: mysqldExporterPassword,
         dockerContainer: containerName,
         serviceName: serviceName,
       });
@@ -171,11 +170,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('PMM-T2276 - Verify pmm-admin inventory change agent flag expose exporter @pmm-ps-integration', async ({ cliHelper }) => {
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
     await cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --expose-exporter`,
@@ -185,7 +179,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     await expect(async () => {
       const metrics = cliHelper.getMetrics({
-        agentPassword: pgExporterPassword,
+        agentPassword: mysqldExporterPassword,
         dockerContainer: containerName,
         serviceName: serviceName,
       });
@@ -198,11 +192,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('PMM-T2277 - Verify pmm-admin inventory change agent flag push metrics @pmm-ps-integration', async ({ cliHelper }) => {
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
     await cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --push-metrics`,
@@ -212,7 +201,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     await expect(async () => {
       const metrics = cliHelper.getMetrics({
-        agentPassword: pgExporterPassword,
+        agentPassword: mysqldExporterPassword,
         dockerContainer: containerName,
         serviceName: serviceName,
       });
