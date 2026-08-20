@@ -184,7 +184,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
     async ({ page, queryAnalytics, urlHelper }) => {
       const commandTypes = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
 
-      await page.goto(urlHelper.buildUrlWithParameters(queryAnalytics.classicUrl, { from: 'now-5m' }));
+      await page.goto(urlHelper.buildUrlWithParameters(queryAnalytics.url, { from: 'now-5m' }));
       await queryAnalytics.waitForLoaded();
       await queryAnalytics.selectContainFilter(pgsmServiceName);
       await queryAnalytics.selectContainFilter(database);
@@ -340,7 +340,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
         )
         .assertSuccess();
 
-      await page.goto(urlHelper.buildUrlWithParameters(queryAnalytics.classicUrl, { from: 'now-5m' }));
+      await page.goto(urlHelper.buildUrlWithParameters(queryAnalytics.url, { from: 'now-5m' }));
       await queryAnalytics.waitForLoaded();
       await queryAnalytics.selectFilter('PMMT1063');
       await expect(queryAnalytics.buttons.showSelected).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
@@ -388,7 +388,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
 
       for (const row of pgsmRows) {
         await page.goto(
-          urlHelper.buildUrlWithParameters(queryAnalytics.classicUrl, { database: db, from: 'now-5m' }),
+          urlHelper.buildUrlWithParameters(queryAnalytics.url, { database: db, from: 'now-5m' }),
         );
         await queryAnalytics.waitForLoaded();
         await queryAnalytics.searchByValue(row.pgsm_query_id);
@@ -421,7 +421,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
       await sleep(Timeouts.TWO_MINUTES);
 
       await page.goto(
-        urlHelper.buildUrlWithParameters(queryAnalytics.classicUrl, { database: db, from: 'now-5m' }),
+        urlHelper.buildUrlWithParameters(queryAnalytics.url, { database: db, from: 'now-5m' }),
       );
       await queryAnalytics.waitForLoaded();
 
@@ -448,7 +448,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
       pgsqlHelper.resetPgStatMonitor({ container: containerName });
 
       const checkForExamples = async (expectNoExamples: boolean) => {
-        await page.goto(urlHelper.buildUrlWithParameters(queryAnalytics.classicUrl, { from: 'now-5m' }));
+        await page.goto(urlHelper.buildUrlWithParameters(queryAnalytics.url, { from: 'now-5m' }));
         await queryAnalytics.waitForLoaded();
         await queryAnalytics.selectFilter(pgsmServiceName);
 
@@ -677,7 +677,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
       pgsqlHelper.exec('SELECT pg_database_size(1);', { container: containerName });
 
       await page.goto(
-        urlHelper.buildUrlWithParameters(queryAnalytics.classicUrl, {
+        urlHelper.buildUrlWithParameters(queryAnalytics.url, {
           from: 'now-2m',
           serviceName: pgServiceName,
         }),
