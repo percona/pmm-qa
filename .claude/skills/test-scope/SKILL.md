@@ -1,6 +1,6 @@
 ---
 name: test-scope
-description: Decide what a PMM change actually requires testing — which deployment mode (single-server Docker vs HA), and any extra dimensions (upgrade path, DB/version matrix, RBAC, backups). Use during QA planning, before provisioning, to pick the right environment and avoid both under-testing a regression and over-provisioning for a change that doesn't need it.
+description: "Decide PMM QA scope before provisioning: deployment mode, upgrade/DB/RBAC/backup dimensions, and causally linked regression checks. Use for planning what to exercise; do not use to judge whether direct evidence is deep enough."
 ---
 
 # Test scope — what does this change need?
@@ -24,9 +24,22 @@ For each, two questions: **does the ticket say so** (labels, AC, an explicit not
 | **DB / version matrix** | change is specific to a DB flavour or version (MySQL 8.4, MongoDB PSMDB, PG 16, etc.) | provision the specific engine/version the ticket names via `pmm-framework --database`; don't only test the default |
 | **RBAC / access control** | diff touches `managed/services/...` authz, roles, or the ticket is about access restrictions | test with a non-admin role, not just admin |
 | **Backups / restore** | diff touches backup/restore, PBM, or the scheduler | run an actual backup+restore, not just that the button renders |
+| **High-risk regressions** | runtime code, configuration, dependency, permission, data path, or lifecycle behavior changed | add the two strongest causally linked checks below; add a third only for a materially different risk |
 
 This list is not exhaustive — it's the recurring ones. If the diff plainly needs some other setup (a specific external integration, a network topology), add it and say so in the plan.
 
+## Select high-risk regressions
+
+Regression selection belongs here; [verification-depth](../verification-depth/SKILL.md) decides how deeply to prove each selected direct check.
+
+Choose a regression only when the diff gives it a plausible causal link, failure would materially affect users, integrity, security, compatibility, or monitoring availability, and the check gives deterministic signal not already covered by an acceptance criterion. Rank candidates from the changed boundary and shared callers, relevant FB/CI failures, existing tests, and prior bugs. Prefer:
+
+1. Existing behavior using the same changed boundary or shared component.
+2. Persistence, restart, upgrade, permission, or recovery behavior touched by the change.
+3. The nearest supported version, engine, topology, or configuration following the same code path.
+
+Record the changed path and intended failure signal for each selected regression. Do not invent broad checks such as another dashboard or database without a shared dependency; if fewer than two meaningful regressions exist, record why.
+
 ## Record the decision
 
-Put the outcome in the test plan and the Jira report: the deployment mode chosen and each extra dimension, each with a one-line reason. "Not HA-impacted — change is a single dashboard panel" is a valid, useful line; a silent omission isn't. When in doubt on a dimension that's cheap to add, prefer testing it and say why — a false positive costs a little setup; a false negative ships a regression.
+Put the outcome in the test plan and Jira report: the deployment mode, each extra dimension, and each selected regression, all with a one-line reason. "Not HA-impacted — change is a single dashboard panel" is useful; a silent omission is not. When a dimension is cheap and genuinely plausible, prefer testing it and state why.

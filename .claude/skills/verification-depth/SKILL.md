@@ -1,106 +1,73 @@
 ---
 name: verification-depth
-description: Enforce rigorous, reproducible PMM verification for backend, API, CLI, infrastructure, packaging, upgrade, logs, metrics, persistence, restart, recovery, and other asynchronous behavior. Use whenever Test Runner or Investigator verifies a claim directly instead of through the PMM UI, especially when one successful command or snapshot could hide delayed, stale, or transient failures. Also use when selecting high-risk regression checks and deciding whether evidence supports "verified" or only "smoke tested." This complements ui-evidence; it does not replace UI validation for user-visible claims.
+description: Verify PMM behavior directly through API, CLI, logs, metrics, or persisted state, especially asynchronous, freshness, restart, recovery, migration, and absence claims. Use after test-scope has selected the checks. Do not use for UI-only evidence or for selecting deployment and regression scope.
 ---
 
 # Verification depth
 
-Do not stop at the first successful response, log line, metric value, or command. Match the evidence depth to the claim being made.
+Use this skill to decide what evidence makes a selected direct check credible. [Test scope](../test-scope/SKILL.md) owns what to test; [UI evidence](../ui-evidence/SKILL.md) owns screenshots and recordings for user-visible claims.
 
-## Build a falsifiable checklist first
+## Build the checklist
 
-After reading the ticket and relevant diff, but before provisioning or executing the test, turn every requirement into an explicit check. Record:
+Before provisioning, record one row per claim:
 
-- Claim being tested.
-- What exact result would make it fail.
-- Correct observation layer: process/agent, API, metric, UI, or persisted state.
-- Exact command, query, endpoint, file, or UI surface.
-- Expected result.
-- Required observation window and relevant system interval.
-- Build/version and environment that will be tested.
+| Claim | Failure condition | Layer | Command/query/action | Expected | Window/interval |
+|-------|-------------------|-------|----------------------|----------|-----------------|
 
-If the failure condition cannot be stated, the check is not ready. Do not hide multiple claims behind a single item such as "monitoring works."
+Also record the build, environment, and deployment once for the checklist. Split combined claims such as "monitoring works." If the failure condition, layer, or bounded window is unknown, the check is not ready.
 
-## Match observation depth to time behavior
+## Start with PMM's real surfaces
 
-A single snapshot is sufficient only for static facts such as deterministic configuration or file content.
+Run commands from the environment selected by the provisioning skill. Replace placeholders and preserve that environment's authentication and certificate handling.
 
-For asynchronous, time-dependent, absence, or persistence claims:
+| Claim type | Correct layer | PMM command or query | Minimum credible window |
+|------------|---------------|----------------------|-------------------------|
+| Agent is operating | Client process | `pmm-admin list --json` to identify it, then `pmm-admin status --json` to require the relevant agent/exporter state to be running | Poll through one registration/restart opportunity; use 2 minutes only when the configured timeout cannot be found |
+| Metrics are current | VictoriaMetrics | `curl -sS -G -u "admin:${ADMIN_PASSWORD}" "${PMM_URL}/prometheus/api/v1/query_range" --data-urlencode 'query=<promql>' --data-urlencode "start=<unix-start>" --data-urlencode "end=<unix-end>" --data-urlencode "step=<seconds>"` | At least 3 expected samples; newest sample must be recent relative to `now` |
+| Inventory/API changed state | PMM API plus affected state | `curl -sS -u "admin:${ADMIN_PASSWORD}" "${PMM_URL}/v1/inventory/services"` and `/v1/inventory/agents`; then re-read the affected process, metric, or persisted state | Through one complete state-transition opportunity |
+| New container logs | Docker log stream | Save `BASELINE_TS=$(date --iso-8601=seconds)` before the action; inspect with `docker logs --since "$BASELINE_TS" <container>` | Trigger the relevant mechanism, then cover one full retry/job cycle |
+| New host logs | systemd journal | Save the same baseline timestamp; inspect with `journalctl --since "$BASELINE_TS" -u pmm-agent` (or the affected unit) | Trigger the relevant mechanism, then cover one full retry/job cycle |
+| QAN data reached storage | ClickHouse | `docker exec pmm-server clickhouse client --password=clickhouse --query "SELECT service_name, max(period_start), sum(num_queries) FROM pmm.metrics WHERE service_name='<service>' AND period_start >= now() - INTERVAL 10 MINUTE GROUP BY service_name FORMAT Vertical"` | One complete QAN collection cycle; use 5 minutes only when the configured delay cannot be found |
 
-- **Logs:** capture a baseline before the action, inspect immediately after it, then inspect again after further relevant activity. Poll with a bounded timeout spanning at least two retry or job intervals. Scope output by timestamp, cursor, or unique marker so old lines cannot satisfy the check.
-- **Metrics:** issue a range query covering at least two scrape intervals. Verify sample timestamps and continuity across the window. Do not treat an instant query or stale last-known value as proof that collection is current.
-- **Persistence:** verify state before the triggering event, immediately after it, and again after at least two relevant system intervals. For restart, failover, or upgrade claims, the event itself must occur during the test.
-- **Data flow:** create a uniquely identifiable input or workload and find its expected output at the claimed destination.
-- **Absence:** observe for the complete relevant interval. A quick empty result does not prove continued absence.
+For external or HA ClickHouse, use the connection details produced by that provisioning skill instead of `docker exec`. If the QAN schema differs, run `SHOW TABLES FROM pmm` and `DESCRIBE TABLE pmm.metrics`, then adapt the same `service_name`/`period_start` freshness check rather than guessing.
 
-Determine intervals from the actual configuration or implementation. If the necessary window cannot be observed, report the check as incomplete or smoke-tested; do not shorten the window silently.
+PMM metrics-resolution defaults are a starting assumption, not evidence: HR 5s, MR 10s, LR 60s. Confirm the running build's settings or generated scrape configuration before choosing `step` and the window. When an interval genuinely cannot be discovered, label the 2-minute agent or 5-minute QAN value as a fallback timeout in the plan and report that the configured interval was not confirmed.
 
-## Check the layer named by the claim
+## Match evidence to the mechanism
 
-Do not substitute a cheaper adjacent check:
+A single snapshot is sufficient only for deterministic static state. Otherwise:
 
-- **Agent/process:** verify the exporter or agent is actually running and healthy, not merely registered or present.
-- **Metric/data:** verify fresh data flows over a range and has the expected labels and values.
-- **API/CLI:** verify the response semantics and resulting state, not only a zero exit code or HTTP success status.
-- **UI:** verify the dashboard, panel, or control a user sees renders the expected result without error, following `ui-evidence`.
-- **Persisted state:** read the state again after the lifecycle event named by the requirement.
+- **Logs:** establish a timestamp/cursor before the action, trigger the behavior, and inspect only new entries through one full opportunity cycle. Old lines cannot satisfy the check.
+- **Metrics:** query a range containing at least three expected samples. Check continuity and require the newest timestamp to be no older than about two confirmed scrape intervals, allowing documented ingestion jitter. An instant query or stale last-known value is smoke evidence only.
+- **Persistence:** read before the event, immediately after it, and after subsequent background processing. Perform the restart, failover, migration, or upgrade named by the claim.
+- **Data flow:** create a uniquely identifiable workload and locate it at every material boundary claimed, such as agent state, VictoriaMetrics, ClickHouse, API, and UI.
+- **Absence:** deterministically trigger one complete opportunity cycle in which the unwanted event would be produced, then show it did not occur in the cursor-bounded evidence. Do not claim open-ended absence such as "no errors ever."
 
-When a requirement spans layers, verify each material boundary. State which layers were checked and which were not. A metrics API result does not prove a user-facing dashboard works, and a rendered panel does not by itself prove persistence across restart.
+Do not substitute an adjacent layer: registration is not a running agent, HTTP success is not correct resulting state, a fresh metric is not a rendered dashboard, and a rendered dashboard is not persistence.
 
-## Resolve anomalies before reaching a verdict
+## Bound time and cost before provisioning
 
-Stop on unexpected output, unexplained log entries, timing gaps, inconsistent values, or results that are only "probably fine." Either:
+Prefer a deterministic trigger over waiting. Where the ticket permits, temporarily shorten the product's own interval and record the changed setting; do not shorten only the observation window.
 
-1. Explain why the anomaly is benign using additional evidence, or
-2. Record it as a finding and fail or block the affected check.
+Declare any single observation window longer than 10 minutes in the test plan before provisioning a paid environment. Include why it is required and why a deterministic trigger or shorter product interval is unsuitable. Every poll must have a bounded timeout. If the required window cannot be completed, use `SMOKE TESTED` or `BLOCKED`, never a shortened silent pass.
 
-Never narrate past an anomaly while reporting the surrounding check as verified.
+## Handle anomalies and lifecycle claims
 
-## Seed migrations and upgrades with meaningful data
+Resolve unexpected output, timing gaps, inconsistent values, or unexplained log entries before a pass. Either support a benign explanation with evidence or record a finding and mark the affected check `FAILED` or `BLOCKED`.
 
-Do not verify "no data loss" against a fresh empty instance. Before a migration or upgrade:
+For migrations and upgrades, seed realistic ticket-relevant data first, record the source version and values, perform the real lifecycle event, re-read the data after background processing, and exercise a post-change read/write path. Empty-instance survival does not prove data preservation.
 
-1. Create realistic ticket-relevant data, settings, users, or monitored services.
-2. Record the pre-change values and tested source version.
-3. Perform the real migration or upgrade.
-4. Verify the same content immediately afterward and again after relevant background processing.
-5. Exercise at least one post-change read/write path so preserved but unusable data is not mistaken for success.
+## Report from the checklist
 
-## Select high-risk regression checks
+Use exactly these results: `VERIFIED`, `SMOKE TESTED`, `FAILED`, or `BLOCKED`.
 
-For a runtime change, add the two highest-risk regression checks. Add a third only when it covers a materially different risk. Select a check only when all three conditions hold:
-
-1. **Causal link:** the changed code, configuration, dependency, data path, permission, or lifecycle step could plausibly break it.
-2. **Material impact:** failure would affect a common workflow, data integrity, security, upgrades/compatibility, or monitoring availability.
-3. **Useful signal:** the check is deterministic, has a clear expected result, and is not already proved by a requirement check.
-
-Rank candidates using the PR diff, shared callers, existing tests, relevant FB/CI failures, and prior bugs. Prefer:
-
-1. Existing behavior that uses the same changed boundary or shared component.
-2. Persistence, restart, upgrade, permission, or failure/recovery behavior touched by the change.
-3. The nearest supported version, engine, topology, or configuration following the same code path.
-
-For every selected regression, record the changed path that makes it relevant and the failure it is intended to catch. Reject broad checks such as "open another dashboard" or "check another database" unless the diff shows a shared dependency. If fewer than two meaningful regressions exist, do not invent them; record why the change has no additional plausible regression surface.
-
-## Report only what the evidence supports
-
-Use one of these labels:
-
-- **Smoke tested:** the mechanism ran on the happy path, but the required layer, observation window, persistence, or anomaly investigation was not completed.
-- **Verified:** the falsifiable checklist passed at the correct layer, required observation points/windows completed, and no anomaly remains unexplained.
-
-For every verified check, record:
+Record build/environment/deployment once, then reuse the checklist as the report:
 
 ```text
-Claim:
-Build/version:
-Environment:
-Layer(s):
-Command/query/action:
-Expected:
-Actual:
-Observation window/intervals:
-Result: VERIFIED | FAILED | BLOCKED
+Build/environment/deployment: ...
+
+| Check | Expected / failure condition | Evidence and actual result | Window | Result |
+|-------|------------------------------|----------------------------|--------|--------|
 ```
 
-Record smoke tests separately. Never convert incomplete evidence into a pass merely because the first observation succeeded.
+`VERIFIED` requires the correct layer, completed observation window or lifecycle event, and no unexplained anomaly. `SMOKE TESTED` means the mechanism ran on a happy path but a required layer, window, persistence check, or anomaly investigation remains incomplete.

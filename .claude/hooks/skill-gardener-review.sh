@@ -1,48 +1,48 @@
 #!/usr/bin/env bash
 # Review completed skills on PostToolUse and reset a skill's retired counter
 # when ConfigChange reports a file change in its skill directory.
-# Use native jq in cloud/WSL and fall back to WSL from Windows Git Bash.
+# JSON is parsed with node, which this repository already requires.
 set -euo pipefail
 
-jqw() {
-  if command -v jq >/dev/null 2>&1; then
-    jq "$@"
-  else
-    wsl -d Ubuntu -- jq "$@"
-  fi
+command -v node >/dev/null 2>&1 || exit 0
+
+here="$(dirname "$0")"
+
+template="The '{skill}' skill just finished (auto-review pass {n} of 3 for this skill before this review retires here). Invoke the skill-gardener skill in Capture mode against the observable tool and command sequence for '{skill}'. Check for repeated reads or searches, avoidable failed retries, unnecessary setup or dependencies, safe parallelization opportunities, and existing helpers or native tools that could replace custom commands. Do not create a raw command log or optimize away required verification. Record a lesson only if something qualifies under skill-gardener's Capture criteria. Follow its auto-apply rules when the primary task is skill testing or review. When done, run: bash .claude/scripts/skill-gardener-counter.sh '{skill}' <found|none> -- pass 'found' if a lesson was added or gained evidence, 'none' if nothing qualified."
+
+action=$(STATE="$here/../skill-gardener-state.json" TEMPLATE="$template" node -e '
+const fs = require("fs");
+const SKILLS_DIR = "/.claude/skills/";
+
+let raw = "";
+try { raw = fs.readFileSync(0, "utf8") } catch { process.exit(0) }
+let h;
+try { h = JSON.parse(raw) } catch { process.exit(0) }
+
+if (h.hook_event_name === "ConfigChange") {
+  const path = String(h.file_path || "").split(String.fromCharCode(92)).join("/");
+  const at = path.indexOf(SKILLS_DIR);
+  if (at < 0) process.exit(0);
+  const rest = path.slice(at + SKILLS_DIR.length);
+  if (rest.indexOf("/") > 0) process.stdout.write("reset " + rest.split("/")[0]);
+  process.exit(0);
 }
 
-input=$(cat)
-event=$(printf '%s' "$input" | jqw -r '.hook_event_name // empty')
+const skill = (h.tool_input || {}).skill || "";
+if (!skill || skill === "skill-gardener") process.exit(0);
 
-if [ "$event" = "ConfigChange" ]; then
-  file=$(printf '%s' "$input" | jqw -r '.file_path // empty')
-  file=${file//\\//}
-  case "$file" in
-    */.claude/skills/*/*)
-      relative=${file#*/.claude/skills/}
-      skill=${relative%%/*}
-      bash "$(dirname "$0")/../scripts/skill-gardener-counter.sh" "$skill" reset >/dev/null
-      ;;
-  esac
-  exit 0
-fi
+let state = {};
+try { state = JSON.parse(fs.readFileSync(process.env.STATE, "utf8")) } catch {}
+const count = Number(state[skill]) || 0;
+if (count >= 3) process.exit(0);
 
-skill=$(printf '%s' "$input" | jqw -r '.tool_input.skill // empty')
+const ctx = process.env.TEMPLATE.split("{skill}").join(skill).split("{n}").join(count + 1);
+process.stdout.write("emit " + JSON.stringify({
+  hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: ctx },
+}));
+')
 
-[ -z "$skill" ] && exit 0
-[ "$skill" = "skill-gardener" ] && exit 0
-
-state_file="$(dirname "$0")/../skill-gardener-state.json"
-count=0
-if [ -f "$state_file" ]; then
-  count=$(jqw -r --arg s "$skill" '.[$s] // 0' < "$state_file")
-fi
-
-if [ "$count" -ge 3 ]; then
-  exit 0
-fi
-
-context="The '$skill' skill just finished (auto-review pass $((count + 1)) of 3 for this skill before this review retires here). Invoke the skill-gardener skill in Capture mode against the steps just taken for '$skill' -- flag any redundant or wasted steps and record a lesson only if something new qualifies under skill-gardener's own Capture criteria. When done, run: bash .claude/scripts/skill-gardener-counter.sh '$skill' <found|none> -- pass 'found' if a new lesson was captured, 'none' if nothing new was found."
-
-jqw -n --arg ctx "$context" '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $ctx}}'
+case "$action" in
+  "reset "*) bash "$here/../scripts/skill-gardener-counter.sh" "${action#reset }" reset >/dev/null ;;
+  "emit "*) printf '%s\n' "${action#emit }" ;;
+esac

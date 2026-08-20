@@ -1,41 +1,30 @@
 #!/usr/bin/env bash
 # Updates .claude/skill-gardener-state.json's per-skill consecutive-no-finding
 # counter. Called by Claude after a skill-gardener Capture review triggered by
-# .claude/hooks/skill-gardener-review.sh. Use native jq in cloud/WSL and fall
-# back to WSL from Windows Git Bash.
+# .claude/hooks/skill-gardener-review.sh, and by that hook to reset a skill on
+# ConfigChange. JSON is handled by node, which this repository already requires.
 set -euo pipefail
 
 skill="${1:?usage: skill-gardener-counter.sh <skill-name> <found|none|reset>}"
 result="${2:?usage: skill-gardener-counter.sh <skill-name> <found|none|reset>}"
 
-jqw() {
-  if command -v jq >/dev/null 2>&1; then
-    jq "$@"
-  else
-    wsl -d Ubuntu -- jq "$@"
-  fi
-}
+case "$result" in
+  found|none|reset) ;;
+  *) echo "error: result must be 'found', 'none', or 'reset'" >&2; exit 1 ;;
+esac
 
-state_file="$(dirname "$0")/../skill-gardener-state.json"
+command -v node >/dev/null 2>&1 || exit 0
 
-if [ "$result" = "reset" ]; then
-  [ -f "$state_file" ] || exit 0
-  current=$(jqw -r --arg s "$skill" '.[$s] // 0' < "$state_file")
-  [ "$current" -eq 0 ] && exit 0
-fi
+SKILL="$skill" RESULT="$result" STATE="$(dirname "$0")/../skill-gardener-state.json" node -e '
+const fs = require("fs");
+const { SKILL, RESULT, STATE } = process.env;
 
-[ -f "$state_file" ] || echo '{}' > "$state_file"
+let state = {};
+try { state = JSON.parse(fs.readFileSync(STATE, "utf8")) } catch {}
+const current = Number(state[SKILL]) || 0;
+if (RESULT === "reset" && current === 0) process.exit(0);
 
-if [ "$result" = "found" ] || [ "$result" = "reset" ]; then
-  new_count=0
-elif [ "$result" = "none" ]; then
-  current=$(jqw -r --arg s "$skill" '.[$s] // 0' < "$state_file")
-  new_count=$((current + 1))
-else
-  echo "error: result must be 'found', 'none', or 'reset'" >&2
-  exit 1
-fi
-
-tmp="$(mktemp)"
-jqw --arg s "$skill" --argjson c "$new_count" '.[$s] = $c' < "$state_file" > "$tmp" && mv "$tmp" "$state_file"
-echo "skill-gardener: '$skill' consecutive-no-finding count -> $new_count"
+state[SKILL] = RESULT === "none" ? current + 1 : 0;
+fs.writeFileSync(STATE, JSON.stringify(state, null, 2) + "\n");
+console.log("skill-gardener: " + SKILL + " consecutive-no-finding count -> " + state[SKILL]);
+'
