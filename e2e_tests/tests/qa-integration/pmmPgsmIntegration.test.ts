@@ -4,15 +4,6 @@ import { AgentType, CliAgentStatus } from '@helpers/constants';
 import { QanLabel } from '@api/qan.api';
 import { Timeouts } from '@helpers/timeouts';
 
-/**
- * Migrated from codeceptjs-e2e/tests/qa-integration/pmm_pgsm_integration_test.js
- * (scenarios tagged @pgsm-pmm-integration).
- *
- * These scenarios expect a `pdpgsql` environment provisioned by pmm-framework
- * (`--database pdpgsql`): a TCP service (pdpgsql_*) and a socket service
- * (socket_pdpgsql_*) both monitored with pg_stat_monitor.
- */
-
 const connection = {
   password: 'pass+this',
   user: 'postgres',
@@ -27,7 +18,6 @@ let pgsmServiceName: string;
 let pgsmServiceNameSocket: string;
 
 pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
-  pmmTest.describe.configure({ mode: 'serial' });
 
   pmmTest.beforeAll(async ({ api, cliHelper }) => {
     const dockerCheck = cliHelper
