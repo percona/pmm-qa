@@ -89,9 +89,11 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 <!-- E2E-TAGS-START -->
 
 - `@alerting`
+- `@annotations`
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
+- `@fb-instances`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
