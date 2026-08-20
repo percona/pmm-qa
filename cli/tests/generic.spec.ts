@@ -6,6 +6,13 @@ import { readZipFile } from '@helpers/zip-helper';
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
+const compareVersions = (a: string, b: string) => {
+  const left = a.split('.').map(Number);
+  const right = b.split('.').map(Number);
+  const index = left.findIndex((part, i) => part !== right[i]);
+
+  return index === -1 ? 0 : left[index] - right[index];
+};
 
 test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test.beforeAll(async ({}) => {
@@ -577,7 +584,26 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     await cli.exec('docker network create pmm-qa || true');
     await cli.exec('docker network connect pmm-server pmm-qa');
     await cli.exec(`docker run --rm -d --name="${containerName}" --network="pmm-qa" --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw -v /var/lib/containerd antmelekhin/docker-systemd:almalinux-10`);
-    const latestReleasedVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout.trim();
+    const versionLookup = process.env.PMM_CLIENT_VERSION?.includes('http')
+      ? undefined
+      : cli.execute('curl --fail --silent --show-error https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION');
+    if (versionLookup && (versionLookup.code !== 0 || !versionLookup.stdout.trim())) {
+      throw new Error('Could not read the expected upgrade version from v3 VERSION');
+    }
+    const upgradedVersion = versionLookup?.stdout.trim() ?? '';
+
+    const releasedVersions = (await cli.exec('wget -q "https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=100" -O - | jq -r .results[].name'))
+      .getStdOutLines()
+      .map((tag) => tag.trim())
+      .filter((tag) => /^\d+\.\d+\.\d+$/.test(tag))
+      .sort(compareVersions);
+    // The TESTING tarball of the version currently on v3 is the same nightly build as
+    // pmm-client-latest.tar.gz, so upgrading from that tag would install an identical client.
+    const upgradeSources = upgradedVersion
+      ? releasedVersions.filter((tag) => compareVersions(tag, upgradedVersion) < 0)
+      : releasedVersions;
+    const latestReleasedVersion = upgradeSources[upgradeSources.length - 1];
+    expect(latestReleasedVersion, `No released pmm-client version to upgrade from, tags: ${releasedVersions.join(', ')}`).toBeTruthy();
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`);
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
     await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestReleasedVersion}`);
@@ -602,14 +628,6 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
     const newAdminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
-
-    const versionLookup = process.env.PMM_CLIENT_VERSION?.includes('http')
-      ? undefined
-      : cli.execute('curl --fail --silent --show-error https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION');
-    if (versionLookup && (versionLookup.code !== 0 || !versionLookup.stdout.trim())) {
-      throw new Error('Could not read the expected upgrade version from v3 VERSION');
-    }
-    const upgradedVersion = versionLookup?.stdout.trim() ?? '';
 
     await newPid.outNotContains(oldPid.stdout);
     await newAdminStatus.outContains('Connected');
