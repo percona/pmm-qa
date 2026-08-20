@@ -21,7 +21,7 @@ Full procedure: `run.md`. This tracker only owns row selection and the two provi
 Everything else - best-fit target selection, source rename, branch/PR mechanics - is owned by
 `context.md` section 2a/2b and `branch-workflow.md`; see those instead of this file.
 
-Before creating a migration branch, merge `origin/main` into control and refresh and commit only `e2e_tests/graphify-out/`. Mark the selected row `in-progress` in a separate tracker-only commit, then create the migration branch from control. After its PR is opened, update the row on control and record the PR and pre-migration graph-refresh result in Notes. Do not merge the migration branch into control; a later merge from `main` receives it after the PR merges.
+Merge `origin/main` into control and refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/`. Mark the selected row `in-progress` in a separate tracker-only commit (this is `migration-start`); all migration work then happens directly on control, with no separate branch until publish. At publish time, a fresh branch is cut from `origin/main` and the migration's own commits (`migration-start..control`) are cherry-picked onto it. After its PR is opened, update the row on control and record the PR and pre-migration graph-refresh result in Notes. Do not merge the publish branch into control; a later merge from `main` receives it after the PR merges.
 
 ## Status legend
 

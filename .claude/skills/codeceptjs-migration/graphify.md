@@ -1,6 +1,6 @@
 # Graphify Discovery
 
-Refresh both the CodeceptJS source graph and the Playwright target graph on control before creating a migration branch, then use both Graphify artifacts read-only during migration.
+Refresh both the CodeceptJS source graph and the Playwright target graph on control before starting the migration's own commits, then use both Graphify artifacts read-only during migration. All migration work happens directly on control — no separate branch exists until publish; see `branch-workflow.md`.
 
 ## Graph artifacts (read-only during migration)
 
@@ -11,7 +11,7 @@ e2e_tests/graphify-out/graph.json        # target side - refreshed on control du
 
 ## Pre-migration graph updates
 
-After merging `origin/main` into control and before creating the migration branch, perform one incremental update of each graph:
+After merging `origin/main` into control and before marking the tracker row `in-progress`, perform one incremental update of each graph:
 
 ```bash
 cd e2e_tests
@@ -28,11 +28,10 @@ cd ..
 - Run each from its own root (`e2e_tests/` or `codeceptjs-e2e/`) so output stays in that directory's `graphify-out/`.
 - Use `--update` only.
 - Keep only `graph.json` and `manifest.json`; delete generated reports, HTML, and `.graphify_*` sidecars.
-- Commit each graph's updated files on control in its own commit.
+- Commit each graph's updated files on control in its own commit, before the tracker row's `in-progress` commit (which becomes `migration-start`).
 - Refresh once on control during preflight; never regenerate either graph during migration (see "Read-only during migration").
-- Create the migration branch from `origin/main`, not from control.
 
-Both graph commits stay on control only; since the migration branch is cut from `origin/main`, neither commit ever reaches the migration PR.
+Both graph commits stay on control only, before `migration-start` — since the publish branch is built by cherry-picking `migration-start..control` onto `origin/main` (see `branch-workflow.md`), neither graph commit is ever in that range, so neither reaches the migration PR.
 
 ## Read-only during migration
 

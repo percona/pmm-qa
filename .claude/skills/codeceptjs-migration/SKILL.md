@@ -83,7 +83,7 @@ Inline in the test only when no suitable existing abstraction exists. Creating a
 
 ## Graphify rule
 
-Before creating a migration branch, merge `origin/main` into control and refresh only `e2e_tests/graphify-out/` with `graphify . --update` from `e2e_tests/`. Commit that refresh on control. Never regenerate the CodeceptJS source graph. During migration, use both graphs read-only for discovery, open every behaviorally relevant file, and treat actual repository code as authoritative. The migration PR excludes control-only graph and tracker commits. See `graphify.md` and `branch-workflow.md`.
+Before marking the tracker row `in-progress`, merge `origin/main` into control and refresh both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` with `graphify . --update`, each from its own root, each its own commit on control. Never regenerate either graph during migration. All migration work then happens directly on control's own worktree — no separate branch exists until publish, when a fresh branch is cut from `origin/main` and the migration's own commits are cherry-picked onto it, excluding the control-only graph and tracker commits by construction. See `graphify.md` and `branch-workflow.md`.
 
 ## Local provisioning rule
 

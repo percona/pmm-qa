@@ -43,7 +43,7 @@ The reviewer performs this checklist twice: before execution and after execution
 
 - [ ] Source Graphify-linked files were independently inspected.
 - [ ] Target Graphify-linked files were independently inspected.
-- [ ] The target graph was refreshed and committed on control before the migration branch was created.
+- [ ] Both graphs were refreshed and committed on control before the tracker row was marked `in-progress` (`migration-start`).
 - [ ] Missing or stale graph edges were accounted for.
 - [ ] Existing Playwright abstractions were reused where applicable.
 - [ ] Reuse changes follow `SKILL.md` section Minimal reuse diffs (expose in place; no duplicate public+private delegates).
@@ -97,7 +97,7 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] Every original CodeceptJS tag remains on the migrated Playwright scenarios.
 - [ ] Existing CodeceptJS jobs and grep expressions remain unchanged.
 - [ ] Each migrated tag is appended to a compatible existing Playwright job, or a new Playwright job provides the required setup.
-- [ ] The final migration PR excludes tracker and `graphify-out/` files after rebasing migration-only commits onto `main`.
+- [ ] The final migration PR excludes tracker and `graphify-out/` files after cherry-picking `migration-start..control` onto the fresh `origin/main`-based publish branch.
 - [ ] No debug or temporary code remains.
 - [ ] No unrelated files or behavior are included.
 - [ ] Static validation still introduces zero new failures.
