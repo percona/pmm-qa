@@ -9,7 +9,7 @@ const services = ['mysql', 'mongodb', 'postgresql', 'proxysql', 'external', 'hap
 
 test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@service-removal' }, () => {
   test.beforeAll(async () => {
-    test.setTimeout(600_000);
+    test.setTimeout(360_000);
     const startCommand = `PMM_SERVER_IMAGE=${PMM_SERVER_IMAGE} PMM_CLIENT_IMAGE=${PMM_CLIENT_IMAGE} docker compose -f test-setup/docker-compose-pmm-admin-remove.yml up -d`;
     await cli.exec(startCommand);
     await expect(async () => {
@@ -37,7 +37,7 @@ test.describe('PMM Server CLI tests for Docker Environment Variables', { tag: '@
         const output = await cli.exec(addCommand);
         await output.assertSuccess();
       }, { message: `"${addCommand}" failed to register the service.` }).toPass({
-        timeout: 30_000,
+        timeout: 15_000,
         intervals: [2_000],
       });
     }
