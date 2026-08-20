@@ -103,11 +103,11 @@ The log is a queue, not a record. Prune while reading it in Capture or Review:
 When Capture runs during a session whose primary task is testing or reviewing a skill and produces a lesson, that lesson is pre-authorized for Review and Apply:
 
 1. Run Review on the lesson.
-2. Ensure the edit will not disturb unrelated worktree changes.
+2. Before editing, ensure the change will land on a branch based on `main` without disturbing unrelated worktree changes.
 3. Run Apply; its authorization check is already satisfied.
-4. Leave the result in the current worktree. Never create or open a pull request.
+4. Commit the change and open a PR naming the target and lesson.
 
-During ordinary feature or bug work, Capture still logs lessons for later approval.
+Ask before combining lessons for unrelated targets into one PR. During ordinary feature or bug work, Capture still logs lessons for later approval.
 
 ## Review
 

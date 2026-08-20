@@ -1,11 +1,11 @@
 ---
 name: test-scope
-description: "Decide PMM QA scope before provisioning: deployment mode, upgrade/DB/RBAC/backup dimensions, and causally linked regression checks. Use for planning what to exercise; do not use to judge whether direct evidence is deep enough."
+description: "Decide PMM QA scope: deployment mode, upgrade/DB/RBAC/backup dimensions, and causally linked regression checks. Use for planning what to exercise in local, existing, or newly provisioned environments; do not use to judge whether direct evidence is deep enough."
 ---
 
 # Test scope — what does this change need?
 
-Read this when planning QA, **before** provisioning. It turns a ticket + diff into a short list of what to actually exercise, and which provisioning skill each item implies. The goal is to catch the dimensions a plain single-server run would miss, without spinning up expensive environments a change doesn't need.
+Read this when planning QA. It turns a ticket + diff into a short list of what to actually exercise, and which environment or provisioning skill each item implies. The goal is to catch the dimensions a plain single-server run would miss, without spinning up expensive environments a change doesn't need.
 
 Inputs you already have by this point: the Jira ticket (summary, AC, labels/components, dev comments) and the `percona/pmm` / `percona/grafana` diff (`git-diff` skill).
 

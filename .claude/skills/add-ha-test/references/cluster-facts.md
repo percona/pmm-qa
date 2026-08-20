@@ -2,7 +2,9 @@
 
 Everything here is from `charts/pmm-ha` in
 [percona-helm-charts](https://github.com/percona/percona-helm-charts) and
-verified against a live ROSA deployment.
+verified against a live ROSA deployment. The chart to deploy is the `PMM-HA-GA`
+branch (the HA GA chart, still unmerged) — or the change's own chart PR when it has
+one; see [`linode-ha-provisioning`](../../linode-ha-provisioning/SKILL.md).
 
 ## Topology
 
