@@ -56,7 +56,7 @@ const NETWORK = 'pmm-qa';
 const SERVER = 'pmm-server';
 const WATCHTOWER = 'watchtower';
 const TEARDOWN_LABELS = ['pmm-qa.orchestrator=server', 'pmm-qa.engine'];
-const TEARDOWN_VOLUME_PREFIXES = ['pmm-qa-', 'psmdb-', 'pmm-data'];
+const TEARDOWN_VOLUME_PREFIXES = ['pmm-qa-', 'psmdb-', 'mysql-ps-minio-backups', 'pmm-data'];
 const SERVER_VOLUME = 'pmm-data';
 const DIAGNOSTICS_DIR = resolve(ROOT, '..', 'provisioning-artifacts');
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
@@ -72,6 +72,7 @@ export const DATABASES = {
   pgsql: { versions: ['16', '17', '18'], defaultVersion: '18', script: ['images', 'engines', 'pgsql', 'setup.ts'] },
   pdpgsql: { versions: ['14', '15', '16', '17', '18'], defaultVersion: '18', script: ['images', 'engines', 'pdpgsql', 'setup.ts'] },
   valkey: { versions: ['7', '8'], defaultVersion: '8', script: ['images', 'engines', 'valkey', 'setup.ts'] },
+  client: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'services', 'setup.ts'], selector: ['type', 'client'] },
   haproxy: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'services', 'setup.ts'], selector: ['type', 'haproxy'] },
   external: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'services', 'setup.ts'], selector: ['type', 'external'] },
   bucket: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'minio', 'setup.ts'] },
@@ -89,6 +90,7 @@ const HELP = `Usage: node provisioning/setup.ts [--db DESCRIPTOR] [--db DESCRIPT
   --db pgsql=VERSION,setup-type=single|replication,nodes=NUMBER,use-socket=true
   --db pdpgsql=VERSION,setup-type=single|replication|patroni,nodes=NUMBER
   --db valkey=VERSION,setup-type=cluster|sentinel
+  --db client                 standalone PMM Client node, without a database
   --db haproxy
   --db external
   --db bucket,buckets=bcp;archive
@@ -305,7 +307,7 @@ export function provisionerArgs(
   if ('selector' in spec) args.push(`--${spec.selector[0]}`, spec.selector[1]);
   args.push('--image', databaseImage(database));
   if (database.type !== 'bucket') {
-    if (database.type !== 'haproxy' && database.type !== 'external') {
+    if (!['client', 'haproxy', 'external'].includes(database.type)) {
       args.push('--version', database.version);
     }
     args.push('--pmm-server', pmmServer, '--admin-password', adminPassword, ...clientArgs);

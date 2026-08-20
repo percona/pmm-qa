@@ -128,7 +128,7 @@ export function dockerBuildArgs(descriptor: string): string[] {
     ];
   }
 
-  if (normalizedEngine === 'haproxy' || normalizedEngine === 'external') {
+  if (normalizedEngine === 'client' || normalizedEngine === 'haproxy' || normalizedEngine === 'external') {
     if (version !== 'latest') throw new Error(`${normalizedEngine} has no version selector`);
     return [
       'build', '-f', 'engines/services/Dockerfile',

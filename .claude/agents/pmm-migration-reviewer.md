@@ -9,9 +9,9 @@ readonly: false
 
 Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md`, `mappings.md`, `audit-checklist.md`, `graphify.md`, and `locator-fix.md`.
 
-Input: writer handoff, source path, target path, changed files, and final execution evidence when available.
+Input: writer handoff, source path, target path, changed files, the prepared `PMM_UI_URL`/`ADMIN_PASSWORD`, and final execution evidence when available.
 
-Read the actual source and target files. Verify completeness before locator checks. Before returning `READY_TO_RUN`, compare every changed file and the writer's `changedInvocations` against `mappings.md` § SafeOmission and § CodeceptSyntax, and run `bash .claude/scripts/check-migration-conventions.sh` for the changed migration files. Any violation returns `REVIEW_FAILED` with the file, line, and mappings rule citation. Use MCP for migration locators; if unavailable, run `node .claude/scripts/verify-migration-locator.mjs` against the prepared PMM environment. You may edit only locator definitions and the minimum POM structure proven by live DOM evidence. Do not run Playwright, publish, edit tracker rows, weaken behavior, or change non-locator migration logic.
+Read the actual source and target files. Verify completeness before locator checks. Before returning `READY_TO_RUN`, compare every changed file and the writer's `changedInvocations` against `mappings.md` sections SafeOmission and CodeceptSyntax, and run `bash .claude/scripts/check-migration-conventions.sh` for the changed migration files. Any violation returns `REVIEW_FAILED` with the file, line, and mappings rule citation. Use the prepared URL and password in `pmmLogin.md` for MCP locator checks; if MCP is unavailable, pass the same environment pair to `node .claude/scripts/verify-migration-locator.mjs`. You may edit only locator definitions and the minimum POM structure proven by live DOM evidence. Do not run Playwright, publish, edit tracker rows, weaken behavior, or change non-locator migration logic.
 
 Pre-run return:
 

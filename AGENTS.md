@@ -2,7 +2,7 @@
 
 <!-- SINGLE ENTRY POINT for all AI coding assistants (Claude Code, Cursor, GitHub Copilot, etc.)
      Compatibility shims: CLAUDE.md, .cursorrules, .github/copilot-instructions.md
-     Last reviewed: 2026-07 -->
+     Last reviewed: 2026-08 -->
 
 ## Maintaining This Document
 
@@ -36,6 +36,7 @@ Each test suite has its own dependency manifest, lint config and runner. **Read 
 | [cli/](cli/) | Playwright-runner CLI tests for `pmm-admin` (no browser) | [README.md](cli/README.md) · [playwright.config.ts](cli/playwright.config.ts) |
 | [codeceptjs-e2e/](codeceptjs-e2e/) | **Legacy** CodeceptJS UI e2e suite — do not add new coverage unless extending an area that exists only here | [README.md](codeceptjs-e2e/README.md) · [CONTRIBUTING.md](codeceptjs-e2e/CONTRIBUTING.md) |
 | [e2e_tests/](e2e_tests/) | **Active** Playwright UI e2e suite — preferred for all new UI tests | [README.md](e2e_tests/README.md) · [CONTRIBUTING.md](e2e_tests/CONTRIBUTING.md) · [playwright.config.ts](e2e_tests/playwright.config.ts) · [fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) |
+| [provisioning/](provisioning/) | Docker-native TypeScript provisioner for a local PMM Server, monitored databases, and PMM Clients | [ARCHITECTURE.md](provisioning/ARCHITECTURE.md) · [setup.ts](provisioning/setup.ts) |
 | [qa-integration/](qa-integration/) | `pmm-framework` (bash CLI) + Ansible playbooks to provision PMM Clients and monitored DBs on the `pmm-qa` Docker network | [pmm-framework/README.md](qa-integration/pmm_qa/pmm-framework/README.md) · [pmm_qa/README.md](qa-integration/pmm_qa/README.md) · [scripts/database_options.py](qa-integration/pmm_qa/scripts/database_options.py) |
 | [package_tests/](package_tests/) | Ansible playbooks for OS-level pmm-client install + upgrade (deb/rpm/tarball, auth modes, custom path/port, GSSAPI) | [pmm3-client_integration.yml](package_tests/pmm3-client_integration.yml) |
 | [k8s/](k8s/) | BATS helm-chart smoke + functional tests against a local Kubernetes cluster | [helm-test.bats](k8s/helm-test.bats) |
@@ -83,6 +84,8 @@ flowchart LR
 ```
 
 `pmm-framework` (the bash CLI at [qa-integration/pmm_qa/pmm-framework/](qa-integration/pmm_qa/pmm-framework/)) is the common provisioning step for most CI jobs: it stands up PMM Client containers and monitored DBs on a shared Docker network named `pmm-qa`, then the respective UI / CLI suite runs against that environment.
+
+For local Docker runs, including CodeceptJS-to-Playwright migration verification, use [provisioning/setup.ts](provisioning/setup.ts). It owns the local PMM Server lifecycle and accepts the existing `--database` grammar without Ansible or systemd.
 
 ## CI / Pipelines
 
@@ -199,7 +202,8 @@ After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` w
 | `ADMIN_PASSWORD` | `admin` | Grafana/PMM admin password |
 | `WORKERS` | `1` | Playwright parallel workers |
 | `HEADLESS` | `true` | Browser visibility (`false` for headed) |
-| `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | PMM Server Docker image (local compose) |
+| `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | PMM Server Docker image (local compose and `provisioning/`) |
+| `CLIENT_VERSION` | `latest-tarball` in `provisioning/` | PMM Client version or tarball URL for local provisioning |
 | `PMM_SERVER_LATEST` | — | Required for `@post-release` tests |
 
 ## Key Files to Reference
@@ -207,6 +211,7 @@ After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` w
 - [e2e_tests/playwright.config.ts](e2e_tests/playwright.config.ts) — Playwright configuration
 - [e2e_tests/fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) — shared test fixtures
 - [e2e_tests/docker-compose.yml](e2e_tests/docker-compose.yml) — local PMM Server environment
+- [provisioning/setup.ts](provisioning/setup.ts) — Docker-native local PMM Server, database, and client provisioning
 - [k8s/helm-test.bats](k8s/helm-test.bats) — Helm chart test suite
 - [.github/workflows/runner-e2e-tests-playwright.yml](.github/workflows/runner-e2e-tests-playwright.yml) — reusable Playwright CI runner
 - [.agents/README.md](.agents/README.md) — LLM workflow prompts and MCP config

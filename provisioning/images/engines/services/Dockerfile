@@ -1,6 +1,6 @@
 FROM rockylinux:9
 RUN REDIS_EXPORTER_VERSION=1.58.0 PROCESS_EXPORTER_VERSION=0.7.10; \
-    dnf install -y findutils gzip haproxy openssl tar \
+    dnf install -y findutils gzip haproxy openssl tar https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
     && ln -s /usr/bin/dnf /usr/bin/microdnf \
     && curl -fL "https://github.com/oliver006/redis_exporter/releases/download/v${REDIS_EXPORTER_VERSION}/redis_exporter-v${REDIS_EXPORTER_VERSION}.linux-amd64.tar.gz" -o /tmp/redis.tar.gz \
     && tar -xzf /tmp/redis.tar.gz -C /tmp \

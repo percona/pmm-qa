@@ -17,23 +17,28 @@ Read this first for a migration run. It is a map, not a command cookbook. Query 
 
 ## Provisioning
 
-Provision PMM and its databases on a throwaway Linode by following `.claude/skills/linode-provisioning/SKILL.md`. Pass the source-derived `setup_services` arguments to the unmodified `pmm-framework` on that VM.
-
-The bash `pmm-framework` has no standalone-client-only mode (`--client-version` only tags a client inside a `--database` run; a no-database mode is intentionally not implemented). When `setup_client=true` with no `--database` need, provision the standalone client directly, remotely, via `qa-integration/pmm_qa/pmm3-client-setup.sh`:
+Use the Docker-native [`provisioning/`](../../../provisioning/) entry point from the repository root. It owns the local PMM Server lifecycle and accepts the tracked `pmm-framework` spellings such as `--database`, so source-derived `setup_services` database arguments can be passed unchanged:
 
 ```bash
-terraform/linode-runner/run.sh <run-id> -- "
-  cd pmm-qa/qa-integration/pmm_qa && sudo bash pmm3-client-setup.sh \
-    --pmm_server_ip 127.0.0.1 \
-    --client_version '<client-version>' \
-    --admin_password '<admin-password>' \
-    --use_metrics_mode no
-"
+node provisioning/setup.ts
+node provisioning/setup.ts --database ps=8.4 --database psmdb
+node provisioning/setup.ts --db client
+node provisioning/setup.ts --database ps=8.4 --db client
 ```
 
-Use `.claude/scripts/run-migration-single-test.sh` from repo root only to wait for readiness and run the target test against the prepared environment. Arguments are the target test path relative to `e2e_tests/`, plus optional `--prepare-only` and `--grep`. `PMM_UI_URL` (the plain Linode nip.io PMM hostname) and `ADMIN_PASSWORD` (from the run directory) are required env vars; the script errors if either is unset instead of falling back to a local default. Never edit `e2e_tests/.env` during migration.
+Build the command from source behavior:
 
-The Linode removes the local nested-Docker/systemd limitation. It does not create AWS RDS, Aurora, Azure, AMI, OVF, or pmm-demo dependencies; those tracker rows remain blocked until their named external infrastructure exists.
+- no database arguments starts PMM Server only;
+- pass every derived database argument for a database-backed test; and
+- append `--db client` whenever `setup_client=true`, with or without database arguments. A database container's embedded PMM Client does not replace a source-required standalone client/node.
+
+Tracker values `-h` and `--help` mean no database setup in the old workflow. Omit them here: passing either to `provisioning/setup.ts` prints help and exits without starting PMM.
+
+Local requirements are Node.js 22.18 or newer, a running Docker engine, and `e2e_tests` dependencies (`npm ci` there when missing). `DOCKER_VERSION`, `CLIENT_VERSION`, and `ADMIN_PASSWORD` select non-default builds without changing the command shape. Run `node provisioning/setup.ts --help` for the complete descriptor grammar.
+
+Run `bash .claude/scripts/run-migration-single-test.sh` from the repository root to wait for readiness and run the target test. Arguments are the target test path relative to `e2e_tests/`, plus optional `--prepare-only` and `--grep`. The prepare-only check also ensures Chromium is installed for the reviewer. It defaults to the local provisioner's `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin`; export both when provisioning used a different host port or password. Never edit `e2e_tests/.env` during migration.
+
+Local provisioning does not create AWS RDS, Aurora, Azure, AMI, OVF, or pmm-demo dependencies. Those tracker rows remain blocked until their named external infrastructure exists.
 
 For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
 
@@ -41,7 +46,7 @@ For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs
 
 Source behavior wins. Derive setup by reading the selected source test, hooks, data rows, custom steps, helpers, APIs, and POM methods.
 
-Use the tracker `Setup` value only as the planned default. Tags are hints, not truth. When setup is unclear, inspect `qa-integration/pmm_qa/README.md` and `qa-integration/pmm_qa/scripts/database_options.py`.
+Use the tracker `Setup` value only as the planned default. Tags are hints, not truth. When setup is unclear, inspect `provisioning/ARCHITECTURE.md` and `node provisioning/setup.ts --help`.
 
 For tests with no DB dependency, pass an empty `setup_services` string. Use `setup_client=true` only when the source test needs a standalone client/node.
 
@@ -82,4 +87,4 @@ Use repository patterns: POM locators grouped in `buttons`, `elements`, `inputs`
 
 Tests authorize through `grafanaHelper.authorize()` in `pmmTest.beforeEach`; `pmmTest` already mocks tour completion and server updates at context level.
 
-For browser MCP locator discovery, use `.agents/workflows/pmmLogin.md`. For broken locator recovery, follow `locator-fix.md`.
+For browser MCP locator discovery, use `.agents/workflows/pmmLogin.md` with the prepared `PMM_UI_URL` and `ADMIN_PASSWORD`. For broken locator recovery, follow `locator-fix.md`.

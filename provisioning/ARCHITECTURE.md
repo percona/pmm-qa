@@ -65,7 +65,7 @@ that child owns every container it creates.
 | `images/build.ts` | `dockerBuildArgs(descriptor)` — one Dockerfile build per engine/version, `npm run build --` entry point | `setup.ts` (`DATABASES`), `lib/engines.ts` |
 | `images/lib/engines.ts` | Static per-engine metadata for MySQL/PS (container prefixes, PMM environment/cluster names, minimum node counts) | nothing in `provisioning/` |
 | `images/setup.ts` | mysql/ps engine: topology, container naming, workload seeding | `pmm-client.ts`, `lib/engines.ts` |
-| `images/engines/*/setup.ts` | One engine per database family (pxc, psmdb/mongodb, pgsql, pdpgsql, valkey, services (haproxy/external), minio (bucket), mlaunch) | `pmm-client.ts` |
+| `images/engines/*/setup.ts` | One engine per database family (pxc, psmdb/mongodb, pgsql, pdpgsql, valkey, services (standalone client/haproxy/external), minio (bucket), mlaunch) | `pmm-client.ts` |
 | `images/engines/*/Dockerfile` | The image each engine's `setup.ts` runs `docker run` against | — |
 
 Every `images/**/setup.ts` is independently runnable (`node
@@ -159,6 +159,11 @@ bucket-only run skips every server step. `npm run build:dockerclients` builds
 the `ps`/`pdpgsql`/`psmdb` client images without pretending they are a
 provisionable database type.
 
+`--db client` reuses the services engine and its Rocky Linux image to create a
+single `client_container`, install the selected PMM Client package or tarball,
+and register its node without adding a monitored service. It waits for
+`node_exporter` so client-backed dashboards can consume metrics immediately.
+
 ### Sequential vs parallel
 
 |  | default (parallel) | `--sequential` |
@@ -200,8 +205,8 @@ on its primary node (`engines/psmdb/setup.ts`) — is also the one place the
 name is *not* setup-type-prefixed (`topologyPrefix('pss')` is `''`, every
 other setup-type gets a `<setup-type>_` prefix), so it can never collide with
 another PSMDB topology; a second `psmdb:pss` run is already blocked by the
-duplicate-topology check below. `haproxy`/`external`/`bucket` each use one
-fixed container name, but each has exactly one `setup-type` value, so that
+duplicate-topology check below. `client`/`haproxy`/`external`/`bucket` each use
+one fixed container name, but each has exactly one `setup-type` value, so that
 same check — in `parseConfig()`, keyed on
 `` `${type}:${options['setup-type']}` `` — rejects the only collision that
 could occur. `mlaunch-psmdb`/`mlaunch-mongodb` keep this property:
@@ -322,7 +327,7 @@ I/O boundaries are dependency-injected so tests never touch Docker:
 Run everything relevant to `provisioning/`:
 
 ```bash
-node --test --experimental-test-isolation=none provisioning/setup.test.ts provisioning/pmm-client.test.ts provisioning/images/setup.test.ts provisioning/images/engines/*/setup.test.ts
+npm --prefix provisioning test
 ```
 
 ---

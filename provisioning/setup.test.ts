@@ -92,7 +92,7 @@ test('parses --reuse-server, --sequential, and --verbose flags', () => {
 
 test('parses database defaults together', () => {
   const config = parseConfig([
-    '--db', 'mysql', '--db', 'ps', '--db', 'pxc', '--db', 'psmdb', '--db', 'mongodb', '--db', 'pgsql', '--db', 'pdpgsql',
+    '--db', 'mysql', '--db', 'ps', '--db', 'pxc', '--db', 'psmdb', '--db', 'mongodb', '--db', 'pgsql', '--db', 'pdpgsql', '--db', 'client',
   ]);
   assert.deepEqual(
     config.databases.map(({ type, version, options }) => ({ type, version, options })),
@@ -104,6 +104,7 @@ test('parses database defaults together', () => {
       { type: 'mongodb', version: '8.0', options: {} },
       { type: 'pgsql', version: '18', options: {} },
       { type: 'pdpgsql', version: '18', options: {} },
+      { type: 'client', version: 'latest', options: {} },
     ],
   );
   assert.equal(config.serverImage, 'perconalab/pmm-server:3-dev-latest');
@@ -159,6 +160,24 @@ test('parses descriptors generically and forwards engine options', () => {
 });
 
 test('maps archives, images, and provisioner arguments', () => {
+  const client = parseDatabase('client');
+  const clientArgs = provisionerArgs(
+    client,
+    ['--client-version', '3.9.1'],
+    'secret',
+    false,
+    false,
+    'pmm-server',
+    'no',
+  );
+  assert.equal(databaseImage(client), 'pmm-qa/client:latest');
+  assert.ok(clientArgs[0].endsWith(provisioningPath('images', 'engines', 'services', 'setup.ts')));
+  assert.deepEqual(clientArgs.slice(1), [
+    '--type', 'client', '--image', 'pmm-qa/client:latest',
+    '--pmm-server', 'pmm-server', '--admin-password', 'secret',
+    '--client-version', '3.9.1', '--metrics-mode', 'no',
+  ]);
+
   const mysql = parseDatabase('mysql=9.7,setup-type=replication');
   assert.ok(provisionerArgs(mysql, [])[0].endsWith(provisioningPath('images', 'setup.ts')));
   assert.ok(provisionerArgs(mysql, []).includes('mysql'));
@@ -646,6 +665,36 @@ test('uses an existing PMM Server without recreating it', async () => {
   assert.equal(provisionerServer, '192.0.2.10');
 });
 
+test('orchestrates a standalone client with an explicit tarball', async () => {
+  const url = 'https://example.test/pmm-client.tar.gz';
+  let childArgs: string[] = [];
+  const runner: Runner = async (file, args): Promise<CommandResult> => {
+    if (file === process.execPath) childArgs = args;
+    return { code: 0, stdout: '', stderr: '' };
+  };
+  await orchestrate(
+    parseConfig([
+      '--db', 'client',
+      '--pmm-server', 'pmm.example.test',
+      '--client-version', url,
+      '--admin-password', 'secret',
+      '--metrics-mode', 'no',
+    ]),
+    runner,
+    async (source) => {
+      assert.equal(source, url);
+      return 'client.tar.gz';
+    },
+  );
+  assert.ok(childArgs[0].endsWith(provisioningPath('images', 'engines', 'services', 'setup.ts')));
+  assert.ok(childArgs.includes('client'));
+  assert.deepEqual(
+    childArgs.slice(childArgs.indexOf('--client-tarball'), childArgs.indexOf('--client-tarball') + 2),
+    ['--client-tarball', 'client.tar.gz'],
+  );
+  assert.equal(childArgs.includes('--version'), false);
+});
+
 test('bucket-only provisioning skips PMM Server and client resolution', async () => {
   let serverRuns = 0;
   let clientResolved = false;
@@ -681,15 +730,15 @@ test('teardownContainerIds collects server and provisioned containers', async ()
   assert.ok(filteredLabels.includes('label=pmm-qa.engine'));
 });
 
-test('teardownVolumeNames collects volumes across every pmm-qa prefix', async () => {
+test('teardownVolumeNames collects every provisioned volume family', async () => {
   const runner: Runner = async (_file, args): Promise<CommandResult> => {
     const filterValue = args[args.indexOf('--filter') + 1];
-    return filterValue === 'name=psmdb-'
-      ? { code: 0, stdout: 'psmdb-minio-backups', stderr: '' }
-      : { code: 0, stdout: 'pmm-data', stderr: '' };
+    if (filterValue === 'name=psmdb-') return { code: 0, stdout: 'psmdb-minio-backups', stderr: '' };
+    if (filterValue === 'name=mysql-ps-minio-backups') return { code: 0, stdout: 'mysql-ps-minio-backups', stderr: '' };
+    return { code: 0, stdout: 'pmm-data', stderr: '' };
   };
   const names = await teardownVolumeNames(runner);
-  assert.deepEqual(new Set(names), new Set(['pmm-data', 'psmdb-minio-backups']));
+  assert.deepEqual(new Set(names), new Set(['pmm-data', 'psmdb-minio-backups', 'mysql-ps-minio-backups']));
 });
 
 test('teardown removes matched containers, volumes, and the network', async () => {

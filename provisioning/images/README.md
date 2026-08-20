@@ -9,8 +9,7 @@ registers the nodes, and runs the framework workloads.
 ## Requirements
 
 - Node.js 22.18 or newer
-- Docker
-- A running PMM Server container, or a reachable PMM Server address
+- A running Docker engine; the orchestrator creates PMM Server unless `--pmm-server` or `--reuse-server` selects an existing one
 
 ## Build
 
@@ -18,15 +17,16 @@ Optional: `setup.ts` builds any missing image on demand, so this is only for
 pre-warming a cache. Run from the repository root:
 
 ```bash
-npm run build -- mysql=8.4
-npm run build -- ps=8.0
-npm run build -- pxc=8.0
-npm run build -- psmdb=8.0
-npm run build -- mongodb=8.0
-npm run build -- pgsql=18
-npm run build -- pdpgsql=18
-npm run build -- valkey=8
-npm run build:dockerclients
+npm --prefix provisioning run build -- mysql=8.4
+npm --prefix provisioning run build -- ps=8.0
+npm --prefix provisioning run build -- pxc=8.0
+npm --prefix provisioning run build -- psmdb=8.0
+npm --prefix provisioning run build -- mongodb=8.0
+npm --prefix provisioning run build -- pgsql=18
+npm --prefix provisioning run build -- pdpgsql=18
+npm --prefix provisioning run build -- valkey=8
+npm --prefix provisioning run build -- client
+npm --prefix provisioning run build:dockerclients
 ```
 
 Extra build options: `psmdb=8.0,ol-version=8`, `psmdb=8.0,patch=8.0.4-1` (pin a
@@ -42,21 +42,29 @@ and `8.4`. Each engine has its own Dockerfile under `engines/`.
 
 ## Run
 
+Run from the repository root:
+
 ```bash
-npm run setup
-npm run setup -- --db ps=8.4
-npm run setup -- --db pxc=8.0,nodes=3
-npm run setup -- --db psmdb=8.0,setup-type=sharding
-npm run setup -- --db pgsql=18,setup-type=replication
-npm run setup -- --db pdpgsql=18,setup-type=patroni
-npm run setup -- --db valkey=8,setup-type=sentinel
-npm run setup -- --db ps=8.4 --db psmdb=8.0 --db pdpgsql=18
-npm run setup -- --db mlaunch-psmdb=8.0,setup-type=pss
+node provisioning/setup.ts
+node provisioning/setup.ts --db client --client-version 3.9.1
+node provisioning/setup.ts --db client --client-version https://example.test/pmm-client.tar.gz
+node provisioning/setup.ts --db ps=8.4
+node provisioning/setup.ts --db pxc=8.0,nodes=3
+node provisioning/setup.ts --db psmdb=8.0,setup-type=sharding
+node provisioning/setup.ts --db pgsql=18,setup-type=replication
+node provisioning/setup.ts --db pdpgsql=18,setup-type=patroni
+node provisioning/setup.ts --db valkey=8,setup-type=sentinel
+node provisioning/setup.ts --db ps=8.4 --db psmdb=8.0 --db pdpgsql=18
+node provisioning/setup.ts --db mlaunch-psmdb=8.0,setup-type=pss
 ```
 
-With no `--db`, the orchestrator starts PMM Server only. With databases selected, it
+With no `--db`, the orchestrator starts PMM Server only. `--db client` starts and
+registers a standalone PMM Client node without a monitored database; `--client-version`
+accepts a PMM Client version or tarball URL. With databases selected, the orchestrator
 resolves PMM Client once and invokes independent engine modules. Run
 `node provisioning/setup.ts --help` for the supported descriptors and shared options.
+The standalone container and node are both named `client_container`, matching the
+legacy test contract. For example: `docker exec client_container pmm-admin status`.
 
 PMM agents are prepared concurrently across independent nodes. After registration,
 provisioning waits for each engine's exact exporter to become ready. On failure,
@@ -69,7 +77,7 @@ See `provisioning/ARCHITECTURE.md` for the full design and how this compares to
 ## Test
 
 ```bash
-npm test
+npm --prefix provisioning test
 ```
 
-The unit tests do not require Docker.
+The unit and workflow-parity tests do not require Docker.

@@ -144,6 +144,7 @@ dist
 /qa-integration/pmm_qa/inventory/
 /qa-integration/pmm_qa/pmm_framework/
 /qa-integration/pmm_qa/virtenv/
+/provisioning-artifacts/
 
 # Local-only k8s helper libs
 /k8s/lib/bats-assert/

@@ -1,6 +1,6 @@
 # Simple Migration Workflow
 
-Run exactly one migration at a time. One selected migration owns one PMM environment from review provisioning until PR creation. Do not clean or recreate that environment inside the workflow.
+Run exactly one migration at a time. One selected migration owns one local Docker PMM environment from review provisioning until PR creation. Do not clean or recreate that environment inside the workflow.
 
 Use WSL/Git Bash for `.claude/scripts/*.sh`; keep shell scripts LF-only and run `bash -n .claude/scripts/*.sh` after editing them.
 
@@ -11,10 +11,10 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - Launch each subagent and **wait on its task completion notification** (or poll its transcript every 10-15s). Do **not** use long `Await` sleeps with regex patterns on terminal output.
 - Enforce gates strictly: no execution before `READY_TO_RUN`, no publish before `FINAL_REVIEW_PASS`, no tracker `done` before a PR exists.
 - Overlap only where gates allow: static review can start while PMM provisions; MCP locator checks begin after readyz passes.
-- Reuse one Linode PMM environment per migration; never recreate it mid-workflow.
-- Never edit `e2e_tests/.env` during migration; pass the Linode `PMM_UI_URL` and generated `ADMIN_PASSWORD` explicitly to every command that needs them (`run-migration-single-test.sh`, `verify-migration-locator.mjs`, Playwright).
+- Reuse one local PMM environment per migration; never recreate it mid-workflow.
+- Never edit `e2e_tests/.env` during migration. Use `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin` unless the local provisioning command selected different values, and pass the same pair to every review and execution command.
 - For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
-- If the workflow stops after step 3 (VM provisioned) without ever reaching step 5 (e.g. the writer/reviewer loop exhausts its retries on `REVIEW_FAILED`/`LOCATOR_FIX_REQUIRED` and the runner is never invoked), the parent - not the runner - destroys the VM with `terraform/linode-runner/down.sh <run-id>` before stopping. The runner owns cleanup for every path it does reach (step 8); this bullet only covers the case where it is never reached at all.
+- Once step 3's provisioning command starts, if the workflow stops before the runner is invoked (including a provisioning failure or an exhausted writer/reviewer loop), the parent runs `node provisioning/setup.ts --teardown` before stopping. The runner owns cleanup for every path it reaches in step 8.
 
 ## 1. Select and prepare
 
@@ -51,22 +51,32 @@ The writer:
 
 Writer output: `MIGRATION_READY`, `BLOCKED`, or `STATIC_FAILED`.
 
-## 3. Provision once on Linode for review
+## 3. Provision once locally for review
 
-After `MIGRATION_READY`, follow `.claude/skills/linode-provisioning/SKILL.md` to create one throwaway VM with role `pmm-migration`, start PMM Server, and run the source-derived `setup_services` and `setup_client` provisioning there. Use a unique run ID such as `migration-<tracker-row>-<date>`.
+After `MIGRATION_READY`, ensure Node.js 22.18 or newer and Docker are available. The provisioner uses fixed local resources, including `pmm-server`, `client_container`, `pmm-data`, the `pmm-qa` network, and engine-labeled containers and volumes. Inspect them before provisioning. Treat every matching resource as foreign unless this migration created it earlier in the same run; stop instead of adopting, replacing, or tearing down another environment.
 
-Then verify the remote environment from the migration worktree:
+From the migration worktree, run `provisioning/setup.ts` once with the source-derived setup. It accepts the tracker's existing `--database` grammar. Omit tracker-only `-h`/`--help` no-op values. Examples:
 
 ```bash
-RUN_DIR='terraform/linode-runner/runs/<run-id>'
-PMM_UI_URL="https://$(tr '.' '-' <"$RUN_DIR/ip").nip.io" \
-ADMIN_PASSWORD="$(cat "$RUN_DIR/admin_password")" \
-./.claude/scripts/run-migration-single-test.sh \
+node provisioning/setup.ts
+node provisioning/setup.ts --database ps=8.4 --database psmdb
+node provisioning/setup.ts --db client
+node provisioning/setup.ts --database ps=8.4 --db client
+```
+
+Use no database arguments for server-only setup. Append `--db client` whenever the writer derived `setupClient: true`, including alongside database arguments; it represents a distinct standalone node. Record the exact provisioning command in the handoff.
+
+Then verify the prepared environment:
+
+```bash
+PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}" \
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}" \
+bash .claude/scripts/run-migration-single-test.sh \
   '<target-test-file>' \
   --prepare-only
 ```
 
-After this step, all later review and execution commands must reuse the same `PMM_UI_URL` and `ADMIN_PASSWORD`. If reuse cannot reach PMM, keep the tracker `in-progress`, record the blocker in Notes, and stop instead of recreating the environment.
+After this step, all later review and execution commands must reuse the same `PMM_UI_URL` and `ADMIN_PASSWORD`. If the environment becomes unreachable, keep the tracker `in-progress`, record the blocker and `provisioning-artifacts/` path in Notes, and stop instead of recreating it.
 
 ## 4. Initial review and MCP verification
 
@@ -85,7 +95,7 @@ Non-locator findings return to the writer. Any changed code must be reviewed aga
 
 ## 5. Execute
 
-The runner executes the migrated scenarios or existing coverage against the prepared environment, reusing the same `PMM_UI_URL`/`ADMIN_PASSWORD` for every proof and regression command.
+The runner executes the migrated scenarios or existing coverage against the prepared local environment, reusing the same `PMM_UI_URL`/`ADMIN_PASSWORD` for every proof and regression command.
 
 - For a new target file containing only migrated scenarios, run the complete file once.
 - For an appended existing target file, first run only the migrated scenarios, then run the complete target file.
@@ -123,7 +133,7 @@ For this workflow, `done` means the PR was opened successfully.
 
 ## 8. Cleanup
 
-Run `terraform/linode-runner/down.sh <run-id>` on every terminal path after provisioning: success, test failure, review failure, publication failure, or blocker. Do not leave a billable VM running.
+Run `node provisioning/setup.ts --teardown` on every terminal path after provisioning begins: success, provisioning failure, test failure, review failure, publication failure, or blocker. This removes the migration's provisioned containers, volumes, and network.
 
 ## Canonical sequence
 
@@ -138,12 +148,12 @@ pending
 -> provision once
 -> initial review
 -> MCP locator verification
--> test execution or already-covered regression against the same Linode PMM environment
+-> test execution or already-covered regression against the same local PMM environment
 -> final review
 -> retire source
 -> update workflow coverage
 -> rebase migration-only commits onto main
 -> PR opened
 -> done
--> destroy Linode VM
+-> tear down the local PMM environment
 ```

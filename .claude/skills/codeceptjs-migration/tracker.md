@@ -11,12 +11,12 @@ Full procedure: `run.md`. This tracker only owns row selection and the two provi
 - Pick the first row (top-to-bottom) with `status = pending`, always skipping B13 rows.
 - The `Env` column is the PLANNED provisioning; ALWAYS confirm it by reading the source test's
   `Before`/`BeforeSuite` hook + `Data(...)` before provisioning. Update the row if it differs.
-- `Setup` is only the planned `setup_services` argument set for the bash `pmm-framework` run on the Linode VM (see `context.md` section Provisioning). Source test confirmation wins over both tracker and tag mapping; broad tags such as `@settings` are not authoritative by themselves.
-  Empty `Setup` = no DB provisioning needed. `setup_client` is not tracked as a column; derive it from the source test hooks/custom steps each run and record the derived value in Notes.
+- `Setup` is the planned `setup_services` argument set passed to `provisioning/setup.ts` (see `context.md` section Provisioning). Its `--database` spellings are accepted unchanged. Source test confirmation wins over both tracker and tag mapping; broad tags such as `@settings` are not authoritative by themselves.
+  Empty `Setup` = no DB provisioning needed. `setup_client` is not tracked as a column; derive it from the source test hooks/custom steps each run, append `--db client` whenever it is true, and record the derived value in Notes.
 - Ordering is efficiency-first: consecutive rows share the same env bucket and provisioning shape;
-  each migration still owns and destroys its Linode VM. Within a bucket, UI-only comes first and
+  each migration still owns and tears down its local Docker environment. Within a bucket, UI-only comes first and
   the heaviest/integration rows come last.
-- Linode is the default execution host and removes local nested-Docker/systemd blockers. Rows that need vendor cloud resources, appliance images, or pmm-demo access still stay `pending`; Linode does not provide those dependencies.
+- Local Docker through `provisioning/setup.ts` is the default execution environment. Rows that need vendor cloud resources, appliance images, or pmm-demo access stay `pending`; local provisioning does not provide those dependencies.
 
 Everything else - best-fit target selection, source rename, branch/PR mechanics - is owned by
 `context.md` section 2a/2b and `branch-workflow.md`; see those instead of this file.
@@ -29,9 +29,9 @@ Before creating a migration branch, merge `origin/main` into control and refresh
 
 ## Env bucket summary
 
-| Bucket | Env                          | Setup (setup_services)                                  |
+| Bucket | Env                          | Setup (`provisioning/setup.ts` arguments)               |
 | ------ | ---------------------------- | ------------------------------------------------------- |
-| B1     | none (UI/server only)        | (none) / `-h` / `--help` no-op                         |
+| B1     | none (UI/server only)        | (none); omit legacy `-h` / `--help`                    |
 | B2     | pgsql / pdpgsql              | `--database pgsql` or `--database pdpgsql`              |
 | B3     | ps / mysql                   | `--database ps`, `ps=8.0`, `ps=8.4`, or `mysql`         |
 | B4     | psmdb                        | `--database psmdb`                                      |
@@ -39,7 +39,7 @@ Before creating a migration branch, merge `origin/main` into control and refresh
 | B6     | pxc + haproxy                | `--database haproxy --database ps --database pxc`       |
 | B7     | ssl variants                 | `--database ssl_mysql` / `ssl_psmdb` / `ssl_pdpgsql=16` |
 | B8     | backup (ps + bucket)         | `--database ps=8.4,BACKUP=true --database bucket`       |
-| B9     | qa-integration / multi-db    | per workflow/test (ps / psmdb / pdpgsql / pxc / haproxy) |
+| B9     | integration / multi-db       | per workflow/test (ps / psmdb / pdpgsql / pxc / haproxy) |
 | B10    | migration                    | `--database <db>` (source) + pmm2->pmm3 flow            |
 | B11    | advisors                     | `--database pdpgsql`                                    |
 | B12    | upgrade (special harness)    | pmm-server upgrade flow + `--database`                  |
@@ -50,7 +50,7 @@ Before creating a migration branch, merge `origin/main` into control and refresh
 | #   | Status         | Bucket | Env            | Setup                                             | Source                                                                          | Target                                                              | Tags                                       | Conf% | Date | Notes/PR                                   |
 | --- | -------------- | ------ | -------------- | ------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------ | ----- | ---- | ------------------------------------------ |
 | 1   | done           | B1     | none           |                                                   | `codeceptjs-e2e/tests/leftNavigation_test.js`                                   | `e2e_tests/tests/helpCenter.test.ts`                                | @menu                                      |       | 2026-07-21 | PMM-T1830 migrated; source retired to `leftNavigation_migrated.js`; kept tag `@menu` (not `@new-navigation`) to preserve nightly-e2e-tests-matrix.yml coverage per branch-workflow.md "Workflow coverage"; e2e-tests-matrix.yml's `new-navigation` job grep updated to `@new-navigation\|@menu` to keep PR-CI coverage; added `runner-e2e-tests-playwright-remote-nightly-tests.yml` + `test_execution_playwright` nightly job; PR https://github.com/percona/pmm-qa/pull/1094; graphify update OK (587 nodes). |
-| 2   | in-progress    | B3     | mysql          | `--database mysql`                                | `codeceptjs-e2e/tests/serverLogs_test.js`                                       | `e2e_tests/tests/serverLogs.test.ts`                                | @fb-settings                               |       |      | logs.zip download; preserve existing FB workflow bucket/setup. BLOCKED 2026-08-20: provisioning impossible from the run session -- egress policy denied `registry.terraform.io` and `api.linode.com` (403 on CONNECT, confirmed via `$HTTPS_PROXY/__agentproxy/status` `recentRelayFailures`), so `terraform init` cannot fetch the linode provider and the Linode API is unreachable. No VM was ever created; no `down.sh` cleanup was owed. Graph refresh OK (692 nodes, 1466 edges, 55 communities; health OK). Writer returned MIGRATION_READY: targetMode new-file, derived setupServices EMPTY and setupClient false (source only calls `locationsAPI.getLocationsList()` + downloads server `/logs.zip`, so no monitored DB is source-required -- planned `--database mysql` is a workflow-coverage question, not a source requirement); reuses `pmmTest`/`grafanaHelper`/`BackupsApi.getLocations` (exposed in place)/`apiEndpoints`/`archive.helper`; adds `getFileLineCount` to `@helpers/archive.helper.ts` and `server.logs` to `apiEndpoints`; 3 scenarios PMM-T1902/T1903/T1904 with tags and assertion strictness preserved; `locators: []` (API-only test, no UI locators). Static validation PASS (eslint 0 new, tsc 0 new, conventions + script checks PASS). NOT reached: initial review, MCP locator verification, execution, FINAL_REVIEW_PASS, source retirement, PR. Migration branch `migrate-settings-serverLogs` was created from this control commit but nothing was committed or pushed on it (publish gate). Next run needs an environment with `registry.terraform.io` + `api.linode.com` allowed. |
+| 2   | pending        | B3     | mysql          | `--database mysql`                                | `codeceptjs-e2e/tests/serverLogs_test.js`                                       | `e2e_tests/tests/serverLogs.test.ts`                                | @fb-settings                               |       |      | logs.zip download; preserve existing FB workflow bucket/setup. Prior Linode provisioning blocker is superseded; restart through the local workflow. |
 | 3   | pending        | B9     | ps+external+haproxy | `--database ps --database external --database haproxy` | `codeceptjs-e2e/tests/verifyAnnotations_test.js`                                | `e2e_tests/tests/verifyAnnotations.test.ts`                         | @fb-instances                              |       |      | annotations; preserve FB instances workflow setup; confirm source client needs |
 | 4   | pending        | B2     | pgsql          | `--database pgsql`                                | `codeceptjs-e2e/tests/configuration/verifyPMMSettingsPageElements_test.js`      | `e2e_tests/tests/configuration/settingsPageElements.test.ts`        | @settings                                  |       |      | preserve settings workflow setup; reuse `settingsPage` |
 | 5   | pending        | B2     | pgsql          | `--database pgsql`                                | `codeceptjs-e2e/tests/configuration/verifyServerAdminSettings_test.js`          | `e2e_tests/tests/configuration/serverAdminSettings.test.ts`         | @settings                                  |       |      | preserve settings workflow setup            |
@@ -157,5 +157,5 @@ Best-fit rule (Target column is a hint, not a mandate): `context.md` section 2a.
   check the target folder; if a test already covers the source, mark the row `done` with a note
   instead of duplicating. Rows #13/#14 (Insight dashboards root vs dashboards/) are likely
   near-duplicates - reconcile into one target.
-- `@not-ui-pipeline` / cloud / demo / ami / ovf tests need infra beyond a local docker PMM.
-  They stay `pending`; keep the required infra in Notes until it is available.
+- Tests that specifically require cloud, demo, AMI, or OVF infrastructure need more than the local Docker PMM.
+  They stay `pending`; keep the required infrastructure in Notes until it is available.

@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# Wait for an already-provisioned remote PMM (Linode VM) to be ready, then run one
-# Playwright test file or an anchored grep-filtered subset. Provisioning (server, DB,
-# client) happens on the VM via the linode-provisioning skill, not by this script.
+# Wait for the local PMM environment created by provisioning/setup.ts, then run one
+# Playwright test file or an anchored grep-filtered subset. This script does not
+# create or tear down that environment.
 # Usage:
 #   run-migration-single-test.sh <tests/file.test.ts> [--prepare-only] [--grep regex]
 set -Eeuo pipefail
-
 
 ensure_playwright_browser() {
   local playwright_bin="$E2E_DIR/node_modules/.bin/playwright"
@@ -13,7 +12,10 @@ ensure_playwright_browser() {
     echo "ERROR: Playwright not installed in $E2E_DIR (run: cd e2e_tests && npm ci)" >&2
     exit 2
   }
-  "$playwright_bin" install chromium >/dev/null 2>&1 || true
+  "$playwright_bin" install chromium >/dev/null || {
+    echo "ERROR: Chromium installation failed" >&2
+    exit 2
+  }
 }
 
 print_playwright_target() {
@@ -22,7 +24,7 @@ print_playwright_target() {
     PMM_MIGRATION=1 PMM_UI_URL="$PMM_UI_URL" ADMIN_PASSWORD="$ADMIN_PASSWORD" node -e "
       const dotenv = require('dotenv');
       dotenv.config({ override: false, quiet: true });
-      const url = process.env.PMM_UI_URL || 'http://127.0.0.1/';
+      const url = process.env.PMM_UI_URL || 'https://127.0.0.1/';
       console.log('Playwright target: PMM_UI_URL=' + url + ' PMM_MIGRATION=' + !!process.env.PMM_MIGRATION);
     "
   )
@@ -79,15 +81,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 E2E_DIR="$REPO_ROOT/e2e_tests"
 
-if [[ -z "${PMM_UI_URL:-}" ]]; then
-  echo "ERROR: PMM_UI_URL must be set explicitly to the provisioned Linode PMM URL (see linode-provisioning skill)." >&2
-  exit 2
-fi
-if [[ -z "${ADMIN_PASSWORD:-}" ]]; then
-  echo "ERROR: ADMIN_PASSWORD must be set explicitly (see terraform/linode-runner/runs/<run-id>/admin_password)." >&2
-  exit 2
-fi
-
+PMM_UI_URL="${PMM_UI_URL:-https://127.0.0.1/}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
 HEADLESS="${HEADLESS:-true}"
 WORKERS="${WORKERS:-1}"
 export ADMIN_PASSWORD PMM_MIGRATION=1 PMM_UI_URL HEADLESS WORKERS
@@ -124,12 +119,6 @@ wait_readyz() {
   return 1
 }
 
-cleanup() {
-  local code=$?
-  exit "$code"
-}
-trap cleanup EXIT
-
 [[ -f "$E2E_DIR/$TEST_FILE" ]] || {
   echo "ERROR: target test does not exist: $E2E_DIR/$TEST_FILE" >&2
   exit 2
@@ -137,10 +126,12 @@ trap cleanup EXIT
 
 if ! readyz_once; then
   wait_readyz || {
-    echo "ERROR: could not reach the provisioned PMM environment at ${PMM_UI_URL}. Provision it first via the linode-provisioning skill." >&2
+    echo "ERROR: could not reach the local PMM environment at ${PMM_UI_URL}. Provision it first with node provisioning/setup.ts." >&2
     exit 2
   }
 fi
+
+ensure_playwright_browser
 
 if [[ "$PREPARE_ONLY" == "true" ]]; then
   echo "PMM environment at ${PMM_UI_URL} is ready."
@@ -149,5 +140,4 @@ if [[ "$PREPARE_ONLY" == "true" ]]; then
 fi
 
 cd "$E2E_DIR"
-ensure_playwright_browser
 run_playwright

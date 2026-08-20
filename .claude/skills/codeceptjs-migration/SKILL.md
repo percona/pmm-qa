@@ -1,6 +1,6 @@
 ---
 name: codeceptjs-migration
-description: Migrate one CodeceptJS test to native Playwright, verify completeness and locators, execute it, open a PR, and mark the tracker done.
+description: Migrate one CodeceptJS test to native Playwright, provision its PMM environment locally with provisioning/, verify and execute it, open a PR, and mark the tracker done.
 ---
 
 # CodeceptJS to Playwright Migration
@@ -84,6 +84,10 @@ Inline in the test only when no suitable existing abstraction exists. Creating a
 ## Graphify rule
 
 Before creating a migration branch, merge `origin/main` into control and refresh only `e2e_tests/graphify-out/` with `graphify . --update` from `e2e_tests/`. Commit that refresh on control. Never regenerate the CodeceptJS source graph. During migration, use both graphs read-only for discovery, open every behaviorally relevant file, and treat actual repository code as authoritative. The migration PR excludes control-only graph and tracker commits. See `graphify.md` and `branch-workflow.md`.
+
+## Local provisioning rule
+
+Create one local Docker environment per migration through `provisioning/setup.ts`, reuse it through both reviews and execution, then tear it down through the same entry point. Do not use the Linode or `qa-integration` provisioners for this workflow. See `context.md` and `run.md`.
 
 ## Agent responsibilities
 

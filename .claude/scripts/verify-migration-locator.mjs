@@ -16,8 +16,8 @@ const repoRoot = path.resolve(__dirname, '../..');
 const e2eDir = path.join(repoRoot, 'e2e_tests');
 const { chromium } = createRequire(path.join(e2eDir, 'package.json'))('playwright');
 
-const pmmUrl = (process.env.PMM_UI_URL ?? 'http://127.0.0.1/').replace(/\/?$/, '/');
-const adminPassword = process.env.ADMIN_PASSWORD ?? 'admin-password';
+const pmmUrl = (process.env.PMM_UI_URL ?? 'https://127.0.0.1/').replace(/\/?$/, '/');
+const adminPassword = process.env.ADMIN_PASSWORD ?? 'admin';
 const helpPath = `${pmmUrl}pmm-ui/help`;
 
 const presets = {

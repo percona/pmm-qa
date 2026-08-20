@@ -12,7 +12,8 @@ DoNotMigrateHelpers;MapToExistingPlaywrightHelpers.
 `FileHelper`/`FileSystem`->Node`fs`/`path`.
 `ChaiWrapper`(`assert`)->`expect()`.
 `linksHelper.js`->Inline/POM/`@helpers/apiEndpoints.ts`.
-`I.verifyCommand()`->`@helpers/cli.helper.ts`;fixture:`cliHelper`.
+`I.verifyCommand()`->`@helpers/cli.helper.ts`;fixture:`cliHelper`. Preserve all four source semantics: a normal command uses `cliHelper.execute(command).assertSuccess()`; read `stdout.trim()` when the source consumes its return value; assert the requested output substring when supplied; for `result='fail'`, assert a nonzero exit code and use `stderr.trim()` when `returnErrorPipe=true`.
+When a source test with `setupClient=true` runs a bare or `sudo`-prefixed `pmm-admin` command on the standalone client host, preserve its arguments and the assertions above but execute it in the locally provisioned client: `cliHelper.execute('docker exec client_container pmm-admin ...').assertSuccess()`. Never assume `pmm-admin` is installed on the workstation.
 `testdata/`->`e2e_tests/testdata/`;LoadVia`fs`Or`cliHelper`.
 
 SafeOmission: `parseInt(versionPart, 10)`->`parseInt(versionPart)` for normal decimal version segments.
@@ -20,6 +21,8 @@ SafeOmission: `parseInt(versionPart, 10)`->`parseInt(versionPart)` for normal de
 `codeceptjs-e2e/tests/**/pages/api/*API.js` -> existing `e2e_tests/api/*.api.ts` via `api.*Api` fixture, or `new *Api(request)` in `beforeAll` when `page` is unavailable. When exposing a formerly private method, follow `SKILL.md` section Minimal reuse diffs.
 
 ## CodeceptSyntax
+
+Legacy remote-instance tests route from `client_container` to a database through `192.168.0.1`, `host_server_port`, and credentials created by the old environment. Local provisioning puts both containers on `pmm-qa`, so preserve the selected PMM node as `client_container` but derive the database container DNS name, internal service port, username, and password together from the exact `provisioning/` engine/topology selected for the test. Confirm the account accepts connections from `client_container`; when the provisioner only creates a loopback account, create a dedicated network-accessible test account through the database container during test setup and remove it during teardown. Do not copy the legacy gateway, host-published port, or credentials, and do not guess a container name.
 
 `I.amOnPage(path)`->`await page.goto(path)`.
 `I.click(locator)`->`await locator.click()`.
