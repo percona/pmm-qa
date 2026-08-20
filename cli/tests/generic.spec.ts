@@ -16,10 +16,19 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   });
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
+  let CLIENT_VERSION_LABEL = '';
   if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
     // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
-    PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
-    if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
+    const status = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status;
+    const serverVersion = status?.server_version;
+    if (!serverVersion) throw new Error('Could not read server version from "pmm-admin status --json"');
+    // Only the release part is comparable between the server image and the client tarball: the
+    // '-<branch>-<commit>' suffix names the pmm-submodules commit an artifact was built from, and a
+    // feature build reuses an unchanged server image, so its label can name an older commit than the
+    // client tarball published in the same build.
+    PMM_VERSION = serverVersion.match(/^\d+\.\d+\.\d+/)?.[0] || serverVersion;
+    // The client's own label is still asserted in full - pmm-agent and pmm-admin ship together.
+    CLIENT_VERSION_LABEL = status?.agent_version || '';
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
     // TODO: refactor to use docker hub API to remove file-update dependency
     // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
@@ -110,6 +119,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const output = await cli.exec('sudo pmm-admin --version');
     await output.assertSuccess();
     await output.outContains(`Version: ${PMM_VERSION}`);
+    if (CLIENT_VERSION_LABEL) {
+      await output.outContains(`Version: ${CLIENT_VERSION_LABEL}`);
+    }
   });
 
   /**
@@ -137,6 +149,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const output = await cli.exec('sudo pmm-admin summary --version');
     await output.assertSuccess();
     await output.outContains(`Version: ${PMM_VERSION}`);
+    if (CLIENT_VERSION_LABEL) {
+      await output.outContains(`Version: ${CLIENT_VERSION_LABEL}`);
+    }
   });
 
   test('PMM-T1219 - verify pmm-admin summary includes targets from vmagent', async ({}) => {
@@ -587,6 +602,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const oldVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
     const oldPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
 
+    await adminStatus.assertSuccess();
     await adminStatus.outContains('Connected');
     await oldVersion.outContains(latestReleasedVersion);
     const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http') ? process.env.PMM_CLIENT_VERSION : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
