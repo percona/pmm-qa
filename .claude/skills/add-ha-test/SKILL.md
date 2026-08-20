@@ -150,13 +150,21 @@ After writing a file, re-read every comment and cut the ones that do not survive
 
 ## Prove the test can fail
 
-Do not assume the test is working. A green HA test proves
-little on its own — a locator that resolves to nothing,
+A green HA test proves little on its own — a locator that resolves to nothing,
 or an oracle that echoes the thing under test, both look green. Mutate and
 re-run:
 
-Invert the expectation, not the assertion — inverting `toEqual` to
-`not.toEqual` passes for the wrong reason.
+1. Change the expected **value**, not the matcher: assert the leader is a pod
+   you know is not leading, or the Raft term is a number it is not.
+2. Re-run and read the failure. It has to fail on your changed value — a
+   timeout or a missing locator means the test was never asserting what you
+   thought.
+3. Revert.
+
+Inverting the matcher (`toEqual` → `not.toEqual`) is not a mutation: anything
+other than the expected value satisfies it, so it passes for the wrong reason.
+
+**Done when** you have seen the test red for the right reason, then green again.```
 
 ## Running them
 
