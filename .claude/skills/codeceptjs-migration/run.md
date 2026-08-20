@@ -102,9 +102,9 @@ node provisioning/setup.ts --database ps=8.4 --db client
 
 Use no database arguments for server-only setup. Append `--db client` whenever the confirmed setup includes `setupClient: true`, including alongside database arguments; it represents a distinct standalone node.
 
-Some source tests assert on log volume. `--server-env PMM_DEBUG=1` is not a provisioner default,
-unlike every other PMM test environment in this repository; add it when the source depends on log
-verbosity.
+`PMM_DEBUG=1` is a provisioner default, matching every other PMM test environment in this
+repository, so source tests that assert on log volume work without extra flags. Override it only
+when a test needs quieter logs: `--server-env PMM_DEBUG=0`.
 
 Then verify the prepared environment:
 
@@ -190,7 +190,7 @@ phases, and no basis for judging whether a step can be overlapped.
 
 | phase | started | ended | gate | loop | retries | notes |
 | --- | --- | --- | --- | --- | --- | --- |
-| provision | 14:02 | 14:41 | ready | 1 | 1 | first attempt failed, missing PMM_DEBUG |
+| provision | 14:02 | 14:41 | ready | 1 | 1 | first attempt failed, stale container from a prior run |
 | writer | 14:02 | 14:31 | MIGRATION_READY | 1 | 0 | 3 static-validation reruns |
 
 - provision: blocked on image pull for 11m.
