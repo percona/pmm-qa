@@ -19,19 +19,10 @@ let pgsmServiceNameSocket: string;
 
 pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
 
-  pmmTest.beforeAll(async ({ api, cliHelper }) => {
-    const dockerCheck = cliHelper
-      .execSilent("docker ps | grep pdpgsql_ | awk '{print $NF}'")
-      .assertSuccess().stdout;
-
-    expect(
-      dockerCheck.includes('pdpgsql_'),
-      'pdpgsql docker container should exist. please run pmm-framework with --database pdpgsql',
-    ).toBeTruthy();
-    containerName = dockerCheck.trim().split('\n')[0];
+  pmmTest.beforeEach(async ({ api, cliHelper }) => {
+    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
     pgsmServiceName = (await api.inventoryApi.getServiceDetailsByPartialName('pdpgsql_')).service_name;
-    pgsmServiceNameSocket = (await api.inventoryApi.getServiceDetailsByPartialName('socket_pdpgsql_'))
-      .service_name;
+    pgsmServiceNameSocket = (await api.inventoryApi.getServiceDetailsByPartialName('socket_pdpgsql_')).service_name;
   });
 
   pmmTest.beforeEach(async ({ grafanaHelper }) => {
@@ -64,7 +55,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
   );
 
   pmmTest(
-    'PMM-T1867 - pg_stat_monitor is used by default without providing --query-source @not-ui-pipeline @pgsm-pmm-integration',
+    'PMM-T1867 - pg_stat_monitor is used by default without providing --query-source @pgsm-pmm-integration',
     { tag: ['@pgsm-pmm-integration'] },
     async ({ cliHelper }) => {
       const serviceName = `pgsm_${Math.floor(Math.random() * 99) + 1}`;
