@@ -2,7 +2,7 @@
 
 FB Tests are the **GitHub Actions check-runs** on `pmm-submodules`. They are **often flaky** — treat failures as signals, not automatic blockers. Cross-check failed suites against the ticket scope before adding them to manual test steps.
 
-> **`gh pr checks` 403s in cloud sessions** (GraphQL). Everywhere below, read checks via repo-scoped REST on the PR head SHA:
+> **Read checks MCP-first** — GitHub MCP `pull_request_read` (`method: get_check_runs`, `perPage: 100`, page through all), then keep the latest run per check (`group_by(.name) | max_by(.started_at)`). Routine sessions have **no `gh`**; the `gh api` recipes below are a fallback only where `gh` exists. `gh pr checks` 403s regardless (GraphQL). The fallback reads checks via repo-scoped REST on the PR head SHA:
 > ```bash
 > SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<SUBMODULES_PR> --jq .head.sha)
 > CHECKS() { gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \

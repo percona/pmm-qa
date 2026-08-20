@@ -11,7 +11,7 @@ It includes tests, shared fixtures, page objects, helpers, API clients, and test
 | `fixtures/`            | Shared Playwright fixtures. Tests use `pmmTest` from `@fixtures/pmmTest`.      |
 | `pages/`               | Page objects for PMM pages and Grafana dashboards.                             |
 | `components/`          | Reusable UI components, mostly dashboard panels.                               |
-| `helpers/`             | Shared helpers for API, URL, auth, CLI, metrics, mocks, MongoDB, and timeouts. |
+| `helpers/`             | Shared helpers for API, URL, auth, CLI, k8s, metrics, mocks, MongoDB, timeouts. |
 | `api/`                 | API clients used by UI and API tests.                                          |
 | `interfaces/`          | Shared TypeScript types.                                                       |
 | `testdata/`            | Test data used by specific scenarios.                                          |
@@ -40,6 +40,11 @@ WORKERS=1
 | `ADMIN_PASSWORD` | `admin`             | Password used to authenticate as PMM `admin`.          |
 | `HEADLESS`       | `true`              | Browser visibility; use `false` for a visible browser. |
 | `WORKERS`        | `1`                 | Playwright worker count.                               |
+
+`@pmm-ha` tests need `kubectl` on the runner and a `KUBECONFIG` pointing at the PMM HA
+cluster. The namespace defaults to `pmm` in the [`K8sHelper`](./helpers/k8s.helper.ts)
+constructor — change it there, or pass one in. Nothing skips itself: an unreachable
+namespace fails the test with kubectl's own error.
 
 ## Running Tests
 
@@ -87,13 +92,13 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
-- `@ha-settings`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
 - `@menu`
 - `@new-navigation`
 - `@nightly`
+- `@pmm-ha`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
