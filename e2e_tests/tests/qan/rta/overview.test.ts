@@ -259,3 +259,112 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
     expect(csvOperationIds).toEqual(uiOperationIds);
   });
 });
+
+pmmTest(
+  'PMM-T2265 Verify RTA overview table state is stored in the URL and restored after refresh @rta',
+  async ({ page, queryAnalytics }) => {
+    const { rta } = queryAnalytics;
+    const expectedServiceIds = new URL(page.url()).searchParams.getAll('serviceIds');
+
+    await pmmTest.step('Set up table state', async () => {
+      expect(expectedServiceIds).toHaveLength(2);
+      await rta.buttons.pauseRealTimeAnalytics.click();
+      await rta.filterQueriesByText('db.runCommand');
+      await rta.inputs.rowsLimit.click();
+      await rta.builders.rowsPerPageOption('10').click();
+      await rta.clickElapsedTimeHeader();
+    });
+
+    await pmmTest.step('Verify table state in the URL', async () => {
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get('overview.f.queryText'))
+        .toBe('db.runCommand');
+      await expect.poll(() => new URL(page.url()).searchParams.get('overview.pageSize')).toBe('10');
+      await expect.poll(() => new URL(page.url()).searchParams.get('overview.sort')).not.toBeNull();
+      expect(new URL(page.url()).searchParams.getAll('serviceIds')).toEqual(expectedServiceIds);
+    });
+
+    await pmmTest.step('Reload the page', async () => {
+      await page.reload();
+      await rta.elements.realTimeTable.waitFor({ state: 'visible' });
+      await rta.openFiltersIfHidden();
+    });
+
+    await pmmTest.step('Verify restored table state', async () => {
+      await expect(rta.inputs.filterByQueryText).toHaveValue('db.runCommand');
+      await expect(rta.inputs.rowsLimit).toHaveText('10');
+      await expect(rta.elements.elapsedTimeColumnHeader).toHaveAccessibleName(
+        /Elapsed time Sorted by Elapsed time descending/,
+      );
+      expect(new URL(page.url()).searchParams.getAll('serviceIds')).toEqual(expectedServiceIds);
+    });
+  },
+);
+
+pmmTest(
+  'PMM-T2266 Verify RTA elapsed-time decimal filter and URL restoration @rta',
+  async ({ page, queryAnalytics }) => {
+    const { rta } = queryAnalytics;
+    const durationParameterName = 'overview.f.queryExecutionDurationMs';
+    let decimalMaximum = '';
+    let decimalMinimum = '';
+    let rowsBeforeFilter = 0;
+
+    await pmmTest.step('Set up decimal duration filters', async () => {
+      await rta.elements.realTimeTableRow.first().waitFor({ state: 'visible' });
+      await rta.buttons.pauseRealTimeAnalytics.click();
+      await rta.openFilters();
+
+      const rowCount = await rta.elements.realTimeTableRow.count();
+      const durations = (await rta.elements.durationCells.allTextContents()).map(Number.parseFloat);
+      const shortestDuration = Math.min(...durations);
+      const longestDuration = Math.max(...durations);
+
+      rowsBeforeFilter = rowCount;
+      decimalMinimum = String(Number(((shortestDuration + longestDuration) / 2).toFixed(2)));
+      decimalMaximum = String(longestDuration);
+
+      expect(longestDuration).toBeGreaterThan(shortestDuration);
+      await rta.inputs.minimumDuration.fill(decimalMinimum);
+      await rta.inputs.maximumDuration.fill(decimalMaximum);
+    });
+
+    await pmmTest.step('Verify filtered results', async () => {
+      await expect
+        .poll(async () => {
+          const values = await rta.elements.durationCells.allTextContents();
+
+          return (
+            values.length > 0 &&
+            values.length < rowsBeforeFilter &&
+            values.every(
+              (value) =>
+                Number.parseFloat(value) >= Number(decimalMinimum) &&
+                Number.parseFloat(value) <= Number(decimalMaximum),
+            )
+          );
+        })
+        .toBeTruthy();
+    });
+
+    const durationParameterValue = await pmmTest.step('Verify duration filters in the URL', async () => {
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get(durationParameterName))
+        .toEqual(expect.stringContaining(decimalMinimum));
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get(durationParameterName))
+        .toEqual(expect.stringContaining(decimalMaximum));
+
+      return new URL(page.url()).searchParams.get(durationParameterName);
+    });
+
+    await pmmTest.step('Reload and verify restored duration filters', async () => {
+      await page.reload();
+      await rta.openFiltersIfHidden();
+
+      await expect(rta.inputs.minimumDuration).toHaveValue(decimalMinimum);
+      await expect(rta.inputs.maximumDuration).toHaveValue(decimalMaximum);
+      expect(new URL(page.url()).searchParams.get(durationParameterName)).toBe(durationParameterValue);
+    });
+  },
+);

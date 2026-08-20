@@ -1,13 +1,20 @@
 # FB Tests — Analysis & Jira Documentation
 
-FB Tests are the **GitHub PR checks** on `pmm-submodules` (`gh pr checks`). They are **often flaky** — treat failures as signals, not automatic blockers. Cross-check failed suites against the ticket scope before adding them to manual test steps.
+FB Tests are the **GitHub Actions check-runs** on `pmm-submodules`. They are **often flaky** — treat failures as signals, not automatic blockers. Cross-check failed suites against the ticket scope before adding them to manual test steps.
+
+> **Read checks MCP-first** — GitHub MCP `pull_request_read` (`method: get_check_runs`, `perPage: 100`, page through all), then keep the latest run per check (`group_by(.name) | max_by(.started_at)`). Routine sessions have **no `gh`**; the `gh api` recipes below are a fallback only where `gh` exists. `gh pr checks` 403s regardless (GraphQL). The fallback reads checks via repo-scoped REST on the PR head SHA:
+> ```bash
+> SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<SUBMODULES_PR> --jq .head.sha)
+> CHECKS() { gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
+>   --jq '.check_runs | group_by(.name) | map(max_by(.started_at))[]'; }  # latest run per check
+> ```
 
 **Ignore JNKPercona API test comments** (`API tests have succeded/failed`) — not part of this workflow.
 
-## Source: GitHub PR checks (latest FB build only)
+## Source: GitHub Actions check-runs (latest FB build only)
 
 ```bash
-gh pr checks <SUBMODULES_PR> -R Percona-Lab/pmm-submodules
+CHECKS | jq -r '"\(.conclusion // .status)\t\(.name)"'
 ```
 
 Returns matrix jobs from `pmm-qa-fb-checks.yml` and Jenkins:
@@ -29,27 +36,22 @@ https://github.com/Percona-Lab/pmm-submodules/actions/runs/<run_id>
 
 ### Get the run URL for the latest FB build
 
+Pick the run the FB matrix shares — the most common run URL across the
+github-actions checks — so a stray single-job workflow (notify, lint) can't win.
+`/job/<id>` is stripped so you land on the run page, not one job:
+
 ```bash
-gh pr checks <SUBMODULES_PR> -R Percona-Lab/pmm-submodules 2>&1 \
-  | grep -oE 'actions/runs/[0-9]+' | head -1
+CHECKS | jq -rs 'map(select(.app.slug=="github-actions")
+  | .details_url | sub("/job/[0-9]+$";"")) | group_by(.) | max_by(length)[0]'
 ```
 
 Then open: `https://github.com/Percona-Lab/pmm-submodules/actions/runs/<run_id>`
-
-Or via API (latest commit on PR):
-
-```bash
-sha=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<SUBMODULES_PR> --jq .head.sha)
-gh api "repos/Percona-Lab/pmm-submodules/commits/$sha/check-runs" \
-  --jq '[.check_runs[] | select(.app.slug=="github-actions")] | .[0].details_url' \
-  | sed 's|/job/.*||'
-```
 
 Jenkins submodules build is separate: `continuous-integration/jenkins/pr-head` → `pmm3-submodules/PR-XXXX` (not the FB Tests screenshot target).
 
 ## Analysis workflow
 
-1. Run `gh pr checks` and list **failed** / **passed** suites
+1. Run `CHECKS` and list **failed** / **passed** suites
 2. For each failure, note suite name (e.g. `@rta UI tests`, `CLI tests pmm-server container`)
 3. **Filter by ticket relevance:**
    - In scope → add explicit manual verification to How to test
@@ -68,37 +70,44 @@ Use `.claude/scripts/pw-screenshot.js` (see `ui-evidence`) instead of any browse
 
 ### Screenshot only when all checks pass
 
+`CHECKS` emits one object per check, so slurp with `jq -s` and fail closed —
+"green" only if there's at least one check and every latest check completed success-ish:
+
 ```bash
-gh pr checks <SUBMODULES_PR> -R Percona-Lab/pmm-submodules 2>&1 | grep -E '\tfail\t'
+CHECKS | jq -rs '
+  length as $n
+  | ([ .[] | select(.status=="completed" and (.conclusion|IN("success","skipped","neutral"))) ] | length) as $ok
+  | if $n>0 and $ok==$n then "green" else "not-green (\($ok)/\($n) clean)" end'
 ```
 
 | Result | Action |
 |--------|--------|
-| **No fail lines** | Screenshot + attach to Jira `customfield_10492` |
-| **Any fail** | **No screenshot** — update Jira with text only (run URL, failed suites, relevant/flaky notes) |
+| **`green`** | Screenshot + attach to Jira `customfield_10492` |
+| **anything else** | **No screenshot** — update Jira with text only (run URL, failed suites, relevant/flaky notes) |
 
 Failures still matter for manual test planning; they just do not get a green screenshot in Jira.
 
 **Screenshot the FB Tests Actions run page** when all green — shows the full matrix (UI + CLI checks).
 
 ```bash
-run_id=$(gh pr checks 4376 -R Percona-Lab/pmm-submodules 2>&1 | grep -oE 'actions/runs/[0-9]+' | head -1 | cut -d/ -f2)
-node .claude/scripts/pw-screenshot.js \
-  "https://github.com/Percona-Lab/pmm-submodules/actions/runs/${run_id}" \
-  "/tmp/fb-test-PMM-14915-checks.png"
+SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/4376 --jq .head.sha)
+run_url=$(gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" --jq -r \
+  '.check_runs | map(select(.app.slug=="github-actions") | .details_url | sub("/job/[0-9]+$";""))
+   | group_by(.) | max_by(length)[0]')
+node .claude/scripts/pw-screenshot.js "$run_url" "/tmp/fb-test-PMM-14915-checks.png"
 ```
 
 If the page renders blank, the repo is private and no GitHub session is loaded in the browser context — `gh auth status` confirms CLI auth, but the *browser* needs its own login; note this as a blocker rather than guessing.
 
 ## Update Jira
 
+**Use the `jira` skill's curl-first REST recipes for all Jira writes** (reads, comments, attachments, field updates). Do **not** call the Atlassian MCP connector — it stalls routine runs on the #61015 approval prompt. The field IDs and templates below still apply; only the transport is REST, per `jira`.
+
 ### Comment visibility (mandatory)
 
-**Every Jira comment** on `perconadev.atlassian.net` PMM tickets MUST be restricted to the **Developers** role. Omitting visibility posts a **public** comment (visible to reporters/customers) — never do that for QA notes, triage, or test results.
+**Every Jira comment** on `perconadev.atlassian.net` PMM tickets MUST be restricted to the **Developers** role. Omitting visibility posts a **public** comment (visible to reporters/customers) — never do that for QA notes, triage, or test results. On the REST path this is the `visibility: {"type":"role","value":"Developers"}` key (see `jira`).
 
-**Always** pass visibility when calling a comment tool (Atlassian MCP `addCommentToJiraIssue`, `commentVisibility: {"type": "role", "value": "Developers"}`).
-
-If the MCP tool does not accept a visibility parameter, **do not post** — show the draft to the user and ask them to paste it with **Restrict to → Developers**.
+If visibility can't be set on whatever path is available, **do not post** — show the draft to the user and ask them to paste it with **Restrict to → Developers**.
 
 Updating custom fields (below) does **not** use comment visibility (different mechanism).
 
@@ -109,28 +118,14 @@ Updating custom fields (below) does **not** use comment visibility (different me
 | **FB test screenshots** | `customfield_10492` | FB test analysis summary + screenshot reference |
 | **How to test** | `customfield_10083` | Manual test steps (adapt using FB failures + PR diff) |
 
-### Update via Atlassian MCP
+### Update via the `jira` skill (curl-first REST)
 
-**All checks passed** — attach screenshot and update fields in one call:
-
-```json
-{
-  "issue_key": "PMM-14915",
-  "fields": "{\"customfield_10492\": \"## FB Tests — PR-4376 (all green)\\n\\n**Run:** https://github.com/Percona-Lab/pmm-submodules/actions/runs/27009345670\\n\\n!fb-test-PMM-14915-checks.png|width=900!\"}",
-  "attachments": "/tmp/fb-test-PMM-14915-checks.png"
-}
-```
-
-After attachment upload, Jira may render images inline: `!fb-test-PMM-14915-checks.png|width=900!`
+**All checks passed** — attach the screenshot, then set the field. Both via the `jira` skill's recipes:
+- Attach: `POST $J/issue/PMM-14915/attachments` with `-F "file=@/tmp/fb-test-PMM-14915-checks.png"`.
+- Field: `PUT $J/issue/PMM-14915` with `{"fields":{"customfield_10492":"h2. FB Tests — PR-4376 (all green)\n\n*Run:* <run_url>\n\n!fb-test-PMM-14915-checks.png|width=900!"}}` (wiki markup; after upload Jira renders it inline).
 
 **Any check failed** — text only, no attachment:
-
-```json
-{
-  "issue_key": "PMM-14915",
-  "fields": "{\"customfield_10492\": \"## FB Tests — PR-4376 (failures — no screenshot)\\n\\n**Run:** https://github.com/Percona-Lab/pmm-submodules/actions/runs/27009345670\\n\\n**Failed:** @rta UI tests, @pmm-ps-integration UI tests, CLI tests pmm-server container\\n\\n**Relevant to ticket:** none (flaky / out of scope)\\n\\n_Screenshot pending — waiting for all-green FB build._\"}"
-}
-```
+- Field: `PUT $J/issue/PMM-14915` with `{"fields":{"customfield_10492":"h2. FB Tests — PR-4376 (failures — no screenshot)\n\n*Run:* <run_url>\n\n*Failed:* @rta UI tests, CLI tests pmm-server container\n\n*Relevant to ticket:* none (flaky / out of scope)\n\n_Screenshot pending — waiting for all-green FB build._"}}`.
 
 Update **How to test** separately when manual steps are finalized (`customfield_10083`).
 

@@ -1,16 +1,20 @@
 ---
 name: fb-tests
-description: Analyze Percona-Lab/pmm-submodules FB Tests via gh pr checks, JNKPercona build comments, flaky triage, and map failures to pmm-qa GitHub workflow runners. Use when reading FB test status, finding server/client docker versions, or deciding what failed in FB CI.
+description: Analyze Percona-Lab/pmm-submodules FB Tests via REST check-runs, JNKPercona build comments, flaky triage, and map failures to pmm-qa GitHub workflow runners. Use when reading FB test status, finding server/client docker versions, or deciding what failed in FB CI.
 ---
 
 # PMM FB Tests
 
-**pmm-submodules** — use `gh` only. **Never** `git clone` this repo.
+**pmm-submodules** — access via the **GitHub MCP tools** (`mcp__github__*`; see the `repos` skill's "GitHub access — MCP-first" tool map). Routine sessions have **no `gh`**, so the `gh api` recipes below are a fallback only where `gh` actually exists. **Never** `git clone` this repo.
 
 ## Collect checks
 
+Read checks with the GitHub MCP `pull_request_read` (`method: get_check_runs`, owner `Percona-Lab`, repo `pmm-submodules`, `pullNumber: <SUBMODULES_PR>`, `perPage: 100`) — it resolves the head SHA for you and returns the check runs. The FB matrix has many checks, so **page through every result** (bump `page` until a short page) before grouping — a partial page hides checks and skews the gate. `gh pr checks` is GraphQL-backed and **403s** anyway. Where `gh` exists, the repo-scoped REST recipe below is an equivalent fallback (`per_page=100`, one page covers the matrix); `group_by(.name) | max_by(.started_at)` keeps only the **latest** run per check (so a passing rerun supersedes its old failure):
+
 ```bash
-gh pr checks <SUBMODULES_PR> -R Percona-Lab/pmm-submodules
+SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<SUBMODULES_PR> --jq .head.sha)
+gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
+  --jq '.check_runs | group_by(.name) | map(max_by(.started_at))[] | {name, status, conclusion}'
 ```
 
 - **Latest FB build only** — older comments/checks are invalid
@@ -45,11 +49,30 @@ Mark each failure: **relevant** (overlaps ticket) / **flaky** / **out of scope**
 
 ## Green gate (FB Reporter)
 
+Fail closed: only "green" when there's at least one check and **every** latest
+check completed with a success-ish conclusion. `cancelled`, `null`, still-running,
+or an empty set all read as not-green. Apply this identically whichever path
+retrieved the checks.
+
+Primary (works with no `gh`): from the `get_check_runs` output collected above
+(all pages, latest run per check), the set is **green** iff there is ≥1 check and
+**every** latest check has `status == "completed"` with `conclusion` in
+`success` / `skipped` / `neutral`; anything else (`failure`, `cancelled`,
+`timed_out`, `null`, still-running, empty set) → not-green.
+
+Where `gh` exists, this one-liner is the equivalent fallback:
+
 ```bash
-gh pr checks <PR> -R Percona-Lab/pmm-submodules 2>&1 | grep -E '\tfail\t'
+SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<PR> --jq .head.sha)
+gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" --jq '
+  .check_runs | group_by(.name) | map(max_by(.started_at)) as $latest
+  | ($latest | length) as $n
+  | ([ $latest[] | select(.status=="completed" and (.conclusion|IN("success","skipped","neutral"))) ] | length) as $ok
+  | if $n>0 and $ok==$n then "green" else "not-green (\($ok)/\($n) clean)" end'
 ```
 
-Any output → do **not** attach green screenshot to Jira.
+Anything but `green` → do **not** attach the screenshot to Jira; rerun the failed
+jobs and re-check first.
 
 ## Detail
 

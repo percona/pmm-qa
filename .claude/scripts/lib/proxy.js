@@ -29,6 +29,9 @@
 // Precedence: PW_PROXY_SERVER > HTTPS_PROXY > https_proxy. Set
 // PW_PROXY_SERVER='' to force a direct connection.
 
+const fs = require("node:fs");
+const { spkiPinsFromBundle } = require("./spki-pin");
+
 function resolveProxyServer() {
   const explicit = process.env.PW_PROXY_SERVER;
   if (explicit !== undefined) {
@@ -37,17 +40,49 @@ function resolveProxyServer() {
   return (process.env.HTTPS_PROXY || process.env.https_proxy || "").trim();
 }
 
-// Returns { proxy, args } to merge into chromium.launch(). Both are empty
-// when no proxy is configured, so callers can spread unconditionally.
-function proxyLaunchOptions() {
+function caBundlePath() {
+  return process.env.CCR_CA_BUNDLE || "/root/.ccr/ca-bundle.crt";
+}
+
+// Chromium ships its own trust store and ignores the environment's CA bundle,
+// so a TLS-intercepted site fails cert validation. Pin the interception CAs
+// from that bundle to trust exactly them -- nothing broader.
+function interceptionCaPins() {
+  const bundle = caBundlePath();
+  return fs.existsSync(bundle) ? spkiPinsFromBundle(bundle) : [];
+}
+
+// A single --ignore-certificate-errors-spki-list flag combining the caller's
+// own pins (e.g. a pinned PMM cert) with the interception CA pins. Chromium
+// keeps only the LAST occurrence of the flag, so every pin must go in one --
+// two separate flags would silently drop the earlier set.
+function spkiListArgs(extraPins = []) {
+  const pins = [...new Set([...extraPins, ...interceptionCaPins()].filter(Boolean))];
+  return pins.length ? [`--ignore-certificate-errors-spki-list=${pins.join(",")}`] : [];
+}
+
+// Returns { proxy, args } to merge into chromium.launch(). Pass any caller pins
+// (e.g. a pinned PMM cert) as opts.spkiPins so they combine with the
+// interception CA pins into the single flag above.
+function proxyLaunchOptions({ spkiPins = [] } = {}) {
   const server = resolveProxyServer();
   if (server === "") {
-    return { args: [] };
+    return { args: spkiListArgs(spkiPins) };
   }
   return {
     proxy: { server, bypass: "127.0.0.1,localhost" },
-    args: ["--ssl-version-max=tls1.2"],
+    args: ["--ssl-version-max=tls1.2", ...spkiListArgs(spkiPins)],
   };
 }
 
-module.exports = { proxyLaunchOptions };
+// Launch options that BYPASS the agent proxy for a direct egress connection.
+// The agent proxy is credential-scoped for github.com (repo-scoped REST only),
+// so a github web page navigated through it comes back as a 403 JSON. A bare
+// launch still inherits the system proxy, so force --no-proxy-server to take
+// the transparent egress-gateway path, which serves the real page. That path is
+// TLS-intercepted too, hence the CA pins.
+function directEgressLaunchOptions({ spkiPins = [] } = {}) {
+  return { args: ["--no-proxy-server", ...spkiListArgs(spkiPins)] };
+}
+
+module.exports = { proxyLaunchOptions, directEgressLaunchOptions };

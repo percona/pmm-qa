@@ -9,27 +9,46 @@ Read `.claude/skills/repos/SKILL.md` for repo rules. Never clone `pmm-submodules
 
 ## Find and diff PRs
 
+**GitHub access is MCP-first** — use the `mcp__github__*` tools (see the `repos`
+skill's "GitHub access — MCP-first" tool map): `pull_request_read` with
+`get_diff` (full diff), `get_files` (changed files), or `get` (metadata/base+head
+SHAs), and `search_pull_requests`/`list_pull_requests` to find PRs. Routine
+sessions have **no `gh`**, so the `gh api repos/...` recipes below are a fallback
+only where `gh` exists — and even there, global search (`gh search`) and
+GraphQL-backed commands (`gh pr diff/view/list`) return HTTP 403, so never use those.
+
 ```bash
-gh search prs "<JIRA_KEY>" --repo percona/pmm --json number,title,url
-gh search prs "<JIRA_KEY>" --repo percona/grafana --json number,title,url
-gh pr diff <n> --repo percona/pmm
+# 1. Get the PR number from the ticket's Development panel (jira skill) — that's
+#    the authoritative link. Only if it's missing, list + filter by key REST-side:
+gh api "repos/percona/pmm/pulls?state=all&per_page=100" \
+  --jq '.[] | select((.title + " " + .head.ref) | test("<JIRA_KEY>")) | {number, title, url: .html_url}'
+
+# 2. Full diff of a PR (repo-scoped REST, replaces `gh pr diff`):
+gh api repos/percona/pmm/pulls/<n> -H "Accept: application/vnd.github.diff"
+
+# 3. Changed files only — far cheaper than the full diff, prefer this first:
+gh api "repos/percona/pmm/pulls/<n>/files?per_page=100" \
+  --jq '.[] | {filename, status, additions, deletions}'
 ```
 
 Return: files changed, behavioral summary, gaps in "How to test", suggested manual checks.
 
 ## Large Grafana dashboard JSON diffs
 
-Grafana PRs often change dashboard JSON under `grafana/public/` or packaged dashboards. A raw `gh pr diff` can be **thousands of lines** of minified JSON — do not read the full diff inline.
+Grafana PRs often change dashboard JSON under `grafana/public/` or packaged dashboards. A raw diff can be **thousands of lines** of minified JSON — do not read the full diff inline.
 
-1. List changed JSON files: `gh pr diff <n> --repo percona/grafana --name-only | grep -E '\.json$'`
-2. For each file, use a structural JSON diff tool (installed by the SessionStart hook):
+1. List changed JSON files (REST):
+   `gh api "repos/percona/grafana/pulls/<n>/files?per_page=100" --jq '.[].filename' | grep -E '\.json$'`
+2. Get the base/head SHAs once:
+   `gh api repos/percona/grafana/pulls/<n> --jq '{base: .base.sha, head: .head.sha}'`
+3. For each file, use a structural JSON diff tool (installed by the SessionStart hook):
 
 ```bash
 set -euo pipefail
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-# gh pr diff has no positional path filter -- fetch base/head content directly instead:
+# Fetch base/head content directly (repo-scoped REST):
 gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<base_sha>" --jq '.content' | base64 -d > "$tmp/base.json"
 gh api "repos/percona/grafana/contents/path/to/dashboard.json?ref=<head_sha>" --jq '.content' | base64 -d > "$tmp/head.json"
 for f in "$tmp/base.json" "$tmp/head.json"; do
@@ -41,7 +60,7 @@ done
 json-diff "$tmp/base.json" "$tmp/head.json"
 ```
 
-3. Summarize **what panels/queries/alerts changed**, not every byte.
+4. Summarize **what panels/queries/alerts changed**, not every byte.
 
 `json-diff` is installed globally by `.claude/hooks/session-start.sh` (`npm install -g json-diff`).
 
