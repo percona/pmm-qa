@@ -7,6 +7,16 @@ const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
 
+// `docker exec -d pmm-agent` returns before the agent has bound its local API on
+// 127.0.0.1:7777, so reading the status once races it - on a loaded runner the agent can
+// need ~1s while the next docker exec arrives in ~60ms.
+const waitForAgentConnected = async (container: string, after: string) => {
+  await expect(async () => {
+    const status = await cli.exec(`docker exec ${container} pmm-admin status`);
+    expect(status.stdout, `pmm-agent in ${container} never reported Connected after ${after}!`).toContain('Connected');
+  }).toPass({ intervals: [1_000], timeout: 30_000 });
+};
+
 test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep pdpgsql_pmm | awk \'{print $NF}\'');
@@ -580,14 +590,18 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const latestReleasedVersion = (await cli.exec('wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | tail -n1')).stdout.trim();
     await cli.exec(`docker cp ../package_tests/scripts/pmm3_client_install_tarball.sh ${containerName}:/`);
     await cli.exec(`docker exec ${containerName} dnf install -y wget`);
-    await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestReleasedVersion}`);
-    await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`);
+    const install = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${latestReleasedVersion}`);
+
+    await install.assertSuccess();
+    const setup = await cli.exec(`docker exec ${containerName} pmm-agent setup --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --force --server-insecure-tls --server-address=pmm-server:8443 --server-username=admin --server-password=admin 127.0.0.1 generic tarball_node`);
+
+    await setup.assertSuccess();
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
-    const adminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
+    await waitForAgentConnected(containerName, 'install');
+
     const oldVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
     const oldPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
 
-    await adminStatus.outContains('Connected');
     await oldVersion.outContains(latestReleasedVersion);
     const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http') ? process.env.PMM_CLIENT_VERSION : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
 
@@ -601,8 +615,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     }).toPass({ intervals: [500], timeout: 30_000 });
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
 
+    await waitForAgentConnected(containerName, 'upgrade');
+
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
-    const newAdminStatus = await cli.exec(`docker exec ${containerName} pmm-admin status`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
     const versionLookup = process.env.PMM_CLIENT_VERSION?.includes('http')
@@ -614,7 +629,6 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const upgradedVersion = versionLookup?.stdout.trim() ?? '';
 
     await newPid.outNotContains(oldPid.stdout);
-    await newAdminStatus.outContains('Connected');
     // The dev-latest tarball tracks the v3 line, so right after a release is cut it is the same
     // build as the latest released tarball and the reported version legitimately cannot change.
     if (!upgradedVersion || upgradedVersion !== latestReleasedVersion) {
