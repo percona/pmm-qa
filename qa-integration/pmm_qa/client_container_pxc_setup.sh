@@ -87,5 +87,5 @@ bin/mysql -A -uroot -S/home/pxc/PXC/node1/socket.sock -e "grant select on *.* to
 
 export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
 for j in `seq 1  ${number_of_nodes}`;do
-	pmm-admin add mysql --query-source=${query_source} --username=admin --password=admin --host=127.0.0.1 --port=$(cat /home/pxc/PXC/node$j.cnf | grep port | awk -F"=" '{print $2}') --environment=pxc-dev --cluster=${pxc_dev_cluster} --replication-set=pxc-repl pxc_node__${j}_${SERVICE_RANDOM_NUMBER}
+	pmm-admin add mysql --query-source=${query_source} --username=admin --password=admin --host=127.0.0.1 --port="$(cat /home/pxc/PXC/node$j.cnf | grep port | awk -F"=" '{print $2}')" --environment=pxc-dev --cluster=${pxc_dev_cluster} --replication-set=pxc-repl pxc_node__${j}_${SERVICE_RANDOM_NUMBER}
 done

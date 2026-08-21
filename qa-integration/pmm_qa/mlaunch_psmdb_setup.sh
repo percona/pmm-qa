@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 while [ $# -gt 0 ]; do
    if [[ $1 == *"--"* ]]; then
@@ -25,6 +25,7 @@ export user="dba"
 export pwd="test1234"
 
 # Install the dependencies
+# shellcheck source=/dev/null
 source ~/.bash_profile || true;
 apt-get update
 apt-get -y install wget curl jq git gnupg2 lsb-release
@@ -33,7 +34,7 @@ sleep 10
 
 #wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/mongo_startup.sh
 #chmod +x mongo_startup.sh
-export SERVICE_RANDOM_NUMBER=$(echo $((1 + $RANDOM % 9999)))
+export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
 
 ### Detect latest tarball link for specified mongodb_version: 8.0 | 7.0 | 6.0 | 5.0 | 4.4 | 4.2 at the moment
 psmdb_latest=$( wget -q --post-data "version=percona-server-mongodb-${mongodb_version}" https://www.percona.com/products-api.php -O - | grep  -oP "(?<=value\=\")[^\"]*" | sort -V | tail -1)

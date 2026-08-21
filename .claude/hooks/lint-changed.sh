@@ -75,10 +75,15 @@ if [ ${#workflow_files[@]} -gt 0 ]; then
   actionlint "${workflow_files[@]}" || fail "actionlint"
 fi
 
+# Scripts under qa-integration/ and terraform/ provision real hosts and
+# databases, so they are held at -S warning; everything else at -S error.
 if [ ${#sh_files[@]} -gt 0 ]; then
   echo "==> shellcheck"
   ensure_shellcheck || fail "shellcheck not installed"
-  shellcheck -S error "${sh_files[@]}" || fail "shellcheck"
+  mapfile -t sh_strict < <(printf '%s\n' "${sh_files[@]}" | grep -E '^(qa-integration|terraform)/')
+  mapfile -t sh_rest < <(printf '%s\n' "${sh_files[@]}" | grep -vE '^(qa-integration|terraform)/')
+  [ ${#sh_strict[@]} -gt 0 ] && { shellcheck -S warning "${sh_strict[@]}" || fail "shellcheck -S warning"; }
+  [ ${#sh_rest[@]} -gt 0 ] && { shellcheck -S error "${sh_rest[@]}" || fail "shellcheck -S error"; }
 fi
 
 if [ ${#py_files[@]} -gt 0 ]; then

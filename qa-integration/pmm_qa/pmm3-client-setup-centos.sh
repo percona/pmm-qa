@@ -48,7 +48,7 @@ fi
 microdnf install -y wget gnupg2 jq
 wget https://repo.percona.com/yum/percona-release-latest.noarch.rpm
 rpm -i ./percona-release-latest.noarch.rpm
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
+export PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))
 
 # Percona's CDN/repo occasionally serves inconsistent metadata during builds,
 # which makes microdnf abort. The mismatch usually clears within a minute, so retry.
