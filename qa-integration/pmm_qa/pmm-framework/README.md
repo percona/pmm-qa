@@ -51,6 +51,19 @@ qa-integration/pmm_qa/pmm-framework/pmm-framework \
   --database pgsql=17,SETUP_TYPE=replication
 ```
 
+Set up Percona Server as a multi-master (multi-source GTID) mesh:
+
+```bash
+qa-integration/pmm_qa/pmm-framework/pmm-framework \
+  --database ps=8.0,SETUP_TYPE=multi_source,NODES_COUNT=3
+```
+
+Every node replicates from every other node over its own named channel
+(`source1`, `source2`, ...), so each node is a source and a multi-source
+replica at once and returns one `SHOW REPLICA STATUS` row per channel. Needs
+Percona Server 8.0 or newer, and at least three nodes -- a smaller
+`NODES_COUNT` is raised to 3.
+
 Set up multiple databases sequentially:
 
 ```bash

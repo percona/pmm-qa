@@ -1,0 +1,116 @@
+- name: Multi-source replication needs Percona Server 8.0 or newer
+  fail:
+    msg: >-
+      SETUP_TYPE=multi_source requires Percona Server 8.0+ (got
+      {{ ps_version | replace('_', '.') }}). Use SETUP_TYPE=replication for 5.7.
+  when: ps_version | replace('_', '') | int < 80
+
+- name: Generate my.cnf for each node
+  template:
+    src: ./data/my-multi-source-replication.cnf.j2
+    dest: "{{ data_dir }}/node{{ item }}/my.cnf"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Prepare docker container and install Percona Server for MySQL
+  include_tasks: ./tasks/prepare_install_ps.yml
+
+- name: Reset configuration for all nodes
+  shell: docker exec {{ container_prefix}}{{ item }} mysql -uroot -p{{ root_password }} -e "RESET BINARY LOGS AND GTIDS; RESET REPLICA ALL;"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  ignore_errors: yes
+
+- name: Create Replication user on every node
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "
+    CREATE USER IF NOT EXISTS '{{ replication_user }}'@'%' IDENTIFIED BY '{{ replication_password }}';
+    GRANT REPLICATION SLAVE ON *.* TO '{{ replication_user }}'@'%';
+    "
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+# Full GTID mesh: every node replicates from every other node over its own
+# named channel, so each node is a source and a multi-source replica at once
+# and SHOW REPLICA STATUS returns one row per channel.
+- name: Configure one replication channel per remote source on every node
+  shell: >
+    docker exec {{ container_prefix }}{{ item.0 }} mysql -uroot -p{{ root_password }} -e "
+    CHANGE REPLICATION SOURCE TO
+    SOURCE_HOST='{{ container_prefix }}{{ item.1 }}',
+    SOURCE_PORT={{ mysql_listen_port }},
+    SOURCE_USER='{{ replication_user }}',
+    SOURCE_PASSWORD='{{ replication_password }}',
+    SOURCE_AUTO_POSITION=1,
+    SOURCE_PUBLIC_KEY_PATH='',
+    GET_SOURCE_PUBLIC_KEY=1
+    FOR CHANNEL '{{ channel_prefix }}{{ item.1 }}';
+    START REPLICA FOR CHANNEL '{{ channel_prefix }}{{ item.1 }}';
+    "
+  loop: "{{ query('nested', range(1, nodes_count | int + 1) | list, range(1, nodes_count | int + 1) | list) }}"
+  loop_control:
+    label: "node{{ item.0 }} <- {{ channel_prefix }}{{ item.1 }}"
+  when: item.0 != item.1
+
+- name: Wait until every channel is connected and applying on every node
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -N -B -e
+    "SELECT COUNT(*) FROM performance_schema.replication_connection_status c
+     JOIN performance_schema.replication_applier_status a USING (CHANNEL_NAME)
+     WHERE c.SERVICE_STATE = 'ON' AND a.SERVICE_STATE = 'ON'"
+  register: running_channels
+  until: running_channels.stdout | trim | int == (nodes_count | int - 1)
+  retries: 24
+  delay: 5
+  changed_when: false
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Create a per-node database so every channel carries its own writes
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "
+    CREATE DATABASE IF NOT EXISTS ms_node{{ item }};
+    CREATE TABLE IF NOT EXISTS ms_node{{ item }}.events (
+      id BIGINT AUTO_INCREMENT PRIMARY KEY,
+      payload VARCHAR(64) NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO ms_node{{ item }}.events (payload)
+      WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 500)
+      SELECT CONCAT('write from node{{ item }} #', n) FROM seq;
+    "
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Wait until every node has received every other node's database
+  shell: >
+    docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -N -B -e
+    "SELECT COUNT(*) FROM information_schema.schemata WHERE schema_name REGEXP '^ms_node[0-9]+$'"
+  register: replicated_schemas
+  until: replicated_schemas.stdout | trim | int == nodes_count | int
+  retries: 24
+  delay: 5
+  changed_when: false
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+
+- name: Check replication status on all nodes
+  shell: docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "SHOW REPLICA STATUS\G"
+  loop: "{{ range(1, nodes_count | int + 1) | list }}"
+  changed_when: false
+
+- name: Set verification instructions
+  set_fact:
+    verification_msg: |
+      Percona Server multi-master (multi-source GTID) setup complete!
+      {{ nodes_count }} nodes in a full mesh, {{ nodes_count | int - 1 }} named
+      channels per node ({{ channel_prefix }}N points at node N).
+      To verify multi-channel replication:
+        1. Connect to any node:
+            docker exec -it {{ container_prefix }}1 mysql -uroot -p{{ root_password }}
+        2. List every channel and its state:
+           SHOW REPLICA STATUS\G
+           SELECT CHANNEL_NAME, SERVICE_STATE FROM performance_schema.replication_connection_status;
+        3. Write on one node and read the row back on the others:
+           INSERT INTO ms_node1.events (payload) VALUES ('manual check');
+           docker exec -it {{ container_prefix }}2 mysql -uroot -p{{ root_password }} \
+             -e "SELECT * FROM ms_node1.events ORDER BY id DESC LIMIT 1"
+        4. Break a single channel and leave the others running:
+           STOP REPLICA FOR CHANNEL '{{ channel_prefix }}2';
+- name: Display verification instructions
+  debug:
+    msg: "{{ verification_msg | split('\n') }}"

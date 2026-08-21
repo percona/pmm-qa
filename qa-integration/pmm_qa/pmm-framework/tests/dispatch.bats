@@ -21,6 +21,17 @@ load helpers/test_helper
   [[ -z ${CAPTURE_ENV[PREBAKED_PS_IMAGE]-} ]]
 }
 
+@test "PS multi-source passes the topology and node count through" {
+  parse_database_spec 'ps=8.0,SETUP_TYPE=multi_source,NODES_COUNT=3'
+  dispatch_setup
+
+  [[ $CAPTURE_KIND == playbook ]]
+  [[ $CAPTURE_TARGET == percona_server_for_mysql/percona-server-setup.yml ]]
+  [[ ${CAPTURE_ENV[PS_VERSION]} == 8.0 ]]
+  [[ ${CAPTURE_ENV[SETUP_TYPE]} == multi_source ]]
+  [[ ${CAPTURE_ENV[NODES_COUNT]} == 3 ]]
+}
+
 @test "MySQL GR maps group replication and node values" {
   parse_database_spec 'mysql=8.4,SETUP_TYPE=gr'
   dispatch_setup

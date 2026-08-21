@@ -28,28 +28,29 @@ Format: `pmm-framework --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value
 | 14 | `ps` | `percona_server_for_mysql/percona-server-setup.yml` | single (default) |
 | 15 | `ps,SETUP_TYPE=gr` | same | Group Replication |
 | 16 | `ps,SETUP_TYPE=replication` | same | Async replication |
-| 17 | `ps,BACKUP=true` | same + backup_setup | XtraBackup + MinIO |
-| 18 | `ssl_mysql` | `tls-ssl-setup/mysql_tls_setup.yml` | TLS MySQL |
+| 17 | `ps,SETUP_TYPE=multi_source` | same | Multi-master GTID mesh (3 nodes, named channels) |
+| 18 | `ps,BACKUP=true` | same + backup_setup | XtraBackup + MinIO |
+| 19 | `ssl_mysql` | `tls-ssl-setup/mysql_tls_setup.yml` | TLS MySQL |
 
 ## PostgreSQL family
 
 | # | Command | Playbook | SETUP_TYPE variants |
 |---|---------|----------|---------------------|
-| 19 | `pgsql` | `pgsql_pgss_setup.yml` | single + pg_stat_statements |
-| 20 | `pgsql,SETUP_TYPE=replication` | `postgresql/postgresql-setup.yml` | Primary + replica |
-| 21 | `pdpgsql` | `percona-distribution-postgresql/...` | single (default) |
-| 22 | `pdpgsql,SETUP_TYPE=replication` | same | Streaming replication |
-| 23 | `pdpgsql,SETUP_TYPE=patroni` | same | Patroni HA |
-| 24 | `ssl_pdpgsql` | `tls-ssl-setup/postgresql_tls_setup.yml` | TLS PostgreSQL |
+| 20 | `pgsql` | `pgsql_pgss_setup.yml` | single + pg_stat_statements |
+| 21 | `pgsql,SETUP_TYPE=replication` | `postgresql/postgresql-setup.yml` | Primary + replica |
+| 22 | `pdpgsql` | `percona-distribution-postgresql/...` | single (default) |
+| 23 | `pdpgsql,SETUP_TYPE=replication` | same | Streaming replication |
+| 24 | `pdpgsql,SETUP_TYPE=patroni` | same | Patroni HA |
+| 25 | `ssl_pdpgsql` | `tls-ssl-setup/postgresql_tls_setup.yml` | TLS PostgreSQL |
 
 ## Proxy / external / infra
 
 | # | Command | Playbook / script | Notes |
 |---|---------|-------------------|-------|
-| 25 | `pxc` | `pxc_proxysql_setup.yml` | PXC + ProxySQL |
-| 26 | `haproxy` | `haproxy_setup.yml` | HAProxy frontend |
-| 27 | `external` | `external_setup.yml` | Redis + Node exporter |
-| 28 | `dockerclients` | `setup_docker_client_images.sh` | Client docker images |
-| 29 | `bucket` | `tasks/create_minio_container.yml` | MinIO backup bucket |
-| 30 | `valkey` | `valkey/valkey-cluster.yml` | Cluster (default) |
-| 31 | `valkey,SETUP_TYPE=sentinel` | `valkey/valkey-sentinel.yml` | Sentinel HA |
+| 26 | `pxc` | `pxc_proxysql_setup.yml` | PXC + ProxySQL |
+| 27 | `haproxy` | `haproxy_setup.yml` | HAProxy frontend |
+| 28 | `external` | `external_setup.yml` | Redis + Node exporter |
+| 29 | `dockerclients` | `setup_docker_client_images.sh` | Client docker images |
+| 30 | `bucket` | `tasks/create_minio_container.yml` | MinIO backup bucket |
+| 31 | `valkey` | `valkey/valkey-cluster.yml` | Cluster (default) |
+| 32 | `valkey,SETUP_TYPE=sentinel` | `valkey/valkey-sentinel.yml` | Sentinel HA |
