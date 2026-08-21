@@ -591,7 +591,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     await oldVersion.outContains(latestReleasedVersion);
     const tarballURL = process.env.PMM_CLIENT_VERSION!.includes('http') ? process.env.PMM_CLIENT_VERSION : 'https://pmm-build-cache.s3.us-east-2.amazonaws.com/PR-BUILDS/pmm-client/pmm-client-latest.tar.gz';
 
-    await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
+    const upgrade = await cli.exec(`docker exec ${containerName} /pmm3_client_install_tarball.sh -v ${tarballURL} -u`);
+
+    await upgrade.assertSuccess();
     await cli.exec(`docker exec ${containerName} pkill -f pmm-agent`);
     await expect(async () => {
       const pids = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
@@ -613,7 +615,11 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
 
     await newPid.outNotContains(oldPid.stdout);
     await newAdminStatus.outContains('Connected');
-    expect(newVersion.stdout.trim()).not.toEqual(oldVersion.stdout.trim());
+    // The dev-latest tarball tracks the v3 line, so right after a release is cut it is the same
+    // build as the latest released tarball and the reported version legitimately cannot change.
+    if (!upgradedVersion || !oldVersion.stdout.includes(upgradedVersion)) {
+      expect(newVersion.stdout.trim()).not.toEqual(oldVersion.stdout.trim());
+    }
     if (upgradedVersion) {
       await newVersion.outContains(upgradedVersion);
     }
