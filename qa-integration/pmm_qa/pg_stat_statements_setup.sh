@@ -24,11 +24,11 @@ then
 fi
 
 # Need to add a user postgres either here or in Dockerfile
-cd /home
+cd /home || exit 1
 mkdir postgres
 useradd postgres
 chown -R postgres:postgres postgres
-cd postgres
+cd postgres || exit 1
 
 # Install the dependencies
 apt-get update

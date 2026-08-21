@@ -36,11 +36,11 @@ then
 fi
 
 # Need to add a user postgres either here or in Dockerfile
-cd /home
+cd /home || exit 1
 mkdir postgres
 useradd postgres
 chown -R postgres:postgres postgres
-cd postgres
+cd postgres || exit 1
 
 # Install the dependencies
 apt-get update
@@ -84,10 +84,10 @@ echo $PATH
 cp /usr/lib/postgresql/${pgsql_version}/bin/pg_config /usr/bin
 
 # Clone PGSM repo and move to /home/postgres/pg_stat_monitor dir
-cd /home/postgres
+cd /home/postgres || exit 1
 git clone --depth 1 --branch ${pgstat_monitor_branch} https://github.com/${pgstat_monitor_repo}
 chown -R postgres:postgres pg_stat_monitor
-cd pg_stat_monitor
+cd pg_stat_monitor || exit 1
 
 # Build PGSM
 make USE_PGXS=1

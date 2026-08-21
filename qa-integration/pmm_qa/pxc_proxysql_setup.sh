@@ -21,7 +21,7 @@ fi
 tar -xzf Percona-XtraDB-Cluster*
 rm -r Percona-XtraDB-Cluster*.tar.gz
 mv Percona-XtraDB-Cluster* PXC
-cd PXC
+cd PXC || exit 1
 
 ## start PXC
 bash ../pxc-startup.sh

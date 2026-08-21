@@ -112,11 +112,11 @@ if [[ "$client_version" == http* ]]; then
     mv ${PMM_CLIENT} pmm-client
     rm -rf /usr/local/bin/pmm-client
     mv -f pmm-client /usr/local/bin
-    pushd /usr/local/bin/pmm-client
+    pushd /usr/local/bin/pmm-client || exit 1
     ## only setting up all binaries in default path /usr/local/percona/pmm
     bash -x ./install_tarball ${upgrade}
     pwd
-    popd
+    popd || exit 1
     pmm-admin --version
 fi    
 

@@ -36,7 +36,7 @@ then
 fi
 
 whoami
-cd ~
+cd ~ || exit 1
 wget https://raw.githubusercontent.com/Percona-QA/percona-qa/master/pxc-tests/pxc-startup.sh
 sed -i 's/log-output=none/log-output=file/g' pxc-startup.sh
 ## bug https://bugs.mysql.com/bug.php?id=90553 workaround
@@ -59,7 +59,7 @@ mv Percona-XtraDB-Cluster* PXC
 # terminate the SST helper before it can fall back to mysqld from PATH.
 sed -i 's#MYSQLD_PATH=$(readlink -f /proc/${WSREP_SST_OPT_PARENT}/exe)#MYSQLD_PATH=$(readlink -f /proc/${WSREP_SST_OPT_PARENT}/exe || true)#' PXC/bin/wsrep_sst_common
 
-cd PXC
+cd PXC || exit 1
 
 ## start PXC
 bash ../pxc-startup.sh

@@ -3,7 +3,7 @@
 export PWD=$(pwd)
 export HOST=localhost
 mkdir -p certificates
-pushd certificates
+pushd certificates || exit 1
 echo -e "\n=== Generating SSL certificates in ${PWD}/certificates ==="
 # Generate self signed root CA cert
 openssl req -nodes -x509 -newkey rsa:4096 -keyout ca.key -out ca.crt -subj "/C=US/ST=California/L=San Francisco/O=Percona/OU=root/CN=${HOST}/emailAddress=test@percona.com"
@@ -19,4 +19,4 @@ openssl req -nodes -newkey rsa:4096 -keyout client.key -out client.csr -subj "/C
 openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -set_serial 02 -out client.crt
 # Create client PEM file
 cat client.key client.crt > client.pem
-popd
+popd || exit 1
