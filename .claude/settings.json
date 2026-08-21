@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-start.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'n=session-start.sh; for d in \"$CLAUDE_PROJECT_DIR\" \"$PWD\" /workspace/pmm-qa; do h=\"$d/.claude/hooks/$n\"; [ -f \"$h\" ] && exec bash \"$h\"; done; echo \"pmm-qa: hook $n not found (CLAUDE_PROJECT_DIR=$CLAUDE_PROJECT_DIR PWD=$PWD)\" >&2; exit 0'"
           }
         ]
       }
@@ -42,7 +42,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/block-pmm-submodules-clone.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'n=block-pmm-submodules-clone.sh; for d in \"$CLAUDE_PROJECT_DIR\" \"$PWD\" /workspace/pmm-qa; do h=\"$d/.claude/hooks/$n\"; [ -f \"$h\" ] && exec bash \"$h\"; done; echo \"pmm-qa: hook $n not found (CLAUDE_PROJECT_DIR=$CLAUDE_PROJECT_DIR PWD=$PWD)\" >&2; exit 0'"
           }
         ]
       }
@@ -53,18 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/skill-gardener-review.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
-          }
-        ]
-      }
-    ],
-    "ConfigChange": [
-      {
-        "matcher": "skills",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/skill-gardener-review.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'n=skill-gardener-review.sh; for d in \"$CLAUDE_PROJECT_DIR\" \"$PWD\" /workspace/pmm-qa; do h=\"$d/.claude/hooks/$n\"; [ -f \"$h\" ] && exec bash \"$h\"; done; echo \"pmm-qa: hook $n not found (CLAUDE_PROJECT_DIR=$CLAUDE_PROJECT_DIR PWD=$PWD)\" >&2; exit 0'"
           }
         ]
       }
@@ -74,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-end-cleanup.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'n=session-end-cleanup.sh; for d in \"$CLAUDE_PROJECT_DIR\" \"$PWD\" /workspace/pmm-qa; do h=\"$d/.claude/hooks/$n\"; [ -f \"$h\" ] && exec bash \"$h\"; done; echo \"pmm-qa: hook $n not found (CLAUDE_PROJECT_DIR=$CLAUDE_PROJECT_DIR PWD=$PWD)\" >&2; exit 0'"
           }
         ]
       }

@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Review completed skills on PostToolUse and reset a skill's retired counter
-# when ConfigChange reports a file change in its skill directory.
+# Review completed skills on PostToolUse.
 # JSON is parsed with node, which this repository already requires.
+# The ConfigChange branch below is dormant: Claude Code has no such hook event,
+# so nothing invokes it -- kept so the counter reset works if one ever ships.
 set -euo pipefail
 
 command -v node >/dev/null 2>&1 || exit 0
 
-here="$(dirname "$0")"
+QA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 template="The '{skill}' skill just finished (auto-review pass {n} of 3 for this skill before this review retires here). Invoke the skill-gardener skill in Capture mode against the observable tool and command sequence for '{skill}'. Check for repeated reads or searches, avoidable failed retries, unnecessary setup or dependencies, safe parallelization opportunities, and existing helpers or native tools that could replace custom commands. Do not create a raw command log or optimize away required verification. Record a lesson only if something qualifies under skill-gardener's Capture criteria. Follow its auto-apply rules when the primary task is skill testing or review. When done, run: bash .claude/scripts/skill-gardener-counter.sh '{skill}' <found|none> -- pass 'found' if a lesson was added or gained evidence, 'none' if nothing qualified."
 
-action=$(STATE="$here/../skill-gardener-state.json" TEMPLATE="$template" node -e '
+action=$(STATE="$QA_ROOT/.claude/skill-gardener-state.json" TEMPLATE="$template" node -e '
 const fs = require("fs");
 const SKILLS_DIR = "/.claude/skills/";
 
@@ -43,6 +44,6 @@ process.stdout.write("emit " + JSON.stringify({
 ')
 
 case "$action" in
-  "reset "*) bash "$here/../scripts/skill-gardener-counter.sh" "${action#reset }" reset >/dev/null ;;
+  "reset "*) bash "$QA_ROOT/.claude/scripts/skill-gardener-counter.sh" "${action#reset }" reset >/dev/null ;;
   "emit "*) printf '%s\n' "${action#emit }" ;;
 esac
