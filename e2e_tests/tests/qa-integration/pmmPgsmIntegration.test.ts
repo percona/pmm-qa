@@ -660,7 +660,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
 
       const service = await api.inventoryApi.getServiceDetailsByPartialName(pgServiceName);
       const pgStatMonitorAgentId = service.agents.find((agent) =>
-        agent.agent_type.includes('PGSTATMONITOR'),
+        agent.agent_type.includes('qan-postgresql-pgstatmonitor-agent'),
       )?.agent_id;
 
       expect(pgStatMonitorAgentId, 'pg_stat_monitor agent should exist').toBeTruthy();
