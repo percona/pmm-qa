@@ -12,8 +12,8 @@ if [ -z "$mongodb_version" ]; then
   export mongodb_version=7.0
 fi
 
-if [ -z "$mongdb_setup" ]; then
-  export mongdb_setup=pss
+if [ -z "$mongodb_setup" ]; then
+  export mongodb_setup=pss
 fi
 
 if [ -z "$metrics_mode" ]; then

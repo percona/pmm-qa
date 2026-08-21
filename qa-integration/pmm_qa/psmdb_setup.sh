@@ -12,8 +12,8 @@ if [ -z "$mongodb_version" ]; then
   export mongodb_version=4.4
 fi
 
-if [ -z "$mongdb_setup" ]; then
-  export mongdb_setup=replica
+if [ -z "$mongodb_setup" ]; then
+  export mongodb_setup=replica
 fi
 
 if [ -z "$metrics_mode" ]; then
