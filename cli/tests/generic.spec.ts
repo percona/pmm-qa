@@ -617,7 +617,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     await newAdminStatus.outContains('Connected');
     // The dev-latest tarball tracks the v3 line, so right after a release is cut it is the same
     // build as the latest released tarball and the reported version legitimately cannot change.
-    if (!upgradedVersion || !oldVersion.stdout.includes(upgradedVersion)) {
+    if (!upgradedVersion || upgradedVersion !== latestReleasedVersion) {
       expect(newVersion.stdout.trim()).not.toEqual(oldVersion.stdout.trim());
     }
     if (upgradedVersion) {
