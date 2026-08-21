@@ -7,7 +7,8 @@ Read this first for a migration run. It is a map, not a command cookbook. Query 
 | Topic | Canonical file |
 | --- | --- |
 | Migration rules and invariants | `SKILL.md` |
-| Step-by-step workflow | `run.md` |
+| Worker phase contracts | `run.md` |
+| Parent orchestration and canonical sequence | `orchestration.md` |
 | CodeceptJS call and custom-step mapping | `mappings.md` |
 | Review checklist and done gate | `audit-checklist.md` |
 | Broken locator recovery | `locator-fix.md` |

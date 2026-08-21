@@ -10,8 +10,9 @@ reuse, tracker); this file is authoritative for Playwright idiom. When the two d
 whether a behavior may change, `SKILL.md` wins: practices govern how behavior is expressed, never
 whether it is preserved.
 
-`verifiedAgainst` must match the `@playwright/test` version in `e2e_tests/package.json`. `run.md`
-step 1 checks this. On drift, refresh this file against the release notes before migrating.
+`verifiedAgainst` must match the `@playwright/test` version in `e2e_tests/package.json`.
+`orchestration.md` step 1 checks this. On drift, refresh this file against the release notes before
+migrating.
 
 ## Locators
 

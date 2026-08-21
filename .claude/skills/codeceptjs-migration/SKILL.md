@@ -16,9 +16,10 @@ A migration is complete only when:
 3. migration-related locators are verified through MCP;
 4. the migrated test passes;
 5. the complete target file passes when an existing file was modified;
-6. the final independent review passes;
-7. a PR targeting `main` is opened; and
-8. the tracker row is updated to `done`.
+6. every migrated scenario is selected by some Playwright job, and that coverage is committed;
+7. the final independent review passes;
+8. a PR targeting `main` is opened; and
+9. the tracker row is updated to `done`.
 
 For this workflow, `done` means the PR is open for review. Merge is not required.
 
@@ -63,7 +64,7 @@ Inline in the test only when no suitable existing abstraction exists. Creating a
 `playwright-practices.md` is authoritative for how migrated code is written: locator ladder,
 web-first assertions, the modern API to prefer over a CodeceptJS transliteration, removed APIs,
 structure, and the repository's deliberate deviations from upstream. Read it before migrating.
-Its `verifiedAgainst` version must match `e2e_tests/package.json`; `run.md` step 1 checks this.
+Its `verifiedAgainst` version must match `e2e_tests/package.json`; `orchestration.md` step 1 checks this.
 
 The rules below are migration-specific and are not repeated there:
 
@@ -87,20 +88,26 @@ The rules below are migration-specific and are not repeated there:
 
 ## Graphify rule
 
-Before marking the tracker row `in-progress`, merge `origin/main` into control and refresh both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` with `graphify . --update`, each from its own root, each its own commit on control. Never regenerate either graph during migration. All migration work then happens directly on control's own worktree — no separate branch exists until publish, when a fresh branch is cut from `origin/main` and the migration's own commits are cherry-picked onto it, excluding the control-only graph and tracker commits by construction. See `graphify.md` and `branch-workflow.md`.
+Before marking the tracker row `in-progress`, merge `origin/main` into control and refresh both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` through the `graphify` skill's update flow, each from its own root, each its own commit on control. Never regenerate either graph during migration. A missing LLM API key is never a reason to stop or to fall back to `--code-only`; see `graphify.md`. All migration work then happens directly on control's own worktree - no separate branch exists until publish, when a fresh branch is cut from `origin/main` and the migration's own commits are cherry-picked onto it, excluding the control-only graph and tracker commits by construction. See `graphify.md` and `branch-workflow.md`.
 
 ## Local provisioning rule
 
 Create one local Docker environment per migration through `provisioning/setup.ts`, reuse it through both reviews and execution, then tear it down through the same entry point. It starts in the background as soon as the environment bucket is confirmed, so it provisions while the writer migrates. Do not use the Linode or `qa-integration` provisioners for this workflow. See `context.md` and `run.md`.
 
+## Searching this repository
+
+Use the Grep tool with an explicit path scope and `output_mode`. A repo-wide `grep -rn` from the repository root exceeds the 120s Bash timeout here, and the retry has to be scoped anyway.
+
 ## Agent responsibilities
 
-- `pmm-migration-writer`: graph discovery, migration, and static validation.
+- `pmm-migration-writer`: graph discovery, migration, per-scenario selectability check, and static validation.
 - `pmm-migration-reviewer`: independent completeness review, MCP locator verification, locator-only corrections, and final review.
-- `pmm-migration-runner`: execution, failure evidence, publication, PR creation, and tracker completion.
+- `pmm-migration-runner`: execution, failure evidence, workflow coverage, publication, PR creation, and tracker completion.
+
+The parent spawns every review gate. No worker subagent spawns another subagent - one that does, and then waits on the reply, deadlocks.
 
 Each of the three appends its own row to this migration's timeline in
 `.claude/migration-observations/` before returning. `skill-gardener` reads those rows to audit the
 workflow and to fill in `parallelization-ledger.md`.
 
-The canonical sequence is defined in `run.md`.
+Phase contracts are defined in `run.md`; the parent's steps and the canonical sequence are in `orchestration.md`.

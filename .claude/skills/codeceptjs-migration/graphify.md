@@ -1,6 +1,6 @@
 # Graphify Discovery
 
-Refresh both the CodeceptJS source graph and the Playwright target graph on control before starting the migration's own commits, then use both Graphify artifacts read-only during migration. All migration work happens directly on control — no separate branch exists until publish; see `branch-workflow.md`.
+Refresh both the CodeceptJS source graph and the Playwright target graph on control before starting the migration's own commits, then use both Graphify artifacts read-only during migration. All migration work happens directly on control - no separate branch exists until publish; see `branch-workflow.md`.
 
 ## Graph artifacts (read-only during migration)
 
@@ -11,27 +11,22 @@ e2e_tests/graphify-out/graph.json        # target side - refreshed on control du
 
 ## Pre-migration graph updates
 
-After merging `origin/main` into control and before marking the tracker row `in-progress`, perform one incremental update of each graph:
+After merging `origin/main` into control and before marking the tracker row `in-progress`, perform one incremental update of each graph.
 
-```bash
-cd e2e_tests
-graphify . --update
-find graphify-out -type f ! -name graph.json ! -name manifest.json -delete
-cd ..
+Drive this through the **`graphify` skill's own update flow** (`.claude/skills/graphify/references/update.md`), once from `e2e_tests/` and once from `codeceptjs-e2e/`. Do not shell out to a bare `graphify . --update`: that CLI path demands an LLM API key as soon as any changed file is a doc, and stops with an error that looks like a hard blocker.
 
-cd codeceptjs-e2e
-graphify . --update
-find graphify-out -type f ! -name graph.json ! -name manifest.json -delete
-cd ..
-```
+It is not one. Per `.claude/skills/graphify/SKILL.md`, graphify needs no API key and you must never block on or ask for one. Code is extracted structurally by AST with no LLM at all; semantic extraction applies only to docs, papers, and images, and when `GEMINI_API_KEY`/`GOOGLE_API_KEY` is unset the host agent performs it (the `code_only: False` path in `update.md`). `ANTHROPIC_API_KEY` is never read.
 
-- Run each from its own root (`e2e_tests/` or `codeceptjs-e2e/`) so output stays in that directory's `graphify-out/`.
-- Use `--update` only.
-- Keep only `graph.json` and `manifest.json`; delete generated reports, HTML, and `.graphify_*` sidecars.
+- **Never pass `--code-only` to step past a changed doc.** It suppresses the error by skipping the file, which silently leaves that node stale in a graph you are about to commit as refreshed. `--code-only` is legitimate only when the changed set genuinely contains no docs, papers, or images, which is also the case where it changes nothing.
+- If `steps.d.ts` is among the changed files, run a full build instead of an incremental one. The CodeceptJS injection registry can rebind unchanged consumers, and their old edges cannot be replaced safely from a changed-files-only fragment.
+- Run each update from its own root (`e2e_tests/` or `codeceptjs-e2e/`) so output stays in that directory's `graphify-out/`.
+- Keep only `graph.json` and `manifest.json`. Delete generated reports, HTML, and `.graphify_*` sidecars, and delete the dated backup directory (`graphify-out/<YYYY-MM-DD>/`) that a curated-graph rebuild leaves behind - it holds its own `graph.json`/`manifest.json`, so a name-based `find ... -delete` skips it and it lands in the commit.
+- The cleanup above removes `graphify-out/.graphify_python`, which the graphify skill's own bash blocks read to locate their interpreter. That is fine: the skill recreates it in its setup step. It does mean you must enter that flow at the beginning rather than jumping straight to an `update.md` snippet, because the `graphify` CLI does not regenerate that sidecar.
 - Commit each graph's updated files on control in its own commit, before the tracker row's `in-progress` commit (which becomes `migration-start`).
+- If a refresh produces no changes, do not create an empty commit for it.
 - Refresh once on control during preflight; never regenerate either graph during migration (see "Read-only during migration").
 
-Both graph commits stay on control only, before `migration-start` — since the publish branch is built by cherry-picking `migration-start..control` onto `origin/main` (see `branch-workflow.md`), neither graph commit is ever in that range, so neither reaches the migration PR.
+Both graph commits stay on control only, before `migration-start` - since the publish branch is built by cherry-picking `migration-start..control` onto `origin/main` (see `branch-workflow.md`), neither graph commit is ever in that range, so neither reaches the migration PR.
 
 ## Read-only during migration
 
@@ -45,7 +40,7 @@ During writer, reviewer, and runner work (through `FINAL_REVIEW_PASS`):
 
 Query and inspect the existing JSON graphs only. When a node or edge is missing, follow actual imports and code; record a graph discrepancy. Never block migration waiting for a fresh graph build.
 
-Query via the `graphify query`/`graphify path`/`graphify explain` CLI, or a targeted `python -c` filter over `graph.json` run through Bash (see `.claude/skills/graphify/references/query.md`). Never load a full `graph.json` into context with the Read tool — these files run into the hundreds of thousands of tokens, and a targeted query only costs the size of its filtered output.
+Query via the `graphify query`/`graphify path`/`graphify explain` CLI, or a targeted `python -c` filter over `graph.json` run through Bash (see `.claude/skills/graphify/references/query.md`). Never load a full `graph.json` into context with the Read tool - these files run into the hundreds of thousands of tokens, and a targeted query only costs the size of its filtered output.
 
 ## Source discovery
 
