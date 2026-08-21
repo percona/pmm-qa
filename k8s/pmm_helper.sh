@@ -1,4 +1,4 @@
-
+#!/usr/bin/env bash
 load "./lib/bats-support/load"  # Load BATS support libraries
 load "./lib/bats-assert/load"   # Load BATS assertions
 

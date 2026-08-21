@@ -86,7 +86,7 @@ flowchart LR
 
 ## CI / Pipelines
 
-All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (24 workflow files). Naming convention:
+All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (30 workflow files). Naming convention:
 
 - `runner-*.yml` — **reusable** workflow that runs one suite (drives codeceptjs-e2e, e2e_tests, cli, package_tests, easy-install, podman).
 - `fb-*.yml` — **feature-build** wrappers invoking a runner against a PR build.
@@ -94,6 +94,7 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `nightly-e2e-tests-matrix.yml` — remote nightly E2E matrix (triggered by Jenkins after PMM Server is up).
 - `runner-e2e-tests-codeceptjs-remote-nightly-*.yml` — nightly remote setup and test runners for CodeceptJS.
 - `helm-tests.yml` — the only k8s entry point.
+- `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
 - `rc-testing-suite.yml` — GitHub Actions portion of RC testing (see [External RC orchestration](#external-rc-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
@@ -109,6 +110,26 @@ Full Release-Candidate testing is **not** driven from this repo. The orchestrato
 - **Lane 3**: `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`rc-testing-suite.yml`](.github/workflows/rc-testing-suite.yml).
 
 **Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `rc-testing-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.
+
+## Linting
+
+One gate, two entry points, the same commands: [.github/workflows/lint.yml](.github/workflows/lint.yml) runs it repo-wide in CI, and the `PreToolUse` hook [.claude/hooks/pre-commit-lint-gate.sh](.claude/hooks/pre-commit-lint-gate.sh) runs it over the staged files before an agent's `git commit`. Both dispatch through [.claude/hooks/lint-changed.sh](.claude/hooks/lint-changed.sh), which picks the linter per file kind and lazily installs whatever is missing via [.claude/hooks/lib/install-linters.sh](.claude/hooks/lib/install-linters.sh) — the same installers `session-start.sh` runs eagerly.
+
+| File kind | Command | Config |
+|-----------|---------|--------|
+| `*.ts` | `npm run lint` in the owning workspace (eslint + `tsc --noEmit`) | `e2e_tests/eslint.config.mjs`, `cli/.eslintrc.json` |
+| `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
+| `.github/workflows/*` | `actionlint` | [.github/actionlint.yaml](.github/actionlint.yaml) |
+| `*.sh` | `shellcheck -S error` | — |
+| `*.py` | `ruff check` | ruff defaults |
+| `*.tf` | `terraform fmt -check -recursive` | — |
+| `Dockerfile*` | `hadolint --failure-threshold error` | — |
+| `docker-compose*.y*ml` | `docker compose config -q` | — |
+| `*.groovy` | `npm-groovy-lint --failon error` | — |
+
+The tuned severities are deliberate and phase-scoped: `.yamllint` disables `line-length`, `indentation` and `trailing-spaces`; `.github/actionlint.yaml` suppresses actionlint's embedded shellcheck. Both hold ~2000 pre-existing cosmetic findings out of the gate so the gate itself can stay at zero. Tightening either is a follow-up, not a config to loosen further.
+
+The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
 
 ## Playwright E2E Suite (`e2e_tests/`)
 

@@ -11,7 +11,7 @@ on:
         type: string
       repository:
         description: 'To detect "finish_version" string: X.XX.X'
-        required: true
+        required: false
         default: 'dev-latest'
         type: string
       matrix_range:

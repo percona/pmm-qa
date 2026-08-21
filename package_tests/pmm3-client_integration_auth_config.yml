@@ -102,7 +102,7 @@
     when: '"psmdb-" in enabled_db | join("")'
     include_tasks: ./tasks/install_and_add_to_pmm_psmdb.yml
     vars:
-      psmdb_to_test:  "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
+      psmdb_to_test: "{{ enabled_db | select('match', '^psmdb-*') | join('') }}"
 
   - name: Verify MongoDB Exporter metric endpoint with Auth(including service with socket)
     when: '"psmdb-" in enabled_db | join("")'
