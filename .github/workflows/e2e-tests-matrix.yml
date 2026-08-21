@@ -156,7 +156,7 @@ jobs:
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
       setup_services: '--database ps=8.4 --database psmdb --database valkey'
-      pmm_test_flag: '@new-navigation'
+      pmm_test_flag: '@new-navigation|@menu'
 
 #  valkey_integration:
 #    name: Valkey integration tests
