@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           r_latest=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name  | grep -v latest | sort -V | tail -n1)
-          rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
+          rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep '3.*.*-rc$' | sort -V | tail -n1)
           d_latest=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION -O -)
           
           echo "release_latest=$r_latest" >> $GITHUB_ENV
@@ -107,14 +107,14 @@ jobs:
         run: |
           range=${{ inputs.matrix_range }}
           if [[ "${{ inputs.repository }}" == "release" ]]; then
-            array=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - \
+            mapfile -t array < <(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - \
               | jq -r .results[].name | grep -v latest | sort -V \
               | grep -E '[[:digit:]]\.[[:digit:]]+\.[[:digit:]]' | tail -$((++range)) | head -$((range)))
           else
-            array=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - \
+            mapfile -t array < <(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags?page_size=250 -O - \
               | jq -r .results[].name | grep -v latest | sort -V \
               | grep -E '[[:digit:]]\.[[:digit:]]+\.[[:digit:]]' | tail -$((range)))
           fi
-          jq -c -n '$ARGS.positional' --args ${array[@]}
-          echo "result=$(jq -c -n '$ARGS.positional' --args ${array[@]})" >> "$GITHUB_OUTPUT"
+          jq -c -n '$ARGS.positional' --args "${array[@]}"
+          echo "result=$(jq -c -n '$ARGS.positional' --args "${array[@]}")" >> "$GITHUB_OUTPUT"
           #echo "result=$(jq -c -n '$ARGS.positional' --args '2.11.0' ${array[@]})" >> "$GITHUB_OUTPUT"
