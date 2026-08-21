@@ -63,21 +63,9 @@ jobs:
           SHELLCHECK_OPTS: -S warning
         run: actionlint
 
-      # qa-integration/ and terraform/ provision real hosts and databases, so
-      # they are held at -S warning; everything else at -S error.
-      - name: shellcheck (provisioning, -S warning)
+      - name: shellcheck
         if: ${{ !cancelled() }}
-        run: |
-          git ls-files -z 'qa-integration/*.sh' 'terraform/*.sh' \
-            | xargs -0 --no-run-if-empty shellcheck -S warning
-
-      - name: shellcheck (rest, -S error)
-        if: ${{ !cancelled() }}
-        run: |
-          git ls-files '*.sh' \
-            | grep -vE '^(qa-integration|terraform)/' \
-            | tr '\n' '\0' \
-            | xargs -0 --no-run-if-empty shellcheck -S error
+        run: git ls-files -z '*.sh' | xargs -0 --no-run-if-empty shellcheck -S warning
 
       - name: ruff
         if: ${{ !cancelled() }}

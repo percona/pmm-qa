@@ -120,7 +120,7 @@ One gate, two entry points, the same commands: [.github/workflows/lint.yml](.git
 | `*.ts` | `npm run lint` in the owning workspace (eslint + `tsc --noEmit`) | `e2e_tests/eslint.config.mjs`, `cli/.eslintrc.json` |
 | `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
 | `.github/workflows/*` | `actionlint` with `SHELLCHECK_OPTS='-S warning'` | [.github/actionlint.yaml](.github/actionlint.yaml) |
-| `*.sh` | `shellcheck -S warning` under `qa-integration/` and `terraform/`, `-S error` elsewhere | — |
+| `*.sh` | `shellcheck -S warning` (every tracked script) | — |
 | `*.py` | `ruff check` | [ruff.toml](ruff.toml) |
 | `*.tf` | `terraform fmt -check -recursive` | — |
 | `Dockerfile*` | `hadolint --failure-threshold error` | — |
