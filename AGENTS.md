@@ -121,7 +121,7 @@ One gate, two entry points, the same commands: [.github/workflows/lint.yml](.git
 | `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
 | `.github/workflows/*` | `actionlint` with `SHELLCHECK_OPTS='-S warning'` | [.github/actionlint.yaml](.github/actionlint.yaml) |
 | `*.sh` | `shellcheck -S warning` under `qa-integration/` and `terraform/`, `-S error` elsewhere | — |
-| `*.py` | `ruff check` | ruff defaults |
+| `*.py` | `ruff check` | [ruff.toml](ruff.toml) |
 | `*.tf` | `terraform fmt -check -recursive` | — |
 | `Dockerfile*` | `hadolint --failure-threshold error` | — |
 | `docker-compose*.y*ml` | `docker compose config -q` | — |
@@ -130,6 +130,8 @@ One gate, two entry points, the same commands: [.github/workflows/lint.yml](.git
 `.yamllint` runs `line-length` at **max 200** and `indentation` with `indent-sequences: whatever`; `trailing-spaces` is still off. 200 is where the repo's real ceiling sits: below it there is nothing left to fix, and every line above it is shell command text, so tightening the max means rewrapping provisioning commands rather than YAML. `indent-sequences: whatever` enforces mapping indentation — the kind that changes meaning — while leaving sequence style to the file, because the Ansible playbooks put `- name:` level with `tasks:` and normalising that would reindent every task block in the repo. Three block scalars carry a `# yamllint disable rule:line-length` region with the reason inline: their length lives inside a single-quoted command (or a systemd unit in a heredoc) that a backslash-newline cannot split. Keep the directive line itself bare — yamllint ignores a `disable` line that carries trailing prose.
 
 actionlint's embedded shellcheck is on, with no suppression in `.github/actionlint.yaml`. It runs at `-S warning`, the same bar as the `.sh` files those `run:` blocks invoke — a `run:` block is shell, so holding it to a different severity than the scripts next to it would be the arbitrary choice. Going further means taking on shellcheck's info and style tiers across every workflow (88 findings, 55 of them SC2086 quoting); that is a separate decision, not a config to loosen.
+
+`ruff.toml` declares the rule set explicitly. `ruff check` with no config uses whatever `select` the installed ruff defaults to, and that default has widened between releases — so an unpinned ruff reports a different set of findings on CI than on your machine, which is exactly how the gate first went red. The declared set is `E4`/`E7`/`E9`/`F`, ruff's documented default and the set the baseline was measured against; `lint.yml` logs `ruff --version` so a future drift is visible in the run. Widening the set is a deliberate change, not a config to loosen — see the note in `ruff.toml` for what a broader default currently reports.
 
 The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
 
