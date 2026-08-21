@@ -7,16 +7,6 @@ const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
 const ipPort = async () => ((await cli.exec('docker ps')).stdout.includes('pdpgsql_pmm_') ? '127.0.0.1:5432' : '127.0.0.1:5447');
 
-// `docker exec -d pmm-agent` returns before the agent has bound its local API on
-// 127.0.0.1:7777, so reading the status once races it - on a loaded runner the agent can
-// need ~1s while the next docker exec arrives in ~60ms.
-const waitForAgentConnected = async (container: string, after: string) => {
-  await expect(async () => {
-    const status = await cli.exec(`docker exec ${container} pmm-admin status`);
-    expect(status.stdout, `pmm-agent in ${container} never reported Connected after ${after}!`).toContain('Connected');
-  }).toPass({ intervals: [1_000], timeout: 30_000 });
-};
-
 test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test.beforeAll(async ({}) => {
     const result = await cli.exec('docker ps | grep pdpgsql_pmm | awk \'{print $NF}\'');
@@ -597,7 +587,10 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
 
     await setup.assertSuccess();
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
-    await waitForAgentConnected(containerName, 'install');
+    await expect(async () => {
+      const status = await cli.exec(`docker exec ${containerName} pmm-admin status`);
+      expect(status.stdout, 'pmm-agent did not report Connected after install!').toContain('Connected');
+    }).toPass({ intervals: [1_000], timeout: 30_000 });
 
     const oldVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
     const oldPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
@@ -615,14 +608,14 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     }).toPass({ intervals: [500], timeout: 30_000 });
     await cli.exec(`docker exec -d ${containerName} pmm-agent --debug --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml`);
 
-    await waitForAgentConnected(containerName, 'upgrade');
+    await expect(async () => {
+      const status = await cli.exec(`docker exec ${containerName} pmm-admin status`);
+      expect(status.stdout, 'pmm-agent did not report Connected after upgrade!').toContain('Connected');
+    }).toPass({ intervals: [1_000], timeout: 30_000 });
 
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
-    // pmm3-client-setup.sh installed the host client from this same PMM_CLIENT_VERSION, so the
-    // host's own version is the exact reference for what the upgrade must report. v3 VERSION is
-    // not: it is bumped when a release branches, ahead of the builds that carry the new number.
     const upgradedVersion = (await cli.exec('sudo pmm-admin version | grep -m1 "^Version:"'))
       .stdout.replace('Version:', '').trim();
 
