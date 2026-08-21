@@ -620,22 +620,14 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const newPid = await cli.exec(`docker exec ${containerName} ps -C pmm-agent -o pid=`);
     const newVersion = await cli.exec(`docker exec ${containerName} pmm-admin version | grep "Version:"`);
 
-    const versionLookup = process.env.PMM_CLIENT_VERSION?.includes('http')
-      ? undefined
-      : cli.execute('curl --fail --silent --show-error https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION');
-    if (versionLookup && (versionLookup.code !== 0 || !versionLookup.stdout.trim())) {
-      throw new Error('Could not read the expected upgrade version from v3 VERSION');
-    }
-    const upgradedVersion = versionLookup?.stdout.trim() ?? '';
+    // pmm3-client-setup.sh installed the host client from this same PMM_CLIENT_VERSION, so the
+    // host's own version is the exact reference for what the upgrade must report. v3 VERSION is
+    // not: it is bumped when a release branches, ahead of the builds that carry the new number.
+    const upgradedVersion = (await cli.exec('sudo pmm-admin version | grep -m1 "^Version:"'))
+      .stdout.replace('Version:', '').trim();
 
+    expect(upgradedVersion, 'Could not read the expected upgrade version from the host client!').not.toEqual('');
     await newPid.outNotContains(oldPid.stdout);
-    // The dev-latest tarball tracks the v3 line, so right after a release is cut it is the same
-    // build as the latest released tarball and the reported version legitimately cannot change.
-    if (!upgradedVersion || upgradedVersion !== latestReleasedVersion) {
-      expect(newVersion.stdout.trim()).not.toEqual(oldVersion.stdout.trim());
-    }
-    if (upgradedVersion) {
-      await newVersion.outContains(upgradedVersion);
-    }
+    await newVersion.outContains(upgradedVersion);
   });
 });
