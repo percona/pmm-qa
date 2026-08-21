@@ -121,13 +121,15 @@ One gate, two entry points, the same commands: [.github/workflows/lint.yml](.git
 | `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
 | `.github/workflows/*` | `actionlint` | [.github/actionlint.yaml](.github/actionlint.yaml) |
 | `*.sh` | `shellcheck -S error` | — |
-| `*.py` | `ruff check` | ruff defaults |
+| `*.py` | `ruff check` | [ruff.toml](ruff.toml) |
 | `*.tf` | `terraform fmt -check -recursive` | — |
 | `Dockerfile*` | `hadolint --failure-threshold error` | — |
 | `docker-compose*.y*ml` | `docker compose config -q` | — |
 | `*.groovy` | `npm-groovy-lint --failon error` | — |
 
 The tuned severities are deliberate and phase-scoped: `.yamllint` disables `line-length`, `indentation` and `trailing-spaces`; `.github/actionlint.yaml` suppresses actionlint's embedded shellcheck. Both hold ~2000 pre-existing cosmetic findings out of the gate so the gate itself can stay at zero. Tightening either is a follow-up, not a config to loosen further.
+
+`ruff.toml` declares the rule set explicitly. `ruff check` with no config uses whatever `select` the installed ruff defaults to, and that default has widened between releases — so an unpinned ruff reports a different set of findings on CI than on your machine, which is exactly how the gate first went red. The declared set is `E4`/`E7`/`E9`/`F`, ruff's documented default and the set the baseline was measured against; `lint.yml` logs `ruff --version` so a future drift is visible in the run. Widening the set is a deliberate change, not a config to loosen — see the note in `ruff.toml` for what a broader default currently reports.
 
 The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
 

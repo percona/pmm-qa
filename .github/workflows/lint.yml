@@ -67,7 +67,9 @@ jobs:
 
       - name: ruff
         if: ${{ !cancelled() }}
-        run: git ls-files -z '*.py' | xargs -0 --no-run-if-empty ruff check
+        run: |
+          ruff --version
+          git ls-files -z '*.py' | xargs -0 --no-run-if-empty ruff check
 
       - name: terraform fmt
         if: ${{ !cancelled() }}

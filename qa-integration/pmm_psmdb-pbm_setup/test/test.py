@@ -31,7 +31,7 @@ def test_pmm_services():
     assert mongodb
     assert "service_id" in mongodb[0]
     for service in mongodb:
-        assert "rs" or "mongos" in service['service_name']
+        assert "rs" in service['service_name'] or "mongos" in service['service_name']
         if "mongos" not in service['service_name']:
             pytest.service_id = service['service_id']
     print('This service_id will be used in the next steps')
