@@ -97,6 +97,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@LBAC`
 - `@new-navigation`
 - `@nightly`
+- `@node-exporter-cli`
 - `@pmm-ha`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
