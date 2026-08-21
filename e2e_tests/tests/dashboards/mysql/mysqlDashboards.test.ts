@@ -189,3 +189,29 @@ pmmTest(
     await dashboard.verifyPanelValues(dashboard.mysql.mysqlMyRocksDetails.metricsWithData);
   },
 );
+
+// TODO: replace PMM-T0000 with the Zephyr test-case id reserved for PMM-12279.
+pmmTest(
+  'PMM-T0000 - Verify Performance Schema Memory panels on MySQL Performance Schema Details Dashboard (PMM-12279) @pmm-ps-integration',
+  async ({ api, dashboard, page, urlHelper }) => {
+    const { service_name } = await api.inventoryApi.getServiceDetailsByRegex('ps_pmm');
+
+    await page.goto(
+      urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlPerformanceSchemaDetails.url, {
+        from: 'now-15m',
+        refresh: '5s',
+        serviceName: service_name,
+      }),
+    );
+
+    // Feature under test: the "Performance Schema Memory" row and its three panels are present.
+    await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlPerformanceSchemaDetails.memoryMetrics);
+
+    // End-to-end proof (perf_schema.memory_events collector -> VictoriaMetrics -> panel):
+    // Current Bytes Used is populated whenever memory instruments are enabled server-side,
+    // which is the default on PS/MySQL 8.0+, so it must render real data.
+    await dashboard.verifyNamedPanelsHaveData([
+      dashboard.mysql.mysqlPerformanceSchemaDetails.memoryCurrentUsedPanel,
+    ]);
+  },
+);
