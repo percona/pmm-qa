@@ -2,7 +2,7 @@ import { PlaywrightTestConfig } from '@playwright/test';
 import dotenv from 'dotenv';
 import { Timeouts } from '@helpers/timeouts';
 
-dotenv.config({ override: true, quiet: true });
+dotenv.config({ override: !!process.env.CI && !process.env.PMM_MIGRATION, quiet: true });
 
 export const pmmUrl = process.env.PMM_UI_URL ? process.env.PMM_UI_URL : 'http://localhost/';
 const config: PlaywrightTestConfig = {

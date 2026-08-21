@@ -144,6 +144,7 @@ dist
 /qa-integration/pmm_qa/inventory/
 /qa-integration/pmm_qa/pmm_framework/
 /qa-integration/pmm_qa/virtenv/
+/provisioning-artifacts/
 
 # Local-only k8s helper libs
 /k8s/lib/bats-assert/
@@ -166,7 +167,6 @@ dist
 !.claude/skill-gardener-state.json
 .claude/scripts/node_modules/
 .claude/scripts/.sessions/
-.cursor
 .cursorrules
 
 # Terraform (Linode ephemeral test runner) -- module + lock file are
@@ -180,3 +180,8 @@ terraform/linode-runner/*.tfstate.backup
 terraform/linode-runner/id_ed25519
 terraform/linode-runner/id_ed25519.pub
 terraform/linode-runner/*.pem
+
+graphify-out/cache
+
+# Local migration phase observations (evidence for skill-gardener, not repo content)
+.claude/migration-observations/

@@ -56,6 +56,15 @@
             "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/skill-gardener-review.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/migration-phase-observe.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+          }
+        ]
       }
     ],
     "ConfigChange": [
