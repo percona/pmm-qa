@@ -170,6 +170,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - tags_for_tests: '@annotations'
           - tags_for_tests: '@menu'
     uses: ./.github/workflows/runner-e2e-tests-playwright-remote-nightly-tests.yml
     secrets:

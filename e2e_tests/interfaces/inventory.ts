@@ -1,8 +1,14 @@
+export interface GetNode {
+  node_id: string;
+  node_name: string;
+}
+
 export interface GetServices {
   services: GetService[];
 }
 
 export enum ServiceType {
+  mongodb = 'mongodb',
   mysql = 'mysql',
   postgresql = 'postgresql',
   valkey = 'valkey',

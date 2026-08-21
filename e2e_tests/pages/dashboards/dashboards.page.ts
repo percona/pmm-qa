@@ -31,6 +31,10 @@ export default class Dashboards extends BasePage {
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
+    annotationTagText: (tagValue: string) =>
+      this.grafanaIframe().locator(`//span[contains(text(), '${tagValue}')]`),
+    annotationText: (annotationTitle: string) =>
+      this.grafanaIframe().locator(`//div[contains(text(), '${annotationTitle}')]`),
     panelByExactName: (panelName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
@@ -46,6 +50,7 @@ export default class Dashboards extends BasePage {
     imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   elements = {
+    annotationMarkers: this.grafanaIframe().getByTestId('data-testid annotation-marker'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
