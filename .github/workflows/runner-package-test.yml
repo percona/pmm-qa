@@ -157,7 +157,8 @@ jobs:
               echo "PMM_SERVER_IMAGE=perconalab/pmm-server:3-dev-latest" >> $GITHUB_ENV
             fi
             if [[ "${{ inputs.repository }}" =~ "candidate" ]]; then
-              rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
+              rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - \
+                | jq -r .results[].name  | grep '3.*.*-rc$' | sort -V | tail -n1)
               echo "PMM_SERVER_IMAGE=perconalab/pmm-server:$rc_latest" >> $GITHUB_ENV
             fi
             if [[ "${{ inputs.repository }}" = "release" ]]; then
@@ -180,7 +181,8 @@ jobs:
             DEV_VERSION=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION -O -)
             echo "EXPECTED_VERSION=$DEV_VERSION" >> $GITHUB_ENV
           elif [[ "${{ inputs.expected_version}}" = "pmm3-rc" ]]; then
-            RC_VERSION=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
+            RC_VERSION=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - \
+              | jq -r .results[].name  | grep '3.*.*-rc$' | sort -V | tail -n1)
             echo "EXPECTED_VERSION=$RC_VERSION" >> $GITHUB_ENV
           fi
                     

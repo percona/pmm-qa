@@ -97,11 +97,12 @@ jobs:
       - name: Run helm tests
         working-directory: ${{ env.WORK_DIR }}
         run: |
-          echo $(git submodule status)
+          git submodule status
           echo "PMM Chart Branch: $PMM_CHART_BRANCH"
 
-          export IMAGE_REPO=$(echo $SERVER_IMAGE | cut -d ':' -f 1)
-          export IMAGE_TAG=$(echo $SERVER_IMAGE | cut -d ':' -f 2)
+          IMAGE_REPO=${SERVER_IMAGE%%:*}
+          IMAGE_TAG=${SERVER_IMAGE#*:}
+          export IMAGE_REPO IMAGE_TAG
           export PMM_CHART_BRANCH=$PMM_CHART_BRANCH
           bats --tap helm-test.bats
 

@@ -1,7 +1,7 @@
-# actionlint's embedded shellcheck stays suppressed in this phase: the ~120
-# findings in `run:` blocks are a separate cleanup from the workflow-schema ones.
-# Patterns are regexes matched against the reported message.
-paths:
-  .github/workflows/**:
-    ignore:
-      - 'shellcheck reported issue in this script'
+# actionlint's embedded shellcheck now runs; nothing is suppressed here.
+#
+# It is invoked with SHELLCHECK_OPTS='-S warning' by both entry points, which
+# holds `run:` blocks to exactly the bar the repo's own .sh files under
+# qa-integration/ and terraform/ are held to. Raising it further means taking
+# on shellcheck's info and style tiers (55 of them SC2086 quoting) across every
+# workflow, which is a separate decision from this one.

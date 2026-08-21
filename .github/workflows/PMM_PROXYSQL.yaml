@@ -98,7 +98,8 @@ jobs:
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa
         run: |
-          mkdir -m 777 -p /tmp/backup_data
+          mkdir -p /tmp/backup_data
+          chmod 777 /tmp/backup_data
           if [[ "${PXC_VERSION}" != http* ]]; then
             ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} --client-version=${{ env.PMM_CLIENT_VERSION }} --database PXC=${PXC_VERSION}
           else

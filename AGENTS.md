@@ -119,7 +119,7 @@ One gate, two entry points, the same commands: [.github/workflows/lint.yml](.git
 |-----------|---------|--------|
 | `*.ts` | `npm run lint` in the owning workspace (eslint + `tsc --noEmit`) | `e2e_tests/eslint.config.mjs`, `cli/.eslintrc.json` |
 | `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
-| `.github/workflows/*` | `actionlint` | [.github/actionlint.yaml](.github/actionlint.yaml) |
+| `.github/workflows/*` | `actionlint` with `SHELLCHECK_OPTS='-S warning'` | [.github/actionlint.yaml](.github/actionlint.yaml) |
 | `*.sh` | `shellcheck -S warning` under `qa-integration/` and `terraform/`, `-S error` elsewhere | — |
 | `*.py` | `ruff check` | ruff defaults |
 | `*.tf` | `terraform fmt -check -recursive` | — |
@@ -128,6 +128,8 @@ One gate, two entry points, the same commands: [.github/workflows/lint.yml](.git
 | `*.groovy` | `npm-groovy-lint --failon error` | — |
 
 `.yamllint` runs `line-length` at **max 200** and `indentation` with `indent-sequences: whatever`; `trailing-spaces` is still off. 200 is where the repo's real ceiling sits: below it there is nothing left to fix, and every line above it is shell command text, so tightening the max means rewrapping provisioning commands rather than YAML. `indent-sequences: whatever` enforces mapping indentation — the kind that changes meaning — while leaving sequence style to the file, because the Ansible playbooks put `- name:` level with `tasks:` and normalising that would reindent every task block in the repo. Three block scalars carry a `# yamllint disable rule:line-length` region with the reason inline: their length lives inside a single-quoted command (or a systemd unit in a heredoc) that a backslash-newline cannot split. Keep the directive line itself bare — yamllint ignores a `disable` line that carries trailing prose.
+
+actionlint's embedded shellcheck is on, with no suppression in `.github/actionlint.yaml`. It runs at `-S warning`, the same bar as the `.sh` files those `run:` blocks invoke — a `run:` block is shell, so holding it to a different severity than the scripts next to it would be the arbitrary choice. Going further means taking on shellcheck's info and style tiers across every workflow (88 findings, 55 of them SC2086 quoting); that is a separate decision, not a config to loosen.
 
 The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
 

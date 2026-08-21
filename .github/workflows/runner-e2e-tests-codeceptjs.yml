@@ -170,14 +170,15 @@ jobs:
           launchable verify || true
           
           docker pull ${{ env.DOCKER_VERSION }} || true
-          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
           
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
           cat test_list.txt \
-            | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
+            | launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
           echo "$(cat launchable-subset.json)" || true
 
       - name: Check if launchable subset is empty
@@ -223,7 +224,8 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
-          mkdir -m 777 -p /tmp/backup_data
+          mkdir -p /tmp/backup_data
+          chmod 777 /tmp/backup_data
           ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
@@ -261,7 +263,7 @@ jobs:
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
           sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-          launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
+          launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs
@@ -269,7 +271,7 @@ jobs:
         working-directory: pmm-qa/codeceptjs-e2e
         continue-on-error: true
         run: |
-          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() && (failure() || steps.execute_tests.outputs.codecept_failed == 'true') }}

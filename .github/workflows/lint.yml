@@ -59,6 +59,8 @@ jobs:
 
       - name: actionlint
         if: ${{ !cancelled() }}
+        env:
+          SHELLCHECK_OPTS: -S warning
         run: actionlint
 
       # qa-integration/ and terraform/ provision real hosts and databases, so
