@@ -1,6 +1,6 @@
 # Graphify Discovery
 
-Refresh both the CodeceptJS source graph and the Playwright target graph on control before starting the migration's own commits, then use both Graphify artifacts read-only during migration. All migration work happens directly on control - no separate branch exists until publish; see `branch-workflow.md`.
+Refresh both the CodeceptJS source graph and the Playwright target graph on control before starting the migration's own commits, then use both Graphify artifacts read-only during migration. Migration work happens in control's worktree and is committed only on the publish branch; see `branch-workflow.md`.
 
 ## Graph artifacts (read-only during migration)
 
@@ -22,11 +22,11 @@ It is not one. Per `.claude/skills/graphify/SKILL.md`, graphify needs no API key
 - Run each update from its own root (`e2e_tests/` or `codeceptjs-e2e/`) so output stays in that directory's `graphify-out/`.
 - Keep only `graph.json` and `manifest.json`. Delete generated reports, HTML, and `.graphify_*` sidecars, and delete the dated backup directory (`graphify-out/<YYYY-MM-DD>/`) that a curated-graph rebuild leaves behind - it holds its own `graph.json`/`manifest.json`, so a name-based `find ... -delete` skips it and it lands in the commit.
 - The cleanup above removes `graphify-out/.graphify_python`, which the graphify skill's own bash blocks read to locate their interpreter. That is fine: the skill recreates it in its setup step. It does mean you must enter that flow at the beginning rather than jumping straight to an `update.md` snippet, because the `graphify` CLI does not regenerate that sidecar.
-- Commit each graph's updated files on control in its own commit, before the tracker row's `in-progress` commit (which becomes `migration-start`).
+- Commit each graph's updated files on control in its own commit, before the tracker row's `in-progress` commit.
 - If a refresh produces no changes, do not create an empty commit for it.
 - Refresh once on control during preflight; never regenerate either graph during migration (see "Read-only during migration").
 
-Both graph commits stay on control only, before `migration-start` - since the publish branch is built by cherry-picking `migration-start..control` onto `origin/main` (see `branch-workflow.md`), neither graph commit is ever in that range, so neither reaches the migration PR.
+Both graph commits stay on control only. The publish branch is cut from `origin/main` and carries just the migrated code, its coverage, and the source retirement (see `branch-workflow.md`), so neither graph commit can reach the migration PR - not because a later step removes it, but because it was never on that branch.
 
 ## Read-only during migration
 

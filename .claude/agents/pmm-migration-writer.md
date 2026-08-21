@@ -11,6 +11,8 @@ Follow `.claude/skills/codeceptjs-migration/SKILL.md`, `run.md` (step 2 is yours
 
 Input: one tracker row, source path, optional target path, control worktree, and this migration's timeline file.
 
+Leave every change uncommitted in control's worktree and report the changed paths. Migration code is never committed on control - it is moved to a branch cut from `origin/main` at publish time, by the runner.
+
 Do only the selected migration. Derive setup from source behavior, reuse existing Playwright code first, write to `playwright-practices.md` idiom rather than transliterating CodeceptJS calls, check destination selectability per scenario with `npx playwright test --list --grep`, run required static validation, and hand off to the reviewer. Scenarios in one source file rarely share a tag set, so check each migrated title against the grep of the job that will run it; a scenario matching no destination grep is coverage that disappears when the source is retired, and a green run will not show it. Provisioning runs in the background while you work; do not wait on it, start one, or use the environment. Append your timeline row before returning. Do not use MCP, run Playwright, publish, mark `done`, or invent behavior/locators/setup.
 
 Return:

@@ -4,7 +4,9 @@ The parent agent's half of the workflow: row selection, preflight, provisioning,
 
 Run exactly one migration at a time. One selected migration owns one local Docker PMM environment from the moment provisioning starts until PR creation. Do not clean or recreate that environment inside the workflow.
 
-All working-phase steps (writer, provisioning, review, execution, workflow coverage, final review, source retirement) happen directly on the control branch's own worktree - no separate migration branch exists until publish time. Step 7 (Publish) touches a second ref via an isolated `git worktree`; control's own checkout is never switched away from, through the entire workflow.
+Migration work happens and is tested in the control branch's own worktree, and is never committed there. Control commits only the `origin/main` merge, both graph refreshes, and the two tracker status changes; everything the migration produces stays uncommitted until publication, when it is moved to a branch cut from `origin/main` and committed there. See `branch-workflow.md` section What is committed where.
+
+Step 7 (Publish) touches that second ref via an isolated `git worktree`; control's own checkout is never switched away from, through the entire workflow.
 
 Use WSL/Git Bash for `.claude/scripts/*.sh`; keep shell scripts LF-only and run `bash -n .claude/scripts/*.sh` after editing them.
 
@@ -16,7 +18,8 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - **The parent, and only the parent, spawns review gates.** A worker subagent that spawns another subagent and then blocks waiting for its reply deadlocks. Do not give the runner, or any worker, the job of requesting a review: the runner returns its execution evidence and stops, and the parent spawns the reviewer.
 - **Never run two reviewers against the same commit.** Before spawning a gate, confirm no reviewer is still live for it. Reviewer cost is roughly flat per spawn regardless of scope, so the only lever on gate cost is spawning fewer of them; a duplicated final review is the largest single avoidable cost in this workflow.
 - **A re-requested gate handoff must carry the prior verdict, its blocker, and what changed since.** A gate re-requested as though it were a fresh review re-derives the whole checklist to rediscover one unchanged finding, and cannot move.
-- Enforce gates strictly: no execution before `READY_TO_RUN`, no workflow-coverage commit before execution passes, no final review before coverage is committed, no publish before `FINAL_REVIEW_PASS`, and no tracker `done` before a PR exists.
+- Enforce gates strictly: no execution before `READY_TO_RUN`, no publish branch before execution passes, no final review before the code and its workflow coverage are committed on that branch, no push or PR before `FINAL_REVIEW_PASS`, and no tracker `done` before a PR exists.
+- **Nothing the migration produces is committed on control.** If a subagent reports a commit SHA on control for migration code, that is a defect: have it reset the commit and leave the change in the worktree.
 - Overlap only where gates allow: provisioning runs in the background while the writer migrates (step 2a); static review can start while PMM provisions; MCP locator checks begin after readyz passes. Everything else is serial. Candidates and their verdicts live in `parallelization-ledger.md`; do not add an overlap that is not recorded there as `implemented`.
 - Reuse one local PMM environment per migration; never recreate it mid-workflow.
 - Never edit `e2e_tests/.env` during migration. Use `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin` unless the local provisioning command selected different values, and pass the same pair to every review and execution command.
@@ -26,7 +29,9 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - Maintain this migration's timeline at `.claude/migration-observations/<row>-<slug>.md`; see section Phase timeline. The parent creates it in step 1 and appends rows for provisioning, gate transitions, and publish. Each subagent appends its own row before returning.
 - After each subagent phase completes, `.claude/hooks/migration-phase-observe.sh` requests a `skill-gardener` Capture pass for that phase. The hook fires when a subagent is launched, not when it finishes, so treat it as a reminder rather than a signal. Batch the passes to the end of the migration whenever another subagent is still live - editing skill files underneath a running subagent is worse than a late capture.
 - Do not rely on the `PostToolUse`/`Skill` hook for this workflow. It fires against the `Skill` tool call, which for an inline-loading skill returns as soon as the instructions load.
-- Record the `migration-start` commit SHA (the "mark row in-progress" commit, see `branch-workflow.md`) in the handoff so it survives a resumed session - it is what defines this migration's cherry-pick range at publish time.
+- Record the tracker `in-progress` commit SHA in the handoff so a resumed session can recover which row is active. It is a marker only; it no longer defines a commit range, because nothing is cherry-picked.
+- **Checkpoint the uncommitted worktree after each phase** to `.claude/migration-observations/<row>-<slug>.patch` (`git add -N .` first, then `git diff`). That directory is gitignored, so this is a recovery point and not a commit. Delete it once the PR is open. Without it a multi-hour run has nothing to fall back on.
+- **Restore control's worktree to clean after publication.** The migration's edits are still sitting there; leaving them means the next migration starts on top of them.
 
 ## 1. Select and prepare
 
@@ -40,11 +45,11 @@ The drift-check extraction must use the Grep tool or an ERE pattern, and must no
 
 Check practices freshness: read `@playwright/test` from `e2e_tests/package.json` and compare it with `verifiedAgainst` in `playwright-practices.md`. If they differ, stop and refresh that file against the Playwright release notes before migrating; a stale practices file silently authorizes outdated idiom for every later row.
 
-Select the first `pending` tracker row that is not in B13. Always skip B13 rows. Refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` per `graphify.md`, then change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight commands. Record that commit's SHA as `migration-start`.
+Select the first `pending` tracker row that is not in B13. Always skip B13 rows. Refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` per `graphify.md`, then change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight commands. Record that commit's SHA as the active-row marker.
 
-Do not begin migration work until the control merge and both graph refreshes are complete. All migration work happens directly on control from here - no branch is created until publish (step 7).
+Do not begin migration work until the control merge and both graph refreshes are complete. Confirm the worktree is clean first - a previous migration that failed to restore it leaves edits that would be swept into this migration's patch. From here everything the migration produces stays uncommitted in control's worktree until publish (step 7).
 
-Create this migration's timeline file (`mkdir -p .claude/migration-observations` first; the directory is gitignored and may not exist) and record the selection, the confirmed bucket, and `migration-start`.
+Create this migration's timeline file (`mkdir -p .claude/migration-observations` first; the directory is gitignored and may not exist) and record the selection, the confirmed bucket, and the active-row marker commit.
 
 ## Test-run mode
 
@@ -52,9 +57,9 @@ The parent may explicitly designate a run as test-only (dry run). In that mode, 
 
 - the tracker `pending` -> `in-progress` -> `done` status writes and Notes updates;
 - the control-branch graph refreshes and commits; and
-- Stage 7 (Publish): source retirement, cherry-pick, commit, push, and PR.
+- Stage 5b and 7 (publish branch, source retirement, workflow-coverage commit, push, and PR).
 
-All other steps, including provisioning, review, `READY_TO_RUN`, execution, workflow coverage, and `FINAL_REVIEW_PASS`, still apply unchanged. Test-run mode never skips a gate; it only skips tracker, graph-refresh, and publication side effects.
+All other steps, including provisioning, review, `READY_TO_RUN`, execution, and `FINAL_REVIEW_PASS`, still apply unchanged. Test-run mode never skips a gate; it only skips tracker, graph-refresh, and publication side effects. Workflow coverage is designed and its greps verified as usual, but not committed, since there is no publish branch to commit it on.
 
 ## 2a. Start provisioning in the background
 
@@ -118,7 +123,7 @@ pending
 -> merge main into control
 -> refresh target graph on control
 -> refresh source graph on control
--> in-progress (this commit = migration-start)
+-> in-progress (tracker-only commit; marks the active row)
 -> refreshed graph discovery (read-only)
 -> inspect local resources, then start provisioning in the background
    |
@@ -128,13 +133,13 @@ pending
 -> initial review
 -> MCP locator verification
 -> test execution or already-covered regression against the same local PMM environment
--> workflow coverage, committed on control
--> final review, over committed code and committed coverage
--> retire source, directly on control
+   (everything so far is UNCOMMITTED in control's worktree)
 -> cut isolated worktree + publish branch from origin/main
--> cherry-pick migration-start..control onto publish branch
--> purify + revalidate
--> PR opened
--> done
+-> move the migrated code across, commit it there
+-> retire source + commit workflow coverage, there
+-> final review, over the publish branch
+-> revalidate in that worktree
+-> push, PR opened
+-> tracker done on control, restore control's worktree clean
 -> tear down the local PMM environment and the publish worktree
 ```

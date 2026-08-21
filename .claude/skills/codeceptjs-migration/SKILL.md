@@ -16,7 +16,7 @@ A migration is complete only when:
 3. migration-related locators are verified through MCP;
 4. the migrated test passes;
 5. the complete target file passes when an existing file was modified;
-6. every migrated scenario is selected by some Playwright job, and that coverage is committed;
+6. every migrated scenario is selected by some Playwright job, and that coverage is committed on the PR branch;
 7. the final independent review passes;
 8. a PR targeting `main` is opened; and
 9. the tracker row is updated to `done`.
@@ -88,7 +88,7 @@ The rules below are migration-specific and are not repeated there:
 
 ## Graphify rule
 
-Before marking the tracker row `in-progress`, merge `origin/main` into control and refresh both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` through the `graphify` skill's update flow, each from its own root, each its own commit on control. Never regenerate either graph during migration. A missing LLM API key is never a reason to stop or to fall back to `--code-only`; see `graphify.md`. All migration work then happens directly on control's own worktree - no separate branch exists until publish, when a fresh branch is cut from `origin/main` and the migration's own commits are cherry-picked onto it, excluding the control-only graph and tracker commits by construction. See `graphify.md` and `branch-workflow.md`.
+Before marking the tracker row `in-progress`, merge `origin/main` into control and refresh both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` through the `graphify` skill's update flow, each from its own root, each its own commit on control. Never regenerate either graph during migration. A missing LLM API key is never a reason to stop or to fall back to `--code-only`; see `graphify.md`. Migration work then happens in control's own worktree but is never committed there; at publish a fresh branch is cut from `origin/main` and the work is moved onto it, so the graph and tracker commits stay on control by construction. See `graphify.md` and `branch-workflow.md`.
 
 ## Local provisioning rule
 
