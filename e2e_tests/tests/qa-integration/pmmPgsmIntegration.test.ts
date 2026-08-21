@@ -18,11 +18,11 @@ let pgsmServiceName: string;
 let pgsmServiceNameSocket: string;
 
 pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
-
-  pmmTest.beforeEach(async ({ grafanaHelper, cliHelper, api }) => {
+  pmmTest.beforeEach(async ({ api, cliHelper, grafanaHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
     pgsmServiceName = (await api.inventoryApi.getServiceDetailsByPartialName('pdpgsql_')).service_name;
-    pgsmServiceNameSocket = (await api.inventoryApi.getServiceDetailsByPartialName('socket_pdpgsql_')).service_name;
+    pgsmServiceNameSocket = (await api.inventoryApi.getServiceDetailsByPartialName('socket_pdpgsql_'))
+      .service_name;
     await grafanaHelper.authorize();
   });
 
@@ -420,9 +420,7 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
 
       await sleep(Timeouts.TWO_MINUTES);
 
-      await page.goto(
-        urlHelper.buildUrlWithParameters(queryAnalytics.url, { database: db, from: 'now-5m' }),
-      );
+      await page.goto(urlHelper.buildUrlWithParameters(queryAnalytics.url, { database: db, from: 'now-5m' }));
       await queryAnalytics.waitForLoaded();
 
       const rowCount = await queryAnalytics.getRowCount();

@@ -78,6 +78,6 @@ export default class RemoteInstancesPage extends BasePage {
 
   selectNode = async (nodeName: string) => {
     await this.buttons.nodesSelect.click();
-    await this.builders.nodeOption(nodeName).click();
+    await this.builders.nodeOption(nodeName).first().click();
   };
 }
