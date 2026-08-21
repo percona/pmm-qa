@@ -15,7 +15,7 @@ const execFileP = promisify(execFile);
 // Slack Socket Mode can reject asynchronously on a background reconnect (e.g.
 // invalid_auth) OUTSIDE the try/catch around app.start(); unguarded that becomes
 // an unhandledRejection and takes the whole relay down, defeating the
-// endpoints-only fallback and killing the /linode, /jira, /slack broker with it.
+// endpoints-only fallback and killing the /linode, /jira, /slack, /zephyr broker with it.
 // Keep the listeners serving and just log — a broken Slack must never stop the
 // HTTPS broker. (Sync bugs still crash, as they should.)
 process.on("unhandledRejection", (e) => {
@@ -686,6 +686,114 @@ async function brokerJira(action, m, by) {
   }
 }
 
+// Zephyr Scale (SmartBear) test-case management. Project is FORCED to PMM.
+// Read + create test cases only — no update, no delete, and no execution
+// reporting (CI's own reporter posts executions with the same key from GitHub
+// Actions; see codeceptjs-e2e/tests/helper/reporter_helper.js).
+const ZEPHYR_BASE = "https://api.zephyrscale.smartbear.com/v2";
+const ZEPHYR_TIMEOUT_MS = 30_000;
+const ZEPHYR_SCAN_PAGES = 20; // search pages 1000 at a time; caps a runaway scan
+const TESTCASE_KEY = /^PMM-T[0-9]+$/;
+// pmm-qa test titles are "PMM-Txxxx [+ PMM-Tyyyy] - description @tag @tag", so a
+// caller pasting a whole title still searches on the description alone (Zephyr
+// names carry neither the key nor the CodeceptJS/Playwright tags).
+const titleToQuery = (s) =>
+  String(s)
+    .replace(/^\s*PMM-T[0-9]+(\s*\+\s*PMM-T[0-9]+)*\s*-\s*/, "")
+    .replace(/(\s+@[\w-]+)+\s*$/, "")
+    .trim();
+
+async function brokerZephyr(action, m, by) {
+  if (!process.env.ZEPHYR_PMM_API_KEY) return { status: 503, body: "zephyr_not_configured" };
+  const z = (p, init = {}) =>
+    fetch(`${ZEPHYR_BASE}${p}`, {
+      ...init,
+      signal: AbortSignal.timeout(ZEPHYR_TIMEOUT_MS),
+      headers: { Authorization: `Bearer ${process.env.ZEPHYR_PMM_API_KEY}`, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) },
+    });
+  console.log(`zephyr/${action} ${m.key || m.name || m.query || ""} by ${by}`);
+  try {
+    if (action === "create-testcase") {
+      const name = String(m.name || "").trim();
+      if (!name || name.length > 255) return { status: 400, body: "name_required_1_255_chars" };
+      // The key is assigned BY Zephyr; a name carrying one means the caller
+      // pasted a test title and would create a test case named after another.
+      if (/^PMM-T[0-9]+/.test(name)) return { status: 400, body: "name_must_not_start_with_a_test_case_key" };
+      const body = { ...(m.fields || {}), projectKey: "PMM", name };
+      for (const k of ["objective", "precondition", "priorityName", "statusName", "ownerId"]) if (m[k] != null) body[k] = String(m[k]);
+      if (m.folderId != null) {
+        if (!/^[0-9]+$/.test(String(m.folderId))) return { status: 400, body: "bad_folder_id" };
+        body.folderId = Number(m.folderId);
+      }
+      if (Array.isArray(m.labels)) body.labels = m.labels.map(String);
+      const r = await z("/testcases", { method: "POST", body: JSON.stringify(body) });
+      return { status: r.status, json: true, body: (await r.text()) || "{}" };
+    }
+    if (action === "get-testcase") {
+      const key = String(m.key || "").trim();
+      if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
+      const r = await z(`/testcases/${key}`);
+      return { status: r.status, json: true, body: (await r.text()) || "{}" };
+    }
+    if (action === "search-testcase") {
+      // Zephyr v2 has NO name search, so the relay pages the project and matches
+      // here: a name containing the whole query scores highest, else one covering
+      // >=60% of its words. Ranked and capped — the caller judges the duplicate.
+      const query = titleToQuery(m.query || "");
+      if (!query) return { status: 400, body: "query_required" };
+      const needle = query.toLowerCase();
+      const words = [...new Set(needle.split(/[^a-z0-9]+/).filter((w) => w.length > 2))];
+      const need = Math.max(1, Math.ceil(words.length * 0.6));
+      const limit = Math.min(Math.max(Math.floor(Number(m.limit) || 20), 1), 100);
+      let folder = "";
+      if (m.folderId != null) {
+        if (!/^[0-9]+$/.test(String(m.folderId))) return { status: 400, body: "bad_folder_id" };
+        folder = `&folderId=${Number(m.folderId)}`;
+      }
+      const matches = [];
+      let startAtId = 0;
+      let scanned = 0;
+      let pages = 0;
+      let truncated = false;
+      for (;;) {
+        const r = await z(`/testcases/nextgen?projectKey=PMM&limit=1000&startAtId=${startAtId}${folder}`);
+        if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
+        const j = await r.json();
+        for (const tc of j.values || []) {
+          scanned++;
+          const name = String(tc.name || "");
+          const low = name.toLowerCase();
+          const score = low.includes(needle) ? words.length + 1 : words.filter((w) => low.includes(w)).length;
+          if (score >= need) matches.push({ key: tc.key, name, score, folderId: tc.folder?.id ?? null });
+        }
+        pages++;
+        if (j.nextStartAtId == null) break;
+        if (pages >= ZEPHYR_SCAN_PAGES) {
+          truncated = true;
+          break;
+        }
+        startAtId = j.nextStartAtId;
+      }
+      matches.sort((a, b) => b.score - a.score || a.key.localeCompare(b.key));
+      return { status: 200, json: true, body: JSON.stringify({ query, scanned, truncated, matches: matches.slice(0, limit) }) };
+    }
+    if (action === "list-folders") {
+      const r = await z(`/folders?projectKey=PMM&folderType=TEST_CASE&maxResults=1000`);
+      if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
+      const j = await r.json();
+      return {
+        status: 200,
+        json: true,
+        body: JSON.stringify({ folders: (j.values || []).map((f) => ({ id: f.id, name: f.name, parentId: f.parentId })), total: j.total ?? null, isLast: j.isLast ?? null }),
+      };
+    }
+    return { status: 400, body: "unknown_action" };
+  } catch (e) {
+    console.error(`zephyr/${action} failed: ${e.message}`);
+    return { status: 502, body: "zephyr_upstream_error" };
+  }
+}
+
 async function brokerSlack(action, m, by) {
   console.log(`slack/${action} by ${by}`);
   try {
@@ -827,7 +935,7 @@ const handler = async (req, res) => {
     // GitHub token is checked against GitHub itself, so `by` is unspoofable and
     // an unknown identity is refused even with a valid RELAY_KEY. The old
     // /announce, /jira-act, /provision, /destroy all live here now.
-    const bm = req.method === "POST" && /^\/(linode|jira|slack)\/([a-z-]+)$/.exec(req.url);
+    const bm = req.method === "POST" && /^\/(linode|jira|slack|zephyr)\/([a-z-]+)$/.exec(req.url);
     if (bm) {
       const [, service, action] = bm;
       if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) { res.writeHead(403).end("forbidden"); return; }
@@ -836,9 +944,11 @@ const handler = async (req, res) => {
       let m;
       try { m = raw ? JSON.parse(raw) : {}; } catch { res.writeHead(400).end("bad_request"); return; }
       if (service === "linode") req.setTimeout(action.endsWith("-lke") ? 1_800_000 : 600000); // LKE (cluster + Helm) runs far longer than a VM
+      if (service === "zephyr") req.setTimeout(180_000); // search-testcase pages the whole PMM project
       const out =
         service === "linode" ? await brokerLinode(action, m, id.login)
         : service === "jira" ? await brokerJira(action, m, id.login)
+        : service === "zephyr" ? await brokerZephyr(action, m, id.login)
         : await brokerSlack(action, m, id.login);
       res.writeHead(out.status, out.json ? { "Content-Type": "application/json" } : {}).end(out.body);
       return;
@@ -852,7 +962,7 @@ const handler = async (req, res) => {
 // no plain-HTTP path, so nothing here depends on curl -k.
 https
   .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-  .listen(HTTPS_PORT, () => console.log(`HTTPS up on :${HTTPS_PORT} — plumbing (/health /reply /route /jira) + broker /<linode|jira|slack>/<action> (RELAY_KEY + GitHub identity)`));
+  .listen(HTTPS_PORT, () => console.log(`HTTPS up on :${HTTPS_PORT} — plumbing (/health /reply /route /jira) + broker /<linode|jira|slack|zephyr>/<action> (RELAY_KEY + GitHub identity)`));
 
 if (app) {
   try {
