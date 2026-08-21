@@ -9,10 +9,13 @@ Read `.claude/skills/repos/SKILL.md` for repo rules. Never clone `pmm-submodules
 
 ## Find and diff PRs
 
-**These sessions only serve repo-scoped REST (`gh api repos/{owner}/{repo}/...`).**
-Global search (`gh search`, `gh api search/issues`) and every GraphQL-backed
-command (`gh pr diff`, `gh pr view`, `gh pr list --json`) return HTTP 403 —
-don't use them, they only burn turns. The equivalents below all work.
+**GitHub access is MCP-first** — use the `mcp__github__*` tools (see the `repos`
+skill's "GitHub access — MCP-first" tool map): `pull_request_read` with
+`get_diff` (full diff), `get_files` (changed files), or `get` (metadata/base+head
+SHAs), and `search_pull_requests`/`list_pull_requests` to find PRs. Routine
+sessions have **no `gh`**, so the `gh api repos/...` recipes below are a fallback
+only where `gh` exists — and even there, global search (`gh search`) and
+GraphQL-backed commands (`gh pr diff/view/list`) return HTTP 403, so never use those.
 
 ```bash
 # 1. Get the PR number from the ticket's Development panel (jira skill) — that's

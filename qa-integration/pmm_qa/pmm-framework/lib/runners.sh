@@ -77,19 +77,22 @@ version_is_greater() {
 # Expand a PSMDB major version into its newest full version.
 #
 # The PSMDB setup scripts want a complete version such as '8.0.26-11', but
-# specs name the major series ('8.0'). This asks the same admin-ajax.php
-# endpoint the percona.com downloads page itself calls (Percona removed the
-# old products-api.php when the site was rebuilt on WordPress/Breakdance) for
-# every published patch of that series, and picks the highest.
+# specs name the major series ('8.0'). This lists the psmdb repo the setup
+# installs from and picks the highest patch there. Reading the repo rather than
+# the percona.com downloads page matters: a release appears on the page (and in
+# psmdb-<series>/yum/testing) before its RPMs are promoted to 'release', and the
+# Dockerfile installs a pinned '<version>.el<N>' from 'release' -- so the newest
+# published patch is not always one that can be installed yet.
 #
 # 'latest' and '' pass through untouched -- they are meaningful to the setup
 # script as-is. This is the only network call the framework makes, and the only
 # reason `curl` is required (preflight checks for it only when a PSMDB setup is
 # requested).
 #
+# Reads:  OL_VERSION (the el release the Dockerfile builds on, default 9)
 # Usage:  version=$(latest_psmdb_version 8.0)   # -> 8.0.26-11
 # Stdout: the resolved version
-# Exits:  via die() when the API call fails or no patch matches
+# Exits:  via die() when the repo index cannot be read or no patch matches
 latest_psmdb_version() {
   local requested=$1
   if [[ $requested == latest || -z $requested ]]; then
@@ -97,19 +100,14 @@ latest_psmdb_version() {
     return
   fi
 
-  local response latest='' latest_patch='' candidate patch
-  response=$(curl --fail --silent --show-error \
-    --data-urlencode 'action=percona_downloads' \
-    --data-urlencode "product_id=percona-server-mongodb-$requested" \
-    --data-urlencode 'hydrate=1' \
-    'https://www.percona.com/wp-admin/admin-ajax.php') ||
-    die "Failed to query the Percona products API for PSMDB $requested."
+  local el=${OL_VERSION:-9} index latest='' latest_patch='' candidate patch
+  index=$(curl --fail --silent --show-error \
+    "https://repo.percona.com/psmdb-${requested//./}/yum/release/$el/RPMS/$(uname -m)/") ||
+    die "Failed to read the psmdb-${requested//./} release repo index for PSMDB $requested."
 
-  # The API answers with JSON; pull the quoted entries out of the 'versions'
-  # array, strip the product prefix, and keep only entries for the requested
-  # series. Patches look like '<major.minor>.<patch>-<build>'; the trailing
-  # '-build' is turned into '.build' so version_is_greater can compare it as
-  # just another dotted component.
+  # Patches look like '<major.minor>.<patch>-<build>'; the trailing '-build' is
+  # turned into '.build' so version_is_greater can compare it as just another
+  # dotted component.
   while IFS= read -r candidate; do
     patch=${candidate#"$requested."}
     patch=${patch//-/.}
@@ -118,15 +116,12 @@ latest_psmdb_version() {
       latest_patch=$patch
     fi
   done < <(
-    printf '%s' "$response" |
-      grep -Eo '"versions"[[:space:]]*:[[:space:]]*\[[^]]*\]' |
-      grep -Eo '"percona-server-mongodb-[^"]+"' |
-      tr -d '"' |
-      sed 's/^percona-server-mongodb-//' |
-      grep -E "^${requested//./\\.}\.[0-9]+(-[0-9]+)?$"
+    printf '%s' "$index" |
+      grep -Eo "percona-server-mongodb-server-${requested//./\\.}\.[0-9]+-[0-9]+\.el$el\." |
+      sed -e 's/^percona-server-mongodb-server-//' -e "s/\.el$el\.\$//"
   )
   [[ -n $latest ]] ||
-    die "Could not resolve the latest PSMDB patch for '$requested'."
+    die "Could not resolve an installable PSMDB patch for '$requested' from the psmdb-${requested//./} release repo."
   printf '%s' "$latest"
 }
 

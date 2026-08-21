@@ -4,6 +4,7 @@ services:
   pmm-server-external-clickhouse:
     image: ${PMM_SERVER_IMAGE:-perconalab/pmm-server:3-dev-latest}
     container_name: pmm-server-external-clickhouse
+    platform: linux/amd64
     depends_on:
       external-clickhouse:
         condition: service_healthy
@@ -31,6 +32,7 @@ services:
   pmm-client:
     image: perconalab/pmm-client:3-dev-latest
     container_name: pmm-client-clickhouse
+    platform: linux/amd64
     depends_on:
       pmm-server-external-clickhouse:
         condition: service_healthy
@@ -50,6 +52,7 @@ services:
 
   ps8:
     container_name: ps8
+    platform: linux/amd64
     image: percona:8
     command: --default-authentication-plugin=mysql_native_password
     restart: always
@@ -59,6 +62,7 @@ services:
   external-clickhouse:
     image: clickhouse/clickhouse-server:latest
     container_name: external-clickhouse
+    platform: linux/amd64
     environment:
       - CLICKHOUSE_DB=pmm
       - CLICKHOUSE_USER=pmm

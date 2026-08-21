@@ -172,6 +172,8 @@ npx playwright test --grep @inventory
 
 ## Patterns and Conventions
 
+After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` when a reusable correction, repeated workflow, demonstrated improvement, or skill gap emerged. Automated post-skill passes may invoke Capture to check for such a signal; follow the skill's counter and auto-apply rules. If no lesson qualifies, write or report nothing, but still record `none` for an automated pass. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly.
+
 ### Do
 - Use the **Page Object Model** for Playwright browser tests — put selectors and actions in `pages/`
 - Use **`data-testid`** locators (stable, not CSS-class dependent)
