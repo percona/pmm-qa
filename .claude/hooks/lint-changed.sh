@@ -69,12 +69,10 @@ if [ ${#yaml_files[@]} -gt 0 ]; then
   yamllint --strict "${yaml_files[@]}" || fail "yamllint"
 fi
 
-# -S warning for the embedded shellcheck: `run:` blocks are shell, held to the
-# same bar as the .sh files under qa-integration/ and terraform/.
 if [ ${#workflow_files[@]} -gt 0 ]; then
   echo "==> actionlint"
   ensure_actionlint || fail "actionlint not installed"
-  SHELLCHECK_OPTS='-S warning' actionlint "${workflow_files[@]}" || fail "actionlint"
+  actionlint "${workflow_files[@]}" || fail "actionlint"
 fi
 
 if [ ${#sh_files[@]} -gt 0 ]; then

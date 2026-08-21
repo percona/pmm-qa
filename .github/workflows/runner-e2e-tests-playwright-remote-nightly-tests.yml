@@ -100,9 +100,11 @@ jobs:
           ADDR_NO_SCHEME=${ADDR#http://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
-          echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/" >> "$GITHUB_ENV"
-          echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
-          echo "SERVER_IP=${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
+          {
+            echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/"
+            echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}"
+            echo "SERVER_IP=${ADDR_NO_SCHEME}"
+          } >> "$GITHUB_ENV"
 
       - name: Sanity check remote PMM Server reachability
         run: |
@@ -145,11 +147,12 @@ jobs:
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
 
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
+            > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt \
-            | launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > ${{ env.SUBSET_FILE_NAME }} || true
-          echo "$(cat ${{ env.SUBSET_FILE_NAME }})" || true
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
+            --use-case feature-branch playwright < test_list.txt > ${{ env.SUBSET_FILE_NAME }} || true
+          cat ${{ env.SUBSET_FILE_NAME }} || true
 
       - name: Check if launchable subset is empty
         id: check_launchable_subset

@@ -59,8 +59,6 @@ jobs:
 
       - name: actionlint
         if: ${{ !cancelled() }}
-        env:
-          SHELLCHECK_OPTS: -S warning
         run: actionlint
 
       - name: shellcheck

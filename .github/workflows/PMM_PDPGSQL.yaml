@@ -60,7 +60,7 @@ jobs:
 
       - name: Export path to qa-integration tree
         working-directory: qa-integration
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
       - name: Run Setup for E2E Tests
         working-directory: qa-integration/pmm_qa

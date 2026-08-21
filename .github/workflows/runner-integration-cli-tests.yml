@@ -145,12 +145,11 @@ jobs:
           DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.PMM_SERVER_IMAGE }} | cut -d@ -f2) || true
           export DOCKER_IMAGE_ID
           
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "cli-tests-${{ steps.test_name_processed.outputs.result }}-${{ steps.tags_processed.outputs.result }}" > \
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "cli-tests-${{ steps.test_name_processed.outputs.result }}-${{ steps.tags_processed.outputs.result }}" > \
             launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt \
-            | launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > launchable-subset.txt || true
-          echo "$(cat launchable-subset.txt)" || true
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright < test_list.txt > launchable-subset.txt || true
+          cat launchable-subset.txt || true
 
       - name: 'Check if launchable subset is empty'
         working-directory: pmm-qa/cli
@@ -181,6 +180,9 @@ jobs:
             -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
             -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }} 
+          # shellcheck disable=SC2016
+          # Deliberately unexpanded: the inner bash -c does the expanding, and
+          # curl's %{http_code} must reach curl literally.
           timeout 240 bash -c 'while [[ "$(curl -k -s -o /dev/null -w ''%{http_code}'' https://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'

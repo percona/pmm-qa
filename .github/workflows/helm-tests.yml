@@ -75,7 +75,7 @@ jobs:
         working-directory: ${{ env.WORK_DIR }}
         run: |
           ./setup_bats_libs.sh
-          echo "BATS_LIB_PATH=$(pwd)/lib" >> $GITHUB_ENV
+          echo "BATS_LIB_PATH=$(pwd)/lib" >> "$GITHUB_ENV"
 
       - name: Install git (required for helm chart branch support)
         run: |
@@ -123,7 +123,7 @@ jobs:
           gh api \
             --method POST \
             -H "Accept: application/vnd.github.v3+json" \
-            /repos/$REPO/statuses/$SHA \
+            "/repos/$REPO/statuses/$SHA" \
             -f state="$STATUS" \
             -f target_url="https://github.com/$REPO/actions/runs/$RUN_ID" \
             -f description="Helm Tests status: $STATUS" \
