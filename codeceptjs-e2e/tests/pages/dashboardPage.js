@@ -1131,9 +1131,14 @@ module.exports = {
     panelLoading: locate('div').withAttr({ class: 'panel-loading' }),
     postgreSQLServiceSummaryContent: locate('$pt-summary-fingerprint').withText('Detected PostgreSQL version:'),
     reportTitle: locate('$header-container').inside(locate('[class*="panel-container"]')),
+    // Table cells are excluded: a value mapped to "No Data"/"-" in one column is a
+    // per-row value, not the panel being empty. Grafana renders a panel-wide
+    // no-data state as [data-testid="data-testid Panel data error message"], never
+    // inside a role="gridcell".
     reportTitleWithNA: locate('$header-container').inside(
       locate('[class*="panel-container"]').withDescendant(
-        '//*[(text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data")]',
+        '//*[((text()="No data") or (text()="NO DATA") or (text()="N/A") or (text()="-") or (text() = "No Data"))'
+        + ' and not(ancestor-or-self::*[@role="gridcell"])]',
       ),
     ),
     reportTitleWithNoData: locate('$header-container').inside(
