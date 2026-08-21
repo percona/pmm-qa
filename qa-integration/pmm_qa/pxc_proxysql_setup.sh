@@ -52,7 +52,8 @@ bin/mysql -A -uroot -Snode1/socket.sock -e "grant all on *.* to sysbench@'%';"
 bin/mysql -A -uroot -Snode1/socket.sock -e "drop database if exists sbtest;create database sbtest;"
 
 ### update proxysql configuration use, correct port
-export node1_port=$(cat node1.cnf | grep port | awk -F"=" '{print $2}')
+node1_port=$(cat node1.cnf | grep port | awk -F"=" '{print $2}')
+export node1_port
 sudo sed -i "s/3306/${node1_port}/" /etc/proxysql-admin.cnf
 
 sudo service proxysql start

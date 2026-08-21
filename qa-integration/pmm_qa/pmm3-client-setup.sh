@@ -121,7 +121,7 @@ if [[ "$client_version" == http* ]]; then
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz
-    PMM_CLIENT=`ls -1td pmm-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
+    PMM_CLIENT=$(ls -1td pmm-client*/ 2>/dev/null | head -n1)
     echo ${PMM_CLIENT}
     rm -rf pmm-client
     mv ${PMM_CLIENT} pmm-client

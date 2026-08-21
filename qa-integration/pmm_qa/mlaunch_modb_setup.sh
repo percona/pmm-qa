@@ -45,7 +45,8 @@ echo "Downloading ${mongodb_version} from ${modb_tarball}..."
 wget -O percona_server_mongodb.tar.gz ${modb_tarball}
 tar -xvf percona_server_mongodb.tar.gz
 
-export extracted_folder_name=$(ls | grep mongodb-linux)
+extracted_folder_name=$(compgen -G 'mongodb-linux*' | head -n1)
+export extracted_folder_name
 echo "Extracted folder name ${extracted_folder_name}"
 mv ${extracted_folder_name} modb_${mongodb_version}
 rm percona_server_mongodb.tar.gz*

@@ -1,10 +1,10 @@
 #!/bin/bash
 
-export PWD=$(pwd)
+cert_root=$(pwd)
 export HOST=localhost
 mkdir -p certificates
 pushd certificates || exit 1
-echo -e "\n=== Generating SSL certificates in ${PWD}/certificates ==="
+echo -e "\n=== Generating SSL certificates in ${cert_root}/certificates ==="
 # Generate self signed root CA cert
 openssl req -nodes -x509 -newkey rsa:4096 -keyout ca.key -out ca.crt -subj "/C=US/ST=California/L=San Francisco/O=Percona/OU=root/CN=${HOST}/emailAddress=test@percona.com"
 # Generate server cert to be signed

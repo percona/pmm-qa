@@ -48,7 +48,8 @@ echo "Downloading ${mongodb_version} ..."
 wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 tar -xvf percona_server_mongodb.tar.gz
 
-export extracted_folder_name=$(ls | grep percona-server-mongodb)
+extracted_folder_name=$(compgen -G 'percona-server-mongodb*' | head -n1)
+export extracted_folder_name
 echo "Extracted folder name ${extracted_folder_name}"
 mv ${extracted_folder_name} psmdb_${mongodb_version}
 
@@ -61,7 +62,8 @@ echo "Downloading ${mongodb_version} from ${psmdb_tarball}..."
 wget -O percona_server_mongodb.tar.gz ${psmdb_tarball}
 tar -xvf percona_server_mongodb.tar.gz
 
-export extracted_folder_name=$(ls | grep mongodb-linux)
+extracted_folder_name=$(compgen -G 'mongodb-linux*' | head -n1)
+export extracted_folder_name
 echo "Extracted folder name ${extracted_folder_name}"
 mv ${extracted_folder_name} psmdb_${mongodb_version}
 
