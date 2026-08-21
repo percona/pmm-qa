@@ -40,6 +40,7 @@ const apiEndpoints = {
   server: {
     // 200 only on the HA leader; HAProxy routes on it.
     leaderHealthCheck: '/v1/server/leaderHealthCheck',
+    logs: '/logs.zip',
     readyz: '/v1/server/readyz',
     settings: '/v1/server/settings',
     updates: '**/v1/server/updates?force=**',
