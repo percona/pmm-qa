@@ -143,6 +143,74 @@ docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo --q
 EOF
 sleep 60
 echo
+echo "configuring root user on primary rscfg01 configserver replicaset"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo --quiet << EOF
+    db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] });
+EOF
+echo
+echo "configuring pbm and pmm roles on configserver replicaset rscfg"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo "mongodb://root:root@localhost/?replicaSet=rscfg" --quiet << EOF
+db.getSiblingDB("admin").createRole({
+    "role": "pbmAnyAction",
+    "privileges": [{
+        "resource": { "anyResource": true },
+	    "actions": [ "anyAction" ]
+        }],
+    "roles": []
+});
+db.getSiblingDB("admin").createRole({
+    role: "explainRole",
+    privileges: [{
+        resource: {
+            db: "",
+            collection: ""
+            },
+        actions: [
+            "listIndexes",
+            "listCollections",
+            "dbStats",
+            "dbHash",
+            "collStats",
+            "find"
+            ]
+        }],
+    roles:[]
+});
+EOF
+echo
+echo "creating pbm user for configserver replicaset rscfg"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo "mongodb://root:root@localhost/?replicaSet=rscfg" --quiet << EOF
+db.getSiblingDB("admin").createUser({
+    user: "${pbm_user}",
+    pwd: "${pbm_pass}",
+    "roles" : [
+        { "db" : "admin", "role" : "readWrite", "collection": "" },
+        { "db" : "admin", "role" : "backup" },
+        { "db" : "admin", "role" : "clusterMonitor" },
+        { "db" : "admin", "role" : "restore" },
+        { "db" : "admin", "role" : "pbmAnyAction" }
+    ]
+});
+EOF
+echo
+echo "creating pmm user for configserver replicaset rscfg"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 mongo "mongodb://root:root@localhost/?replicaSet=rscfg" --quiet << EOF
+db.getSiblingDB("admin").createUser({
+    user: "${pmm_user}",
+    pwd: "${pmm_pass}",
+    roles: [
+        { role: "explainRole", db: "admin" },
+        { role: "clusterMonitor", db: "admin" },
+        { role: "read", db: "local" },
+        { "db" : "admin", "role" : "readWrite", "collection": "" },
+        { "db" : "admin", "role" : "backup" },
+        { "db" : "admin", "role" : "clusterMonitor" },
+        { "db" : "admin", "role" : "restore" },
+        { "db" : "admin", "role" : "pbmAnyAction" }
+    ]
+});
+EOF
+echo
 echo "adding shards and creating global mongo user"
 docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos mongo --quiet << EOF
 db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] });
@@ -245,6 +313,34 @@ docker compose -f docker-compose-sharded-with-pmm.yaml exec -T rscfg01 pmm-admin
 
 echo "adding some data"
 docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017
+
+echo "writing chunk-activity generator so the chunk-move/split dashboards keep getting data"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos tee /tmp/keep_chunks_moving.js > /dev/null << 'JSEOF'
+var shards = db.getSiblingDB("config").shards.find().toArray().map(function (s) { return s._id; });
+var ins = db.getSiblingDB("test").test.insertOne({ ts: new Date() });
+shards.forEach(function (target) {
+    try {
+        sh.moveChunk("test.test", { _id: ins.insertedId }, target);
+    } catch (e) {
+        print("moveChunk to " + target + " failed, skipping: " + e);
+    }
+});
+try {
+    sh.splitFind("test.test", { _id: ins.insertedId });
+} catch (e) {
+    print("splitFind failed, skipping: " + e);
+}
+JSEOF
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -T mongos tee /tmp/keep_chunks_moving.sh > /dev/null << 'SHEOF'
+#!/bin/bash
+while true; do
+    mongo "mongodb://root:root@localhost" --quiet /tmp/keep_chunks_moving.js > /tmp/keep_chunks_moving.log 2>&1
+    sleep 240
+done
+SHEOF
+echo "starting background chunk-activity generator"
+docker compose -f docker-compose-sharded-with-pmm.yaml exec -d mongos bash /tmp/keep_chunks_moving.sh
+
 tests=${TESTS:-yes}
 if [ $tests != "no" ]; then
     echo "running tests"
