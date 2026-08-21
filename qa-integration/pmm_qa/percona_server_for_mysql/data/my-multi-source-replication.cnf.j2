@@ -32,11 +32,6 @@ replica_parallel_workers=4
 replica_parallel_type=LOGICAL_CLOCK
 replica_preserve_commit_order=1
 
-# Keep auto-increment ranges disjoint so any node can be written to without
-# colliding with a row that is still in flight from another node
-auto_increment_increment={{ nodes_count | int }}
-auto_increment_offset={{ item }}
-
 # Crash-safe replication settings. One relay log set per channel: the channel
 # name is appended to this base name automatically
 relay-log={{ container_prefix }}{{ item }}-relay-bin
