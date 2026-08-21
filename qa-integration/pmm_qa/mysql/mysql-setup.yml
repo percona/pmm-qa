@@ -98,17 +98,23 @@
         random_service_name_value: "_{{ 99999 | random + 1 }}"
 
     - name: Add service to pmm server
-      shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --environment=mysql-gr-dev --cluster=mysql-gr-dev-cluster --replication-set=mysql-gr-replication {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
+      shell: >-
+        docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --environment=mysql-gr-dev
+        --cluster=mysql-gr-dev-cluster --replication-set=mysql-gr-replication {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type == "gr"
 
     - name: Add service to pmm server
-      shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --environment=mysql-replication-dev --cluster=mysql-replication-dev-cluster --replication-set=mysql-async-replication {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
+      shell: >-
+        docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --environment=mysql-replication-dev
+        --cluster=mysql-replication-dev-cluster --replication-set=mysql-async-replication {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type == "replication"
 
     - name: Add service to pmm server
-      shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --cluster=mysql-single-dev-cluster --environment=mysql-dev {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
+      shell: >-
+        docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --cluster=mysql-single-dev-cluster
+        --environment=mysql-dev {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type != "gr" and setup_type != "replication"
 
@@ -142,16 +148,22 @@
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
     - name: Prepare data for sysbench inside of first mysql nodes
-      shell: docker exec {{ container_prefix }}1 sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest --tables=10 --table-size=100000 prepare
+      shell: >-
+        docker exec {{ container_prefix }}1 sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest
+        --tables=10 --table-size=100000 prepare
       when: setup_type == "gr" or setup_type == "replication"
 
     - name: Run load for sysbench inside of all mysql nodes
-      shell: docker exec {{ container_prefix }}{{ item }} sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest --tables=10 --table-size=100000 --threads=16 --time=60 run
+      shell: >-
+        docker exec {{ container_prefix }}{{ item }} sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password
+        --mysql-db=sbtest --tables=10 --table-size=100000 --threads=16 --time=60 run
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type != "gr" and setup_type != "replication"
 
     - name: Run load for sysbench inside of primary mysql node
-      shell: docker exec {{ container_prefix }}1 sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest --tables=10 --table-size=100000 --threads=16 --time=60 run
+      shell: >-
+        docker exec {{ container_prefix }}1 sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest
+        --tables=10 --table-size=100000 --threads=16 --time=60 run
       when: setup_type == "gr" and setup_type == "replication"
 
     - name: Copy a load file into the container

@@ -12,13 +12,13 @@ on:
         required: false
         type: string
       pmm_server_compose_file:
-          description: 'PMM Server docker image'
-          default: 'docker-compose.yml'
-          required: false
-          options:
-            - 'docker-compose.yml'
-            - 'docker-compose-nomad.yml'
-          type: choice
+        description: 'PMM Server docker image'
+        default: 'docker-compose.yml'
+        required: false
+        options:
+          - 'docker-compose.yml'
+          - 'docker-compose-nomad.yml'
+        type: choice
       pmm_client_image:
         description: 'pmm3-client docker image'
         default: 'perconalab/pmm-client:3-dev-latest'

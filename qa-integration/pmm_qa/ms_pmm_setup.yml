@@ -62,9 +62,13 @@
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ ms_container }}
-      - docker exec {{ ms_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+      - >-
+        docker exec {{ ms_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode
+        no
 
   - name: Execute Setup script inside the MySQL ms_container
     shell: "{{ item }}"
     with_items:
-      - docker exec {{ ms_container }} bash -xe ./client_container_ms_setup.sh --ms_version {{ ms_version }} --ms_tarball {{ ms_tarball }} --number_of_nodes {{ number_of_nodes }} --query_source {{ query_source }} --group_replication {{ group_replication }} > setup_ms_{{ ms_version }}.log
+      - >-
+        docker exec {{ ms_container }} bash -xe ./client_container_ms_setup.sh --ms_version {{ ms_version }} --ms_tarball {{ ms_tarball }} --number_of_nodes {{ number_of_nodes }} --query_source {{
+        query_source }} --group_replication {{ group_replication }} > setup_ms_{{ ms_version }}.log

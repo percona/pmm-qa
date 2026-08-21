@@ -51,7 +51,9 @@
     with_items:
       - docker exec {{ mongodb_ssl_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
       - docker network connect pmm-qa {{ mongodb_ssl_container }}
-      - docker exec {{ mongodb_ssl_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+      - >-
+        docker exec {{ mongodb_ssl_container }} bash -x ./pmm2-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}
+        --use_metrics_mode no
 
   - name: Add pmm-admin binary to path when tar ball installation
     shell: docker exec {{ mongodb_ssl_container }} echo "export PATH=$PATH:/pmm2-client/bin" > setup_path.sh
@@ -67,7 +69,10 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ mongodb_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-      - docker exec {{ mongodb_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add mongodb --tls --tls-skip-verify --authentication-mechanism=MONGODB-X509 --authentication-database=$external --tls-certificate-key-file=/nodes/certificates/client.pem --tls-certificate-key-file-password=/nodes/certificates/client.key --tls-ca-file=/nodes/certificates/ca.crt {{ mongodb_ssl_container }}_ssl_service'
+      - >-
+        docker exec {{ mongodb_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add mongodb --tls --tls-skip-verify --authentication-mechanism=MONGODB-X509
+        --authentication-database=$external --tls-certificate-key-file=/nodes/certificates/client.pem --tls-certificate-key-file-password=/nodes/certificates/client.key
+        --tls-ca-file=/nodes/certificates/ca.crt {{ mongodb_ssl_container }}_ssl_service'
 
   - name: Get client cert Files on host
     shell: "{{ item }}"
