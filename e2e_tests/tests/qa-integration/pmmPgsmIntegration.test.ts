@@ -4,6 +4,15 @@ import { AgentType, CliAgentStatus } from '@helpers/constants';
 import { QanLabel } from '@api/qan.api';
 import { Timeouts } from '@helpers/timeouts';
 
+/**
+ * Migrated from codeceptjs-e2e/tests/qa-integration/pmm_pgsm_integration_test.js
+ * (scenarios tagged @pgsm-pmm-integration).
+ *
+ * These scenarios expect a `pdpgsql` environment provisioned by pmm-framework
+ * (`--database pdpgsql`): a TCP service (pdpgsql_*) and a socket service
+ * (socket_pdpgsql_*) both monitored with pg_stat_monitor.
+ */
+
 const connection = {
   password: 'pass+this',
   user: 'postgres',
@@ -439,27 +448,20 @@ pmmTest.describe('PMM + PGSM Integration Scenarios', () => {
   pmmTest(
     'PMM-T1253 - Verify pg_stat_monitor.pgsm_normalized_query settings @not-ui-pipeline @pgsm-pmm-integration',
     { tag: ['@pgsm-pmm-integration'] },
-    async ({ cliHelper, page, pgsqlHelper, queryAnalytics, urlHelper }) => {
+    async ({ cliHelper, pgsqlHelper, queryAnalytics, urlHelper }) => {
       const queriesNumber = 2;
+      const checkForExamples = (expectNoExamples: boolean) =>
+        queryAnalytics.verifyExamplesForGeneratedQueries({
+          container: containerName,
+          expectNoExamples,
+          pgsqlHelper,
+          queriesCount: queriesNumber,
+          serviceName: pgsmServiceName,
+          urlHelper,
+        });
 
       pgsqlHelper.cleanupClickhouse();
       pgsqlHelper.resetPgStatMonitor({ container: containerName });
-
-      const checkForExamples = async (expectNoExamples: boolean) => {
-        await page.goto(urlHelper.buildUrlWithParameters(queryAnalytics.url, { from: 'now-5m' }));
-        await queryAnalytics.waitForLoaded();
-        await queryAnalytics.selectFilter(pgsmServiceName);
-
-        for (let i = 1; i < queriesNumber; i++) {
-          const tableName = `PMM_T1253_${i}_${Math.floor(Math.random() * 10_000)}`;
-
-          pgsqlHelper.exec(`CREATE TABLE ${tableName} ( TestId int );`, { container: containerName });
-          pgsqlHelper.exec(`DROP TABLE ${tableName};`, { container: containerName });
-          await queryAnalytics.searchByValue(tableName);
-          await queryAnalytics.selectRow(1);
-          await queryAnalytics.checkExamplesTab(expectNoExamples);
-        }
-      };
 
       pgsqlHelper
         .exec("ALTER SYSTEM SET pg_stat_monitor.pgsm_normalized_query='no';", { container: containerName })

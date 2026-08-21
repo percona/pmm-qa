@@ -1,8 +1,19 @@
 import { expect, Locator } from '@playwright/test';
 import BasePage from '@pages/base.page';
+import PgsqlHelper from '@helpers/pgsql.helper';
+import UrlHelper from '@helpers/url.helper';
 import { Timeouts } from '@helpers/timeouts';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import StoredMetricsPage from '@pages/qan/storedMetrics/storedMetrics.page';
+
+export interface VerifyGeneratedQueryExamplesOptions {
+  container: string;
+  expectNoExamples: boolean;
+  pgsqlHelper: PgsqlHelper;
+  queriesCount: number;
+  serviceName: string;
+  urlHelper: UrlHelper;
+}
 
 enum TabNames {
   realTime = 'Real-Time',
@@ -148,6 +159,24 @@ export default class QueryAnalyticsPage extends BasePage {
     await tab.click();
     await expect(this.page).toHaveURL(urlPattern);
     await this.noSpinner();
+  };
+
+  verifyExamplesForGeneratedQueries = async (options: VerifyGeneratedQueryExamplesOptions) => {
+    const { container, expectNoExamples, pgsqlHelper, queriesCount, serviceName, urlHelper } = options;
+
+    await this.page.goto(urlHelper.buildUrlWithParameters(this.url, { from: 'now-5m' }));
+    await this.waitForLoaded();
+    await this.selectFilter(serviceName);
+
+    for (let i = 1; i < queriesCount; i++) {
+      const tableName = `test_table_${i}_${Math.floor(Math.random() * 10_000)}`;
+
+      pgsqlHelper.exec(`CREATE TABLE ${tableName} ( TestId int );`, { container });
+      pgsqlHelper.exec(`DROP TABLE ${tableName};`, { container });
+      await this.searchByValue(tableName);
+      await this.selectRow(1);
+      await this.checkExamplesTab(expectNoExamples);
+    }
   };
 
   verifyNoExamples = async () => {
