@@ -129,6 +129,9 @@ jobs:
 
       - name: Setup PMM3-Server
         working-directory: ./pmm-qa/codeceptjs-e2e
+        # yamllint disable rule:line-length
+        # ExecStart below is a systemd unit line inside a heredoc, not
+        # shell; systemd owns its own continuation syntax.
         run: |
           mkdir -p ~/.config/systemd/user/
           cat > ~/.config/systemd/user/pmm-server.service <<EOF
@@ -196,6 +199,7 @@ jobs:
           timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" != "200" ]]; do sleep 5; done'
           # bash -x testdata/db_setup.sh
 
+        # yamllint enable rule:line-length
       - name: Print Podman logs on failure
         if: ${{ failure() }}
         run: |

@@ -105,25 +105,25 @@ jobs:
           export PMM_CHART_BRANCH=$PMM_CHART_BRANCH
           bats --tap helm-test.bats
 
-        - name: Create status check
-          if: ${{ always() && github.event_name != 'pull_request' && inputs.sha && inputs.sha != 'null' }}
-          continue-on-error: true
-          env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-            REPO: ${{ github.repository }}
-            RUN_ID: ${{ github.run_id }}
-            SHA: ${{ inputs.sha }}
-            STATUS: ${{ job.status }}
-          run: |
-            if [ "${STATUS}" = "cancelled" ]; then
-              STATUS="error"
-            fi
-            
-            gh api \
-              --method POST \
-              -H "Accept: application/vnd.github.v3+json" \
-              /repos/$REPO/statuses/$SHA \
-              -f state="$STATUS" \
-              -f target_url="https://github.com/$REPO/actions/runs/$RUN_ID" \
-              -f description="Helm Tests status: $STATUS" \
-              -f context='actions/workflows/helm-tests'
+      - name: Create status check
+        if: ${{ always() && github.event_name != 'pull_request' && inputs.sha && inputs.sha != 'null' }}
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          SHA: ${{ inputs.sha }}
+          STATUS: ${{ job.status }}
+        run: |
+          if [ "${STATUS}" = "cancelled" ]; then
+            STATUS="error"
+          fi
+          
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            /repos/$REPO/statuses/$SHA \
+            -f state="$STATUS" \
+            -f target_url="https://github.com/$REPO/actions/runs/$RUN_ID" \
+            -f description="Helm Tests status: $STATUS" \
+            -f context='actions/workflows/helm-tests'

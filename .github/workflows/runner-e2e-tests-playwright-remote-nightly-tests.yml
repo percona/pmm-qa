@@ -146,7 +146,8 @@ jobs:
 
           launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > ${{ env.SUBSET_FILE_NAME }} || true
+          cat test_list.txt \
+            | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > ${{ env.SUBSET_FILE_NAME }} || true
           echo "$(cat ${{ env.SUBSET_FILE_NAME }})" || true
 
       - name: Check if launchable subset is empty

@@ -129,7 +129,8 @@
     - name: Prepare sysbench inside of all mysql nodes
       shell: |
         docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "CREATE DATABASE sbtest; CREATE USER 'sbtest'@'localhost' IDENTIFIED BY 'password';"
-        docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "GRANT ALL PRIVILEGES ON *.* TO 'sbtest'@'localhost'; CREATE USER 'sbtest'@'127.0.0.1' IDENTIFIED BY 'password';"
+        docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e \
+          "GRANT ALL PRIVILEGES ON *.* TO 'sbtest'@'localhost'; CREATE USER 'sbtest'@'127.0.0.1' IDENTIFIED BY 'password';"
         docker exec {{ container_prefix }}{{ item }} mysql -uroot -p{{ root_password }} -e "GRANT ALL PRIVILEGES ON *.* TO 'sbtest'@'127.0.0.1'; FLUSH PRIVILEGES;"
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type != "gr" and setup_type != "replication" #and mysql_version | replace('_', '') | int >= 84
@@ -143,7 +144,8 @@
 
     - name: Prepare data for sysbench inside of all mysql nodes
       shell: |
-        docker exec {{ container_prefix }}{{ item }} sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password --mysql-db=sbtest --tables=10 --table-size=100000 prepare
+        docker exec {{ container_prefix }}{{ item }} sysbench /usr/share/sysbench/oltp_read_write.lua --mysql-host=127.0.0.1 --mysql-port=3306 --mysql-user=sbtest --mysql-password=password \
+          --mysql-db=sbtest --tables=10 --table-size=100000 prepare
       when: setup_type != "gr" and setup_type != "replication"
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
 

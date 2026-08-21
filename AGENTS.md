@@ -127,7 +127,7 @@ One gate, two entry points, the same commands: [.github/workflows/lint.yml](.git
 | `docker-compose*.y*ml` | `docker compose config -q` | — |
 | `*.groovy` | `npm-groovy-lint --failon error` | — |
 
-The tuned severities are deliberate and phase-scoped: `.yamllint` disables `line-length`, `indentation` and `trailing-spaces`; `.github/actionlint.yaml` suppresses actionlint's embedded shellcheck. Both hold ~2000 pre-existing cosmetic findings out of the gate so the gate itself can stay at zero. Tightening either is a follow-up, not a config to loosen further.
+`.yamllint` runs `line-length` at **max 200** and `indentation` with `indent-sequences: whatever`; `trailing-spaces` is still off. 200 is where the repo's real ceiling sits: below it there is nothing left to fix, and every line above it is shell command text, so tightening the max means rewrapping provisioning commands rather than YAML. `indent-sequences: whatever` enforces mapping indentation — the kind that changes meaning — while leaving sequence style to the file, because the Ansible playbooks put `- name:` level with `tasks:` and normalising that would reindent every task block in the repo. Three block scalars carry a `# yamllint disable rule:line-length` region with the reason inline: their length lives inside a single-quoted command (or a systemd unit in a heredoc) that a backslash-newline cannot split. Keep the directive line itself bare — yamllint ignores a `disable` line that carries trailing prose.
 
 The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
 

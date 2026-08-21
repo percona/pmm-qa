@@ -188,7 +188,8 @@
 
 - name: Start permanent SQL load in background
   shell: |
-    docker exec {{ container_prefix }}1 sh -c 'nohup bash -c "while true; do echo Starting insert at \$(date +\"%Y-%m-%d %H:%M:%S\"); psql -U postgres -d test_database -f /load_pgsql.sql; sleep 30; done" > /tmp/sql_loop.log 2>&1 &'
+    docker exec {{ container_prefix }}1 sh -c \
+      'nohup bash -c "while true; do echo Starting insert at \$(date +\"%Y-%m-%d %H:%M:%S\"); psql -U postgres -d test_database -f /load_pgsql.sql; sleep 30; done" > /tmp/sql_loop.log 2>&1 &'
 
 - name: Create logical replication slots
   shell: docker exec {{ container_prefix }}1 psql -U postgres -d postgres -c "SELECT * FROM pg_create_logical_replication_slot('test_slot', 'test_decoding');"
