@@ -24,7 +24,7 @@ export default class HaproxyInstanceSummary implements DashboardInterface {
     { name: 'Session Limit', type: 'table' },
     { name: 'Maximum Observed Sessions Rate', type: 'table' },
     { name: 'Backend Data', type: 'timeSeries' },
-    { name: 'Aborted Data Transfers ', type: 'timeSeries' },
+    { name: 'Aborted Data Transfers', type: 'timeSeries' },
     { name: 'Connection Errors', type: 'timeSeries' },
     { name: 'Connection Establishment Attempts', type: 'timeSeries' },
     { name: 'Connection Reuses', type: 'timeSeries' },

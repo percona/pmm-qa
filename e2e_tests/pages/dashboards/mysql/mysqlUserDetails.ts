@@ -4,7 +4,6 @@ import DashboardInterface from '@interfaces/dashboard';
 export default class MySQLUserDetails implements DashboardInterface {
   url = 'graph/d/mysql-user/mysql-user-details';
   metrics: GrafanaPanel[] = [
-    { name: ' ', type: 'empty' },
     { name: 'Active Users', type: 'stat' },
     { name: 'Lost Connections', type: 'stat' },
     { name: 'Denied Connections', type: 'stat' },
