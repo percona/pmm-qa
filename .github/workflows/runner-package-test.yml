@@ -80,27 +80,27 @@ on:
         required: false
         type: string
       package:
-        required: true
+        required: false
         default: "pmm3-client"
         type: string
       repository:
-        required: true
+        required: false
         default: "dev-latest"
         type: string
       metrics_mode:
-        required: true
+        required: false
         default: "auto"
         type: string
       playbook:
         type: string
         default: "pmm3-client_integration"
-        required: true
+        required: false
       test_name:
         type: string
         required: false
       os:
         description: "Select OS to run test in:"
-        required: true
+        required: false
         default: "jammy"
         type: string
       sha:

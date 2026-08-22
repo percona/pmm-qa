@@ -1,0 +1,13 @@
+extends: relaxed
+
+# Cosmetic rules stay off in this phase: enabling them would mean reflowing
+# ~2000 lines of Ansible and workflow YAML nobody is otherwise touching.
+rules:
+  line-length: disable
+  indentation: disable
+  trailing-spaces: disable
+
+ignore: |
+  node_modules/
+  # Deliberately malformed fixture for the pmm-admin config-file tests.
+  cli/test-data/broken_prometheus.base.yml

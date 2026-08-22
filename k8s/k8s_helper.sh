@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 wait_for_pmm(){
     sleep 5
     kubectl wait --for=condition=Ready --selector=app.kubernetes.io/name=pmm pod --timeout=5m

@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-start.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" \"$CLAUDE_PROJECT_DIR/pmm-qa\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-start.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
       }
@@ -42,7 +42,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/block-pmm-submodules-clone.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" \"$CLAUDE_PROJECT_DIR/pmm-qa\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/block-pmm-submodules-clone.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+          },
+          {
+            "type": "command",
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" \"$CLAUDE_PROJECT_DIR/pmm-qa\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/pre-commit-lint-gate.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
       }
@@ -53,7 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/skill-gardener-review.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" \"$CLAUDE_PROJECT_DIR/pmm-qa\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/skill-gardener-review.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
       }
@@ -64,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/skill-gardener-review.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" \"$CLAUDE_PROJECT_DIR/pmm-qa\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/skill-gardener-review.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
       }
@@ -74,7 +78,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-end-cleanup.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
+            "command": "sh -c 'for d in \"$CLAUDE_PROJECT_DIR\" \"$CLAUDE_PROJECT_DIR/pmm-qa\" /home/user/pmm-qa; do h=\"$d/.claude/hooks/session-end-cleanup.sh\"; [ -f \"$h\" ] && exec bash \"$h\"; done; exit 0'"
           }
         ]
       }
