@@ -22,9 +22,9 @@ jobs:
     timeout-minutes: 20
     steps:
       # persist-credentials: false because this job runs code out of the PR it
-      # is checking -- it sources .claude/hooks/lib/install-linters.sh and runs
-      # `npm ci` twice, both of which execute PR-controlled content. The default
-      # leaves GITHUB_TOKEN readable in .git/config for that code.
+      # is checking -- lint-changed.sh, the installers it sources, and `npm ci`
+      # all execute PR-controlled content. The default leaves GITHUB_TOKEN
+      # readable in .git/config for that code, and nothing here pushes.
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -38,61 +38,18 @@ jobs:
           terraform_version: 1.9.8
           terraform_wrapper: false
 
-      # Same versions the commit gate installs, so local and CI agree.
-      - name: Install linters
+      # npm ci rather than letting the dispatcher's ensure_node_modules fall
+      # back to npm install: CI should install exactly what the lockfile says.
+      - name: Install workspace dependencies
         run: |
           set -euo pipefail
-          . .claude/hooks/lib/install-linters.sh
-          ensure_all_linters
+          for ws in e2e_tests cli; do (cd "$ws" && npm ci); done
 
-      - name: eslint + tsc (e2e_tests)
-        if: ${{ !cancelled() }}
-        working-directory: e2e_tests
-        run: |
-          npm ci
-          npm run lint
-
-      - name: eslint + tsc (cli)
-        if: ${{ !cancelled() }}
-        working-directory: cli
-        run: |
-          npm ci
-          npm run lint
-
-      - name: yamllint
-        if: ${{ !cancelled() }}
-        run: yamllint --strict .
-
-      - name: actionlint
-        if: ${{ !cancelled() }}
-        run: actionlint
-
-      - name: shellcheck
-        if: ${{ !cancelled() }}
-        run: git ls-files -z '*.sh' | xargs -0 --no-run-if-empty shellcheck -S warning
-
-      - name: ruff
-        if: ${{ !cancelled() }}
-        run: |
-          ruff --version
-          git ls-files -z '*.py' | xargs -0 --no-run-if-empty ruff check
-
-      - name: terraform fmt
-        if: ${{ !cancelled() }}
-        run: terraform fmt -check -recursive terraform/
-
-      - name: hadolint
-        if: ${{ !cancelled() }}
-        run: |
-          git ls-files -z '*Dockerfile*' \
-            | xargs -0 --no-run-if-empty hadolint --failure-threshold error
-
-      - name: docker compose config
-        if: ${{ !cancelled() }}
-        run: |
-          set -euo pipefail
-          status=0
-          while IFS= read -r f; do
-            (cd "$(dirname "$f")" && docker compose -f "$(basename "$f")" config -q) || status=1
-          done < <(git ls-files '*docker-compose*.yml' '*docker-compose*.yaml')
-          exit $status
+      # One call, because .claude/hooks/lint-changed.sh already owns the
+      # which-linter-for-which-file mapping and the PreToolUse commit gate calls
+      # the same script. Re-listing the linters here is how CI and the local
+      # gate drift apart. The dispatcher runs every group before returning, so a
+      # run still reports all failures at once, and it prints a `==> <linter>`
+      # header per group so the log stays readable.
+      - name: Lint (all tracked files)
+        run: git ls-files -z | xargs -0 bash .claude/hooks/lint-changed.sh
