@@ -13,7 +13,6 @@ set -euo pipefail
 ENV_FILE=${1:?usage: deploy.sh /path/to/.env [people_dir] [ssh_pubkey_file]}
 PEOPLE_DIR_IN=${2:-}
 PUBKEY_FILE=${3:-}
-HERE=$(cd "$(dirname "$0")" && pwd)
 LABEL=${RELAY_LABEL:-pmm-ai-relay}
 # relay.js is pulled from the pmm-qa clone on the box (see runcmd), NOT baked
 # into cloud-init -- it outgrew Linode's 16KB user_data cap. REF picks the ref

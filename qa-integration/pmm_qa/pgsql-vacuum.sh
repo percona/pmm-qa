@@ -35,10 +35,14 @@ pmm-admin add postgresql --username=postgres --password=YIn7620U1SUc pgsql_vacuu
 j=0
 while [ $j -lt 3 ]
 do
-    export LENGTH=$(shuf -i 100-120 -n 1)
-    export LENGTH_NEW=$(shuf -i 100-120 -n 1)
-    export TABLE=$(shuf -i 1-1000 -n 1)
-    export COUNT=$(docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "select count(*) from film_testing_${TABLE} where length=${LENGTH};" | tail -3 | head -1 | xargs)
+    LENGTH=$(shuf -i 100-120 -n 1)
+    export LENGTH
+    LENGTH_NEW=$(shuf -i 100-120 -n 1)
+    export LENGTH_NEW
+    TABLE=$(shuf -i 1-1000 -n 1)
+    export TABLE
+    COUNT=$(docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "select count(*) from film_testing_${TABLE} where length=${LENGTH};" | tail -3 | head -1 | xargs)
+    export COUNT
     docker exec pgsql_vacuum_db psql -U postgres -d dvdrental -c "delete from film_testing_${TABLE} where length=${LENGTH};"
     i=0
     while [ "$i" -le ${COUNT} ]; do

@@ -32,7 +32,7 @@ works around the first limit; it doesn't try to work around the second
 ## Runbook
 
 | Operation | How |
-|---|---|
+| --- | --- |
 | Onboard a person | Slack + Jira IDs are already resolved for the whole team and pre-filled in `people/<name>.json`, so they send **only their routine id(s)+token(s)**. Then either ask a Claude session on this repo to bake `people/<name>.json` into the server, or Lish → `nano /opt/pmm-ai-relay/people/<name>.json` → paste → save. Hot-reloaded, no restart. Mirror the file as a LastPass **PMM** note. |
 | First activation | When the Slack app tokens exist: hand them to a Claude session (final rebuild, service auto-starts) or Lish → edit `.env` → `touch /opt/pmm-ai-relay/.env.ready && systemctl restart pmm-ai-relay`. |
 | Code/config change | Rebuild via the Linode API (same instance/IP/root password): a Claude session on this repo can do it, or run `./relay/deploy.sh .env people_dir/` with the files from LastPass. |
@@ -168,7 +168,7 @@ own prompt is just "read `router.md` and follow it," not a mega-prompt
 trying to guess intent itself:
 
 | Channel (placeholder) | Routine | Notes |
-|---|---|---|
+| --- | --- | --- |
 | PMM QA channel(s) | `PMM AI` | Fires `router.md`, which matches the mention to test-runner / investigator / fb-reporter by description, or just answers directly if it's a general question. |
 | Prod/support channel(s) | `PMM AI` (same Routine) | No separate agent needed here — a suspected customer-reported bug, or a "is this expected?" question, is one of `investigator`'s own direct-ask outcomes (`.claude/agents/investigator.md` workflow step 3b), not a distinct triage step in front of it. `router.md` sends it there like anything else that looks like a bug report. |
 

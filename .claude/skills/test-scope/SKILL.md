@@ -18,7 +18,7 @@ Unless a dimension below applies, the change is tested on the **default single-s
 For each, two questions: **does the ticket say so** (labels, AC, an explicit note), and **does the diff touch it**. If either is yes, add it to the plan and note why.
 
 | Dimension | Spot it by | Then |
-|-----------|-----------|------|
+| ----------- | ----------- | ------ |
 | **High Availability** | ticket flags HA; diff touches leader-elected services, shared/externalised state, VMAgent scraping, Grafana clustering, `PMM_HA_*`, or the `pmm-ha` charts/operators | test on HA — `linode-ha-provisioning`. Full criteria: [references/ha.md](references/ha.md) |
 | **Upgrade** | ticket is about upgrade/migration; diff adds a DB migration, changes on-disk/`/srv` layout, or default settings | provision the **previous** GA, then upgrade to the build under test and re-verify (single-server unless the change is also HA) |
 | **DB / version matrix** | change is specific to a DB flavour or version (MySQL 8.4, MongoDB PSMDB, PG 16, etc.) | provision the specific engine/version the ticket names via `pmm-framework --database`; don't only test the default |

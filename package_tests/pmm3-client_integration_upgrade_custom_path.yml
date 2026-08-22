@@ -50,7 +50,9 @@
     register: latest_release
 
   - name: Detect and save previous release version
-    shell: "wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | grep -E '[[:digit:]]\\.[[:digit:]]+\\.[[:digit:]]' | tail -n2 | head -n1"
+    shell: >-
+      wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name | grep -v latest | sort -V | grep -E '[[:digit:]]\.[[:digit:]]+\.[[:digit:]]' | tail
+      -n2 | head -n1
     register: old_release
 
   - set_fact:
