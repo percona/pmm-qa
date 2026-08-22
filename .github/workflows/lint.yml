@@ -21,7 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # persist-credentials: false because this job runs code out of the PR it
+      # is checking -- it sources install-linters.sh and runs `npm ci` twice,
+      # both of which execute PR-controlled content. The default leaves
+      # GITHUB_TOKEN readable in .git/config, and nothing here pushes.
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Sourced by session-start.sh (eager) and lint-changed.sh (lazy). Every
-# ensure_* is a no-op when the tool is already on PATH, so it is safe to call
-# from a pre-commit gate on every commit.
+# Sourced by session-start.sh (eager) and lint-changed.sh (lazy). Each ensure_*
+# is a no-op once the pinned version is present, so it is safe to call from a
+# pre-commit gate on every commit.
 
 ACTIONLINT_VERSION="1.7.7"
 HADOLINT_VERSION="2.13.1"
 RUFF_VERSION="0.15.8"
+NPM_GROOVY_LINT_VERSION="15.2.0"
 
 # Refuse to install a downloaded binary whose sha256 is not the one recorded
 # beside its version below. A pinned tag is not enough on its own: a release
@@ -19,6 +20,26 @@ _lint_verify_sha256() {
   [ "$got" = "$want" ] && return 0
   echo "checksum mismatch for $file: expected $want, got ${got:-none}" >&2
   return 1
+}
+
+# A pin only holds if the binary actually on PATH is the pinned one. `command
+# -v` alone let any build decide the findings, which is how CI and a local
+# session came to disagree about ruff. Returns 0 when $1 --version reports $2.
+_lint_version_is() {
+  local bin="$1" want="$2" got
+  command -v "$bin" >/dev/null 2>&1 || return 1
+  got=$("$bin" --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+(\.[0-9]+)?' | head -1)
+  [ "$got" = "$want" ]
+}
+
+# Called when the wrong version is already installed and the pinned one could
+# not be fetched. Warns and accepts what is there: a hard failure would make the
+# commit gate unusable on a machine without sudo or network, and a gate that
+# runs with a near-miss version is worth more than one that refuses to run.
+_lint_version_fallback() {
+  local bin="$1" want="$2"
+  echo "warning: $bin is not the pinned $want and the pinned build could not be installed; using $(command -v "$bin")" >&2
+  command -v "$bin" >/dev/null 2>&1
 }
 
 _lint_apt_install() {
@@ -41,13 +62,14 @@ ensure_yamllint() {
 }
 
 ensure_ruff() {
-  command -v ruff >/dev/null 2>&1 && return 0
-  pipx install "ruff==${RUFF_VERSION}" >/dev/null 2>&1 \
+  _lint_version_is ruff "$RUFF_VERSION" && return 0
+  pipx install --force "ruff==${RUFF_VERSION}" >/dev/null 2>&1 \
     || pip3 install --user --break-system-packages "ruff==${RUFF_VERSION}" >/dev/null 2>&1
+  _lint_version_is ruff "$RUFF_VERSION" || _lint_version_fallback ruff "$RUFF_VERSION"
 }
 
 ensure_actionlint() {
-  command -v actionlint >/dev/null 2>&1 && return 0
+  _lint_version_is actionlint "$ACTIONLINT_VERSION" && return 0
   local arch tmp sha
   case "$(uname -m)" in
     x86_64) arch=amd64 sha=023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757 ;;
@@ -55,18 +77,19 @@ ensure_actionlint() {
     *) return 1 ;;
   esac
   tmp="$(mktemp -d)"
-  curl -fsSL -o "$tmp/actionlint.tar.gz" \
+  curl -fsSL --connect-timeout 10 --max-time 120 -o "$tmp/actionlint.tar.gz" \
     "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_${arch}.tar.gz" \
     && _lint_verify_sha256 "$tmp/actionlint.tar.gz" "$sha" \
     && tar -xzf "$tmp/actionlint.tar.gz" -C "$tmp" actionlint \
     && sudo install -m0755 "$tmp/actionlint" /usr/local/bin/actionlint
   local rc=$?
   rm -rf "$tmp"
-  return $rc
+  [ $rc -eq 0 ] && return 0
+  _lint_version_fallback actionlint "$ACTIONLINT_VERSION"
 }
 
 ensure_hadolint() {
-  command -v hadolint >/dev/null 2>&1 && return 0
+  _lint_version_is hadolint "$HADOLINT_VERSION" && return 0
   local arch tmp sha
   case "$(uname -m)" in
     x86_64) arch=x86_64 sha=f8b05e4c724cdeb84c0dca07e40936c3d875c0af5d120a27c94026a0f370b2cf ;;
@@ -74,18 +97,21 @@ ensure_hadolint() {
     *) return 1 ;;
   esac
   tmp="$(mktemp -d)"
-  curl -fsSL -o "$tmp/hadolint" \
+  curl -fsSL --connect-timeout 10 --max-time 120 -o "$tmp/hadolint" \
     "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-Linux-${arch}" \
     && _lint_verify_sha256 "$tmp/hadolint" "$sha" \
     && sudo install -m0755 "$tmp/hadolint" /usr/local/bin/hadolint
   local rc=$?
   rm -rf "$tmp"
-  return $rc
+  [ $rc -eq 0 ] && return 0
+  _lint_version_fallback hadolint "$HADOLINT_VERSION"
 }
 
 ensure_npm_groovy_lint() {
-  command -v npm-groovy-lint >/dev/null 2>&1 && return 0
-  npm install -g npm-groovy-lint >/dev/null 2>&1
+  _lint_version_is npm-groovy-lint "$NPM_GROOVY_LINT_VERSION" && return 0
+  npm install -g "npm-groovy-lint@${NPM_GROOVY_LINT_VERSION}" >/dev/null 2>&1
+  _lint_version_is npm-groovy-lint "$NPM_GROOVY_LINT_VERSION" \
+    || _lint_version_fallback npm-groovy-lint "$NPM_GROOVY_LINT_VERSION"
 }
 
 # Playwright workspaces carry their own eslint/tsc; install on first use only.

@@ -13,7 +13,13 @@ QA_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 input=$(cat)
 command=$(jq -r '.tool_input.command // empty' <<<"$input")
 
-grep -qE '(^|[;&|(]|&&|\|\|)[[:space:]]*git[[:space:]]+([-a-zA-Z0-9=_/.]+[[:space:]]+)*commit\b' <<<"$command" || exit 0
+# A git option's argument may be quoted -- `git -C "$REPO" commit`,
+# `git -c user.name="A B" commit` -- and a character class of bare option
+# characters silently misses every one of those, letting an ordinary commit past
+# the gate. Tokens are matched as quoted-or-unquoted instead.
+git_token='("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:];&|()]+)'
+grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*git([[:space:]]+${git_token})*[[:space:]]+commit([[:space:]]|\$)" \
+  <<<"$command" || exit 0
 
 # Only gate commits landing in pmm-qa; sibling clones have their own tooling.
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0

@@ -34,6 +34,9 @@ def test_pmm_services():
         assert "rs" in service['service_name'] or "mongos" in service['service_name']
         if "mongos" not in service['service_name']:
             pytest.service_id = service['service_id']
+    assert pytest.service_id, \
+        f"no replica-set member among {[s['service_name'] for s in mongodb]}; " \
+        "the later restore tests need one"
     print('This service_id will be used in the next steps')
     print(pytest.service_id)
 
