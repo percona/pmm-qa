@@ -135,6 +135,36 @@ actionlint's embedded shellcheck is on at its own default severity — info and 
 
 The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
 
+### Why not a bundled linter action
+
+[super-linter](https://github.com/super-linter/super-linter) has been evaluated
+twice and declined both times; the reasoning, so it does not need re-deriving:
+
+- **It cannot serve the commit gate.** It runs locally only as
+  `docker run` over the whole workspace, and the image is 1.34 GB (slim) to
+  1.81 GB. Per-commit that is unusable, so the gate would still need
+  `install-linters.sh` and `lint-changed.sh` — and CI would then hold a second
+  copy of the linter mapping, which is the duplication `lint.yml` was collapsed
+  to 55 lines to remove.
+- **It does not remove the configs.** `.yamllint`, `ruff.toml` and
+  `.github/actionlint.yaml` are decisions about *this* repo, not wiring, and
+  super-linter reads the same files. Dropping them for its defaults means
+  roughly 5300 findings — 2502 from yamllint alone at `line-length: 80`.
+- **It does not remove the maintenance either.** Its upgrade guide removes
+  linters and variables between majors (16 variables in v7→v8), renames default
+  config filenames, and has added linters in a *minor* bump (v8.1→8.2 added the
+  Ruff formatter and Biome, with documented conflicts). That is the same drift
+  class as the unpinned ruff above, with more tools behind one tag.
+- **It drops three checks we run:** `tsc --noEmit` (it type-checks via eslint
+  only), `docker compose config -q` over the 21 compose files, and the
+  workspace-aware `npm run lint` that resolves each workspace's own plugins.
+
+The tools it would have brought that are worth having were taken directly
+instead: pinned checksums on the downloaded binaries, and a pinned ruff.
+`zizmor` (workflow-security auditing, which would have caught the
+`persist-credentials` issue in `lint.yml`) is still an open candidate — it is a
+single small binary, unlike the image.
+
 ## Playwright E2E Suite (`e2e_tests/`)
 
 Preferred location for all new UI tests. See [e2e_tests/README.md](e2e_tests/README.md) for full setup and run instructions.
