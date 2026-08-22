@@ -1,5 +1,6 @@
 import subprocess
 
+
 def verify_command(command):
     """
     Executes shell specified command and return the console output.
@@ -26,9 +27,8 @@ if __name__ == '__main__':
                 if "pmm_agent" in line:
                     if "connected" not in line.lower():
                         errors.append(f"pmm_agent status in container {container} should be 'Connected' but is: {line}")
-                else:
-                    if "running" not in line.lower() and "external-exporter" not in line.lower():
-                        errors.append(f"pmm_agent status in container {container} should be 'Running' but is: {line}")
+                elif "running" not in line.lower() and "external-exporter" not in line.lower():
+                    errors.append(f"pmm_agent status in container {container} should be 'Running' but is: {line}")
 
     if errors:
         raise ValueError('\n'.join(errors))
