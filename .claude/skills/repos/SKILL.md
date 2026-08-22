@@ -8,7 +8,7 @@ description: PMM GitHub repository map, GitHub access (MCP-first), and rules for
 ## Product & QA
 
 | Repo | Remote | Agent may open PR? |
-|------|--------|-------------------|
+| ------ | -------- | ------------------- |
 | `percona/pmm-qa` | QA tests, provisioning | **Yes** (Test Runner, Investigator, FB Reporter) |
 | `percona/pmm` | PMM server monorepo | **No** (read/diff only) |
 | `percona/grafana` | Grafana UI | **No** (read/diff only) |
@@ -28,7 +28,7 @@ repos/{owner}/{repo}/...` is a **fallback only where `gh` is actually present**
 Tool map (what replaces each old `gh` recipe):
 
 | Need | GitHub MCP tool | `gh` fallback (only if present) |
-|------|-----------------|-------------------------------|
+| ------ | ----------------- | ------------------------------- |
 | Your GitHub login (for `X-Actor`) | `get_me` → `.login` | `gh api user --jq .login` |
 | List PRs (page through all before dedup) | `list_pull_requests` / `search_pull_requests` (`perPage: 100`, bump `page` until a short page) | `gh api --paginate "repos/{o}/{r}/pulls?state=..."` |
 | PR details / diff / files / commits | `pull_request_read` (`get` / `get_diff` / `get_files` / `get_commits`) | `gh api repos/{o}/{r}/pulls/<n>` (+ `Accept: …diff`) |

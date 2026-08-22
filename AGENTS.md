@@ -32,7 +32,7 @@ This file is the **single authoritative entry point** for AI agents working with
 Each test suite has its own dependency manifest, lint config and runner. **Read the linked docs before contributing.** Most suites assume `pmm-framework` (the bash CLI under [qa-integration/](qa-integration/)) has already provisioned the required PMM Client and DB containers on the `pmm-qa` Docker network.
 
 | Directory | Purpose | Docs / entry point |
-|-----------|---------|--------------------|
+| ----------- | --------- | -------------------- |
 | [cli/](cli/) | Playwright-runner CLI tests for `pmm-admin` (no browser) | [README.md](cli/README.md) · [playwright.config.ts](cli/playwright.config.ts) |
 | [codeceptjs-e2e/](codeceptjs-e2e/) | **Legacy** CodeceptJS UI e2e suite — do not add new coverage unless extending an area that exists only here | [README.md](codeceptjs-e2e/README.md) · [CONTRIBUTING.md](codeceptjs-e2e/CONTRIBUTING.md) |
 | [e2e_tests/](e2e_tests/) | **Active** Playwright UI e2e suite — preferred for all new UI tests | [README.md](e2e_tests/README.md) · [CONTRIBUTING.md](e2e_tests/CONTRIBUTING.md) · [playwright.config.ts](e2e_tests/playwright.config.ts) · [fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) |
@@ -116,7 +116,7 @@ Full Release-Candidate testing is **not** driven from this repo. The orchestrato
 One gate, two entry points, the same commands: [.github/workflows/lint.yml](.github/workflows/lint.yml) runs it repo-wide in CI, and the `PreToolUse` hook [.claude/hooks/pre-commit-lint-gate.sh](.claude/hooks/pre-commit-lint-gate.sh) runs it over the staged files before an agent's `git commit`. Both dispatch through [.claude/hooks/lint-changed.sh](.claude/hooks/lint-changed.sh), which picks the linter per file kind and lazily installs whatever is missing via [.claude/hooks/lib/install-linters.sh](.claude/hooks/lib/install-linters.sh) — the same installers `session-start.sh` runs eagerly.
 
 | File kind | Command | Config |
-|-----------|---------|--------|
+| ----------- | --------- | -------- |
 | `*.ts` | `npm run lint` in the owning workspace (eslint + `tsc --noEmit`) | `e2e_tests/eslint.config.mjs`, `cli/.eslintrc.json` |
 | `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
 | `.github/workflows/*` | `actionlint` (embedded shellcheck at default severity) | [.github/actionlint.yaml](.github/actionlint.yaml) |
@@ -182,7 +182,7 @@ Preferred location for all new UI tests. See [e2e_tests/README.md](e2e_tests/REA
 ### Test areas (`e2e_tests/tests/`)
 
 | Area | Path | Notes |
-|------|------|-------|
+| ------ | ------ | ------- |
 | Access control | `accessControl/` | LBAC and permissions |
 | Alerting | `api/alerting/` | Alerting permissions API |
 | Dashboards | `dashboards/` | MySQL, Valkey, image renderer |
@@ -197,6 +197,7 @@ Preferred location for all new UI tests. See [e2e_tests/README.md](e2e_tests/REA
 ### Page Object Model
 
 Tests use class-based page objects in `e2e_tests/pages/`:
+
 - Page classes encapsulate selectors and actions
 - Locators use `data-testid` attributes where available
 - Path aliases: `@pages/*`, `@helpers/*`, `@fixtures/*` (via `tsconfig.json`)
@@ -230,6 +231,7 @@ npx playwright test --grep @inventory
 After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` when a reusable correction, repeated workflow, demonstrated improvement, or skill gap emerged. Automated post-skill passes may invoke Capture to check for such a signal; follow the skill's counter and auto-apply rules. If no lesson qualifies, write or report nothing, but still record `none` for an automated pass. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly.
 
 ### Do
+
 - Use the **Page Object Model** for Playwright browser tests — put selectors and actions in `pages/`
 - Use **`data-testid`** locators (stable, not CSS-class dependent)
 - Tag tests for CI filtering (`@inventory`, `@dashboards`, `@qan`, etc.)
@@ -240,6 +242,7 @@ After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` w
 - Read suite-specific docs before contributing to `cli/`, `codeceptjs-e2e/`, or `package_tests/`
 
 ### Don't
+
 - Don't use CSS class selectors for Grafana elements (they change across versions)
 - Don't hardcode PMM Server URLs — use `PMM_UI_URL` env var
 - Don't hardcode admin passwords — use `ADMIN_PASSWORD` env var (default `admin`)
@@ -249,7 +252,7 @@ After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` w
 ## Environment Variables
 
 | Variable | Default | Purpose |
-|----------|---------|---------|
+| ---------- | --------- | --------- |
 | `PMM_UI_URL` | `http://localhost/` | PMM Server URL |
 | `ADMIN_PASSWORD` | `admin` | Grafana/PMM admin password |
 | `WORKERS` | `1` | Playwright parallel workers |

@@ -13,7 +13,7 @@ HA is not "PMM with three replicas". Four things that are true for single-node
 PMM are false here, and each has already produced a failing run:
 
 | Assumption | Reality in HA |
-|---|---|
+| --- | --- |
 | `/prometheus/api/v1/query` returns metrics | vmproxy fronts an external VictoriaMetrics **cluster** and 500s on the single-node query path |
 | The API stays up while you poke the cluster | HAProxy routes only to the leader, so killing it 5xxs every request until a new one is elected |
 | A UI check against the API proves something | The sidebar badge *and* the Inventory Nodes page both render from `/v1/ha/nodes` |
@@ -25,7 +25,7 @@ topology, label reference and kubectl recipes.
 ## Where things live
 
 | Path | What |
-|---|---|
+| --- | --- |
 | `e2e_tests/tests/ha/` | the tests; every one tagged `@pmm-ha` |
 | `e2e_tests/helpers/k8s.helper.ts` | generic namespaced `kubectl` (`getPods`, `deletePod`, `execInPod`, `scaleStatefulSet`, `assertReachable`) |
 | `e2e_tests/helpers/haCluster.helper.ts` | HA-specific: `podNames`, `leaderFromPods`, `lastPromotionTime` |
@@ -44,7 +44,7 @@ which is exactly what the page fetches, so it would have passed even if the API
 named the wrong leader.
 
 | Asserting on | Use as truth |
-|---|---|
+| --- | --- |
 | Sidebar badge, Inventory Nodes roles, anything rendering `/v1/ha/nodes` | `haClusterHelper.leaderFromPods()` |
 | `pmm_ha_leader_status` | `/v1/ha/nodes`, or the badge — different code paths off the same Raft state |
 | A failover actually happened | `haClusterHelper.lastPromotionTime()` before vs after, on the same pod |
