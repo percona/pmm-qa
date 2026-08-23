@@ -1300,8 +1300,21 @@ module.exports = {
   },
 
   async waitForAllGraphsToHaveData(timeout = 60) {
-    await I.waitForInvisible(this.fields.notAvailableMetrics, timeout);
-    await I.waitForInvisible(this.fields.notAvailableDataPoints, timeout);
+    const deadline = Date.now() + timeout * 1000;
+
+    // A dashboard that has not rendered its panels yet contains no "N/A"/"No data"
+    // element at all, so waiting for one to disappear returns straight away. Wait for
+    // the panels first, then poll the same locator verifyThereAreNoGraphsWithoutData
+    // asserts on, so the wait and the assertion agree on what "has data" means.
+    await I.waitForVisible(this.fields.reportTitle, timeout);
+
+    while (Date.now() < deadline) {
+      if ((await this.grabRealFailedReportTitles()).length === 0) return;
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1000);
+      });
+    }
   },
 
   async waitForGraphsToHaveData(acceptableNACount = 0, timeoutInSeconds = 60) {
@@ -1330,9 +1343,7 @@ module.exports = {
 
     I.say(`Number of no data and N/A elements is = ${numberOfNAElements}`);
     if (numberOfNAElements > acceptableNACount) {
-      const titles = await this.grabFailedReportTitles(this.fields.reportTitleWithNA);
-      const realFailures = titles.filter((title) => !title.toLowerCase().includes('24') && !title.toLowerCase().includes('hour'));
-
+      const realFailures = await this.grabRealFailedReportTitles();
       const url = await I.grabCurrentUrl();
 
       if (realFailures.length > 0) {
@@ -1365,6 +1376,12 @@ module.exports = {
 
   async grabFailedReportTitles(selector) {
     return await I.grabTextFromAll(selector);
+  },
+
+  async grabRealFailedReportTitles() {
+    const titles = await this.grabFailedReportTitles(this.fields.reportTitleWithNA);
+
+    return titles.filter((title) => !title.toLowerCase().includes('24') && !title.toLowerCase().includes('hour'));
   },
 
   async expandEachDashboardRow() {
