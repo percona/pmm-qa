@@ -141,7 +141,18 @@ jobs:
       - name: Prepare launchable
         working-directory: pmm-qa/e2e_tests
         run: |
-          pip3 install --user --upgrade launchable~=1.0
+          # A PyPI read timeout here aborts the whole leg before any test runs; retry instead.
+          for attempt in 1 2 3; do
+            if pip3 install --user --upgrade --timeout 60 launchable~=1.0; then
+              break
+            fi
+            if [ "${attempt}" -eq 3 ]; then
+              echo "launchable install failed after ${attempt} attempts"
+              exit 1
+            fi
+            echo "launchable install attempt ${attempt} failed; retrying"
+            sleep $((attempt * 10))
+          done
           launchable verify || true
           
           docker pull ${{ env.DOCKER_VERSION }} || true
