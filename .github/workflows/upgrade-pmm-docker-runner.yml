@@ -103,7 +103,7 @@ jobs:
           ./pmm-framework/pmm-framework --parallel \
             --client-version="$CLIENT_VERSION" \
             --pmm-server-password="$ADMIN_PASSWORD" \
-            --database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb --database external
+            --database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb,MINIO=false --database external
 
       - name: Setup custom queries
         run: |
