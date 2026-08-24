@@ -260,14 +260,14 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 - [ ] **GitHub App Actions scope** — grant the GitHub App installation on `percona/*` **Actions: Read and write** (`rerun-failed-jobs` answers `X-Accepted-Github-Permissions: actions=write`), hit live on 2026-08-12 in [run 31549464587](https://github.com/percona/pmm-qa/actions/runs/31549464587). **Owner:** a `percona` GitHub org owner/admin (IT) — org-app installation permissions can only be changed by an org owner at `github.com/organizations/percona/settings/installations`.
 - [x] Relay infrastructure verified end-to-end 2026-08-07 (Linode up, Let's Encrypt cert trusted through the session egress proxy, /health 200, /reply and /jira auth gates 403, davi.json loaded, crash-on-bad-token fixed)
 - [x] Create the Slack app from `manifest.yaml` (done 2026-08-08)
-- [ ] Get Slack admin approval + install the `@pmm-ai` app.
-- [ ] Generate the App-Level Token (`xapp-`, scope `connections:write`).
-- [ ] Copy the Bot Token (`xoxb-`).
+- [x] Get Slack admin approval + install the `@pmm-ai` app (done 2026-08-24)
+- [x] Generate the App-Level Token (`xapp-`, scope `connections:write`) (done 2026-08-24)
+- [x] Copy the Bot Token (`xoxb-`) (done 2026-08-24)
 - [x] Generate the PMM AI routine's API token (done 2026-08-07, stored in the LastPass **PMM** note)
 - [x] Get the Test Runner routine's token (done 2026-08-07, stored in the LastPass **PMM** note)
-- [ ] Hand a session the 2 Slack tokens + routine tokens (from LastPass) to finish the relay `.env` and start it.
-- [ ] Save the completed `.env` to the LastPass **PMM** note.
-- [ ] `/invite @pmm-ai` to a channel and confirm 👀 → reply.
+- [x] Hand a session the 2 Slack tokens + routine tokens (from LastPass) to finish the relay `.env` and start it (done 2026-08-24)
+- [x] Save the completed `.env` to the LastPass **PMM** note (done 2026-08-24)
+- [x] `/invite @pmm-ai` to a channel and confirm 👀 → reply (done 2026-08-24)
 - [x] Point the Jira button automation at the relay's `POST /jira` (header `X-Relay-Secret`, body `accountId`+`text`, "Wait for response" on) (done 2026-08-17)
 - [x] Add a `{{webResponse.status}} == 404` → "not onboarded" comment to that rule (done 2026-08-17)
 - [x] Click the Jira button on a test ticket and confirm it runs (done 2026-08-17)
@@ -287,7 +287,7 @@ One dispatch, one gate: consolidating the old `/announce`, `/jira-act`, `/provis
 
 - [x] `blocked` label created in `percona/pmm-qa` (the agent applies/removes it, doesn't create it).
 - [x] `RELAY_KEY` set in the shared env + relay redeployed (2026-08-17). The Routine authenticates with `RELAY_KEY` + its `X-Actor` login (roster already in the people files). *Nothing PR-maintainer-specific remains: `POST /slack/announce` still can't reach Slack until the Slack app is live (bot token in the relay `.env`) — see the Slack section above. Until then the daily Routine runs and its announce call errors harmlessly.*
-- [ ] `/invite @pmm-ai` into `#qa-automation` (part of the Slack-app go-live).
+- [x] `/invite @pmm-ai` into `#qa-automation` (part of the Slack-app go-live) (done 2026-08-24)
 - [x] Create the daily **PR Maintainer** Routine (done — it will error on `/slack/announce` until the relay runs the new code, `RELAY_KEY` is set, and the Slack app is live; harmless until then).
 
 **Later / optional:**
