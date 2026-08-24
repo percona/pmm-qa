@@ -1,6 +1,6 @@
 ---
 name: zephyr
-description: Create, look up and update PMM test cases in Zephyr Scale (project PMM) — get the PMM-Txxxx key a new automated test needs in its title, and flip a case to Automated once it is. Use when writing a test that has no key yet, checking whether a case already exists before creating a duplicate, marking a case Needs Automation → Automated, or writing its test steps.
+description: Create, look up and update PMM test cases in Zephyr Scale (project PMM) — get the PMM-Txxxx key every automated test needs in its title. Use whenever writing a test that has no key yet (create one, status Automated), automating an existing manual case (flip it to Automated), looking a PMM-Txxxx up, or writing its test steps.
 ---
 
 # Zephyr Scale (PMM test cases)
@@ -48,27 +48,24 @@ the tags are a repo concern, so the broker rejects a `name` starting with a key.
 
 ## Workflow — from "new test" to a key in the title
 
-1. **Search first** (mandatory — duplicates are cheap to create, expensive to
-   clean up). Query with the description, or paste the whole intended test title;
-   the relay strips the `PMM-Txxxx - ` prefix and trailing `@tags` for you.
-2. **Read the candidates.** `matches` is ranked by `score`: a name containing the
-   whole query scores highest, then by how many query words the name contains
-   (a match needs ≥60% of them). Judge them yourself — a high score can still be
-   a different case, and a real duplicate can score low if it is worded
-   differently. Search once more with different words before concluding "none".
-3. **Reuse or create.** If an existing case covers the behaviour, use its key —
-   automating an already-written manual case is the normal path. Only create when
-   nothing covers it.
-4. **Create** with `create`, taking `folderId` from `folders` so the case lands
-   next to its feature instead of the project root, and `statusName` (a new case
-   defaults to `Draft`, which is rarely what you want). The response is
-   `201 {"id":…,"key":"PMM-T…"}` — that `key` is what goes into the test title.
-5. **Put the key in the test title** in the format above, and check the test's
-   suite actually reports to Zephyr (see below) before claiming the result will
-   land in a cycle.
-6. **Flip the status to `Automated`** with `set-status` once the test is written
-   and passing. That is what makes the automation visible in Zephyr — a case
-   automated but left on `Needs Automation` still reads as outstanding work.
+**Writing a new test? Create the case, don't go hunting for one.** Searching the
+2144 existing cases first is not worth the round trip when you already know you
+are writing something new.
+
+1. **Create** with `create`: `statusName: "Automated"` (a case for a test that
+   exists *is* automated — nothing should have to come back and flip it later),
+   `Version of the Product`, and a `folderId` from `folders` so it lands next to
+   its feature instead of the project root. The response is
+   `201 {"id":…,"key":"PMM-T…"}`.
+2. **Put that key in the test title** in the format above.
+3. **Check the suite actually reports to Zephyr** (see "Who reports results")
+   before telling anyone the result will land in a cycle.
+
+**Automating a case that already exists** — someone handed you a `PMM-Txxxx`, or
+you are automating a manual case sitting on `Needs Automation` — is the other
+path: reuse that key and `set-status` it to `Automated`. `search` exists for
+that lookup (and for a human asking "do we have a case for X"), not as a gate in
+front of `create`.
 
 ## Status workflow
 
@@ -78,7 +75,7 @@ case-insensitively, and rejects anything else with the full list):
 | Status | Means |
 |---|---|
 | `Needs Automation` | Manual case waiting for someone to automate it — the usual starting point |
-| `AQA In Progress` | Being automated right now |
+| `AQA In Progress` | Being automated right now. **Not used by this workflow** — a case goes straight to `Automated`; nobody should have to come back and move it |
 | `Automated` | Covered by an automated test in this repo |
 | `Manual Only` | Reviewed and deliberately left manual |
 | `Skipped` | Automated but currently skipped |
