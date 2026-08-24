@@ -18,7 +18,10 @@ only `RELAY_KEY`. Identify yourself with `X-Actor` (your GitHub login, from the
 GitHub MCP `get_me`), which the relay roster-checks. Same gate and same shape as
 the `jira` skill. The relay:
 
-- forces `projectKey: PMM` on every call;
+- forces `projectKey: PMM` on every call, and forces the **owner** of a case it
+  creates to be you — resolved from your `X-Actor` login to your Jira accountId
+  via the relay roster, so an unowned case cannot be created (and `ownerId` is
+  not a caller-settable field);
 - exposes **read, create, status and steps** — no free-form edit, no delete, and
   no execution reporting (CI posts executions itself, see "Who reports results");
 - returns the Zephyr REST response (status + body) verbatim on create/get.
@@ -56,9 +59,9 @@ the tags are a repo concern, so the broker rejects a `name` starting with a key.
 3. **Reuse or create.** If an existing case covers the behaviour, use its key —
    automating an already-written manual case is the normal path. Only create when
    nothing covers it.
-4. **Create** with `create`, taking `folderId` from `folders` so the
-   case lands next to its feature instead of the project root. `Version of the
-   Product` is **required** — see "Creating". The response is
+4. **Create** with `create`, taking `folderId` from `folders` so the case lands
+   next to its feature instead of the project root, and `statusName` (a new case
+   defaults to `Draft`, which is rarely what you want). The response is
    `201 {"id":…,"key":"PMM-T…"}` — that `key` is what goes into the test title.
 5. **Put the key in the test title** in the format above, and check the test's
    suite actually reports to Zephyr (see below) before claiming the result will
@@ -90,17 +93,6 @@ Zephyr UI between the read and the write would be lost. It is one API call apart
 so this is unlikely, but do not run `set-status` in a loop over a case somebody is
 editing.)
 
-## Creating: the required custom field
-
-The PMM project marks **`Version of the Product`** required, so a create without
-it is rejected by Zephyr (`400`) — an empty string or `null` counts as missing.
-The broker checks it up front and answers `version_of_the_product_required`
-before spending a call. Pass the PMM version the test targets:
-
-```json
-{"customFields": {"Version of the Product": "3.5.0"}}
-```
-
 ## Operations (via the relay)
 
 `POST $RELAY/zephyr/<action>` with `X-Relay-Secret: $RELAY_KEY` and
@@ -129,7 +121,7 @@ Z create "$(jq -n --arg n 'Verify user is able to add MySQL service' \
       --arg o 'Ensures the Add Service wizard registers a MySQL instance' \
       --arg v 3.5.0 \
       '{name:$n, objective:$o, folderId:1234, labels:["Automated"],
-        customFields:{"Version of the Product":$v}}')"
+        statusName:"Automated", customFields:{"Version of the Product":$v}}')"
 
 # get — read an existing key (name, folder, status, priority, labels)
 Z get "$(jq -n --arg k PMM-T2087 '{key:$k}')"
@@ -146,7 +138,7 @@ Z steps "$(jq -n --arg k PMM-T2087 '{key:$k, steps:[
 | Action | Body | Notes |
 |---|---|---|
 | `search` | `query` (required), `folderId`, `limit` (≤100, default 20) | Ranked name match, done relay-side; returns `{query, scanned, truncated, matches:[{key,name,score,folderId}]}`. `truncated:true` = the scan hit its page cap, so treat "no match" as inconclusive |
-| `create` | `name` (required, 1–255), `objective`, `precondition`, `folderId`, `labels`, `priorityName`, `statusName`, `ownerId`, `fields` (raw passthrough) | Returns Zephyr's `201 {id, key, self}` |
+| `create` | `name` (required, 1–255), `customFields` (required, see notes), `objective`, `precondition`, `folderId`, `labels`, `priorityName` (`High`/`Normal`/`Low`, default `Normal`), `statusName` (default `Draft`), `fields` (raw passthrough) | Returns Zephyr's `201 {id, key, self}`. PMM has two custom fields: **`Version of the Product` is required** — empty string and `null` count as missing, and the broker rejects it before spending a call — and `Assignee`, optional |
 | `get` | `key` (`PMM-Txxxx`) | Returns the test case verbatim; `404` if it does not exist |
 | `folders` | — | `{folders:[{id,name,parentId}], total, isLast}` for `TEST_CASE` folders |
 | `set-status` | `key`, `status` (name, case-insensitive) | Read-modify-write; returns `{key, status, statusId, previousStatusId}`. Unknown status → `400` listing the valid ones |
@@ -156,7 +148,7 @@ Errors: `400` bad input (`name_required_1_255_chars`,
 `name_must_not_start_with_a_test_case_key`, `key_must_be_a_PMM-T_key`,
 `bad_folder_id`, `query_required`, `version_of_the_product_required`,
 `status_required`, `steps_required`, `too_many_steps`, `unknown_status`),
-`403` bad `RELAY_KEY` / non-roster actor,
+`403` bad `RELAY_KEY` / non-roster actor / `owner_unresolved_add_jira_id_to_your_people_file`,
 `503 zephyr_not_configured` (key missing from the relay `.env`),
 `502 zephyr_upstream_error`, or Zephyr's own status passed through.
 
@@ -173,7 +165,7 @@ Base `https://api.zephyrscale.smartbear.com/v2`, auth
 | `GET /testcases/{testCaseKey}` | `get` | `status`/`priority`/`folder` come back as `{id, self}` links, not names |
 | `GET /testcases/nextgen` | `search` | `projectKey`, `folderId`, `limit` (≤1000), `startAtId`; cursor pagination via `nextStartAtId`. **There is no name/text search in the API** — hence the relay-side scan and ranking |
 | `GET /folders` | `folders` | `projectKey`, `folderType=TEST_CASE`, `maxResults` (≤1000). PMM has 88, so one page covers it |
-| `PUT /testcases/{testCaseKey}` | `set-status` | **Replaces the whole case** — every omitted field is cleared, and all custom fields must be present (`null` allowed for optional ones). Takes `status` as `{id}`, not a name |
+| `PUT /testcases/{testCaseKey}` | `set-status` | Whole-case replace (see "Status workflow"); takes `status` as `{id}`, not a name, and needs every custom field present — `null` for the optional ones |
 | `GET /statuses` | `set-status` | `projectKey`, `statusType=TEST_CASE` — resolves the status name to the id the PUT needs |
 | `POST /testcases/{testCaseKey}/teststeps` | `steps` | `{mode, items[]}`, ≤100 per request |
 | `POST /testexecutions` | CI only | `projectKey`, `testCaseKey`, `testCycleKey`, `statusName` (`PASS`/`FAIL`), `comment`. Not brokered — see below |

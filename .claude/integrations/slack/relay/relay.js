@@ -57,12 +57,12 @@ const WATCHED_CHANNELS = JSON.parse(process.env.WATCHED_CHANNELS || "{}");
 let bySlack = {};
 let byJira = {};
 let byName = {};
-let ghRoster = new Set(); // github logins from people files (broker roster), lowercased
+let byGithub = {}; // lowercased github login -> person (broker roster + caller identity)
 function loadPeople() {
   const s = {};
   const j = {};
   const n = {};
-  const gh = new Set();
+  const gh = {};
   let files = [];
   try {
     files = fs.readdirSync(PEOPLE_DIR).filter((f) => f.endsWith(".json"));
@@ -80,7 +80,7 @@ function loadPeople() {
       n[p.name] = p;
       if (p.slack) s[p.slack] = p;
       if (p.jira) j[p.jira] = p;
-      if (p.github) gh.add(String(p.github).toLowerCase()); // broker roster
+      if (p.github) gh[String(p.github).toLowerCase()] = p; // broker roster
     } catch (e) {
       console.error(`people: skipping bad file ${f}: ${e.message}`); // one broken file never takes the relay down
     }
@@ -88,7 +88,7 @@ function loadPeople() {
   bySlack = s;
   byJira = j;
   byName = n;
-  ghRoster = gh;
+  byGithub = gh;
   console.log(`people loaded: ${files.length} file(s), central owner "${CENTRAL_OWNER}" ${byName[CENTRAL_OWNER] ? "found" : "MISSING"}`);
 }
 
@@ -135,7 +135,7 @@ const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 // RELAY_KEY (possession) plus a caller identity. The caller sends its GitHub
 // login in X-Actor — it gets that login from `gh api user`, which the egress
 // proxy really verified — and the relay checks it against the roster (the
-// `github` logins in the people files it already loads; see ghRoster) and logs
+// `github` logins in the people files it already loads; see byGithub) and logs
 // it. No extra env var; the roster is the people directory.
 //
 // Design note: this is env-membership-grade, not cryptographically unspoofable
@@ -146,7 +146,7 @@ const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 // short op list, never account access. (Unspoofable upgrade = the push-proof
 // handshake, documented in AUTOMATIONS.) Empty roster = any login accepted.
 function rosterOk(login) {
-  return ghRoster.size === 0 || ghRoster.has(login.toLowerCase());
+  return Object.keys(byGithub).length === 0 || login.toLowerCase() in byGithub;
 }
 function identity(req) {
   const actor = String(req.headers["x-actor"] || "").trim();
@@ -687,7 +687,8 @@ async function brokerJira(action, m, by) {
 }
 
 // Zephyr Scale (SmartBear) test-case management. Project is FORCED to PMM.
-// Read + create test cases only — no update, no delete, and no execution
+// Read, create, status and steps — no free-form edit, no delete (the API has
+// none: a case is retired by moving it to Deprecated), and no execution
 // reporting (CI's own reporter posts executions with the same key from GitHub
 // Actions; see codeceptjs-e2e/tests/helper/reporter_helper.js).
 const ZEPHYR_BASE = "https://api.zephyrscale.smartbear.com/v2";
@@ -723,7 +724,13 @@ async function brokerZephyr(action, m, by) {
       // pasted a test title and would create a test case named after another.
       if (/^PMM-T[0-9]+/.test(name)) return { status: 400, body: "name_must_not_start_with_a_test_case_key" };
       const body = { ...(m.fields || {}), projectKey: "PMM", name };
-      for (const k of ["objective", "precondition", "priorityName", "statusName", "ownerId"]) if (m[k] != null) body[k] = String(m[k]);
+      for (const k of ["objective", "precondition", "priorityName", "statusName"]) if (m[k] != null) body[k] = String(m[k]);
+      // Owner is the caller, never the caller's choice: X-Actor is already
+      // roster-checked, so map that login to the person's Jira accountId. A case
+      // with no owner has nobody to chase, so an unmappable caller is refused.
+      const owner = byGithub[by.toLowerCase()]?.jira;
+      if (!owner || !/^[-:a-zA-Z0-9]{1,128}$/.test(owner)) return { status: 403, body: "owner_unresolved_add_jira_id_to_your_people_file" };
+      body.ownerId = owner;
       if (m.folderId != null) {
         if (!/^[0-9]+$/.test(String(m.folderId))) return { status: 400, body: "bad_folder_id" };
         body.folderId = Number(m.folderId);
