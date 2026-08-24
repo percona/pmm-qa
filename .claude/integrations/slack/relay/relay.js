@@ -708,6 +708,100 @@ const titleToQuery = (s) =>
     .replace(/(\s+@[\w-]+)+\s*$/, "")
     .trim();
 
+// Zephyr returns every reference — status, priority, folder, steps, linked Jira
+// issues — as a bare id or a URL, so a caller holding a test case cannot name any
+// of them. `get` resolves them from these tables, which are a few dozen rows and
+// change almost never, so they are cached rather than re-read per call.
+const ZEPHYR_LOOKUP_TTL_MS = 600_000;
+let zephyrLookups = { at: 0 };
+
+async function zephyrLookupTables(z) {
+  if (zephyrLookups.at && Date.now() - zephyrLookups.at < ZEPHYR_LOOKUP_TTL_MS) return zephyrLookups;
+  const [st, pr, fo] = await Promise.all([
+    z(`/statuses?projectKey=PMM&statusType=TEST_CASE&maxResults=100`),
+    z(`/priorities?projectKey=PMM&maxResults=100`),
+    z(`/folders?projectKey=PMM&folderType=TEST_CASE&maxResults=1000`),
+  ]);
+  if (!st.ok || !pr.ok || !fo.ok) throw new Error(`zephyr_lookup_failed statuses=${st.status} priorities=${pr.status} folders=${fo.status}`);
+  const [sj, pj, fj] = await Promise.all([st.json(), pr.json(), fo.json()]);
+  const named = (vs) => new Map((vs || []).map((v) => [v.id, v.name]));
+  zephyrLookups = {
+    at: Date.now(),
+    statuses: named(sj.values),
+    priorities: named(pj.values),
+    folders: new Map((fj.values || []).map((f) => [f.id, { name: f.name, parentId: f.parentId ?? null }])),
+  };
+  return zephyrLookups;
+}
+
+// "PMM3.x HA Tests / Failover". The guard bounds a parentId cycle.
+function zephyrFolderPath(folders, id) {
+  const parts = [];
+  for (let cur = id, depth = 0; cur != null && depth < 20; depth++) {
+    const f = folders.get(cur);
+    if (!f) break;
+    parts.unshift(f.name);
+    cur = f.parentId;
+  }
+  return parts.join(" / ") || null;
+}
+
+// Every folder at or below `root`, so a listing covers a feature's whole subtree.
+function zephyrSubtree(folders, root) {
+  const ids = new Set([root]);
+  for (const [id, f] of folders) {
+    for (let p = f.parentId, depth = 0; p != null && depth < 20; depth++) {
+      if (p === root) {
+        ids.add(id);
+        break;
+      }
+      p = folders.get(p)?.parentId ?? null;
+    }
+  }
+  return ids;
+}
+
+// A step is either inline or a call to another case. Values stay as Zephyr stores
+// them (HTML) — a broker should not lossily rewrite what it relays.
+function zephyrFlattenSteps(script) {
+  return (script?.values || []).map((s, i) =>
+    s.testCase
+      ? { index: i + 1, callsTestCase: s.testCase.testCaseKey ?? s.testCase.self ?? null }
+      : {
+          index: i + 1,
+          description: s.inline?.description ?? null,
+          testData: s.inline?.testData ?? null,
+          expectedResult: s.inline?.expectedResult ?? null,
+        },
+  );
+}
+
+// Zephyr links coverage by numeric Jira id, so a caller sees 174296 and not
+// PMM-14744. Resolved through the same service account the /jira broker uses.
+async function zephyrJiraIssues(issueIds) {
+  if (!issueIds.length || !JIRA_EMAIL || !JIRA_API_TOKEN) return [];
+  const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+  const r = await fetch("https://perconadev.atlassian.net/rest/api/2/search/jql", {
+    method: "POST",
+    signal: AbortSignal.timeout(30_000),
+    headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      jql: `project = PMM AND id in (${issueIds.join(",")})`,
+      maxResults: Math.min(issueIds.length, 100),
+      fields: ["key", "summary", "status", "issuetype"],
+    }),
+  });
+  if (!r.ok) return [];
+  const j = await r.json();
+  return (j.issues || []).map((i) => ({
+    id: Number(i.id),
+    key: i.key,
+    summary: i.fields?.summary ?? null,
+    status: i.fields?.status?.name ?? null,
+    issuetype: i.fields?.issuetype?.name ?? null,
+  }));
+}
+
 async function brokerZephyr(action, m, by) {
   if (!process.env.ZEPHYR_PMM_API_KEY) return { status: 503, body: "zephyr_not_configured" };
   const z = (p, init = {}) =>
@@ -749,7 +843,104 @@ async function brokerZephyr(action, m, by) {
       const key = String(m.key || "").trim();
       if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
       const r = await z(`/testcases/${key}`);
-      return { status: r.status, json: true, body: (await r.text()) || "{}" };
+      if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
+      const tc = await r.json();
+      const wantSteps = m.steps !== false;
+      const wantJira = m.jira !== false;
+      // Additive: the verbatim test case plus `resolved`, which names what Zephyr
+      // returns as ids. Enrichment must never cost the caller the raw read, so a
+      // failing lookup degrades to resolved.error instead of failing the call.
+      try {
+        const [tables, script, issues] = await Promise.all([
+          zephyrLookupTables(z),
+          wantSteps ? z(`/testcases/${key}/teststeps?maxResults=${MAX_STEPS}`).then((s) => (s.ok ? s.json() : null)) : null,
+          wantJira ? zephyrJiraIssues((tc.links?.issues || []).map((i) => i.issueId).filter(Boolean)) : [],
+        ]);
+        tc.resolved = {
+          status: tables.statuses.get(tc.status?.id) ?? null,
+          priority: tables.priorities.get(tc.priority?.id) ?? null,
+          folder: tc.folder?.id != null ? zephyrFolderPath(tables.folders, tc.folder.id) : null,
+          ...(wantSteps ? { steps: zephyrFlattenSteps(script) } : {}),
+          ...(wantJira ? { jiraIssues: issues } : {}),
+        };
+      } catch (e) {
+        tc.resolved = { error: e.message };
+      }
+      return { status: 200, json: true, body: JSON.stringify(tc) };
+    }
+    if (action === "list") {
+      // Every case in a folder, no query needed — `search` cannot answer "what is
+      // in this folder" because it requires a query, so callers were reduced to
+      // searching a common letter and reading `scanned`.
+      if (m.folderId != null && !/^[0-9]+$/.test(String(m.folderId))) return { status: 400, body: "bad_folder_id" };
+      const limit = Math.min(Math.max(Math.floor(Number(m.limit) || 200), 1), 1000);
+      const tables = await zephyrLookupTables(z);
+      let wanted = null;
+      if (m.folderId != null) {
+        const root = Number(m.folderId);
+        if (!tables.folders.has(root)) return { status: 400, body: "bad_folder_id" };
+        wanted = m.recursive === false ? new Set([root]) : zephyrSubtree(tables.folders, root);
+      }
+      // One folder is filtered upstream (a single short page); a subtree or the
+      // whole project is a paged scan filtered here, which costs fewer round
+      // trips than one call per folder.
+      const upstreamFolder = wanted && wanted.size === 1 ? `&folderId=${[...wanted][0]}` : "";
+      const cases = [];
+      let startAtId = 0;
+      let scanned = 0;
+      let pages = 0;
+      let truncated = false;
+      const scanStarted = Date.now();
+      for (;;) {
+        const r = await z(`/testcases/nextgen?projectKey=PMM&limit=1000&startAtId=${startAtId}${upstreamFolder}`);
+        if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
+        const j = await r.json();
+        for (const tc of j.values || []) {
+          scanned++;
+          const folderId = tc.folder?.id ?? null;
+          if (wanted && !upstreamFolder && !wanted.has(folderId)) continue;
+          cases.push({
+            key: tc.key,
+            name: String(tc.name || ""),
+            status: tables.statuses.get(tc.status?.id) ?? null,
+            priority: tables.priorities.get(tc.priority?.id) ?? null,
+            folderId,
+            folder: folderId != null ? zephyrFolderPath(tables.folders, folderId) : null,
+          });
+        }
+        pages++;
+        if (j.nextStartAtId == null) break;
+        if (pages >= ZEPHYR_SCAN_PAGES || Date.now() - scanStarted > ZEPHYR_SCAN_BUDGET_MS) {
+          truncated = true;
+          break;
+        }
+        startAtId = j.nextStartAtId;
+      }
+      cases.sort((a, b) => Number(a.key.slice(6)) - Number(b.key.slice(6)));
+      return {
+        status: 200,
+        json: true,
+        body: JSON.stringify({
+          folderId: m.folderId != null ? Number(m.folderId) : null,
+          recursive: wanted ? wanted.size > 1 : null,
+          folders: wanted ? [...wanted] : null,
+          total: cases.length,
+          scanned,
+          truncated,
+          cases: cases.slice(0, limit),
+        }),
+      };
+    }
+    if (action === "statuses") {
+      const t = await zephyrLookupTables(z);
+      return {
+        status: 200,
+        json: true,
+        body: JSON.stringify({
+          statuses: [...t.statuses].map(([id, name]) => ({ id, name })),
+          priorities: [...t.priorities].map(([id, name]) => ({ id, name })),
+        }),
+      };
     }
     if (action === "search") {
       // Zephyr v2 has NO name search, so the relay pages the project and matches
