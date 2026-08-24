@@ -198,6 +198,7 @@ export default class LeftNavigation extends BasePage {
     await pmmTest.step(`Select menu item: ${path}`, async () => {
       const parts = path.split('.');
       let node = this.buttons as NestedLocators;
+      let reExpandParent: (() => Promise<void>) | undefined;
 
       for (const [index, part] of parts.entries()) {
         const item = node[part];
@@ -205,25 +206,37 @@ export default class LeftNavigation extends BasePage {
         if (!item) throw new Error(`Menu item not found: ${part} in path: ${path}`);
         if (index < parts.length - 1 && !this.isLocator(item) && part !== 'ha' && part !== 'org') {
           const childLocator = this.getLocator((item as NestedLocators)[parts[index + 1]] as NestedLocator);
+          const expandButton = this.getLocator(item as NestedLocator)
+            ?.locator('xpath=..')
+            .getByRole('button')
+            .first();
 
-          if (childLocator && !(await childLocator.isVisible())) {
-            await this.getLocator(item as NestedLocator)
-              ?.locator('xpath=..')
-              .getByRole('button')
-              .first()
-              .click({ timeout: Timeouts.TEN_SECONDS });
-            await childLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+          if (childLocator && expandButton) {
+            const expand = async (): Promise<void> => {
+              if (!(await childLocator.isVisible())) {
+                await expandButton.click({ timeout: Timeouts.TEN_SECONDS });
+                await childLocator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+              }
+            };
+
+            await expand();
+            reExpandParent = expand;
           }
         }
         if (part === 'ha' || part === 'org') {
           const expandKey = part === 'ha' ? 'highAvailability' : 'orgManagement';
           const expandLocator = this.getLocator(node[expandKey] as NestedLocator);
-
-          await expandLocator?.click({ timeout: Timeouts.TEN_SECONDS });
-
           const expandedItem = this.getLocator(item as NestedLocator);
 
-          await expandedItem?.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+          const expand = async (): Promise<void> => {
+            if (!(await expandedItem?.isVisible())) {
+              await expandLocator?.click({ timeout: Timeouts.TEN_SECONDS });
+              await expandedItem?.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
+            }
+          };
+
+          await expand();
+          reExpandParent = expand;
         }
 
         node = item as NestedLocators;
@@ -233,11 +246,16 @@ export default class LeftNavigation extends BasePage {
 
       if (!locator) throw new Error(`No locator found for path: ${path}`);
 
-      await locator.waitFor({ state: 'visible', timeout: Timeouts.TEN_SECONDS });
-
       const currentUrl = this.page.url();
 
-      await locator.click({ timeout: Timeouts.TEN_SECONDS });
+      // The left-nav auto-collapses an expanded submenu shortly after a route
+      // change, so a nested item can flip from visible back to hidden between the
+      // visibility wait and the click landing (the PMM-T2202 traversal flake).
+      // Re-expand the parent and retry the click together until it registers.
+      await expect(async () => {
+        await reExpandParent?.();
+        await locator.click({ timeout: Timeouts.TEN_SECONDS });
+      }).toPass({ timeout: Timeouts.THIRTY_SECONDS });
       await this.page
         .waitForFunction((url) => window.location.href !== url, currentUrl, { timeout: Timeouts.TEN_SECONDS })
         .catch(Boolean);
