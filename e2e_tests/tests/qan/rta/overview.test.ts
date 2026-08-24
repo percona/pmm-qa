@@ -184,18 +184,51 @@ pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnal
     await expect(queryAnalytics.rta.builders.hostForRow('1')).toContainText(sortedHostNames[1]);
     await expect(queryAnalytics.rta.builders.hostForLastRow()).toContainText(sortedHostNames[0]);
   });
+
+  await pmmTest.step('Filter by Host substring and verify only matching rows remain', async () => {
+    const rs101HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs101')) as string;
+    const rs102HostName = sortedHostNames.find((hostName) => hostName.startsWith('rs102')) as string;
+    const [rs101HostSubstring] = rs101HostName.split('_');
+    const [rs102HostSubstring] = rs102HostName.split('_');
+
+    expect(rs101HostSubstring).not.toBe(rs101HostName);
+    expect(rs102HostSubstring).not.toBe(rs102HostName);
+    await queryAnalytics.rta.openFilters();
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostSubstring);
+    await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName)).toHaveCount(0);
+    await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName).first()).toBeVisible();
+    await queryAnalytics.rta.openFilters();
+    await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostSubstring);
+    await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName)).toHaveCount(0);
+    await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName).first()).toBeVisible();
+  });
 });
 
 pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAnalytics }, testInfo) => {
+  const dynamicHeader = 'future_export_field';
+  const dynamicValue = 'future-export-value';
+
+  await page.route(`**${queryAnalytics.rta.apiEndpoint}`, async (route) => {
+    const response = await route.fetch();
+    const body = (await response.json()) as { queries?: Record<string, unknown>[] };
+
+    for (const query of body.queries ?? []) {
+      query[dynamicHeader] = dynamicValue;
+    }
+
+    await route.fulfill({ body: JSON.stringify(body), contentType: 'application/json', response });
+  });
+  await page.reload();
+
   await pmmTest.step('Verify export is hidden while real-time updates are running', async () => {
     await expect(queryAnalytics.rta.buttons.pauseRealTimeAnalytics).toBeVisible();
     await expect(queryAnalytics.rta.buttons.export).toBeHidden();
   });
 
-  await pmmTest.step('Pause RTA, filter rows, and sort by host', async () => {
+  await pmmTest.step('Filter rows, pause RTA, and sort by host', async () => {
+    await queryAnalytics.rta.filterQueriesByText('db.runCommand');
     await queryAnalytics.rta.buttons.pauseRealTimeAnalytics.click();
     await expect(queryAnalytics.rta.buttons.export).toBeVisible();
-    await queryAnalytics.rta.filterQueriesByText('db.runCommand');
     await queryAnalytics.rta.clickHostHeader();
     await expect(queryAnalytics.rta.elements.realTimeTableRow.first()).toBeVisible();
   });
@@ -232,12 +265,153 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
 
     const csvContent = await readFile(csvPath, 'utf8');
     const csvOperationIds = Array.from(csvContent.matchAll(/^"(\d+)",/gm), (match) => match[1]);
+    const headerRow = csvContent.split('\n')[0];
+    const headers = Array.from(headerRow.matchAll(/"([^"]*)"/g), (match) => match[1]);
 
-    expect(csvContent).toContain('operation_id');
-    expect(csvContent).toContain('elapsed_exec_time_sec');
-    expect(csvContent).toContain('plan_summary');
-    expect(csvContent).toContain('raw_query');
     expect(csvOperationIds).toHaveLength(uiOperationIds.length);
     expect(csvOperationIds).toEqual(uiOperationIds);
+
+    expect(headers).toEqual(
+      expect.arrayContaining([
+        'operation_id',
+        'elapsed_exec_time_sec',
+        'db_instance_address',
+        'client_address',
+        'database_name',
+        'service',
+        'user_name',
+        'collection',
+        'operation',
+        'plan_summary',
+        'client_app_name',
+        'operation_start_time',
+        'data_capture_time',
+        'raw_query',
+        'service_id',
+        'query_text',
+      ]),
+    );
+    expect(headers.every((header) => /^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$/.test(header))).toBe(true);
+    expect(headers).toContain(dynamicHeader);
+    expect(csvContent).toContain(dynamicValue);
+    expect(headers).not.toContain('query_execution_duration');
+  });
+
+  await page.unroute(`**${queryAnalytics.rta.apiEndpoint}`);
+
+  await pmmTest.step('Verify export is disabled when no rows match the filter', async () => {
+    await queryAnalytics.rta.inputs.filterByQueryText.fill('no-such-rta-query');
+
+    await expect(queryAnalytics.rta.elements.noQueriesAvailable).toBeVisible();
+    await expect(queryAnalytics.rta.buttons.export).toBeDisabled();
   });
 });
+
+pmmTest(
+  'PMM-T2265 Verify RTA overview table state is stored in the URL and restored after refresh @rta',
+  async ({ page, queryAnalytics }) => {
+    const { rta } = queryAnalytics;
+    const expectedServiceIds = new URL(page.url()).searchParams.getAll('serviceIds');
+
+    await pmmTest.step('Set up table state', async () => {
+      expect(expectedServiceIds).toHaveLength(2);
+      await rta.buttons.pauseRealTimeAnalytics.click();
+      await rta.filterQueriesByText('db.runCommand');
+      await rta.inputs.rowsLimit.click();
+      await rta.builders.rowsPerPageOption('10').click();
+      await rta.clickElapsedTimeHeader();
+    });
+
+    await pmmTest.step('Verify table state in the URL', async () => {
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get('overview.f.queryText'))
+        .toBe('db.runCommand');
+      await expect.poll(() => new URL(page.url()).searchParams.get('overview.pageSize')).toBe('10');
+      await expect.poll(() => new URL(page.url()).searchParams.get('overview.sort')).not.toBeNull();
+      expect(new URL(page.url()).searchParams.getAll('serviceIds')).toEqual(expectedServiceIds);
+    });
+
+    await pmmTest.step('Reload the page', async () => {
+      await page.reload();
+      await rta.elements.realTimeTable.waitFor({ state: 'visible' });
+      await rta.openFiltersIfHidden();
+    });
+
+    await pmmTest.step('Verify restored table state', async () => {
+      await expect(rta.inputs.filterByQueryText).toHaveValue('db.runCommand');
+      await expect(rta.inputs.rowsLimit).toHaveText('10');
+      await expect(rta.elements.elapsedTimeColumnHeader).toHaveAccessibleName(
+        /Elapsed time Sorted by Elapsed time descending/,
+      );
+      expect(new URL(page.url()).searchParams.getAll('serviceIds')).toEqual(expectedServiceIds);
+    });
+  },
+);
+
+pmmTest(
+  'PMM-T2266 Verify RTA elapsed-time decimal filter and URL restoration @rta',
+  async ({ page, queryAnalytics }) => {
+    const { rta } = queryAnalytics;
+    const durationParameterName = 'overview.f.queryExecutionDurationMs';
+    let decimalMaximum = '';
+    let decimalMinimum = '';
+    let rowsBeforeFilter = 0;
+
+    await pmmTest.step('Set up decimal duration filters', async () => {
+      await rta.elements.realTimeTableRow.first().waitFor({ state: 'visible' });
+      await rta.buttons.pauseRealTimeAnalytics.click();
+      await rta.openFilters();
+
+      const rowCount = await rta.elements.realTimeTableRow.count();
+      const durations = (await rta.elements.durationCells.allTextContents()).map(Number.parseFloat);
+      const shortestDuration = Math.min(...durations);
+      const longestDuration = Math.max(...durations);
+
+      rowsBeforeFilter = rowCount;
+      decimalMinimum = String(Number(((shortestDuration + longestDuration) / 2).toFixed(2)));
+      decimalMaximum = String(longestDuration);
+
+      expect(longestDuration).toBeGreaterThan(shortestDuration);
+      await rta.inputs.minimumDuration.fill(decimalMinimum);
+      await rta.inputs.maximumDuration.fill(decimalMaximum);
+    });
+
+    await pmmTest.step('Verify filtered results', async () => {
+      await expect
+        .poll(async () => {
+          const values = await rta.elements.durationCells.allTextContents();
+
+          return (
+            values.length > 0 &&
+            values.length < rowsBeforeFilter &&
+            values.every(
+              (value) =>
+                Number.parseFloat(value) >= Number(decimalMinimum) &&
+                Number.parseFloat(value) <= Number(decimalMaximum),
+            )
+          );
+        })
+        .toBeTruthy();
+    });
+
+    const durationParameterValue = await pmmTest.step('Verify duration filters in the URL', async () => {
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get(durationParameterName))
+        .toEqual(expect.stringContaining(decimalMinimum));
+      await expect
+        .poll(() => new URL(page.url()).searchParams.get(durationParameterName))
+        .toEqual(expect.stringContaining(decimalMaximum));
+
+      return new URL(page.url()).searchParams.get(durationParameterName);
+    });
+
+    await pmmTest.step('Reload and verify restored duration filters', async () => {
+      await page.reload();
+      await rta.openFiltersIfHidden();
+
+      await expect(rta.inputs.minimumDuration).toHaveValue(decimalMinimum);
+      await expect(rta.inputs.maximumDuration).toHaveValue(decimalMaximum);
+      expect(new URL(page.url()).searchParams.get(durationParameterName)).toBe(durationParameterValue);
+    });
+  },
+);

@@ -14,7 +14,11 @@ ENV_FILE=${1:?usage: deploy.sh /path/to/.env [people_dir] [ssh_pubkey_file]}
 PEOPLE_DIR_IN=${2:-}
 PUBKEY_FILE=${3:-}
 HERE=$(cd "$(dirname "$0")" && pwd)
-LABEL=pmm-ai-relay
+LABEL=${RELAY_LABEL:-pmm-ai-relay}
+# relay.js is pulled from the pmm-qa clone on the box (see runcmd), NOT baked
+# into cloud-init -- it outgrew Linode's 16KB user_data cap. REF picks the ref
+# that clone checks out (default main; set PMM_QA_REF to test a branch).
+REF=${PMM_QA_REF:-main}
 
 b64() { base64 < "$1" | tr -d '\n'; }  # single line on both GNU (-w0) and BSD base64
 
@@ -25,6 +29,9 @@ Description=PMM AI Slack/Jira relay
 After=network-online.target
 
 [Service]
+# HOME is unset for systemd services; the Linode Terraform provider (run by
+# /provision -> up.sh) needs it to resolve its config path, so pin it to root's.
+Environment=HOME=/root
 EnvironmentFile=/opt/pmm-ai-relay/.env
 WorkingDirectory=/opt/pmm-ai-relay
 ExecStart=/usr/bin/node relay.js
@@ -39,10 +46,6 @@ CLOUD_INIT=$(mktemp)
 cat > "$CLOUD_INIT" <<EOF
 #cloud-config
 write_files:
-  - path: /opt/pmm-ai-relay/relay.js
-    permissions: "0644"
-    encoding: b64
-    content: $(b64 "$HERE/relay.js")
   - path: /opt/pmm-ai-relay/.env
     permissions: "0600"
     encoding: b64
@@ -68,26 +71,45 @@ fi
 
 cat >> "$CLOUD_INIT" <<'EOF'
 runcmd:
-  - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls /etc/letsencrypt/renewal-hooks/deploy
-  # self-signed fallback so the HTTPS listener always starts (the egress proxy
-  # rejects it, but the relay stays up); Let's Encrypt overwrites it if issuance works
-  - openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout /opt/pmm-ai-relay/tls/key.pem -out /opt/pmm-ai-relay/tls/cert.pem -subj "/CN=139-162-176-43.ip.linodeusercontent.com" -addext "subjectAltName=DNS:139-162-176-43.ip.linodeusercontent.com,IP:139.162.176.43"
+  - mkdir -p /opt/pmm-ai-relay/people /opt/pmm-ai-relay/tls /opt/pmm-ai-relay/lke-runs /etc/letsencrypt/renewal-hooks/deploy
   - curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-  - apt-get install -y nodejs certbot
-  # HTTP-01 on port 80 (relay listens on 443/8787, so 80 is free); LE validates
-  # from the public internet, bypassing the session egress proxy entirely
-  - certbot certonly --standalone --non-interactive --agree-tos -m davi.travaglia@percona.com -d 139-162-176-43.ip.linodeusercontent.com --http-01-port 80 || echo "LE issuance failed - relay will run on self-signed (unreachable through proxy)"
-  - 'if [ -f /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem ]; then cp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem; cp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/privkey.pem /opt/pmm-ai-relay/tls/key.pem; fi'
-  # renewal: refresh the copied cert and restart the relay
-  - printf '#!/bin/sh\ncp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem\ncp /etc/letsencrypt/live/139-162-176-43.ip.linodeusercontent.com/privkey.pem /opt/pmm-ai-relay/tls/key.pem\nsystemctl restart pmm-ai-relay\n' > /etc/letsencrypt/renewal-hooks/deploy/relay.sh
-  - chmod +x /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+  - apt-get install -y nodejs certbot git unzip jq python3-pip
+  # HA/LKE toolchain so /linode/provision-lke + /linode/destroy-lke can run the
+  # linode-ha-provisioning scripts here (the LINODE_TOKEN stays on this box).
+  # The reaper itself uses the Linode API directly, so it does not depend on these.
+  - pip3 install --break-system-packages linode-cli 2>/dev/null || pip3 install linode-cli
+  - curl -fsSL "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl && chmod +x /usr/local/bin/kubectl
+  - curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  # terraform + the pmm-qa module so /linode/provision + /linode/destroy can run linode-runner
+  # here (the LINODE_TOKEN stays on this box, never in the shared Claude env)
+  - curl -fsSL https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip -o /tmp/tf.zip && unzip -o /tmp/tf.zip -d /usr/local/bin && rm -f /tmp/tf.zip
+  - git clone --depth 1 --branch __PMM_QA_REF__ https://github.com/percona/pmm-qa.git /opt/pmm-qa || git clone --depth 1 https://github.com/percona/pmm-qa.git /opt/pmm-qa
+  # relay.js comes from the clone (not baked -- keeps user_data under 16KB)
+  - cp /opt/pmm-qa/.claude/integrations/slack/relay/relay.js /opt/pmm-ai-relay/relay.js
+  # Derive this box's OWN hostname (Linode rDNS <ip-dashes>.ip.linodeusercontent.com)
+  # so the same image works for any relay IP -- not pinned to one reserved IP.
+  # One shell block so $HOST persists; certbot validates over public HTTP-01.
+  - |
+    PUBIP=$(curl -fsS --max-time 15 https://api.ipify.org || ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+    HOST="$(echo "$PUBIP" | tr '.' '-').ip.linodeusercontent.com"
+    echo "relay host: $HOST ($PUBIP)"
+    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -keyout /opt/pmm-ai-relay/tls/key.pem -out /opt/pmm-ai-relay/tls/cert.pem -subj "/CN=$HOST" -addext "subjectAltName=DNS:$HOST,IP:$PUBIP"
+    certbot certonly --standalone --non-interactive --agree-tos -m davi.travaglia@percona.com -d "$HOST" --http-01-port 80 || echo "LE issuance failed - relay stays on self-signed"
+    if [ -f "/etc/letsencrypt/live/$HOST/fullchain.pem" ]; then cp "/etc/letsencrypt/live/$HOST/fullchain.pem" /opt/pmm-ai-relay/tls/cert.pem; cp "/etc/letsencrypt/live/$HOST/privkey.pem" /opt/pmm-ai-relay/tls/key.pem; fi
+    printf '#!/bin/sh\ncp /etc/letsencrypt/live/%s/fullchain.pem /opt/pmm-ai-relay/tls/cert.pem\ncp /etc/letsencrypt/live/%s/privkey.pem /opt/pmm-ai-relay/tls/key.pem\nsystemctl restart pmm-ai-relay\n' "$HOST" "$HOST" > /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+    chmod +x /etc/letsencrypt/renewal-hooks/deploy/relay.sh
+    if grep -q '^REPLY_BASE_URL=' /opt/pmm-ai-relay/.env; then sed -i "s#^REPLY_BASE_URL=.*#REPLY_BASE_URL=https://$HOST#" /opt/pmm-ai-relay/.env; else echo "REPLY_BASE_URL=https://$HOST" >> /opt/pmm-ai-relay/.env; fi
   - cd /opt/pmm-ai-relay && npm install @slack/bolt
   - systemctl daemon-reload
   - systemctl enable --now pmm-ai-relay
 EOF
 
+# Bake the chosen ref into the runcmd clone (heredoc above is single-quoted).
+sed -i "s|__PMM_QA_REF__|$REF|g" "$CLOUD_INIT"
+
 # gzip: Linode caps decoded user_data at 16KB and cloud-init transparently
-# handles gzipped input; the embedded relay.js pushes the plain form past the cap
+# handles gzipped input. relay.js is fetched from the clone (not baked) to stay
+# under that cap; only .env + the unit are baked here.
 USER_DATA=$(gzip -9 -c "$CLOUD_INIT" | { base64 -w0 2>/dev/null || base64; })
 # Keep the team's known root password across rebuilds: export RELAY_ROOT_PASS
 # (from the LastPass "PMM" folder) before running. Only generates a fresh one
@@ -108,10 +130,10 @@ if [ -n "$ID" ]; then
   curl -sS --fail-with-body -X POST "${HDR[@]}" "$API/$ID/rebuild" -d "$BODY" | jq '{id,label,ipv4,status}'
 else
   echo "Creating new $LABEL"
-  BODY=$(jq -n --arg pass "$ROOT_PASS" --arg ud "$USER_DATA" --argjson keys "$AUTH_KEYS" \
-    '{label:"pmm-ai-relay", type:"g6-nanode-1", region:"eu-central", image:"linode/ubuntu24.04",
+  BODY=$(jq -n --arg pass "$ROOT_PASS" --arg ud "$USER_DATA" --argjson keys "$AUTH_KEYS" --arg label "$LABEL" \
+    '{label:$label, type:"g6-nanode-1", region:"eu-central", image:"linode/ubuntu24.04",
       root_pass:$pass, authorized_keys:$keys, backups_enabled:false,
-      tags:["pmm-ai","relay","do-not-delete"], metadata:{user_data:$ud}}')
+      tags:["pmm-ai","relay"], metadata:{user_data:$ud}}')
   curl -sS --fail-with-body -X POST "${HDR[@]}" "$API" -d "$BODY" | jq '{id,label,ipv4,status}'
 fi
 

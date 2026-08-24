@@ -26,6 +26,7 @@ const config: PlaywrightTestConfig = {
     ['list'],
     ['html', { open: 'never', outputFolder: './playwright-report' }],
     ['json', { outputFile: 'output/results.json' }],
+    ['junit', { outputFile: 'output/junit.xml' }],
   ],
   retries: process.env.CI ? 2 : 0,
   testDir: './tests',

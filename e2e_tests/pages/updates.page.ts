@@ -22,7 +22,7 @@ export default class UpdatesPage extends BasePage {
   };
   elements = {
     availableSection: this.page.getByRole('heading', { name: /New update available/i }),
-    newVersionLine: this.page.locator('p').filter({ hasText: 'New version:' }),
+    newVersionLine: this.page.getByText('New version:'),
     pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
     updateSuccess: this.page.getByText('PMM Server installation complete!'),
   };

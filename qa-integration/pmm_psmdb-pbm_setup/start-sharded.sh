@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+source "$(dirname "${BASH_SOURCE[0]}")/wait-for-pmm-agent.sh"
+
 pmm_mongo_user=${PMM_MONGO_USER:-${PMM_USER:-pmm}}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-${PMM_PASS:-pmmpass}}
 pbm_user=${PBM_USER:-pbm}
@@ -322,6 +324,7 @@ do
     echo "configuring pmm agent on $node"
     rs=$(echo $node | awk -F "0" '{print $1}')
     docker compose -f docker-compose-sharded.yaml exec -T -e PMM_AGENT_SETUP_NODE_NAME=${node}._${random_number} $node pmm-agent setup
+    wait_for_pmm_agent docker-compose-sharded.yaml "$node"
     docker compose -f docker-compose-sharded.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=mongo-sharded-dev --cluster=sharded --replication-set=${rs} --username=${pmm_mongo_user} --password=${pmm_mongo_user_pass} --host=${node} --port=27017 ${node}_${random_number}
 done
 
