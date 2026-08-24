@@ -47,9 +47,18 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "UserPromptSubmit": [
       {
-        "matcher": "Skill",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'n=skill-gardener-review.sh; for d in \"$CLAUDE_PROJECT_DIR\" \"$PWD\" /workspace/pmm-qa; do h=\"$d/.claude/hooks/$n\"; [ -f \"$h\" ] && exec bash \"$h\"; done; echo \"pmm-qa: hook $n not found (CLAUDE_PROJECT_DIR=$CLAUDE_PROJECT_DIR PWD=$PWD)\" >&2; exit 0'"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
         "hooks": [
           {
             "type": "command",

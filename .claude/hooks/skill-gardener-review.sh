@@ -1,49 +1,37 @@
 #!/usr/bin/env bash
-# Review completed skills on PostToolUse.
-# JSON is parsed with node, which this repository already requires.
-# The ConfigChange branch below is dormant: Claude Code has no such hook event,
-# so nothing invokes it -- kept so the counter reset works if one ever ships.
+# Inject lightweight skill-gardener guidance into main and subagent turns.
 set -euo pipefail
 
 command -v node >/dev/null 2>&1 || exit 0
 
-QA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-
-template="The '{skill}' skill just finished (auto-review pass {n} of 3 for this skill before this review retires here). Invoke the skill-gardener skill in Capture mode against the observable tool and command sequence for '{skill}'. Check for repeated reads or searches, avoidable failed retries, unnecessary setup or dependencies, safe parallelization opportunities, and existing helpers or native tools that could replace custom commands. Do not create a raw command log or optimize away required verification. Record a lesson only if something qualifies under skill-gardener's Capture criteria. Follow its auto-apply rules when the primary task is skill testing or review. When done, run: bash .claude/scripts/skill-gardener-counter.sh '{skill}' <found|none> -- pass 'found' if a lesson was added or gained evidence, 'none' if nothing qualified."
-
-action=$(STATE="$QA_ROOT/.claude/skill-gardener-state.json" TEMPLATE="$template" node -e '
-const fs = require("fs");
-const SKILLS_DIR = "/.claude/skills/";
-
+node -e '
 let raw = "";
-try { raw = fs.readFileSync(0, "utf8") } catch { process.exit(0) }
-let h;
-try { h = JSON.parse(raw) } catch { process.exit(0) }
+try { raw = require("fs").readFileSync(0, "utf8") } catch { process.exit(0) }
+let input;
+try { input = JSON.parse(raw) } catch { process.exit(0) }
 
-if (h.hook_event_name === "ConfigChange") {
-  const path = String(h.file_path || "").split(String.fromCharCode(92)).join("/");
-  const at = path.indexOf(SKILLS_DIR);
-  if (at < 0) process.exit(0);
-  const rest = path.slice(at + SKILLS_DIR.length);
-  if (rest.indexOf("/") > 0) process.stdout.write("reset " + rest.split("/")[0]);
+const event = input.hook_event_name;
+let context;
+
+if (event === "UserPromptSubmit") {
+  context = [
+    "Continuously observe this turn for reusable workflow lessons while completing the primary task.",
+    "Notice user corrections, failures followed by a better successful approach, unnecessary or repeated work, missed safe batching, and existing helpers or native tools that would save effort or tokens.",
+    "Before the final response, invoke skill-gardener in Continuous mode only if a qualifying signal appeared or open subagent lesson entries need review.",
+    "The main agent alone may Review, Apply, commit, push, or open PRs. If nothing qualifies, finish silently without gardening work."
+  ].join(" ");
+} else if (event === "SubagentStart") {
+  context = [
+    "Continuously observe your complete subagent sequence for reusable workflow lessons while completing your assigned task.",
+    "Notice failures followed by a better successful approach, unnecessary or repeated work, missed safe batching, and existing helpers or native tools that would save effort or tokens.",
+    "If a qualifying signal appears, invoke skill-gardener in Capture mode before returning and write only a unique immutable lesson entry for main-agent review.",
+    "Never Review, Apply, commit, push, or open a PR from a subagent. If nothing qualifies, return normally without gardening work."
+  ].join(" ");
+} else {
   process.exit(0);
 }
 
-const skill = (h.tool_input || {}).skill || "";
-if (!skill || skill === "skill-gardener") process.exit(0);
-
-let state = {};
-try { state = JSON.parse(fs.readFileSync(process.env.STATE, "utf8")) } catch {}
-const count = Number(state[skill]) || 0;
-if (count >= 3) process.exit(0);
-
-const ctx = process.env.TEMPLATE.split("{skill}").join(skill).split("{n}").join(count + 1);
-process.stdout.write("emit " + JSON.stringify({
-  hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: ctx },
+process.stdout.write(JSON.stringify({
+  hookSpecificOutput: { hookEventName: event, additionalContext: context }
 }));
-')
-
-case "$action" in
-  "reset "*) bash "$QA_ROOT/.claude/scripts/skill-gardener-counter.sh" "${action#reset }" reset >/dev/null ;;
-  "emit "*) printf '%s\n' "${action#emit }" ;;
-esac
+'
