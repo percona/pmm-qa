@@ -2,7 +2,14 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 
 pmmTest.describe('PMM cli tests for upgrade', () => {
-  const nonClientContainers = ['ldap-server', 'minio', 'external_pmm', 'nginx', 'redis_container'];
+  const nonClientContainers = [
+    'ldap-server',
+    'minio',
+    'external_pmm',
+    'nginx',
+    'redis_container',
+    'chunk-churn',
+  ];
 
   pmmTest(
     'Verify PMM Agents statuses @pre-upgrade @post-upgrade @post-client-upgrade',
@@ -31,8 +38,6 @@ pmmTest.describe('PMM cli tests for upgrade', () => {
   );
 
   pmmTest('Verify PMM client versions before upgrade @pre-upgrade', async ({ cliHelper }) => {
-    console.log(cliHelper.execSilent('docker ps').stdout);
-
     const containers: string[] = cliHelper
       .execSilent(`docker ps --format "{{.Names }}"`)
       .stdout.split('\n')
