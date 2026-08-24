@@ -713,7 +713,7 @@ async function brokerZephyr(action, m, by) {
     });
   console.log(`zephyr/${action} ${m.key || m.name || m.query || ""} by ${by}`);
   try {
-    if (action === "create-testcase") {
+    if (action === "create") {
       const name = String(m.name || "").trim();
       if (!name || name.length > 255) return { status: 400, body: "name_required_1_255_chars" };
       // The key is assigned BY Zephyr; a name carrying one means the caller
@@ -729,13 +729,13 @@ async function brokerZephyr(action, m, by) {
       const r = await z("/testcases", { method: "POST", body: JSON.stringify(body) });
       return { status: r.status, json: true, body: (await r.text()) || "{}" };
     }
-    if (action === "get-testcase") {
+    if (action === "get") {
       const key = String(m.key || "").trim();
       if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
       const r = await z(`/testcases/${key}`);
       return { status: r.status, json: true, body: (await r.text()) || "{}" };
     }
-    if (action === "search-testcase") {
+    if (action === "search") {
       // Zephyr v2 has NO name search, so the relay pages the project and matches
       // here: a name containing the whole query scores highest, else one covering
       // >=60% of its words. Ranked and capped — the caller judges the duplicate.
@@ -777,7 +777,7 @@ async function brokerZephyr(action, m, by) {
       matches.sort((a, b) => b.score - a.score || a.key.localeCompare(b.key));
       return { status: 200, json: true, body: JSON.stringify({ query, scanned, truncated, matches: matches.slice(0, limit) }) };
     }
-    if (action === "list-folders") {
+    if (action === "folders") {
       const r = await z(`/folders?projectKey=PMM&folderType=TEST_CASE&maxResults=1000`);
       if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
       const j = await r.json();
@@ -944,7 +944,7 @@ const handler = async (req, res) => {
       let m;
       try { m = raw ? JSON.parse(raw) : {}; } catch { res.writeHead(400).end("bad_request"); return; }
       if (service === "linode") req.setTimeout(action.endsWith("-lke") ? 1_800_000 : 600000); // LKE (cluster + Helm) runs far longer than a VM
-      if (service === "zephyr") req.setTimeout(180_000); // search-testcase pages the whole PMM project
+      if (service === "zephyr") req.setTimeout(180_000); // search pages the whole PMM project
       const out =
         service === "linode" ? await brokerLinode(action, m, id.login)
         : service === "jira" ? await brokerJira(action, m, id.login)

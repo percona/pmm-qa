@@ -56,7 +56,7 @@ the tags are a repo concern, so the broker rejects a `name` starting with a key.
 3. **Reuse or create.** If an existing case covers the behaviour, use its key —
    automating an already-written manual case is the normal path. Only create when
    nothing covers it.
-4. **Create** with `create-testcase`, taking `folderId` from `list-folders` so the
+4. **Create** with `create`, taking `folderId` from `folders` so the
    case lands next to its feature instead of the project root. The response is
    `201 {"id":…,"key":"PMM-T…"}` — that `key` is what goes into the test title.
 5. **Put the key in the test title** in the format above, and check the test's
@@ -78,29 +78,29 @@ Z() { curl -sS -m 180 --fail-with-body -X POST "$RELAY/zephyr/$1" \
         -H "X-Relay-Secret: $RELAY_KEY" -H "X-Actor: $ACTOR" \
         -H "Content-Type: application/json" -d "$2"; }
 
-# search-testcase — dedup BEFORE creating. A full test title works as the query.
-Z search-testcase "$(jq -n --arg q 'PMM-T555 - Verify user is able to add MySQL service @instances' \
+# search — dedup BEFORE creating. A full test title works as the query.
+Z search "$(jq -n --arg q 'PMM-T555 - Verify user is able to add MySQL service @instances' \
       '{query:$q, limit:20}')"
-Z search-testcase "$(jq -n --arg q 'add MySQL service' '{query:$q, folderId:1234}')"
+Z search "$(jq -n --arg q 'add MySQL service' '{query:$q, folderId:1234}')"
 
-# list-folders — TEST_CASE folders of the PMM project, to pick a folderId
-Z list-folders '{}'
+# folders — TEST_CASE folders of the PMM project, to pick a folderId
+Z folders '{}'
 
-# create-testcase — name is the DESCRIPTION only. Returns 201 {id, key, self}.
-Z create-testcase "$(jq -n --arg n 'Verify user is able to add MySQL service' \
+# create — name is the DESCRIPTION only. Returns 201 {id, key, self}.
+Z create "$(jq -n --arg n 'Verify user is able to add MySQL service' \
       --arg o 'Ensures the Add Service wizard registers a MySQL instance' \
       '{name:$n, objective:$o, folderId:1234, labels:["Automated"]}')"
 
-# get-testcase — read an existing key (name, folder, status, priority, labels)
-Z get-testcase "$(jq -n --arg k PMM-T2087 '{key:$k}')"
+# get — read an existing key (name, folder, status, priority, labels)
+Z get "$(jq -n --arg k PMM-T2087 '{key:$k}')"
 ```
 
 | Action | Body | Notes |
 |---|---|---|
-| `search-testcase` | `query` (required), `folderId`, `limit` (≤100, default 20) | Ranked name match, done relay-side; returns `{query, scanned, truncated, matches:[{key,name,score,folderId}]}`. `truncated:true` = the scan hit its page cap, so treat "no match" as inconclusive |
-| `create-testcase` | `name` (required, 1–255), `objective`, `precondition`, `folderId`, `labels`, `priorityName`, `statusName`, `ownerId`, `fields` (raw passthrough) | Returns Zephyr's `201 {id, key, self}` |
-| `get-testcase` | `key` (`PMM-Txxxx`) | Returns the test case verbatim; `404` if it does not exist |
-| `list-folders` | — | `{folders:[{id,name,parentId}], total, isLast}` for `TEST_CASE` folders |
+| `search` | `query` (required), `folderId`, `limit` (≤100, default 20) | Ranked name match, done relay-side; returns `{query, scanned, truncated, matches:[{key,name,score,folderId}]}`. `truncated:true` = the scan hit its page cap, so treat "no match" as inconclusive |
+| `create` | `name` (required, 1–255), `objective`, `precondition`, `folderId`, `labels`, `priorityName`, `statusName`, `ownerId`, `fields` (raw passthrough) | Returns Zephyr's `201 {id, key, self}` |
+| `get` | `key` (`PMM-Txxxx`) | Returns the test case verbatim; `404` if it does not exist |
+| `folders` | — | `{folders:[{id,name,parentId}], total, isLast}` for `TEST_CASE` folders |
 
 Errors: `400` bad input (`name_required_1_255_chars`,
 `name_must_not_start_with_a_test_case_key`, `key_must_be_a_PMM-T_key`,
@@ -117,10 +117,10 @@ Base `https://api.zephyrscale.smartbear.com/v2`, auth
 
 | Endpoint | Used by | Notes |
 |---|---|---|
-| `POST /testcases` | `create-testcase` | Requires `projectKey` + `name`; `priorityName`/`statusName` default to Normal/Draft. `201 {id, key, self}`. Creation adds one empty test step — real steps need `POST /testcases/{key}/teststeps` in `OVERWRITE` mode, which this broker does not expose |
-| `GET /testcases/{testCaseKey}` | `get-testcase` | `status`/`priority`/`folder` come back as `{id, self}` links, not names |
-| `GET /testcases/nextgen` | `search-testcase` | `projectKey`, `folderId`, `limit` (≤1000), `startAtId`; cursor pagination via `nextStartAtId`. **There is no name/text search in the API** — hence the relay-side scan and ranking |
-| `GET /folders` | `list-folders` | `projectKey`, `folderType=TEST_CASE`, `maxResults` (≤1000) |
+| `POST /testcases` | `create` | Requires `projectKey` + `name`; `priorityName`/`statusName` default to Normal/Draft. `201 {id, key, self}`. Creation adds one empty test step — real steps need `POST /testcases/{key}/teststeps` in `OVERWRITE` mode, which this broker does not expose |
+| `GET /testcases/{testCaseKey}` | `get` | `status`/`priority`/`folder` come back as `{id, self}` links, not names |
+| `GET /testcases/nextgen` | `search` | `projectKey`, `folderId`, `limit` (≤1000), `startAtId`; cursor pagination via `nextStartAtId`. **There is no name/text search in the API** — hence the relay-side scan and ranking |
+| `GET /folders` | `folders` | `projectKey`, `folderType=TEST_CASE`, `maxResults` (≤1000) |
 | `POST /testexecutions` | CI only | `projectKey`, `testCaseKey`, `testCycleKey`, `statusName` (`PASS`/`FAIL`), `comment`. Not brokered — see below |
 
 ## Who reports results (and who doesn't)
