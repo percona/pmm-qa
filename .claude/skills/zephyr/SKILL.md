@@ -1,6 +1,6 @@
 ---
 name: zephyr
-description: Create and look up PMM test cases in Zephyr Scale (project PMM) to get the PMM-Txxxx key a new automated test needs in its title. Use when writing a test that has no key yet, checking whether a case already exists before creating a duplicate, or reading an existing PMM-Txxxx.
+description: Create, look up and update PMM test cases in Zephyr Scale (project PMM) — get the PMM-Txxxx key a new automated test needs in its title, and flip a case to Automated once it is. Use when writing a test that has no key yet, checking whether a case already exists before creating a duplicate, marking a case Needs Automation → Automated, or writing its test steps.
 ---
 
 # Zephyr Scale (PMM test cases)
@@ -19,8 +19,8 @@ GitHub MCP `get_me`), which the relay roster-checks. Same gate and same shape as
 the `jira` skill. The relay:
 
 - forces `projectKey: PMM` on every call;
-- exposes **read + create test cases only** — no update, no delete, and no
-  execution reporting (CI posts executions itself, see "Who reports results");
+- exposes **read, create, status and steps** — no free-form edit, no delete, and
+  no execution reporting (CI posts executions itself, see "Who reports results");
 - returns the Zephyr REST response (status + body) verbatim on create/get.
 
 Do **not** call `api.zephyrscale.smartbear.com` directly — the API key is not in
@@ -57,11 +57,49 @@ the tags are a repo concern, so the broker rejects a `name` starting with a key.
    automating an already-written manual case is the normal path. Only create when
    nothing covers it.
 4. **Create** with `create`, taking `folderId` from `folders` so the
-   case lands next to its feature instead of the project root. The response is
+   case lands next to its feature instead of the project root. `Version of the
+   Product` is **required** — see "Creating". The response is
    `201 {"id":…,"key":"PMM-T…"}` — that `key` is what goes into the test title.
 5. **Put the key in the test title** in the format above, and check the test's
    suite actually reports to Zephyr (see below) before claiming the result will
    land in a cycle.
+6. **Flip the status to `Automated`** with `set-status` once the test is written
+   and passing. That is what makes the automation visible in Zephyr — a case
+   automated but left on `Needs Automation` still reads as outstanding work.
+
+## Status workflow
+
+The PMM project defines these test case statuses (`set-status` accepts the name,
+case-insensitively, and rejects anything else with the full list):
+
+| Status | Means |
+|---|---|
+| `Needs Automation` | Manual case waiting for someone to automate it — the usual starting point |
+| `AQA In Progress` | Being automated right now |
+| `Automated` | Covered by an automated test in this repo |
+| `Manual Only` | Reviewed and deliberately left manual |
+| `Skipped` | Automated but currently skipped |
+| `Draft` / `Approved` / `Deprecated` | Authoring lifecycle. `Deprecated` is also how a case is retired — **the API has no delete**, so a case created by mistake is deprecated, never removed |
+
+`set-status` is deliberately the *only* way this broker edits an existing case.
+Zephyr's update endpoint replaces the whole test case and **clears every field the
+body leaves out** — a naive "just set the status" PUT silently wipes `objective`
+and `precondition`. The broker does a read-modify-write server-side, so the rest
+of the case survives. (That read-modify-write is not atomic: an edit made in the
+Zephyr UI between the read and the write would be lost. It is one API call apart,
+so this is unlikely, but do not run `set-status` in a loop over a case somebody is
+editing.)
+
+## Creating: the required custom field
+
+The PMM project marks **`Version of the Product`** required, so a create without
+it is rejected by Zephyr (`400`) — an empty string or `null` counts as missing.
+The broker checks it up front and answers `version_of_the_product_required`
+before spending a call. Pass the PMM version the test targets:
+
+```json
+{"customFields": {"Version of the Product": "3.5.0"}}
+```
 
 ## Operations (via the relay)
 
@@ -86,13 +124,23 @@ Z search "$(jq -n --arg q 'add MySQL service' '{query:$q, folderId:1234}')"
 # folders — TEST_CASE folders of the PMM project, to pick a folderId
 Z folders '{}'
 
-# create — name is the DESCRIPTION only. Returns 201 {id, key, self}.
+# create — name is the DESCRIPTION only. "Version of the Product" is required.
 Z create "$(jq -n --arg n 'Verify user is able to add MySQL service' \
       --arg o 'Ensures the Add Service wizard registers a MySQL instance' \
-      '{name:$n, objective:$o, folderId:1234, labels:["Automated"]}')"
+      --arg v 3.5.0 \
+      '{name:$n, objective:$o, folderId:1234, labels:["Automated"],
+        customFields:{"Version of the Product":$v}}')"
 
 # get — read an existing key (name, folder, status, priority, labels)
 Z get "$(jq -n --arg k PMM-T2087 '{key:$k}')"
+
+# set-status — the case is automated now. Read-modify-write, nothing else changes.
+Z set-status "$(jq -n --arg k PMM-T2087 '{key:$k, status:"Automated"}')"
+
+# steps — OVERWRITE by default (a new case ships with one empty step to replace)
+Z steps "$(jq -n --arg k PMM-T2087 '{key:$k, steps:[
+      {description:"Open the Valkey Overview dashboard", expectedResult:"Dashboard loads"},
+      {description:"Check the metrics panels", testData:"valkey-1", expectedResult:"No gaps"}]}')"
 ```
 
 | Action | Body | Notes |
@@ -101,10 +149,14 @@ Z get "$(jq -n --arg k PMM-T2087 '{key:$k}')"
 | `create` | `name` (required, 1–255), `objective`, `precondition`, `folderId`, `labels`, `priorityName`, `statusName`, `ownerId`, `fields` (raw passthrough) | Returns Zephyr's `201 {id, key, self}` |
 | `get` | `key` (`PMM-Txxxx`) | Returns the test case verbatim; `404` if it does not exist |
 | `folders` | — | `{folders:[{id,name,parentId}], total, isLast}` for `TEST_CASE` folders |
+| `set-status` | `key`, `status` (name, case-insensitive) | Read-modify-write; returns `{key, status, statusId, previousStatusId}`. Unknown status → `400` listing the valid ones |
+| `steps` | `key`, `steps[]` (≤100), `mode` (`OVERWRITE` default, `APPEND`) | Each step is `{description, testData?, expectedResult?}`, or `{testCaseKey}` to call another case. Writing steps removes any plain-text/BDD script the case had |
 
 Errors: `400` bad input (`name_required_1_255_chars`,
 `name_must_not_start_with_a_test_case_key`, `key_must_be_a_PMM-T_key`,
-`bad_folder_id`, `query_required`), `403` bad `RELAY_KEY` / non-roster actor,
+`bad_folder_id`, `query_required`, `version_of_the_product_required`,
+`status_required`, `steps_required`, `too_many_steps`, `unknown_status`),
+`403` bad `RELAY_KEY` / non-roster actor,
 `503 zephyr_not_configured` (key missing from the relay `.env`),
 `502 zephyr_upstream_error`, or Zephyr's own status passed through.
 
@@ -120,7 +172,10 @@ Base `https://api.zephyrscale.smartbear.com/v2`, auth
 | `POST /testcases` | `create` | Requires `projectKey` + `name`; `priorityName`/`statusName` default to Normal/Draft. `201 {id, key, self}`. Creation adds one empty test step — real steps need `POST /testcases/{key}/teststeps` in `OVERWRITE` mode, which this broker does not expose |
 | `GET /testcases/{testCaseKey}` | `get` | `status`/`priority`/`folder` come back as `{id, self}` links, not names |
 | `GET /testcases/nextgen` | `search` | `projectKey`, `folderId`, `limit` (≤1000), `startAtId`; cursor pagination via `nextStartAtId`. **There is no name/text search in the API** — hence the relay-side scan and ranking |
-| `GET /folders` | `folders` | `projectKey`, `folderType=TEST_CASE`, `maxResults` (≤1000) |
+| `GET /folders` | `folders` | `projectKey`, `folderType=TEST_CASE`, `maxResults` (≤1000). PMM has 88, so one page covers it |
+| `PUT /testcases/{testCaseKey}` | `set-status` | **Replaces the whole case** — every omitted field is cleared, and all custom fields must be present (`null` allowed for optional ones). Takes `status` as `{id}`, not a name |
+| `GET /statuses` | `set-status` | `projectKey`, `statusType=TEST_CASE` — resolves the status name to the id the PUT needs |
+| `POST /testcases/{testCaseKey}/teststeps` | `steps` | `{mode, items[]}`, ≤100 per request |
 | `POST /testexecutions` | CI only | `projectKey`, `testCaseKey`, `testCycleKey`, `statusName` (`PASS`/`FAIL`), `comment`. Not brokered — see below |
 
 ## Who reports results (and who doesn't)

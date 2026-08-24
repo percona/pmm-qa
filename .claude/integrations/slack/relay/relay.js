@@ -694,6 +694,9 @@ const ZEPHYR_BASE = "https://api.zephyrscale.smartbear.com/v2";
 const ZEPHYR_TIMEOUT_MS = 30_000;
 const ZEPHYR_SCAN_PAGES = 20; // search pages 1000 at a time; caps a runaway scan
 const TESTCASE_KEY = /^PMM-T[0-9]+$/;
+const ZEPHYR_REQUIRED_CF = "Version of the Product"; // required on every test case in the PMM project
+const PUT_ONLY_STRIP = ["createdOn", "links", "testScript"]; // read-only on GET, rejected by the update endpoint
+const MAX_STEPS = 100; // per the API's own cap
 // pmm-qa test titles are "PMM-Txxxx [+ PMM-Tyyyy] - description @tag @tag", so a
 // caller pasting a whole title still searches on the description alone (Zephyr
 // names carry neither the key nor the CodeceptJS/Playwright tags).
@@ -726,6 +729,11 @@ async function brokerZephyr(action, m, by) {
         body.folderId = Number(m.folderId);
       }
       if (Array.isArray(m.labels)) body.labels = m.labels.map(String);
+      // The PMM project marks one custom field required, and Zephyr rejects the
+      // create outright without it — surface that here instead of as a raw 400.
+      const cf = m.customFields && typeof m.customFields === "object" ? { ...m.customFields } : {};
+      if (!String(cf[ZEPHYR_REQUIRED_CF] ?? "").trim()) return { status: 400, body: "version_of_the_product_required" };
+      body.customFields = cf;
       const r = await z("/testcases", { method: "POST", body: JSON.stringify(body) });
       return { status: r.status, json: true, body: (await r.text()) || "{}" };
     }
@@ -786,6 +794,49 @@ async function brokerZephyr(action, m, by) {
         json: true,
         body: JSON.stringify({ folders: (j.values || []).map((f) => ({ id: f.id, name: f.name, parentId: f.parentId })), total: j.total ?? null, isLast: j.isLast ?? null }),
       };
+    }
+    if (action === "set-status") {
+      const key = String(m.key || "").trim();
+      if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
+      if (!m.status) return { status: 400, body: "status_required" };
+      const sr = await z(`/statuses?projectKey=PMM&statusType=TEST_CASE&maxResults=100`);
+      if (!sr.ok) return { status: sr.status, json: true, body: (await sr.text()) || "{}" };
+      const statuses = (await sr.json()).values || [];
+      const want = statuses.find((x) => x.name.toLowerCase() === String(m.status).toLowerCase());
+      if (!want) return { status: 400, json: true, body: JSON.stringify({ error: "unknown_status", allowed: statuses.map((x) => x.name) }) };
+      // The update endpoint CLEARS every field the body omits, so a status change
+      // is a read-modify-write of the whole test case, never a partial PUT. Not
+      // atomic: a concurrent edit between the GET and the PUT would be lost.
+      const g = await z(`/testcases/${key}`);
+      if (!g.ok) return { status: g.status, json: true, body: (await g.text()) || "{}" };
+      const tc = await g.json();
+      for (const f of PUT_ONLY_STRIP) delete tc[f];
+      const from = tc.status?.id ?? null;
+      tc.status = { id: want.id };
+      const put = await z(`/testcases/${key}`, { method: "PUT", body: JSON.stringify(tc) });
+      if (!put.ok) return { status: put.status, json: true, body: (await put.text()) || "{}" };
+      return { status: 200, json: true, body: JSON.stringify({ key, status: want.name, statusId: want.id, previousStatusId: from }) };
+    }
+    if (action === "steps") {
+      const key = String(m.key || "").trim();
+      if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
+      if (!Array.isArray(m.steps) || !m.steps.length) return { status: 400, body: "steps_required" };
+      if (m.steps.length > MAX_STEPS) return { status: 400, body: "too_many_steps" };
+      const items = m.steps.map((st) =>
+        st.testCaseKey
+          ? { testCase: { testCaseKey: String(st.testCaseKey) } }
+          : {
+              inline: {
+                description: String(st.description ?? ""),
+                testData: st.testData != null ? String(st.testData) : null,
+                expectedResult: st.expectedResult != null ? String(st.expectedResult) : null,
+              },
+            },
+      );
+      // OVERWRITE by default: a freshly created test case already carries one
+      // empty step, which APPEND would leave stranded at the top.
+      const r = await z(`/testcases/${key}/teststeps`, { method: "POST", body: JSON.stringify({ mode: m.mode === "APPEND" ? "APPEND" : "OVERWRITE", items }) });
+      return { status: r.status, json: true, body: (await r.text()) || "{}" };
     }
     return { status: 400, body: "unknown_action" };
   } catch (e) {
