@@ -2,7 +2,7 @@
 
 Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this repo — committed, so anyone who opens `percona/pmm-qa` in Claude Code gets all agents automatically. No separate environment snapshot or dashboard config to keep in sync (unlike the earlier Cursor prototype this replaces).
 
-## The five agents
+## The six agents
 
 | Agent | Watches / invoked by | Trigger | Does | Never |
 |-------|----------------------|---------|------|-------|
@@ -11,6 +11,7 @@ Agent behavior lives in `.claude/agents/*.md` and `.claude/skills/*` in this rep
 | [fb-reporter](../../.claude/agents/fb-reporter.md) | Referenced by `test-runner`, or asked directly | N/A — read-and-followed in the caller's own session, or invoked directly | Gets a clean FB Tests screenshot for a ticket's linked submodules PR, retrying past flakiness (`gh run rerun --failed`, up to twice), attaches to Jira | Diagnose or fix a genuine (non-flaky) failure — that's `investigator`'s job |
 | [router](../../.claude/agents/router.md) | The `PMM AI` Routine, fired by a Slack `@pmm-ai` mention | Slack-only — see "PMM AI" below | Matches the mention to test-runner / investigator / fb-reporter by description and hands off, or answers directly if it's just a question | Guess a ticket key/PR number that wasn't in the message, do the matched agent's work itself |
 | [pr-maintainer](../../.claude/agents/pr-maintainer.md) | Every open `percona/pmm-qa` PR | Scheduled — a daily weekday Routine | Reads each open PR and sorts it into ready / unblocked / needs-review / blocked / needs-work / needs-a-human, maintains a `blocked` label, and posts a **PR Digest** to Slack `#qa-automation` via the relay bot | Merge, close, approve, or edit any PR — the `blocked` label is the only thing it changes |
+| [skill-gardener-publisher](../../.claude/agents/skill-gardener-publisher.md) | The daily `skill-gardener/*` lesson branches and `.claude/skill-lessons/` on `main` | Scheduled — a daily Routine | Promotes each daily branch to `main` as a lessons-only PR, then turns the entries **already merged** into `main` into one implementation PR against skills, agents, hooks, or instruction docs, deleting every entry it acted on | Edit a target from an unmerged entry, open a PR on a day with no merged entries, merge or approve anything, change product or test code |
 
 There's no separate "watcher" agent in front of Investigator. An earlier draft had one (detect the failure, hand off to a shared fixer) — dropped once it became clear the "detect" step was too thin to be its own agent: parsing a trigger payload and extracting a failure list is just Investigator's own first step, not a separable concern the way `fb-reporter`'s screenshot-and-retry job genuinely is.
 
@@ -193,6 +194,23 @@ A scheduled weekday Routine reads [`.claude/agents/pr-maintainer.md`](../../.cla
 It **reads** each PR (not a keyword scan) and sorts it (first match wins; bias to "needs a human"): 🔓 **Unblocked** (carries the `blocked` label but the reason has now cleared → promote/re-verify; the agent removes the label), ⏳ **Blocked** (the agent *judges* the PR can't safely merge yet — most often waiting on another PR to land — and adds a `blocked` label), 🔧 **Needs work** (open review threads — whoever opened them — or changes requested), ✅ **Ready to merge** (approved, no open threads, not blocked), 👀 **Needs review** (waiting on a reviewer), and ❓ **Needs a human** (nothing fits cleanly). **CI checks are deliberately ignored** — an approved PR is ready regardless. The `blocked` label (add/remove) is the only thing it ever writes; it never merges, closes, approves, or edits.
 
 Delivery reuses the **relay bot**, so no MCP connector is needed in the Routine (which sidesteps the connector-in-routine limits): the run `curl`s the composed digest to the relay's `POST /slack/announce` (gated by `RELAY_KEY` + the caller's `X-Actor` login), which posts it as the `@pmm-ai` bot to a channel it's been invited to. Daily, weekdays, **no @-mentions**.
+
+## Skill Gardener Publisher — daily lesson publisher
+
+A scheduled daily Routine reads [`.claude/agents/skill-gardener-publisher.md`](../../.claude/agents/skill-gardener-publisher.md), which in turn follows the **Publish** section of [`skill-gardener/SKILL.md`](../../.claude/skills/skill-gardener/SKILL.md). It is the only pass that ever edits a skill, agent, hook, or instruction doc from a captured lesson — user sessions only *capture* entries onto that day's shared `skill-gardener/<YYYY-MM-DD>` branch and stop.
+
+Two steps per run, in order:
+
+1. **Promote** — every `skill-gardener/*` branch not yet on `main` gets one open **lessons-only** PR against `main` (entry files, nothing else). Cheap to review, safe to merge fast.
+2. **Implement** — read `.claude/skill-lessons/` on the latest `origin/main`; review those entries, apply the worthwhile ones, validate each changed target, **delete every entry acted on**, and open one PR from `skill-gardener-publish/<YYYY-MM-DD>`.
+
+**Why the two steps are split.** An entry on a daily branch has had no human eye on it. Requiring an entry to be *merged* before it can drive a target edit makes the promote PR the review gate — which is what makes it acceptable for the implement step to edit instructions unattended. The cost is a one-day lag between capturing a lesson and applying it.
+
+**Deleting is the mechanism, not cleanup.** The gardener refuses to capture a lesson it can already see in the queue, so an applied-but-undeleted entry permanently blocks that lesson from being captured again. The deletions ride in the same PR as the change.
+
+**Silence is the normal output.** Most days `main` carries no entries; then the run creates no branch, opens no PR, and posts nothing. It has no Slack delivery at all — its output *is* the PR, and `pr-maintainer`'s digest already reports open gardener PRs, including a promote PR that has gone stale because a run was skipped or failed. That is what keeps a missed day from silently losing a lesson.
+
+**Routine to create** (not yet created — Publish mode does not exist on `main` until [#1233](https://github.com/percona/pmm-qa/pull/1233) merges): daily, in the shared qa-linode environment, fresh session per fire, prompt pointing at `.claude/agents/skill-gardener-publisher.md`. Pick the fire time late enough in the day that captures have landed, and remember `<YYYY-MM-DD>` is resolved in **UTC** by the run itself — a fire time near midnight UTC will read a different day's branch than intended. Daily rather than weekdays-only: a lesson captured on a weekend would otherwise sit unpromoted until Monday.
 
 ## Secrets architecture — relay-brokered (built; prod cutover pending)
 
