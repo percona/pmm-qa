@@ -18,8 +18,12 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
   if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
     // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
+    // The server image and client tarball can be built from different commits (e.g. a superproject-only
+    // change reuses a cached server image), so their trailing git-SHA suffixes may differ even though the
+    // X.Y.Z-branch part matches. Drop that suffix so the check compares the meaningful version, not the SHA.
     PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
     if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
+    PMM_VERSION = PMM_VERSION.replace(/-[0-9a-f]{7,}$/, '');
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
     // TODO: refactor to use docker hub API to remove file-update dependency
     // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
