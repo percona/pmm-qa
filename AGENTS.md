@@ -172,7 +172,7 @@ npx playwright test --grep @inventory
 
 ## Patterns and Conventions
 
-After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` when a reusable correction, repeated workflow, demonstrated improvement, or skill gap emerged. Automated post-skill passes may invoke Capture to check for such a signal; follow the skill's counter and auto-apply rules. If no lesson qualifies, write or report nothing, but still record `none` for an automated pass. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly.
+The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/skills/skill-gardener/SKILL.md` observation reminder into every main-agent and subagent turn without forcing another LLM pass at Stop; `SKILL_GARDENER=off` silences it for a session. After the primary task is stable, evaluate the full observable sequence. Capture every distinct qualifying lesson without numeric or expiry limits, as immutable per-observation files committed by the main agent to that day's shared `skill-gardener/<YYYY-MM-DD>` branch. Reviewing entries, editing a target, and opening a PR happen only in the scheduled Publish pass ([`skill-gardener-publisher`](.claude/agents/skill-gardener-publisher.md)), never inside a user session — and Publish acts only on entries already merged into `main`, so every target edit has had a human merge in front of it. If no lesson qualifies, write and report nothing. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly.
 
 ### Do
 - Use the **Page Object Model** for Playwright browser tests — put selectors and actions in `pages/`
