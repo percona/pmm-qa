@@ -13,6 +13,9 @@
 
 set -e
 
+profile=${COMPOSE_PROFILES:-classic}
+export COMPOSE_PROFILES=${profile}
+
 # PSMDB 4.2 doesn't support AWS auth
 if [[ -n "$PSMDB_VERSION" ]] && [[ "$PSMDB_VERSION" == *"4.2."* ]]; then
     sed -i 's/,MONGODB-AWS//' conf/mongod.conf
@@ -61,14 +64,6 @@ fi
 # project's container) makes `up` try to (re)create /test and clash. Tests still
 # create it fresh via `docker compose run test`.
 docker rm -f test 2>/dev/null || true
-
-# Never let `up` activate the "tests" profile: the test container is not needed
-# for setup, and its fixed name clashes across the parallel PSMDB stacks. An
-# inherited COMPOSE_PROFILES that contains "tests" would otherwise make `up`
-# start it. Tests are still run explicitly via `docker compose --profile tests
-# run test` below (that ignores COMPOSE_PROFILES).
-COMPOSE_PROFILES=$(printf '%s' "${COMPOSE_PROFILES:-}" | tr ',' '\n' | grep -vxF tests | paste -sd, -)
-export COMPOSE_PROFILES
 
 docker compose -f docker-compose-pmm-psmdb.yml up -d
 
