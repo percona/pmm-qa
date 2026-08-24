@@ -57,12 +57,12 @@ const WATCHED_CHANNELS = JSON.parse(process.env.WATCHED_CHANNELS || "{}");
 let bySlack = {};
 let byJira = {};
 let byName = {};
-let byGithub = {}; // lowercased github login -> person (broker roster + caller identity)
+let byGithub = Object.create(null); // lowercased github login -> person (broker roster + caller identity)
 function loadPeople() {
   const s = {};
   const j = {};
   const n = {};
-  const gh = {};
+  const gh = Object.create(null); // no prototype: "constructor"/"__proto__" must never look like a roster entry
   let files = [];
   try {
     files = fs.readdirSync(PEOPLE_DIR).filter((f) => f.endsWith(".json"));
@@ -146,7 +146,7 @@ const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 // short op list, never account access. (Unspoofable upgrade = the push-proof
 // handshake, documented in AUTOMATIONS.) Empty roster = any login accepted.
 function rosterOk(login) {
-  return Object.keys(byGithub).length === 0 || login.toLowerCase() in byGithub;
+  return Object.keys(byGithub).length === 0 || Object.hasOwn(byGithub, login.toLowerCase());
 }
 function identity(req) {
   const actor = String(req.headers["x-actor"] || "").trim();
@@ -694,6 +694,7 @@ async function brokerJira(action, m, by) {
 const ZEPHYR_BASE = "https://api.zephyrscale.smartbear.com/v2";
 const ZEPHYR_TIMEOUT_MS = 30_000;
 const ZEPHYR_SCAN_PAGES = 20; // search pages 1000 at a time; caps a runaway scan
+const ZEPHYR_SCAN_BUDGET_MS = 150_000; // per-page timeouts are independent, so bound the whole scan inside the handler's own 180s
 const TESTCASE_KEY = /^PMM-T[0-9]+$/;
 const ZEPHYR_REQUIRED_CF = "Version of the Product"; // required on every test case in the PMM project
 const PUT_ONLY_STRIP = ["createdOn", "links", "testScript"]; // read-only on GET, rejected by the update endpoint
@@ -770,6 +771,7 @@ async function brokerZephyr(action, m, by) {
       let scanned = 0;
       let pages = 0;
       let truncated = false;
+      const scanStarted = Date.now();
       for (;;) {
         const r = await z(`/testcases/nextgen?projectKey=PMM&limit=1000&startAtId=${startAtId}${folder}`);
         if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
@@ -783,7 +785,7 @@ async function brokerZephyr(action, m, by) {
         }
         pages++;
         if (j.nextStartAtId == null) break;
-        if (pages >= ZEPHYR_SCAN_PAGES) {
+        if (pages >= ZEPHYR_SCAN_PAGES || Date.now() - scanStarted > ZEPHYR_SCAN_BUDGET_MS) {
           truncated = true;
           break;
         }

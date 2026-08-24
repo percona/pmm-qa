@@ -161,7 +161,7 @@ Base `https://api.zephyrscale.smartbear.com/v2`, auth
 
 | Endpoint | Used by | Notes |
 |---|---|---|
-| `POST /testcases` | `create` | Requires `projectKey` + `name`; `priorityName`/`statusName` default to Normal/Draft. `201 {id, key, self}`. Creation adds one empty test step — real steps need `POST /testcases/{key}/teststeps` in `OVERWRITE` mode, which this broker does not expose |
+| `POST /testcases` | `create` | Requires `projectKey` + `name`; `priorityName`/`statusName` default to Normal/Draft. `201 {id, key, self}`. Creation adds one empty test step, which the `steps` action overwrites |
 | `GET /testcases/{testCaseKey}` | `get` | `status`/`priority`/`folder` come back as `{id, self}` links, not names |
 | `GET /testcases/nextgen` | `search` | `projectKey`, `folderId`, `limit` (≤1000), `startAtId`; cursor pagination via `nextStartAtId`. **There is no name/text search in the API** — hence the relay-side scan and ranking |
 | `GET /folders` | `folders` | `projectKey`, `folderType=TEST_CASE`, `maxResults` (≤1000). PMM has 88, so one page covers it |
