@@ -31,6 +31,15 @@ export COMPOSE_PROFILES
 
 docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded.yaml build
+
+# Drop any leftover fixed-name "test" container before bringing the stack up.
+# `docker compose up` revives/adopts a previously-created container even when its
+# profile is inactive (docker/compose#9398), so a "test" left behind by another
+# PSMDB stack (CLEANUP=no keeps it, and this project's `down` won't remove another
+# project's container) makes `up` try to (re)create /test and clash. Tests still
+# create it fresh via `docker compose run test`.
+docker rm -f test 2>/dev/null || true
+
 docker compose -f docker-compose-sharded.yaml up -d
 
 echo
