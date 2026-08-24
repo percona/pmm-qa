@@ -13,11 +13,11 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
       const clientCert = cliHelper
         .execSilent(`docker exec ${container} cat /mongodb_certs/client.pem`)
         .assertSuccess().stdout;
-      const ca = cliHelper
-        .execSilent(
-          'cat /home/runner/work/pmm-qa/pmm-qa/pmm-qa/qa-integration/pmm_psmdb_diffauth_setup/pki/ca.crt',
-        )
-        .assertSuccess().stdout;
+      const caLocation = cliHelper.execSilent(`find / -name "ca.crt"`).stdout;
+
+      console.log(`Ca Location is: ${caLocation}`);
+
+      const ca = cliHelper.execSilent(`cat ${caLocation}`).assertSuccess().stdout;
 
       await api.remoteInstanceApi.addRemoteInstance({
         mongodb: {
