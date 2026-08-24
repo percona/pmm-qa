@@ -23,6 +23,8 @@ State the tier and reason in one line before delegating.
 
 Always pass an explicit tier. If uncertain between haiku and sonnet, use sonnet. If uncertain between sonnet and opus, use sonnet unless the high-stakes rule applies. Inherit only when matching the parent model is intentional.
 
+After a successful escalation, identify the cause. Capture a missing reusable instruction for the relevant task-specific skill; if stronger reasoning was required or the cause is unclear, route that task type to the successful tier. Ignore one-off failures, and never let subagents modify routing files.
+
 ## Apply and audit
 
 Read the active delegation tool's schema and use its documented model field and accepted values. For Claude Code's Agent tool, pass `model: "haiku" | "sonnet" | "opus"`. For other tools or Workflow APIs, use their documented field; never invent or assume one.
