@@ -17,9 +17,12 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
   if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
-    // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
-    PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
-    if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
+    // Feature-build / RC clients trail v3 VERSION once an RC branches; take the reference from the
+    // client itself. Server_version drifts from the client on submodules-only FB pushes -- the pmm
+    // submodule pointer doesn't move, so the pmm-managed RPM cache hits and the server keeps
+    // reporting its first-build stamp while the client tarball is rebuilt fresh with the new head.
+    PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_admin_version;
+    if (!PMM_VERSION) throw new Error('Could not read pmm_admin_version from "pmm-admin status --json"');
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
     // TODO: refactor to use docker hub API to remove file-update dependency
     // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
