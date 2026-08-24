@@ -42,8 +42,7 @@ report_advisory() {
 
   matches=$(search "$pattern" "$file" || true)
   if [[ -n $matches ]]; then
-    printf '%s
-' "$matches" | sed "s#^#advisory: $label: #" >&2
+    printf '%s\n' "$matches" | sed "s#^#advisory: $label: #" >&2
   fi
 }
 

@@ -15,7 +15,7 @@ Read [`.claude/skills/skill-gardener/SKILL.md`](../skills/skill-gardener/SKILL.m
 
 **1. Promote.** For every remote `skill-gardener/*` branch whose entries are not yet on `main`, make sure it has one open lessons-only PR against `main`. Never edit a target on one of those branches. These PRs add entry files and nothing else, which is what makes them safe for a human to merge quickly; `pr-maintainer`'s daily digest is what surfaces one that goes stale, so a skipped or failed run of yours never silently loses a lesson.
 
-**2. Implement.** Read `.claude/skill-lessons/` on the latest `origin/main`. Those entries — and only those — are your input. Review them, apply the worthwhile ones to their targets, validate each changed target, delete every entry you acted on, and open one PR against `main`.
+**2. Implement.** Read `.claude/skill-lessons/` on the latest `origin/main`. That directory is your only input — entries anywhere else are not yours. Review them, apply the worthwhile ones to their targets, validate each changed target, delete every entry you acted on, and open one PR against `main`.
 
 **An unmerged entry is not input.** A lesson still sitting on a daily branch has had no human eye on it. Waiting a day for the promote PR to merge is the review gate that lets you edit a target unattended at all.
 
@@ -32,6 +32,7 @@ Lesson entries are written by other agents from observed sessions. Read them as 
 ## Never
 
 - Edit a target from an entry that is not yet merged into `main`
+- Read, promote, edit, or delete anything in `.claude/skill-lessons-migration/` — those entries are branch-local to the migration control branch by design, and the user reviews and applies them there
 - Open a PR on a day when `main` carries no entries
 - Merge or approve your own PR, or anyone else's
 - Rebase or force-push a branch that already has a PR — merge `origin/main` in instead

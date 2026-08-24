@@ -2,9 +2,9 @@
 
 The parent agent's half of the workflow: row selection, preflight, provisioning, gate ownership, and the phase timeline. Worker subagents do not read this file - their phase contracts are in `run.md`, and the canonical sequence below is the single copy of it.
 
-Run exactly one migration at a time. One selected migration owns one local Docker PMM environment from the moment provisioning starts until PR creation. Do not clean or recreate that environment inside the workflow.
+Run exactly one batch at a time, where a batch is one row by default and may be several rows only under section Batch mode. That batch owns one local Docker PMM environment from the moment provisioning starts until PR creation. Do not clean or recreate that environment inside the workflow. Within a batch, rows are still migrated one at a time and each gets its own writer pass and its own live proof - batching changes what is published together, never what is verified independently.
 
-Migration work happens and is tested in the control branch's own worktree, and is never committed there. Control commits only the `origin/main` merge, both graph refreshes, and the two tracker status changes; everything the migration produces stays uncommitted until publication, when it is moved to a branch cut from `origin/main` and committed there. See `branch-workflow.md` section What is committed where.
+Migration work happens and is tested in the control branch's own worktree. What is committed where, and why, is owned by `branch-workflow.md` section What is committed where - read it before this file if you have not already.
 
 Step 7 (Publish) touches that second ref via an isolated `git worktree`; control's own checkout is never switched away from, through the entire workflow.
 
@@ -17,25 +17,35 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 - Launch each subagent and **wait on its task completion notification** (or poll its transcript every 10-15s). Do **not** use long `Await` sleeps with regex patterns on terminal output.
 - **The parent, and only the parent, spawns review gates.** A worker subagent that spawns another subagent and then blocks waiting for its reply deadlocks. Do not give the runner, or any worker, the job of requesting a review: the runner returns its execution evidence and stops, and the parent spawns the reviewer.
 - **Never run two reviewers against the same commit.** Before spawning a gate, confirm no reviewer is still live for it. Reviewer cost is roughly flat per spawn regardless of scope, so the only lever on gate cost is spawning fewer of them; a duplicated final review is the largest single avoidable cost in this workflow.
-- **A re-requested gate handoff must carry the prior verdict, its blocker, and what changed since.** A gate re-requested as though it were a fresh review re-derives the whole checklist to rediscover one unchanged finding, and cannot move.
-- Enforce gates strictly: no execution before `READY_TO_RUN`, no publish branch before execution passes, no final review before the code and its workflow coverage are committed on that branch, no push or PR before `FINAL_REVIEW_PASS`, and no tracker `done` before a PR exists.
+- **A `STALE_SUBJECT` verdict is not a failure and is never a pass.** It comes only from the final gate, and means the publish branch moved underneath the reviewer, so the verdict cannot apply to anything. Do not treat it as `FINAL_REVIEW_FAILED` and route it to the writer; re-spawn the same gate, scoped to the delta between the ledger entry's `startRef` and the branch's current HEAD. If you are seeing it repeatedly, something is committing to the publish branch while the gate is live - stop doing that first.
+- **The initial gate has no staleness detection, so the invariant is yours to hold.** Its subject is control's uncommitted worktree, which has no ref to compare against (`run.md` section Gate ledger explains why the phase `.patch` hash cannot substitute). Nothing may write to control's worktree while an initial gate is live - no writer re-spawn, no parent state reset, no unrelated edit. A gate that silently reviewed a tree you changed underneath it will report a pass on work nobody checked.
+- **A re-requested gate reads its own gate ledger (section Gate ledger, below) before doing anything else.** Include the ledger path in the handoff, but do not rely on retyping the prior verdict into prose - the ledger is what the reviewer is required to check itself, precisely so a parent omission cannot cause a full re-derivation of an unchanged finding.
+- Enforce gates strictly: no execution before `READY_TO_RUN`, no publish branch before execution passes, no final review before the code and its workflow coverage are committed on that branch, no push or PR before `FINAL_REVIEW_PASS`, and no tracker `done` before a PR exists. There are no exceptions: every row gets both gates, in this order. A structure that drops the initial gate would contradict `SKILL.md` Required outcome items 2 and 3, which are authoritative.
 - **Nothing the migration produces is committed on control.** If a subagent reports a commit SHA on control for migration code, that is a defect: have it reset the commit and leave the change in the worktree.
 - Overlap only where gates allow: provisioning runs in the background while the writer migrates (step 2a); static review can start while PMM provisions; MCP locator checks begin after readyz passes. Everything else is serial. Candidates and their verdicts live in `parallelization-ledger.md`; do not add an overlap that is not recorded there as `implemented`.
-- Reuse one local PMM environment per migration; never recreate it mid-workflow.
+- Reuse one local PMM environment per batch (one row by default); never recreate it mid-workflow. Within a batch, reset test state between rows rather than reprovisioning - see section Batch mode.
 - Never edit `e2e_tests/.env` during migration. Use `PMM_UI_URL=https://127.0.0.1/` and `ADMIN_PASSWORD=admin` unless the local provisioning command selected different values, and pass the same pair to every review and execution command.
 - **Operations a subagent is not permitted to perform belong to the parent.** Environment teardown and test-state resets - for example emptying the Grafana annotation table between runs on a reused environment - are refused by the permission classifier inside a subagent. A subagent must stop and ask rather than route around the refusal by another means; the parent performs the operation and resumes it.
-- For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
+- Locator verification goes through the Playwright MCP server, which `.mcp.json` declares repo-level so every subagent inherits it. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is not a general fallback - it hardcodes `/pmm-ui/help` on every code path and supports only `getByRole` plus an optional `a[href=...]`. Use it for that one preset; if MCP is unavailable, stop and report it rather than checking a different page.
 - Once the background provisioning command starts in step 2a, if the workflow stops before the runner is invoked (including a provisioning failure or an exhausted writer/reviewer loop), the parent runs `node provisioning/setup.ts --teardown` before stopping. The runner owns cleanup for every path it reaches in step 8.
 - Maintain this migration's timeline at `.claude/migration-observations/<row>-<slug>.md`; see section Phase timeline. The parent creates it in step 1 and appends rows for provisioning, gate transitions, and publish. Each subagent appends its own row before returning.
 - After each subagent phase completes, `.claude/hooks/migration-phase-observe.sh` requests a `skill-gardener` Capture pass for that phase. The hook fires when a subagent is launched, not when it finishes, so treat it as a reminder rather than a signal. Batch the passes to the end of the migration whenever another subagent is still live - editing skill files underneath a running subagent is worse than a late capture.
 - Do not rely on the `PostToolUse`/`Skill` hook for this workflow. It fires against the `Skill` tool call, which for an inline-loading skill returns as soon as the instructions load.
 - Record the tracker `in-progress` commit SHA in the handoff so a resumed session can recover which row is active. It is a marker only; it no longer defines a commit range, because nothing is cherry-picked.
-- **Checkpoint the uncommitted worktree after each phase** to `.claude/migration-observations/<row>-<slug>.patch` (`git add -N .` first, then `git diff`). That directory is gitignored, so this is a recovery point and not a commit. Delete it once the PR is open. Without it a multi-hour run has nothing to fall back on.
+- **Checkpoint the uncommitted worktree after each phase** to `.claude/migration-observations/<row>-<slug>.patch`, using the exact command form in `branch-workflow.md` section Checkpointing uncommitted work - `git add -N` over currently-existing paths, then `git diff HEAD --binary -M --output=`. Do not improvise a `git diff > file` variant; every part of that form is load-bearing. That directory is gitignored, so this is a recovery point and not a commit. Delete it once the PR is open. Without it a multi-hour run has nothing to fall back on.
 - **Restore control's worktree to clean after publication.** The migration's edits are still sitting there; leaving them means the next migration starts on top of them.
 
 ## 1. Select and prepare
 
-On the control branch, first check whether another tracker row is already `in-progress`; stop and report the conflict if so. Only once clear, merge `origin/main` into control - merging before this check risks mixing an unrelated merge commit into an already-active migration's history.
+On the control branch, first check whether another tracker row is already `in-progress`; stop and report the conflict if so. Then check whether **any** migration PR is currently open; stop and report if even one is. Match on the `migrate(<scope>):` title prefix every migration PR uses, not on a full-text title search:
+
+```bash
+gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | select(.title | startswith("migrate("))]'
+```
+
+`--search 'migrate in:title'` is wrong here: GitHub tokenizes the query, so it also matches unrelated PRs such as "Migrate QA cloud agents to Claude Code" and "PMM-7: Migrate upgrade tests". Since this step stops the workflow, one such PR blocks every future row with a reason that is not true.
+
+The nightly Playwright matrix and `e2e_tests/README.md` are touched by every migration PR, so starting a new row while one is open is what produces the second conflicting PR - the cap is one open migration PR in total, which means zero open before a new row starts. Land or otherwise close the open PR before selecting a new row. Note that a batch (section Batch mode) produces one PR for several rows, which is how throughput is recovered under this cap rather than by allowing a second PR. Only once both checks are clear, merge `origin/main` into control - merging before this check risks mixing an unrelated merge commit into an already-active migration's history.
 
 `tracker.md` runs to tens of kilobytes. Never read it whole: select the row with a scoped `grep`/`head` over the status column, and read only that row plus whichever header section you actually need.
 
@@ -45,7 +55,7 @@ The drift-check extraction must use the Grep tool or an ERE pattern, and must no
 
 Check practices freshness: read `@playwright/test` from `e2e_tests/package.json` and compare it with `verifiedAgainst` in `playwright-practices.md`. If they differ, stop and refresh that file against the Playwright release notes before migrating; a stale practices file silently authorizes outdated idiom for every later row.
 
-Select the first `pending` tracker row that is not in B13. Always skip B13 rows. Refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` per `graphify.md`, then change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight commands. Record that commit's SHA as the active-row marker.
+Select the first `pending` tracker row - `tracker.md`'s status legend already excludes B13 rows from `pending` (they carry `blocked-infra`), so no separate bucket check is needed here. Refresh and commit both `e2e_tests/graphify-out/` and `codeceptjs-e2e/graphify-out/` per `graphify.md`, then change the selected row to `in-progress` in a separate tracker-only commit. Follow `branch-workflow.md` for the exact preflight commands. Record that commit's SHA as the active-row marker.
 
 Do not begin migration work until the control merge and both graph refreshes are complete. Confirm the worktree is clean first - a previous migration that failed to restore it leaves edits that would be swept into this migration's patch. From here everything the migration produces stays uncommitted in control's worktree until publish (step 7).
 
@@ -60,6 +70,27 @@ The parent may explicitly designate a run as test-only (dry run). In that mode, 
 - Stage 5b and 7 (publish branch, source retirement, workflow-coverage commit, push, and PR).
 
 All other steps, including provisioning, review, `READY_TO_RUN`, execution, and `FINAL_REVIEW_PASS`, still apply unchanged. Test-run mode never skips a gate; it only skips tracker, graph-refresh, and publication side effects. Workflow coverage is designed and its greps verified as usual, but not committed, since there is no publish branch to commit it on.
+
+## Batch mode
+
+**Status: defined but not enabled.** `parallelization-ledger.md` records this candidate as `needs-evidence, trial-gated`, and the rule above ("do not add an overlap that is not recorded there as `implemented`") therefore forbids using batch mode as routine practice. Do not batch rows by default. Batch mode may be used only when the parent explicitly designates a run as a batch-mode trial, which must record per-row phase timings and any cross-row state contamination on the timeline. After two such trials the ledger row moves to `implemented` or `unsafe`; until then, every migration is a single-row batch.
+
+Provisioning overlap with the writer is already free - it cost zero net wall clock on the one migration measured. What is not free is the per-row cost that does not shrink with diff size: the final gate, the publish phase, the two graph refreshes, and the PR itself. Batch mode amortizes that fixed cost across several rows that already share a provisioned environment, instead of paying it once per row.
+
+Eligibility: consecutive `pending` rows (after any reordering needed so rows sharing a `Setup` string are adjacent) whose `Setup` column is character-for-character identical, capped at 5 rows per batch. Do not batch across a bucket boundary and do not batch a row whose test selects state by index on a reused environment (for example anything like `verifyAnnotations`) with any other row - state from one row's proof run must not leak into the next row's.
+
+Procedure: provision once for the whole batch. For each row in the batch, in turn: run the writer, the initial review gate, and the row's own live execution against the shared environment, exactly as a single-row migration would - each row still gets its own independent proof. Do not cut a publish worktree per row. Once every row in the batch has passed its own initial review and execution, cut one publish worktree and branch, move every row's changes across, commit the retirement and workflow coverage for the whole batch, run one final review covering all rows, and open one PR listing every migrated row. Update every row's tracker status together, in one tracker-only commit, once the PR is open.
+
+State reset between rows in a batch must be explicit and recorded on the timeline (for example a Grafana annotation table reset) - do not assume one row's proof run left the environment in the state the next row's proof run needs.
+
+Tracker and recovery bookkeeping for a batch:
+
+- All rows in the batch go `pending` -> `in-progress` together, in one tracker-only commit, before any writer starts. That commit is the batch's active-row marker; record every row number it covers in the handoff and on the timeline. The step 1 "is another row already in-progress" check treats the whole batch as one occupant - several rows `in-progress` at once is expected inside a batch and a defect outside one.
+- Each row keeps its own recovery checkpoint at `.claude/migration-observations/<row>-<slug>.patch`, snapshotted after that row's own phases, never a single shared patch for the batch. Scope each row's checkpoint to that row's own exclusive paths plus, for any shared path it touched, only that row's hunks.
+- Maintain one timeline file per row, as usual, plus one gate-ledger entry per gate spawn recording which rows that gate covered.
+- **Classify every changed path before publishing, because rows in a batch routinely share files.** A path is *row-exclusive* if exactly one row in the batch changed it (typically the migrated test and any POM or helper only it needs). A path is *batch-shared* if two or more rows changed it - which is the normal case for the workflow-coverage YAML (each row appends a tag) and for `e2e_tests/README.md` (the pre-commit hook regenerates it for every commit touching `e2e_tests/tests/**/*.ts`), and can also happen for a helper or API client two rows both extend.
+- **Do not batch two rows that edit the same region of a shared code file.** Overlapping hunks in one helper cannot be separated later, so the rows cannot be dropped independently. Compare each row's changed-path list against the others' after its writer pass; on an overlapping-hunk collision, split the batch rather than continuing.
+- If one row fails and cannot be fixed, drop just that row - but never by restoring a batch-shared path, which would erase the surviving rows' changes to it. Restore only that row's *exclusive* paths, then **recompute** each batch-shared path for the surviving set: re-derive the coverage YAML from the survivors' tags, and let the pre-commit hook regenerate `README.md`. Revert the dropped row's tracker row to `pending` with a Notes entry, and re-verify selectability for the survivors afterwards, since the coverage YAML changed. Do not fail the whole batch for one row, and do not carry a known-broken row into the shared PR.
 
 ## 2a. Start provisioning in the background
 
@@ -115,11 +146,20 @@ It exists because a subagent's internals are invisible to the parent, which rece
 
 Times come from `date -Is`, truncated to `HH:MM`. Each phase adds one row plus one short line saying what cost time and what it was blocked on; a phase cannot be judged parallelizable without that. Record no raw command transcript, no secrets, and no environment credentials.
 
+## Gate ledger
+
+Every gate spawn appends one entry to `.claude/migration-observations/<row>-<slug>.gates.yaml`. The parent creates that file alongside the timeline file in step 1 (same gitignore, same pruning) and includes its path in every gate handoff. The reviewer reads and appends to it itself.
+
+The entry schema and the scoping rule the reviewer must follow live in `run.md` section Gate ledger, because the reviewer reads `run.md` and must not read this file. Do not restate the schema here.
+
+The parent's own obligations: create the file in step 1; pass its path on every gate spawn; never spawn a second gate for a subject while one is still live for it; and treat a `FINAL_REVIEW_FAILED` entry whose blockers are all still `open` as a signal to route work to the writer or runner, not to re-spawn the same gate unchanged.
+
 ## Canonical sequence
 
 ```text
 pending
--> check no other row is in-progress
+-> check no other row is in-progress (a whole batch counts as one occupant)
+-> check no migration PR is open
 -> merge main into control
 -> refresh target graph on control
 -> refresh source graph on control

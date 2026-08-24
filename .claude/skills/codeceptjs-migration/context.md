@@ -41,7 +41,7 @@ Run `bash .claude/scripts/run-migration-single-test.sh` from the repository root
 
 Local provisioning does not create AWS RDS, Aurora, Azure, AMI, OVF, or pmm-demo dependencies. Those tracker rows remain blocked until their named external infrastructure exists.
 
-For MCP locator fallback, run `node .claude/scripts/verify-migration-locator.mjs help-export-logs` against the prepared environment.
+Locator verification goes through the Playwright MCP server, which `.mcp.json` declares repo-level so every subagent inherits it. `node .claude/scripts/verify-migration-locator.mjs help-export-logs` is not a general fallback - it hardcodes `/pmm-ui/help` on every code path and supports only `getByRole` plus an optional `a[href=...]`. Use it for that one preset; if MCP is unavailable, stop and report it rather than checking a different page.
 
 ## Setup Precedence
 

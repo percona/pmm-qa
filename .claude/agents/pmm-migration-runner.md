@@ -1,6 +1,6 @@
 ---
 name: pmm-migration-runner
-description: Runs one independently approved Playwright migration, gathers execution evidence, requests the final review, then retires the CodeceptJS source, opens a PR to main, and updates the tracker to done. Does not design migration logic or change assertions and locators.
+description: Runs one independently approved Playwright migration, gathers execution evidence, cuts the publish branch and commits the retirement and workflow coverage there, then - once the parent has separately obtained FINAL_REVIEW_PASS - opens a PR to main and updates the tracker to done. Never requests or spawns the final review itself; that is the parent's job alone. Does not design migration logic or change assertions and locators.
 model: inherit
 readonly: false
 ---
@@ -33,7 +33,14 @@ publishBranch:
 workflowCoverage:
   commit:
   jobsChanged: []
+  jobsDeleted: []
   grepVerification: []
+  consumers:
+    - job:
+      grep:
+      setupServices:
+      scenariosSelected: []
+      sufficient: true | false
 migrationProof:
   required:
   command:

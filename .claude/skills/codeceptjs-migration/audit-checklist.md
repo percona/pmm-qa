@@ -11,6 +11,7 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Commented-out scenarios are excluded.
 - [ ] Scenario titles and every original CodeceptJS tag are preserved; a destination execution tag may be added but does not replace a source tag.
 - [ ] Data-driven rows and generated titles are preserved.
+- [ ] The writer's `scenarioSelectability` report is re-derived, not trusted: every scenario either already matches an existing job's grep, or carries `destinationTagNeeded: true` with a stated plan for what tag or job the runner will add at step 5b. No scenario is left unresolved with no plan.
 
 ### Source fidelity
 
@@ -93,6 +94,7 @@ Missing hooks or cleanup: 0
 Missing data rows: 0
 Unresolved dependencies: 0
 Unverified locators: 0
+Unresolved scenario selectability: 0
 New TypeScript failures: 0
 New ESLint failures: 0
 Migration convention violations: 0
@@ -111,8 +113,12 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] No required source dependency was omitted.
 - [ ] No target registration is missing.
 - [ ] Every original CodeceptJS tag remains on the migrated Playwright scenarios.
-- [ ] Existing CodeceptJS jobs and grep expressions remain unchanged.
-- [ ] Each migrated tag is appended to a compatible existing Playwright job, or a new Playwright job provides the required setup.
+- [ ] Existing CodeceptJS jobs and grep expressions remain unchanged, unless retirement emptied one - in which case that job was deleted in this PR (see `branch-workflow.md` section Workflow coverage), not left in place reporting green on zero tests.
+- [ ] Each migrated tag is appended to the existing `test_execution_playwright` matrix entry, with no new job block added, unless no compatible job exists anywhere for this migration's CI surface - in which case a new job was created mirroring the retiring CodeceptJS job's setup.
+- [ ] `expected_test_jobs` matches the actual number of nightly `"test execution / "` consumer jobs after this PR's edits: unchanged when a tag was merely appended, incremented when a nightly consumer was added, decremented when one was deleted (including a CodeceptJS job this migration emptied). The before/after count is stated, not inferred.
+- [ ] Every migrated scenario title is selected by some Playwright job, proven with `npx playwright test --list --grep '<expression>'` and a title count - not merely believed selected because the file's union of tags looks right.
+- [ ] Every tag the edited job already carried still selects exactly what it selected before the edit (the same command, run against the pre-edit grep).
+- [ ] Any grep expression touched or added contains no unescaped `|` that was meant to be literal: `e2e_tests/launchable-prepare.js` and `codeceptjs-e2e/launchable-prepare.js` both compile a `|`-containing expression as a regular expression, not a string match - a string-matched intent here silently selects nothing while the job still reports green.
 - [ ] The publish branch was cut from `origin/main` and carries only the migrated code, its workflow coverage, and the source retirement - no tracker, `graphify-out/`, `parallelization-ledger.md`, or `.claude/migration-observations/` paths, because none were ever committed on it.
 - [ ] No migration code was committed on control; control carries only the `origin/main` merge, the two graph refreshes, and the two tracker status commits.
 - [ ] Control's worktree was restored to clean after publication.
@@ -129,6 +135,9 @@ Missing scenarios: 0
 Missing assertions: 0
 Unresolved dependencies: 0
 Unverified locators: 0
+Unselectable scenarios: 0
+Vacuous CodeceptJS jobs left undeleted: 0
+expected_test_jobs mismatches: 0
 Required test execution: PASS
 Target regression: PASS or NOT REQUIRED
 Result: FINAL_REVIEW_PASS

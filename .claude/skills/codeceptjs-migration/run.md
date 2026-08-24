@@ -24,7 +24,7 @@ The writer:
 8. checks destination selectability **per scenario**; and
 9. runs static validation.
 
-On step 8: a source file's scenarios do not all carry the same tags, so the file's union of tags is not what CI selects on. Check every migrated scenario title against the grep of the workflow job that will run it, with `npx playwright test --list --grep '<expression>'`, and confirm the count and the titles. A scenario that matches no destination grep is coverage that disappears the moment the CodeceptJS source is retired - and it is invisible in a green test run. Report any scenario that needs a destination execution tag added; adding one is permitted, removing or replacing a source tag is not.
+On step 8: a source file's scenarios do not all carry the same tags, so the file's union of tags is not what CI selects on. The workflow-coverage YAML itself is not edited until step 5b (the runner's), so at this point you can only check against jobs as they exist **today** - list the migrated scenario titles, diff them against the grep expressions the destination jobs already carry, with `npx playwright test --list --grep '<expression>'` per existing job, and report each scenario that matches no existing job's grep as `destinationTagNeeded: true`. Do not edit workflow YAML. A scenario left at `destinationTagNeeded: true` is not a defect in itself, but `MIGRATION_READY` is invalid while any scenario's tag need is unresolved: either the scenario already has a home in an existing job's grep, or the report says explicitly which new tag or job the runner must add at step 5b. Do not return `MIGRATION_READY` with an unresolved `destinationTagNeeded: true` scenario and no stated plan for it - that gap is what cost row 3 two extra final-review passes.
 
 Leave the changes uncommitted and report the changed paths. Do not commit on control.
 
@@ -77,9 +77,7 @@ After execution passes and **before** the final review, the runner cuts a worktr
 
 This ordering is deliberate: the final review has to verify committed content, and a coverage plan described only in prose cannot be verified at all.
 
-Preserve every original CodeceptJS scenario tag. Leave existing CodeceptJS jobs and grep expressions unchanged. Append the migrated tags to an existing Playwright job when its `setup_services` is genuinely sufficient, or create a Playwright job with the required setup when no compatible job exists.
-
-Verify each grep expression selects what you intend with `npx playwright test --list --grep`, in both directions: the migrated scenarios are now selected, and every tag the job already carried still selects what it selected before.
+Coverage rules, the per-scenario check across every consumer job (not only the one edited), and the two CI traps (the `|` regex trap and the `expected_test_jobs` counter) are all in `branch-workflow.md` section Workflow coverage - apply it in full; it is not restated here.
 
 ## 6. Final review
 
@@ -89,11 +87,40 @@ The parent spawns this gate. The runner does not.
 
 Reviewer output: `FINAL_REVIEW_PASS` or `FINAL_REVIEW_FAILED`.
 
+## Gate ledger
+
+Applies to both gates (step 4 and step 6). The parent creates `.claude/migration-observations/<row>-<slug>.gates.yaml` and passes its path on every gate spawn; the reviewer reads it and appends to it itself, so a missing or incomplete prose handoff can never silently cause a full re-derivation.
+
+Read it first, before any other work in the gate. Append one entry before returning:
+
+```yaml
+- gate: initial | final
+  attempt: 1
+  rowsCovered: []   # usually one row; several only for a batch (see the parent's batch mode)
+  subject:
+    kind: worktree | branch   # initial gate is always worktree, final gate always branch
+    startRef:       # final gate only: the branch HEAD sha, measured before any review work. Omit at the initial gate.
+    endRef:         # final gate only: the branch HEAD sha again, measured immediately before returning; must equal startRef for a passing verdict. Omit at the initial gate.
+  verdict: READY_TO_RUN | REVIEW_FAILED | LOCATOR_FIX_REQUIRED | STALE_SUBJECT | FINAL_REVIEW_PASS | FINAL_REVIEW_FAILED
+  blockers:
+    - id: B1
+      claim:
+      evidence:
+      status: open | fixed-by:<commit-or-note> | withdrawn
+  advisories: []
+```
+
+Scoping rule. If no entry exists for this gate, this is attempt 1 and the full checklist in `audit-checklist.md` applies. If the last entry for this gate is not a pass and carries any blocker with `status: open`, scope this pass to those blocker ids plus whatever changed on the subject since that entry's `endRef`, and do not re-derive the full checklist. If you cannot determine what changed since that entry - the handoff is silent and the recorded `endRef` does not correspond to anything you can diff - stop and report that gap rather than repeating a pass that cannot move; a missing delta is not license to re-derive everything anyway.
+
+Subject stability, final gate only. The final gate's subject is the publish branch, so measure its HEAD sha before doing any review work and again immediately before returning. If they differ, the subject changed underneath you: record both values, return `STALE_SUBJECT`, and do not return a passing verdict on a branch that no longer exists as reviewed. The parent then re-spawns the gate scoped to the delta.
+
+There is deliberately no equivalent at the initial gate. Its subject is control's uncommitted worktree, which has no ref to compare, and the obvious stand-in - the phase `.patch` file's hash - does not work: the parent writes that file between phases and nothing regenerates it during a gate, so the two measurements would be equal by construction no matter what happened to the tree. The initial gate therefore omits `startRef`/`endRef` and never returns `STALE_SUBJECT`. The invariant that protects it is the parent's, not the reviewer's: nothing may write to a subject while its gate is live (`orchestration.md`).
+
 ## 7. Publish
 
 Only after `FINAL_REVIEW_PASS`, the runner:
 
-1. revalidates the publish worktree (lint/typecheck/build/test), every time - `.claude/scripts/` is absent from a tree cut from `origin/main`, so the test runner is invoked directly;
+1. revalidates the publish worktree (lint/typecheck/build/test), every time - the four migration-specific scripts under `.claude/scripts/` are control-only and absent from a tree cut from `origin/main` (see `branch-workflow.md` "Revalidate, every time"), so the test runner is invoked directly and any of those four scripts still needed here is invoked by its absolute path on the control worktree;
 2. pushes the publish branch, opens a PR targeting `main`, and attaches the E2E tests Matrix Actions run URL per `branch-workflow.md`;
 3. on control's own checkout (never switched away), updates the tracker row to `done` with the PR link and pre-migration graph-refresh result, then commits and pushes only the tracker change; and
 4. restores control's worktree to clean and verifies `git status --short` is empty.

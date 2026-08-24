@@ -165,6 +165,8 @@ dist
 !.claude/settings.json
 !.claude/skill-lessons/
 !.claude/skill-lessons/**
+!.claude/skill-lessons-migration/
+!.claude/skill-lessons-migration/**
 .claude/scripts/node_modules/
 .claude/scripts/.sessions/
 .cursorrules
@@ -185,3 +187,4 @@ graphify-out/cache
 
 # Local migration phase observations (evidence for skill-gardener, not repo content)
 .claude/migration-observations/
+.playwright-cli/

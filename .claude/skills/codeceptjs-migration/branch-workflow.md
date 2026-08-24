@@ -1,6 +1,6 @@
 # Branch and PR Workflow
 
-Migration work **happens and is tested** on the control branch's worktree, and is **never committed there**. Control commits only what is genuinely control-only: the `origin/main` merge, both graph refreshes, and the two tracker status changes. The migrated code is moved to a fresh branch cut from `origin/main`, committed there, reviewed there, and PR'd against `main`. Control receives it later through an ordinary `merge origin/main`.
+Migration work **happens and is tested** on the control branch's worktree, and is **never committed there**. Control commits only what is genuinely control-only: the `origin/main` merge, both graph refreshes, the two tracker status changes, and branch-local gardener lesson entries. The migrated code is moved to a fresh branch cut from `origin/main`, committed there, reviewed there, and PR'd against `main`. Control receives it later through an ordinary `merge origin/main`.
 
 Committing the code on control as well would author the same content twice and then take delivery of it a third time on the next merge from `main`. That is what produced cross-branch conflicts and what made a scrubbing step necessary; neither exists in this model.
 
@@ -10,6 +10,7 @@ Committing the code on control as well would author the same content twice and t
 | --- | --- |
 | `origin/main` merge, `e2e_tests/graphify-out/`, `codeceptjs-e2e/graphify-out/` | control |
 | tracker row `in-progress`, tracker row `done` | control |
+| `.claude/skill-lessons-migration/` entries, and any target edit the user approves from one | control |
 | migrated Playwright test, POMs, helpers, API clients, fixtures | publish branch |
 | workflow-coverage YAML | publish branch |
 | CodeceptJS source retirement | publish branch |
@@ -84,15 +85,17 @@ From here the writer's edits, any reviewer locator fixes, and everything else th
 A migration runs for hours across several subagents with nothing committed, so give it a recovery point. After each phase, snapshot the working tree:
 
 ```bash
-git add -N .
-git diff > .claude/migration-observations/<row>-<slug>.patch
+git add -N -- <paths...>
+git diff HEAD --binary -M --output=.claude/migration-observations/<row>-<slug>.patch -- <paths...>
 ```
 
-`git add -N` is required or new files are absent from the diff. `.claude/migration-observations/` is gitignored, so this is a checkpoint and not a commit. Note the snapshot on the timeline and delete it once the PR is open.
+`git add -N` is still required: `git diff HEAD` sees staged content, but a genuinely untracked new file is invisible to any `git diff` form unless it is marked with intent-to-add first. `--binary` is required or a changed binary file (for example an `image-renderer` snapshot baseline) produces an unappliable stub. `-M` is required or a `git mv` (the source retirement) is invisible to the diff entirely. `--output=` is required instead of a shell redirect or a pipe: on this Windows/PowerShell setup a `>` redirect or a `|` pipe re-encodes the bytes with a UTF-8 BOM and CRLF line endings, and `git apply` accepts the corrupted patch silently. `git diff --output=` writes the bytes itself and is safe in any shell. `.claude/migration-observations/` is gitignored, so this is a checkpoint and not a commit. Note the snapshot on the timeline and delete it once the PR is open.
+
+Every path in the `add -N` pathspec must exist on disk right now, under its current name. `git add -N` fails on the whole invocation if even one listed path does not exist - for example the pre-rename name of a file `git mv` already renamed - and when it fails, none of the paths in that call get intent-to-add, including ones that were otherwise fine; the checkpoint then silently omits every genuinely new file with no error surfaced downstream. List only the paths `git status --short` shows right now (their current names, not any name a file used to have), not a remembered list from earlier in the phase.
 
 `git add -N` leaves intent-to-add entries in the index, and they persist. That is why the cleanup at the end restores `--staged` as well as `--worktree`: without it a new file that was snapshotted and then removed shows up as a staged deletion on control.
 
-Verified round-trip: a diff carrying one new file and one modified file, taken this way from control, applies cleanly with `git apply --3way` into a worktree cut from `origin/main` and produces the expected `A` and `M` entries.
+Verified only for a new file, a modified file, a modified binary file, and a `git mv` rename - the four shapes this workflow actually produces. Not verified for a merge conflict inside the applied patch; see "Move the work across" below for that failure mode.
 
 ## Before publication
 
@@ -136,13 +139,14 @@ A path absent from `origin/main` depends on an earlier still-unmerged sibling mi
 Apply control's working-tree changes into the publish worktree, restricted to the paths this migration actually touched:
 
 ```bash
-git -C <control-worktree> add -N .
-git -C <control-worktree> diff -- <paths...> | git -C ../pmm-qa-publish apply --3way
+git -C <control-worktree> add -N -- <paths...>
+git -C <control-worktree> diff HEAD --binary -M --output=<tmpfile> -- <paths...>
+git -C ../pmm-qa-publish apply --3way <tmpfile>
 ```
 
-List the paths explicitly rather than taking the whole diff, so an unrelated edit sitting in control's worktree cannot ride along. Then commit in the publish worktree.
+List the paths explicitly rather than taking the whole diff, so an unrelated edit sitting in control's worktree cannot ride along. Never pipe the diff into `apply` and never redirect it with `>` - write it with `--output=` and apply from that file, for the same reason given in "Checkpointing uncommitted work" above.
 
-A patch that does not apply is the same cross-migration dependency surfacing earlier and more legibly than a merge conflict would. Resolve it the same way, before the PR exists.
+A patch that fails to apply at all is the same cross-migration dependency surfacing earlier and more legibly than a merge conflict would. Resolve it the same way, before the PR exists. A patch that *appears* to apply can still be wrong: `git apply --3way` can land conflict markers in a file and still exit non-zero for that file while other files in the same patch apply cleanly - check `git -C ../pmm-qa-publish status --short` for `U` entries and `git -C ../pmm-qa-publish grep -n '^<<<<<<< '` for stray markers before committing anything in the publish worktree.
 
 ### Retire the source and add coverage, here
 
@@ -165,7 +169,7 @@ Then commit workflow coverage, per the section below.
 
 Rerun static validation (lint/typecheck/build) and the migrated test itself in the publish worktree before pushing. A migration can call something an unmerged sibling added to a shared file without touching that file itself, which no dependency check above will catch.
 
-`.claude/scripts/` is control-only tooling and is correctly absent from a worktree cut from `origin/main`, so `run-migration-single-test.sh` does not exist here. Invoke the test runner directly, against the same live environment and the same credential pair:
+Most of `.claude/` - `settings.json`, `hooks/`, `agents/`, and most of `scripts/` (`pmm-ui-login.js`, `pw-record.js`, `pw-screenshot.js`, `skill-gardener-counter.sh`, and their `lib/`) - is on `origin/main` and present in this worktree. Only four migration-specific scripts are control-only and therefore absent here: `check-migration-conventions.sh`, `run-migration-single-test.sh`, `verify-migration-locator.mjs`, and `validate-migration-scripts.sh` - along with the `codeceptjs-migration` skill and its three agents, which also exist only on control. Where one of those four scripts is still needed against files in this worktree, invoke it by its absolute path on the control worktree, pointed at the target file's path here, rather than assuming a local copy: `bash "<control-worktree>/.claude/scripts/check-migration-conventions.sh" ../pmm-qa-publish/e2e_tests/tests/<file>.test.ts`. For `run-migration-single-test.sh`, invoke the test runner directly instead, against the same live environment and the same credential pair:
 
 ```bash
 cd ../pmm-qa-publish/e2e_tests
@@ -180,23 +184,28 @@ Committed on the publish branch, before the final review, so the gate can verify
 
 Preserve every original CodeceptJS scenario tag in the migrated Playwright test. A destination execution tag may be added, but it must not replace or remove a source tag.
 
-Leave existing CodeceptJS jobs and grep expressions unchanged, including when no active CodeceptJS scenario remains for a migrated tag.
+Leave existing CodeceptJS jobs and grep expressions unchanged, unless this migration is the one that empties them - see below.
 
-For Playwright coverage:
+If retiring this source leaves a CodeceptJS job's grep expression selecting zero remaining active scenarios, delete that job in this same PR, in the same commit as the Playwright coverage that replaces it. Do not leave it in place "unchanged": both CI runners treat an empty test selection as a passing job (the launchable-subset gate skips every downstream step, and the run step itself ends `|| true`), so an emptied job does not fail or warn - it reports green forever while testing nothing, and nothing later in this process, or in CI, will ever flag it. Check every job the retired source's tags feed, not only the one job this migration happens to be touching.
 
-- append the migrated tag to an existing Playwright job when its `setup_services` is sufficient; or
-- create a Playwright job with the required setup when no compatible job exists.
+For Playwright coverage, append the migrated tag to the existing `test_execution_playwright` matrix entry. Do not add a new Playwright job block: that job and its counter are already established on `main`, and adding coverage should be a one-line tag append to the existing `tags_for_tests` matrix entry. Only when no Playwright job of any kind exists yet for this migration's CI surface (for example, a job not fed by `test_execution_playwright` at all - see the FB-suite case below) may a new job be created, mirroring the retiring CodeceptJS job's setup verbatim.
 
-Do not create a new Playwright job when an existing job provides the required setup.
+`expected_test_jobs` in `nightly-e2e-tests-matrix.yml` is the number of nightly test-execution jobs the setup shards wait for, matched by the `"test execution / "` name prefix in `runner-e2e-tests-codeceptjs-remote-nightly-setup.yml`. Both CodeceptJS and Playwright test-execution jobs count toward it. So:
 
-**Check selectability per scenario, not per file.** A source file's scenarios rarely all carry the same tags, so the file's union of tags is not what CI selects on. Verify with `npx playwright test --list --grep '<expression>'` in both directions:
+- **Appending a tag** to an existing matrix entry changes no job count - leave the counter alone. This is the normal case, and it is why appending is preferred over adding an entry.
+- **Adding** a nightly consumer (a new matrix entry or a new prefixed job) increments the count, and **deleting** one - including deleting a CodeceptJS job this migration emptied - decrements it. In either case the counter must be updated in the same commit to match reality. Leaving it too high makes the setup shards wait for a job that no longer exists and then fail the run on a timeout; leaving it too low lets the shards finish and tear down their environment while a real consumer is still running.
+- A job in `fb-e2e-suite.yml` is not fed by these setup shards and carries no such counter, so adding or deleting one there does not affect `expected_test_jobs`.
+
+Count the nightly consumers after your edit and state the before/after number in the handoff rather than reasoning about the delta.
+
+**Check selectability per scenario, not per file, and across every consumer, not only the job you edited.** A source file's scenarios rarely all carry the same tags, so the file's union of tags is not what CI selects on. Verify with `npx playwright test --list --grep '<expression>'` in both directions:
 
 - every migrated scenario is now selected by some Playwright job; and
 - every tag the edited job already carried still selects exactly what it selected before.
 
-A migrated scenario that matches no destination grep is coverage that vanishes the moment the source is retired, and nothing about a green test run reveals it.
+Then widen the check beyond the job you just edited: tags are reused across many tracker rows, so a migrated scenario's tag can already be selected by a job you never touched - one that was written for an earlier, different migration and may not provision what this scenario needs. For each tag on each migrated scenario, enumerate every job across `.github/workflows/` whose `pmm_test_flag`/`tags_for_tests` would select it (`grep -n "pmm_test_flag\|tags_for_tests" .github/workflows/*.yml`), and for every consumer found - not only the one this migration edited - confirm its `setup_services` actually covers what the scenario needs. Selection is not the same claim as executability: a scenario can be correctly *selected* by a job whose environment cannot make it *pass*.
 
-Two traps worth checking explicitly. A grep expression containing `|` is compiled as a regular expression by `e2e_tests/launchable-prepare.js`; if it were string-matched the subset would be empty and the whole job would skip while still reporting green. And a matrix entry that counts its consumers (`expected_test_jobs`) stays correct only if you append a tag to an existing entry rather than adding a second one.
+A migrated scenario that matches no destination grep is coverage that vanishes the moment the source is retired, and nothing about a green test run reveals it. A migrated scenario selected by a job that cannot supply its required services is worse: it may fail (swallowed by the `|| true` on the run step, reading as flake) or silently pass while asserting less than the source did.
 
 ## Push and open the PR
 
@@ -249,9 +258,12 @@ Step 4 is not optional. The migration's edits are still sitting there uncommitte
 
 ```bash
 git -C <control-worktree> restore --staged --worktree -- <paths...>
-git -C <control-worktree> clean -fd -- <new-paths...>
 git -C <control-worktree> status --short
 ```
+
+`restore --staged --worktree` on its own is both necessary and sufficient here, and it depends on the intent-to-add entries from `git add -N` still being in the index. Do not `git reset` those entries first: `reset` turns an intent-to-add new file back into a plain untracked file, and `restore` then fails on it with `pathspec ... did not match any file(s) known to git` and aborts the **entire** invocation - so the new file survives and every other path in the same pathspec is left un-restored too. Verified: with the entries intact, one `restore --staged --worktree` deletes intent-to-add new files (binaries included), reverts modified files, exits 0, and leaves `git status --short` empty.
+
+Do not use `git clean -fd` here either, even scoped to specific paths. If the migration created a new directory, `clean -fd` removes the whole directory rather than an enumerated file list, and it will delete anything else placed there since - with no backup, because by this point the `.patch` checkpoint has already been deleted and nothing was ever committed on control. If a path still shows after the restore, inspect it by name before removing it.
 
 Verify the status output is empty before reporting completion.
 
