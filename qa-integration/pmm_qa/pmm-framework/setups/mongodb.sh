@@ -198,6 +198,7 @@ EOF
     [PMM_CLIENT_VERSION]="$client"
     [COMPOSE_PROFILES]="$(resolve_value SSL_PSMDB COMPOSE_PROFILES DB_CONFIG)"
     [MONGO_SETUP_TYPE]="$(resolve_value SSL_PSMDB SETUP_TYPE DB_CONFIG)"
+    [MINIO]="$(bool_string "$(resolve_value SSL_PSMDB MINIO DB_CONFIG)")"
     [TESTS]=no
     [CLEANUP]=no
   )

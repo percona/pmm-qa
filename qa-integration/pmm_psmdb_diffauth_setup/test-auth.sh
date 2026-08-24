@@ -23,6 +23,10 @@ if [ -z "$ADMIN_PASSWORD" ]; then
     export ADMIN_PASSWORD=admin
 fi
 
+# MINIO - whether to start the shared minio/createbucket containers, by default - true
+minio=${MINIO:-true}
+minio=${minio,,}
+
 bash -e ./generate-certs.sh
 
 #Start setup
@@ -34,16 +38,21 @@ docker compose -f docker-compose-pmm-psmdb.yml build
 # either has actually created it, and both then try to create a container
 # named "minio". --no-deps keeps the locked section short: it starts just
 # minio/createbucket without pulling in the rest of this stack.
-minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
-(
-  flock -x 200
-  if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-    echo "minio container exists, reusing it"
-  else
-    echo "starting shared minio container"
-    docker compose -f docker-compose-pmm-psmdb.yml up -d --no-deps minio createbucket
-  fi
-) 200>"$minio_lock"
+# Skipped entirely when MINIO=false.
+if [ "$minio" != "false" ]; then
+  minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
+  (
+    flock -x 200
+    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
+      echo "minio container exists, reusing it"
+    else
+      echo "starting shared minio container"
+      docker compose -f docker-compose-pmm-psmdb.yml up -d --no-deps minio createbucket
+    fi
+  ) 200>"$minio_lock"
+else
+  echo "skipping minio container (MINIO=false)"
+fi
 
 docker compose -f docker-compose-pmm-psmdb.yml up -d
 

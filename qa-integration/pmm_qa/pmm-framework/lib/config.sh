@@ -86,9 +86,9 @@ register_database SSL_MLAUNCH \
 
 register_database SSL_PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
-  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL' \
+  'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL MINIO' \
   'DEFAULT_VERSION=latest' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL='
+  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=true'
 
 register_database MYSQL \
   '5.7 8.0 8.4 9.7' \
