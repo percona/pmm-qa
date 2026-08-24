@@ -18,9 +18,15 @@
       "mcp__github",
       "mcp__Atlassian_Rovo",
       "mcp__Atlassian-Rovo",
+      "mcp__Atlassian_Confluence",
+      "mcp__Atlassian-Confluence",
+      "mcp__Percona_Jenkins_MCP",
+      "mcp__Percona-Jenkins-MCP",
       "mcp__Slack",
       "mcp__Claude_Code_Remote",
       "mcp__claude_ai_Atlassian_Rovo",
+      "mcp__claude_ai_Atlassian_Confluence",
+      "mcp__claude_ai_Percona_Jenkins_MCP",
       "mcp__claude_ai_Slack",
       "mcp__claude_ai_Claude_Code_Remote"
     ]
