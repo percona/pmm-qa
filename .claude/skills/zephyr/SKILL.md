@@ -24,7 +24,16 @@ the `jira` skill. The relay:
   not a caller-settable field);
 - exposes **read, create, status and steps** — no free-form edit, no delete, and
   no execution reporting (CI posts executions itself, see "Who reports results");
-- returns the Zephyr REST response (status + body) verbatim on create/get.
+- returns the Zephyr REST response (status + body) verbatim on create/get, with
+  `get` adding a `resolved` block (see below).
+
+**Read a case with `get`, not `search`.** Zephyr returns every reference as a bare
+id or URL — `"status": {"id": 5755711}`, a `testScript.self` link, `issueId`
+174296 — so the raw body names none of them. `get` resolves them relay-side into
+`resolved`: status and priority **names**, the folder **path**, the test **steps**,
+and the linked Jira issues as **keys**. Never map a status id to a name by hand or
+by inference; ask `statuses`. Resolution is fail-soft — if a lookup breaks you
+still get the verbatim case, with `resolved.error` explaining why.
 
 Do **not** call `api.zephyrscale.smartbear.com` directly — the API key is not in
 this environment (the one place that holds it is GitHub Actions, for the CI
@@ -120,8 +129,19 @@ Z create "$(jq -n --arg n 'Verify user is able to add MySQL service' \
       '{name:$n, objective:$o, folderId:1234, labels:["Automated"],
         statusName:"Automated", customFields:{"Version of the Product":$v}}')"
 
-# get — read an existing key (name, folder, status, priority, labels)
+# get — the whole case: raw Zephyr body + `resolved` (status/priority names,
+# folder path, steps, linked Jira keys). Pass steps:false / jira:false to skip
+# those two lookups when scanning many cases for one field.
 Z get "$(jq -n --arg k PMM-T2087 '{key:$k}')"
+Z get "$(jq -n --arg k PMM-T2087 '{key:$k, steps:false, jira:false}')"
+
+# list — every case in a folder, no query needed. Recursive by default, so a
+# feature's whole subtree comes back in one call.
+Z list "$(jq -n '{folderId:28264127}')"
+Z list "$(jq -n '{folderId:28264127, recursive:false, limit:500}')"
+
+# statuses — the id -> name tables for test-case statuses and priorities
+Z statuses '{}'
 
 # set-status — the case is automated now. Read-modify-write, nothing else changes.
 Z set-status "$(jq -n --arg k PMM-T2087 '{key:$k, status:"Automated"}')"
@@ -136,7 +156,9 @@ Z steps "$(jq -n --arg k PMM-T2087 '{key:$k, steps:[
 |---|---|---|
 | `search` | `query` (required), `folderId`, `limit` (≤100, default 20) | Ranked name match, done relay-side; returns `{query, scanned, truncated, matches:[{key,name,score,folderId}]}`. `truncated:true` = the scan hit its page cap, so treat "no match" as inconclusive |
 | `create` | `name` (required, 1–255), `customFields` (required, see notes), `objective`, `precondition`, `folderId`, `labels`, `priorityName` (`High`/`Normal`/`Low`, default `Normal`), `statusName` (default `Draft`), `fields` (raw passthrough) | Returns Zephyr's `201 {id, key, self}`. PMM has two custom fields: **`Version of the Product` is required** — empty string and `null` count as missing, and the broker rejects it before spending a call — and `Assignee`, optional |
-| `get` | `key` (`PMM-Txxxx`) | Returns the test case verbatim; `404` if it does not exist |
+| `get` | `key` (`PMM-Txxxx`), `steps` (default true), `jira` (default true) | The test case verbatim **plus** `resolved: {status, priority, folder, steps[], jiraIssues[]}` — the names behind Zephyr's ids. `steps:false` / `jira:false` drop those lookups for bulk reads. Step and field text stays as Zephyr stores it (HTML). A broken lookup degrades to `resolved.error`, never a failed read. `404` if the key does not exist |
+| `list` | `folderId` (omit for the whole project), `recursive` (default true), `limit` (≤1000, default 200) | `{folderId, recursive, folders, total, scanned, truncated, cases:[{key,name,status,priority,folderId,folder}]}`, sorted by key. Use this — not `search` with a filler query — to enumerate a feature's cases |
+| `statuses` | — | `{statuses:[{id,name}], priorities:[{id,name}]}` for `TEST_CASE`. The only correct way to turn a status id into a name |
 | `folders` | — | `{folders:[{id,name,parentId}], total, isLast}` for `TEST_CASE` folders |
 | `set-status` | `key`, `status` (name, case-insensitive) | Read-modify-write; returns `{key, status, statusId, previousStatusId}`. Unknown status → `400` listing the valid ones |
 | `steps` | `key`, `steps[]` (≤100), `mode` (`OVERWRITE` default, `APPEND`) | Each step is `{description, testData?, expectedResult?}`, or `{testCaseKey}` to call another case. Writing steps removes any plain-text/BDD script the case had |
