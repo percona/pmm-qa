@@ -690,7 +690,7 @@ async function brokerJira(action, m, by) {
 // Read + create test cases only — no update, no delete, and no execution
 // reporting (CI's own reporter posts executions with the same key from GitHub
 // Actions; see codeceptjs-e2e/tests/helper/reporter_helper.js).
-const ZEPHYR_BASE = process.env.ZEPHYR_BASE || "https://api.zephyrscale.smartbear.com/v2";
+const ZEPHYR_BASE = "https://api.zephyrscale.smartbear.com/v2";
 const ZEPHYR_TIMEOUT_MS = 30_000;
 const ZEPHYR_SCAN_PAGES = 20; // search pages 1000 at a time; caps a runaway scan
 const TESTCASE_KEY = /^PMM-T[0-9]+$/;
