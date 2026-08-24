@@ -13,23 +13,10 @@ services:
         - PMM_CLIENT_VERSION=${PMM_CLIENT_VERSION:-3-dev-latest}
     command: /bin/bash
 
-  test:
-    # Only started when the "tests" profile is active, so `docker compose up -d`
-    # never launches it. The test suite runs via `docker compose run test ...`
-    # (which targets the service by name regardless of profile), gated on TESTS
-    # in test-auth.sh.
-    profiles: ["tests"]
-    container_name: test
-    hostname: test
-    environment:
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-    build:
-      dockerfile: ../pmm_psmdb-pbm_setup/Dockerfile-testinfra
-      context: .
-    volumes:
-      - ./test:/test
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+  # The test harness lives in docker-compose-test.yml (merged in only for the
+  # TESTS=yes run via `docker compose -f docker-compose-pmm-psmdb.yml -f
+  # docker-compose-test.yml ... run --rm test`), so `up` here never creates the
+  # fixed-name "test" container that would clash across the parallel PSMDB stacks.
 
   psmdb-server:
     container_name: psmdb-server

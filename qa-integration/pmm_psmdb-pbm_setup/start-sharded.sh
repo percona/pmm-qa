@@ -32,22 +32,9 @@ export COMPOSE_PROFILES
 docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded.yaml build
 
-# Drop any leftover fixed-name "test" container before bringing the stack up.
-# `docker compose up` revives/adopts a previously-created container even when its
-# profile is inactive (docker/compose#9398), so a "test" left behind by another
-# PSMDB stack (CLEANUP=no keeps it, and this project's `down` won't remove another
-# project's container) makes `up` try to (re)create /test and clash. Tests still
-# create it fresh via `docker compose run test`.
-docker rm -f test 2>/dev/null || true
-
-# Never let `up` activate the "tests" profile: the test container is not needed
-# for setup, and its fixed name clashes across the parallel PSMDB stacks. An
-# inherited COMPOSE_PROFILES that contains "tests" would otherwise make `up`
-# start it. Tests are still run explicitly via `docker compose --profile tests
-# run test` below (that ignores COMPOSE_PROFILES).
-COMPOSE_PROFILES=$(printf '%s' "${COMPOSE_PROFILES:-}" | tr ',' '\n' | grep -vxF tests | paste -sd, -)
-export COMPOSE_PROFILES
-
+# The "test" service lives in docker-compose-test.yaml and is merged in only for
+# the TESTS=yes run below, so `up` here can never create the fixed-name "test"
+# container that would clash across the parallel PSMDB stacks.
 docker compose -f docker-compose-sharded.yaml up -d
 
 echo
@@ -414,8 +401,8 @@ fi
 tests=${TESTS:-yes}
 if [ $tests != "no" ]; then
     echo "running tests"
-    docker compose -f docker-compose-sharded.yaml --profile tests run test pytest -s -x --verbose test.py
-    docker compose -f docker-compose-sharded.yaml --profile tests run test chmod -R 777 .
+    docker compose -f docker-compose-sharded.yaml -f docker-compose-test.yaml --profile tests run --rm test pytest -s -x --verbose test.py
+    docker compose -f docker-compose-sharded.yaml -f docker-compose-test.yaml --profile tests run --rm test chmod -R 777 .
     else
     echo "skipping tests"
 fi

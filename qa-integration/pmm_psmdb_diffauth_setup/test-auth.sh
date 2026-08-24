@@ -13,9 +13,6 @@
 
 set -e
 
-profile=${COMPOSE_PROFILES:-classic}
-export COMPOSE_PROFILES=${profile}
-
 # PSMDB 4.2 doesn't support AWS auth
 if [[ -n "$PSMDB_VERSION" ]] && [[ "$PSMDB_VERSION" == *"4.2."* ]]; then
     sed -i 's/,MONGODB-AWS//' conf/mongod.conf
@@ -57,14 +54,9 @@ else
   echo "skipping minio container (MINIO=false)"
 fi
 
-# Drop any leftover fixed-name "test" container before bringing the stack up.
-# `docker compose up` revives/adopts a previously-created container even when its
-# profile is inactive (docker/compose#9398), so a "test" left behind by another
-# PSMDB stack (CLEANUP=no keeps it, and this project's `down` won't remove another
-# project's container) makes `up` try to (re)create /test and clash. Tests still
-# create it fresh via `docker compose run test`.
-docker rm -f test 2>/dev/null || true
-
+# The "test" service lives in docker-compose-test.yml and is merged in only for
+# the TESTS=yes run below, so `up` here can never create the fixed-name "test"
+# container that would clash across the parallel PSMDB stacks.
 docker compose -f docker-compose-pmm-psmdb.yml up -d
 
 # Wait until psmdb-server reports healthy (i.e. its replica set is
@@ -113,7 +105,7 @@ docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mgodatagen -
 tests=${TESTS:-yes}
 if [ $tests = "yes" ]; then
     echo "running tests"
-    output=$(docker compose -f docker-compose-pmm-psmdb.yml --profile tests run test pytest -s --verbose test.py)
+    output=$(docker compose -f docker-compose-pmm-psmdb.yml -f docker-compose-test.yml --profile tests run --rm test pytest -s --verbose test.py)
     else
     echo "skipping tests"
 fi

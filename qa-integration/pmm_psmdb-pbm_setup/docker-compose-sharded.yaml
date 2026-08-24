@@ -337,28 +337,10 @@ services:
     entrypoint: >
       /bin/sh -c " sleep 5; /usr/bin/mc alias set myminio http://minio:9000 minio1234 minio1234; /usr/bin/mc mb myminio/bcp; exit 0; "
 
-  test:
-    # Only started when the "tests" profile is active, so `docker compose up -d`
-    # never launches it. The test suite runs via `docker compose run test ...`
-    # (which targets the service by name regardless of profile), gated on TESTS
-    # in the start scripts.
-    profiles: ["tests"]
-    build:
-      dockerfile: ./Dockerfile-testinfra
-      context: .
-    environment:
-      PMM_SERVER_CONTAINER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
-    volumes:
-      - ./test:/test
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    container_name: test
-    hostname: test
-    networks:
-      - pmm-qa
-      - pmm-ui-tests1
-      - qa-integration
-      - pmm-ui-tests3
-      - pmm-ui-tests2
+  # The test harness lives in docker-compose-test.yaml (merged in only for the
+  # TESTS=yes run via `docker compose -f docker-compose-sharded.yaml -f
+  # docker-compose-test.yaml ... run --rm test`), so `up` here never creates the
+  # fixed-name "test" container that would clash across the parallel PSMDB stacks.
 
 networks:
   qa-integration:
