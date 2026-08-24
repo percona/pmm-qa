@@ -7,6 +7,8 @@ mongo_setup_type=${mongo_setup_type,,}
 mongo_storage_engine=${MONGO_STORAGE_ENGINE:-wiredTiger}
 mongo_storage_engine=${mongo_storage_engine,,}
 ol_version=${OL_VERSION:-9}
+minio=${MINIO:-true}
+minio=${minio,,}
 
 
 export COMPOSE_PROFILES=${profile}
@@ -38,16 +40,21 @@ docker compose -f docker-compose-rs.yaml build --no-cache
 # either has actually created it, and both then try to create a container
 # named "minio". --no-deps keeps the locked section short: it starts just
 # minio/createbucket without pulling in the rest of this stack.
-minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
-(
-  flock -x 200
-  if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-    echo "minio container exists, reusing it"
-  else
-    echo "starting shared minio container"
-    docker compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket
-  fi
-) 200>"$minio_lock"
+# Skipped entirely when MINIO=false.
+if [ "$minio" != "false" ]; then
+  minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
+  (
+    flock -x 200
+    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
+      echo "minio container exists, reusing it"
+    else
+      echo "starting shared minio container"
+      docker compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket
+    fi
+  ) 200>"$minio_lock"
+else
+  echo "skipping minio container (MINIO=false)"
+fi
 
 docker compose -f docker-compose-rs.yaml up -d
 echo

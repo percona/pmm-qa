@@ -12,11 +12,18 @@ docker network create pmm-ui-tests_pmm-network || true
 docker network create pmm2-upgrade-tests_pmm-network || true
 docker network create pmm2-ui-tests_pmm-network || true
 
-# Start our own minio only if no other setup is already running one.
-if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-    echo "minio container exists, reusing it"
+# Start minio (the "minio" compose profile) unless MINIO=false. When enabled,
+# start our own only if no other setup is already running one.
+minio=${MINIO:-true}
+minio=${minio,,}
+if [ "$minio" != "false" ]; then
+    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
+        echo "minio container exists, reusing it"
+    else
+        COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}minio"
+    fi
 else
-    COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}minio"
+    echo "skipping minio container (MINIO=false)"
 fi
 export COMPOSE_PROFILES
 

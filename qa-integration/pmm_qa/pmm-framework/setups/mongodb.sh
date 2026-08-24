@@ -42,6 +42,10 @@ psmdb_version() {
 # framework never wants.
 #
 # SETUP_TYPE picks the script; 'shards' and 'sharding' are aliases.
+#
+# MINIO (default 'true') controls whether the downstream scripts start the
+# shared minio/createbucket containers (used as the PBM backup store). Pass
+# MINIO=false in the --database spec to skip them.
 setup_psmdb() {
   local version client setup_type script
   version=$(psmdb_version)
@@ -60,6 +64,7 @@ setup_psmdb() {
     [MONGO_STORAGE_ENGINE]="$(resolve_value PSMDB STORAGE_ENGINE DB_CONFIG)"
     [OL_VERSION]="$(resolve_value PSMDB OL_VERSION DB_CONFIG)"
     [GSSAPI]="$(resolve_value PSMDB GSSAPI DB_CONFIG)"
+    [MINIO]="$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")"
     [TESTS]=no
     [CLEANUP]=no
     [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
