@@ -34,8 +34,6 @@ export default class ManagementApi {
   constructor(private request: APIRequestContext) {}
 
   addService = async (addInstance: AddInstance) => {
-    console.log(addInstance);
-
     const res = await this.request.post(apiEndpoints.management.services, {
       data: addInstance,
       headers: GrafanaHelper.getAuthHeader(),

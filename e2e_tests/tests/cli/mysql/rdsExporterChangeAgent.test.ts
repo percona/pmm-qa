@@ -37,6 +37,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper }) => {
+    console.log(
+      cliHelper.execSilent(
+        'docker exec pmm-server pmm-admin list --server-url=http://admin:admin@127.0.0.1:8080',
+      ).stdout,
+    );
+
     rdsExporterId = cliHelper
       .execSilent(
         `docker exec pmm-server pmm-admin list --server-url=http://admin:admin@127.0.0.1:8080 | grep rds_exporter | awk -F' ' '{print $4}'`,
