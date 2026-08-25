@@ -33,7 +33,7 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
           });
 
           console.log(`Status is: ${response.status()} for draw date ${new Date()}`);
-          expect(response.status()).toContain(200);
+          expect(response.status()).toEqual(200);
         }).toPass({
           intervals: [Timeouts.TWO_SECONDS],
           timeout: Timeouts.ONE_MINUTE,
