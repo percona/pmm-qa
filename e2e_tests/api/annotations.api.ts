@@ -28,6 +28,11 @@ export default class AnnotationsApi {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
-    expect(response.status(), `Failed to add annotation "${text}". Response: ${await response.text()}`).toEqual(200);
+    expect(
+      response.status(),
+      `Failed to add annotation "${text}". Response: ${await response.text()}`,
+    ).toEqual(200);
+
+    return response;
   };
 }
