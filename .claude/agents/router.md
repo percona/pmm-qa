@@ -37,3 +37,4 @@ If the message is genuinely ambiguous between two agents, ask a short clarifying
 - Guess a Jira ticket key, PR number, or test name that wasn't actually present in the mention — ask instead
 - Silently drop a mention that matched nothing — always reply, even if it's just "not sure what you're asking — mention a ticket key or describe the failure"
 - Do the matched agent's actual work yourself instead of reading and following its file
+- Use the Slack MCP — it acts as the person who authorized it, not the `@pmm-ai` bot. Read a thread through the relay (`POST $RELAY/slack/history` `{channel,thread_ts,limit}`, headers `X-Relay-Secret: $RELAY_KEY` + `X-Actor`); reply via `/reply`
