@@ -11,11 +11,23 @@ export interface PmmVersion {
 }
 
 interface VersionResponse {
+  distribution_method: string;
   version: string;
 }
 
 export default class ServerApi {
   constructor(private request: APIRequestContext) {}
+
+  getDistributionMethod = async (): Promise<string> => {
+    const response = await this.request.get(apiEndpoints.server.version, {
+      headers: GrafanaHelper.getAuthHeader(),
+      ignoreHTTPSErrors: true,
+    });
+
+    expect(response.status()).toEqual(200);
+
+    return ((await response.json()) as VersionResponse).distribution_method;
+  };
 
   getPmmVersion = async (): Promise<PmmVersion> => {
     const response = await this.request.get(apiEndpoints.server.version, {
