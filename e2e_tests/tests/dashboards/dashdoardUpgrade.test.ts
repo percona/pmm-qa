@@ -1,7 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { GetService } from '@interfaces/inventory';
 import { expect } from '@playwright/test';
-import data from '@fixtures/dataTest';
 
 pmmTest.describe('PMM settings tests for upgrade', () => {
   const dashboardName = 'upgrade-dashboard';
@@ -156,7 +155,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     async ({ api, dashboard, page, urlHelper }) => {
       const shardNames = ['rs1', 'rs2'];
       const nodeNames = ['rs1', 'rs2', 'rscfg'];
-      const serviceNames = (await api.inventoryApi.getAllServicesDetailsByPartialName('rs')).map(
+      const serviceNames = (await api.inventoryApi.getAllServiceDetailsByRegex('rs\\d{3}_\\d+')).map(
         (service: GetService) => service.service_name,
       );
 

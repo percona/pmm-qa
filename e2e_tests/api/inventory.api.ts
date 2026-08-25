@@ -1,10 +1,20 @@
-import { APIRequestContext, expect, Page } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
+
+  getAllServiceDetailsByRegex = async (regexString: string): Promise<GetService[]> => {
+    const services = await this.getServices();
+    const regex = new RegExp(regexString);
+    const service = services.services.filter((service: GetService) => regex.test(service.service_name));
+
+    if (!service) throw new Error(`Service matching regex: ${regex} is not present`);
+
+    return service;
+  };
 
   getAllServicesDetailsByPartialName = async (partialServiceName: string): Promise<GetService[]> => {
     const services = await this.getServices();
@@ -28,15 +38,8 @@ export default class InventoryApi {
     return service;
   };
 
-  getServiceDetailsByRegex = async (regexString: string): Promise<GetService> => {
-    const services = await this.getServices();
-    const regex = new RegExp(regexString);
-    const service = services.services.find((service: GetService) => regex.test(service.service_name));
-
-    if (!service) throw new Error(`Service matching regex: ${regex} is not present`);
-
-    return service;
-  };
+  getServiceDetailsByRegex = async (regexString: string): Promise<GetService> =>
+    (await this.getAllServiceDetailsByRegex(regexString))[0];
 
   getServiceDetailsByRegexAndParameters = async (
     regexString: string,
