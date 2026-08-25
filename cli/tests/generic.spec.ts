@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { readZipFile } from '@helpers/zip-helper';
+import ExecReturn from '@support/types/exec-return.class';
 
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
@@ -16,8 +17,15 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   });
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
-  if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
-    // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
+  // A feature-build tarball is named after the commit it was built from
+  // (pmm-client-PR-4486-b72741a.tar.gz), which is the only reliable reference for the client's
+  // version. The server cannot stand in for it: server RPMs are restored from an S3 cache keyed on
+  // the pmm submodule commit, so they keep the build metadata of whichever feature build first
+  // produced them, while the client tarball is rebuilt on every push.
+  const CLIENT_BUILD_SHA = PMM_VERSION.match(/-([0-9a-f]{7,40})\.tar\.gz$/)?.[1] ?? '';
+  if (!CLIENT_BUILD_SHA && (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION))) {
+    // An untagged tarball or an RC client trails v3 VERSION once an RC branches; the server it
+    // shipped with is then the closest available reference.
     PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
     if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
@@ -26,6 +34,17 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     PMM_VERSION = cli.execute('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')
       .stdout.trim();
   }
+
+  const expectClientVersion = async (output: ExecReturn) => {
+    if (!CLIENT_BUILD_SHA) {
+      await output.outContains(`Version: ${PMM_VERSION}`);
+      return;
+    }
+    const versionLine = output.getStdOutLines().find((line) => line.startsWith('Version:'));
+    expect(versionLine, `No "Version:" line in output: ${output.stdout}`).toBeDefined();
+    expect(versionLine, `pmm-admin does not report the client build under test (${CLIENT_BUILD_SHA})`)
+      .toContain(CLIENT_BUILD_SHA);
+  };
 
   test('Verify pt summary for mysql mongodb and pgsql', async ({}) => {
     await test.step('Verify pt summary returns correct exit code', async () => {
@@ -109,7 +128,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test('run pmm-admin --version', async ({}) => {
     const output = await cli.exec('sudo pmm-admin --version');
     await output.assertSuccess();
-    await output.outContains(`Version: ${PMM_VERSION}`);
+    await expectClientVersion(output);
   });
 
   /**
@@ -136,7 +155,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test('run pmm-admin summary --version', async ({}) => {
     const output = await cli.exec('sudo pmm-admin summary --version');
     await output.assertSuccess();
-    await output.outContains(`Version: ${PMM_VERSION}`);
+    await expectClientVersion(output);
   });
 
   test('PMM-T1219 - verify pmm-admin summary includes targets from vmagent', async ({}) => {
