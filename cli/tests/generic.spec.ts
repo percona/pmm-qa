@@ -15,11 +15,18 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     await result1.outContains('pmm-admin', 'pmm-client is not installed/connected locally, please run pmm3-client-setup script');
   });
 
+  // Commit the client tarball was built from, when CLIENT_VERSION points at a feature build.
+  // It is the only version fact CI states independently of the machine under test.
+  const CLIENT_ARTIFACT_COMMIT = /-([0-9a-f]{7,40})\.tar\.gz$/.exec(`${process.env.CLIENT_VERSION}`)?.[1];
+
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
   if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
-    // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
-    PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
-    if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
+    // Feature-build / RC clients trail v3 VERSION once an RC branches, so the expected version has
+    // to come from the installed client. Not from the server: build-server-rpm restores pmm-server
+    // RPMs from the S3 build cache whenever the PMM sources are unchanged, so a feature-build server
+    // keeps the full_pmm_version of the build that produced them and legitimately lags the client.
+    PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_admin_version;
+    if (!PMM_VERSION) throw new Error('Could not read client version from "pmm-admin status --json"');
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
     // TODO: refactor to use docker hub API to remove file-update dependency
     // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
@@ -110,6 +117,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const output = await cli.exec('sudo pmm-admin --version');
     await output.assertSuccess();
     await output.outContains(`Version: ${PMM_VERSION}`);
+    if (CLIENT_ARTIFACT_COMMIT) {
+      await output.outContains(CLIENT_ARTIFACT_COMMIT, `pmm-admin is not the client built from ${process.env.CLIENT_VERSION}`);
+    }
   });
 
   /**
@@ -137,6 +147,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     const output = await cli.exec('sudo pmm-admin summary --version');
     await output.assertSuccess();
     await output.outContains(`Version: ${PMM_VERSION}`);
+    if (CLIENT_ARTIFACT_COMMIT) {
+      await output.outContains(CLIENT_ARTIFACT_COMMIT, `pmm-admin is not the client built from ${process.env.CLIENT_VERSION}`);
+    }
   });
 
   test('PMM-T1219 - verify pmm-admin summary includes targets from vmagent', async ({}) => {
