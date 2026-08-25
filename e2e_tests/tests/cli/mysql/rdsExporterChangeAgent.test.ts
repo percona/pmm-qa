@@ -6,6 +6,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest.describe.configure({ mode: 'serial' });
 
   let rdsExporterId;
+  const serverUrlFlag = `--server-url=http://admin:${process.env.ADMIN_PASSWORD}@127.0.0.1:8080`;
 
   pmmTest('T10000 - Add rds @rds-integration', async ({ api }) => {
     const addService = await api.managementApi.addService({
@@ -37,21 +38,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper }) => {
-    console.log(
-      cliHelper.execSilent(
-        'docker exec pmm-server pmm-admin list --server-url=http://admin:admin@127.0.0.1:8080',
-      ).stdout,
-    );
+    console.log(`Server url flag is: ${serverUrlFlag}`);
+    console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
 
     rdsExporterId = cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin list --server-url=http://admin:admin@127.0.0.1:8080 | grep rds_exporter | awk -F' ' '{print $4}'`,
+        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
 
     cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} --server-url=http://admin:admin@127.0.0.1:8080 --enable=false`,
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --enable=false`,
       )
       .assertSuccess();
 
