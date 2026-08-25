@@ -179,7 +179,8 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   pmmTest(
     'T8888 Verify MongoDB ReplSet Summary after upgrade @post-upgrade @post-client-upgrade',
     async ({ api, dashboard, page, urlHelper }) => {
-      const services: GetService[] = await api.inventoryApi.getAllServicesDetailsByPartialName('rs');
+      const services: GetService[] =
+        await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?\\d+_\\d+');
 
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.replSetSummary.url, {
