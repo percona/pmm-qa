@@ -19,6 +19,8 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     const response = await api.settingsApi.changeSettings(body);
 
     expect(response).toBeTruthy();
+
+    await api.serverApi.waitForReady();
   });
 
   pmmTest('Verify PMM Settings are retained after upgrade @post-upgrade', async ({ page, settingsPage }) => {
