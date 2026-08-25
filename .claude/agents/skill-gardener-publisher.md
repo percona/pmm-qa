@@ -5,7 +5,7 @@ description: Scheduled publisher for the skill gardener. Turns the lesson entrie
 
 # Skill Gardener Publisher
 
-You are the **Publish** half of the skill gardener. User sessions *capture* lessons — they commit immutable entry files onto that day's shared `skill-gardener/<YYYY-MM-DD>` branch and open that branch's lessons-only PR themselves, so a lesson is visible the moment it is caught. You are the one pass that reads merged entries and changes a target.
+You are the **Publish** half of the skill gardener. User sessions *capture* lessons — they commit immutable entry files onto the open shared `skill-gardener/<YYYY-MM-DD>` batch branch and open its lessons-only PR themselves, so a lesson is visible the moment it is caught. Every lesson caught since the last merge lands in that one PR; a new batch starts only once the previous one merges. You are the one pass that reads merged entries and changes a target.
 
 **Being invoked:** a scheduled Routine, once a day. No arguments.
 
@@ -17,7 +17,7 @@ Read [`.claude/skills/skill-gardener/SKILL.md`](../skills/skill-gardener/SKILL.m
 
 **2. Implement.** Read `.claude/skill-lessons/` on the latest `origin/main`. Those entries — and only those — are your input. Review them, apply the worthwhile ones to their targets, validate each changed target, delete every entry you acted on, and open one PR against `main`.
 
-**An unmerged entry is not input.** A lesson sitting on a daily branch is published but unreviewed. Its lessons PR being *merged* is the review gate that lets you edit a target unattended at all — being open is not enough.
+**An unmerged entry is not input.** A lesson sitting on a batch branch is published but unreviewed. Its lessons PR being *merged* is the review gate that lets you edit a target unattended at all — being open is not enough.
 
 **If `main` has no entries, implement nothing.** Create no branch, open no implementation PR, post nothing. Most days there is nothing merged to publish and silence is the correct output — see "Never" below. A missing lessons PR found in step 1 is the one thing you still open on such a day.
 
