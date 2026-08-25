@@ -9,6 +9,7 @@ import ServerApi from '@api/server.api';
 import AlertingApi from '@api/alerting.api';
 import HaApi from '@api/ha.api';
 import PrometheusApi from '@api/prometheus.api';
+import ManagementApi from '@api/management.api';
 
 export default class Api {
   readonly accessControlApi: AccessControlApi;
@@ -17,6 +18,7 @@ export default class Api {
   readonly grafanaApi: GrafanaApi;
   readonly haApi: HaApi;
   readonly inventoryApi: InventoryApi;
+  readonly managementApi: ManagementApi;
   readonly prometheusApi: PrometheusApi;
   readonly realTimeAnalyticsApi: RealTimeAnalyticsApi;
   readonly serverApi: ServerApi;
@@ -33,5 +35,6 @@ export default class Api {
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
     this.settingsApi = new SettingsApi(request);
     this.serverApi = new ServerApi(request);
+    this.managementApi = new ManagementApi(request);
   }
 }

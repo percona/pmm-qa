@@ -88,6 +88,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 <!-- E2E-TAGS-START -->
 
+- `@127`
 - `@alerting`
 - `@all`
 - `@dashboards`
@@ -107,6 +108,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@post-release`
 - `@ps-integration`
 - `@ps-slowlog-integration`
+- `@rds-integration`
 - `@rta`
 - `@settings`
 - `@standalone`

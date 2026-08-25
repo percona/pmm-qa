@@ -21,6 +21,8 @@ const apiEndpoints = {
     services: '/v1/inventory/services',
   },
   management: {
+    discoverRDS: 'v1/management/services:discoverRDS',
+    nodes: 'v1/management/nodes',
     services: '/v1/management/services',
   },
   platform: {
