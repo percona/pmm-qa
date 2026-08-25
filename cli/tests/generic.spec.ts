@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import * as cli from '@helpers/cli-helper';
 import { getPmmAdminMinorVersion } from '@helpers/pmm-admin';
 import { readZipFile } from '@helpers/zip-helper';
+import ExecReturn from '@support/types/exec-return.class';
 
 const PGSQL_USER = 'postgres';
 const PGSQL_PASSWORD = 'pass+this';
@@ -16,8 +17,15 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   });
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
-  if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
-    // Feature-build / RC clients trail v3 VERSION once an RC branches; take the version from the server.
+  // A feature build names its client tarball after the pmm-submodules commit it was built from,
+  // and stamps that commit into the client version. The server image sharing the same FB tag can
+  // report an earlier commit, because the server side is only rebuilt when its own sources change,
+  // so the client is matched against its own artifact rather than against the server.
+  const fbCommit = /pmm-client-PR-\d+-([0-9a-f]{7,40})\.tar\.gz$/.exec(PMM_VERSION)?.[1];
+  if (fbCommit) {
+    PMM_VERSION = '';
+  } else if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
+    // RC clients trail v3 VERSION once an RC branches; take the version from the server.
     PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
     if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
@@ -26,6 +34,16 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     PMM_VERSION = cli.execute('curl -s https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION')
       .stdout.trim();
   }
+
+  const expectedVersion = fbCommit
+    ? new RegExp(`Version: \\d+\\.\\d+\\.\\d+\\S*-${fbCommit}[0-9a-f]*\\s`)
+    : `Version: ${PMM_VERSION}`;
+
+  const verifyReportedVersion = async (output: ExecReturn) => {
+    await test.step(`Verify command output reports ${expectedVersion}`, async () => {
+      expect(output.stdout.replace(/ +(?= )/g, ''), `Stdout does not report ${expectedVersion}!`).toMatch(expectedVersion);
+    });
+  };
 
   test('Verify pt summary for mysql mongodb and pgsql', async ({}) => {
     await test.step('Verify pt summary returns correct exit code', async () => {
@@ -109,7 +127,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test('run pmm-admin --version', async ({}) => {
     const output = await cli.exec('sudo pmm-admin --version');
     await output.assertSuccess();
-    await output.outContains(`Version: ${PMM_VERSION}`);
+    await verifyReportedVersion(output);
   });
 
   /**
@@ -136,7 +154,7 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   test('run pmm-admin summary --version', async ({}) => {
     const output = await cli.exec('sudo pmm-admin summary --version');
     await output.assertSuccess();
-    await output.outContains(`Version: ${PMM_VERSION}`);
+    await verifyReportedVersion(output);
   });
 
   test('PMM-T1219 - verify pmm-admin summary includes targets from vmagent', async ({}) => {
