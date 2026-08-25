@@ -31,9 +31,12 @@ def test_pmm_services():
     assert mongodb
     assert "service_id" in mongodb[0]
     for service in mongodb:
-        assert "rs" or "mongos" in service['service_name']
-        if not "mongos" in service['service_name']:
+        assert "rs" in service['service_name'] or "mongos" in service['service_name']
+        if "mongos" not in service['service_name']:
             pytest.service_id = service['service_id']
+    assert pytest.service_id, \
+        f"no replica-set member among {[s['service_name'] for s in mongodb]}; " \
+        "the later restore tests need one"
     print('This service_id will be used in the next steps')
     print(pytest.service_id)
 
@@ -114,7 +117,7 @@ def test_pbm_artifact():
 
 
 def test_pmm_start_restore():
-    if pytest.artifact_is_sharded == True:
+    if pytest.artifact_is_sharded:
         pytest.skip("Unsupported setup for restore from UI")
     data = {
         'service_id': pytest.service_id,
@@ -129,7 +132,7 @@ def test_pmm_start_restore():
 
 
 def test_pmm_restore():
-    if pytest.artifact_is_sharded == True:
+    if pytest.artifact_is_sharded:
         pytest.skip("Unsupported setup for restore from UI")
     restore_complete = False
     for i in range(600):
@@ -155,7 +158,7 @@ def test_pmm_restore():
 
 
 def test_pbm_restore():
-    if pytest.artifact_is_sharded == True:
+    if pytest.artifact_is_sharded:
         pytest.skip("Unsupported setup for restore from UI")
     restore_list = docker_rs101.check_output('pbm list --restore --out json')
     parsed_restore_list = json.loads(restore_list)
@@ -180,8 +183,8 @@ def test_metrics():
       command = f"curl -s http://pmm:{agent_id}@127.0.0.1:{agent_port}/metrics"
       metrics = docker_rs101.run(command, timeout=30)
       assert metrics.exit_status == 0, f"Curl command failed with exit status {metrics.exit_status}"
-    except Exception as e:
-      pytest.fail(f"Fail to get metrics from exporter")
+    except Exception:
+      pytest.fail("Fail to get metrics from exporter")
 
     try:
         with open("expected_metrics.txt", "r") as f:

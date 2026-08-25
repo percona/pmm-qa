@@ -3,7 +3,7 @@
 export DOCKER_CONTAINER_NAME=pgsql_vacuum_db
 export PGSQL_VACUUM_VERSION="latest"
 echo "Setting up Postgres for vacuum monitoring"
-if [ ! -z $@ ]; then
+if [ "$#" -gt 0 ]; then
     PGSQL_VACUUM_VERSION=$1
 fi  
 docker stop pgsql_vacuum_db || true

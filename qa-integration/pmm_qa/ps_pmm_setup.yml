@@ -68,4 +68,3 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ ps_container }} bash -xe ./client_container_ps_setup.sh --ps_version {{ ps_version }} --ps_tarball {{ ps_tarball }} --number_of_nodes {{ number_of_nodes }} --query_source {{ query_source }} --group_replication {{ group_replication }} > setup_ps_{{ ps_container }}.log
-

@@ -1,0 +1,98 @@
+---
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # persist-credentials: false because this job runs code out of the PR it
+      # is checking -- it sources install-linters.sh and runs `npm ci` twice,
+      # both of which execute PR-controlled content. The default leaves
+      # GITHUB_TOKEN readable in .git/config, and nothing here pushes.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      # Same versions the commit gate installs, so local and CI agree.
+      - name: Install linters
+        run: |
+          set -euo pipefail
+          . .claude/hooks/lib/install-linters.sh
+          ensure_all_linters
+
+      - name: eslint + tsc (e2e_tests)
+        if: ${{ !cancelled() }}
+        working-directory: e2e_tests
+        run: |
+          npm ci
+          npm run lint
+
+      - name: eslint + tsc (cli)
+        if: ${{ !cancelled() }}
+        working-directory: cli
+        run: |
+          npm ci
+          npm run lint
+
+      - name: yamllint
+        if: ${{ !cancelled() }}
+        run: yamllint --strict .
+
+      - name: actionlint
+        if: ${{ !cancelled() }}
+        run: actionlint
+
+      - name: shellcheck
+        if: ${{ !cancelled() }}
+        run: git ls-files -z '*.sh' | xargs -0 --no-run-if-empty shellcheck -S error
+
+      - name: ruff
+        if: ${{ !cancelled() }}
+        run: |
+          ruff --version
+          git ls-files -z '*.py' | xargs -0 --no-run-if-empty ruff check
+
+      - name: terraform fmt
+        if: ${{ !cancelled() }}
+        run: terraform fmt -check -recursive terraform/
+
+      - name: hadolint
+        if: ${{ !cancelled() }}
+        run: |
+          git ls-files -z '*Dockerfile*' \
+            | xargs -0 --no-run-if-empty hadolint --failure-threshold error
+
+      - name: docker compose config
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          status=0
+          while IFS= read -r f; do
+            (cd "$(dirname "$f")" && docker compose -f "$(basename "$f")" config -q) || status=1
+          done < <(git ls-files '*docker-compose*.yml' '*docker-compose*.yaml')
+          exit $status

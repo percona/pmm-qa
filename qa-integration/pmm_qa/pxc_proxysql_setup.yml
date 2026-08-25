@@ -61,7 +61,7 @@
     set_fact:
       proxysql_package: "{{package.stdout | default(proxysql_package,true)}}"
 
-  - name : Get filename from URL for ProxySQL
+  - name: Get filename from URL for ProxySQL
     shell: basename {{ proxysql_package }}    
     register: file_name
 
@@ -136,4 +136,3 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pxc_container }} bash -xe ./client_container_proxysql_setup.sh
-

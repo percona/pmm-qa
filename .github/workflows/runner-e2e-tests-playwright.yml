@@ -24,6 +24,10 @@ on:
         type: string
         default: 'latest-tarball'
         required: true
+      pmm_client_image:
+        description: 'pmm-client docker image used by the client containers'
+        type: string
+        required: false
       setup_services:
         description: 'Clients for pmm-server'
         type: string
@@ -54,6 +58,9 @@ on:
       pmm_client_version:
         type: string
         required: true
+      pmm_client_image:
+        type: string
+        required: false
       setup_services:
         type: string
         required: false
@@ -63,8 +70,13 @@ on:
       launchable_confidence:
         type: string
         required: false
+      sha:
+        type: string
+        required: false
     secrets:
       LAUNCHABLE_TOKEN:
+        required: false
+      ZEPHYR_PMM_API_KEY:
         required: false
 jobs:
   tests:
@@ -86,7 +98,6 @@ jobs:
       PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       CLIENT_VERSION: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       WIZARD_ARGS: ${{ inputs.setup_services || github.event.inputs.setup_services || '' }}
-      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests || github.event.inputs.tags_for_tests || '@settings-fb' }}
       ZEPHYR_PMM_API_KEY: ${{ secrets.ZEPHYR_PMM_API_KEY }}
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
       ADMIN_PASSWORD: 'admin-password'

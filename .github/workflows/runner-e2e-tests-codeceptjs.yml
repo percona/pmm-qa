@@ -80,6 +80,8 @@ on:
     secrets:
       LAUNCHABLE_TOKEN:
         required: false
+      ZEPHYR_PMM_API_KEY:
+        required: false
 
 jobs:
   ui-tests-e2e:
@@ -228,9 +230,9 @@ jobs:
         id: execute_tests
         working-directory: pmm-qa/codeceptjs-e2e
         env:
-          SERVER_IP : "127.0.0.1"
-          PMM_UI_URL : "http://127.0.0.1/"
-          PMM_URL : "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
+          SERVER_IP: "127.0.0.1"
+          PMM_UI_URL: "http://127.0.0.1/"
+          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
           GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
         run: |
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js

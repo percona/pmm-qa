@@ -1,8 +1,4 @@
-import argparse
-import os
 import subprocess
-import sys
-import unittest
 
 def verify_command(command):
     """
