@@ -9,9 +9,15 @@ export function parseConfig(argv: string[] = process.argv.slice(2)): Config {
   const { values } = parseArgs({ args: argv, strict: true, options: {
     image: { type: 'string' }, buckets: { type: 'string' },
   }});
-  const buckets = (values.buckets ?? 'bcp').split(';').map((value) => value.trim()).filter(Boolean);
+  // pmm-framework accepted ';' and ',' interchangeably, stripped quotes and lower-cased.
+  const buckets = (values.buckets ?? 'bcp')
+    .replaceAll('"', '')
+    .toLowerCase()
+    .split(/[;,]/)
+    .map((value) => value.trim())
+    .filter(Boolean);
   if (!buckets.length || buckets.some((bucket) => !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(bucket))) {
-    throw new Error('buckets must be semicolon-separated valid S3 bucket names');
+    throw new Error('buckets must be a semicolon- or comma-separated list of valid S3 bucket names');
   }
   return { image: values.image ?? 'pmm-qa/minio:latest', buckets };
 }

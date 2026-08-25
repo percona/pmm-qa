@@ -72,7 +72,7 @@ export function parseConfig(
     process.exit(0);
   }
 
-  const version = values.version ?? env.PDPGSQL_VERSION ?? '18';
+  const version = values.version ?? env.PDPGSQL_VERSION ?? '17';
   if (!['14', '15', '16', '17', '18'].includes(version)) throw new Error('version must be 14, 15, 16, 17, or 18');
   const setupType = (values['setup-type'] ?? env.SETUP_TYPE ?? 'single').toLowerCase();
   if (!['single', 'replication', 'patroni'].includes(setupType)) {

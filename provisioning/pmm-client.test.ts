@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -8,6 +8,7 @@ import {
   isPmmAgentDisconnected,
   isTransientServerError,
   pmmClientBuild,
+  pruneClientTarballCache,
   resolveClientTarball,
   retry,
   setupPmmAgents,
@@ -140,19 +141,85 @@ test('uses an existing local client tarball', async () => {
   await rm(directory, { recursive: true });
 });
 
-test('downloads a remote client tarball only once', async () => {
-  let downloads = 0;
-  const url = `https://example.test/pmm-client-${process.pid}.tar.gz`;
-  const fetcher = (async () => {
-    downloads += 1;
-    return new Response('tarball');
-  }) as typeof fetch;
+// A conditional request carries If-Modified-Since; a plain one does not.
+function countingFetcher(reply: (conditional: boolean) => Response) {
+  const calls = { downloads: 0, revalidations: 0 };
+  const fetcher = (async (_url: string, init?: RequestInit) => {
+    const conditional = Boolean((init?.headers as Record<string, string> | undefined)?.['If-Modified-Since']);
+    if (conditional) calls.revalidations += 1;
+    else calls.downloads += 1;
+    return reply(conditional);
+  }) as unknown as typeof fetch;
+  return { calls, fetcher };
+}
+
+test('revalidates a cached client tarball rather than re-downloading it', async () => {
+  const url = `https://example.test/pmm-client-latest-${process.pid}.tar.gz`;
+  const { calls, fetcher } = countingFetcher((conditional) =>
+    conditional ? new Response(null, { status: 304 }) : new Response('tarball'));
 
   const first = await resolveClientTarball(url, fetcher);
   const second = await resolveClientTarball(url, fetcher);
   assert.equal(first, second);
-  assert.equal(downloads, 1);
+  assert.equal(calls.downloads, 1);
+  assert.equal(calls.revalidations, 1);
+  assert.equal(await readFile(first, 'utf8'), 'tarball');
   await rm(first);
+});
+
+test('a moving latest tarball is replaced when the build cache has a newer one', async () => {
+  const url = `https://example.test/pmm-client-moved-${process.pid}.tar.gz`;
+  const { calls, fetcher } = countingFetcher(() => new Response('newer tarball'));
+
+  const first = await resolveClientTarball(url, fetcher);
+  const second = await resolveClientTarball(url, fetcher);
+  assert.equal(first, second);
+  // The second call revalidated, got 200, and took the new body without a separate download.
+  assert.equal(calls.downloads, 1);
+  assert.equal(calls.revalidations, 1);
+  assert.equal(await readFile(second, 'utf8'), 'newer tarball');
+  await rm(second);
+});
+
+test('an unreachable build cache falls back to the cached tarball', async () => {
+  const url = `https://example.test/pmm-client-offline-${process.pid}.tar.gz`;
+  let attempts = 0;
+  const fetcher = (async (_url: string, init?: RequestInit) => {
+    attempts += 1;
+    if (init) throw new Error('getaddrinfo ENOTFOUND');
+    return new Response('tarball');
+  }) as unknown as typeof fetch;
+
+  const first = await resolveClientTarball(url, fetcher);
+  const second = await resolveClientTarball(url, fetcher);
+  assert.equal(second, first);
+  assert.equal(attempts, 2);
+  assert.equal(await readFile(second, 'utf8'), 'tarball');
+  await rm(second);
+});
+
+test('pruning drops abandoned tarballs and keeps recent and in-use ones', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'pmm-cache-'));
+  const entry = async (key: string, ageDays: number) => {
+    const path = join(directory, `pmm-client-${key}.tar.gz`);
+    await writeFile(path, 'tarball');
+    const when = new Date(Date.now() - ageDays * 24 * 60 * 60 * 1000);
+    await utimes(path, when, when);
+    return path;
+  };
+  const stale = await entry('a'.repeat(16), 30);
+  const recent = await entry('b'.repeat(16), 3);
+  const inUse = await entry('c'.repeat(16), 30);
+  const unrelated = join(directory, 'notes.txt');
+  await writeFile(unrelated, 'keep me');
+
+  const removed = await pruneClientTarballCache(inUse, directory);
+  assert.deepEqual(removed, [stale]);
+  await assert.rejects(() => readFile(stale, 'utf8'));
+  assert.equal(await readFile(recent, 'utf8'), 'tarball');
+  assert.equal(await readFile(inUse, 'utf8'), 'tarball');
+  assert.equal(await readFile(unrelated, 'utf8'), 'keep me');
+  await rm(directory, { recursive: true });
 });
 
 test('a timed-out retry reports what the last attempt actually returned', async () => {

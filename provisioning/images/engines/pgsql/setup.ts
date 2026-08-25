@@ -13,7 +13,7 @@ import {
   waitForPmmExporter,
 } from '../../../pmm-client.ts';
 
-type Version = '16' | '17' | '18';
+type Version = '14' | '15' | '16' | '17' | '18';
 type SetupType = 'single' | 'replication';
 
 export interface Config extends PmmClientConfig {
@@ -39,12 +39,15 @@ export function parseConfig(argv: string[] = process.argv.slice(2), env = proces
       version: { type: 'string' }, image: { type: 'string' },
       'setup-type': { type: 'string' }, nodes: { type: 'string' },
       'use-socket': { type: 'boolean' },
+      // Accepted for pmm-framework parity: it registered QUERY_SOURCE for PGSQL but never passed
+      // it to the playbook, and this engine always monitors through pg_stat_statements.
+      'query-source': { type: 'string' },
       ...PMM_CLIENT_OPTIONS,
       tls: { type: 'boolean' },
     },
   });
-  const version = values.version ?? env.PGSQL_VERSION ?? '18';
-  if (!['16', '17', '18'].includes(version)) throw new Error('version must be 16, 17, or 18');
+  const version = values.version ?? env.PGSQL_VERSION ?? '17';
+  if (!['14', '15', '16', '17', '18'].includes(version)) throw new Error('version must be 14, 15, 16, 17, or 18');
   const setupType = (values['setup-type'] ?? env.SETUP_TYPE ?? 'single').toLowerCase();
   if (setupType !== 'single' && setupType !== 'replication') {
     throw new Error('setup type must be single or replication');
@@ -79,6 +82,10 @@ export function postgresRunArgs(config: Config, node = 1): string[] {
     '--env', `PGDATA=${PGDATA}`, config.image,
     '-c', 'shared_preload_libraries=pg_stat_statements',
     '-c', 'wal_level=replica', '-c', `max_wal_senders=${Math.max(10, config.nodes)}`,
+    // Replicas bootstrap with concurrent pg_basebackup streams; without retained WAL the primary
+    // recycles a segment mid-clone and the replica dies with "WAL segment has already been
+    // removed". The pdpgsql engine guards the same way.
+    ...(config.setupType === 'replication' ? ['-c', 'wal_keep_size=512MB'] : []),
   ];
   if (config.tls) args.push('-c', 'ssl=on', '-c', `ssl_cert_file=${PGDATA}/server.crt`, '-c', `ssl_key_file=${PGDATA}/server.key`);
   return args;

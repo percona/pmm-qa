@@ -1,10 +1,10 @@
 import { parseArgs } from 'node:util';
 import {
   configurePmm, docker, PMM_CLIENT_OPTIONS, pmmClientConfig, preparePmm, registerPmmService, retry,
-  step, waitForPmmExporter, type PmmClientConfig,
+  step, type PmmClientConfig,
 } from '../../../pmm-client.ts';
 
-type ServiceType = 'client' | 'haproxy' | 'external';
+type ServiceType = 'haproxy' | 'external';
 interface Config extends PmmClientConfig {
   type: ServiceType; image: string; clientTarball?: string; pmmServer?: string; backends: string[];
   redisImage: string;
@@ -19,7 +19,7 @@ export function parseConfig(argv: string[] = process.argv.slice(2), env = proces
     'redis-image': { type: 'string' },
   }});
   const type = (values.type ?? env.SERVICE_TYPE ?? '').toLowerCase();
-  if (type !== 'client' && type !== 'haproxy' && type !== 'external') throw new Error('type must be client, haproxy, or external');
+  if (type !== 'haproxy' && type !== 'external') throw new Error('type must be haproxy or external');
   const rawBackends = values.backends ?? env.HAPROXY_BACKENDS;
   if (rawBackends && type !== 'haproxy') throw new Error('backends are supported by haproxy only');
   const backends = rawBackends?.split(',').map((target) => target.trim()) ?? [];
@@ -58,7 +58,7 @@ function renderHaproxyConfig(backends: string[]): string {
 }
 
 export function serviceRunArgs(config: Config): string[] {
-  const name = config.type === 'client' ? 'client_container' : `${config.type}_pmm`;
+  const name = config.type === 'haproxy' ? 'haproxy_pmm' : 'external_pmm';
   const writeConfig = config.type === 'haproxy' && config.backends.length
     ? `cat <<'HAPROXY_CFG' >> /etc/haproxy/haproxy.cfg\n${renderHaproxyConfig(config.backends)}HAPROXY_CFG\n`
     : '';
@@ -68,11 +68,9 @@ export function serviceRunArgs(config: Config): string[] {
   const traffic = config.type === 'haproxy' && config.backends.length
     ? 'while :; do (exec 3<>/dev/tcp/127.0.0.1/3306) 2>/dev/null && exec 3<&- 3>&- || true; sleep 10; done & '
     : '';
-  const command = config.type === 'client'
-    ? 'exec sleep infinity'
-    : config.type === 'haproxy'
-      ? `${writeConfig}${traffic}exec haproxy -W -db -f /etc/haproxy/haproxy.cfg`
-      : 'redis_exporter --redis.addr=redis://redis_container:6379 --redis.password=oFukiBRg7GujAJXq3tmd --web.listen-address=:42200 & exec process-exporter --web.listen-address=:9256';
+  const command = config.type === 'haproxy'
+    ? `${writeConfig}${traffic}exec haproxy -W -db -f /etc/haproxy/haproxy.cfg`
+    : 'redis_exporter --redis.addr=redis://redis_container:6379 --redis.password=oFukiBRg7GujAJXq3tmd --web.listen-address=:42200 & exec process-exporter --web.listen-address=:9256';
   return ['run', '--detach', '--name', name, '--hostname', name, '--label', LABEL,
     '--label', `pmm-qa.service=${config.type}`, '--network', NETWORK, '--entrypoint', 'sh', config.image, '-ceu', command];
 }
@@ -88,7 +86,7 @@ async function cleanup(type: ServiceType): Promise<void> {
 
 async function main(): Promise<void> {
   const config = parseConfig();
-  const name = config.type === 'client' ? 'client_container' : `${config.type}_pmm`;
+  const name = config.type === 'haproxy' ? 'haproxy_pmm' : 'external_pmm';
   await step('Check Docker', () => docker(['info']));
   const [server, tarball] = await preparePmm(config, config.image, 'npm run build');
   await step('Clean previous run', () => cleanup(config.type));
@@ -96,16 +94,12 @@ async function main(): Promise<void> {
     await step('Start Redis target', () => docker(['run', '--detach', '--name', 'redis_container', '--label', LABEL, '--network', NETWORK, config.redisImage, 'valkey-server', '--requirepass', 'oFukiBRg7GujAJXq3tmd']));
   }
   await step(`Start ${config.type}`, () => docker(serviceRunArgs(config)));
-  if (config.type !== 'client') {
-    const port = config.type === 'haproxy' ? '42100' : '42200';
-    await retry(`${config.type} metrics`, () => docker(['exec', name, 'curl', '-fsS', `http://127.0.0.1:${port}/metrics`], true), (result) => result.stdout.length > 0);
-  }
+  const port = config.type === 'haproxy' ? '42100' : '42200';
+  await retry(`${config.type} metrics`, () => docker(['exec', name, 'curl', '-fsS', `http://127.0.0.1:${port}/metrics`], true), (result) => result.stdout.length > 0);
   await configurePmm(config, [name], server, tarball);
-  if (config.type === 'client') {
-    await step('Wait for node exporter', () => waitForPmmExporter(name, 'node_exporter').then(() => undefined));
-  } else if (config.type === 'haproxy') {
+  if (config.type === 'haproxy') {
     await step('Register HAProxy', () => registerPmmService(['exec', name, 'pmm-admin', 'add', 'haproxy', '--listen-port=42100', '--environment=haproxy', 'haproxy_service']).then(() => undefined));
-  } else if (config.type === 'external') {
+  } else {
     await step('Register external exporters', () => Promise.all([
       registerPmmService(['exec', name, 'pmm-admin', 'add', 'external', '--listen-port=42200', '--group=redis', '--service-name=redis_external_service']),
       registerPmmService(['exec', name, 'pmm-admin', 'add', 'external', '--listen-port=9256', '--group=processes', '--service-name=nodeprocess_service']),

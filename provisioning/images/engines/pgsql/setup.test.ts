@@ -3,26 +3,29 @@ import test from 'node:test';
 import { dockerBuildArgs } from '../../build.ts';
 import { containerName, parseConfig, postgresRunArgs, replicaRunArgs } from './setup.ts';
 
-test('builds the latest three PostgreSQL versions', () => {
-  for (const version of ['16', '17', '18']) {
+test('builds every supported PostgreSQL version', () => {
+  for (const version of ['14', '15', '16', '17', '18']) {
     assert.ok(dockerBuildArgs(`pgsql=${version}`).includes(`pmm-qa/pgsql:${version}`));
   }
-  assert.throws(() => dockerBuildArgs('pgsql=15'), /version must be 16, 17, or 18/);
+  assert.throws(() => dockerBuildArgs('pgsql=13'), /version must be 14, 15, 16, 17, or 18/);
 });
 
 test('parses single and replication topologies', () => {
   const single = parseConfig([], {});
-  assert.equal(single.version, '18');
+  assert.equal(single.version, '17');
   assert.equal(single.nodes, 1);
-  assert.equal(containerName(single, 1), 'pgsql_pmm_18_1');
-  const replication = parseConfig(['--version', '17', '--setup-type', 'replication', '--nodes', '3'], {});
+  assert.equal(containerName(single, 1), 'pgsql_pmm_17_1');
+  const replication = parseConfig(['--version', '18', '--setup-type', 'replication', '--nodes', '3'], {});
   assert.equal(replication.nodes, 3);
-  assert.equal(containerName(replication, 2), 'pgsql_pmm_replication_17_2');
+  assert.equal(containerName(replication, 2), 'pgsql_pmm_replication_18_2');
   assert.throws(() => parseConfig(['--setup-type', 'replication', '--nodes', '1'], {}), /at least 2/);
 });
 
 test('starts PostgreSQL with pg_stat_statements', () => {
   assert.ok(postgresRunArgs(parseConfig([], {})).includes('shared_preload_libraries=pg_stat_statements'));
+  // Retained WAL only matters once replicas clone from the primary.
+  assert.ok(!postgresRunArgs(parseConfig([], {})).includes('wal_keep_size=512MB'));
+  assert.ok(postgresRunArgs(parseConfig(['--setup-type', 'replication', '--nodes', '3'], {})).includes('wal_keep_size=512MB'));
   assert.ok(postgresRunArgs(parseConfig(['--tls'], {})).includes('ssl=on'));
 });
 

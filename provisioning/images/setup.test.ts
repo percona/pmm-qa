@@ -36,7 +36,7 @@ test('accepts engine defaults and engine=version overrides', () => {
   assert.ok(dockerBuildArgs('psmdb=8.0').includes('pmm-qa/psmdb:8.0'));
   assert.deepEqual(dockerBuildArgs('ps'), dockerBuildArgs('ps=8.0'));
   assert.deepEqual(dockerBuildArgs('psmdb'), dockerBuildArgs('psmdb=8.0'));
-  assert.deepEqual(dockerBuildArgs('pdpgsql'), dockerBuildArgs('pdpgsql=18'));
+  assert.deepEqual(dockerBuildArgs('pdpgsql'), dockerBuildArgs('pdpgsql=17'));
   assert.throws(() => dockerBuildArgs('ps='), /<engine>\[=<version>\]/);
 });
 

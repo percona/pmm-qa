@@ -60,12 +60,12 @@ that child owns every container it creates.
 
 | File | Responsibility | Depends on |
 |---|---|---|
-| `setup.ts` | `parseConfig`/`parseDatabase` (the catalogue is `DATABASES`), `orchestrate`, server lifecycle, `provisionerArgs`, teardown | `pmm-client.ts`, `images/setup.ts` (for `mysqlContainerName`), `images/engines/pxc/setup.ts`, `images/lib/engines.ts` |
+| `setup.ts` | `parseConfig`/`parseDatabase` (the catalogue is `DATABASES`; `TYPE_ALIASES`/`OPTION_ALIASES`/`VERSION_ENV` carry pmm-framework's spellings), `orchestrate`, server lifecycle, `provisionerArgs`, teardown | `pmm-client.ts`, `images/setup.ts` (for `mysqlContainerName`), `images/engines/pxc/setup.ts`, `images/lib/engines.ts` |
 | `pmm-client.ts` | Shared CLI options, Docker wrapper, PMM preparation/configuration, service registration, tarball caching | nothing in `provisioning/` |
 | `images/build.ts` | `dockerBuildArgs(descriptor)` — one Dockerfile build per engine/version, `npm run build --` entry point | `setup.ts` (`DATABASES`), `lib/engines.ts` |
 | `images/lib/engines.ts` | Static per-engine metadata for MySQL/PS (container prefixes, PMM environment/cluster names, minimum node counts) | nothing in `provisioning/` |
 | `images/setup.ts` | mysql/ps engine: topology, container naming, workload seeding | `pmm-client.ts`, `lib/engines.ts` |
-| `images/engines/*/setup.ts` | One engine per database family (pxc, psmdb/mongodb, pgsql, pdpgsql, valkey, services (standalone client/haproxy/external), minio (bucket), mlaunch) | `pmm-client.ts` |
+| `images/engines/*/setup.ts` | One engine per database family (pxc, psmdb/mongodb, pgsql, pdpgsql, valkey, services (haproxy/external), minio (bucket), mlaunch) | `pmm-client.ts` |
 | `images/engines/*/Dockerfile` | The image each engine's `setup.ts` runs `docker run` against | — |
 
 Every `images/**/setup.ts` is independently runnable (`node
@@ -159,11 +159,6 @@ bucket-only run skips every server step. `npm run build:dockerclients` builds
 the `ps`/`pdpgsql`/`psmdb` client images without pretending they are a
 provisionable database type.
 
-`--db client` reuses the services engine and its Rocky Linux image to create a
-single `client_container`, install the selected PMM Client package or tarball,
-and register its node without adding a monitored service. It waits for
-`node_exporter` so client-backed dashboards can consume metrics immediately.
-
 ### Sequential vs parallel
 
 |  | default (parallel) | `--sequential` |
@@ -205,8 +200,8 @@ on its primary node (`engines/psmdb/setup.ts`) — is also the one place the
 name is *not* setup-type-prefixed (`topologyPrefix('pss')` is `''`, every
 other setup-type gets a `<setup-type>_` prefix), so it can never collide with
 another PSMDB topology; a second `psmdb:pss` run is already blocked by the
-duplicate-topology check below. `client`/`haproxy`/`external`/`bucket` each use
-one fixed container name, but each has exactly one `setup-type` value, so that
+duplicate-topology check below. `haproxy`/`external`/`bucket` each use one
+fixed container name, but each has exactly one `setup-type` value, so that
 same check — in `parseConfig()`, keyed on
 `` `${type}:${options['setup-type']}` `` — rejects the only collision that
 could occur. `mlaunch-psmdb`/`mlaunch-mongodb` keep this property:
@@ -250,17 +245,38 @@ the same `CommandResult` shape rather than writing straight to
 
 ### Where provisioning/ deliberately differs from pmm-framework
 
-`provisioning/` accepts pmm-framework's own CLI grammar (`--database`,
-`--pmm-server-ip`, `--pmm-server-password`, `--v`, `UPPER_CASE` option keys, and
-`--parallel`/`--verbosity-level` which are accepted and ignored), so its callers
-need no edits. `provisioning/parity.test.ts` reads every `--database` string out
-of `.github/workflows/` and asserts all of them still parse — a new CI setup
-string that this cannot express fails that test rather than a 20-minute job.
+`provisioning/` accepts pmm-framework's own CLI grammar (`--database`, `--pmm-server-ip`,
+`--pmm-server-password`, `--v`, `UPPER_CASE` option keys, and `--parallel`/`--verbosity-level`
+which are accepted and ignored), its type aliases (`mlaunch_modb`, `ssl_mlaunch`, `modb`), its
+option aliases (`NODES_COUNT`, `BUCKET_NAMES`), and its environment variables, so its callers need
+no edits. `provisioning/parity.test.ts` reads every `--database` string out of `.github/workflows/`
+and asserts all of them still parse, alongside the alias and environment-variable rules -- a new CI
+setup string that this cannot express fails that test rather than a 20-minute job.
+
+**The client tarball cache.** `provisioning/.cache/` is keyed on a hash of the download URL, but
+`pmm-client-latest.tar.gz` and the per-OL dynamic builds are *moving* targets, so a hit is
+revalidated with `If-Modified-Since` carrying the cached file's own mtime -- 304 keeps it and
+re-stamps it, 200 replaces it, and an unreachable build cache falls back to the copy on disk
+rather than failing the run. The mtime therefore doubles as the LRU marker: `pruneClientTarballCache()`
+drops entries untouched for 14 days after each successful download, which is what stops one
+~180MB entry per feature-branch URL from accumulating forever.
+
+**Environment variables.** `parseDatabase()` reproduces pmm-framework's `resolve_value()`
+precedence: an exported variable named after a registered option outranks the spec, which outranks
+the registered default, and an exported-but-empty variable deliberately wins with an empty value.
+`DATABASES[type].envOptions` is the per-type list that gets scanned, so `SETUP_TYPE=gr` never leaks
+into a type that never registered it. Versions follow `resolved_version()` instead -- `VERSION_ENV`
+maps each type to `MS_VERSION`/`PS_VERSION`/`PXC_VERSION`/`PSMDB_VERSION`/`MODB_VERSION`/
+`PGSQL_VERSION`/`PDPGSQL_VERSION`/`VALKEY_VERSION`, and an *empty* value is skipped there. A
+`PSMDB_VERSION` carrying a full patch release (`8.0.4-1`) selects the `8.0` series and pins the
+release as a `patch=` build option, replacing pmm-framework's downloads-API lookup.
+`REDIS_VERSION`/`NODE_PROCESS_VERSION` are build args on the services image rather than playbook
+variables, so changing one needs `npm run build -- external`.
 
 The list below is what remains deliberately different. Everything not listed is
 expected to behave the same; if it does not, that is a bug.
 
-**Functionally equivalent, mechanism differs** — no code changes planned:
+**Functionally equivalent, mechanism differs** -- no code changes planned:
 
 - **SSL_MYSQL**: `--db mysql=8.0,tls=true`/`--db ps=8.0,tls=true` enables
   MySQL's native TLS and registers the service with `--tls`. This does not
@@ -272,11 +288,10 @@ expected to behave the same; if it does not, that is a bug.
   pmm-framework's embedded pytest auth suite and compose-override/sed-patch
   mechanism are test-suite mechanics, not provisioning capability, and are
   intentionally not ported.
-- **DOCKERCLIENTS**: `npm run build:dockerclients` builds the ps/pdpgsql/psmdb
-  images; pmm-framework's specific
-  `docker-compose-clients.yaml` rig with fixed container names is a
-  different integration-test rig, not reproduced here. It has no callers in
-  `.github/workflows`, `package_tests`, or `cli`.
+- **DOCKERCLIENTS**: `--db dockerclients` builds the ps/pdpgsql/psmdb images and provisions
+  nothing (the same work `npm run build:dockerclients` does). pmm-framework's specific
+  `docker-compose-clients.yaml` rig with fixed container names is a different integration-test
+  rig, not reproduced here.
 
 **Moved from provision time to build time.** These were spec options; here they
 select which image gets built, because the image is prebaked rather than
@@ -287,22 +302,28 @@ with a message naming the replacement:
 |---|---|
 | `PGSM_BRANCH=x` | `npm run build -- pdpgsql=18,pgsm-branch=x` |
 | `PXC,TARBALL=<url>` | `npm run build -- pxc=8.0,image=perconalab/percona-xtradb-cluster:8.0.41` |
-| `PSMDB_VERSION=8.0.4-1` (downloads-API patch lookup) | `npm run build -- psmdb=8.0,patch=8.0.4-1` |
 
-`TARBALL` is the one real capability reduction: a pre-release is consumed as a
-published image, not as a tarball unpacked over a base image. If a TESTING build
-ships a tarball with no matching image, raise it with the release process rather
-than adding an unpack step here.
+**`TARBALL` on the other types.** pmm-framework registered `TARBALL` for MYSQL, PS, SSL_MYSQL,
+PSMDB, SSL_PSMDB, VALKEY and the MLAUNCH types, but only PXC's playbook ever read it -- the
+MySQL and PS playbooks pmm-framework actually dispatches to (`mysql/mysql-setup.yml`,
+`percona_server_for_mysql/percona-server-setup.yml`) never mention it. So `TARBALL=` is accepted
+and ignored here for exactly the types where it was already inert, and only PXC's reaches a build.
+For PXC, a pre-release is consumed as a published image or a `tarball=` build arg, not as a tarball
+unpacked at provision time.
 
-**Deliberately dropped versions.** pmm-framework's catalogue carries PGSQL
-11–15, PSMDB 4.4/5.0 and MLAUNCH 4.4/5.0. All are upstream EOL and no workflow
-requests them, so they are not built here. PDPGSQL 14 and 15 *are* supported —
-`e2e-tests-matrix.yml` uses them. Revisit only if PMM's supported-monitoring
-matrix still claims one of the dropped versions.
+**Deliberately dropped versions.** pmm-framework's catalogue carries PGSQL and PDPGSQL 11-13,
+PSMDB 4.4/5.0 and MLAUNCH 4.4/5.0. All are past upstream EOL and outside PMM's supported-monitoring
+matrix, so they are not built here. PGSQL and PDPGSQL 14-18 *are* supported. Revisit only if PMM's
+supported-monitoring matrix still claims one of the dropped versions.
 
 **Stricter by design.** An unknown version or option is fatal here;
 pmm-framework logged a note under `--verbose` and silently used its default. The
 parity test above is what makes that safe to keep.
+
+**A different default client.** pmm-framework registered `CLIENT_VERSION=3-dev-latest` per type;
+here the default is `latest-tarball`. Both install the newest development client, from the
+experimental package channel and the PR build cache respectively, and every CI caller sets
+`CLIENT_VERSION` explicitly, so the registered default is never what actually runs.
 
 ---
 
@@ -327,7 +348,7 @@ I/O boundaries are dependency-injected so tests never touch Docker:
 Run everything relevant to `provisioning/`:
 
 ```bash
-npm --prefix provisioning test
+node --test --experimental-test-isolation=none provisioning/setup.test.ts provisioning/pmm-client.test.ts provisioning/images/setup.test.ts provisioning/images/engines/*/setup.test.ts
 ```
 
 ---

@@ -3,8 +3,7 @@ import test from 'node:test';
 import { dockerBuildArgs } from '../../build.ts';
 import { parseConfig, serviceRunArgs } from './setup.ts';
 
-test('builds standalone client, HAProxy, and external exporter images', () => {
-  assert.ok(dockerBuildArgs('client').includes('pmm-qa/client:latest'));
+test('builds HAProxy and external exporter images', () => {
   assert.ok(dockerBuildArgs('haproxy').includes('pmm-qa/haproxy:latest'));
   assert.ok(dockerBuildArgs('external').includes('pmm-qa/external:latest'));
 });
@@ -15,28 +14,6 @@ test('starts each service with its metrics endpoint', () => {
   const external = parseConfig(['--type', 'external'], {});
   assert.ok(serviceRunArgs(external).some((arg) => arg.includes('redis_exporter')));
   assert.throws(() => parseConfig(['--type', 'unknown'], {}), /type must be/);
-});
-
-test('starts a stable standalone client container with shared PMM options and teardown labels', () => {
-  const client = parseConfig([
-    '--type', 'client',
-    '--client-version', '3.9.1',
-    '--admin-password', 'secret',
-    '--metrics-mode', 'no',
-  ], {});
-  assert.equal(client.clientVersion, '3.9.1');
-  assert.equal(client.adminPassword, 'secret');
-  assert.equal(client.metricsMode, 'no');
-
-  const args = serviceRunArgs(client);
-  assert.equal(args[args.indexOf('--name') + 1], 'client_container');
-  assert.equal(args[args.indexOf('--hostname') + 1], 'client_container');
-  assert.ok(args.includes('pmm-qa.engine=services'));
-  assert.ok(args.includes('pmm-qa.service=client'));
-  assert.equal(args.at(-1), 'exec sleep infinity');
-
-  const tarball = parseConfig(['--type', 'client', '--client-tarball', '/tmp/pmm-client.tar.gz'], {});
-  assert.equal(tarball.clientTarball, '/tmp/pmm-client.tar.gz');
 });
 
 test('haproxy fronts real backends over a TCP proxy when --backends is supplied', () => {

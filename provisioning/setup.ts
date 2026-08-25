@@ -16,10 +16,14 @@ export interface DatabaseConfig {
   type: DatabaseType;
   version: string;
   options: Record<string, string>;
+  // Set only when this database needs a client other than the run's global one; see
+  // gssapiClientVersion().
+  clientVersion?: string;
 }
 
 export interface Config {
   databases: DatabaseConfig[];
+  dockerClients: boolean;
   serverImage: string;
   serverPort: string;
   serverEnv: string[];
@@ -56,29 +60,106 @@ const NETWORK = 'pmm-qa';
 const SERVER = 'pmm-server';
 const WATCHTOWER = 'watchtower';
 const TEARDOWN_LABELS = ['pmm-qa.orchestrator=server', 'pmm-qa.engine'];
-const TEARDOWN_VOLUME_PREFIXES = ['pmm-qa-', 'psmdb-', 'mysql-ps-minio-backups', 'pmm-data'];
+const TEARDOWN_VOLUME_PREFIXES = ['pmm-qa-', 'psmdb-', 'pmm-data'];
 const SERVER_VOLUME = 'pmm-data';
 const DIAGNOSTICS_DIR = resolve(ROOT, '..', 'provisioning-artifacts');
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
 const FALSE_VALUES = new Set(['0', 'false', 'no', 'off']);
 const SERVERLESS_TYPES = new Set<DatabaseType>(['bucket']);
 
+// `envOptions` lists the spec options pmm-framework registered for this type. It is what
+// applyEnvironment() scans for an UPPER_CASE environment variable of the same name, reproducing
+// resolve_value()'s "an exported variable outranks the spec" rule. Keys are in provisioning's own
+// spelling; OPTION_ALIASES maps pmm-framework's differing names onto them.
 export const DATABASES = {
-  mysql: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '9.7', script: ['images', 'setup.ts'], selector: ['engine', 'mysql'] },
-  ps: { versions: ['5.7', '8.0', '8.4'], defaultVersion: '8.0', script: ['images', 'setup.ts'], selector: ['engine', 'ps'] },
-  pxc: { versions: ['5.7', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'pxc', 'setup.ts'] },
-  psmdb: { versions: ['6.0', '7.0', '8.0', 'latest'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'psmdb'] },
-  mongodb: { versions: ['6.0', '7.0', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'mongodb'] },
-  pgsql: { versions: ['16', '17', '18'], defaultVersion: '18', script: ['images', 'engines', 'pgsql', 'setup.ts'] },
-  pdpgsql: { versions: ['14', '15', '16', '17', '18'], defaultVersion: '18', script: ['images', 'engines', 'pdpgsql', 'setup.ts'] },
-  valkey: { versions: ['7', '8'], defaultVersion: '8', script: ['images', 'engines', 'valkey', 'setup.ts'] },
-  client: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'services', 'setup.ts'], selector: ['type', 'client'] },
-  haproxy: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'services', 'setup.ts'], selector: ['type', 'haproxy'] },
-  external: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'services', 'setup.ts'], selector: ['type', 'external'] },
-  bucket: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'minio', 'setup.ts'] },
-  'mlaunch-psmdb': { versions: ['6.0', '7.0', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'mlaunch', 'setup.ts'], selector: ['engine', 'psmdb'] },
-  'mlaunch-mongodb': { versions: ['6.0', '7.0', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'mlaunch', 'setup.ts'], selector: ['engine', 'mongodb'] },
+  mysql: { versions: ['5.7', '8.0', '8.4', '9.7'], defaultVersion: '9.7', script: ['images', 'setup.ts'], selector: ['engine', 'mysql'], envOptions: ['query-source', 'setup-type', 'tarball', 'encrypted-client-config'] },
+  ps: { versions: ['5.7', '8.0', '8.4'], defaultVersion: '8.0', script: ['images', 'setup.ts'], selector: ['engine', 'ps'], envOptions: ['query-source', 'setup-type', 'tarball', 'nodes-count', 'my-rocks', 'encrypted-client-config', 'backup'] },
+  pxc: { versions: ['5.7', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'pxc', 'setup.ts'], envOptions: ['query-source', 'tarball'] },
+  psmdb: { versions: ['6.0', '7.0', '8.0', 'latest'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'psmdb'], envOptions: ['setup-type', 'compose-profiles', 'tarball', 'ol-version', 'gssapi', 'storage-engine'] },
+  mongodb: { versions: ['6.0', '7.0', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'psmdb', 'setup.ts'], selector: ['engine', 'mongodb'], envOptions: ['setup-type', 'compose-profiles', 'tarball', 'storage-engine'] },
+  pgsql: { versions: ['14', '15', '16', '17', '18'], defaultVersion: '17', script: ['images', 'engines', 'pgsql', 'setup.ts'], envOptions: ['query-source', 'use-socket', 'setup-type', 'encrypted-client-config'] },
+  pdpgsql: { versions: ['14', '15', '16', '17', '18'], defaultVersion: '17', script: ['images', 'engines', 'pdpgsql', 'setup.ts'], envOptions: ['use-socket', 'setup-type', 'encrypted-client-config'] },
+  valkey: { versions: ['7', '8'], defaultVersion: '8', script: ['images', 'engines', 'valkey', 'setup.ts'], envOptions: ['setup-type', 'tarball', 'encrypted-client-config'] },
+  haproxy: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'services', 'setup.ts'], selector: ['type', 'haproxy'], envOptions: [] },
+  external: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'services', 'setup.ts'], selector: ['type', 'external'], envOptions: [] },
+  bucket: { versions: ['latest'], defaultVersion: 'latest', script: ['images', 'engines', 'minio', 'setup.ts'], envOptions: ['bucket-names'] },
+  'mlaunch-psmdb': { versions: ['6.0', '7.0', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'mlaunch', 'setup.ts'], selector: ['engine', 'psmdb'], envOptions: ['setup-type', 'tarball'] },
+  'mlaunch-mongodb': { versions: ['6.0', '7.0', '8.0'], defaultVersion: '8.0', script: ['images', 'engines', 'mlaunch', 'setup.ts'], selector: ['engine', 'mongodb'], envOptions: ['setup-type', 'tarball'] },
 } as const;
+
+// pmm-framework type names that provisioning spells differently. `mlaunch` is here so its
+// `ssl_mlaunch` alias resolves once the `ssl_` prefix has been stripped.
+const TYPE_ALIASES: Record<string, string> = {
+  'mlaunch-modb': 'mlaunch-mongodb',
+  mlaunch: 'mlaunch-psmdb',
+  modb: 'mongodb',
+};
+
+// Registered by pmm-framework only so PXC could read its defaults; it was never provisionable.
+const NOT_PROVISIONABLE: Record<string, string> = {
+  proxysql: 'PROXYSQL is provisioned as part of --db pxc, not on its own',
+};
+
+// The pseudo-type that builds the pre-baked client images instead of provisioning anything.
+const DOCKER_CLIENTS = 'dockerclients';
+const DOCKER_CLIENT_IMAGES = ['ps', 'pdpgsql', 'psmdb'];
+
+// pmm-framework spec option keys that provisioning spells differently.
+const OPTION_ALIASES: Record<string, string> = {
+  'nodes-count': 'nodes',
+  'bucket-names': 'buckets',
+};
+
+// GSSAPI authenticates against the service principal mongodb/<host>, which needs a PMM client
+// linked against libkrb5 -- the default tarball is a static build with no -tags gssapi, and it
+// fails only at `pmm-admin add`, minutes into a run. The dynamic build is published per Oracle
+// Linux major, and must match the OL the PSMDB image was built for.
+const GSSAPI_CLIENT_TARBALL = (olVersion: string) =>
+  `https://s3.us-east-2.amazonaws.com/pmm-build-cache/PR-BUILDS/pmm-client/pmm-client-dynamic-ol${olVersion}-latest.tar.gz`;
+const GSSAPI_INCAPABLE_CLIENT = /^latest-tarball$|\/pmm-client-latest\.tar\.gz$/;
+
+// The client this database needs, or undefined to use the run's global one.
+//
+// Without an explicit --client-version/CLIENT_VERSION, a GSSAPI run selects the matching dynamic
+// tarball itself so `--db psmdb,gssapi=true` works unattended. With one, the only cases rejected
+// are those known to fail: the static default, and a dynamic tarball built for the wrong OL.
+export function gssapiClientVersion(
+  database: DatabaseConfig,
+  clientVersion: string,
+  explicit: boolean,
+): string | undefined {
+  if (database.type !== 'psmdb') return undefined;
+  if (!TRUE_VALUES.has((database.options.gssapi ?? '').toLowerCase())) return undefined;
+  const olVersion = database.options['ol-version'] ?? '9';
+  if (!explicit) return GSSAPI_CLIENT_TARBALL(olVersion);
+  if (GSSAPI_INCAPABLE_CLIENT.test(clientVersion)) {
+    throw new Error(
+      `gssapi needs a PMM client built with -tags gssapi; ${clientVersion} is the static build. Use --client-version ${GSSAPI_CLIENT_TARBALL(olVersion)}`,
+    );
+  }
+  const built = /pmm-client-dynamic-ol(\d+)/.exec(clientVersion);
+  if (built && built[1] !== olVersion) {
+    throw new Error(
+      `client tarball is built for ol${built[1]} but this PSMDB image is ol${olVersion}; use ${GSSAPI_CLIENT_TARBALL(olVersion)}`,
+    );
+  }
+  return undefined;
+}
+
+// The product-specific version override pmm-framework's resolved_version() honoured above the
+// version in the spec. An empty value is skipped, matching its `os.getenv(X) or ...` rule.
+const VERSION_ENV: Partial<Record<DatabaseType, string>> = {
+  mysql: 'MS_VERSION',
+  ps: 'PS_VERSION',
+  pxc: 'PXC_VERSION',
+  psmdb: 'PSMDB_VERSION',
+  mongodb: 'MODB_VERSION',
+  pgsql: 'PGSQL_VERSION',
+  pdpgsql: 'PDPGSQL_VERSION',
+  valkey: 'VALKEY_VERSION',
+  'mlaunch-psmdb': 'PSMDB_VERSION',
+  'mlaunch-mongodb': 'MODB_VERSION',
+};
 
 const HELP = `Usage: node provisioning/setup.ts [--db DESCRIPTOR] [--db DESCRIPTOR] [options]
 
@@ -90,15 +171,15 @@ const HELP = `Usage: node provisioning/setup.ts [--db DESCRIPTOR] [--db DESCRIPT
   --db pgsql=VERSION,setup-type=single|replication,nodes=NUMBER,use-socket=true
   --db pdpgsql=VERSION,setup-type=single|replication|patroni,nodes=NUMBER
   --db valkey=VERSION,setup-type=cluster|sentinel
-  --db client                 standalone PMM Client node, without a database
   --db haproxy
   --db external
   --db bucket,buckets=bcp;archive
   --db mlaunch-psmdb=VERSION,setup-type=single|pss   single-container mongod or 3-node replica set
   --db mlaunch-mongodb=VERSION,setup-type=single|pss
+  --db dockerclients         build the pre-baked ps/pdpgsql/psmdb client images, provision nothing
   --server-image IMAGE       default: perconalab/pmm-server:3-dev-latest
   --server-port PORT         host port mapped to the server's 8443 (default: 443)
-  --server-env KEY=VALUE     extra env for the server container, repeatable (PMM_DEBUG=1 by default)
+  --server-env KEY=VALUE     extra env for the server container, repeatable
   --watchtower               also run watchtower, for PMM's in-place upgrade flow
   --pmm-server HOST[:PORT]   use an existing PMM Server
   --admin-password PASSWORD  default: admin
@@ -120,6 +201,11 @@ Omit --db to provision PMM Server only.
 --teardown ignores --db and removes everything this script previously provisioned.
 pmm-framework spellings are accepted: --database, --pmm-server-ip, --pmm-server-password, --v,
 UPPER_CASE option keys, and --parallel/--verbosity-level (ignored; concurrent is already default).
+Its type aliases (mlaunch_modb, ssl_mlaunch, modb) and option aliases (NODES_COUNT, BUCKET_NAMES)
+resolve too, and its environment variables outrank the spec exactly as they did there:
+MS_/PS_/PXC_/PSMDB_/MODB_/PGSQL_/PDPGSQL_/VALKEY_VERSION select the version, and SETUP_TYPE,
+QUERY_SOURCE, NODES_COUNT, MY_ROCKS, BACKUP, STORAGE_ENGINE, COMPOSE_PROFILES, OL_VERSION, GSSAPI,
+USE_SOCKET, BUCKET_NAMES, ENCRYPTED_CLIENT_CONFIG, ADMIN_PASSWORD and CLIENT_VERSION select options.
 Set CONTAINER_RUNTIME=podman to drive podman instead of docker.`;
 
 // pmm-framework's flag spellings, accepted so its callers (CI workflows, skills, muscle memory)
@@ -143,7 +229,9 @@ const RETIRED_OPTIONS: Record<string, string> = {
 
 // Spec options that select which image gets built rather than how it is provisioned. Lifted out of
 // the options map and folded into the build descriptor, so pmm-framework's spelling still works.
-const BUILD_OPTIONS = new Set(['tarball']);
+// `tarball` reaches a build for PXC only, and `patch` for PSMDB only; every other type registered
+// TARBALL without a playbook that read it, so it is accepted and ignored exactly as it was.
+const BUILD_OPTIONS = new Set(['tarball', 'patch']);
 
 export function normalizeArgv(argv: string[]): string[] {
   const normalized: string[] = [];
@@ -163,18 +251,44 @@ export function normalizeArgv(argv: string[]): string[] {
   return normalized;
 }
 
-export function parseDatabase(value: string): DatabaseConfig {
+// Version precedence, highest first: the product's own environment variable, the spec's version,
+// the registered default -- pmm-framework's resolved_version(), including its skip-if-empty rule.
+function resolveVersion(
+  type: DatabaseType,
+  requested: string | undefined,
+  env: Record<string, string | undefined>,
+  options: Record<string, string>,
+): string {
+  const environmentName = VERSION_ENV[type];
+  let candidate =
+    (environmentName ? env[environmentName] : undefined) || requested || DATABASES[type].defaultVersion;
+  // PSMDB_VERSION carries a full patch release (8.0.4-1) in pmm-framework. Select the series here
+  // and pin the exact release as a build option, which is where provisioning consumes it.
+  const series = /^(\d+\.\d+)\.\S+$/.exec(candidate);
+  if (series) {
+    if (type === 'psmdb') options.patch = candidate;
+    candidate = series[1];
+  }
+  if (!DATABASES[type].versions.includes(candidate as never)) {
+    throw new Error(`${type} version must be ${DATABASES[type].versions.join(', ')}`);
+  }
+  return type === 'psmdb' && candidate === 'latest' ? '8.0' : candidate;
+}
+
+export function parseDatabase(
+  value: string,
+  env: Record<string, string | undefined> = {},
+): DatabaseConfig {
   const [head, ...entries] = value.split(',');
   const separator = head.indexOf('=');
   const requestedType = (separator === -1 ? head : head.slice(0, separator)).toLowerCase().replaceAll('_', '-');
   const tlsAlias = requestedType.startsWith('ssl-');
-  const type = tlsAlias ? requestedType.slice(4) : requestedType;
+  const stripped = tlsAlias ? requestedType.slice(4) : requestedType;
+  const type = TYPE_ALIASES[stripped] ?? stripped;
+  const rejected = NOT_PROVISIONABLE[type];
+  if (rejected) throw new Error(rejected);
   if (!(type in DATABASES)) throw new Error('unknown provisioning type');
   const databaseType = type as DatabaseType;
-  const requestedVersion = separator === -1 ? DATABASES[databaseType].defaultVersion : head.slice(separator + 1);
-  if (!DATABASES[databaseType].versions.includes(requestedVersion as never)) {
-    throw new Error(`${type} version must be ${DATABASES[databaseType].versions.join(', ')}`);
-  }
   const options: Record<string, string> = tlsAlias ? { tls: 'true' } : {};
   for (const entry of entries) {
     const equals = entry.indexOf('=');
@@ -182,9 +296,16 @@ export function parseDatabase(value: string): DatabaseConfig {
     const key = entry.slice(0, equals).toLowerCase().replaceAll('_', '-');
     const retired = RETIRED_OPTIONS[key];
     if (retired) throw new Error(`${key} is not a provisioning option: ${retired}`);
-    options[key] = entry.slice(equals + 1);
+    options[OPTION_ALIASES[key] ?? key] = entry.slice(equals + 1);
   }
-  return { type: databaseType, version: type === 'psmdb' && requestedVersion === 'latest' ? '8.0' : requestedVersion, options };
+  // resolve_value(): an exported variable named after a registered option outranks the spec, and
+  // an exported-but-empty one deliberately wins with an empty value.
+  for (const key of DATABASES[databaseType].envOptions as readonly string[]) {
+    const value = env[key.replaceAll('-', '_').toUpperCase()];
+    if (value !== undefined) options[OPTION_ALIASES[key] ?? key] = value;
+  }
+  const requestedVersion = separator === -1 ? undefined : head.slice(separator + 1);
+  return { type: databaseType, version: resolveVersion(databaseType, requestedVersion, env, options), options };
 }
 
 export function parseConfig(
@@ -215,7 +336,10 @@ export function parseConfig(
   });
   const help = values.help ?? false;
   const teardown = values.teardown ?? false;
-  const databases = (values.db ?? []).map(parseDatabase);
+  const requested = values.db ?? [];
+  const isDockerClients = (entry: string) => entry.split(',')[0].split('=')[0].toLowerCase() === DOCKER_CLIENTS;
+  const dockerClients = requested.some(isDockerClients);
+  const databases = requested.filter((entry) => !isDockerClients(entry)).map((entry) => parseDatabase(entry, env));
   const databaseKeys = databases.map(
     ({ type, options }) => `${type}:${options['setup-type']}`,
   );
@@ -232,8 +356,15 @@ export function parseConfig(
       'client version must be 3-dev-latest, pmm3-rc, pmm3-latest, 3.x.y[-suffix], latest-tarball, or a tarball URL',
     );
   }
+  // Fail here rather than minutes into a run: this is before any image, network or container.
+  const clientExplicit = values['client-version'] !== undefined || env.CLIENT_VERSION !== undefined;
+  for (const database of databases) {
+    const required = gssapiClientVersion(database, clientVersion, clientExplicit);
+    if (required) database.clientVersion = required;
+  }
   return {
     databases,
+    dockerClients,
     serverImage: values['server-image'] ?? env.DOCKER_VERSION ?? 'perconalab/pmm-server:3-dev-latest',
     serverPort: values['server-port'] ?? '443',
     serverEnv: values['server-env'] ?? [],
@@ -261,12 +392,17 @@ export function databaseArchive(database: DatabaseConfig): string {
 }
 
 export function databaseSuffix(database: DatabaseConfig): string {
-  if (database.type === 'psmdb' && database.options['ol-version']) return `-ol${database.options['ol-version']}`;
+  const parts: string[] = [];
+  if (database.type === 'psmdb') {
+    if (database.options['ol-version']) parts.push(`ol${database.options['ol-version']}`);
+    if (database.options.patch) parts.push(`p${database.options.patch}`);
+  }
   // A tarball build must not reuse the tag a packaged build already occupies, or
   // ensureDatabaseImage() would skip the build and provision the wrong binaries.
-  const tarball = database.options.tarball;
-  if (tarball) return `-tb${createHash('sha256').update(tarball).digest('hex').slice(0, 8)}`;
-  return '';
+  if (database.type === 'pxc' && database.options.tarball) {
+    parts.push(`tb${createHash('sha256').update(database.options.tarball).digest('hex').slice(0, 8)}`);
+  }
+  return parts.length ? `-${parts.join('-')}` : '';
 }
 
 // HAProxy's `haproxy` --db target has no database of its own to front; when PS/PXC are
@@ -307,7 +443,7 @@ export function provisionerArgs(
   if ('selector' in spec) args.push(`--${spec.selector[0]}`, spec.selector[1]);
   args.push('--image', databaseImage(database));
   if (database.type !== 'bucket') {
-    if (!['client', 'haproxy', 'external'].includes(database.type)) {
+    if (database.type !== 'haproxy' && database.type !== 'external') {
       args.push('--version', database.version);
     }
     args.push('--pmm-server', pmmServer, '--admin-password', adminPassword, ...clientArgs);
@@ -447,10 +583,6 @@ export async function createServer(
   config: Pick<Config, 'serverImage' | 'adminPassword' | 'serverPort' | 'serverEnv' | 'watchtower'>,
   runner: Runner,
 ): Promise<void> {
-  const serverEnv = config.serverEnv.some((entry) => entry.startsWith('PMM_DEBUG='))
-    ? config.serverEnv
-    : ['PMM_DEBUG=1', ...config.serverEnv];
-
   await runner(CONTAINER_RUNTIME, ['rm', '-f', SERVER, WATCHTOWER], true, true);
   await runner(CONTAINER_RUNTIME, ['volume', 'rm', '-f', SERVER_VOLUME], true, true);
   await ensureNetwork(runner);
@@ -481,7 +613,7 @@ export async function createServer(
     'GF_SECURITY_ADMIN_USER=admin',
     '--env',
     `GF_SECURITY_ADMIN_PASSWORD=${config.adminPassword}`,
-    ...serverEnv.flatMap((entry) => ['--env', entry]),
+    ...config.serverEnv.flatMap((entry) => ['--env', entry]),
     '--volume',
     `${SERVER_VOLUME}:/srv`,
     config.serverImage,
@@ -544,11 +676,11 @@ export async function reportReusedServer(name: string, runner: Runner): Promise<
 
 export function buildDescriptor(database: DatabaseConfig): string {
   const parts = [`${database.type}=${database.version}`];
-  const olVersion = database.type === 'psmdb' ? database.options['ol-version'] : undefined;
-  if (olVersion) parts.push(`ol-version=${olVersion}`);
-  for (const key of BUILD_OPTIONS) {
-    if (database.options[key]) parts.push(`${key}=${database.options[key]}`);
+  if (database.type === 'psmdb') {
+    if (database.options['ol-version']) parts.push(`ol-version=${database.options['ol-version']}`);
+    if (database.options.patch) parts.push(`patch=${database.options.patch}`);
   }
+  if (database.type === 'pxc' && database.options.tarball) parts.push(`tarball=${database.options.tarball}`);
   return parts.join(',');
 }
 
@@ -650,8 +782,16 @@ export async function orchestrate(
     validate(args, process.env);
   }));
   await step('Check Docker', () => ensureDocker(runner));
+  if (config.dockerClients) {
+    await step('Build PMM client images', async () => {
+      for (const engine of DOCKER_CLIENT_IMAGES) {
+        await runner(process.execPath, [resolve(ROOT, 'images', 'build.ts'), engine]);
+      }
+    });
+  }
   const needsServer =
-    config.databases.length === 0 || config.databases.some(({ type }) => !SERVERLESS_TYPES.has(type));
+    (config.databases.length === 0 && !config.dockerClients) ||
+    config.databases.some(({ type }) => !SERVERLESS_TYPES.has(type));
   // Neither the client tarball nor the database images need PMM Server, so fetch them while it
   // pulls and boots -- otherwise both waits are paid one after the other.
   const prefetch = Promise.all([
@@ -694,11 +834,14 @@ export async function orchestrate(
   const provision = (database: DatabaseConfig) =>
     step(`Provision ${database.type.toUpperCase()} ${database.version}`, async () => {
       const label = `${database.type.toUpperCase()} ${database.version}`;
+      const databaseClientArgs = database.clientVersion
+        ? await step(`Resolve PMM Client for ${label}`, () => resolveClientArgs(database.clientVersion!, resolveTarball))
+        : clientArgs;
       const result = await runner(
         process.execPath,
         provisionerArgs(
           database,
-          clientArgs,
+          databaseClientArgs,
           config.adminPassword,
           config.clientDebug,
           config.encryptedClientConfig,

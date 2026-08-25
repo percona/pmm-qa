@@ -22,11 +22,14 @@ const psImages = {
 
 const SIMPLE_ENGINE_BUILDS: Record<string, { versions: string[]; arg: string; context: string }> = {
   mongodb: { versions: ['6.0', '7.0', '8.0'], arg: 'MONGODB_VERSION', context: 'engines' },
-  pgsql: { versions: ['16', '17', '18'], arg: 'PGSQL_VERSION', context: 'engines/pgsql' },
+  pgsql: { versions: ['14', '15', '16', '17', '18'], arg: 'PGSQL_VERSION', context: 'engines/pgsql' },
   valkey: { versions: ['7', '8'], arg: 'VALKEY_VERSION', context: 'engines/valkey' },
 };
 
-export function dockerBuildArgs(descriptor: string): string[] {
+export function dockerBuildArgs(
+  descriptor: string,
+  env: Record<string, string | undefined> = process.env,
+): string[] {
   const [head, ...entries] = descriptor.split(',');
   const [engine, requestedVersion, extra] = head.split('=');
   if (!engine || requestedVersion === '' || extra !== undefined) {
@@ -128,12 +131,14 @@ export function dockerBuildArgs(descriptor: string): string[] {
     ];
   }
 
-  if (normalizedEngine === 'client' || normalizedEngine === 'haproxy' || normalizedEngine === 'external') {
+  if (normalizedEngine === 'haproxy' || normalizedEngine === 'external') {
     if (version !== 'latest') throw new Error(`${normalizedEngine} has no version selector`);
-    return [
-      'build', '-f', 'engines/services/Dockerfile',
-      '-t', `pmm-qa/${normalizedEngine}:latest`, 'engines/services',
-    ];
+    const args = ['build', '-f', 'engines/services/Dockerfile'];
+    // pmm-framework's REDIS_VERSION / NODE_PROCESS_VERSION, honoured at build time.
+    if (env.REDIS_VERSION) args.push('--build-arg', `REDIS_EXPORTER_VERSION=${env.REDIS_VERSION}`);
+    if (env.NODE_PROCESS_VERSION) args.push('--build-arg', `PROCESS_EXPORTER_VERSION=${env.NODE_PROCESS_VERSION}`);
+    args.push('-t', `pmm-qa/${normalizedEngine}:latest`, 'engines/services');
+    return args;
   }
 
   if (normalizedEngine === 'bucket') {

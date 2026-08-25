@@ -23,7 +23,7 @@ test('builds every supported PDPGSQL major version', () => {
 
 test('parses single-node defaults', () => {
   const config = parseConfig([], {});
-  assert.equal(config.version, '18');
+  assert.equal(config.version, '17');
   assert.equal(config.setupType, 'single');
   assert.equal(config.nodes, 1);
   assert.equal(config.clientTarball, 'latest');
@@ -45,9 +45,9 @@ test('accepts replication and Patroni setup types', () => {
   assert.throws(() => parseConfig(['--version', '13'], {}), /version must be 14, 15, 16, 17, or 18/);
 });
 
-test('starts PostgreSQL 18 with pg_stat_monitor', () => {
+test('starts PostgreSQL with pg_stat_monitor', () => {
   const config = parseConfig([], {});
-  assert.equal(containerName(config, 1), 'pdpgsql_pmm_18_1');
+  assert.equal(containerName(config, 1), 'pdpgsql_pmm_17_1');
   assert.ok(postgresRunArgs(config).includes('shared_preload_libraries=pg_stat_monitor'));
 });
 
@@ -60,19 +60,19 @@ test('creates a streaming replica from the primary', () => {
   const config = parseConfig(['--setup-type', 'replication'], {});
   const args = replicaRunArgs(config);
   assert.ok(postgresRunArgs(config).includes('wal_keep_size=512MB'));
-  assert.equal(containerName(config, 2), 'pdpgsql_pmm_replication_18_2');
+  assert.equal(containerName(config, 2), 'pdpgsql_pmm_replication_17_2');
   assert.ok(args.some((arg) => arg.includes('pg_basebackup')));
   assert.ok(args.some((arg) => arg.includes('PGPASSWORD=replPasswd')));
-  assert.ok(args.some((arg) => arg.includes('pdpgsql_pmm_replication_18_1')));
+  assert.ok(args.some((arg) => arg.includes('pdpgsql_pmm_replication_17_1')));
   assert.ok(args.includes('pmm-qa.pdpgsql.setup-type=replication'));
-  assert.ok(replicaRunArgs(config, 4).includes('pdpgsql_pmm_replication_18_4'));
+  assert.ok(replicaRunArgs(config, 4).includes('pdpgsql_pmm_replication_17_4'));
 });
 
 test('configures three Patroni nodes against etcd', () => {
   const config = parseConfig(['--setup-type', 'patroni'], {});
   const args = patroniRunArgs(config, 1);
   assert.ok(args.includes('PATRONI_ETCD3_HOST=pdpgsql-etcd:2379'));
-  assert.ok(args.includes('PATRONI_SCOPE=pdpgsql-18'));
+  assert.ok(args.includes('PATRONI_SCOPE=pdpgsql-17'));
   assert.ok(args.includes('pmm-qa.pdpgsql.setup-type=patroni'));
   assert.ok(args.includes('PATRONI_REPLICATION_USERNAME=replicator'));
   assert.ok(args.some((arg) => arg.includes('exec patroni /tmp/patroni.yml')));
@@ -103,7 +103,7 @@ test('starts more than two replicas sequentially', () => {
 });
 
 test('registers TCP and local socket services', () => {
-  const registrations = postgresqlRegistrationArgs(parseConfig([], {}), 'pdpgsql_pmm_18_1', '12345');
+  const registrations = postgresqlRegistrationArgs(parseConfig([], {}), 'pdpgsql_pmm_17_1', '12345');
   assert.equal(registrations.length, 2);
   assert.ok(registrations[0].includes('127.0.0.1:5432'));
   assert.ok(registrations[1].includes('--socket=/tmp'));

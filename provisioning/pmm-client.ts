@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
-import { access, mkdir, rename } from 'node:fs/promises';
+import { access, mkdir, readdir, rename, stat, unlink, utimes } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
@@ -35,8 +35,16 @@ export function pmmClientConfig(
   env: Record<string, string | undefined>,
   fallback: 'latest' | string = 'latest',
 ): PmmClientConfig & { clientTarball?: string; pmmServer?: string } {
+  // A flag from setup.ts wins outright rather than merging with the environment: setup.ts has
+  // already resolved CLIENT_VERSION, and when that resolved to a tarball the child still inherits
+  // the original CLIENT_VERSION=latest-tarball (or a URL), which would otherwise read as a second,
+  // conflicting source. Only a standalone engine run, with neither flag, falls back to the
+  // environment.
+  const flagged = values['client-version'] !== undefined || values['client-tarball'] !== undefined;
+  const requestedVersion = flagged ? values['client-version'] as string | undefined : env.CLIENT_VERSION;
+  const requestedTarball = flagged ? values['client-tarball'] as string | undefined : env.CLIENT_TARBALL;
   return {
-    ...selectClientSource(values['client-version'] as string | undefined ?? env.CLIENT_VERSION, values['client-tarball'] as string | undefined ?? env.CLIENT_TARBALL, fallback),
+    ...selectClientSource(requestedVersion, requestedTarball, fallback),
     pmmServer: values['pmm-server'] as string | undefined ?? env.PMM_SERVER_IP,
     adminPassword: values['admin-password'] as string | undefined ?? env.ADMIN_PASSWORD ?? 'admin',
     metricsMode: values['metrics-mode'] as string | undefined ?? env.METRICS_MODE ?? 'auto',
@@ -306,6 +314,71 @@ export function registerPmmService(args: string[]): Promise<CommandResult> {
   );
 }
 
+// The URLs that matter most -- pmm-client-latest.tar.gz and the per-OL dynamic builds -- are
+// moving targets, but the cache is keyed on a hash of the URL. Returning a hit unconditionally
+// therefore pinned whatever was downloaded first: a run asking for `latest` would keep testing a
+// weeks-old client forever, and say nothing.
+//
+// The cached file's own mtime is the validation timestamp, so no sidecar state is needed: 304
+// means it is still current (and we stamp it as validated now), 200 means it moved and we take
+// the new body, and an unreachable build cache falls back to what we already have rather than
+// failing a run that could otherwise proceed.
+//
+// Returns a response whose body should replace the cache, or undefined to keep the cached file.
+async function revalidateCachedTarball(
+  url: string,
+  cached: string,
+  fetcher: typeof fetch,
+): Promise<Response | undefined> {
+  const keepCached = async (note?: string): Promise<undefined> => {
+    if (note) console.warn(note);
+    const now = new Date();
+    await utimes(cached, now, now);
+    return undefined;
+  };
+  let response: Response;
+  try {
+    const { mtime } = await stat(cached);
+    response = await fetcher(url, { headers: { 'If-Modified-Since': mtime.toUTCString() } });
+  } catch {
+    return keepCached(`could not reach ${url}; using the cached PMM client tarball`);
+  }
+  if (response.status === 304) return keepCached();
+  if (!response.ok) {
+    return keepCached(`revalidating ${url} returned HTTP ${response.status}; using the cached PMM client tarball`);
+  }
+  return response;
+}
+
+// One entry accumulates per distinct URL -- every feature-branch build gets its own -- and each is
+// around 180MB, so without this the directory grows without bound. Age, not count: an entry is
+// re-stamped every time it is used or revalidated, so only genuinely abandoned builds expire, and
+// nothing from a run in progress can be removed.
+const CACHE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
+
+export async function pruneClientTarballCache(
+  keep: string,
+  directory = CACHE_DIR,
+  now = Date.now(),
+): Promise<string[]> {
+  const removed: string[] = [];
+  try {
+    const cutoff = now - CACHE_MAX_AGE_MS;
+    await Promise.all((await readdir(directory))
+      .filter((name) => /^pmm-client-[0-9a-f]{16}\.tar\.gz$/.test(name))
+      .map(async (name) => {
+        const path = resolve(directory, name);
+        if (path === keep) return;
+        if ((await stat(path)).mtimeMs >= cutoff) return;
+        await unlink(path);
+        removed.push(path);
+      }));
+  } catch {
+    // A cache that cannot be pruned is not a reason to fail provisioning.
+  }
+  return removed;
+}
+
 export async function resolveClientTarball(
   source: string,
   fetcher: typeof fetch = fetch,
@@ -321,19 +394,18 @@ export async function resolveClientTarball(
   await mkdir(CACHE_DIR, { recursive: true });
   const cacheKey = createHash('sha256').update(normalized).digest('hex').slice(0, 16);
   const cached = resolve(CACHE_DIR, `pmm-client-${cacheKey}.tar.gz`);
-  try {
-    await access(cached);
-    return cached;
-  } catch {
-    // Download below.
-  }
+  const isCached = await access(cached).then(() => true, () => false);
+  let response = isCached ? await revalidateCachedTarball(normalized, cached, fetcher) : undefined;
+  if (isCached && !response) return cached;
 
-  const response = await fetcher(normalized);
+  response ??= await fetcher(normalized);
   if (!response.ok) throw new Error(`failed to download PMM client: HTTP ${response.status}`);
   if (!response.body) throw new Error('PMM client download returned an empty response');
   const temporary = `${cached}.tmp-${process.pid}`;
   await pipeline(Readable.fromWeb(response.body), createWriteStream(temporary));
   await rename(temporary, cached);
+  const removed = await pruneClientTarballCache(cached);
+  if (removed.length) console.log(`pruned ${removed.length} client tarball(s) unused for 14 days`);
   return cached;
 }
 

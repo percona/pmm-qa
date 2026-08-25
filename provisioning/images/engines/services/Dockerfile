@@ -1,6 +1,10 @@
 FROM rockylinux:9
-RUN REDIS_EXPORTER_VERSION=1.58.0 PROCESS_EXPORTER_VERSION=0.7.10; \
-    dnf install -y findutils gzip haproxy openssl tar https://repo.percona.com/yum/percona-release-latest.noarch.rpm \
+# pmm-framework's REDIS_VERSION / NODE_PROCESS_VERSION, pinned at build time here because the
+# exporters are baked into the image instead of installed by a playbook on every run. Change one and
+# rebuild the image (npm run build -- external) for it to take effect.
+ARG REDIS_EXPORTER_VERSION=1.58.0
+ARG PROCESS_EXPORTER_VERSION=0.7.10
+RUN dnf install -y findutils gzip haproxy openssl tar \
     && ln -s /usr/bin/dnf /usr/bin/microdnf \
     && curl -fL "https://github.com/oliver006/redis_exporter/releases/download/v${REDIS_EXPORTER_VERSION}/redis_exporter-v${REDIS_EXPORTER_VERSION}.linux-amd64.tar.gz" -o /tmp/redis.tar.gz \
     && tar -xzf /tmp/redis.tar.gz -C /tmp \

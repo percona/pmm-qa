@@ -551,7 +551,10 @@ async function registerWithPmm(config: Config, nodes: MongoNode[]): Promise<void
         '--agent-password=mypass',
         `--environment=${config.setupType === 'sharding' ? 'mongo-sharded-dev' : `${config.engine}-dev`}`,
         `--cluster=${config.setupType === 'sharding' ? 'sharded' : 'replicaset'}`,
-        '--host=127.0.0.1',
+        // GSSAPI derives the service principal from the host it connects to, and the KDC only
+        // holds mongodb/<container> (matching mongod's saslHostName), so 127.0.0.1 would ask for
+        // an SPN that does not exist. Docker DNS resolves the container's own name on pmm-qa.
+        `--host=${config.gssapi ? node.name : '127.0.0.1'}`,
         '--port=27017',
       ];
       if (node.role !== 'arbiter') {
