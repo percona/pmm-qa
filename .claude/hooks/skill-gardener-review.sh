@@ -19,6 +19,12 @@ if (event === "UserPromptSubmit") {
   context = "Notice reusable workflow lessons this turn: a correction, a failed approach then a better one, repeated or unbatched work, an unused helper. If one appears, invoke skill-gardener to record it; otherwise finish silently.";
 } else if (event === "SubagentStart") {
   context = "Notice reusable workflow lessons in your sequence: a failed approach then a better one, repeated or unbatched work, an unused helper. If one appears, invoke skill-gardener to write a lesson entry; never commit, push, or open a PR.";
+} else if (event === "PostToolUseFailure") {
+  // The turn-start reminders land before any evidence exists. This one fires at
+  // the moment a failed approach happens, which is the only lesson class the
+  // harness signals; an interrupt is a user cancelling, never a lesson.
+  if (input.is_interrupt) process.exit(0);
+  context = "That call failed. If your recovery generalizes beyond this task - a reusable better approach, or an instruction that should have prevented it - invoke skill-gardener to record it once the primary task is stable. Otherwise ignore this.";
 } else {
   process.exit(0);
 }
