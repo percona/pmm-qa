@@ -21,7 +21,7 @@ Also record the build, environment, and deployment once for the checklist. Split
 Run commands from the environment selected by the provisioning skill. Replace placeholders and preserve that environment's authentication and certificate handling.
 
 | Claim type | Correct layer | PMM command or query | Minimum credible window |
-|------------|---------------|----------------------|-------------------------|
+| ------------ | --------------- | ---------------------- | ------------------------- |
 | Agent is operating | Client process | `pmm-admin list --json` to identify it, then `pmm-admin status --json` to require the relevant agent/exporter state to be running | Poll through one registration/restart opportunity; use 2 minutes only when the configured timeout cannot be found |
 | Metrics are current | VictoriaMetrics | `curl -sS -G -u "admin:${ADMIN_PASSWORD}" "${PMM_URL}/prometheus/api/v1/query_range" --data-urlencode 'query=<promql>' --data-urlencode "start=<unix-start>" --data-urlencode "end=<unix-end>" --data-urlencode "step=<seconds>"` | At least 3 expected samples; newest sample must be recent relative to `now` |
 | Inventory/API changed state | PMM API plus affected state | `curl -sS -u "admin:${ADMIN_PASSWORD}" "${PMM_URL}/v1/inventory/services"` and `/v1/inventory/agents`; then re-read the affected process, metric, or persisted state | Through one complete state-transition opportunity |

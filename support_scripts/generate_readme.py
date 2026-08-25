@@ -9,7 +9,6 @@ import re
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "qa-integration" / "README.md"
 DATABASE_OPTIONS = ROOT / "qa-integration" / "pmm_qa" / "scripts" / "database_options.py"
@@ -29,7 +28,7 @@ CLI_TAGS_END = "<!-- CLI-TAGS-END -->"
 TAG_PATTERN = re.compile(r"(?<!@)@[A-Za-z0-9][A-Za-z0-9_-]*\b(?!/)")
 PLAYWRIGHT_TAG_PATTERN = re.compile(
     r"tag\s*:\s*(?:'(?P<single>@[A-Za-z0-9][A-Za-z0-9_-]*)'|\"(?P<double>@[A-Za-z0-9][A-Za-z0-9_-]*)\"|\[(?P<array>.*?)\])",
-    re.S,
+    re.DOTALL,
 )
 
 TOPOLOGY = {
@@ -143,7 +142,7 @@ def build_cli_tags() -> str:
 
 
 def replace_section(content: str, start_marker: str, end_marker: str, replacement: str) -> str:
-    pattern = re.compile(rf"{re.escape(start_marker)}.*?{re.escape(end_marker)}", re.S)
+    pattern = re.compile(rf"{re.escape(start_marker)}.*?{re.escape(end_marker)}", re.DOTALL)
     updated, count = pattern.subn(f"{start_marker}\n\n{replacement}\n\n{end_marker}", content)
     if count != 1:
         raise RuntimeError(f"Expected exactly one section between {start_marker} and {end_marker}")
@@ -195,6 +194,6 @@ if __name__ == "__main__":
             print("README generated sections are up to date")
         else:
             generate()
-    except Exception as error:
+    except Exception as error:  # noqa: BLE001 -- top-level CLI handler
         print(error, file=sys.stderr)
-        raise SystemExit(1)
+        raise SystemExit(1) from error

@@ -16,12 +16,12 @@ URL format: `https://pmm.cd.percona.com/job/<job-name>/parambuild/?PARAM=value&P
 
 **Purpose:** Single EC2 instance — PMM server docker + optional **local** clients on the same VM via `pmm-framework.py`.
 
-**Activity:** https://pmm.cd.percona.com/blue/organizations/jenkins/pmm3-aws-staging-start/activity
+**Activity:** <https://pmm.cd.percona.com/blue/organizations/jenkins/pmm3-aws-staging-start/activity>
 
-### All parameters
+### All parameters (pmm3-aws-staging-start)
 
 | Param | Type | Default | Notes |
-|-------|------|---------|-------|
+| ------- | ------ | --------- | ------- |
 | `DOCKER_VERSION` | string | `perconalab/pmm-server:3-dev-latest` | FB: `perconalab/pmm-server-fb:PR-XXXX-<sha>` |
 | `WATCHTOWER_VERSION` | string | `perconalab/watchtower:dev-latest` | FB: `perconalab/pmm-watchtower-fb:PR-XXXX-<sha>` from JNKPercona comment |
 | `CLIENT_VERSION` | string | `3-dev-latest` | FB: **tarball URL** only — never client docker image |
@@ -58,7 +58,7 @@ When the test needs **one or a few databases on the same VM**, use **staging-sta
 
 **CLIENTS examples:**
 
-```
+```text
 --database ps=5.7,QUERY_SOURCE=perfschema
 --database psmdb,SETUP_TYPE=pss
 --database pgsql=16
@@ -71,7 +71,7 @@ Leave `CLIENTS` empty for **server-only** tests (UI, API, settings).
 Read `$ReposRoot/pmm/managed/CONTRIBUTING.md` and `$ReposRoot/pmm/documentation/docs/install-pmm/install-pmm-server/deployment-options/docker/env_var.md` when PR/ticket touches server config.
 
 | Variable | Typical test use |
-|----------|------------------|
+| ---------- | ------------------ |
 | `PMM_DEBUG=1` | Verbose logs (default in job) |
 | `PMM_ENABLE_TELEMETRY=0\|1` | Job default is `0`; set `1` when ticket tests server telemetry |
 | `PMM_DEV_TELEMETRY_DISABLE_START_DELAY=1` | Run telemetry immediately |
@@ -86,12 +86,12 @@ Read `$ReposRoot/pmm/managed/CONTRIBUTING.md` and `$ReposRoot/pmm/documentation/
 
 **Purpose:** Orchestrator — provisions PMM server + **separate client VMs**.
 
-**Activity:** https://pmm.cd.percona.com/blue/organizations/jenkins/pmm3-deploy-services/activity
+**Activity:** <https://pmm.cd.percona.com/blue/organizations/jenkins/pmm3-deploy-services/activity>
 
-### All parameters
+### All parameters (pmm3-deploy-services)
 
 | Param | Type | Default | Notes |
-|-------|------|---------|-------|
+| ------- | ------ | --------- | ------- |
 | `SERVER_TYPE` | choice | `docker` | `docker` \| `ovf` \| `ami` \| `helm` \| `ha` |
 | `DOCKER_VERSION` | string | `perconalab/pmm-server:3-dev-latest` | Used for docker/helm/ha server types |
 | `OVA_VERSION` | string | `PMM3-Server-OVF-3.0.0-latest.ova` | OVF only |
@@ -123,7 +123,7 @@ Read `$ReposRoot/pmm/managed/CONTRIBUTING.md` and `$ReposRoot/pmm/documentation/
 ### Client groups when flags are `true`
 
 | Flag | CLIENTS provisioned |
-|------|---------------------|
+| ------ | --------------------- |
 | `DEPLOY_EXTERNAL` | `--database external --database haproxy` |
 | `DEPLOY_MYSQL_GROUP` | GR+mysql, repl+pxc, ps-single+psmdb-pss, pxc-extra |
 | `DEPLOY_POSTGRES_GROUP` | pdpgsql, pgsql, patroni |

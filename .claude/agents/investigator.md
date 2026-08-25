@@ -27,7 +27,7 @@ Once you have what you're investigating and a ref, use marker `## Failures fixed
 ## Knowledge (read by path)
 
 | Skill | Path |
-|-------|------|
+| ------- | ------ |
 | Linode VM + pmm-framework provisioning | `.claude/skills/linode-docker-provisioning/SKILL.md` |
 | FB checks, workflow mapping | `.claude/skills/fb-tests/SKILL.md` |
 | PR diffs, JSON dashboards | `.claude/skills/git-diff/SKILL.md` |

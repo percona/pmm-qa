@@ -154,66 +154,68 @@ jobs:
           ### pmm-server docker image ###
           if [[ -z "${{ env.PMM_SERVER_IMAGE }}" ]]; then
             if [[ "${{ inputs.repository }}" = "dev-latest" ]]; then
-              echo "PMM_SERVER_IMAGE=perconalab/pmm-server:3-dev-latest" >> $GITHUB_ENV
+              echo "PMM_SERVER_IMAGE=perconalab/pmm-server:3-dev-latest" >> "$GITHUB_ENV"
             fi
             if [[ "${{ inputs.repository }}" =~ "candidate" ]]; then
-              rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
-              echo "PMM_SERVER_IMAGE=perconalab/pmm-server:$rc_latest" >> $GITHUB_ENV
+              rc_latest=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - \
+                | jq -r .results[].name  | grep '3.*.*-rc$' | sort -V | tail -n1)
+              echo "PMM_SERVER_IMAGE=perconalab/pmm-server:$rc_latest" >> "$GITHUB_ENV"
             fi
             if [[ "${{ inputs.repository }}" = "release" ]]; then
               r_latest=$(wget -q https://registry.hub.docker.com/v2/repositories/percona/pmm-client/tags -O - | jq -r .results[].name  | grep -v latest | sort -V | tail -n1)
-              echo "PMM_SERVER_IMAGE=percona/pmm-server:$r_latest" >> $GITHUB_ENV
+              echo "PMM_SERVER_IMAGE=percona/pmm-server:$r_latest" >> "$GITHUB_ENV"
             fi
           fi
           echo "${{ env.PMM_SERVER_IMAGE }}"
           
           ### pmm2-client repository ### 
           if [[ "${{ inputs.repository }}" = "dev-latest" ]]; then
-            echo "REPO=experimental" >> $GITHUB_ENV
+            echo "REPO=experimental" >> "$GITHUB_ENV"
           fi
           if [[ "${{ inputs.repository }}" =~ "candidate" ]]; then
-            echo "REPO=testing" >> $GITHUB_ENV
-            echo "EXPECTED_VERSION=$(echo ${{ inputs.expected_version }} | awk -F'-' '{print $1}')" >> $GITHUB_ENV
+            echo "REPO=testing" >> "$GITHUB_ENV"
+            echo "EXPECTED_VERSION=$(echo ${{ inputs.expected_version }} | awk -F'-' '{print $1}')" >> "$GITHUB_ENV"
             echo "expected version is ${{ env.EXPECTED_VERSION }}"
           fi
           if [[ "${{ inputs.expected_version}}" = "3-dev-latest" ]]; then
             DEV_VERSION=$(wget -q https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/v3/VERSION -O -)
-            echo "EXPECTED_VERSION=$DEV_VERSION" >> $GITHUB_ENV
+            echo "EXPECTED_VERSION=$DEV_VERSION" >> "$GITHUB_ENV"
           elif [[ "${{ inputs.expected_version}}" = "pmm3-rc" ]]; then
-            RC_VERSION=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - | jq -r .results[].name  | grep 3.*.*-rc$ | sort -V | tail -n1)
-            echo "EXPECTED_VERSION=$RC_VERSION" >> $GITHUB_ENV
+            RC_VERSION=$(wget -q "https://registry.hub.docker.com/v2/repositories/perconalab/pmm-client/tags?page_size=25&name=rc" -O - \
+              | jq -r .results[].name  | grep '3.*.*-rc$' | sort -V | tail -n1)
+            echo "EXPECTED_VERSION=$RC_VERSION" >> "$GITHUB_ENV"
           fi
                     
           echo "repo=${{ env.REPO }}"
           
           ### vagrant vm ###
           if [[ "${{ inputs.os }}" =~ "bullseye" ]]; then
-            echo "VM_BOX=generic/debian11" >> $GITHUB_ENV
+            echo "VM_BOX=generic/debian11" >> "$GITHUB_ENV"
           fi
           if [[ "${{ inputs.os }}" =~ "bookworm" ]]; then
-            echo "VM_BOX=generic-x64/debian12" >> $GITHUB_ENV
+            echo "VM_BOX=generic-x64/debian12" >> "$GITHUB_ENV"
           fi 
           if [[ "${{ inputs.os }}" =~ "bionic" ]]; then
-            echo "VM_BOX=generic/ubuntu1804" >> $GITHUB_ENV
+            echo "VM_BOX=generic/ubuntu1804" >> "$GITHUB_ENV"
           fi
           if [[ "${{ inputs.os }}" =~ "jammy" ]]; then
-            echo "VM_BOX=generic/ubuntu2204" >> $GITHUB_ENV
+            echo "VM_BOX=generic/ubuntu2204" >> "$GITHUB_ENV"
           fi
           if [[ "${{ inputs.os }}" =~ "ol-8" ]]; then
-            echo "VM_BOX=generic/oracle8" >> $GITHUB_ENV
+            echo "VM_BOX=generic/oracle8" >> "$GITHUB_ENV"
           fi
           if [[ "${{ inputs.os }}" =~ "noble" ]]; then
-            echo "VM_BOX=bento/ubuntu-24.04" >> $GITHUB_ENV
+            echo "VM_BOX=bento/ubuntu-24.04" >> "$GITHUB_ENV"
           fi
           if [[ "${{ inputs.os }}" =~ "ol-9" ]]; then
-            echo "VM_BOX=generic/oracle9" >> $GITHUB_ENV
+            echo "VM_BOX=generic/oracle9" >> "$GITHUB_ENV"
           fi
           if [[ "${{ inputs.os }}" =~ "ol-10" ]]; then
-            echo "VM_BOX=almalinux/10" >> $GITHUB_ENV
-            echo "PS_REPOSITORY=testing" >> $GITHUB_ENV
+            echo "VM_BOX=almalinux/10" >> "$GITHUB_ENV"
+            echo "PS_REPOSITORY=testing" >> "$GITHUB_ENV"
           fi
           if [[ "${{ inputs.os }}" =~ "al2023" ]]; then
-            echo "VM_BOX=gbailey/al2023" >> $GITHUB_ENV
+            echo "VM_BOX=gbailey/al2023" >> "$GITHUB_ENV"
           fi
           echo "${{ env.VM_BOX }}"
           
@@ -244,7 +246,8 @@ jobs:
       - name: "Setup tools"
         run: |
           wget -O - https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee \
+            /etc/apt/sources.list.d/hashicorp.list
           sudo apt-get update
           sudo apt-get install -y apt-transport-https ca-certificates ansible vagrant qemu-system qemu-utils qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils libvirt-dev
           sudo apt update
@@ -253,6 +256,9 @@ jobs:
 
       - name: "Wait for PMM Server to be healthy"
         run: |
+          # shellcheck disable=SC2016
+          # Deliberately unexpanded: the inner bash -c does the expanding, and
+          # curl's %{http_code} must reach curl literally.
           timeout 240 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' http://127.0.0.1/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: "Create vagrantfile"

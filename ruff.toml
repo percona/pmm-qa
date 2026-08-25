@@ -3,12 +3,34 @@
 # between releases -- so an unpinned ruff made the gate report a different set of
 # findings on every machine. This is the same reason .yamllint and
 # .github/actionlint.yaml exist.
-#
-# E4/E7/E9 + F is ruff's documented default and the set the gate's baseline was
-# measured against. Widening it is a deliberate change: at the time of writing a
-# broader default reports 21 more findings (5 PLW1510 `subprocess.run` without
-# `check=`, 4 I001 import order, 3 BLE001 blind `except Exception`, 2 TRY002,
-# 2 FURB167 `re.S`, 2 EXE002, 2 EXE001 shebang/exec-bit). Those are worth doing;
-# they are not this PR.
+
 [lint]
-select = ["E4", "E7", "E9", "F"]
+# E4/E7/E9 + F is ruff's documented default. The rest were added after reading
+# every finding each family produced on this repo, keeping the ones that flag a
+# way code can be wrong and dropping the ones that only express a preference.
+select = [
+  "E4", "E7", "E9", "F",  # ruff's default: syntax, imports, obvious mistakes
+  "B",                    # bugbear: unused loop vars, `raise` losing its cause
+  "BLE",                  # blind `except Exception`
+  "C4",                   # comprehension shortcuts
+  "EXE",                  # shebang and exec-bit disagreeing
+  "FURB",                 # dated stdlib spellings (`re.S`)
+  "I",                    # import order
+  "PLW",                  # pylint warnings, incl. subprocess.run without check=
+  "RET",                  # dead `else` after return/break
+  "SIM",                  # simplifications -- this family caught a real bug: an
+                          # `assert "a" or "b" in x` that could never fail
+  "UP",                   # dated syntax
+  "PLR5501",              # `else: if` -> `elif`
+  "TRY002",               # `raise Exception(...)` with no type information
+]
+
+# Not selected, having looked at what they actually report here:
+#   TRY003 (6) wants a custom exception class per message, in a README
+#     generator and an upgrade checker. Over-engineering for QA scripts.
+#   TRY301 (1) wants `raise` abstracted into an inner function.
+#   PLR2004 (6) flags magic values, but they are expected file counts in a zip
+#     and tuple lengths -- naming them adds indirection, not clarity.
+#   D / ANN would demand docstrings and annotations on throwaway helpers,
+#     S101 bans `assert` in files that exist to assert, and T201 bans `print`
+#     in scripts whose whole job is printing. `--select ALL` reports 620.

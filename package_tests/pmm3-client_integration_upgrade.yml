@@ -94,7 +94,9 @@
 
 ### Setup PMM Client
   - name: Use "pmm-admin config" to connect pmm client to server
-    shell: pmm-admin config --debug --force --server-insecure-tls --metrics-mode={{ metrics_mode }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic node_{{ instance_ip }}
+    shell: >-
+      pmm-admin config --debug --force --server-insecure-tls --metrics-mode={{ metrics_mode }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic
+      node_{{ instance_ip }}
 
   - name: Grep pmm-admin status output
     shell: "pmm-admin status"
