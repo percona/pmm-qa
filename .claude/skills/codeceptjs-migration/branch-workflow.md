@@ -186,9 +186,23 @@ Preserve every original CodeceptJS scenario tag in the migrated Playwright test.
 
 Leave existing CodeceptJS jobs and grep expressions unchanged, unless this migration is the one that empties them - see below.
 
+### First: enumerate what consumes the source today
+
+Every coverage decision below depends on this, so establish it before deciding anything.
+
+Name the **workflow file**, never the word "nightly" - it denotes two different workflows. `e2e-tests-matrix.yml` carries both a `pull_request` trigger and a `schedule: cron '0 2 * * *'`, so its jobs run nightly too; `nightly-e2e-tests-matrix.yml` is `workflow_dispatch`-only, fired by Jenkins against an externally-managed PMM Server. Both run on a nightly cadence by different mechanisms. State each candidate job's trigger block as read, and check for a job-level `if:` gate rather than assuming a scheduled job is gated.
+
+Consumers also exist **outside** `.github/workflows/`. `codeceptjs-e2e/package.json` defines per-tag scripts (`e2e:grafana-pr` runs `codeceptjs run -c pr.codecept.js --grep '@grafana-pr'`) plus a catch-all `e2e` script that excludes only `@not-ui-pipeline`/`@not-pr-pipeline`. Nothing inside pmm-qa invokes those, so the caller is cross-repository - percona/grafana CI running PMM's suite. Such a script invokes CodeceptJS only, so retiring the source drops coverage a new Playwright job cannot restore.
+
+So for each migrated tag, state either its consumers or that a cross-repository caller could not be ruled out. **A tag with no workflow consumer must not be reported as having no consumer** - that is what makes a live tag look decorative.
+
+When two coverage shapes are arguable, stop reasoning in prose and read the precedent: `git log -- .github/workflows/` and the last migration's actual diff shows which surfaces the previous retirement moved and why.
+
 If retiring this source leaves a CodeceptJS job's grep expression selecting zero remaining active scenarios, delete that job in this same PR, in the same commit as the Playwright coverage that replaces it. Do not leave it in place "unchanged": both CI runners treat an empty test selection as a passing job (the launchable-subset gate skips every downstream step, and the run step itself ends `|| true`), so an emptied job does not fail or warn - it reports green forever while testing nothing, and nothing later in this process, or in CI, will ever flag it. Check every job the retired source's tags feed, not only the one job this migration happens to be touching.
 
-For Playwright coverage, append the migrated tag to the existing `test_execution_playwright` matrix entry. Do not add a new Playwright job block: that job and its counter are already established on `main`, and adding coverage should be a one-line tag append to the existing `tags_for_tests` matrix entry. Only when no Playwright job of any kind exists yet for this migration's CI surface (for example, a job not fed by `test_execution_playwright` at all - see the FB-suite case below) may a new job be created, mirroring the retiring CodeceptJS job's setup verbatim.
+For Playwright coverage, add it on the surfaces the enumeration above showed the *source* actually runs on. Only when the source is genuinely in a nightly grep does the append-to-nightly default apply; appending otherwise manufactures nightly coverage that never existed while leaving the surface the source really ran on with zero Playwright coverage once the tag retires - the exact "coverage vanishes on retirement" failure these rules exist to prevent.
+
+On that surface, append the migrated tag to the existing `test_execution_playwright` matrix entry. Do not add a new Playwright job block: that job and its counter are already established on `main`, and adding coverage should be a one-line tag append to the existing `tags_for_tests` matrix entry. Only when no Playwright job of any kind exists yet for this migration's CI surface (for example, a job not fed by `test_execution_playwright` at all - see the FB-suite case below) may a new job be created, mirroring the retiring CodeceptJS job's setup verbatim.
 
 `expected_test_jobs` in `nightly-e2e-tests-matrix.yml` is the number of nightly test-execution jobs the setup shards wait for, matched by the `"test execution / "` name prefix in `runner-e2e-tests-codeceptjs-remote-nightly-setup.yml`. Both CodeceptJS and Playwright test-execution jobs count toward it. So:
 
@@ -196,7 +210,7 @@ For Playwright coverage, append the migrated tag to the existing `test_execution
 - **Adding** a nightly consumer (a new matrix entry or a new prefixed job) increments the count, and **deleting** one - including deleting a CodeceptJS job this migration emptied - decrements it. In either case the counter must be updated in the same commit to match reality. Leaving it too high makes the setup shards wait for a job that no longer exists and then fail the run on a timeout; leaving it too low lets the shards finish and tear down their environment while a real consumer is still running.
 - A job in `fb-e2e-suite.yml` is not fed by these setup shards and carries no such counter, so adding or deleting one there does not affect `expected_test_jobs`.
 
-Count the nightly consumers after your edit and state the before/after number in the handoff rather than reasoning about the delta.
+Count the nightly consumers after your edit and state the before/after number in the handoff rather than reasoning about the delta. Locate the counter mechanically instead of reasoning about your own edit - `grep -rn expected_test_jobs .github/workflows/` finds the single literal and the comment naming its consumers in one command, and it settles which workflow owns it, which is the question that gets answered wrong when framed as "did I add a job?".
 
 **Check selectability per scenario, not per file, and across every consumer, not only the job you edited.** A source file's scenarios rarely all carry the same tags, so the file's union of tags is not what CI selects on. Verify with `npx playwright test --list --grep '<expression>'` in both directions:
 
@@ -206,6 +220,8 @@ Count the nightly consumers after your edit and state the before/after number in
 Then widen the check beyond the job you just edited: tags are reused across many tracker rows, so a migrated scenario's tag can already be selected by a job you never touched - one that was written for an earlier, different migration and may not provision what this scenario needs. For each tag on each migrated scenario, enumerate every job across `.github/workflows/` whose `pmm_test_flag`/`tags_for_tests` would select it (`grep -n "pmm_test_flag\|tags_for_tests" .github/workflows/*.yml`), and for every consumer found - not only the one this migration edited - confirm its `setup_services` actually covers what the scenario needs. Selection is not the same claim as executability: a scenario can be correctly *selected* by a job whose environment cannot make it *pass*.
 
 A migrated scenario that matches no destination grep is coverage that vanishes the moment the source is retired, and nothing about a green test run reveals it. A migrated scenario selected by a job that cannot supply its required services is worse: it may fail (swallowed by the `|| true` on the run step, reading as flake) or silently pass while asserting less than the source did.
+
+**When the edit newly selects tests outside the migrated file, run them.** Widening a grep can pull in existing tests that no job selects today. Selection evidence is not execution evidence, and the `|| true` hides the difference - a newly-selected test the job's environment cannot support fails silently and reads as flake rather than as a coverage defect this migration introduced. Run them against the provisioned environment before committing the edit; it costs one short run.
 
 ## Push and open the PR
 

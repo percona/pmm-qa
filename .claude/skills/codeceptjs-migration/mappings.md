@@ -51,6 +51,7 @@ Legacy remote-instance tests route from `client_container` to a database through
 `signOut()`->`await page.goto('graph/logout')`.
 `useDataQA(sel)`->`getByTestId(sel)`.
 `seeElementsDisabled/seeElementsEnabled(locator)`->`expect(locator).toHaveAttribute('disabled', ...)`/`toBeEnabled()`.
+`locate('$testid').find('<tag>')`(labelLocator)->`getByTestId('testid')`assertedWith`toContainText`, notA`.locator('<tag>')`chainPlus`first()`. Under MUI the child tag is routinely multi-match, so the literal translation is a strict-mode violation on `toBeVisible`/`toContainText`, while the wrapper's innerText is the union of those children. Narrow to a child testid only when MCP shows the wrapper itself is multi-match.
 
 ## Custom Steps
 

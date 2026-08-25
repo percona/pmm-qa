@@ -37,7 +37,9 @@ The parent agent coordinates writer, reviewer, and runner subagents. To avoid id
 
 ## 1. Select and prepare
 
-On the control branch, first check whether another tracker row is already `in-progress`; stop and report the conflict if so. Then check whether **any** migration PR is currently open; stop and report if even one is. Match on the `migrate(<scope>):` title prefix every migration PR uses, not on a full-text title search:
+On the control branch, first check whether another tracker row is already `in-progress`; stop and report the conflict if so. Then check whether **any** migration PR is currently open; stop and report if even one is. Third, ensure Node.js 22.18 or newer and Docker are available and inspect the fixed local resources the provisioner uses: `pmm-server`, `client_container`, `pmm-data`, the `pmm-qa` network, and engine-labeled containers and volumes. Treat every matching resource as foreign unless this migration created it earlier in the same run; stop instead of adopting, replacing, or tearing down another environment.
+
+All three are preflight stop conditions, so all three run here - before the `origin/main` merge, both graph refreshes, and the `in-progress` tracker commit. A foreign environment found at step 2a instead would strand a committed `in-progress` row behind a provision that cannot start. Match on the `migrate(<scope>):` title prefix every migration PR uses, not on a full-text title search:
 
 ```bash
 gh pr list --repo percona/pmm-qa --state open --json number,title --jq '[.[] | select(.title | startswith("migrate("))]'
@@ -51,7 +53,18 @@ The nightly Playwright matrix and `e2e_tests/README.md` are touched by every mig
 
 Before selecting a row, check the tracker for drift against the filesystem: list `codeceptjs-e2e/tests/**/*_test.js` and diff it against the tracker's `Source` column. Any file with no matching row is untracked drift - append it as a new `pending` row (Bucket/Env/Setup left blank pending confirmation from its `Before`/`BeforeSuite`/`Data(...)` hooks, Notes noting it was added by drift check) in its own tracker-only commit before proceeding. In test-run mode, report the drift without editing the tracker. Do not silently skip untracked files.
 
-The drift-check extraction must use the Grep tool or an ERE pattern, and must not post-process paths through `sed`. `grep -P` is not reliably available in this environment, and on Windows a `sed` backslash expression fails outright - either way the call still exits with an empty result that reads exactly like a valid "no drift" answer. Compare both directions and state the two counts.
+Use this extraction verbatim rather than improvising one. `grep -P` is not reliably available here, and a `sed` backslash expression fails outright on Windows - either way the call exits with an empty result that reads exactly like a valid "no drift" answer:
+
+```bash
+comm -23 <(find codeceptjs-e2e/tests -name '*_test.js' | sort -u) \
+         <(grep -oE 'codeceptjs-e2e/tests/[A-Za-z0-9_/.-]+_test\.js' \
+             .claude/skills/codeceptjs-migration/tracker.md | sort -u)   # untracked drift
+comm -13 <(find codeceptjs-e2e/tests -name '*_test.js' | sort -u) \
+         <(grep -oE 'codeceptjs-e2e/tests/[A-Za-z0-9_/.-]+_test\.js' \
+             .claude/skills/codeceptjs-migration/tracker.md | sort -u)   # tracked but absent
+```
+
+No `sed`, no path post-processing. Compare both directions and state the two counts.
 
 Check practices freshness: read `@playwright/test` from `e2e_tests/package.json` and compare it with `verifiedAgainst` in `playwright-practices.md`. If they differ, stop and refresh that file against the Playwright release notes before migrating; a stale practices file silently authorizes outdated idiom for every later row.
 
@@ -66,8 +79,11 @@ Create this migration's timeline file (`mkdir -p .claude/migration-observations`
 The parent may explicitly designate a run as test-only (dry run). In that mode, use the existing graphs read-only and skip only:
 
 - the tracker `pending` -> `in-progress` -> `done` status writes and Notes updates;
-- the control-branch graph refreshes and commits; and
-- Stage 5b and 7 (publish branch, source retirement, workflow-coverage commit, push, and PR).
+- the control-branch graph refreshes and commits;
+- Stage 5b and 7 (publish branch, source retirement, workflow-coverage commit, push, and PR); and
+- the step 1 open-migration-PR check, which exists to prevent a publish-branch collision that cannot occur when no publish branch is cut. The `in-progress` and foreign-resource checks still apply.
+
+Because 5b is skipped, the final gate's subject is control's worktree rather than a branch. It then follows the initial gate's rule: `kind: worktree`, no `startRef`/`endRef`, and `STALE_SUBJECT` is never returned.
 
 All other steps, including provisioning, review, `READY_TO_RUN`, execution, and `FINAL_REVIEW_PASS`, still apply unchanged. Test-run mode never skips a gate; it only skips tracker, graph-refresh, and publication side effects. Workflow coverage is designed and its greps verified as usual, but not committed, since there is no publish branch to commit it on.
 
@@ -98,9 +114,9 @@ This runs before step 2 and overlaps it. Provisioning is the long pole and the e
 
 The parent, not the writer, owns the confirmation, and the tracker's `Setup` is a planned default that is regularly wrong. Derive the real set from the services the source's data rows, hooks, and shell commands actually name, then correct the tracker row when it differs - a row can just as easily name a database the test never touches as omit one it needs.
 
-Before starting anything, ensure Node.js 22.18 or newer and Docker are available, then inspect the fixed local resources the provisioner uses: `pmm-server`, `client_container`, `pmm-data`, the `pmm-qa` network, and engine-labeled containers and volumes. Treat every matching resource as foreign unless this migration created it earlier in the same run; stop instead of adopting, replacing, or tearing down another environment. This inspection happens before the background start, never after it.
+The local-resource inspection that gates provisioning is a step 1 preflight check, not a step 2a one - see step 1. Do not repeat it here; by this point it has already passed.
 
-Then start `provisioning/setup.ts` in the background with the confirmed setup and launch the writer immediately. Record the exact provisioning command and the start time in the handoff and on the timeline. From this moment the teardown obligation is live: any terminal path runs `node provisioning/setup.ts --teardown`.
+Start `provisioning/setup.ts` in the background with the confirmed setup and launch the writer immediately. Record the exact provisioning command and the start time in the handoff and on the timeline. From this moment the teardown obligation is live: any terminal path runs `node provisioning/setup.ts --teardown`.
 
 If the writer's derived `setupServices`/`setupClient` contradicts the confirmed bucket, tear down, re-provision with the corrected setup, and record the mismatch on the timeline. That record is the evidence that decides whether this overlap keeps paying for itself.
 

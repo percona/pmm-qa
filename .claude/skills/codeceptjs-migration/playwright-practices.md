@@ -39,6 +39,11 @@ their literal value including the prefix: `getByTestId('data-testid Panel header
   failures, because they predate this rule in many existing files.
 - Chain and scope rather than writing one long selector.
 - `locator.describe('...')` (1.53) on an otherwise opaque locator so traces and reports name it.
+- **An existing POM entry with no consumers is unproven code, not a convention.** When it disagrees
+  with a currently-green source test, prefer the source-proven selector, verify both through MCP, and
+  rewrite it in place - with nothing consuming it, that is a minimal-reuse diff, not a breaking
+  change. Keep the existing convention only when a second source independently attests it, and record
+  why.
 
 ## Web-first assertions
 

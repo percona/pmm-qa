@@ -9,7 +9,7 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Every active executable scenario is migrated.
 - [ ] For `already-covered`, every active executable scenario is mapped to existing Playwright coverage.
 - [ ] Commented-out scenarios are excluded.
-- [ ] Scenario titles and every original CodeceptJS tag are preserved; a destination execution tag may be added but does not replace a source tag.
+- [ ] Scenario titles and every original CodeceptJS tag are preserved; a destination execution tag may be added but does not replace a source tag. Prove title fidelity by extracting both title lists programmatically and printing them as quoted strings side by side, not by reading the two files - that form exposes a trailing-space or byte-level difference, and it must include commented-out and skipped scenarios so their handling is visible in the same output. For a data-driven scenario, check the generated suffix against CodeceptJS's own `<title> | <JSON.stringify(row)>` construction, derived from the data-table source rather than assumed.
 - [ ] Data-driven rows and generated titles are preserved.
 - [ ] The writer's `scenarioSelectability` report is re-derived, not trusted: every scenario either already matches an existing job's grep, or carries `destinationTagNeeded: true` with a stated plan for what tag or job the runner will add at step 5b. No scenario is left unresolved with no plan.
 
@@ -21,6 +21,7 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] UI, API, CLI, download, and file behavior is preserved.
 - [ ] Reachable custom steps were inspected and mapped.
 - [ ] No behavior was added, removed, weakened, or improved.
+- [ ] Where a migrated helper branches on server configuration, the running server's environment was read (`docker exec pmm-server env`) and the evidence states which branch the green run actually took. Code alone cannot show it, so a ported fallback can look exercised when it never ran, or look dead when it is the only live path.
 
 ### Migration rules compliance
 
