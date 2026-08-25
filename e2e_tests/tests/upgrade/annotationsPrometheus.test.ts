@@ -1,6 +1,5 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
-import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe('PMM upgrade tests for annotations', () => {
   const tag = 'Upgrade-PMM-T878';
@@ -24,19 +23,11 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
 
         expect(details, `Service including "${service.name}" (non-ssl) not found`).toBeTruthy();
 
-        await expect(async () => {
-          const response = await api.annotationsApi.setAnnotation({
-            nodeName: details.node_name,
-            serviceNames: [details.service_name],
-            tags: [tag],
-            text: service.annotationName,
-          });
-
-          console.log(`Status is: ${response.status()} for draw date ${new Date()}`);
-          expect(response.status()).toEqual(200);
-        }).toPass({
-          intervals: [Timeouts.TWO_SECONDS],
-          timeout: Timeouts.ONE_MINUTE,
+        await api.annotationsApi.setAnnotation({
+          nodeName: details.node_name,
+          serviceNames: [details.service_name],
+          tags: [tag],
+          text: service.annotationName,
         });
       },
     );
