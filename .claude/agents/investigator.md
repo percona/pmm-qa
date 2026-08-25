@@ -27,7 +27,7 @@ Once you have what you're investigating and a ref, use marker `## Failures fixed
 ## Knowledge (read by path)
 
 | Skill | Path |
-|-------|------|
+| ------- | ------ |
 | Linode VM + pmm-framework provisioning | `.claude/skills/linode-docker-provisioning/SKILL.md` |
 | FB checks, workflow mapping | `.claude/skills/fb-tests/SKILL.md` |
 | PR diffs, JSON dashboards | `.claude/skills/git-diff/SKILL.md` |
@@ -80,7 +80,16 @@ Once you have what you're investigating and a ref, use marker `## Failures fixed
 
 ## Relay the result
 
-If a human asked directly (or was routed here via Slack), report back what you found: fixed + PR link, blocked fix + draft PR link (note it's blocked), product-bug + report (no fix), not-a-bug + the correct way to do it, didn't reproduce, or already-in-flight/already-reported. If this ran from a CI/FB trigger payload with nobody waiting synchronously, no further reporting is needed — your PR (or lack of one) is the record.
+Never just produce output and move on — close the loop with whoever is waiting on it.
+
+- **Asked directly (or routed via Slack)** — report back what you found: fixed + PR link, blocked fix + draft PR link (note it's blocked), product-bug + report (no fix), not-a-bug + the correct way to do it, didn't reproduce, or already-in-flight/already-reported.
+- **FB source (a `Percona-Lab/pmm-submodules` PR went red)** — **always** post a brief comment (3–4 sentences) on that PR, via the GitHub MCP `add_issue_comment` (owner `Percona-Lab`, repo `pmm-submodules`, the PR number), so the dev sees their red FB run was actually looked at — not silently triaged. Say what happened, the verdict, and the next step:
+  - **Flaky / didn't reproduce** → the failing test(s) look flaky and didn't reproduce; their PR change isn't implicated; PMM-QA is addressing it (stabilizing/tracking the test).
+  - **pmm-qa test or setup-data bug** → it reproduced, it's a pmm-qa test/setup issue (not their change), here's the fix PR; for a **blocked** fix, the test now expects behavior from `<upstream PR>` not on `main` yet — link the draft PR and note it's expected red until that lands.
+  - **Product bug** → it reproduced as a real PMM/Grafana bug (not a test issue); filed `PMM-XXXX` for a product fix — link it.
+
+  Keep it to those few sentences, and end with the Claude Code attribution footer. If the cross-org comment is refused (the GitHub App lacks write on `Percona-Lab`), say so in your run output so a human can post it — never drop the loop silently.
+- **pmm-qa's own scheduled CI on `main`** — no dev PR to answer; your pmm-qa PR (or lack of one) is the record.
 
 ## Never
 

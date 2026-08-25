@@ -58,7 +58,8 @@ class PmmServerComponents(unittest.TestCase):
 
     def test_clickhouse_version(self):
         """PMM-12223 - Verify Clickhouse is v23.8 or later since 2.41.0"""
-        if expected_pmm_minor_version < 41: self.skipTest('Since version 2.41.0')
+        if expected_pmm_minor_version < 41:
+            self.skipTest('Since version 2.41.0')
         if is_ami:
             out = verify_command('sudo clickhouse local --version')
         else:
@@ -66,7 +67,8 @@ class PmmServerComponents(unittest.TestCase):
         self.assertIn('23.8.2.7', out, WRONG_VERSION_MSG)
 
     def test_pmm_update_version(self):
-        if test_mode != "post": self.skipTest(POST_UPGRADE)
+        if test_mode != "post":
+            self.skipTest(POST_UPGRADE)
         out = verify_command('rpm -qa')
         print("Available packages are:")
         print(out)
@@ -79,7 +81,8 @@ class PmmServerComponents(unittest.TestCase):
         self.assertIn(expected_pmm_version, verify_command("docker exec " + pmm_server_docker_container + " pmm-admin --version | grep PMMVersion | awk -F \" \" \'{print $2}\'"), WRONG_VERSION_MSG)
 
     def test_pmm_dump_version(self):
-        if test_mode != "post": self.skipTest(POST_UPGRADE)
+        if test_mode != "post":
+            self.skipTest(POST_UPGRADE)
         self.assertIn(expected_pmm_version, grep_rpm('pmm-dump-'), WRONG_VERSION_MSG)
 
     def test_qan_api2_status(self):
@@ -104,15 +107,18 @@ class PmmServerComponents(unittest.TestCase):
         self.assertIn(RUNNING, grep_supervisor_status('postgresql'), NOT_RUNNING_MSG)
 
     def test_victoriametrics_status(self):
-        if test_mode != "post": self.skipTest(POST_UPGRADE)
+        if test_mode != "post":
+            self.skipTest(POST_UPGRADE)
         self.assertIn(RUNNING, grep_supervisor_status('victoriametrics'), NOT_RUNNING_MSG)
 
     def test_victoria_metrics_alert_status(self):
-        if test_mode != "post": self.skipTest(POST_UPGRADE)
+        if test_mode != "post":
+            self.skipTest(POST_UPGRADE)
         self.assertIn(RUNNING, grep_supervisor_status('vmalert'), NOT_RUNNING_MSG)
 
     def test_victoria_metrics_version(self):
-        if test_mode != "post": self.skipTest(POST_UPGRADE)
+        if test_mode != "post":
+            self.skipTest(POST_UPGRADE)
         if is_ami:
             out = verify_command('sudo victoriametrics --version')
         else:
@@ -121,7 +127,8 @@ class PmmServerComponents(unittest.TestCase):
 
     def test_vertamedia_clickhouse_plugin_absent(self):
         # """PMM-T1758 - Verify vertamedia-clickhouse-datasource plugin is not installed after upgrade to 2.38.0"""
-        if expected_pmm_minor_version < 38: self.skipTest('Since version 2.41.0')
+        if expected_pmm_minor_version < 38:
+            self.skipTest('Since version 2.41.0')
         if is_ami:
             out = verify_command(f"{grafana_cli} plugins ls")
         else:
@@ -162,16 +169,14 @@ if __name__ == '__main__':
         """Polymorphic shortcut to use in test"""
         if is_ami:
             return verify_command(f"rpm -qa | grep {query}")
-        else:
-            return verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep {query}")
+        return verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep {query}")
 
 
     def grep_supervisor_status(name):
         """Polymorphic shortcut to use in test"""
         if is_ami:
             return verify_command(f"sudo supervisorctl status | grep {name}")
-        else:
-            return verify_command(f"docker exec {pmm_server_docker_container} supervisorctl status | grep {name}")
+        return verify_command(f"docker exec {pmm_server_docker_container} supervisorctl status | grep {name}")
 
 
     # leaving sys.argv[0] alone

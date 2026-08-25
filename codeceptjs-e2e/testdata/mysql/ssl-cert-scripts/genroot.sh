@@ -1,4 +1,4 @@
-
+#!/bin/sh
 # Generate new CA certificate root-ca.pem file.
 
 OPENSSL_ROOT_CA=$1

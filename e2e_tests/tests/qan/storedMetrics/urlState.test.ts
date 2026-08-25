@@ -3,9 +3,13 @@ import { Timeouts } from '@helpers/timeouts';
 import StoredMetricsPage from '@pages/qan/storedMetrics/storedMetrics.page';
 import { expect } from '@playwright/test';
 
+// Below QAN's own default of 25, so a second page exists for the amount of query
+// digests a freshly provisioned environment has actually collected by test time.
+const PAGE_SIZE = 10;
+
 pmmTest.beforeEach(async ({ grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
-  await page.goto(queryAnalytics.url);
+  await page.goto(`${queryAnalytics.url}?page_size=${PAGE_SIZE}`);
   await queryAnalytics.storedMetrics.elements.iframe.waitFor({
     state: 'visible',
     timeout: Timeouts.THIRTY_SECONDS,
@@ -24,6 +28,13 @@ pmmTest(
     });
 
     await pmmTest.step('Change pagination', async () => {
+      await expect
+        .poll(async () => storedMetrics.getTotalQueryCount(), {
+          message: `QAN needs more than one page of ${PAGE_SIZE} mongodb queries to exercise pagination`,
+          timeout: Timeouts.THIRTY_SECONDS,
+        })
+        .toBeGreaterThan(PAGE_SIZE);
+
       const secondPaginationItem = storedMetrics.builders.paginationItem('2');
 
       await expect(secondPaginationItem).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
@@ -54,6 +65,7 @@ pmmTest(
     await pmmTest.step('Verify state in the URL', async () => {
       await expect.poll(() => new URL(page.url()).searchParams.has('dimensionSearchText')).toBeFalsy();
       await expect.poll(() => new URL(page.url()).searchParams.get('page_number')).toBe('2');
+      await expect.poll(() => new URL(page.url()).searchParams.get('page_size')).toBe(String(PAGE_SIZE));
       await expect
         .poll(() => new URL(page.url()).searchParams.getAll('var-service_type'))
         .toContain('mongodb');

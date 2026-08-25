@@ -61,7 +61,7 @@
     set_fact:
       proxysql_package: "{{package.stdout | default(proxysql_package,true)}}"
 
-  - name : Get filename from URL for ProxySQL
+  - name: Get filename from URL for ProxySQL
     shell: basename {{ proxysql_package }}    
     register: file_name
 
@@ -80,7 +80,9 @@
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ pxc_container }}
-      - docker exec {{ pxc_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}{{ (debug_client | default(false) | bool) | ternary(' --debug', '') }} --use_metrics_mode no
+      - >-
+        docker exec {{ pxc_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}{{ (debug_client |
+        default(false) | bool) | ternary(' --debug', '') }} --use_metrics_mode no
 
   - name: Configure PXC for PMM Client if non-tarball install
     shell: "{{ item }}"
@@ -103,7 +105,9 @@
       # Under Docker Desktop's Rosetta emulation /proc/<pid>/exe points to
       # /run/rosetta/rosetta, so the PXC SST script needs a PATH fallback.
       - docker exec {{ pxc_container }} ln -sf /home/pxc/PXC/bin/mysqld /usr/local/bin/mysqld
-      - docker exec --user pxc {{ pxc_container }} bash -xe ./client_container_pxc_setup.sh --pxc_version {{ pxc_version }} --pxc_tarball {{ pxc_tarball }} --number_of_nodes {{ number_of_nodes }} --pxc_dev_cluster {{ pxc_dev_cluster }} --query_source {{query_source}}
+      - >-
+        docker exec --user pxc {{ pxc_container }} bash -xe ./client_container_pxc_setup.sh --pxc_version {{ pxc_version }} --pxc_tarball {{ pxc_tarball }} --number_of_nodes {{ number_of_nodes }}
+        --pxc_dev_cluster {{ pxc_dev_cluster }} --query_source {{query_source}}
 
   - name: Set Random Number Fact
     set_fact:
@@ -136,4 +140,3 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pxc_container }} bash -xe ./client_container_proxysql_setup.sh
-
