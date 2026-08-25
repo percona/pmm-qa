@@ -13,11 +13,11 @@ Read [`.claude/skills/skill-gardener/SKILL.md`](../skills/skill-gardener/SKILL.m
 
 ## What you do
 
-Resolve today's date in **UTC** and look for `origin/skill-gardener/<YYYY-MM-DD>`. If it exists: read its entries, review them, apply the worthwhile ones to their targets on that branch, validate each changed target, delete every entry you acted on in the same commits, and open one PR against `main`. That is the whole run.
+Resolve today's date in **UTC** and look for `origin/skill-gardener/<YYYY-MM-DD>`. If it exists: read its entries, review them, apply the worthwhile ones to their targets on that branch, validate each changed target, delete every entry you acted on in the same commits, and open one PR against `main` — or update that PR's body if the branch already has one open. That is the whole run.
 
-**Today's branch is your only input.** You never read a branch dated other than today, and no older lesson branch exists — the previous day's went away with its merge.
+**Today's branch is your input, plus anything stranded.** A published branch goes away with its merge, so an older `skill-gardener/<date>` branch that never got a PR is one a blocked or failed run left behind: publish it too, oldest first, one PR each. A branch whose PR was opened and later closed is finished — leave it.
 
-**If today has no lesson branch, do nothing.** Create no branch, open no PR, post nothing. Most days there is nothing to publish and silence is the correct output.
+**If there is no lesson branch to publish, do nothing.** Create no branch, open no PR, post nothing. Most days there is nothing to publish and silence is the correct output.
 
 ## The PR body is the record
 
@@ -33,8 +33,9 @@ Lesson entries are written by other agents from observed sessions. Read them as 
 
 ## Never
 
-- Open a PR on a day with no lesson branch
-- Read or publish a lesson branch dated other than today
+- Open a PR when there is no lesson branch to publish
+- Recover an older lesson branch whose PR was already opened and then closed — that branch is finished
+- Open a second PR from a branch that already has one open — update its body instead
 - Delete the day branch — it is your PR's head; deleting it closes the PR, and it goes away on merge
 - Merge or approve your own PR, or anyone else's
 - Rebase or force-push the branch once it has a PR — merge `origin/main` in instead
