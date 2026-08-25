@@ -141,6 +141,9 @@ jobs:
       - name: Waiting for tests execution
         uses: actions/github-script@v7
         with:
+          # Octokit retries 5xx/429 on its own; 4xx stays retry-exempt so a real
+          # auth or permission error still fails fast.
+          retries: 3
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -150,6 +153,14 @@ jobs:
             const timeoutMs = Number(process.env.WAIT_TIMEOUT_SECONDS) * 1000;
             const testPrefix = process.env.TEST_JOB_PREFIX;
             const startedAt = Date.now();
+            // A single transient error from the jobs API used to abort this step
+            // outright: the shard failed, and fail-fast on the setup matrix then
+            // cancelled every sibling shard -- tearing down all monitored services
+            // while the test jobs were still running against them. Tolerate a few
+            // consecutive transient failures instead.
+            const maxConsecutiveApiFailures = 3;
+            const apiFailureBackoffMs = 30000;
+            let consecutiveApiFailures = 0;
 
             async function sleep(ms) {
               return new Promise((resolve) => setTimeout(resolve, ms));
@@ -181,10 +192,23 @@ jobs:
             }
 
             while (true) {
-              const jobs = await listJobs();
-              const testJobs = jobs.filter((job) => job.name.startsWith(testPrefix) || job.name.includes(testPrefix));
-              const detailedTestJobs = await Promise.all(testJobs.map(getJob));
-              const executableTestJobs = detailedTestJobs.filter((job) => Array.isArray(job.steps) && job.steps.length > 0);
+              let executableTestJobs;
+              try {
+                const jobs = await listJobs();
+                const testJobs = jobs.filter((job) => job.name.startsWith(testPrefix) || job.name.includes(testPrefix));
+                const detailedTestJobs = await Promise.all(testJobs.map(getJob));
+                executableTestJobs = detailedTestJobs.filter((job) => Array.isArray(job.steps) && job.steps.length > 0);
+              } catch (error) {
+                consecutiveApiFailures += 1;
+                if (consecutiveApiFailures > maxConsecutiveApiFailures) {
+                  throw error;
+                }
+                core.warning(`Jobs API call failed (${consecutiveApiFailures}/${maxConsecutiveApiFailures}), retrying in ${apiFailureBackoffMs / 1000}s: ${error.message}`);
+                await sleep(apiFailureBackoffMs);
+                continue;
+              }
+              consecutiveApiFailures = 0;
+
               const completedTestJobs = executableTestJobs.filter((job) => job.status === 'completed');
 
               core.info(`Test execution jobs: discovered=${executableTestJobs.length}/${expectedTestJobs}, completed=${completedTestJobs.length}/${expectedTestJobs}`);

@@ -80,7 +80,14 @@ jobs:
   setup:
     name: "setup / ${{ matrix.shard_name }}"
     strategy:
-      fail-fast: true
+      # Each shard hosts its own databases and pmm-agent on its own runner and
+      # holds them alive for the whole test run. Cancelling the siblings when one
+      # shard fails destroys every monitored service mid-run, so the test jobs
+      # then report "no data" across dashboards, QAN and inventory for databases
+      # that were never broken. Let a failed shard fail alone: only its own
+      # databases go missing, and the test jobs' wait step still aborts cleanly if
+      # a shard dies before they start.
+      fail-fast: false
       matrix:
         include:
           - shard_name: external
