@@ -10,10 +10,10 @@ Improve the instructions and automation that guide future work without distracti
 ## Modes
 
 - **Continuous:** Observe the complete sequence during a turn and evaluate it after the primary task is stable.
-- **Capture:** Preserve each distinct qualifying lesson as an immutable entry on the day's shared gardener branch.
-- **Publish:** Promote captured entries to `main`, then apply the worthwhile ones already merged there in one PR.
+- **Capture:** Preserve each distinct qualifying lesson as an immutable entry on the day's shared gardener branch, and publish it immediately as a lessons-only PR.
+- **Publish:** Apply the worthwhile entries already merged into `main` in one PR.
 
-Capture is the only mode that runs inside a user session. Review, Apply, target edits, and publishing belong to the scheduled Publish pass, so a session never loads target diffs, validators, or git publishing work into the window it needs for the primary task.
+Capture is the only mode that runs inside a user session. It ends at the lessons PR: a captured lesson is published the moment it is captured, so nothing waits on a schedule to become visible. Review, Apply and target edits belong to the scheduled Publish pass, so a session never loads target diffs, validators, or implementation work into the window it needs for the primary task.
 
 The repository injects a two-sentence observer reminder through `UserPromptSubmit` for the main agent, `SubagentStart` for every subagent, and `PostToolUseFailure` when a tool call fails. This keeps observation inside the model calls already needed for the task instead of forcing another LLM pass after every response. Load this full skill only when a possible lesson appears or the user invokes it directly. Set `SKILL_GARDENER=off` to silence the reminder for a session.
 
@@ -89,15 +89,16 @@ The Continuous reminder authorizes the main agent to commit its own and its suba
 2. Copy the turn's new entries into the worktree, commit only those files, and push.
 3. Never rewrite or force-push a commit already pushed to the shared daily branch. Other sessions push to it the same day, and a force-push silently drops their commits. If your push is rejected, run `git pull --rebase` in the worktree — it replays only your own unpushed commits on top of theirs, rewriting nothing they can see — then push again; unique entry filenames keep that conflict-free.
 4. Remove the entries from the user's checkout only after the push succeeds. Creating and removing the gardener's own entry files is the only permitted mutation in the user's checkout.
-5. Do not open a PR, and do not touch a target file, from a session turn.
-6. If authentication or permissions block the push, keep the entries in place and report the blocker once without repeated retries.
+5. Publish the lesson immediately: ensure the day's branch has exactly one open lessons-only PR against `main`. Open it if there is none, and otherwise stop — an existing PR already picks up the commit you just pushed, so there is one PR per day however many sessions capture into it. Never reopen a closed one; if the day's PR was closed deliberately, say so and leave it closed.
+6. Never touch a target file from a session turn, however obvious the fix looks. The lessons PR carries entries and nothing else, which is what makes it safe to merge quickly.
+7. If authentication or permissions block the push or the PR, keep the entries in place and report the blocker once without repeated retries.
 
 ## Publish
 
-Runs on a schedule outside any user session — a Routine like the PR digest, invoking this skill in Publish mode. Publish only ever edits a target from an entry that is **already merged into `main`**. An entry still sitting on a daily branch is not yet input: it has had no human eye on it, and promoting it is a separate, cheaper step.
+Runs on a schedule outside any user session — a Routine like the PR digest, invoking this skill in Publish mode. Publish only ever edits a target from an entry that is **already merged into `main`**. An entry still sitting on a daily branch is not yet input: it has had no human eye on it, and merging its lessons PR is the review gate that lets a target be edited unattended at all.
 
-1. **Promote.** For each remote `skill-gardener/*` branch whose entries are not yet in `main`, open one lessons-only PR against `main` unless it already has an open one. Those PRs add entry files and nothing else, so they are cheap to review and safe to merge, and `pr-maintainer` surfaces any that go stale. Never edit a target on a daily branch.
-2. **Read.** In an isolated temporary worktree on the latest `origin/main`, read every entry in `.claude/skill-lessons/`. If there is none, create nothing, open no PR, and finish silently — on most days there is nothing merged to publish.
+1. **Catch up on promotion.** Capture publishes its own lessons PR, so normally there is nothing to do here. Check for a remote `skill-gardener/*` branch whose entries are not in `main` and that has no open PR — a session blocked on permissions, or interrupted between push and PR, leaves one — and open the missing lessons-only PR. Never edit a target on a daily branch.
+2. **Read.** In an isolated temporary worktree on the latest `origin/main`, read every entry in `.claude/skill-lessons/`. If there is none, create nothing, open no implementation PR, and finish silently — on most days there is nothing merged to publish.
 3. Review those entries against the current targets, merging related evidence conceptually.
 4. For a new skill or substantial skill restructuring, use the available skill-creator guidance and validator.
 5. Implement the smallest coherent change per target and match sibling conventions. If the latest target already contains it, resolve the lesson without editing.
@@ -112,7 +113,7 @@ Runs on a schedule outside any user session — a Routine like the PR digest, in
 - Keep observation and empty audits silent.
 - Mention captured lessons once at handoff.
 - Never create telemetry, raw transcripts, arbitrary counters, expiry rules, backup files, or per-tool commits.
-- Never edit a target or open a PR outside Publish. Publish opens at most one lessons-only PR per daily branch and one implementation PR per run.
+- Never edit a target outside Publish. A session opens only the day's lessons-only PR; Publish opens one implementation PR per run. At most one lessons PR exists per daily branch.
 - Never let gardening delay an unstable primary task or recursively review its own work.
 
 Concept adapted from Eoghan Henn's [Task Observer](https://github.com/rebelytics/one-skill-to-rule-them-all), licensed under CC BY 4.0.

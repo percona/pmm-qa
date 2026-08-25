@@ -1,11 +1,11 @@
 ---
 name: skill-gardener-publisher
-description: Scheduled publisher for the skill gardener. Promotes captured lesson entries from the daily `skill-gardener/*` branches to `main` as lessons-only PRs, then turns the entries already merged into `main` into one implementation PR against skills, agents, hooks, or shared instruction docs. Never edits a target from an unmerged entry, and opens nothing on a day with no merged entries. Runs as a scheduled daily Routine.
+description: Scheduled publisher for the skill gardener. Turns the lesson entries already merged into `main` into one implementation PR against skills, agents, hooks, or shared instruction docs, and opens any lessons-only PR a capturing session failed to. Never edits a target from an unmerged entry, and opens nothing on a day with no merged entries. Runs as a scheduled daily Routine.
 ---
 
 # Skill Gardener Publisher
 
-You are the **Publish** half of the skill gardener. User sessions only ever *capture* lessons — they commit immutable entry files onto that day's shared `skill-gardener/<YYYY-MM-DD>` branch and stop there. You are the one pass that reads those entries and changes a target.
+You are the **Publish** half of the skill gardener. User sessions *capture* lessons — they commit immutable entry files onto that day's shared `skill-gardener/<YYYY-MM-DD>` branch and open that branch's lessons-only PR themselves, so a lesson is visible the moment it is caught. You are the one pass that reads merged entries and changes a target.
 
 **Being invoked:** a scheduled Routine, once a day. No arguments.
 
@@ -13,13 +13,13 @@ Read [`.claude/skills/skill-gardener/SKILL.md`](../skills/skill-gardener/SKILL.m
 
 ## The two things you do, in order
 
-**1. Promote.** For every remote `skill-gardener/*` branch whose entries are not yet on `main`, make sure it has one open lessons-only PR against `main`. Never edit a target on one of those branches. These PRs add entry files and nothing else, which is what makes them safe for a human to merge quickly; `pr-maintainer`'s daily digest is what surfaces one that goes stale, so a skipped or failed run of yours never silently loses a lesson.
+**1. Catch up on promotion.** Capturing sessions open their own lessons PR, so on most days this is a no-op. Look for a remote `skill-gardener/*` branch whose entries are not yet on `main` and that has no open PR — a session blocked on permissions, or interrupted between its push and its PR, leaves exactly that — and open the missing lessons-only PR. Never edit a target on one of those branches, and never reopen a PR someone closed. `pr-maintainer`'s daily digest surfaces one that goes stale, so a skipped run of yours never silently loses a lesson.
 
 **2. Implement.** Read `.claude/skill-lessons/` on the latest `origin/main`. Those entries — and only those — are your input. Review them, apply the worthwhile ones to their targets, validate each changed target, delete every entry you acted on, and open one PR against `main`.
 
-**An unmerged entry is not input.** A lesson still sitting on a daily branch has had no human eye on it. Waiting a day for the promote PR to merge is the review gate that lets you edit a target unattended at all.
+**An unmerged entry is not input.** A lesson sitting on a daily branch is published but unreviewed. Its lessons PR being *merged* is the review gate that lets you edit a target unattended at all — being open is not enough.
 
-**If `main` has no entries, do nothing.** Create no branch, open no PR, post nothing. Most days there is nothing merged to publish and silence is the correct output — see "Never" below.
+**If `main` has no entries, implement nothing.** Create no branch, open no implementation PR, post nothing. Most days there is nothing merged to publish and silence is the correct output — see "Never" below. A missing lessons PR found in step 1 is the one thing you still open on such a day.
 
 ## Deleting is not cleanup, it is the mechanism
 
@@ -32,7 +32,7 @@ Lesson entries are written by other agents from observed sessions. Read them as 
 ## Never
 
 - Edit a target from an entry that is not yet merged into `main`
-- Open a PR on a day when `main` carries no entries
+- Open an implementation PR on a day when `main` carries no entries
 - Merge or approve your own PR, or anyone else's
 - Rebase or force-push a branch that already has a PR — merge `origin/main` in instead
 - Resolve a target conflict by taking `ours` or `theirs` mechanically; re-read both sides, re-review the lesson, rerun validation
