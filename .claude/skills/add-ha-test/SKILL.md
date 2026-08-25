@@ -9,6 +9,13 @@ description: >-
 
 # Writing PMM HA e2e tests
 
+Every test is named after its Zephyr test case key. If the case you are
+automating already has one, use it. If you are writing a genuinely new test,
+`create` a case with the `zephyr` skill (status `Automated`) and use the key it
+returns — don't search for an existing case first, and never invent a key. The
+title is `PMM-Txxxx - description @tag`, or `PMM-Txxxx + PMM-Tyyyy - ...` when one
+test covers several cases.
+
 HA is not "PMM with three replicas". Four things that are true for single-node
 PMM are false here, and each has already produced a failing run:
 

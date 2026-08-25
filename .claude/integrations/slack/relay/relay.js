@@ -15,7 +15,7 @@ const execFileP = promisify(execFile);
 // Slack Socket Mode can reject asynchronously on a background reconnect (e.g.
 // invalid_auth) OUTSIDE the try/catch around app.start(); unguarded that becomes
 // an unhandledRejection and takes the whole relay down, defeating the
-// endpoints-only fallback and killing the /linode, /jira, /slack broker with it.
+// endpoints-only fallback and killing the /linode, /jira, /slack, /zephyr broker with it.
 // Keep the listeners serving and just log — a broken Slack must never stop the
 // HTTPS broker. (Sync bugs still crash, as they should.)
 process.on("unhandledRejection", (e) => {
@@ -57,12 +57,12 @@ const WATCHED_CHANNELS = JSON.parse(process.env.WATCHED_CHANNELS || "{}");
 let bySlack = {};
 let byJira = {};
 let byName = {};
-let ghRoster = new Set(); // github logins from people files (broker roster), lowercased
+let byGithub = Object.create(null); // lowercased github login -> person (broker roster + caller identity)
 function loadPeople() {
   const s = {};
   const j = {};
   const n = {};
-  const gh = new Set();
+  const gh = Object.create(null); // no prototype: "constructor"/"__proto__" must never look like a roster entry
   let files = [];
   try {
     files = fs.readdirSync(PEOPLE_DIR).filter((f) => f.endsWith(".json"));
@@ -80,7 +80,7 @@ function loadPeople() {
       n[p.name] = p;
       if (p.slack) s[p.slack] = p;
       if (p.jira) j[p.jira] = p;
-      if (p.github) gh.add(String(p.github).toLowerCase()); // broker roster
+      if (p.github) gh[String(p.github).toLowerCase()] = p; // broker roster
     } catch (e) {
       console.error(`people: skipping bad file ${f}: ${e.message}`); // one broken file never takes the relay down
     }
@@ -88,7 +88,7 @@ function loadPeople() {
   bySlack = s;
   byJira = j;
   byName = n;
-  ghRoster = gh;
+  byGithub = gh;
   console.log(`people loaded: ${files.length} file(s), central owner "${CENTRAL_OWNER}" ${byName[CENTRAL_OWNER] ? "found" : "MISSING"}`);
 }
 
@@ -135,7 +135,7 @@ const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 // RELAY_KEY (possession) plus a caller identity. The caller sends its GitHub
 // login in X-Actor — it gets that login from `gh api user`, which the egress
 // proxy really verified — and the relay checks it against the roster (the
-// `github` logins in the people files it already loads; see ghRoster) and logs
+// `github` logins in the people files it already loads; see byGithub) and logs
 // it. No extra env var; the roster is the people directory.
 //
 // Design note: this is env-membership-grade, not cryptographically unspoofable
@@ -146,7 +146,7 @@ const CAP_TTL_MS = 2 * 60 * 60 * 1000;
 // short op list, never account access. (Unspoofable upgrade = the push-proof
 // handshake, documented in AUTOMATIONS.) Empty roster = any login accepted.
 function rosterOk(login) {
-  return ghRoster.size === 0 || ghRoster.has(login.toLowerCase());
+  return Object.keys(byGithub).length === 0 || Object.hasOwn(byGithub, login.toLowerCase());
 }
 function identity(req) {
   const actor = String(req.headers["x-actor"] || "").trim();
@@ -686,6 +686,365 @@ async function brokerJira(action, m, by) {
   }
 }
 
+// Zephyr Scale (SmartBear) test-case management. Project is FORCED to PMM.
+// Read, create, status and steps — no free-form edit, no delete (the API has
+// none: a case is retired by moving it to Deprecated), and no execution
+// reporting (CI's own reporter posts executions with the same key from GitHub
+// Actions; see codeceptjs-e2e/tests/helper/reporter_helper.js).
+const ZEPHYR_BASE = "https://api.zephyrscale.smartbear.com/v2";
+const ZEPHYR_TIMEOUT_MS = 30_000;
+const ZEPHYR_SCAN_PAGES = 20; // search pages 1000 at a time; caps a runaway scan
+const ZEPHYR_SCAN_BUDGET_MS = 150_000; // per-page timeouts are independent, so bound the whole scan inside the handler's own 180s
+const TESTCASE_KEY = /^PMM-T[0-9]+$/;
+const ZEPHYR_REQUIRED_CF = "Version of the Product"; // required on every test case in the PMM project
+const PUT_ONLY_STRIP = ["createdOn", "links", "testScript"]; // read-only on GET, rejected by the update endpoint
+const MAX_STEPS = 100; // per the API's own cap
+// pmm-qa test titles are "PMM-Txxxx [+ PMM-Tyyyy] - description @tag @tag", so a
+// caller pasting a whole title still searches on the description alone (Zephyr
+// names carry neither the key nor the CodeceptJS/Playwright tags).
+const titleToQuery = (s) =>
+  String(s)
+    .replace(/^\s*PMM-T[0-9]+(\s*\+\s*PMM-T[0-9]+)*\s*-\s*/, "")
+    .replace(/(\s+@[\w-]+)+\s*$/, "")
+    .trim();
+
+// Zephyr returns every reference — status, priority, folder, steps, linked Jira
+// issues — as a bare id or a URL, so a caller holding a test case cannot name any
+// of them. `get` resolves them from these tables, which are a few dozen rows and
+// change almost never, so they are cached rather than re-read per call.
+const ZEPHYR_LOOKUP_TTL_MS = 600_000;
+let zephyrLookups = { at: 0 };
+
+async function zephyrLookupTables(z) {
+  if (zephyrLookups.at && Date.now() - zephyrLookups.at < ZEPHYR_LOOKUP_TTL_MS) return zephyrLookups;
+  const [st, pr, fo] = await Promise.all([
+    z(`/statuses?projectKey=PMM&statusType=TEST_CASE&maxResults=100`),
+    z(`/priorities?projectKey=PMM&maxResults=100`),
+    z(`/folders?projectKey=PMM&folderType=TEST_CASE&maxResults=1000`),
+  ]);
+  if (!st.ok || !pr.ok || !fo.ok) throw new Error(`zephyr_lookup_failed statuses=${st.status} priorities=${pr.status} folders=${fo.status}`);
+  const [sj, pj, fj] = await Promise.all([st.json(), pr.json(), fo.json()]);
+  const named = (vs) => new Map((vs || []).map((v) => [v.id, v.name]));
+  zephyrLookups = {
+    at: Date.now(),
+    statuses: named(sj.values),
+    priorities: named(pj.values),
+    folders: new Map((fj.values || []).map((f) => [f.id, { name: f.name, parentId: f.parentId ?? null }])),
+  };
+  return zephyrLookups;
+}
+
+// "PMM3.x HA Tests / Failover". The guard bounds a parentId cycle.
+function zephyrFolderPath(folders, id) {
+  const parts = [];
+  for (let cur = id, depth = 0; cur != null && depth < 20; depth++) {
+    const f = folders.get(cur);
+    if (!f) break;
+    parts.unshift(f.name);
+    cur = f.parentId;
+  }
+  return parts.join(" / ") || null;
+}
+
+// Every folder at or below `root`, so a listing covers a feature's whole subtree.
+function zephyrSubtree(folders, root) {
+  const ids = new Set([root]);
+  for (const [id, f] of folders) {
+    for (let p = f.parentId, depth = 0; p != null && depth < 20; depth++) {
+      if (p === root) {
+        ids.add(id);
+        break;
+      }
+      p = folders.get(p)?.parentId ?? null;
+    }
+  }
+  return ids;
+}
+
+// A step is either inline or a call to another case. Values stay as Zephyr stores
+// them (HTML) — a broker should not lossily rewrite what it relays.
+function zephyrFlattenSteps(script) {
+  return (script?.values || []).map((s, i) =>
+    s.testCase
+      ? { index: i + 1, callsTestCase: s.testCase.testCaseKey ?? s.testCase.self ?? null }
+      : {
+          index: i + 1,
+          description: s.inline?.description ?? null,
+          testData: s.inline?.testData ?? null,
+          expectedResult: s.inline?.expectedResult ?? null,
+        },
+  );
+}
+
+// Zephyr links coverage by numeric Jira id, so a caller sees 174296 and not
+// PMM-14744. Resolved through the same service account the /jira broker uses.
+async function zephyrJiraIssues(issueIds) {
+  if (!issueIds.length || !JIRA_EMAIL || !JIRA_API_TOKEN) return [];
+  const auth = "Basic " + Buffer.from(`${JIRA_EMAIL}:${JIRA_API_TOKEN}`).toString("base64");
+  const r = await fetch("https://perconadev.atlassian.net/rest/api/2/search/jql", {
+    method: "POST",
+    signal: AbortSignal.timeout(30_000),
+    headers: { Authorization: auth, "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      jql: `project = PMM AND id in (${issueIds.join(",")})`,
+      maxResults: Math.min(issueIds.length, 100),
+      fields: ["key", "summary", "status", "issuetype"],
+    }),
+  });
+  if (!r.ok) return [];
+  const j = await r.json();
+  return (j.issues || []).map((i) => ({
+    id: Number(i.id),
+    key: i.key,
+    summary: i.fields?.summary ?? null,
+    status: i.fields?.status?.name ?? null,
+    issuetype: i.fields?.issuetype?.name ?? null,
+  }));
+}
+
+async function brokerZephyr(action, m, by) {
+  if (!process.env.ZEPHYR_PMM_API_KEY) return { status: 503, body: "zephyr_not_configured" };
+  const z = (p, init = {}) =>
+    fetch(`${ZEPHYR_BASE}${p}`, {
+      ...init,
+      signal: AbortSignal.timeout(ZEPHYR_TIMEOUT_MS),
+      headers: { Authorization: `Bearer ${process.env.ZEPHYR_PMM_API_KEY}`, "Content-Type": "application/json", Accept: "application/json", ...(init.headers || {}) },
+    });
+  console.log(`zephyr/${action} ${m.key || m.name || m.query || ""} by ${by}`);
+  try {
+    if (action === "create") {
+      const name = String(m.name || "").trim();
+      if (!name || name.length > 255) return { status: 400, body: "name_required_1_255_chars" };
+      // The key is assigned BY Zephyr; a name carrying one means the caller
+      // pasted a test title and would create a test case named after another.
+      if (/^PMM-T[0-9]+/.test(name)) return { status: 400, body: "name_must_not_start_with_a_test_case_key" };
+      const body = { ...(m.fields || {}), projectKey: "PMM", name };
+      for (const k of ["objective", "precondition", "priorityName", "statusName"]) if (m[k] != null) body[k] = String(m[k]);
+      // Owner is the caller, never the caller's choice: X-Actor is already
+      // roster-checked, so map that login to the person's Jira accountId. A case
+      // with no owner has nobody to chase, so an unmappable caller is refused.
+      const owner = byGithub[by.toLowerCase()]?.jira;
+      if (!owner || !/^[-:a-zA-Z0-9]{1,128}$/.test(owner)) return { status: 403, body: "owner_unresolved_add_jira_id_to_your_people_file" };
+      body.ownerId = owner;
+      if (m.folderId != null) {
+        if (!/^[0-9]+$/.test(String(m.folderId))) return { status: 400, body: "bad_folder_id" };
+        body.folderId = Number(m.folderId);
+      }
+      if (Array.isArray(m.labels)) body.labels = m.labels.map(String);
+      // The PMM project marks one custom field required, and Zephyr rejects the
+      // create outright without it — surface that here instead of as a raw 400.
+      const cf = m.customFields && typeof m.customFields === "object" ? { ...m.customFields } : {};
+      if (!String(cf[ZEPHYR_REQUIRED_CF] ?? "").trim()) return { status: 400, body: "version_of_the_product_required" };
+      body.customFields = cf;
+      const r = await z("/testcases", { method: "POST", body: JSON.stringify(body) });
+      return { status: r.status, json: true, body: (await r.text()) || "{}" };
+    }
+    if (action === "get") {
+      const key = String(m.key || "").trim();
+      if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
+      const r = await z(`/testcases/${key}`);
+      if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
+      const tc = await r.json();
+      const wantSteps = m.steps !== false;
+      const wantJira = m.jira !== false;
+      // Additive: the verbatim test case plus `resolved`, which names what Zephyr
+      // returns as ids. Enrichment must never cost the caller the raw read, so a
+      // failing lookup degrades to resolved.error instead of failing the call.
+      try {
+        const [tables, script, issues] = await Promise.all([
+          zephyrLookupTables(z),
+          wantSteps ? z(`/testcases/${key}/teststeps?maxResults=${MAX_STEPS}`).then((s) => (s.ok ? s.json() : null)) : null,
+          wantJira ? zephyrJiraIssues((tc.links?.issues || []).map((i) => i.issueId).filter(Boolean)) : [],
+        ]);
+        tc.resolved = {
+          status: tables.statuses.get(tc.status?.id) ?? null,
+          priority: tables.priorities.get(tc.priority?.id) ?? null,
+          folder: tc.folder?.id != null ? zephyrFolderPath(tables.folders, tc.folder.id) : null,
+          ...(wantSteps ? { steps: zephyrFlattenSteps(script) } : {}),
+          ...(wantJira ? { jiraIssues: issues } : {}),
+        };
+      } catch (e) {
+        tc.resolved = { error: e.message };
+      }
+      return { status: 200, json: true, body: JSON.stringify(tc) };
+    }
+    if (action === "list") {
+      // Every case in a folder, no query needed — `search` cannot answer "what is
+      // in this folder" because it requires a query, so callers were reduced to
+      // searching a common letter and reading `scanned`.
+      if (m.folderId != null && !/^[0-9]+$/.test(String(m.folderId))) return { status: 400, body: "bad_folder_id" };
+      const limit = Math.min(Math.max(Math.floor(Number(m.limit) || 200), 1), 1000);
+      const tables = await zephyrLookupTables(z);
+      let wanted = null;
+      if (m.folderId != null) {
+        const root = Number(m.folderId);
+        if (!tables.folders.has(root)) return { status: 400, body: "bad_folder_id" };
+        wanted = m.recursive === false ? new Set([root]) : zephyrSubtree(tables.folders, root);
+      }
+      // One folder is filtered upstream (a single short page); a subtree or the
+      // whole project is a paged scan filtered here, which costs fewer round
+      // trips than one call per folder.
+      const upstreamFolder = wanted && wanted.size === 1 ? `&folderId=${[...wanted][0]}` : "";
+      const cases = [];
+      let startAtId = 0;
+      let scanned = 0;
+      let pages = 0;
+      let truncated = false;
+      const scanStarted = Date.now();
+      for (;;) {
+        const r = await z(`/testcases/nextgen?projectKey=PMM&limit=1000&startAtId=${startAtId}${upstreamFolder}`);
+        if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
+        const j = await r.json();
+        for (const tc of j.values || []) {
+          scanned++;
+          const folderId = tc.folder?.id ?? null;
+          if (wanted && !upstreamFolder && !wanted.has(folderId)) continue;
+          cases.push({
+            key: tc.key,
+            name: String(tc.name || ""),
+            status: tables.statuses.get(tc.status?.id) ?? null,
+            priority: tables.priorities.get(tc.priority?.id) ?? null,
+            folderId,
+            folder: folderId != null ? zephyrFolderPath(tables.folders, folderId) : null,
+          });
+        }
+        pages++;
+        if (j.nextStartAtId == null) break;
+        if (pages >= ZEPHYR_SCAN_PAGES || Date.now() - scanStarted > ZEPHYR_SCAN_BUDGET_MS) {
+          truncated = true;
+          break;
+        }
+        startAtId = j.nextStartAtId;
+      }
+      cases.sort((a, b) => Number(a.key.slice(6)) - Number(b.key.slice(6)));
+      return {
+        status: 200,
+        json: true,
+        body: JSON.stringify({
+          folderId: m.folderId != null ? Number(m.folderId) : null,
+          recursive: wanted ? wanted.size > 1 : null,
+          folders: wanted ? [...wanted] : null,
+          total: cases.length,
+          scanned,
+          truncated,
+          cases: cases.slice(0, limit),
+        }),
+      };
+    }
+    if (action === "statuses") {
+      const t = await zephyrLookupTables(z);
+      return {
+        status: 200,
+        json: true,
+        body: JSON.stringify({
+          statuses: [...t.statuses].map(([id, name]) => ({ id, name })),
+          priorities: [...t.priorities].map(([id, name]) => ({ id, name })),
+        }),
+      };
+    }
+    if (action === "search") {
+      // Zephyr v2 has NO name search, so the relay pages the project and matches
+      // here: a name containing the whole query scores highest, else one covering
+      // >=60% of its words. Ranked and capped — the caller judges the duplicate.
+      const query = titleToQuery(m.query || "");
+      if (!query) return { status: 400, body: "query_required" };
+      const needle = query.toLowerCase();
+      const words = [...new Set(needle.split(/[^a-z0-9]+/).filter((w) => w.length > 2))];
+      const need = Math.max(1, Math.ceil(words.length * 0.6));
+      const limit = Math.min(Math.max(Math.floor(Number(m.limit) || 20), 1), 100);
+      let folder = "";
+      if (m.folderId != null) {
+        if (!/^[0-9]+$/.test(String(m.folderId))) return { status: 400, body: "bad_folder_id" };
+        folder = `&folderId=${Number(m.folderId)}`;
+      }
+      const matches = [];
+      let startAtId = 0;
+      let scanned = 0;
+      let pages = 0;
+      let truncated = false;
+      const scanStarted = Date.now();
+      for (;;) {
+        const r = await z(`/testcases/nextgen?projectKey=PMM&limit=1000&startAtId=${startAtId}${folder}`);
+        if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
+        const j = await r.json();
+        for (const tc of j.values || []) {
+          scanned++;
+          const name = String(tc.name || "");
+          const low = name.toLowerCase();
+          const score = low.includes(needle) ? words.length + 1 : words.filter((w) => low.includes(w)).length;
+          if (score >= need) matches.push({ key: tc.key, name, score, folderId: tc.folder?.id ?? null });
+        }
+        pages++;
+        if (j.nextStartAtId == null) break;
+        if (pages >= ZEPHYR_SCAN_PAGES || Date.now() - scanStarted > ZEPHYR_SCAN_BUDGET_MS) {
+          truncated = true;
+          break;
+        }
+        startAtId = j.nextStartAtId;
+      }
+      matches.sort((a, b) => b.score - a.score || a.key.localeCompare(b.key));
+      return { status: 200, json: true, body: JSON.stringify({ query, scanned, truncated, matches: matches.slice(0, limit) }) };
+    }
+    if (action === "folders") {
+      const r = await z(`/folders?projectKey=PMM&folderType=TEST_CASE&maxResults=1000`);
+      if (!r.ok) return { status: r.status, json: true, body: (await r.text()) || "{}" };
+      const j = await r.json();
+      return {
+        status: 200,
+        json: true,
+        body: JSON.stringify({ folders: (j.values || []).map((f) => ({ id: f.id, name: f.name, parentId: f.parentId })), total: j.total ?? null, isLast: j.isLast ?? null }),
+      };
+    }
+    if (action === "set-status") {
+      const key = String(m.key || "").trim();
+      if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
+      if (!m.status) return { status: 400, body: "status_required" };
+      const sr = await z(`/statuses?projectKey=PMM&statusType=TEST_CASE&maxResults=100`);
+      if (!sr.ok) return { status: sr.status, json: true, body: (await sr.text()) || "{}" };
+      const statuses = (await sr.json()).values || [];
+      const want = statuses.find((x) => x.name.toLowerCase() === String(m.status).toLowerCase());
+      if (!want) return { status: 400, json: true, body: JSON.stringify({ error: "unknown_status", allowed: statuses.map((x) => x.name) }) };
+      // The update endpoint CLEARS every field the body omits, so a status change
+      // is a read-modify-write of the whole test case, never a partial PUT. Not
+      // atomic: a concurrent edit between the GET and the PUT would be lost.
+      const g = await z(`/testcases/${key}`);
+      if (!g.ok) return { status: g.status, json: true, body: (await g.text()) || "{}" };
+      const tc = await g.json();
+      for (const f of PUT_ONLY_STRIP) delete tc[f];
+      const from = tc.status?.id ?? null;
+      tc.status = { id: want.id };
+      const put = await z(`/testcases/${key}`, { method: "PUT", body: JSON.stringify(tc) });
+      if (!put.ok) return { status: put.status, json: true, body: (await put.text()) || "{}" };
+      return { status: 200, json: true, body: JSON.stringify({ key, status: want.name, statusId: want.id, previousStatusId: from }) };
+    }
+    if (action === "steps") {
+      const key = String(m.key || "").trim();
+      if (!TESTCASE_KEY.test(key)) return { status: 400, body: "key_must_be_a_PMM-T_key" };
+      if (!Array.isArray(m.steps) || !m.steps.length) return { status: 400, body: "steps_required" };
+      if (m.steps.length > MAX_STEPS) return { status: 400, body: "too_many_steps" };
+      const items = m.steps.map((st) =>
+        st.testCaseKey
+          ? { testCase: { testCaseKey: String(st.testCaseKey) } }
+          : {
+              inline: {
+                description: String(st.description ?? ""),
+                testData: st.testData != null ? String(st.testData) : null,
+                expectedResult: st.expectedResult != null ? String(st.expectedResult) : null,
+              },
+            },
+      );
+      // OVERWRITE by default: a freshly created test case already carries one
+      // empty step, which APPEND would leave stranded at the top.
+      const r = await z(`/testcases/${key}/teststeps`, { method: "POST", body: JSON.stringify({ mode: m.mode === "APPEND" ? "APPEND" : "OVERWRITE", items }) });
+      return { status: r.status, json: true, body: (await r.text()) || "{}" };
+    }
+    return { status: 400, body: "unknown_action" };
+  } catch (e) {
+    console.error(`zephyr/${action} failed: ${e.message}`);
+    return { status: 502, body: "zephyr_upstream_error" };
+  }
+}
+
 async function brokerSlack(action, m, by) {
   console.log(`slack/${action} by ${by}`);
   try {
@@ -827,7 +1186,7 @@ const handler = async (req, res) => {
     // GitHub token is checked against GitHub itself, so `by` is unspoofable and
     // an unknown identity is refused even with a valid RELAY_KEY. The old
     // /announce, /jira-act, /provision, /destroy all live here now.
-    const bm = req.method === "POST" && /^\/(linode|jira|slack)\/([a-z-]+)$/.exec(req.url);
+    const bm = req.method === "POST" && /^\/(linode|jira|slack|zephyr)\/([a-z-]+)$/.exec(req.url);
     if (bm) {
       const [, service, action] = bm;
       if (!RELAY_KEY || req.headers["x-relay-secret"] !== RELAY_KEY) { res.writeHead(403).end("forbidden"); return; }
@@ -836,9 +1195,11 @@ const handler = async (req, res) => {
       let m;
       try { m = raw ? JSON.parse(raw) : {}; } catch { res.writeHead(400).end("bad_request"); return; }
       if (service === "linode") req.setTimeout(action.endsWith("-lke") ? 1_800_000 : 600000); // LKE (cluster + Helm) runs far longer than a VM
+      if (service === "zephyr") req.setTimeout(180_000); // search pages the whole PMM project
       const out =
         service === "linode" ? await brokerLinode(action, m, id.login)
         : service === "jira" ? await brokerJira(action, m, id.login)
+        : service === "zephyr" ? await brokerZephyr(action, m, id.login)
         : await brokerSlack(action, m, id.login);
       res.writeHead(out.status, out.json ? { "Content-Type": "application/json" } : {}).end(out.body);
       return;
@@ -852,7 +1213,7 @@ const handler = async (req, res) => {
 // no plain-HTTP path, so nothing here depends on curl -k.
 https
   .createServer({ cert: fs.readFileSync(TLS_CERT), key: fs.readFileSync(TLS_KEY) }, handler)
-  .listen(HTTPS_PORT, () => console.log(`HTTPS up on :${HTTPS_PORT} — plumbing (/health /reply /route /jira) + broker /<linode|jira|slack>/<action> (RELAY_KEY + GitHub identity)`));
+  .listen(HTTPS_PORT, () => console.log(`HTTPS up on :${HTTPS_PORT} — plumbing (/health /reply /route /jira) + broker /<linode|jira|slack|zephyr>/<action> (RELAY_KEY + GitHub identity)`));
 
 if (app) {
   try {
