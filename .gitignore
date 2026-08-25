@@ -162,8 +162,8 @@ dist
 !.claude/integrations/
 !.claude/integrations/**
 !.claude/settings.json
-!.claude/skill-lessons.md
-!.claude/skill-gardener-state.json
+!.claude/skill-lessons/
+!.claude/skill-lessons/**
 .claude/scripts/node_modules/
 .claude/scripts/.sessions/
 .cursor
