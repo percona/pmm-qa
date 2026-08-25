@@ -89,24 +89,28 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 <!-- E2E-TAGS-START -->
 
 - `@alerting`
+- `@all`
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
-- `@fb-settings`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
 - `@new-navigation`
 - `@nightly`
+- `@pgsm-pmm-integration`
 - `@pmm-ha`
 - `@pmm-ps-integration`
 - `@pmm-ps-pxc-haproxy-integration`
 - `@pmm-psmdb-integration`
 - `@pmm-valkey-integration`
 - `@post-release`
+- `@ps-integration`
+- `@ps-slowlog-integration`
 - `@rta`
 - `@settings`
 - `@standalone`
+- `@valkey-integration`
 
 <!-- E2E-TAGS-END -->
 

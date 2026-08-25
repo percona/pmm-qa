@@ -133,6 +133,19 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await agentsPage.hideRowDetails(pgExporterId);
       await agentsPage.showRowDetails(pgStatMonitorId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
+
+      await expect(async () => {
+        const metrics = cliHelper.getMetrics({
+          agentPassword: pgExporterId,
+          dockerContainer: containerName,
+          serviceName: serviceName,
+        });
+
+        expect(metrics).toContain('redis_up');
+      }).toPass({
+        intervals: [Timeouts.TWO_SECONDS],
+        timeout: Timeouts.ONE_MINUTE,
+      });
     },
   );
 
