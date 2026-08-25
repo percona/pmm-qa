@@ -8,8 +8,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let rdsExporterId;
   const serverUrlFlag = `--server-url=http://admin:${process.env.ADMIN_PASSWORD}@127.0.0.1:8080`;
 
-  pmmTest('T10000 - Add rds @rds-integration', async ({ api }) => {
-    const addService = await api.managementApi.addService({
+  pmmTest('T10000 - Add rds @rds-integration', async ({ api, cliHelper }) => {
+    await api.managementApi.addService({
       rds: {
         address: process.env.PMM_QA_MYSQL_RDS_8_4_HOST,
         aws_access_key: process.env.PMM_QA_AWS_ACCESS_KEY_ID,
@@ -34,7 +34,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       },
     });
 
-    expect(addService).toBeDefined();
+    await expect(async () => {
+      const status = cliHelper
+        .execSilent(
+          `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $2}'`,
+        )
+        .stdout.trim();
+
+      expect(status).toEqual('Running');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
   });
 
   pmmTest('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper }) => {
@@ -65,7 +76,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} --server-url=http://admin:admin@127.0.0.1:8080 --enable=true`,
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --enable=true`,
       )
       .assertSuccess();
 
