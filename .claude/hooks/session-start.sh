@@ -57,4 +57,6 @@ command -v json-diff >/dev/null 2>&1 || npm install -g json-diff >/dev/null 2>&1
 cd "$QA_ROOT/.claude/scripts"
 npm install >/dev/null
 
-chmod +x "$QA_ROOT"/terraform/linode-runner/*.sh "$QA_ROOT"/.claude/hooks/*.sh "$QA_ROOT"/.claude/hooks/lib/*.sh
+# Not .claude/hooks/*.sh -- settings.json runs those as `bash "$h"`, and
+# chmod-ing one git tracks as 100644 leaves a mode-only diff behind.
+chmod +x "$QA_ROOT"/terraform/linode-runner/*.sh
