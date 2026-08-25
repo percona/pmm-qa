@@ -32,6 +32,7 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
             text: service.annotationName,
           });
 
+          console.log(`Status is: ${response.status()} for draw date ${new Date()}`);
           expect(response.status()).toContain(200);
         }).toPass({
           intervals: [Timeouts.TWO_SECONDS],
