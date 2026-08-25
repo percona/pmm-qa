@@ -155,7 +155,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
     async ({ api, dashboard, page, urlHelper }) => {
       const shardNames = ['rs1', 'rs2'];
       const nodeNames = ['rs1', 'rs2', 'rscfg'];
-      const serviceNames = (await api.inventoryApi.getAllServiceDetailsByRegex('rs\\d{3}_\\d+')).map(
+      const serviceNames = (await api.inventoryApi.getAllServiceDetailsByRegex('rs(?:cfg)?\\d+_\\d+')).map(
         (service: GetService) => service.service_name,
       );
 
@@ -183,6 +183,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
 
       await page.goto(
         urlHelper.buildUrlWithParameters(dashboard.mongo.replSetSummary.url, {
+          cluster: 'sharded',
           from: 'now-1h',
           refresh: '5s',
         }),

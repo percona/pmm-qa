@@ -18,22 +18,20 @@ export default class MongodbReplSetSummary implements DashboardInterface {
       ],
       rowName: 'Overview',
     },
-    ...services.map(
-      (serviceName): MetricsRow => ({
-        metrics: [
-          { name: 'State', type: 'stat' },
-          { name: 'CPU Usage', type: 'gauge' },
-          { name: 'Memory Used', type: 'gauge' },
-          { name: 'Disk IO Utilization', type: 'gauge' },
-          { name: 'Disk Space Utilization', type: 'gauge' },
-          { name: 'Disk IOPS', type: 'stat' },
-          { name: 'Network Traffic', type: 'stat' },
-          { name: 'Uptime', type: 'stat' },
-          { name: 'Version', type: 'stat' },
-        ],
-        rowName: `Overview - ${serviceName}`,
-      }),
-    ),
+    ...services.map((serviceName): MetricsRow => ({
+      metrics: [
+        { name: 'State', type: 'stat' },
+        { name: 'CPU Usage', type: 'gauge' },
+        { name: 'Memory Used', type: 'gauge' },
+        { name: 'Disk IO Utilization', type: 'gauge' },
+        { name: 'Disk Space Utilization', type: 'gauge' },
+        { name: 'Disk IOPS', type: 'stat' },
+        { name: 'Network Traffic', type: 'stat' },
+        { name: 'Uptime', type: 'stat' },
+        { name: 'Version', type: 'stat' },
+      ],
+      rowName: `Overview - ${serviceName}`,
+    })),
     {
       metrics: [
         { name: 'Command Operations', type: 'timeSeries' },
@@ -58,9 +56,10 @@ export default class MongodbReplSetSummary implements DashboardInterface {
     },
     {
       metrics: [
-        ...services.map(
-          (serviceName): GrafanaPanel => ({ name: `Oplog GB/Hour - ${serviceName}`, type: 'timeSeries' }),
-        ),
+        ...services.map((serviceName): GrafanaPanel => ({
+          name: `Oplog GB/Hour - ${serviceName}`,
+          type: 'timeSeries',
+        })),
         { name: 'Replication Lag', type: 'timeSeries' },
         { name: 'Oplog Recovery Window', type: 'timeSeries' },
         { name: 'Flow Control', type: 'timeSeries' },
@@ -71,43 +70,38 @@ export default class MongodbReplSetSummary implements DashboardInterface {
     { metrics: [{ name: 'Nodes Overview', type: 'table' }], rowName: 'Nodes Summary' },
     {
       metrics: [
-        ...nodes.map(
-          (serviceName): GrafanaPanel => ({ name: `CPU Usage - ${serviceName}`, type: 'timeSeries' }),
-        ),
+        ...nodes.map((serviceName): GrafanaPanel => ({
+          name: `CPU Usage - ${serviceName}`,
+          type: 'timeSeries',
+        })),
       ],
       rowName: 'CPU Usage',
     },
     {
       metrics: [
-        ...nodes.map(
-          (serviceName): GrafanaPanel => ({
-            name: `CPU Saturation and Max Core Usage - ${serviceName}`,
-            type: 'timeSeries',
-          }),
-        ),
+        ...nodes.map((serviceName): GrafanaPanel => ({
+          name: `CPU Saturation and Max Core Usage - ${serviceName}`,
+          type: 'timeSeries',
+        })),
       ],
       rowName: 'CPU Saturation',
     },
 
     {
       metrics: [
-        ...nodes.map(
-          (serviceName): GrafanaPanel => ({
-            name: `Disk I/O and Swap Activity - ${serviceName}`,
-            type: 'timeSeries',
-          }),
-        ),
+        ...nodes.map((serviceName): GrafanaPanel => ({
+          name: `Disk I/O and Swap Activity - ${serviceName}`,
+          type: 'timeSeries',
+        })),
       ],
       rowName: 'Disk I/O and Swap Activity',
     },
     {
       metrics: [
-        ...nodes.map(
-          (serviceName): GrafanaPanel => ({
-            name: `Network Traffic - ${serviceName}`,
-            type: 'timeSeries',
-          }),
-        ),
+        ...nodes.map((serviceName): GrafanaPanel => ({
+          name: `Network Traffic - ${serviceName}`,
+          type: 'timeSeries',
+        })),
       ],
       rowName: 'Network Traffic',
     },
