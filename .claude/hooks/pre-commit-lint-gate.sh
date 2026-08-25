@@ -18,7 +18,15 @@ command=$(jq -r '.tool_input.command // empty' <<<"$input")
 # characters silently misses every one of those, letting an ordinary commit past
 # the gate. Tokens are matched as quoted-or-unquoted instead.
 git_token='("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:];&|()]+)'
-grep -qE "(^|[;&|(]|&&|\|\|)[[:space:]]*git([[:space:]]+${git_token})*[[:space:]]+commit([[:space:]]|\$)" \
+# `git` is matched wherever it appears as a word, not only at the start of a
+# command or after a separator: anchoring on separators let every wrapper form
+# through -- `sudo git commit`, `env GIT_EDITOR=true git commit`,
+# `time git commit`, `if git commit; then ...`. The leading class excludes `-`
+# and word characters so `github` and `--git` do not match, and requiring
+# whitespace after `git` keeps it a whole token. This does match `git commit`
+# inside a quoted string, which only costs a redundant lint of the staged files
+# and still allows the call when they are clean -- the safe direction.
+grep -qE "(^|[^[:alnum:]_-])git([[:space:]]+${git_token})*[[:space:]]+commit([[:space:]]|\$)" \
   <<<"$command" || exit 0
 
 # Only gate commits landing in pmm-qa; sibling clones have their own tooling.
