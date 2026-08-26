@@ -295,7 +295,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       console.log(
         cliHelper.execSilent(
-          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs[1m])' | jq `,
+          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs[10s])' | jq `,
         ).stdout,
       );
       console.log(`Push metrics counts is: "${pushMetricsCount}"`);
@@ -337,7 +337,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     await expect(async () => {
       const pushMetricsCount = cliHelper
         .execSilent(
-          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs[1m])' | jq '.data.result[0].value[1]''`,
+          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs[10s])' | jq '.data.result[0].value[1]''`,
         )
         .stdout.trim()
         .replaceAll('"', '');
