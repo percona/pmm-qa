@@ -2,6 +2,7 @@
 set -e
 
 source "$(dirname "${BASH_SOURCE[0]}")/wait-for-pmm-agent.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/wait-for-metrics.sh"
 
 pmm_mongo_user=${PMM_MONGO_USER:-pmm}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-pmmpass}
@@ -52,6 +53,7 @@ DEBUG_FLAG=""
 
 random_number=$RANDOM
 nodes="rs101 rs102 rs103"
+declare -A added_services=()
 for node in $nodes
 do
     echo "configuring pmm agent on $node"
@@ -63,6 +65,7 @@ do
       echo
       docker compose -f docker-compose-rs.yaml exec -T $node pmm-admin add mongodb --enable-all-collectors --agent-password=mypass --environment=psmdb-dev --cluster=replicaset --replication-set=rs "${client_credentials_flags[@]}" --host=${node} --port=27017 ${node}${gssapi_service_name_part}_${random_number}
     fi
+    added_services[$node]="${node}${gssapi_service_name_part}_${random_number}"
 done
 echo
 echo "adding some data"
@@ -86,3 +89,14 @@ db.students.insertMany([
 
 db.createView( 'firstYears', 'students', [{ \$match: { year: 1 } }]);
 EOF
+
+echo
+echo "waiting for the first low-resolution scrape of the mongodb exporters"
+for node in "${!added_services[@]}"
+do
+    # An arbiter holds no data, so dbstats never reports for it.
+    if [[ $mongo_setup_type == "psa" && $node == "rs103" ]]; then
+      continue
+    fi
+    wait_for_dbstats_metrics docker-compose-rs.yaml "$node" "${added_services[$node]}"
+done
