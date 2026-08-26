@@ -138,7 +138,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         ).stdout,
       );
 
-      expect(countOfBasicMetrics).toEqual('0');
+      expect(
+        countOfBasicMetrics,
+        `Actual count of basic metrics is: ${countOfBasicMetrics} should equal: 0`,
+      ).toEqual('0');
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
       timeout: Timeouts.TWO_MINUTES,
