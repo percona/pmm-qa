@@ -293,7 +293,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       timeout: Timeouts.ONE_MINUTE,
     });
     console.log(
-      `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --push-metrics=false`,
+      `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --push-metrics=false`,
     );
 
     // cliHelper
