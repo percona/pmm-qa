@@ -5,16 +5,21 @@ import { Timeouts } from '@helpers/timeouts';
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
 
+  let containerName: string;
   let rdsExporterId: string;
   let rdsExporterPort: string;
   const serverUrlFlag = `--server-url=http://admin:Heslo123@127.0.0.1:8080`;
 
+  pmmTest.beforeAll(async ({ cliHelper }) => {
+    containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
+  });
+
   pmmTest('T10000 - Add rds @rds-integration', async ({ api, cliHelper }) => {
     const externalNodeId = cliHelper
-      .execSilent(`docker exec pdpgsql_pmm_17_1 pmm-admin status | grep "Node ID" | awk -F' ' '{print $4}'`)
+      .execSilent(`docker exec ${containerName} pmm-admin status | grep "Node ID" | awk -F' ' '{print $4}'`)
       .stdout.trim();
     const externalPMMAgentId = cliHelper
-      .execSilent(`docker exec pdpgsql_pmm_17_1 pmm-admin status | grep "Agent ID" | awk -F' ' '{print $4}'`)
+      .execSilent(`docker exec ${containerName} pmm-admin status | grep "Agent ID" | awk -F' ' '{print $4}'`)
       .stdout.trim();
 
     console.log(`External node name is: ${externalNodeId}`);
@@ -48,9 +53,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     await expect(async () => {
       const status = cliHelper
-        .execSilent(
-          `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $2}'`,
-        )
+        .execSilent(`docker exec ${containerName} pmm-admin list ${serverUrlFlag}`)
         .stdout.trim();
 
       expect(status).toEqual('Running');
