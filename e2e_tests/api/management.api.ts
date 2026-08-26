@@ -19,7 +19,8 @@ interface AddInstanceRDS {
   metrics_mode?: number;
   node_name?: string;
   password?: string;
-  pmm_agent_id?: 'pmm-server';
+  node_id: string;
+  pmm_agent_id?: 'pmm-server' | string;
   port?: number;
   qan_mysql_perfschema?: boolean;
   rds_exporter?: boolean;
