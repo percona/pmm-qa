@@ -88,7 +88,6 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 
 <!-- E2E-TAGS-START -->
 
-- `@127`
 - `@alerting`
 - `@all`
 - `@dashboards`

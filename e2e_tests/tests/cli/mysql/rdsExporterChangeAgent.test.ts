@@ -8,7 +8,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let containerName: string;
   let rdsExporterId: string;
   let rdsExporterPort: string;
-  const serverUrlFlag = `--server-url=http://admin:Heslo123@127.0.0.1:8080`;
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
@@ -237,46 +236,40 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  // eslint-disable-next-line playwright/expect-expect -- Temporary test
   pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper }) => {
-    rdsExporterId = cliHelper
-      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $4}'`)
-      .stdout.trim();
-
     rdsExporterPort = cliHelper
       .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $5}'`)
       .stdout.trim();
 
-    // cliHelper
-    //   .execSilent(
-    //     `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --push-metrics`,
-    //   )
-    //   .assertSuccess();
+    cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --push-metrics`,
+      )
+      .assertSuccess();
 
     console.log(
-      `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --push-metrics`,
+      `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --push-metrics`,
     );
 
-    // await expect(async () => {
-    //   console.log(
-    //     `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --push-metrics`,
-    //   );
-    //
-    //   const pushMetricsList = cliHelper
-    //     .execSilent(
-    //       `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $3}'`,
-    //     )
-    //     .stdout.trim();
-    //
-    //   expect(
-    //     pushMetricsList,
-    //     `Metrics mode for rds exporter should be push, but is: ${pushMetricsList}`,
-    //   ).toEqual('push');
-    // }).toPass({
-    //   intervals: [Timeouts.TWO_SECONDS],
-    //   timeout: Timeouts.ONE_MINUTE,
-    // });
-    //
+    await expect(async () => {
+      console.log(
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --push-metrics`,
+      );
+
+      const pushMetricsList = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $3}'`,
+        )
+        .stdout.trim();
+
+      expect(
+        pushMetricsList,
+        `Metrics mode for rds exporter should be push, but is: ${pushMetricsList}`,
+      ).toEqual('push');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
 
     // await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
