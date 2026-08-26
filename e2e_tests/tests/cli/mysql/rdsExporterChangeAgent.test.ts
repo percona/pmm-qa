@@ -332,4 +332,16 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     await list.outContains('Running');
     await list.outContains(rdsExporterId);
   });
+
+  pmmTest('T1007 - Debug trace @rds-integration', async ({ cliHelper }) => {
+    console.log(
+      cliHelper
+        .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter`)
+        .stdout.trim()
+        .split(' '),
+    );
+    await cliHelper
+      .changeAgent(containerName, Types.rds, rdsExporterId, '--debug --trace --json')
+      .outContains('RDS Exporter agent configuration updated.');
+  });
 });

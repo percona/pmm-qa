@@ -20,9 +20,9 @@ export enum AgentTypes {
 
 export default class CliHelper {
   changeAgent = (containerName: string, type: ChangeAgentTypes, id: string, flag: string) =>
-    this.execSilent(`docker exec ${containerName} pmm-admin inventory change agent ${type} ${id} ${flag}`)
-      .assertSuccess()
-      .stdout.trim();
+    this.execSilent(
+      `docker exec ${containerName} pmm-admin inventory change agent ${type} ${id} ${flag}`,
+    ).assertSuccess();
 
   /**
    * Shell(sh) echo().to() wrapper to use in tests with handy logs creation
