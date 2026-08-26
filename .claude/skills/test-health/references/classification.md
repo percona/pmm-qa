@@ -3,8 +3,10 @@
 ## From the log
 
 This CLI has no command that returns failure output, so the log comes from the run that produced it: the
-GitHub Actions job log for the session's workflow run (GitHub MCP `get_job_logs`, which Routine sessions can
-use where `gh` is absent), and the `logs.zip` each runner uploads via `launchable record attachment`. Take the
+GitHub Actions job log for the session's workflow run, and the `logs.zip` each runner uploads via
+`launchable record attachment`. Reach the job log by whatever the session has — the GitHub MCP `get_job_logs`,
+`gh run view <id> --log-failed`, or the REST API over the proxy; a Routine-fired session may have no MCP
+connectors and no `gh`, in which case the absence of evidence is the finding. Take the
 session id from `stats test-sessions` back to its run before reading anything into a failure.
 
 The distinction that matters is whether the test failed for a reason inside the test or outside it:

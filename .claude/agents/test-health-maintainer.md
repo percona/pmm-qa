@@ -28,7 +28,10 @@ remembered cutoff.
 ## 2. Establish evidence
 
 Existing logs are the primary evidence and need no environment — the failing run's own job log and uploaded
-`logs.zip` over the spike window, classified per the skill's `classification.md`, settle most candidates.
+`logs.zip` over the spike window, classified per the skill's `classification.md`, settle most candidates. Reach
+the job log by whatever this session has: the GitHub MCP `get_job_logs`, `gh run view --log-failed`, or the
+REST API over the proxy. If none is reachable, say the evidence was unavailable rather than ranking on
+counts alone and calling it evidence.
 
 Where the logs are genuinely inconclusive **and** the candidate is this week's top pick, hand that one candidate
 to **Investigator**: read `.claude/agents/investigator.md` and follow its dedup → reproduce → classify pipeline
@@ -53,8 +56,12 @@ You never merge, approve, close, or reopen anything, and you never change quaran
 
 One message to Slack `#qa-automation` through the relay. Reuse the `POST /slack/announce` recipe in
 `.claude/agents/pr-maintainer.md` verbatim — including the relay host, which changes on rebuild, so read it
-from that file rather than remembering it. Routine sessions have no `gh`, so get the `X-Actor` login from the
-GitHub MCP `get_me` rather than `gh api user`.
+from that file rather than remembering it. The relay is deliberately the delivery path: a Routine-fired session
+carries no MCP connectors, so no Slack tool is available there.
+
+For the `X-Actor` login use whichever of the GitHub MCP `get_me` or `gh api user --jq .login` this session
+actually has — a Routine session may have neither, and then the relay call is the blocker to report, not
+something to work around.
 
 Format: a title line with the date, then one section per non-empty bucket with counts and the week-over-week
 move, the two or three candidates worth a human's attention with their evidence in a line each, and a line for
