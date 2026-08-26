@@ -6,7 +6,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest.describe.configure({ mode: 'serial' });
 
   let rdsExporterId;
-  const serverUrlFlag = `--server-url=http://admin:${process.env.ADMIN_PASSWORD}@127.0.0.1:8080`;
+  let rdsExporterPort;
+  const serverUrlFlag = `--server-url=http://admin:Heslo123@127.0.0.1:8080`;
 
   pmmTest('T10000 - Add rds @rds-integration', async ({ api, cliHelper }) => {
     await api.managementApi.addService({
@@ -92,5 +93,42 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       intervals: [Timeouts.TWO_SECONDS],
       timeout: Timeouts.ONE_MINUTE,
     });
+  });
+
+  pmmTest('T1002 - enable disable basic metrics @rds-integration', async ({ cliHelper, page }) => {
+    console.log(`Server url flag is: ${serverUrlFlag}`);
+    console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
+
+    rdsExporterId = cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $4}'`,
+      )
+      .stdout.trim();
+
+    rdsExporterPort = cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $5}'`,
+      )
+      .stdout.trim();
+
+    cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-basic-metrics`,
+      )
+      .assertSuccess();
+
+    await expect(async () => {
+      const countOfBasicMetrics = cliHelper.execSilent(
+        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
+      ).stdout;
+
+      expect(countOfBasicMetrics).toEqual('0');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Temporary test
+    await page.waitForTimeout(Timeouts.TEN_SECONDS);
   });
 });
