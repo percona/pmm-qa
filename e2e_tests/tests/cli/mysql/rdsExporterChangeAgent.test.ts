@@ -194,6 +194,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       timeout: Timeouts.ONE_MINUTE,
     });
 
+    console.log(
+      `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-enhanced-metrics=false`,
+    );
+
     cliHelper
       .execSilent(
         `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-enhanced-metrics=false`,
@@ -206,6 +210,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^rdsosmetrics_'`,
         )
         .stdout.trim();
+
+      console.log(
+        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^rdsosmetrics_'`,
+      );
 
       expect(
         Number.parseInt(countOfBasicMetrics),
