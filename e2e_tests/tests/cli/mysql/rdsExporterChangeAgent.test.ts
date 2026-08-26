@@ -123,6 +123,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ).stdout;
 
       console.log(
+        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
+      );
+
+      console.log(
         cliHelper.execSilent(
           `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep '^aws_rds_'`,
         ).stdout,
