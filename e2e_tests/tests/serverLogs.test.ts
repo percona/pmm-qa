@@ -6,6 +6,8 @@ import apiEndpoints from '@helpers/apiEndpoints';
 import { getFileLineCount } from '@helpers/archive.helper';
 import { pmmUrl } from '../playwright.config';
 
+pmmTest.describe.configure({ mode: 'default' });
+
 const fileNameToCheck = 'pmm-managed.log';
 
 pmmTest.beforeAll(async () => {
