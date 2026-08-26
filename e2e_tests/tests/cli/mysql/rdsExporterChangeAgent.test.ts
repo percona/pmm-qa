@@ -155,4 +155,65 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       timeout: Timeouts.ONE_MINUTE,
     });
   });
+
+  pmmTest('T1003 - enable disable enhanced metrics @rds-integration', async ({ cliHelper }) => {
+    console.log(`Server url flag is: ${serverUrlFlag}`);
+    console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
+
+    rdsExporterId = cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $4}'`,
+      )
+      .stdout.trim();
+
+    rdsExporterPort = cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $5}'`,
+      )
+      .stdout.trim();
+
+    cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-enhanced-metrics`,
+      )
+      .assertSuccess();
+
+    await expect(async () => {
+      const countOfBasicMetrics = cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^rdsosmetrics_'`,
+        )
+        .stdout.trim();
+
+      expect(
+        countOfBasicMetrics,
+        `Actual count of enhanced metrics is: ${countOfBasicMetrics} should equal: 0`,
+      ).toEqual('0');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+
+    cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-enhanced-metrics=false`,
+      )
+      .assertSuccess();
+
+    await expect(async () => {
+      const countOfBasicMetrics = cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^rdsosmetrics_'`,
+        )
+        .stdout.trim();
+
+      expect(
+        Number.parseInt(countOfBasicMetrics),
+        `Actual count of enhanced metrics is: ${countOfBasicMetrics} should be greater than: 0`,
+      ).toBeGreaterThan(0);
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+  });
 });
