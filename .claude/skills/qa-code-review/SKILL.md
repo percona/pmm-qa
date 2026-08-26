@@ -40,7 +40,7 @@ A path with no reference gets section 3 and nothing more. Say that in the summar
 6. **Generated regions.** Content between `<!-- *-START -->` / `<!-- *-END -->` markers is produced by `support_scripts/generate_readme.py:191`. A hand edit there is 🔴 even when the text happens to be right.
 7. **Over-engineering.** Hand-rolled machinery is a finding until proven necessary. Duplicated blocks, a helper or const file with one caller, two tests where one covers the regression, a new tag where an existing one fits — all 🟡 or worse.
 8. **New `eslint-disable`.** The `--` reason must state a real invariant. `TODO` as the reason means the code is not ready.
-9. **Bot findings.** CodeRabbit findings are claims to verify, not noise: an unanswered valid one is 🟡. Never restate a finding that already has a thread. Read the PR's threads before writing anything (`pull_request_read` → `get_review_comments`) and sweep every bot — CodeRabbit, Copilot, any other — for a finding the author never answered or resolved. Each one that is still open and still valid gets a thread asking for it to be answered and resolved; each one that is open but wrong gets a thread saying so, so the author can close it with a reason instead of leaving it hanging. A finding that already has a thread gets a **reply inside that thread**, never a parallel one. A finding with no file line — a PR-level bot verdict, a problem with the body or the scope — goes in the summary comment.
+9. **Bot findings.** CodeRabbit findings are claims to verify, not noise: an unanswered valid one is 🟡. Never restate a finding that already has a thread. Read the PR's existing threads before writing anything and sweep every bot — CodeRabbit, Copilot, any other — for a finding the author never answered or resolved. Each one that is still open and still valid gets a thread asking for it to be answered and resolved; each one that is open but wrong gets a thread saying so, so the author can close it with a reason instead of leaving it hanging. A finding that already has a thread gets a **reply inside that thread**, never a parallel one. A finding with no file line — a PR-level bot verdict, a problem with the body or the scope — goes in the summary comment.
 10. **Blocked PR.** Depends on unmerged work → draft, with the dependency linked in the body (`> [!WARNING] This is dependent on <url>` or a plain `Depends on <url>`).
 11. **A method with one caller does not need to exist.** Called exactly once → inline it at the call site and delete it. Applies to page-object methods, helpers, API-class methods and const files alike. Reuse that is only planned is not reuse. 🟡
 12. **No methods in a test file.** A test file holds tests. Behaviour belongs in a page object or a helper, whichever is more coherent for it — never declared next to the tests. This does not conflict with 11: 11 says do not create the abstraction when there is one caller, 12 says where it lives once it has earned existing. 🟡
@@ -59,8 +59,9 @@ A path with no reference gets section 3 and nothing more. Say that in the summar
 
 - One thread per finding, anchored at the exact `file:line`.
 - Thread body: the claim in one sentence, then why it matters, then the concrete change. Lead with the emoji.
+- Post each thread with `confirmed: true` where the tool takes it. Without it the comment is buffered and classified once the session ends, and a real finding can be dropped as a probe.
 - One summary comment: counts per severity, plus any finding that has no line to anchor to.
-- Say what you ran (section 1) and its result in the summary.
+- Name the checks you read (section 1) and their result in the summary.
 
 ## 6. Never
 
