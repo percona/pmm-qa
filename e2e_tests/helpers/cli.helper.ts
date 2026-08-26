@@ -1,5 +1,7 @@
 import shell from 'shelljs';
 import ExecReturn from '@interfaces/execReturn';
+import { expect } from '@playwright/test';
+import { Timeouts } from '@helpers/timeouts';
 
 interface getMetrics {
   serviceName: string;
@@ -10,6 +12,10 @@ interface getMetrics {
 
 export enum ChangeAgentTypes {
   rds = 'rds-exporter',
+}
+
+export enum AgentTypes {
+  rds = 'rds_exporter',
 }
 
 export default class CliHelper {
@@ -77,6 +83,11 @@ export default class CliHelper {
     return new ExecReturn(command, code, stdout, stderr);
   };
 
+  getAgentStatus = (containerName: string, agentType: AgentTypes) =>
+    this.execSilent(
+      `docker exec ${containerName} pmm-admin list | grep ${agentType} | awk -F' ' '{print $3}'`,
+    ).stdout.trim();
+
   /**
    * Scrape all metrics from exporter found by Service Name
    *
@@ -131,5 +142,21 @@ export default class CliHelper {
     return this.execSilent(
       `${prefix}curl -s "http://${agentUser}:${agentPassword}@127.0.0.1:${listenPort}/metrics"`,
     ).stdout;
+  };
+
+  waitForAgentStatus = async (
+    containerName: string,
+    agentType: AgentTypes,
+    status: 'Running',
+    timeout: Timeouts = Timeouts.ONE_MINUTE,
+  ) => {
+    await expect(async () => {
+      const agentStatus = this.getAgentStatus(containerName, agentType);
+
+      expect(agentStatus, `Agent status should be: ${status} but is: ${agentStatus}`).toEqual(status);
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: timeout,
+    });
   };
 }

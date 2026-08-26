@@ -1,7 +1,7 @@
 import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
-import { ChangeAgentTypes } from '@helpers/cli.helper';
+import { ChangeAgentTypes as Types } from '@helpers/cli.helper';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
@@ -241,16 +241,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     rdsExporterPort = cliHelper
       .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $5}'`)
       .stdout.trim();
-    cliHelper.changeAgent(containerName, ChangeAgentTypes.rds, rdsExporterId, '--push-metrics');
-    console.log(
-      `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --push-metrics`,
-    );
+    cliHelper.changeAgent(containerName, Types.rds, rdsExporterId, '--push-metrics');
 
     await expect(async () => {
-      console.log(
-        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --push-metrics`,
-      );
-
       const pushMetricsList = cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $3}'`,
@@ -279,29 +272,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       console.log(
         cliHelper.execSilent(
-          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs[10s])' | jq `,
+          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs[10s])' | jq '.data'`,
         ).stdout,
       );
       console.log(`Push metrics counts is: "${pushMetricsCount}"`);
 
       expect(
         Number.parseInt(pushMetricsCount, 10),
-        `Count of metrics in the last ten seconds should be greater than 0 but is: ${pushMetricsCount}`,
+        `Count of metrics for push mode in the last ten seconds should be greater than 0 but is: ${pushMetricsCount}`,
       ).toBeGreaterThan(0);
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
       timeout: Timeouts.ONE_MINUTE,
     });
-    console.log(
-      `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --push-metrics=false`,
-    );
 
-    // cliHelper
-    //   .execSilent(
-    //     `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --push-metrics=false`,
-    //   )
-    //   .assertSuccess();
-    //
+    cliHelper.changeAgent(containerName, Types.rds, rdsExporterId, '--push-metrics=false');
+
     // await expect(async () => {
     //   const pullMetricsList = cliHelper
     //     .execSilent(
@@ -331,7 +317,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     //
     //   expect(
     //     Number.parseInt(pushMetricsCount, 10),
-    //     `Count of metrics in the last ten seconds should be greater than 0 but is: ${pushMetricsCount}`,
+    //     `Count of metrics in the pull mode for last ten seconds should be greater than 0 but is: ${pushMetricsCount}`,
     //   ).toBeGreaterThan(0);
     // }).toPass({
     //   intervals: [Timeouts.TWO_SECONDS],
