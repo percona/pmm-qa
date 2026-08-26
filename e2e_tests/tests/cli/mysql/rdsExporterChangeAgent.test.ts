@@ -239,4 +239,65 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await expect(agentsPage.builders.property(customLabels)).toBeVisible();
     },
   );
+
+  pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper }) => {
+    console.log(`Server url flag is: ${serverUrlFlag}`);
+    console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
+
+    rdsExporterId = cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $4}'`,
+      )
+      .stdout.trim();
+
+    rdsExporterPort = cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $5}'`,
+      )
+      .stdout.trim();
+
+    cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --push-metrics`,
+      )
+      .assertSuccess();
+
+    await expect(async () => {
+      const pushMetricsList = cliHelper
+        .execSilent(
+          `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $3}'`,
+        )
+        .stdout.trim();
+
+      expect(
+        pushMetricsList,
+        `Metrics mode for rds exporter should be push, but is: ${pushMetricsList}`,
+      ).toEqual('push');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+
+    cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --push-metrics=false`,
+      )
+      .assertSuccess();
+
+    await expect(async () => {
+      const pullMetricsList = cliHelper
+        .execSilent(
+          `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $3}'`,
+        )
+        .stdout.trim();
+
+      expect(
+        pullMetricsList,
+        `Metrics mode for rds exporter should be push, but is: ${pullMetricsList}`,
+      ).toEqual('push');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+  });
 });
