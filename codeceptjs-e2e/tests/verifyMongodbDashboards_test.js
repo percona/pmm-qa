@@ -59,9 +59,18 @@ Scenario(
 Scenario(
   'PMM-T1333 - Verify MongoDB - MongoDB Collections Overview @mongodb-exporter @nightly @gssapi-nightly',
   async ({
-    I, dashboardPage, inventoryAPI, adminPage,
+    I, dashboardPage, inventoryAPI, adminPage, grafanaAPI,
   }) => {
     const mongoService = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101' });
+
+    // Wait for the service's metrics before loading the dashboard, not after: Grafana
+    // resolves $database and $replication_set once, at page load, and never re-resolves
+    // them on refresh, so a dashboard opened before the first scrape keeps empty
+    // variables - and empty panels - for the rest of the test. mongodb_dbstats_* needs
+    // its own wait because PMM collects it on the exporter's low-resolution (1m) job,
+    // up to a minute behind the 5s job every other panel here reads.
+    await grafanaAPI.waitForMetric('mongodb_top_commands_count', { type: 'service_name', value: mongoService.service_name }, 120);
+    await grafanaAPI.waitForMetric('mongodb_dbstats_dataSize', { type: 'service_name', value: mongoService.service_name }, 120);
 
     I.amOnPage(
       I.buildUrlWithParams(dashboardPage.mongoDbCollectionsOverview.clearUrl, {
@@ -74,10 +83,7 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await adminPage.performPageDown(5);
     await dashboardPage.verifyMetricsExistence(dashboardPage.mongoDbCollectionsOverview.metrics);
-    // The Datasize panels read mongodb_dbstats_*, which PMM scrapes on the exporter's
-    // low-resolution (1m) job, so on a freshly registered service their first sample can
-    // land up to a minute after the 5s panels on the same dashboard already have data.
-    await dashboardPage.waitForGraphsToHaveData(2, 120);
+    await dashboardPage.waitForGraphsToHaveData(2, 60);
   },
 );
 
