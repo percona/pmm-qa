@@ -118,25 +118,33 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .assertSuccess();
 
     await expect(async () => {
-      const countOfBasicMetrics = cliHelper.execSilent(
-        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
-      ).stdout;
-
-      console.log(
-        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
-      );
-
-      console.log(
-        cliHelper.execSilent(
-          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep '^aws_rds_'`,
-        ).stdout,
-      );
-
-      console.log(
-        cliHelper.execSilent(
+      const countOfBasicMetrics = cliHelper
+        .execSilent(
           `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
-        ).stdout,
+        )
+        .stdout.trim();
+
+      console.log(
+        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
       );
+
+      console.log(
+        cliHelper
+          .execSilent(
+            `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep '^aws_rds_'`,
+          )
+          .stdout.trim(),
+      );
+
+      console.log(
+        cliHelper
+          .execSilent(
+            `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
+          )
+          .stdout.trim(),
+      );
+
+      console.log(countOfBasicMetrics === '0');
 
       expect(
         countOfBasicMetrics,
@@ -144,7 +152,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ).toEqual('0');
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
-      timeout: Timeouts.TWO_MINUTES,
+      timeout: Timeouts.ONE_MINUTE,
     });
 
     // eslint-disable-next-line playwright/no-wait-for-timeout -- Temporary test
