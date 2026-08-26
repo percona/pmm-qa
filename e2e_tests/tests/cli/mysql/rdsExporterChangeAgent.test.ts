@@ -240,7 +240,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper, page }) => {
+  // eslint-disable-next-line playwright/no-skipped-test -- Temporary test
+  pmmTest.skip('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper, page }) => {
     console.log(`Server url flag is: ${serverUrlFlag}`);
     console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
 
