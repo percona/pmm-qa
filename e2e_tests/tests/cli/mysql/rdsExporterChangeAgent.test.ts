@@ -181,7 +181,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     await expect(async () => {
       const countOfBasicMetrics = cliHelper
         .execSilent(
-          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^rdsosmetrics_'`,
+          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/enhanced | grep -c '^rdsosmetrics_'`,
         )
         .stdout.trim();
 
@@ -207,12 +207,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     await expect(async () => {
       const countOfBasicMetrics = cliHelper
         .execSilent(
-          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^rdsosmetrics_'`,
+          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/enhanced | grep -c '^rdsosmetrics_'`,
         )
         .stdout.trim();
 
       console.log(
-        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^rdsosmetrics_'`,
+        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/enhanced | grep -c '^rdsosmetrics_'`,
       );
 
       expect(
