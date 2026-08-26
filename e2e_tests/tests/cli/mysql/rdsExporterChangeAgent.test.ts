@@ -5,8 +5,8 @@ import { Timeouts } from '@helpers/timeouts';
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
 
-  let rdsExporterId;
-  let rdsExporterPort;
+  let rdsExporterId: string;
+  let rdsExporterPort: string;
   const serverUrlFlag = `--server-url=http://admin:Heslo123@127.0.0.1:8080`;
 
   pmmTest('T10000 - Add rds @rds-integration', async ({ api, cliHelper }) => {
@@ -95,7 +95,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     });
   });
 
-  pmmTest('T1002 - enable disable basic metrics @rds-integration', async ({ cliHelper, page }) => {
+  pmmTest('T1002 - enable disable basic metrics @rds-integration', async ({ cliHelper }) => {
     console.log(`Server url flag is: ${serverUrlFlag}`);
     console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
 
@@ -124,28 +124,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         )
         .stdout.trim();
 
-      console.log(
-        `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
-      );
-
-      console.log(
-        cliHelper
-          .execSilent(
-            `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep '^aws_rds_'`,
-          )
-          .stdout.trim(),
-      );
-
-      console.log(
-        cliHelper
-          .execSilent(
-            `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
-          )
-          .stdout.trim(),
-      );
-
-      console.log(countOfBasicMetrics === '0');
-
       expect(
         countOfBasicMetrics,
         `Actual count of basic metrics is: ${countOfBasicMetrics} should equal: 0`,
@@ -155,7 +133,26 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       timeout: Timeouts.ONE_MINUTE,
     });
 
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Temporary test
-    await page.waitForTimeout(Timeouts.TEN_SECONDS);
+    cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-basic-metrics=false`,
+      )
+      .assertSuccess();
+
+    await expect(async () => {
+      const countOfBasicMetrics = cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
+        )
+        .stdout.trim();
+
+      expect(
+        Number.parseInt(countOfBasicMetrics),
+        `Actual count of basic metrics is: ${countOfBasicMetrics} should be greater than: 0`,
+      ).toBeGreaterThan(0);
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
   });
 });
