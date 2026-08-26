@@ -74,7 +74,10 @@ Scenario(
     dashboardPage.waitForDashboardOpened();
     await adminPage.performPageDown(5);
     await dashboardPage.verifyMetricsExistence(dashboardPage.mongoDbCollectionsOverview.metrics);
-    await dashboardPage.verifyThereAreNoGraphsWithoutData(2);
+    // The Datasize panels read mongodb_dbstats_*, which PMM scrapes on the exporter's
+    // low-resolution (1m) job, so on a freshly registered service their first sample can
+    // land up to a minute after the 5s panels on the same dashboard already have data.
+    await dashboardPage.waitForGraphsToHaveData(2, 120);
   },
 );
 
