@@ -53,7 +53,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     await expect(async () => {
       const status = cliHelper
-        .execSilent(`docker exec ${containerName} pmm-admin list grep rds_exporter | awk -F' ' '{print $2}'`)
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $2}'`,
+        )
         .stdout.trim();
 
       expect(status).toEqual('Running');
