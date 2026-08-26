@@ -67,6 +67,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     rdsExporterId = cliHelper
       .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $4}'`)
       .stdout.trim();
+    rdsExporterPort = cliHelper
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $5}'`)
+      .stdout.trim();
   });
 
   pmmTest('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper, page }) => {
@@ -238,11 +241,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper, page }) => {
-    rdsExporterPort = cliHelper
-      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $5}'`)
-      .stdout.trim();
+    console.log(
+      cliHelper
+        .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter`)
+        .stdout.trim()
+        .split(' '),
+    );
     cliHelper.changeAgent(containerName, Types.rds, rdsExporterId, '--push-metrics');
-
     await expect(async () => {
       const pushMetricsList = cliHelper
         .execSilent(

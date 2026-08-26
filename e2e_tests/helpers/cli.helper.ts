@@ -85,7 +85,7 @@ export default class CliHelper {
 
   getAgentStatus = (containerName: string, agentType: AgentTypes) =>
     this.execSilent(
-      `docker exec ${containerName} pmm-admin list | grep ${agentType} | awk -F' ' '{print $3}'`,
+      `docker exec ${containerName} pmm-admin list | grep ${agentType} | awk -F' ' '{print $2}'`,
     ).stdout.trim();
 
   /**
