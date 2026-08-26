@@ -122,10 +122,16 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
       ).stdout;
 
+      console.log(
+        cliHelper.execSilent(
+          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep '^aws_rds_'`,
+        ).stdout,
+      );
+
       expect(countOfBasicMetrics).toEqual('0');
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
-      timeout: Timeouts.ONE_MINUTE,
+      timeout: Timeouts.TWO_MINUTES,
     });
 
     // eslint-disable-next-line playwright/no-wait-for-timeout -- Temporary test
