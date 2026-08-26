@@ -103,7 +103,11 @@ Do not "correct" these. They are load-bearing.
   for this reason. Migration must preserve every original CodeceptJS tag verbatim.
 - **No `expect` timeout in `playwright.config.ts`**, so the default 5s applies and individual
   assertions carry an explicit `Timeouts.X` where they need longer.
-- **`fullyParallel: true` with `workers: 1` by default**; do not assume cross-test parallelism.
+- **`fullyParallel: true`, with `workers: 1` only as the CI default** - `playwright.config.ts` reads
+  `WORKERS`, so never treat single-worker execution as guaranteed. Do not assume cross-test
+  parallelism, and equally do not assume its absence: any `beforeAll` that is expensive or mutates
+  shared server state must be pinned with `describe.configure({ mode: 'default' })` or moved to a
+  worker-scoped fixture, because `beforeAll` runs once per worker.
 
 A migration never upgrades Playwright and never edits `playwright.config.ts`.
 

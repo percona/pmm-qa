@@ -202,7 +202,7 @@ If retiring this source leaves a CodeceptJS job's grep expression selecting zero
 
 For Playwright coverage, add it on the surfaces the enumeration above showed the *source* actually runs on. Only when the source is genuinely in a nightly grep does the append-to-nightly default apply; appending otherwise manufactures nightly coverage that never existed while leaving the surface the source really ran on with zero Playwright coverage once the tag retires - the exact "coverage vanishes on retirement" failure these rules exist to prevent.
 
-On that surface, append the migrated tag to the existing `test_execution_playwright` matrix entry. Do not add a new Playwright job block: that job and its counter are already established on `main`, and adding coverage should be a one-line tag append to the existing `tags_for_tests` matrix entry. Only when no Playwright job of any kind exists yet for this migration's CI surface (for example, a job not fed by `test_execution_playwright` at all - see the FB-suite case below) may a new job be created, mirroring the retiring CodeceptJS job's setup verbatim.
+On a surface the source genuinely ran on, and only there, append the migrated tag to that surface's existing `test_execution_playwright` matrix entry. Do not add a new Playwright job block: that job and its counter are already established on `main`, and adding coverage should be a one-line tag append to the existing `tags_for_tests` matrix entry. Two cases are not this case, and both take a new job rather than an append: no Playwright job of any kind exists yet for this migration's CI surface, or the surface is `fb-e2e-suite.yml`, which has no `test_execution_playwright` entry to append to - see The FB-suite case below. In either, mirror the retiring CodeceptJS job's setup verbatim.
 
 `expected_test_jobs` in `nightly-e2e-tests-matrix.yml` is the number of nightly test-execution jobs the setup shards wait for, matched by the `"test execution / "` name prefix in `runner-e2e-tests-codeceptjs-remote-nightly-setup.yml`. Both CodeceptJS and Playwright test-execution jobs count toward it. So:
 
@@ -212,7 +212,23 @@ On that surface, append the migrated tag to the existing `test_execution_playwri
 
 Count the nightly consumers after your edit and state the before/after number in the handoff rather than reasoning about the delta. Locate the counter mechanically instead of reasoning about your own edit - `grep -rn expected_test_jobs .github/workflows/` finds the single literal and the comment naming its consumers in one command, and it settles which workflow owns it, which is the question that gets answered wrong when framed as "did I add a job?".
 
-**Check selectability per scenario, not per file, and across every consumer, not only the job you edited.** A source file's scenarios rarely all carry the same tags, so the file's union of tags is not what CI selects on. Verify with `npx playwright test --list --grep '<expression>'` in both directions:
+### The FB-suite case
+
+`fb-e2e-suite.yml` is a separate surface with its own rules, and it is the one most easily lost: it is not fed by the nightly setup shards, carries no `expected_test_jobs` counter, and - unlike the matrix workflows - has no `test_execution_playwright` entry to append to at all. Coverage there is per-job.
+
+Almost every `@fb-*` tag is selected by a **CodeceptJS** job in that file (`grep -n "tags_for_tests" .github/workflows/fb-e2e-suite.yml`). Retiring a source off the `_test.js` discovery glob removes that source's scenarios from such a job while leaving the job itself green, because the job's grep still matches the other files carrying the same tag. Nothing fails, nothing warns, and the tag keeps appearing in CI job names - so the loss is invisible in exactly the place the `@fb-` prefix exists to guarantee coverage.
+
+So when any migrated scenario carries a tag selected by a CodeceptJS job in `fb-e2e-suite.yml`:
+
+- add a Playwright job to `fb-e2e-suite.yml` for that tag, mirroring the retiring source's `setup_services`. The `alerting` job there is the precedent for calling `runner-e2e-tests-playwright.yml` from this file; copy its shape, including `launchable_confidence` and the `pmm_qa_branch` expression;
+- leave the CodeceptJS job in place unless retirement emptied it completely - it normally still has live files behind the same grep; and
+- state the tag's FB consumers, before and after the edit, in the handoff.
+
+Do not treat "the `@fb-settings` job still runs" as evidence of coverage. The question is whether *this migration's scenarios* are still selected somewhere in that file, which only `--list --grep` against the job's own expression answers.
+
+### Check selectability per scenario and across every consumer
+
+A source file's scenarios rarely all carry the same tags, so the file's union of tags is not what CI selects on. Verify with `npx playwright test --list --grep '<expression>'` in both directions:
 
 - every migrated scenario is now selected by some Playwright job; and
 - every tag the edited job already carried still selects exactly what it selected before.

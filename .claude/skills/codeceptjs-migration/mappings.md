@@ -52,6 +52,7 @@ Legacy remote-instance tests route from `client_container` to a database through
 `useDataQA(sel)`->`getByTestId(sel)`.
 `seeElementsDisabled/seeElementsEnabled(locator)`->`expect(locator).toHaveAttribute('disabled', ...)`/`toBeEnabled()`.
 `locate('$testid').find('<tag>')`(labelLocator)->`getByTestId('testid')`assertedWith`toContainText`, notA`.locator('<tag>')`chainPlus`first()`. Under MUI the child tag is routinely multi-match, so the literal translation is a strict-mode violation on `toBeVisible`/`toContainText`, while the wrapper's innerText is the union of those children. Narrow to a child testid only when MCP shows the wrapper itself is multi-match.
+`BeforeSuite`/`AfterSuite` -> `beforeAll`/`afterAll`, but the scope is not equivalent: CodeceptJS runs `BeforeSuite` once per suite, while Playwright runs `beforeAll` **once per worker**, and `playwright.config.ts` sets `fullyParallel: true`. A ported `BeforeSuite` whose body is expensive or mutates shared server state therefore runs once per worker that picks up a test from the file - three times for a three-scenario file at `WORKERS=3`. Preserve once-per-file semantics explicitly with a top-level `pmmTest.describe.configure({ mode: 'default' })` (applies file-wide, so no describe block and no re-indentation of the scenarios) or a worker-scoped fixture. `Before`/`After` -> `beforeEach`/`afterEach`, which do correspond directly.
 
 ## Custom Steps
 

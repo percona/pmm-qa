@@ -115,7 +115,10 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] No target registration is missing.
 - [ ] Every original CodeceptJS tag remains on the migrated Playwright scenarios.
 - [ ] Existing CodeceptJS jobs and grep expressions remain unchanged, unless retirement emptied one - in which case that job was deleted in this PR (see `branch-workflow.md` section Workflow coverage), not left in place reporting green on zero tests.
-- [ ] Each migrated tag is appended to the existing `test_execution_playwright` matrix entry, with no new job block added, unless no compatible job exists anywhere for this migration's CI surface - in which case a new job was created mirroring the retiring CodeceptJS job's setup.
+- [ ] Every surface the *source* ran on was enumerated before any coverage was added, and each migrated tag's consumers were named per workflow file - `fb-e2e-suite.yml` explicitly included, never folded into the word "nightly".
+- [ ] A `nightly-e2e-tests-matrix.yml` entry was added **only** where the source's own tags were already in a nightly grep. Manufactured nightly coverage - a tag appended to `test_execution_playwright` that the source never ran under - is a failure, not a safe default (see `branch-workflow.md` section Workflow coverage).
+- [ ] Where a migrated scenario carried a tag selected by a CodeceptJS job in `fb-e2e-suite.yml`, a Playwright job was added to that file mirroring the retiring source's `setup_services`. A still-green `@fb-*` CodeceptJS job is not evidence: it stays green on its remaining files while this migration's scenarios go unselected.
+- [ ] Otherwise, each migrated tag is appended to the existing `test_execution_playwright` matrix entry with no new job block added, unless no compatible job exists anywhere for this migration's CI surface - in which case a new job was created mirroring the retiring CodeceptJS job's setup.
 - [ ] `expected_test_jobs` matches the actual number of nightly `"test execution / "` consumer jobs after this PR's edits: unchanged when a tag was merely appended, incremented when a nightly consumer was added, decremented when one was deleted (including a CodeceptJS job this migration emptied). The before/after count is stated, not inferred.
 - [ ] Every migrated scenario title is selected by some Playwright job, proven with `npx playwright test --list --grep '<expression>'` and a title count - not merely believed selected because the file's union of tags looks right.
 - [ ] Every tag the edited job already carried still selects exactly what it selected before the edit (the same command, run against the pre-edit grep).
@@ -138,6 +141,8 @@ Unresolved dependencies: 0
 Unverified locators: 0
 Unselectable scenarios: 0
 Vacuous CodeceptJS jobs left undeleted: 0
+Surfaces with coverage lost: 0
+Manufactured nightly appends: 0
 expected_test_jobs mismatches: 0
 Required test execution: PASS
 Target regression: PASS or NOT REQUIRED
