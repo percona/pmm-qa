@@ -3,6 +3,7 @@ import { Timeouts } from '@helpers/timeouts';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type HaApi from '@api/ha.api';
 import apiEndpoints from '@helpers/apiEndpoints';
+import { HaStatusResponse } from '@interfaces/ha';
 import { expect } from '@playwright/test';
 
 const leaderLogLine = 'I am the leader!';
@@ -11,7 +12,7 @@ const pmmServerPort = 8_443;
 
 export const pmmServerPodSelector = 'app.kubernetes.io/component=pmm-server';
 /** The `pmm-ha` chart default. */
-const defaultReplicas = 3;
+export const defaultReplicas = 3;
 
 /**
  * PMM HA leadership asked of each pod directly, so tests can assert the UI and
@@ -48,6 +49,18 @@ export default class HaClusterHelper {
     await expect(async () => {
       expect(await haApi.getStatus()).toEqual('Enabled');
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+  };
+
+  /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
+  haStatusFromPod = (podName: string): string => {
+    const password = process.env.ADMIN_PASSWORD ?? 'admin';
+    const { stdout } = this.k8sHelper.execInPod(
+      podName,
+      `curl -sk -u admin:${password} https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.status}`,
+      { silent: true },
+    );
+
+    return (JSON.parse(stdout) as HaStatusResponse).status;
   };
 
   /**
