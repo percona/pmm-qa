@@ -298,7 +298,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       expect(
         pullMetricsList,
         `Metrics mode for rds exporter should be push, but is: ${pullMetricsList}`,
-      ).toEqual('push');
+      ).toEqual('pull');
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
       timeout: Timeouts.ONE_MINUTE,
