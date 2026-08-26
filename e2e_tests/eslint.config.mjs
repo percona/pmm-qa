@@ -282,6 +282,7 @@ export default defineConfig([
             'verifyRTAAgentStatus',
             'verifyAllMenuItems',
             'waitForServiceStatus',
+            'outContains',
           ],
         },
       ],

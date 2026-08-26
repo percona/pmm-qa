@@ -322,4 +322,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       timeout: Timeouts.ONE_MINUTE,
     });
   });
+
+  pmmTest('T1006 - server url and server insecure tls @rds-integration', async ({ cliHelper }) => {
+    const list = cliHelper.execSilent(
+      `docker exec ${containerName} pmm-admin list --server-url=https://admin:Heslo123@pmm-server:8443/ --server-insecure-tls`,
+    );
+
+    await list.outContains('rds_exporter');
+    await list.outContains('Running');
+    await list.outContains(rdsExporterId);
+  });
 });
