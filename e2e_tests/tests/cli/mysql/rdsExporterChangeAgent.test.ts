@@ -293,6 +293,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .stdout.trim()
         .replaceAll('"', '');
 
+      console.log(`Push metrics counts is: "${pushMetricsCount}"`);
+
       expect(
         Number.parseInt(pushMetricsCount, 10),
         `Count of metrics in the last ten seconds should be greater than 0 but is: ${pushMetricsCount}`,
@@ -319,6 +321,26 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         pullMetricsList,
         `Metrics mode for rds exporter should be push, but is: ${pullMetricsList}`,
       ).toEqual('pull');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Temporary test
+    await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
+    await expect(async () => {
+      const pushMetricsCount = cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs[1m])' | jq '.data.result[0].value[1]''`,
+        )
+        .stdout.trim()
+        .replaceAll('"', '');
+
+      expect(
+        Number.parseInt(pushMetricsCount, 10),
+        `Count of metrics in the last ten seconds should be greater than 0 but is: ${pushMetricsCount}`,
+      ).toBeGreaterThan(0);
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
       timeout: Timeouts.ONE_MINUTE,
