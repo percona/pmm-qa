@@ -240,6 +240,7 @@ The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/
 - Use path aliases (`@pages/`, `@helpers/`) in imports
 - Use Playwright's `test.step()` for readable test structure
 - Read suite-specific docs before contributing to `cli/`, `codeceptjs-e2e/`, or `package_tests/`
+- Write a skill or agent that wraps an **external CLI against the installed binary** — install the version CI actually pins and read `--help` for the real subcommand tree before documenting a single command
 
 ### Don't
 
@@ -248,6 +249,7 @@ The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/
 - Don't hardcode admin passwords — use `ADMIN_PASSWORD` env var (default `admin`)
 - Don't skip cleanup — CI runs accumulate state across tests
 - Don't mix Playwright Test and CodeceptJS patterns — new UI tests go in `e2e_tests/` (Playwright)
+- Don't document an external CLI from vendor docs alone — they may describe an unreleased, renamed or separately-packaged tool whose commands the installed one doesn't have. Where it can't be authenticated while authoring, mark command names and flags verified but output field names **unverified**, with an instruction to print one payload and correct them on the first real run, rather than inventing plausible keys
 
 ## Environment Variables
 
