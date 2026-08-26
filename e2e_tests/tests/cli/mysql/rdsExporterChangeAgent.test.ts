@@ -240,7 +240,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper }) => {
+  pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper, page }) => {
     console.log(`Server url flag is: ${serverUrlFlag}`);
     console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
 
@@ -277,6 +277,26 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         pushMetricsList,
         `Metrics mode for rds exporter should be push, but is: ${pushMetricsList}`,
       ).toEqual('push');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Temporary test
+    await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
+    await expect(async () => {
+      const pushMetricsCount = cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs[1m])' | jq '.data.result[0].value[1]''`,
+        )
+        .stdout.trim()
+        .replaceAll('"', '');
+
+      expect(
+        Number.parseInt(pushMetricsCount, 10),
+        `Count of metrics in the last ten seconds should be greater than 0 but is: ${pushMetricsCount}`,
+      ).toBeGreaterThan(0);
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
       timeout: Timeouts.ONE_MINUTE,
