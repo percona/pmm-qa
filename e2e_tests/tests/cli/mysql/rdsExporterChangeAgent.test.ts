@@ -216,4 +216,27 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       timeout: Timeouts.ONE_MINUTE,
     });
   });
+
+  pmmTest(
+    'PMM-T1004 - Verfiy Change agent custom labels @rds-integration',
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
+      const customLabels = 'env=qa_testing_rds_exporter';
+      const nodeId = cliHelper
+        .execSilent(
+          `docker exec pmm-server pmm-admin inventory list nodes ${serverUrlFlag} | grep NODE_TYPE_REMOTE_RDS_NODE | awk -F' ' '{print $4}' `,
+        )
+        .stdout.trim();
+
+      cliHelper
+        .execSilent(
+          `docker exec pmm-server pmm-admin inventory change agent postgres-exporter ${rdsExporterId} --custom-labels=${customLabels}`,
+        )
+        .assertSuccess();
+
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.nodesUrl(nodeId));
+      await agentsPage.showRowDetails(rdsExporterId);
+      await expect(agentsPage.builders.property(customLabels)).toBeVisible();
+    },
+  );
 });
