@@ -92,9 +92,11 @@ jobs:
           ADDR_NO_SCHEME=${ADDR#http://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
-          echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/" >> "$GITHUB_ENV"
-          echo "PMM_URL=https://admin:${ADMIN_PASSWORD}@${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
-          echo "SERVER_IP=${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
+          {
+            echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/"
+            echo "PMM_URL=https://admin:${ADMIN_PASSWORD}@${ADDR_NO_SCHEME}"
+            echo "SERVER_IP=${ADDR_NO_SCHEME}"
+          } >> "$GITHUB_ENV"
 
       - name: Sanity check remote PMM HA Server reachability
         run: |
@@ -139,7 +141,7 @@ jobs:
 
       - name: Export path to qa-integration repo
         working-directory: pmm-qa/qa-integration
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
       - name: Setup PMM-Client against remote PMM HA Server
         uses: nick-fields/retry@v3
@@ -147,10 +149,10 @@ jobs:
           timeout_minutes: 10
           retry_wait_seconds: '10'
           max_attempts: 2
-          retry_on: 'error'
+          retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
-            sudo bash -x pmm3-client-setup.sh \
+            sudo timeout -k 30 9m bash -x pmm3-client-setup.sh \
               --pmm_server_ip "${SERVER_IP}" \
               --client_version "${PMM_CLIENT_VERSION}" \
               --admin_password "${ADMIN_PASSWORD}" \
@@ -163,11 +165,11 @@ jobs:
           timeout_minutes: 20
           retry_wait_seconds: '10'
           max_attempts: 2
-          retry_on: 'error'
+          retry_on: 'any'
           command: |
             cd pmm-qa/qa-integration/pmm_qa
             mkdir -m 777 -p /tmp/backup_data || true
-            ./pmm-framework/pmm-framework \
+            timeout -k 30 19m ./pmm-framework/pmm-framework \
               --parallel \
               --pmm-server-ip "${SERVER_IP}" \
               --pmm-server-password "${ADMIN_PASSWORD}" \
@@ -189,7 +191,7 @@ jobs:
         if: always()
         run: |
           job_tag=$(echo "${TAGS_FOR_TESTS}" | sed -e "s/@//g" -e "s/|/-/g")
-          echo "REPORT_NAME=ha-${job_tag}" >> $GITHUB_ENV
+          echo "REPORT_NAME=ha-${job_tag}" >> "$GITHUB_ENV"
 
       - name: 'Run HA e2e tests: ${{ env.TAGS_FOR_TESTS }}'
         working-directory: pmm-qa/e2e_tests/

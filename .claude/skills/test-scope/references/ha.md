@@ -21,6 +21,7 @@ The ticket doesn't always mention it. Read the `percona/pmm` (and `percona/grafa
 A change to any of these, or to how they start/stop, must be verified under HA: it has to run exactly once (on the leader), survive a leader change, and not double-run or stall when it isn't the leader. Same for anything newly gated on `haService.IsLeader()`.
 
 **The HA subsystem itself.**
+
 - `managed/services/ha/**` (Raft, memberlist, leader election, HA gRPC API, `ha_metrics.go`)
 - `PMM_HA_*` env parsing — `managed/utils/envvars/parser.go`, `managed/cmd/pmm-managed/main.go`, `managed/cmd/pmm-managed-init/main.go`
 - `api/ha/**` and the `ha-badge` / `ha-icon` UI components
@@ -29,6 +30,7 @@ A change to any of these, or to how they start/stop, must be verified under HA: 
 **Metrics scraping / VMAgent.** `managed/services/victoriametrics/**` skips external agents/exporters on non-leaders (`skipExternalAgents`, `skipExternalExporter` gated on `IsLeader()`). Changes to scrape-config generation, external exporters, or VMAgent remote-write need HA verification so external targets are scraped once, from the leader.
 
 **Shared/externalised state.** HA externalises state to shared datastores; anything that assumes a **single instance** breaks with N replicas:
+
 - writing to local `/srv` or local files instead of the shared DB / object store
 - in-memory caches or state assumed global across the process
 - in-process locks/singletons where the guard must instead be leader election or a DB lock
@@ -36,7 +38,7 @@ A change to any of these, or to how they start/stop, must be verified under HA: 
 
 **Grafana clustering.** `PMM_HA_GRAFANA_GOSSIP_PORT` — Grafana runs clustered (shared DB + gossip for alerting/live) in HA. `percona/grafana` changes to auth/session storage, unified alerting, or live features can behave differently clustered.
 
-**Deployment / Helm / operators.** The `pmm-ha` and `pmm-ha-dependencies` Helm charts, operator versions (Victoria Metrics, Altinity ClickHouse, Percona PG), HAProxy fronting, secrets, and pod start ordering. Chart or operator changes are HA-only by definition.
+**Deployment / Helm / operators.** The `pmm-ha` and `pmm-ha-dependencies` Helm charts, operator versions (Victoria Metrics, Altinity ClickHouse, Percona PG), HAProxy fronting, secrets, and pod start ordering. Chart or operator changes are HA-only by definition. The chart under test is the `PMM-HA-GA` branch of `percona/percona-helm-charts` (unmerged, so not the released chart); if the change itself includes `percona-helm-charts` commits, that chart is part of the changes under test — see [`linode-ha-provisioning`](../../linode-ha-provisioning/SKILL.md).
 
 ## If neither is yes
 

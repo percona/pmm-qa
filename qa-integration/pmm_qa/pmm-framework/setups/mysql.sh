@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2034  # env_map and proxysql_config are looked up by name (run_playbook, resolve_value).
 #
 # setups/mysql.sh -- MySQL-family setups: PS, MYSQL, SSL_MYSQL, PXC.
 #

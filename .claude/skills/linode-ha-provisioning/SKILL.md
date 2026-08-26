@@ -93,23 +93,30 @@ An HA change routinely spans **two repos**, and the fix can be in either or **bo
 - **`percona/percona-helm-charts`** — the `pmm-ha` / `pmm-ha-dependencies` charts (env
   wiring, downward-API values, operators, templating). Delivered as a **chart**.
 
+**Default chart: the `PMM-HA-GA` branch of `percona/percona-helm-charts`.** HA GA work
+lives on that branch and is not merged or published yet, so it — not the released
+`percona/pmm-ha` — is the chart PMM HA is tested against today. The relay installs the
+*released* chart, so after the cluster comes up swap `PMM-HA-GA` in yourself (commands
+below). Only drop this once `PMM-HA-GA` has merged and shipped in a published chart
+version.
+
 Before installing anything, read the ticket's linked PR(s) and check **both** repos.
-The chart half is often an **unmerged PR or branch** in `percona-helm-charts`, so a
-released chart won't have it yet — search for it:
+When the change under test includes `percona-helm-charts` commits (a PR or branch off
+`PMM-HA-GA`), that chart is **part of the changes under test**: install it instead of
+`PMM-HA-GA` and report on it alongside the PMM image. Search for it:
 
 ```bash
 # GitHub MCP: search_pull_requests "repo:percona/percona-helm-charts <PMM-key or feature>"
-#             + list_branches (HA GA work has landed on branches like PMM-HA-GA)
+#             + list_branches (HA GA work branches off PMM-HA-GA)
 ```
 
-**If the change is (partly) in the chart, you MUST test against that chart — not the
-released one.** The relay always installs the *released* `percona/pmm-ha`; testing a
-chart change against it tests the wrong thing and yields false findings (e.g.
-concluding "the chart never sets `PMM_HA_NAMESPACE`" when the unmerged chart PR is
-exactly what adds it). After the relay brings the cluster up, swap in the PR-branch
-chart yourself against the returned `$KUBECONFIG`:
+**Never test an HA change against the released chart.** Doing so tests the wrong thing
+and yields false findings (e.g. concluding "the chart never sets `PMM_HA_NAMESPACE`"
+when the unmerged chart is exactly what adds it). After the relay brings the cluster
+up, swap in the chart yourself against the returned `$KUBECONFIG`:
 
 ```bash
+# <chart-branch> = the ticket's chart PR/branch if the change includes one, else PMM-HA-GA
 git clone -b <chart-branch> --depth 1 https://github.com/percona/percona-helm-charts /tmp/phc
 # keys per that chart's values.yaml — read it, don't assume
 helm upgrade --install pmm-ha /tmp/phc/charts/pmm-ha -n pmm --reuse-values \
@@ -118,10 +125,10 @@ kubectl rollout status statefulset/pmm-ha -n pmm --timeout=20m
 # if the dependencies chart also changed: helm upgrade pmm-operators /tmp/phc/charts/pmm-ha-dependencies ...
 ```
 
-**Only if the chart is unchanged** (the fix lives entirely in the PMM image) do you
-test the released chart with an image override — read on.
+### Testing the released chart — only when explicitly asked
 
-### Testing the released chart (image-only changes) — don't assume "latest"
+Use this only when the ticket is specifically about a published chart version (e.g.
+verifying a release); otherwise use `PMM-HA-GA` as above.
 
 The relay installs from the **Percona Helm repo**
 (`https://percona.github.io/percona-helm-charts/`): **`percona/pmm-ha`** and
@@ -145,9 +152,9 @@ helm show values percona/pmm-ha --version <chart-ver>   # the real image.* keys 
 ```
 
 Pick the chart version whose `appVersion` matches the PMM version under test and pass
-it as `chart_version` (the relay applies `--version` to both charts). If the chart
-itself is part of the change, don't use the released repo at all — go back to
-"Charts — first decide" and test the PR-branch chart.
+it as `chart_version` (the relay applies `--version` to both charts). For anything else
+— and always when the chart is part of the change — don't use the released repo at all:
+go back to "Charts — first decide" and install `PMM-HA-GA` or the chart PR branch.
 
 ### Feature Build — override the server image on top of the chart
 

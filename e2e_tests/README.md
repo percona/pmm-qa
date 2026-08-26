@@ -92,10 +92,10 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@dashboards`
 - `@docker-configuration`
 - `@downloads`
-- `@fb-settings`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`
+- `@menu`
 - `@new-navigation`
 - `@nightly`
 - `@pmm-ha`

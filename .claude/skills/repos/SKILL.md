@@ -8,13 +8,30 @@ description: PMM GitHub repository map, GitHub access (MCP-first), and rules for
 ## Product & QA
 
 | Repo | Remote | Agent may open PR? |
-|------|--------|-------------------|
+| ------ | -------- | ------------------- |
 | `percona/pmm-qa` | QA tests, provisioning | **Yes** (Test Runner, Investigator, FB Reporter) |
 | `percona/pmm` | PMM server monorepo | **No** (read/diff only) |
 | `percona/grafana` | Grafana UI | **No** (read/diff only) |
 | `percona/percona-helm-charts` | Helm charts — `pmm`, `pmm-ha`, `pmm-ha-dependencies` (K8s/HA deploys) | **No** (read/diff only) |
 | `Percona-Lab/pmm-submodules` | FB integration | Different org — see **Cross-org access** below |
-| `Percona-Lab/jenkins-pipelines` | Jenkins defs | Different org — see **Cross-org access** below |
+| `Percona-Lab/jenkins-pipelines` | Jenkins defs | Different org — see **Cross-org access** below. **PMM owns `pmm/` only** — see below |
+
+### jenkins-pipelines is multi-team
+
+Every top-level directory belongs to a different team (`.github/CODEOWNERS`): `ppg`, `ps`, `pxc`,
+`pxb`, `psmdb`, `pbm`, the distributions, `cloud`. **Stay inside `pmm/`** — never edit, lint, gate
+or report on another one, and don't "fix in passing" a problem noticed there.
+
+Two shared libraries, only one of them ours:
+
+- **`vars/` at the repo root** is loaded as `lib@master` by *every* product's builds. Call its
+  steps freely; changing one changes everyone's CI. Raise it with the owners instead.
+- **`pmm/v3/vars/`** is PMM's own, loaded as `v3lib@master` via `libraryPath: 'pmm/v3/'`. This is
+  the right home for a PMM-only step.
+
+PMM pipelines live in `pmm/v3/` (`pmm3-*.groovy`). They only provision and invoke the test
+suites — the test logic itself lives in this repo (`qa-integration/pmm_qa`, `e2e_tests`), which
+they clone at `PMM_QA_GIT_BRANCH` and rsync to `/srv/pmm-qa`.
 
 ## GitHub access — MCP-first
 
@@ -28,7 +45,7 @@ repos/{owner}/{repo}/...` is a **fallback only where `gh` is actually present**
 Tool map (what replaces each old `gh` recipe):
 
 | Need | GitHub MCP tool | `gh` fallback (only if present) |
-|------|-----------------|-------------------------------|
+| ------ | ----------------- | ------------------------------- |
 | Your GitHub login (for `X-Actor`) | `get_me` → `.login` | `gh api user --jq .login` |
 | List PRs (page through all before dedup) | `list_pull_requests` / `search_pull_requests` (`perPage: 100`, bump `page` until a short page) | `gh api --paginate "repos/{o}/{r}/pulls?state=..."` |
 | PR details / diff / files / commits | `pull_request_read` (`get` / `get_diff` / `get_files` / `get_commits`) | `gh api repos/{o}/{r}/pulls/<n>` (+ `Accept: …diff`) |

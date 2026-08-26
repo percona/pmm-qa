@@ -3,6 +3,7 @@
 FB Tests are the **GitHub Actions check-runs** on `pmm-submodules`. They are **often flaky** — treat failures as signals, not automatic blockers. Cross-check failed suites against the ticket scope before adding them to manual test steps.
 
 > **Read checks MCP-first** — GitHub MCP `pull_request_read` (`method: get_check_runs`, `perPage: 100`, page through all), then keep the latest run per check (`group_by(.name) | max_by(.started_at)`). Routine sessions have **no `gh`**; the `gh api` recipes below are a fallback only where `gh` exists. `gh pr checks` 403s regardless (GraphQL). The fallback reads checks via repo-scoped REST on the PR head SHA:
+>
 > ```bash
 > SHA=$(gh api repos/Percona-Lab/pmm-submodules/pulls/<SUBMODULES_PR> --jq .head.sha)
 > CHECKS() { gh api "repos/Percona-Lab/pmm-submodules/commits/$SHA/check-runs?per_page=100" \
@@ -20,7 +21,7 @@ CHECKS | jq -r '"\(.conclusion // .status)\t\(.name)"'
 Returns matrix jobs from `pmm-qa-fb-checks.yml` and Jenkins:
 
 | Check pattern | Type |
-|---------------|------|
+| --------------- | ------ |
 | `@* UI tests` | Playwright UI suites in pmm-qa |
 | `CLI tests *` | CLI/integration package tests |
 | `continuous-integration/jenkins/pr-head` | `pmm3-submodules` Jenkins build |
@@ -114,17 +115,19 @@ Updating custom fields (below) does **not** use comment visibility (different me
 ### Custom fields
 
 | Field | ID | Use |
-|-------|-----|-----|
+| ------- | ----- | ----- |
 | **FB test screenshots** | `customfield_10492` | FB test analysis summary + screenshot reference |
 | **How to test** | `customfield_10083` | Manual test steps (adapt using FB failures + PR diff) |
 
 ### Update via the `jira` skill (curl-first REST)
 
 **All checks passed** — attach the screenshot, then set the field. Both via the `jira` skill's recipes:
+
 - Attach: `POST $J/issue/PMM-14915/attachments` with `-F "file=@/tmp/fb-test-PMM-14915-checks.png"`.
 - Field: `PUT $J/issue/PMM-14915` with `{"fields":{"customfield_10492":"h2. FB Tests — PR-4376 (all green)\n\n*Run:* <run_url>\n\n!fb-test-PMM-14915-checks.png|width=900!"}}` (wiki markup; after upload Jira renders it inline).
 
 **Any check failed** — text only, no attachment:
+
 - Field: `PUT $J/issue/PMM-14915` with `{"fields":{"customfield_10492":"h2. FB Tests — PR-4376 (failures — no screenshot)\n\n*Run:* <run_url>\n\n*Failed:* @rta UI tests, CLI tests pmm-server container\n\n*Relevant to ticket:* none (flaky / out of scope)\n\n_Screenshot pending — waiting for all-green FB build._"}}`.
 
 Update **How to test** separately when manual steps are finalized (`customfield_10083`).

@@ -6,7 +6,7 @@ Format: `pmm-framework --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value
 ## MongoDB / PSMDB family
 
 | # | Command | Script / playbook | Notes |
-|---|---------|-------------------|-------|
+| --- | --------- | ------------------- | ------- |
 | 1 | `psmdb` | `start-rs-only.sh` | Default `SETUP_TYPE=pss` |
 | 2 | `psmdb,SETUP_TYPE=psa` | same | PSA replica set |
 | 3 | `psmdb,SETUP_TYPE=sharding` | `start-sharded.sh` | Sharded cluster + PBM |
@@ -21,7 +21,7 @@ Format: `pmm-framework --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value
 ## MySQL family
 
 | # | Command | Playbook | SETUP_TYPE variants |
-|---|---------|----------|---------------------|
+| --- | --------- | ---------- | --------------------- |
 | 11 | `mysql` | `mysql/mysql-setup.yml` | single (default `""`) |
 | 12 | `mysql,SETUP_TYPE=gr` | same | Group Replication (3 nodes) |
 | 13 | `mysql,SETUP_TYPE=replication` | same | Async replication (2 nodes) |
@@ -34,7 +34,7 @@ Format: `pmm-framework --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value
 ## PostgreSQL family
 
 | # | Command | Playbook | SETUP_TYPE variants |
-|---|---------|----------|---------------------|
+| --- | --------- | ---------- | --------------------- |
 | 19 | `pgsql` | `pgsql_pgss_setup.yml` | single + pg_stat_statements |
 | 20 | `pgsql,SETUP_TYPE=replication` | `postgresql/postgresql-setup.yml` | Primary + replica |
 | 21 | `pdpgsql` | `percona-distribution-postgresql/...` | single (default) |
@@ -45,7 +45,7 @@ Format: `pmm-framework --database <TYPE>[,SETUP_TYPE=<variant>][,<OPTION>=<value
 ## Proxy / external / infra
 
 | # | Command | Playbook / script | Notes |
-|---|---------|-------------------|-------|
+| --- | --------- | ------------------- | ------- |
 | 25 | `pxc` | `pxc_proxysql_setup.yml` | PXC + ProxySQL |
 | 26 | `haproxy` | `haproxy_setup.yml` | HAProxy frontend |
 | 27 | `external` | `external_setup.yml` | Redis + Node exporter |

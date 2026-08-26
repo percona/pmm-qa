@@ -14,7 +14,7 @@ Start when the user asks for help with **manual testing**. **Always ask for the 
 PMM repos are expected as **siblings** under one parent directory (repos root). This skill ships in **pmm-qa**; resolve paths from the pmm-qa clone.
 
 | Repo | Directory (under repos root) | Remote |
-|------|------------------------------|--------|
+| ------ | ------------------------------ | -------- |
 | pmm-qa | `pmm-qa` | `percona/pmm-qa` |
 | pmm | `pmm` | `percona/pmm` |
 | grafana | `grafana` | `percona/grafana` |
@@ -37,7 +37,7 @@ REPOS_ROOT="$(dirname "$PMM_QA_ROOT")"
 ```
 
 | Variable | Example path |
-|----------|----------------|
+| ---------- | ---------------- |
 | `$ReposRoot` / `$REPOS_ROOT` | `~/vscodeProjects/PMM` |
 | pmm | `$ReposRoot/pmm` |
 | grafana | `$ReposRoot/grafana` |
@@ -72,7 +72,7 @@ Then `git fetch` / `git pull --ff-only` in each repo that exists.
 
 ## Workflow checklist
 
-```
+```markdown
 - [ ] 1. Get Jira ticket key from user
 - [ ] 2. Read ticket via Atlassian MCP (summary, description, linked PRs, acceptance criteria)
 - [ ] 3. Identify affected repos (pmm, grafana, or both)
@@ -111,7 +111,7 @@ Use **Atlassian MCP** (`jira_get_issue`, `jira_get_issue_development_info`):
 ## Step 3: Identify affected repos
 
 | Change area | Repo |
-|-------------|------|
+| ------------- | ------ |
 | Backend, API, managed services | `percona/pmm` |
 | Grafana UI, dashboards, frontend | `percona/grafana` |
 | Both | Check both PRs |
@@ -157,7 +157,7 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<SUBMODULES_PR>/comments `
 Extract from the **latest** build-summary comment (older FB builds are invalid):
 
 | Field | Param |
-|-------|-------|
+| ------- | ------- |
 | `Server docker:` | `DOCKER_VERSION` |
 | `Watchtower docker:` | `WATCHTOWER_VERSION` |
 | `Client tarball:` | `CLIENT_VERSION` |
@@ -223,7 +223,7 @@ Include **all** params in the `parambuild` URL for the chosen job — not only `
 ### Adapt from ticket + PR diffs + FB test insights
 
 | Concern | Params to review |
-|---------|------------------|
+| --------- | ------------------ |
 | PMM server env vars | `DOCKER_ENV_VARIABLE` — read PR diff + `$ReposRoot/pmm/managed/CONTRIBUTING.md` + docker env docs |
 | Monitored databases | `CLIENTS` (staging-start) or `DEPLOY_*_GROUP` flags (deploy-services) |
 | DB versions | `PS_VERSION`, `MS_VERSION`, `PXC_VERSION`, `PGSQL_VERSION`, `PDPGSQL_VERSION`, `PSMDB_VERSION`, `MODB_VERSION` |
@@ -238,7 +238,7 @@ Include **all** params in the `parambuild` URL for the chosen job — not only `
 ### pmm3-aws-staging-start — review every param
 
 | Param | Default | When to override |
-|-------|---------|------------------|
+| ------- | --------- | ------------------ |
 | `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | Always → FB server image |
 | `WATCHTOWER_VERSION` | `perconalab/watchtower:dev-latest` | Always → FB watchtower image |
 | `CLIENT_VERSION` | `3-dev-latest` | Always → FB client **tarball** URL |
@@ -264,7 +264,7 @@ Include **all** params in the `parambuild` URL for the chosen job — not only `
 ### pmm3-deploy-services — review every param
 
 | Param | Default | When to override |
-|-------|---------|------------------|
+| ------- | --------- | ------------------ |
 | `SERVER_TYPE` | `docker` | `ovf` / `ami` / `helm` / `ha` when ticket tests those install paths |
 | `DOCKER_VERSION` | `perconalab/pmm-server:3-dev-latest` | Always → FB server image (docker/helm/ha) |
 | `OVA_VERSION` | `PMM3-Server-OVF-3.0.0-latest.ova` | When `SERVER_TYPE=ovf` |
@@ -368,7 +368,7 @@ Start-Process "<full-parambuild-url>"
 ## gh CLI quick reference
 
 | Task | Command |
-|------|---------|
+| ------ | --------- |
 | FB Tests (PR checks) | `gh pr checks <n> -R Percona-Lab/pmm-submodules` |
 | View PR | `gh pr view <n> -R owner/repo` |
 | PR diff | `gh pr diff <n> -R owner/repo` |
