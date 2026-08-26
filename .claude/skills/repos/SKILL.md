@@ -58,6 +58,25 @@ Tool map (what replaces each old `gh` recipe):
 | Re-run failed jobs | `actions_run_trigger` (`rerun_failed_jobs`) | `gh run rerun <id> --failed -R {owner}/{repo}` |
 | Issues | `issue_read`, `list_issues`, `search_issues` | `gh api …/issues/<n>` |
 
+### Big listings overflow the result cap — that is expected
+
+On these repos the listing calls routinely exceed the tool-result token cap and get
+spilled to a file instead of returned: `actions_list` (`list_workflow_jobs` on an FB
+matrix of ~48 jobs, `list_workflow_runs` at 20 runs) and `list_pull_requests` (every
+open pmm-qa PR — dedup needs each `body`, so trimming `fields` doesn't shrink it
+enough). This is the normal path, not an error to retry with a smaller page: parse the
+saved file with `jq`/`python3`. The three responses nest differently — assuming one
+shape for all three is what produces `TypeError: string indices must be integers`:
+
+| Call | Saved shape |
+| ------ | ------------- |
+| `actions_list` → `list_workflow_jobs` | `{"jobs": {"total_count": N, "jobs": [...]}}` |
+| `actions_list` → `list_workflow_runs` | `{"total_count": N, "workflow_runs": [...]}` |
+| `list_pull_requests` | bare top-level list |
+
+If a payload doesn't match, check before parsing rather than guessing:
+`jq 'if type == "array" then "array" else keys end' <file>`.
+
 Two whole classes of `gh` command **403 even where `gh` exists** (never use them):
 **global search** (`gh search`, `gh api search/issues`) and **GraphQL-backed**
 (`gh pr diff/view/list --json`, `gh pr checks`, `gh search prs`). The MCP tools above
