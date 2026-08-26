@@ -74,7 +74,7 @@ pmmTest(
       async () => {
         await expect(async () => {
           expect(
-            await api.haApi.getNodesFromUpMetric(),
+            await api.haApi.getNodesFromMetric(HaApi.upMetric),
             `Every HA node must export ${HaApi.upMetric}`,
           ).toEqual(haClusterHelper.podNames());
 

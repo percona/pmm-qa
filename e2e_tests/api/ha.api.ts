@@ -62,9 +62,6 @@ export default class HaApi {
   getNodesFromMetrics = async (): Promise<string[]> =>
     await this.getNodesFromMetric(HaApi.leaderStatusMetric);
 
-  /** Sorted node ids exporting `pmm_ha_up`, one per live node. */
-  getNodesFromUpMetric = async (): Promise<string[]> => await this.getNodesFromMetric(HaApi.upMetric);
-
   /** Per-node Raft term changes over `window`; a failover advances the term on every node. */
   getRaftTermChanges = async (window = '15m'): Promise<number[]> => {
     const samples = await this.prometheusApi.instantQuery(`changes(${HaApi.raftTermMetric}[${window}])`);

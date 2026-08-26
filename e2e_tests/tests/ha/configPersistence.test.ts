@@ -45,14 +45,8 @@ pmmTest(
       });
 
       await pmmTest.step(`Verify the settings are served by the new leader "${newLeader}"`, async () => {
-        await expect(async () => {
-          const response = await page.goto(settingsPage.urls.advanced);
-
-          expect(
-            response?.status(),
-            'HAProxy must route to the new leader before the settings page can be read',
-          ).toBeLessThan(400);
-        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+        await haClusterHelper.waitForApiServing(api.haApi);
+        await page.goto(settingsPage.urls.advanced);
 
         await expect(settingsPage.inputs.dataRetention).toHaveValue(String(newRetentionDays));
         await expect(settingsPage.inputs.publicAddress).toHaveValue(publicAddress);

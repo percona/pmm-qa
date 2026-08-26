@@ -44,11 +44,7 @@ export default class HaClusterHelper {
       })
       .toEqual(replicas);
 
-    // Ready pods, and even an elected leader, are not yet reachable: HAProxy has
-    // to re-run its health check and re-point first.
-    await expect(async () => {
-      expect(await haApi.getStatus()).toEqual('Enabled');
-    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+    await this.waitForApiServing(haApi);
   };
 
   /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
@@ -107,6 +103,16 @@ export default class HaClusterHelper {
     }
 
     return names[0];
+  };
+
+  /**
+   * Ready pods, and even an elected leader, are not yet reachable: HAProxy has to
+   * re-run its health check and re-point first.
+   */
+  waitForApiServing = async (haApi: HaApi, timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<void> => {
+    await expect(async () => {
+      expect(await haApi.getStatus()).toEqual('Enabled');
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
   };
 
   /**
