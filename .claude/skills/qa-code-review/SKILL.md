@@ -60,7 +60,7 @@ A path with no reference gets section 3 and nothing more. Say that in the summar
 - One thread per finding, anchored at the exact `file:line`.
 - Thread body: the claim in one sentence, then why it matters, then the concrete change. Lead with the emoji.
 - Post each thread with `confirmed: true` where the tool takes it. Without it the comment is buffered and classified once the session ends, and a real finding can be dropped as a probe.
-- One summary comment: counts per severity, plus any finding that has no line to anchor to.
+- One summary comment: counts per severity, plus any finding that has no line to anchor to. Post it with `gh pr comment --edit-last --create-if-none`, so a re-review on a later push replaces the summary instead of stacking a second one.
 - Name the checks you read (section 1) and their result in the summary.
 
 ## 6. Never
