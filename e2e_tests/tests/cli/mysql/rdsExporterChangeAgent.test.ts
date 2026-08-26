@@ -52,9 +52,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     });
 
     await expect(async () => {
-      const status = cliHelper
-        .execSilent(`docker exec ${containerName} pmm-admin list ${serverUrlFlag}`)
-        .stdout.trim();
+      const status = cliHelper.execSilent(`docker exec ${containerName} pmm-admin list`).stdout.trim();
 
       expect(status).toEqual('Running');
     }).toPass({
@@ -64,18 +62,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper, page }) => {
-    console.log(`Server url flag is: ${serverUrlFlag}`);
-    console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
-
     rdsExporterId = cliHelper
-      .execSilent(
-        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $4}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $4}'`)
       .stdout.trim();
 
     cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --enable=false`,
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --enable=false`,
       )
       .assertSuccess();
 
@@ -94,7 +87,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --enable=true`,
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --enable=true`,
       )
       .assertSuccess();
 
@@ -110,31 +103,24 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('T1002 - enable disable basic metrics @rds-integration', async ({ cliHelper }) => {
-    console.log(`Server url flag is: ${serverUrlFlag}`);
-    console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
-
     rdsExporterId = cliHelper
-      .execSilent(
-        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $4}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $4}'`)
       .stdout.trim();
 
     rdsExporterPort = cliHelper
-      .execSilent(
-        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $5}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $5}'`)
       .stdout.trim();
 
     cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-basic-metrics`,
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --disable-basic-metrics`,
       )
       .assertSuccess();
 
     await expect(async () => {
       const countOfBasicMetrics = cliHelper
         .execSilent(
-          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
+          `docker exec ${containerName} curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
         )
         .stdout.trim();
 
@@ -149,14 +135,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-basic-metrics=false`,
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --disable-basic-metrics=false`,
       )
       .assertSuccess();
 
     await expect(async () => {
       const countOfBasicMetrics = cliHelper
         .execSilent(
-          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
+          `docker exec ${containerName} curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/basic | grep -c '^aws_rds_'`,
         )
         .stdout.trim();
 
@@ -171,31 +157,24 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('T1003 - enable disable enhanced metrics @rds-integration', async ({ cliHelper }) => {
-    console.log(`Server url flag is: ${serverUrlFlag}`);
-    console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
-
     rdsExporterId = cliHelper
-      .execSilent(
-        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $4}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $4}'`)
       .stdout.trim();
 
     rdsExporterPort = cliHelper
-      .execSilent(
-        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $5}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $5}'`)
       .stdout.trim();
 
     cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-enhanced-metrics`,
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --disable-enhanced-metrics`,
       )
       .assertSuccess();
 
     await expect(async () => {
       const countOfBasicMetrics = cliHelper
         .execSilent(
-          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/enhanced | grep -c '^rdsosmetrics_'`,
+          `docker exec ${containerName} curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/enhanced | grep -c '^rdsosmetrics_'`,
         )
         .stdout.trim();
 
@@ -210,14 +189,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     cliHelper
       .execSilent(
-        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --disable-enhanced-metrics=false`,
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --disable-enhanced-metrics=false`,
       )
       .assertSuccess();
 
     await expect(async () => {
       const countOfBasicMetrics = cliHelper
         .execSilent(
-          `docker exec pmm-server curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/enhanced | grep -c '^rdsosmetrics_'`,
+          `docker exec ${containerName} curl -s -u 'pmm:${rdsExporterId}' http://127.0.0.1:${rdsExporterPort}/enhanced | grep -c '^rdsosmetrics_'`,
         )
         .stdout.trim();
 
@@ -237,13 +216,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       const customLabels = 'env=qa_testing_rds_exporter';
       const nodeId = cliHelper
         .execSilent(
-          `docker exec pmm-server pmm-admin inventory list nodes ${serverUrlFlag} | grep NODE_TYPE_REMOTE_RDS_NODE | awk -F' ' '{print $4}' `,
+          `docker exec ${containerName} pmm-admin inventory list nodes | grep NODE_TYPE_REMOTE_RDS_NODE | awk -F' ' '{print $4}' `,
         )
         .stdout.trim();
 
       cliHelper
         .execSilent(
-          `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --custom-labels=${customLabels}`,
+          `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --custom-labels=${customLabels}`,
         )
         .assertSuccess();
 
@@ -256,19 +235,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   // eslint-disable-next-line playwright/expect-expect -- Temporary test
   pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper }) => {
-    console.log(`Server url flag is: ${serverUrlFlag}`);
-    console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
-
     rdsExporterId = cliHelper
-      .execSilent(
-        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $4}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $4}'`)
       .stdout.trim();
 
     rdsExporterPort = cliHelper
-      .execSilent(
-        `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $5}'`,
-      )
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $5}'`)
       .stdout.trim();
 
     // cliHelper
