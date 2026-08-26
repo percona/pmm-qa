@@ -25,8 +25,8 @@ pmmTest(
     const response = await request.get(apiEndpoints.server.logs, { headers: GrafanaHelper.getAuthHeader() });
     const actualLineCount = getFileLineCount(await response.body(), fileNameToCheck);
 
-    expect(actualLineCount, `File ${fileNameToCheck} has ${actualLineCount} lines, but expected 50001`).toBe(
-      50_001,
+    expect(actualLineCount, `File ${fileNameToCheck} has ${actualLineCount} lines, but expected 50000`).toBe(
+      50_000,
     );
   },
 );
@@ -39,7 +39,7 @@ pmmTest(
     });
     const actualLineCount = getFileLineCount(await response.body(), fileNameToCheck);
 
-    expect(actualLineCount, `File ${fileNameToCheck} has ${actualLineCount} lines, but expected 11`).toBe(11);
+    expect(actualLineCount, `File ${fileNameToCheck} has ${actualLineCount} lines, but expected 10`).toBe(10);
   },
 );
 
@@ -53,7 +53,7 @@ pmmTest(
 
     expect(
       actualLineCount,
-      `File ${fileNameToCheck} has ${actualLineCount} lines, but expected more than 50001`,
-    ).toBeGreaterThan(50_001);
+      `File ${fileNameToCheck} has ${actualLineCount} lines, but expected more than 50000`,
+    ).toBeGreaterThan(50_000);
   },
 );

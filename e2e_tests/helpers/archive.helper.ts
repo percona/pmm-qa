@@ -14,5 +14,9 @@ export const getFileLineCount = (source: string | Buffer, fileName: string): num
     throw new Error(`File ${fileName} not found in the ZIP`);
   }
 
-  return entry.getData().toString('utf8').split('\n').length;
+  const lines = entry.getData().toString('utf8').split('\n');
+
+  if (lines.at(-1) === '') lines.pop();
+
+  return lines.length;
 };
