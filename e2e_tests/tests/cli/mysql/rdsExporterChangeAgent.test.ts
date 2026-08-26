@@ -229,7 +229,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       cliHelper
         .execSilent(
-          `docker exec pmm-server pmm-admin inventory change agent postgres-exporter ${rdsExporterId} ${serverUrlFlag} --custom-labels=${customLabels}`,
+          `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --custom-labels=${customLabels}`,
         )
         .assertSuccess();
 
