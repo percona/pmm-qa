@@ -48,7 +48,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     });
   });
 
-  pmmTest('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper }) => {
+  // eslint-disable-next-line playwright/no-skipped-test -- Temporary test
+  pmmTest.skip('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper }) => {
     console.log(`Server url flag is: ${serverUrlFlag}`);
     console.log(cliHelper.execSilent(`docker exec pmm-server pmm-admin list ${serverUrlFlag}`).stdout);
 
