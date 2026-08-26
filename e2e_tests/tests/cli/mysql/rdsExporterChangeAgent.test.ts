@@ -10,6 +10,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   const serverUrlFlag = `--server-url=http://admin:Heslo123@127.0.0.1:8080`;
 
   pmmTest('T10000 - Add rds @rds-integration', async ({ api, cliHelper }) => {
+    const externalNodeid = cliHelper
+      .execSilent(
+        `docker exec pmm-server pmm-admin inventory list nodes ${serverUrlFlag} | grep "pdpgsql" | awk -F' ' '{print $4}'`,
+      )
+      .stdout.trim();
+
+    console.log(`External node name is: ${externalNodeid}`);
+
     await api.managementApi.addService({
       rds: {
         address: process.env.PMM_QA_MYSQL_RDS_8_4_HOST,
@@ -21,6 +29,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         instance_id: process.env.PMM_QA_MYSQL_RDS_8_4_ID,
         isRDS: true,
         metrics_mode: 1,
+        node_id: externalNodeid,
         node_name: process.env.PMM_QA_MYSQL_RDS_8_4_ID,
         password: process.env.PMM_QA_MYSQL_RDS_8_4_PASSWORD,
         pmm_agent_id: 'pmm-server',
