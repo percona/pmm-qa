@@ -52,20 +52,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     });
 
     await expect(async () => {
-      const status = cliHelper.execSilent(`docker exec ${containerName} pmm-admin list`).stdout.trim();
+      const status = cliHelper
+        .execSilent(`docker exec ${containerName} pmm-admin list grep rds_exporter | awk -F' ' '{print $2}'`)
+        .stdout.trim();
 
       expect(status).toEqual('Running');
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
       timeout: Timeouts.ONE_MINUTE,
     });
-  });
 
-  pmmTest('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper, page }) => {
     rdsExporterId = cliHelper
       .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter | awk -F' ' '{print $4}'`)
       .stdout.trim();
+  });
 
+  pmmTest('T1001 - Enable disable rds exporter @rds-integration', async ({ api, cliHelper, page }) => {
     cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --enable=false`,
