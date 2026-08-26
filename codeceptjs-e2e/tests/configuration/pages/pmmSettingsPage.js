@@ -681,6 +681,11 @@ module.exports = {
         tooltips: {
           dataRetention: this.tooltips.advancedSettings.dataRetention,
           telemetry: this.tooltips.advancedSettings.telemetry,
+        },
+      },
+      {
+        subPage: this.advisorsSettingsUrl,
+        tooltips: {
           stt: this.tooltips.advancedSettings.stt,
         },
       },
