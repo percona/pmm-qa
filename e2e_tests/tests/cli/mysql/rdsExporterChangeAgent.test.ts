@@ -263,6 +263,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .assertSuccess();
 
     await expect(async () => {
+      console.log(
+        `docker exec pmm-server pmm-admin inventory change agent rds-exporter ${rdsExporterId} ${serverUrlFlag} --push-metrics`,
+      );
+
       const pushMetricsList = cliHelper
         .execSilent(
           `docker exec pmm-server pmm-admin list ${serverUrlFlag} | grep rds_exporter | awk -F' ' '{print $3}'`,
