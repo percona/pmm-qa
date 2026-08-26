@@ -147,9 +147,12 @@ pmmTest(
 pmmTest(
   'PMM-T2029 - Verify dashboard for MySQL Replication Summary @pmm-ps-integration',
   async ({ api, dashboard, page, urlHelper }) => {
-    const service = await api.inventoryApi.getServiceDetailsByRegexAndParameters('^ps_pmm_replication_.*_2(_\\d+)?$', {
-      replication_set: 'ps-async-replication',
-    });
+    const service = await api.inventoryApi.getServiceDetailsByRegexAndParameters(
+      '^ps_pmm_replication_.*_2(_\\d+)?$',
+      {
+        replication_set: 'ps-async-replication',
+      },
+    );
 
     await page.goto(
       urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlReplicationSummary.url, {

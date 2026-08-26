@@ -13,7 +13,7 @@ gh pr checks <SUBMODULES_PR> -R Percona-Lab/pmm-submodules
 Returns matrix jobs from `pmm-qa-fb-checks.yml` and Jenkins:
 
 | Check pattern | Type |
-|---------------|------|
+| --------------- | ------ |
 | `@* UI tests` | Playwright UI suites in pmm-qa |
 | `CLI tests *` | CLI/integration package tests |
 | `continuous-integration/jenkins/pr-head` | `pmm3-submodules` Jenkins build |
@@ -21,7 +21,7 @@ Returns matrix jobs from `pmm-qa-fb-checks.yml` and Jenkins:
 
 All matrix checks share one **FB Tests** workflow run:
 
-```
+```text
 https://github.com/Percona-Lab/pmm-submodules/actions/runs/<run_id>
 ```
 
@@ -113,14 +113,13 @@ Save screenshots to a temp path the user can find (e.g. workspace root or `%TEMP
 ### Custom fields
 
 | Field | ID | Use |
-|-------|-----|-----|
+| ------- | ----- | ----- |
 | **FB test screenshots** | `customfield_10492` | FB test analysis summary + screenshot reference |
 | **How to test** | `customfield_10083` | Manual test steps (adapt using FB failures + PR diff) |
 
 ### Update with Atlassian MCP
 
 **All checks passed** — attach screenshot and update fields in one call:
-
 
 ```json
 jira_update_issue(

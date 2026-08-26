@@ -15,5 +15,3 @@
       - "{{ (ansible_distribution == 'Debian') | ternary('pg-17','') }}"
       - "{{ (ansible_distribution == 'Ubuntu') | ternary('pg-17','') }}"
       - "{{ (ansible_os_family == 'RedHat' and ansible_distribution != 'Amazon') | ternary('pg-17','') }}"
-
-

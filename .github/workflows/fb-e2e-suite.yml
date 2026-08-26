@@ -425,4 +425,3 @@ jobs:
       setup_services: '--database psmdb'
       pmm_test_flag: '@rta'
       workers: 1
-

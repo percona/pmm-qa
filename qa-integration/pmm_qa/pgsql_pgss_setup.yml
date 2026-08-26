@@ -47,7 +47,9 @@
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ pgsql_pgss_container }}
-      - docker exec {{ pgsql_pgss_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+      - >-
+        docker exec {{ pgsql_pgss_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}
+        --use_metrics_mode no
 
   - name: Set Random Number Fact
     set_fact:
@@ -63,9 +65,11 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ pgsql_pgss_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-      - docker exec {{ pgsql_pgss_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements {{ pgsql_pgss_container }}_service_{{ random_number }}'
+      - >-
+        docker exec {{ pgsql_pgss_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add postgresql --username=pmm --password=pmm --query-source=pgstatements {{ pgsql_pgss_container
+        }}_service_{{ random_number }}'
 
   - name: Run queries for generating data, using the same script for pgsm
     shell: "{{ item }}"
     with_items:
-        - docker exec {{ pgsql_pgss_container }} bash ./pgsm_run_queries.sh &
+      - docker exec {{ pgsql_pgss_container }} bash ./pgsm_run_queries.sh &

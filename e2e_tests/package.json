@@ -3,7 +3,11 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "prepare": "git -C .. config core.hooksPath .husky"
+    "prepare": "git -C .. config core.hooksPath .husky",
+    "lint": "npm run lint:ts && npm run typecheck && echo 'Lint OK'",
+    "lint:ts": "eslint .",
+    "lint:ts:fix": "eslint --fix .",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "lint-staged": {

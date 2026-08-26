@@ -32,7 +32,7 @@ This file is the **single authoritative entry point** for AI agents working with
 Each test suite has its own dependency manifest, lint config and runner. **Read the linked docs before contributing.** Most suites assume `pmm-framework` (the bash CLI under [qa-integration/](qa-integration/)) has already provisioned the required PMM Client and DB containers on the `pmm-qa` Docker network.
 
 | Directory | Purpose | Docs / entry point |
-|-----------|---------|--------------------|
+| ----------- | --------- | -------------------- |
 | [cli/](cli/) | Playwright-runner CLI tests for `pmm-admin` (no browser) | [README.md](cli/README.md) · [playwright.config.ts](cli/playwright.config.ts) |
 | [codeceptjs-e2e/](codeceptjs-e2e/) | **Legacy** CodeceptJS UI e2e suite — do not add new coverage unless extending an area that exists only here | [README.md](codeceptjs-e2e/README.md) · [CONTRIBUTING.md](codeceptjs-e2e/CONTRIBUTING.md) |
 | [e2e_tests/](e2e_tests/) | **Active** Playwright UI e2e suite — preferred for all new UI tests | [README.md](e2e_tests/README.md) · [CONTRIBUTING.md](e2e_tests/CONTRIBUTING.md) · [playwright.config.ts](e2e_tests/playwright.config.ts) · [fixtures/pmmTest.ts](e2e_tests/fixtures/pmmTest.ts) |
@@ -86,7 +86,7 @@ flowchart LR
 
 ## CI / Pipelines
 
-All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (24 workflow files). Naming convention:
+All CI runs are GitHub Actions workflows under [.github/workflows/](.github/workflows/) (30 workflow files). Naming convention:
 
 - `runner-*.yml` — **reusable** workflow that runs one suite (drives codeceptjs-e2e, e2e_tests, cli, package_tests, easy-install, podman).
 - `fb-*.yml` — **feature-build** wrappers invoking a runner against a PR build.
@@ -94,6 +94,7 @@ All CI runs are GitHub Actions workflows under [.github/workflows/](.github/work
 - `nightly-e2e-tests-matrix.yml` — remote nightly E2E matrix (triggered by Jenkins after PMM Server is up).
 - `runner-e2e-tests-codeceptjs-remote-nightly-*.yml` — nightly remote setup and test runners for CodeceptJS.
 - `helm-tests.yml` — the only k8s entry point.
+- `lint.yml` — repo-wide lint gate (see [Linting](#linting) below); intended as a required check.
 - `rc-testing-suite.yml` — GitHub Actions portion of RC testing (see [External RC orchestration](#external-rc-orchestration) below).
 - `pmm-version-getter.yml` — reusable version-discovery helper.
 - `PMM_*.yml` / `PMM_*.yaml` — database-specific integration workflows (e.g. PDPGSQL, PROXYSQL, PSMDB PBM).
@@ -109,6 +110,60 @@ Full Release-Candidate testing is **not** driven from this repo. The orchestrato
 - **Lane 3**: `pmm3-ui-tests-matrix`, `pmm3-upgrade-ami-test`, `pmm3-package-testing-matrix` (amd64 + arm64), `pmm3-upgrade-tests-matrix`, and a GitHub-API dispatch of [`rc-testing-suite.yml`](.github/workflows/rc-testing-suite.yml).
 
 **Patch RCs** (`x.y.z` where only `z` changes vs the latest GA): Lane 1 compat nightly stages and the `compatibility_integration_tests` job in `rc-testing-suite.yml` are skipped (`skip_compatibility=true`). Minor/major RCs keep full compatibility coverage.
+
+## Linting
+
+One gate, two entry points, the same commands: [.github/workflows/lint.yml](.github/workflows/lint.yml) runs it repo-wide in CI, and the `PreToolUse` hook [.claude/hooks/pre-commit-lint-gate.sh](.claude/hooks/pre-commit-lint-gate.sh) runs it over the staged files before an agent's `git commit`. Both dispatch through [.claude/hooks/lint-changed.sh](.claude/hooks/lint-changed.sh), which picks the linter per file kind and lazily installs whatever is missing via [.claude/hooks/lib/install-linters.sh](.claude/hooks/lib/install-linters.sh) — the same installers `session-start.sh` runs eagerly.
+
+| File kind | Command | Config |
+| ----------- | --------- | -------- |
+| `*.ts` | `npm run lint` in the owning workspace (eslint + `tsc --noEmit`) | `e2e_tests/eslint.config.mjs`, `cli/.eslintrc.json` |
+| `*.yml` / `*.yaml` | `yamllint --strict` | [.yamllint](.yamllint) |
+| `.github/workflows/*` | `actionlint` (embedded shellcheck at default severity) | [.github/actionlint.yaml](.github/actionlint.yaml) |
+| `*.sh` | `shellcheck -S warning` (every tracked script) | — |
+| `*.py` | `ruff check` | [ruff.toml](ruff.toml) |
+| `*.tf` | `terraform fmt -check -recursive` | — |
+| `Dockerfile*` | `hadolint --failure-threshold error` | — |
+| `docker-compose*.y*ml` | `docker compose config -q` | — |
+| `*.groovy` | `npm-groovy-lint --failon error` | — |
+
+`.yamllint` runs `line-length` at **max 200** and `indentation` with `indent-sequences: whatever`; `trailing-spaces` is still off. 200 is where the repo's real ceiling sits: below it there is nothing left to fix, and every line above it is shell command text, so tightening the max means rewrapping provisioning commands rather than YAML. `indent-sequences: whatever` enforces mapping indentation — the kind that changes meaning — while leaving sequence style to the file, because the Ansible playbooks put `- name:` level with `tasks:` and normalising that would reindent every task block in the repo. Three block scalars carry a `# yamllint disable rule:line-length` region with the reason inline: their length lives inside a single-quoted command (or a systemd unit in a heredoc) that a backslash-newline cannot split. Keep the directive line itself bare — yamllint ignores a `disable` line that carries trailing prose.
+
+actionlint's embedded shellcheck is on at its own default severity — info and style included — with no suppression in `.github/actionlint.yaml` and no `SHELLCHECK_OPTS` narrowing. A `run:` block is shell, and the `.sh` files those blocks invoke are held to `-S warning`, so the inline shell is if anything checked harder than the scripts next to it. Seven findings carry an inline `# shellcheck disable=SC2016` with the reason beside them: five are `bash -c '...'` readiness polls where the inner shell must do the expanding and `%{http_code}` has to reach curl literally, two are a `sed` that substitutes a literal on purpose. Note that a `# shellcheck ...` line inside a `run:` block is script text, so directives work there — unlike yamllint, whose `disable-line` cannot reach inside a block scalar.
+
+`ruff.toml` declares the rule set explicitly. `ruff check` with no config uses whatever `select` the installed ruff defaults to, and that default has widened between releases — so an unpinned ruff reports a different set of findings on CI than on your machine, which is exactly how the gate first went red. The declared set is `E4`/`E7`/`E9`/`F`, ruff's documented default and the set the baseline was measured against; `lint.yml` logs `ruff --version` so a future drift is visible in the run. Widening the set is a deliberate change, not a config to loosen — see the note in `ruff.toml` for what a broader default currently reports.
+
+The husky `pre-commit` hook covers the same ground for local checkouts, but `core.hooksPath` is only set by `e2e_tests`' npm `prepare`, which never runs in a cloud session — hence the `PreToolUse` gate.
+
+### Why not a bundled linter action
+
+[super-linter](https://github.com/super-linter/super-linter) has been evaluated
+twice and declined both times; the reasoning, so it does not need re-deriving:
+
+- **It cannot serve the commit gate.** It runs locally only as
+  `docker run` over the whole workspace, and the image is 1.34 GB (slim) to
+  1.81 GB. Per-commit that is unusable, so the gate would still need
+  `install-linters.sh` and `lint-changed.sh` — and CI would then hold a second
+  copy of the linter mapping, which is the duplication `lint.yml` was collapsed
+  to 55 lines to remove.
+- **It does not remove the configs.** `.yamllint`, `ruff.toml` and
+  `.github/actionlint.yaml` are decisions about *this* repo, not wiring, and
+  super-linter reads the same files. Dropping them for its defaults means
+  roughly 5300 findings — 2502 from yamllint alone at `line-length: 80`.
+- **It does not remove the maintenance either.** Its upgrade guide removes
+  linters and variables between majors (16 variables in v7→v8), renames default
+  config filenames, and has added linters in a *minor* bump (v8.1→8.2 added the
+  Ruff formatter and Biome, with documented conflicts). That is the same drift
+  class as the unpinned ruff above, with more tools behind one tag.
+- **It drops three checks we run:** `tsc --noEmit` (it type-checks via eslint
+  only), `docker compose config -q` over the 21 compose files, and the
+  workspace-aware `npm run lint` that resolves each workspace's own plugins.
+
+The tools it would have brought that are worth having were taken directly
+instead: pinned checksums on the downloaded binaries, and a pinned ruff.
+`zizmor` (workflow-security auditing, which would have caught the
+`persist-credentials` issue in `lint.yml`) is still an open candidate — it is a
+single small binary, unlike the image.
 
 ## Playwright E2E Suite (`e2e_tests/`)
 
@@ -127,7 +182,7 @@ Preferred location for all new UI tests. See [e2e_tests/README.md](e2e_tests/REA
 ### Test areas (`e2e_tests/tests/`)
 
 | Area | Path | Notes |
-|------|------|-------|
+| ------ | ------ | ------- |
 | Access control | `accessControl/` | LBAC and permissions |
 | Alerting | `api/alerting/` | Alerting permissions API |
 | Dashboards | `dashboards/` | MySQL, Valkey, image renderer |
@@ -142,6 +197,7 @@ Preferred location for all new UI tests. See [e2e_tests/README.md](e2e_tests/REA
 ### Page Object Model
 
 Tests use class-based page objects in `e2e_tests/pages/`:
+
 - Page classes encapsulate selectors and actions
 - Locators use `data-testid` attributes where available
 - Path aliases: `@pages/*`, `@helpers/*`, `@fixtures/*` (via `tsconfig.json`)
@@ -172,9 +228,10 @@ npx playwright test --grep @inventory
 
 ## Patterns and Conventions
 
-After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` when a reusable correction, repeated workflow, demonstrated improvement, or skill gap emerged. Automated post-skill passes may invoke Capture to check for such a signal; follow the skill's counter and auto-apply rules. If no lesson qualifies, write or report nothing, but still record `none` for an automated pass. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly.
+The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/skills/skill-gardener/SKILL.md` observation reminder into every main-agent and subagent turn without forcing another LLM pass at Stop; `SKILL_GARDENER=off` silences it for a session. After the primary task is stable, evaluate the full observable sequence. Capture every distinct qualifying lesson without numeric or expiry limits, as immutable per-observation files committed by the main agent to that day's shared `skill-gardener/<YYYY-MM-DD>` branch — cut from `main`, created only if today's does not exist yet, and given no PR by the session. Reviewing entries, editing a target, and opening a PR happen only in the scheduled Publish pass ([`skill-gardener-publisher`](.claude/agents/skill-gardener-publisher.md)), never inside a user session: it applies the worthwhile lessons and deletes their entries on that same branch, then opens the single PR against `main`, whose review is the gate in front of every target edit. No lesson branch to publish means no PR; a branch a failed run stranded without a PR is picked up by the next. If no lesson qualifies, write and report nothing. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly.
 
 ### Do
+
 - Use the **Page Object Model** for Playwright browser tests — put selectors and actions in `pages/`
 - Use **`data-testid`** locators (stable, not CSS-class dependent)
 - Tag tests for CI filtering (`@inventory`, `@dashboards`, `@qan`, etc.)
@@ -185,6 +242,7 @@ After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` w
 - Read suite-specific docs before contributing to `cli/`, `codeceptjs-e2e/`, or `package_tests/`
 
 ### Don't
+
 - Don't use CSS class selectors for Grafana elements (they change across versions)
 - Don't hardcode PMM Server URLs — use `PMM_UI_URL` env var
 - Don't hardcode admin passwords — use `ADMIN_PASSWORD` env var (default `admin`)
@@ -194,7 +252,7 @@ After the primary task is stable, use `.claude/skills/skill-gardener/SKILL.md` w
 ## Environment Variables
 
 | Variable | Default | Purpose |
-|----------|---------|---------|
+| ---------- | --------- | --------- |
 | `PMM_UI_URL` | `http://localhost/` | PMM Server URL |
 | `ADMIN_PASSWORD` | `admin` | Grafana/PMM admin password |
 | `WORKERS` | `1` | Playwright parallel workers |

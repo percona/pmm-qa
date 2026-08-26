@@ -72,7 +72,9 @@
         creates: "{{ ssl_dir }}/server.csr"
 
     - name: Generate server certificate
-      shell: "openssl x509 -req -in {{ ssl_dir }}/server.csr -CA {{ ssl_dir }}/ca.crt -CAkey {{ ssl_dir }}/ca.key -CAcreateserial -out {{ ssl_dir }}/server.crt -days 365 -extensions v3_req -extfile ./external-pgsql-ssl-config.cnf"
+      shell: >-
+        openssl x509 -req -in {{ ssl_dir }}/server.csr -CA {{ ssl_dir }}/ca.crt -CAkey {{ ssl_dir }}/ca.key -CAcreateserial -out {{ ssl_dir }}/server.crt -days 365 -extensions v3_req -extfile
+        ./external-pgsql-ssl-config.cnf
       args:
         creates: "{{ ssl_dir }}/server.crt"
 

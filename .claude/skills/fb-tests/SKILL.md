@@ -28,7 +28,7 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 ```
 
 | Field in comment | Use as |
-|------------------|--------|
+| ------------------ | -------- |
 | Server docker | `DOCKER_VERSION` / `PMM_SERVER_IMAGE` |
 | Watchtower docker | `WATCHTOWER_VERSION` |
 | Client tarball | `CLIENT_VERSION` |
@@ -37,7 +37,7 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 ## Map failures to workflows
 
 | Failed check pattern | pmm-qa workflow | Runner |
-|---------------------|-----------------|--------|
+| --------------------- | ----------------- | -------- |
 | `@* UI tests` | `fb-e2e-suite.yml` | `runner-e2e-tests-codeceptjs.yml` (legacy) or `runner-e2e-tests-playwright.yml` (`e2e_tests/`) |
 | `CLI tests *` | `fb-integration-suite.yml` | `runner-integration-cli-tests.yml` |
 
