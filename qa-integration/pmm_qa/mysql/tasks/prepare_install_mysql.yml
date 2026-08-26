@@ -134,10 +134,10 @@
 - name: Restart MySQL docker container
   shell: docker restart {{ container_prefix }}{{ index }}
 
+# No credentials: mysqladmin ping exits 0 as soon as the server answers, even
+# on Access denied, so this waits for the restart alone.
 - name: Wait for MySQL to accept connections
-  shell: >
-    docker exec {{ container_prefix }}{{ index }} mysql --connect-expired-password
-    -uroot -p'{{ mysql_root_password }}' -e "SELECT 1"
+  shell: docker exec {{ container_prefix }}{{ index }} /usr/local/mysql/bin/mysqladmin ping
   register: mysql_ready
   until: mysql_ready.rc == 0
   retries: 30
