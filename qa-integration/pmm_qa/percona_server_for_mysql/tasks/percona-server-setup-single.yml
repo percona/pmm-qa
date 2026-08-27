@@ -1,6 +1,6 @@
 - name: Generate my.cnf for each node
   template:
-    src: ./data/my.cnf.j2
+    src: "./data/my{{ '-97' if ps_version | replace('_', '') == '97' else '' }}.cnf.j2"
     dest: "{{ data_dir }}/node{{ item }}/my.cnf"
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
