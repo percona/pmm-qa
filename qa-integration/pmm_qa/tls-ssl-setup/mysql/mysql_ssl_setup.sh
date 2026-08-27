@@ -55,8 +55,8 @@ EOF
 fi
 
 if [ "$mysql_version" == "9.7" ]; then
-    percona-release setup ps-97-lts
-    sleep 10
+    percona-release enable ps-97-lts release
+    apt-get update
     DEBIAN_FRONTEND=noninteractive apt-get -y install percona-server-server sysbench bc screen
 cat > /etc/mysql/my.cnf << EOF
 [mysqld]
