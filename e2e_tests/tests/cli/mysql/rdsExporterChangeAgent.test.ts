@@ -341,7 +341,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('rds_exporter');
   });
 
-  pmmTest('1008 - change aws keys', async ({ cliHelper }) => {
+  pmmTest('1008 - change aws keys @rds-integration', async ({ cliHelper }) => {
     let response = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent rds-exporter f2f19293-b1f5-4269-8a77-d11e6b465b25 --server-url=http://admin:Heslo123@127.0.0.1:8080 --aws-access-key=NEWKEYID --aws-secret-key=NEWSECRET`,
