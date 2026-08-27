@@ -51,6 +51,7 @@ jobs:
           # additions the skill needs: the inline-comment server only starts when
           # --allowedTools names its tool, and `gh` is not granted by default.
           claude_args: |
+            --model claude-opus-5
             --allowedTools "mcp__github_inline_comment__create_inline_comment,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr comment:*),Bash(gh api:*)"
           # Grants the mcp__github_ci__* tools section 1 of the skill needs.
           additional_permissions: |
