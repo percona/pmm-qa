@@ -25,7 +25,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     console.log(`External node name is: ${externalNodeId}`);
     console.log(`External PMM agent id is: ${externalPMMAgentId}`);
 
-    await api.managementApi.addService({
+    const resp = await api.managementApi.addService({
       rds: {
         address: process.env.PMM_QA_MYSQL_RDS_8_4_HOST,
         aws_access_key: process.env.PMM_QA_AWS_ACCESS_KEY_ID,
@@ -50,6 +50,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         username: process.env.PMM_QA_MYSQL_RDS_8_4_USER,
       },
     });
+
+    console.log(resp);
 
     await expect(async () => {
       const status = cliHelper
