@@ -5,7 +5,7 @@ description: Review an open pull request in percona/pmm-qa — Playwright and Co
 
 # QA code review
 
-Reviews an **open PR in `percona/pmm-qa`**. Its only output is review threads plus one summary comment; it never opens, edits, pushes to, approves or merges a PR.
+Reviews an **open PR in `percona/pmm-qa`**. Its only output is review threads, plus a summary comment when one is warranted (section 5); it never opens, edits, pushes to, approves or merges a PR.
 
 ## 1. Read the checks, never run the PR's tooling
 
@@ -62,7 +62,8 @@ A path with no reference gets section 3 and nothing more. Say that in the summar
 - Post each thread with `confirmed: true` where the tool takes it. Without it the comment is buffered and classified once the session ends, and a real finding can be dropped as a probe.
 - No summary comment when the threads already say everything. The threads are the review; a comment restating them is noise.
 - Post one only for what has no line to anchor to: a finding about the body or the scope, a bot verdict with no file, a gate that does not cover the diff (sections 1 and 2), or the fact that nothing was found. Checks that are clean and do cover the diff are worth no words.
-- When you do post it: five lines at most, one of them the counts per severity. Never a walkthrough, a file table, or a restatement of a thread. Use `gh pr comment --edit-last --create-if-none` so a later push replaces it instead of adding another.
+- When you do post it: five lines at most, one of them the counts per severity. Never a walkthrough, a file table, or a restatement of a thread. Use `gh pr comment --edit-last --create-if-none` so a later run replaces it instead of adding another.
+- When no summary is warranted but an earlier run left one, replace that comment with a single line saying nothing is outstanding. Stale counts read as current. Touch no comment but your own.
 
 ## 6. Never
 
