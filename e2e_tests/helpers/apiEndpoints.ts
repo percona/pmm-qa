@@ -13,6 +13,10 @@ const apiEndpoints = {
     schedule: '/v1/backups:schedule',
     scheduled: '/v1/backups/scheduled',
   },
+  grafana: {
+    folders: '/graph/api/folders',
+    prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
+  },
   ha: {
     nodes: '/v1/ha/nodes',
     status: '/v1/ha/status',
