@@ -348,18 +348,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     // eslint-disable-next-line playwright/no-wait-for-timeout -- Temporary test
     await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
 
-    console.log(
-      cliHelper
-        .execSilent(`docker exec ${containerName} ls /usr/local/percona/pmm/tmp/rds_exporter/`)
-        .stdout.trim(),
-    );
-
-    console.log(
-      cliHelper.execSilent(
-        `docker exec ${containerName} cat /usr/local/percona/pmm/tmp/rds_exporter/${rdsExporterId}:rds/NEWKEYID/config`,
-      ).stdout,
-    );
-
     await expect(async () => {
       const metricsCount = cliHelper
         .execSilent(
@@ -367,14 +355,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         )
         .stdout.trim()
         .split('.')[0];
-
-      console.log(
-        cliHelper
-          .execSilent(
-            `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs{node_name="pmm-qa-rds-mysql-8-4"}[1m])' | jq '.data.result[0].value[1]'`,
-          )
-          .stdout.trim(),
-      );
 
       expect(metricsCount, `Metrics should not hit victoria metrics!`).toEqual('null');
     }).toPass({
@@ -400,8 +380,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .split('.')[0]
         .replaceAll('"', '');
 
-      console.log(`Count of metrics is: ${metricsCount}`);
-
       expect(Number.parseInt(metricsCount, 10), `Metrics should not hit victoria metrics!`).toBeGreaterThan(
         0,
       );
@@ -411,8 +389,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     });
   });
 
-  // eslint-disable-next-line playwright/no-skipped-test -- Temporary test
-  pmmTest.skip(
+  pmmTest(
     'PMM-T1009 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       const commands = [
