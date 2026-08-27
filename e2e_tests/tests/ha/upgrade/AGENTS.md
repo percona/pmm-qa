@@ -4,6 +4,10 @@
 HA cluster. They are not standalone: each one asserts against the phase before it,
 so they only mean anything run in order, against the same cluster.
 
+The pipeline finishes by running the `@pmm-ha` suite from `../` against the upgraded
+cluster, which is the only place that asks whether failover still works after an
+in-place upgrade.
+
 The upgrade itself is **not** done by these tests. Every helm step is
 [`k8s/install_pmm_ha.sh`](../../../../k8s/install_pmm_ha.sh), sequenced in CI by
 `pmm3-ha-helm-upgrade-tests.groovy` in Percona-Lab/jenkins-pipelines (`pmm/v3/`).
@@ -16,6 +20,7 @@ The upgrade itself is **not** done by these tests. Every helm step is
 | 4 | | `@pmm-helm-mid-upgrade` | the dependencies release moved and the `pmm-ha` release did **not**: same revision, same pods, same version, still serving |
 | 5 | `--charts pmm-ha --chart-branch <branch> --image <target>` upgrades the server | — | — |
 | 6 | | `@pmm-helm-post-upgrade` | revision advanced, every pod runs the target image and serves a version no older than the baseline, one leader, UI renders |
+| 7 | | `@pmm-ha` | the ordinary HA suite - failover, leader metrics, node inventory - run last on the upgraded cluster. A failure here is an HA regression, not a broken upgrade |
 
 ## The baseline file
 
