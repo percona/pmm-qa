@@ -30,12 +30,8 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
-          # checkout v6 persists the workflow GITHUB_TOKEN as an extraheader pulled in
-          # via `includeIf.gitdir`. The action tries to strip it but looks under
-          # `include.path`, so the header survives and outranks the app-token remote URL
-          # the action sets: pushes authenticate as github-actions[bot] and 403. Dropping
-          # it leaves the app token as the only credential, and its pushes -- unlike
-          # GITHUB_TOKEN's -- still trigger the E2E matrix on the new commit.
+          # The persisted GITHUB_TOKEN outranks the app-token remote URL the action sets,
+          # so leaving it here makes every push authenticate as github-actions[bot].
           persist-credentials: false
 
       - name: Run Claude Code
