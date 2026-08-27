@@ -342,7 +342,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('1008 - change aws keys', async ({ cliHelper }) => {
-    const response = cliHelper
+    let response = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent rds-exporter f2f19293-b1f5-4269-8a77-d11e6b465b25 --server-url=http://admin:Heslo123@127.0.0.1:8080 --aws-access-key=NEWKEYID --aws-secret-key=NEWSECRET`,
       )
@@ -367,6 +367,34 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       console.log(`Count of metrics is: ${metricsCount}`);
 
       expect(metricsCount, `Metrics should not hit victoria metrics!`).toEqual('null');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+
+    response = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter f2f19293-b1f5-4269-8a77-d11e6b465b25 --server-url=http://admin:Heslo123@127.0.0.1:8080 --aws-access-key=${process.env.PMM_QA_AWS_ACCESS_KEY_ID} --aws-secret-key=${process.env.PMM_QA_AWS_ACCESS_KEY}`,
+      )
+      .assertSuccess();
+
+    await response.outContains('updated AWS access key');
+    await response.outContains('updated AWS secret key');
+
+    await expect(async () => {
+      const metricsCount = cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs{node_name="pmm-qa-rds-mysql-8-4"}[1m])' | jq '.data.result[0].value[1]'`,
+        )
+        .stdout.trim()
+        .split('.')[0]
+        .replaceAll('"', '');
+
+      console.log(`Count of metrics is: ${metricsCount}`);
+
+      expect(Number.parseInt(metricsCount, 10), `Metrics should not hit victoria metrics!`).toBeGreaterThan(
+        0,
+      );
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
       timeout: Timeouts.ONE_MINUTE,
