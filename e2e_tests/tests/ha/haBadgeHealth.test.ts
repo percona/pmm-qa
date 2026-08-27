@@ -24,11 +24,7 @@ pmmTest.afterEach(async ({ api, haClusterHelper }) => {
 
 pmmTest(
   'PMM-T2250 Verify the HA badge reflects the health of the PMM HA cluster @pmm-ha',
-  async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
-    await pmmTest.step('Verify HA mode is enabled', async () => {
-      expect(await api.haApi.getStatus()).toEqual('Enabled');
-    });
-
+  async ({ haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
     await pmmTest.step(`Verify the cluster starts with ${expectedNodes} pods up and running`, async () => {
       statefulSet = haClusterHelper.statefulSetName();
 

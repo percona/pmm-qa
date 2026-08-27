@@ -47,6 +47,19 @@ export default class HaClusterHelper {
     await this.waitForApiServing(haApi);
   };
 
+  /** Restarts the current leader and returns the pod that takes over, once the API serves again. */
+  failoverLeader = async (haApi: HaApi, timeout: Timeouts = Timeouts.FIVE_MINUTES): Promise<string> => {
+    const initialLeader = this.leaderFromPods();
+
+    this.k8sHelper.deletePod(initialLeader).assertSuccess();
+
+    const newLeader = await this.waitForLeaderChange(initialLeader, timeout);
+
+    await this.waitForApiServing(haApi);
+
+    return newLeader;
+  };
+
   /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
   haStatusFromPod = (podName: string): string => {
     const password = process.env.ADMIN_PASSWORD ?? 'admin';

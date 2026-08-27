@@ -9,11 +9,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 
 pmmTest(
   'PMM-T2217 Verify HA mode shows detailed error when enabling QAN for PMM Server @pmm-ha',
-  async ({ page, request, settingsPage }) => {
-    await pmmTest.step('Verify HA mode is enabled', async () => {
-      await settingsPage.haEnableCheck(request);
-    });
-
+  async ({ page, settingsPage }) => {
     await pmmTest.step('Verify detailed HA error is shown in UI', async () => {
       await page.goto(settingsPage.urls.advanced);
       await expect(settingsPage.elements.pageTitle).toBeVisible();

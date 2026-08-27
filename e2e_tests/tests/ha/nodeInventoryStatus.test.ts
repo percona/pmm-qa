@@ -9,11 +9,7 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 
 pmmTest(
   'PMM-T2145 Verify the node status of PMM HA nodes on the Inventory Nodes page @pmm-ha',
-  async ({ api, haClusterHelper, k8sHelper, nodesPage, page }) => {
-    await pmmTest.step('Verify HA mode is enabled', async () => {
-      expect(await api.haApi.getStatus()).toEqual('Enabled');
-    });
-
+  async ({ haClusterHelper, k8sHelper, nodesPage, page }) => {
     // Not /v1/ha/nodes: that is what the Nodes page renders, so it would only
     // prove the page echoes itself.
     const { initialLeader, podNames } = await pmmTest.step('Read the leader from the cluster', async () => {

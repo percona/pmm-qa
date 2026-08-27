@@ -7,6 +7,7 @@ export interface GrafanaDatasource {
 
 export interface GrafanaUser {
   id: number;
+  isGrafanaAdmin?: boolean;
   login: string;
   name?: string;
 }

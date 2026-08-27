@@ -14,76 +14,78 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 pmmTest(
   'PMM-T2261 - Verify Prometheus rules and raft metrics for HA @pmm-ha',
   async ({ api, haClusterHelper, k8sHelper }) => {
-    const initialLeader = await pmmTest.step(
-      `Verify every pod backing the ${defaultReplicas}-replica cluster is ready`,
+    await pmmTest.step(
+      `Verify PMM HA runs with ${defaultReplicas} replicas and every pod is up`,
       async () => {
-        // Polled: a pod deleted by an earlier test lingers Running-but-not-ready while it terminates.
+        expect(haClusterHelper.podNames()).toHaveLength(defaultReplicas);
+
         await expect(async () => {
           expect(
             k8sHelper
               .getPods()
               .filter((pod) => !terminalPhases.includes(pod.phase) && !pod.ready)
               .map((pod) => `${pod.name} (${pod.phase})`),
-            `Every non-terminated pod in namespace "${k8sHelper.namespace}" must be ready`,
           ).toEqual([]);
         }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
-
-        return haClusterHelper.leaderFromPods();
       },
     );
+
+    const initialLeader = haClusterHelper.leaderFromPods();
 
     await pmmTest.step(
-      `Verify "${HaApi.leaderStatusMetric}" names "${initialLeader}" as leader`,
+      `Verify "${HaApi.leaderStatusMetric}" shows "${initialLeader}" as leader`,
       async () => {
-        expect(
-          await api.haApi.waitForLeaderInMetrics(undefined, Timeouts.TWO_MINUTES),
-          'The leader in metrics must be the pod answering the leader health check',
-        ).toEqual(initialLeader);
+        expect(await api.haApi.waitForLeaderInMetrics()).toEqual(initialLeader);
       },
     );
 
-    const newLeader = await pmmTest.step(`Switch the leader away from "${initialLeader}"`, async () => {
-      k8sHelper.deletePod(initialLeader).assertSuccess();
+    const newLeader = await pmmTest.step(
+      `Switch the leader and verify "${HaApi.leaderStatusMetric}" shows the new one`,
+      async () => {
+        const leader = await haClusterHelper.failoverLeader(api.haApi);
 
-      return await api.haApi.waitForLeaderInMetrics(initialLeader, Timeouts.FIVE_MINUTES);
-    });
+        expect(await api.haApi.waitForLeaderInMetrics(initialLeader)).toEqual(leader);
 
-    await pmmTest.step(`Verify "${newLeader}" is the only leader the metric reports`, async () => {
+        return leader;
+      },
+    );
+
+    await pmmTest.step(`Verify sum(${HaApi.leaderStatusMetric}) returns 1`, async () => {
       await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
-
-      expect(
-        await api.haApi.getLeaderFromMetrics(),
-        `"${newLeader}" must be the single node reporting ${HaApi.leaderStatusMetric} == 1`,
-      ).toEqual(newLeader);
     });
 
-    await pmmTest.step(`Verify "${HaApi.raftTermMetric}" recorded the leader change`, async () => {
+    await pmmTest.step(`Verify every node reports "${HaApi.raftTermMetric}"`, async () => {
       await expect(async () => {
-        const changes = await api.haApi.getRaftTermChanges();
-
-        expect(changes, `Every HA node must export ${HaApi.raftTermMetric}`).toHaveLength(defaultReplicas);
-        expect(
-          Math.max(...changes),
-          `The failover must advance the Raft term, so changes(${HaApi.raftTermMetric}[15m]) must exceed 0`,
-        ).toBeGreaterThan(0);
+        expect(await api.haApi.getNodesFromMetric(HaApi.raftTermMetric)).toEqual(haClusterHelper.podNames());
       }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
     });
 
     await pmmTest.step(
-      `Verify "${HaApi.upMetric}" reports every node and ${defaultReplicas} voters once the cluster settles`,
+      `Verify changes(${HaApi.raftTermMetric}[15m]) is above 0 on every node after the switch to "${newLeader}"`,
       async () => {
         await expect(async () => {
-          expect(
-            await api.haApi.getNodesFromMetric(HaApi.upMetric),
-            `Every HA node must export ${HaApi.upMetric}`,
-          ).toEqual(haClusterHelper.podNames());
+          const changes = await api.haApi.getRaftTermChanges();
 
-          expect(
-            await api.haApi.getVoterCount(),
-            `Fewer than ${defaultReplicas} voters puts a ${defaultReplicas}-node cluster at risk of losing quorum`,
-          ).toEqual(defaultReplicas);
+          expect(changes).toHaveLength(defaultReplicas);
+          expect(changes.filter((change) => change > 0)).toHaveLength(defaultReplicas);
         }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
       },
     );
+
+    await pmmTest.step(`Verify every node reports "${HaApi.upMetric}" as a live voter`, async () => {
+      await expect(async () => {
+        const samples = await api.prometheusApi.instantQuery(HaApi.upMetric);
+
+        expect(samples.map((sample) => sample.metric.node_id).sort()).toEqual(haClusterHelper.podNames());
+        expect(samples.map((sample) => sample.metric.role)).toEqual(Array(defaultReplicas).fill('voter'));
+        expect(samples.map((sample) => Number(sample.value[1]))).toEqual(Array(defaultReplicas).fill(1));
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    });
+
+    await pmmTest.step(`Verify count(${HaApi.upMetric}{role="voter"}) is ${defaultReplicas}`, async () => {
+      await expect(async () => {
+        expect(await api.haApi.getVoterCount()).toEqual(defaultReplicas);
+      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+    });
   },
 );
