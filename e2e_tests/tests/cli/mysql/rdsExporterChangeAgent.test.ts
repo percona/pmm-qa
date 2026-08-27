@@ -344,7 +344,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest('1008 - change aws keys @rds-integration', async ({ cliHelper }) => {
     let response = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter f2f19293-b1f5-4269-8a77-d11e6b465b25 --server-url=http://admin:Heslo123@127.0.0.1:8080 --aws-access-key=NEWKEYID --aws-secret-key=NEWSECRET`,
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --aws-access-key=NEWKEYID --aws-secret-key=NEWSECRET`,
       )
       .assertSuccess();
 
@@ -374,7 +374,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     response = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter f2f19293-b1f5-4269-8a77-d11e6b465b25 --server-url=http://admin:Heslo123@127.0.0.1:8080 --aws-access-key=${process.env.PMM_QA_AWS_ACCESS_KEY_ID} --aws-secret-key=${process.env.PMM_QA_AWS_ACCESS_KEY}`,
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --aws-access-key=${process.env.PMM_QA_AWS_ACCESS_KEY_ID} --aws-secret-key=${process.env.PMM_QA_AWS_ACCESS_KEY}`,
       )
       .assertSuccess();
 
