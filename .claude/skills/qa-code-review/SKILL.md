@@ -61,9 +61,10 @@ A path with no reference gets section 3 and nothing more. Say that in the summar
 - Thread body: the claim in one sentence, then why it matters, then the concrete change. Lead with the emoji.
 - Post each thread with `confirmed: true` where the tool takes it. Without it the comment is buffered and classified once the session ends, and a real finding can be dropped as a probe.
 - No summary comment when the threads already say everything. The threads are the review; a comment restating them is noise.
-- Post one only for what has no line to anchor to: a finding about the body or the scope, a bot verdict with no file, a gate that does not cover the diff (sections 1 and 2), or the fact that nothing was found. Checks that are clean and do cover the diff are worth no words.
-- When you do post it: five lines at most, one of them the counts per severity. Never a walkthrough, a file table, or a restatement of a thread. Use `gh pr comment --edit-last --create-if-none` so a later run replaces it instead of adding another.
-- When no summary is warranted but an earlier run left one, replace that comment with a single line saying nothing is outstanding. Stale counts read as current. Touch no comment but your own.
+- Nothing found at all: the whole summary is `LGTM!` — as a comment, never an approval. The one thing that goes with it is a gap section 1 or 2 left: no gate covers the diff, no reference covers a path. Clean checks that do cover the diff are worth no words.
+- Nothing of your own, but open threads you agree with: one sentence in each of those threads, and no summary comment at all.
+- Otherwise post one only for what has no line to anchor to: a finding about the body or the scope, a bot verdict with no file, a gate that misses the diff. Five lines at most, one of them the counts per severity. Never a walkthrough, a file table, or a restatement of a thread.
+- Use `gh pr comment --edit-last --create-if-none`, so a later run replaces the summary instead of adding another. Where no summary is warranted and an earlier run left one, edit that comment down to a single line saying nothing is outstanding — an edit, not a new comment. Touch no comment but your own.
 
 ## 6. Never
 
