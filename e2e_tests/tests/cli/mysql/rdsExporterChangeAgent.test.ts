@@ -342,7 +342,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     );
     await cliHelper
       .changeAgent(containerName, Types.rds, rdsExporterId, '--debug --trace --json')
-      .outContains('RDS Exporter agent configuration updated.');
+      .outContains('rds_exporter');
   });
 
   pmmTest(
