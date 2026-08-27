@@ -349,8 +349,14 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
 
     console.log(
+      cliHelper
+        .execSilent(`docker exec ${containerName} ls /usr/local/percona/pmm/tmp/rds_exporter/`)
+        .stdout.trim(),
+    );
+
+    console.log(
       cliHelper.execSilent(
-        `docker exec pdpgsql_pmm_17_1 cat /usr/local/percona/pmm/tmp/rds_exporter/${rdsExporterId}:rds/NEWKEYID/config`,
+        `docker exec ${containerName} cat /usr/local/percona/pmm/tmp/rds_exporter/${rdsExporterId}:rds/NEWKEYID/config`,
       ).stdout,
     );
 
