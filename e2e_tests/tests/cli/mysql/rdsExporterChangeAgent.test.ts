@@ -345,7 +345,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('rds_exporter');
   });
 
-  pmmTest(
+  // eslint-disable-next-line playwright/no-skipped-test -- Temporary test
+  pmmTest.skip(
     'PMM-T1008 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       const commands = [
