@@ -5,7 +5,7 @@ description: Review an open pull request in percona/pmm-qa — Playwright and Co
 
 # QA code review
 
-Reviews an **open PR in `percona/pmm-qa`**. Its only output is review threads plus one summary comment; it never opens, edits, pushes to, approves or merges a PR.
+Reviews an **open PR in `percona/pmm-qa`**. Its only output is review threads, plus a summary comment when one is warranted (section 5); it never opens, edits, pushes to, approves or merges a PR.
 
 ## 1. Read the checks, never run the PR's tooling
 
@@ -60,8 +60,11 @@ A path with no reference gets section 3 and nothing more. Say that in the summar
 - One thread per finding, anchored at the exact `file:line`.
 - Thread body: the claim in one sentence, then why it matters, then the concrete change. Lead with the emoji.
 - Post each thread with `confirmed: true` where the tool takes it. Without it the comment is buffered and classified once the session ends, and a real finding can be dropped as a probe.
-- One summary comment: counts per severity, plus any finding that has no line to anchor to. Post it with `gh pr comment --edit-last --create-if-none`, so a re-review on a later push replaces the summary instead of stacking a second one.
-- Name the checks you read (section 1) and their result in the summary.
+- No summary comment when the threads already say everything. The threads are the review; a comment restating them is noise.
+- Nothing found at all: the whole summary is `LGTM!` — as a comment, never an approval. The one thing that goes with it is a gap section 1 or 2 left: no gate covers the diff, no reference covers a path. Clean checks that do cover the diff are worth no words.
+- Nothing of your own, but open threads you agree with: one sentence in each of those threads, and no summary comment at all.
+- Otherwise post one only for what has no line to anchor to: a finding about the body or the scope, a bot verdict with no file, a gate that misses the diff. Five lines at most, one of them the counts per severity. Never a walkthrough, a file table, or a restatement of a thread.
+- Use `gh pr comment --edit-last --create-if-none`, so a later run replaces the summary instead of adding another. Where no summary is warranted and an earlier run left one, edit that comment down to a single line saying nothing is outstanding — an edit, not a new comment. Touch no comment but your own.
 
 ## 6. Never
 

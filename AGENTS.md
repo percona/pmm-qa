@@ -1,7 +1,7 @@
 # PMM-QA Development Guide for AI Agents
 
 <!-- SINGLE ENTRY POINT for all AI coding assistants (Claude Code, Cursor, GitHub Copilot, etc.)
-     Compatibility shims: CLAUDE.md, .cursorrules, .github/copilot-instructions.md
+     Compatibility shim: CLAUDE.md
      Last reviewed: 2026-07 -->
 
 ## Maintaining This Document
