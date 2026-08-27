@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: read
-      pull-requests: read
-      issues: read
+      contents: write
+      pull-requests: write
+      issues: write
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
     steps:
@@ -30,6 +30,9 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
+          # The persisted GITHUB_TOKEN outranks the app-token remote URL the action sets,
+          # so leaving it here makes every push authenticate as github-actions[bot].
+          persist-credentials: false
 
       - name: Run Claude Code
         id: claude
