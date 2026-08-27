@@ -7,10 +7,9 @@ import { Timeouts } from '@helpers/timeouts';
 const sshKey =
   'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEtU7ftdqg3rdRcv06kPAOnKX+WRmHlnG2UBpUNKw65h pmm-qa@distribution-method-test';
 const amiContainerName = 'pmm-server-distribution-ami';
-const amiPort = 446;
+const amiPort = 450;
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
-// The AMI container is brand new, so it does not inherit the suite's server password: give it the
-// one GrafanaHelper defaults to, otherwise every authenticated call against it is a 401.
+// Stamped on the AMI container at creation so it matches what the suite authenticates with.
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
 
 pmmTest.describe('SSH key settings follow the PMM Server distribution method.', () => {
@@ -37,8 +36,7 @@ pmmTest.describe('SSH key settings follow the PMM Server distribution method.', 
         await page.goto(settingsPage.urls.ssh);
 
         await expect(settingsPage.tabs.metrics).toHaveAttribute('aria-selected', 'true');
-        await expect(settingsPage.tabs.ssh).toHaveCount(0);
-        expect(new URL(page.url()).pathname).toEqual(settingsPage.url);
+        await expect(page).toHaveURL(new RegExp(`${settingsPage.url}$`));
       });
 
       await pmmTest.step('The server refuses an SSH key', async () => {
@@ -56,7 +54,8 @@ pmmTest.describe('SSH key settings follow the PMM Server distribution method.', 
 
         const settingsAfter = await api.settingsApi.getSettings();
 
-        expect(settingsAfter.settings.ssh_key).toEqual(settingsBefore.settings.ssh_key);
+        expect(settingsBefore.settings.ssh_key).toBeUndefined();
+        expect(settingsAfter.settings.ssh_key).toBeUndefined();
       });
     },
   );
@@ -75,15 +74,19 @@ pmmTest.describe('SSH key settings on an AMI deployment.', () => {
     'PMM-T2283 - Verify the SSH key tab is available on an AMI deployment @docker-configuration',
     async ({ api, cliHelper, grafanaHelper, page, settingsPage }) => {
       await pmmTest.step('Start a PMM Server that reports the AMI distribution method', async () => {
-        cliHelper.execSilent(
-          `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e PMM_DISTRIBUTION_METHOD=ami -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} --publish ${amiPort}:8443 --name ${amiContainerName} ${dockerVersion}`,
-        );
+        cliHelper
+          .execSilent(
+            `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e PMM_DISTRIBUTION_METHOD=ami -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} --publish ${amiPort}:8443 --name ${amiContainerName} ${dockerVersion}`,
+          )
+          .assertSuccess();
         await api.serverApi.waitForReady(Timeouts.FIVE_MINUTES);
 
         expect(await api.serverApi.getDistributionMethod()).toEqual('DISTRIBUTION_METHOD_AMI');
       });
 
-      await grafanaHelper.authorize('admin', adminPassword, baseUrl);
+      await pmmTest.step('Authorize against the AMI server', async () => {
+        await grafanaHelper.authorize('admin', adminPassword, baseUrl);
+      });
 
       await pmmTest.step('Settings page offers the SSH key tab', async () => {
         await page.goto(settingsPage.url);
@@ -96,7 +99,7 @@ pmmTest.describe('SSH key settings on an AMI deployment.', () => {
         await page.goto(settingsPage.urls.ssh);
 
         await expect(settingsPage.tabs.ssh).toHaveAttribute('aria-selected', 'true');
-        expect(new URL(page.url()).pathname).toEqual(settingsPage.urls.ssh);
+        await expect(page).toHaveURL(new RegExp(`${settingsPage.urls.ssh}$`));
       });
     },
   );

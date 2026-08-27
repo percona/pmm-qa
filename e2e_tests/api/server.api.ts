@@ -3,6 +3,14 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 
+export type DistributionMethod =
+  | 'DISTRIBUTION_METHOD_AMI'
+  | 'DISTRIBUTION_METHOD_AZURE'
+  | 'DISTRIBUTION_METHOD_DO'
+  | 'DISTRIBUTION_METHOD_DOCKER'
+  | 'DISTRIBUTION_METHOD_OVF'
+  | 'DISTRIBUTION_METHOD_UNSPECIFIED';
+
 export interface PmmVersion {
   major: number;
   minor: number;
@@ -11,17 +19,16 @@ export interface PmmVersion {
 }
 
 interface VersionResponse {
-  distribution_method: string;
+  distribution_method?: DistributionMethod;
   version: string;
 }
 
 export default class ServerApi {
   constructor(private request: APIRequestContext) {}
 
-  getDistributionMethod = async (): Promise<string> => {
+  getDistributionMethod = async (): Promise<DistributionMethod | undefined> => {
     const response = await this.request.get(apiEndpoints.server.version, {
       headers: GrafanaHelper.getAuthHeader(),
-      ignoreHTTPSErrors: true,
     });
 
     expect(response.status()).toEqual(200);
