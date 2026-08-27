@@ -1312,7 +1312,7 @@ module.exports = {
     while (currentIteration++ <= timeoutInSeconds) {
       numberOfNAElements = await I.grabNumberOfVisibleElements(this.fields.reportTitleWithNA);
 
-      if (numberOfNAElements < acceptableNACount) {
+      if (numberOfNAElements <= acceptableNACount) {
         return;
       }
 

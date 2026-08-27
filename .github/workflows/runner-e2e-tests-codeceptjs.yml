@@ -12,13 +12,13 @@ on:
         required: false
         type: string
       pmm_server_compose_file:
-          description: 'PMM Server docker image'
-          default: 'docker-compose.yml'
-          required: false
-          options:
-            - 'docker-compose.yml'
-            - 'docker-compose-nomad.yml'
-          type: choice
+        description: 'PMM Server docker image'
+        default: 'docker-compose.yml'
+        required: false
+        options:
+          - 'docker-compose.yml'
+          - 'docker-compose-nomad.yml'
+        type: choice
       pmm_client_image:
         description: 'pmm3-client docker image'
         default: 'perconalab/pmm-client:3-dev-latest'
@@ -170,14 +170,16 @@ jobs:
           launchable verify || true
           
           docker pull ${{ env.DOCKER_VERSION }} || true
-          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
           
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
-          echo "$(cat launchable-subset.json)" || true
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
+            --use-case feature-branch codeceptjs < test_list.txt > launchable-subset.json || true
+          cat launchable-subset.json || true
 
       - name: Check if launchable subset is empty
         id: check_launchable_subset
@@ -204,6 +206,9 @@ jobs:
         run: |
           docker network create pmm-qa || true
           PWD=$(pwd) PMM_SERVER_IMAGE=${{ env.DOCKER_VERSION }} docker compose -f ${{ env.DOCKER_COMPOSE_FILE }} up -d
+          # shellcheck disable=SC2016
+          # Deliberately unexpanded: the inner bash -c does the expanding, and
+          # curl's %{http_code} must reach curl literally.
           timeout 120 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" = "200" ]; do sleep 5; done'
           bash -x testdata/db_setup.sh
           docker network connect pmm-qa pmm-server || true
@@ -211,7 +216,7 @@ jobs:
       - name: Export path to qa-integration repo
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/qa-integration
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
       - name: Setup PMM-Client
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
@@ -222,7 +227,8 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
-          mkdir -m 777 -p /tmp/backup_data
+          mkdir -p /tmp/backup_data
+          chmod 777 /tmp/backup_data
           ./pmm-framework/pmm-framework --parallel --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }} with launchable
@@ -235,6 +241,10 @@ jobs:
           PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
           GSSAPI_ENABLED: ${{ steps.gssapi_detected.outputs.result }}
         run: |
+          # shellcheck disable=SC2016
+          # This substitutes the literal string ${PMM_UI_URL}, not its value. It only
+          # rewrites the unused fallback in pr.codecept.js, so it is inert today --
+          # left as-is rather than changed blind. See the PR description.
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
 
           set +e
@@ -260,7 +270,7 @@ jobs:
         working-directory: pmm-qa/codeceptjs-e2e
         run: |
           sed -i "s|$(pwd)/||g" tests/output/result.xml || true
-          launchable record tests --session $(cat launchable-session.txt) codeceptjs tests/output/result.xml || true
+          launchable record tests --session "$(cat launchable-session.txt)" codeceptjs tests/output/result.xml || true
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs
@@ -268,7 +278,7 @@ jobs:
         working-directory: pmm-qa/codeceptjs-e2e
         continue-on-error: true
         run: |
-          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ always() && (failure() || steps.execute_tests.outputs.codecept_failed == 'true') }}

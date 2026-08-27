@@ -70,7 +70,9 @@
 
 ### Setup PMM Client
   - name: Use "pmm-admin config" to connect pmm client to server
-    shell: pmm-admin config --force --debug --server-insecure-tls --metrics-mode={{ metrics_mode }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic node_{{ instance_ip }}
+    shell: >-
+      pmm-admin config --force --debug --server-insecure-tls --metrics-mode={{ metrics_mode }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic
+      node_{{ instance_ip }}
 
   - name: Check that PMM client version is correct
     include_tasks: ./tasks/verify_pmm_status_versions.yml

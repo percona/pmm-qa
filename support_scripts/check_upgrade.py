@@ -169,16 +169,14 @@ if __name__ == '__main__':
         """Polymorphic shortcut to use in test"""
         if is_ami:
             return verify_command(f"rpm -qa | grep {query}")
-        else:
-            return verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep {query}")
+        return verify_command(f"docker exec {pmm_server_docker_container} rpm -qa | grep {query}")
 
 
     def grep_supervisor_status(name):
         """Polymorphic shortcut to use in test"""
         if is_ami:
             return verify_command(f"sudo supervisorctl status | grep {name}")
-        else:
-            return verify_command(f"docker exec {pmm_server_docker_container} supervisorctl status | grep {name}")
+        return verify_command(f"docker exec {pmm_server_docker_container} supervisorctl status | grep {name}")
 
 
     # leaving sys.argv[0] alone

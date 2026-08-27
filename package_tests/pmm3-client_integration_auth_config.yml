@@ -62,11 +62,15 @@
 
   - name: configure pmm client to connect to server in push/auto Mode
     when: lookup('env', 'metrics_mode') == "push" or lookup('env', 'metrics_mode') == ""
-    shell: pmm-admin config --force --debug --server-insecure-tls --metrics-mode=auto --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic node_{{ instance_ip }}
+    shell: >-
+      pmm-admin config --force --debug --server-insecure-tls --metrics-mode=auto --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }}
+      {{ instance_ip }} generic node_{{ instance_ip }}
 
   - name: configure pmm client to connect to server in pull Mode
     when: lookup('env', 'metrics_mode') == "pull"
-    shell: pmm-admin config --force --debug --server-insecure-tls --metrics-mode=pull --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }} {{ instance_ip }} generic node_{{ instance_ip }}
+    shell: >-
+      pmm-admin config --force --debug --server-insecure-tls --metrics-mode=pull --agent-password={{ pmm_auth_password }} --server-url=https://admin:{{ pmm_server_password }}@{{ pmm_server_address }}
+      {{ instance_ip }} generic node_{{ instance_ip }}
 
 ### start PS
   - set_fact:

@@ -9,7 +9,7 @@ one; see [`linode-ha-provisioning`](../../linode-ha-provisioning/SKILL.md).
 ## Topology
 
 | Thing | Value |
-|---|---|
+| --- | --- |
 | Chart | `charts/pmm-ha` (chart version and `appVersion` are independent) |
 | Prerequisite | `charts/pmm-ha-dependencies` — VictoriaMetrics, Altinity ClickHouse and PG operators, installed first |
 | Namespace | `pmm` (the `K8sHelper` constructor default) |
@@ -64,7 +64,7 @@ it so a future chart change fails loudly.
 
 ## HAProxy routes to the leader only
 
-```
+```haproxy
 backend https_back
     option httpchk
     http-check send meth GET uri /v1/server/leaderHealthCheck ver HTTP/1.1 hdr Host www
@@ -94,14 +94,14 @@ Leadership is hashicorp/raft inside pmm-managed. **Kubernetes stores none of it*
 independent read paths off the same Raft state:
 
 | Surface | Source |
-|---|---|
+| --- | --- |
 | `/v1/ha/nodes` | `raftNode.LeaderWithID()` — cluster-wide view |
 | `pmm_ha_leader_status` | `raftNode.State() == raft.Leader` — each node's local view |
 
 `pmm_ha_*` metrics (from `managed/services/ha/ha_metrics.go`, HA mode only):
 
 | Metric | Meaning |
-|---|---|
+| --- | --- |
 | `pmm_ha_leader_status{node_id}` | 1 on the leader, 0 on followers; once converged, `sum()` of 0 = no leader and >1 = split-brain — mid-failover scrapes transiently show either, so wait for `waitForLeaderStatusSum(1)` before classifying |
 | `pmm_ha_raft_term{node_id}` | Raft term; rapid growth = leader flapping |
 | `pmm_ha_up{node_id,role}` | 1 per live node, `role` is `voter`/`nonvoter` |

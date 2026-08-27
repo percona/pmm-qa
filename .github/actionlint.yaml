@@ -1,7 +1,7 @@
-# actionlint's embedded shellcheck stays suppressed in this phase: the ~120
-# findings in `run:` blocks are a separate cleanup from the workflow-schema ones.
-# Patterns are regexes matched against the reported message.
-paths:
-  .github/workflows/**:
-    ignore:
-      - 'shellcheck reported issue in this script'
+# actionlint's embedded shellcheck runs at its own default severity -- info and
+# style included -- and nothing is suppressed here. `run:` blocks are shell and
+# are held to the same bar as the repo's .sh files.
+#
+# Seven findings carry an inline `# shellcheck disable=SC2016` with the reason
+# next to them: five are `bash -c '...'` polls where the inner shell must do the
+# expanding, two are a sed that substitutes a literal on purpose.

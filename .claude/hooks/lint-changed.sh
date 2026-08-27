@@ -78,12 +78,14 @@ fi
 if [ ${#sh_files[@]} -gt 0 ]; then
   echo "==> shellcheck"
   ensure_shellcheck || fail "shellcheck not installed"
-  shellcheck -S error "${sh_files[@]}" || fail "shellcheck"
+  shellcheck -S warning "${sh_files[@]}" || fail "shellcheck"
 fi
 
+# The version is echoed because ruff's default rule set has widened between
+# releases; ruff.toml pins the selection, and this makes a drift visible.
 if [ ${#py_files[@]} -gt 0 ]; then
-  echo "==> ruff"
   ensure_ruff || fail "ruff not installed"
+  echo "==> ruff ($(ruff --version 2>/dev/null))"
   ruff check "${py_files[@]}" || fail "ruff"
 fi
 

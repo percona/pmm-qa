@@ -289,9 +289,13 @@
   when: not (use_encrypted_client_config | default(false) | bool)
 
 - name: Start pmm client with encrypted client config
+  # yamllint disable rule:line-length
+  # The pmm-agent flags sit inside a single-quoted nohup command,
+  # which a backslash-newline would not join.
   shell: |
     docker exec --user root {{ container_name }} \
       sh -c 'nohup pmm-agent --config-file=/usr/local/percona/pmm/config/pmm-agent.yaml --config-file-key-file="/usr/local/percona/pmm/config/pmm-key.pem" --config-file-key-password="testpass" > /var/log/pmm-agent.log 2>&1 &'
+  # yamllint enable rule:line-length
   when: use_encrypted_client_config | default(false) | bool
 
 - name: Wait until pmm-agent is running and connected

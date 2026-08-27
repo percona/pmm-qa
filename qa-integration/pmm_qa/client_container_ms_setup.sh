@@ -44,9 +44,11 @@ chmod 1777 /tmp || true
 
 ## Deploy DB deployer
 export MS_PORT=3308
-export tar_ball_name=$(ls mysql-*)
+tar_ball_name=$(ls mysql-*)
+export tar_ball_name
 dbdeployer unpack ${tar_ball_name} --sandbox-binary=~/ms${ms_version} --overwrite
-export db_version_sandbox=$(ls ~/ms${ms_version})
+db_version_sandbox=$(ls ~/ms${ms_version})
+export db_version_sandbox
 export SERVICE_RANDOM_NUMBER=$((1 + $RANDOM % 9999))
 
 # Initialize my_cnf_options
@@ -60,7 +62,8 @@ fi
 if [[ "$number_of_nodes" == 1 ]];then
    if [[ ! -z $group_replication ]]; then
       dbdeployer deploy --topology=group replication ${db_version_sandbox} --single-primary --sandbox-binary=~/ms${ms_version} --remote-access=% --bind-address=0.0.0.0 --force ${my_cnf_options:+--my-cnf-options="$my_cnf_options"}
-      export db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      export db_sandbox
       node_port=`dbdeployer sandboxes --header | grep ${db_version_sandbox} | grep 'group-single-primary' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
       mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
       mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'GRgrO9301RuF';"
@@ -68,7 +71,8 @@ if [[ "$number_of_nodes" == 1 ]];then
       mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "UPDATE performance_schema.setup_consumers SET ENABLED = 'YES' WHERE NAME LIKE '%statements%';"
    else
       dbdeployer deploy single ${db_version_sandbox} --sandbox-binary=~/ms${ms_version} --port=$MS_PORT --remote-access=% --bind-address=0.0.0.0 --force ${my_cnf_options:+--my-cnf-options="$my_cnf_options"}
-      export db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+      export db_sandbox
       node_port=`dbdeployer sandboxes --header | grep  ${db_version_sandbox} | grep 'single' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
       mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
       mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'GRgrO9301RuF';"
@@ -100,7 +104,8 @@ if [[ "$number_of_nodes" == 1 ]];then
    fi
 else
      dbdeployer deploy multiple ${db_version_sandbox} --sandbox-binary=~/ms${ms_version} --nodes $number_of_nodes --force --remote-access=% --bind-address=0.0.0.0 ${my_cnf_options:+--my-cnf-options="$my_cnf_options"}
-     export db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+     db_sandbox=$(dbdeployer sandboxes | awk -F' ' '{print $1}')
+     export db_sandbox
      node_port=`dbdeployer sandboxes --header | grep ${db_version_sandbox} | grep 'multiple' | awk -F'[' '{print $2}' | awk -F' ' '{print $1}'`
      mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'msandbox'@'localhost' IDENTIFIED WITH mysql_native_password BY 'msandbox';"
      mysql -h 127.0.0.1 -u msandbox -pmsandbox --port $node_port -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'GRgrO9301RuF';"
