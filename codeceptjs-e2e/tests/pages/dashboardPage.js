@@ -1191,24 +1191,36 @@ module.exports = {
     I.waitForVisible(this.annotationText(title), 30);
   },
 
+  // Grafana mounts a panel only once it intersects the viewport, so page down
+  // until it shows up rather than a fixed number of times. grabNumberOfVisibleElements
+  // carries no deadline of its own, so a dashboard that stalls the renderer delays the
+  // check instead of failing it.
+  async scrollToGraph(graphLocator, maxPageDowns = 40) {
+    for (let i = 0; i <= maxPageDowns; i++) {
+      if (await I.grabNumberOfVisibleElements(graphLocator) > 0) break;
+
+      I.pressKey('PageDown');
+      I.wait(1);
+    }
+
+    I.waitForElement(graphLocator, 30);
+    I.scrollTo(graphLocator);
+  },
+
   async verifyMetricsExistence(metrics) {
     I.click(this.fields.reportTitle);
     await adminPage.performPageDown(5);
     I.waitForElement(this.graphsLocator(metrics[0]), 60);
     for (const i in metrics) {
-      I.pressKey('PageDown');
       await this.expandEachDashboardRow();
-      I.waitForElement(this.graphsLocator(metrics[i]), 5);
-      I.scrollTo(this.graphsLocator(metrics[i]));
+      await this.scrollToGraph(this.graphsLocator(metrics[i]));
     }
   },
 
   async verifyMetricsExistencePartialMatch(metrics) {
     for (const i in metrics) {
-      I.pressKey('PageDown');
       await this.expandEachDashboardRow();
-      I.waitForElement(this.graphsLocatorPartialMatch(metrics[i]), 5);
-      I.scrollTo(this.graphsLocatorPartialMatch(metrics[i]));
+      await this.scrollToGraph(this.graphsLocatorPartialMatch(metrics[i]));
     }
   },
 
