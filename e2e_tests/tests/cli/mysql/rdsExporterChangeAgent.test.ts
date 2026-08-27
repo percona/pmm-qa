@@ -243,12 +243,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest('T1005 - enable disable push metrics @rds-integration', async ({ cliHelper, page }) => {
-    console.log(
-      cliHelper
-        .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter`)
-        .stdout.trim()
-        .split(' '),
-    );
     cliHelper.changeAgent(containerName, Types.rds, rdsExporterId, '--push-metrics');
     await expect(async () => {
       const pushMetricsList = cliHelper
