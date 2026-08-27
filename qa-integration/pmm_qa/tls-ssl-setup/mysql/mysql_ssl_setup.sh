@@ -16,6 +16,21 @@ then
       export mysql_version=8.0
 fi
 
+# Percona Server 9.7 is systemd-only (no /etc/init.d/mysql, no mysqld_safe) and
+# this container has no systemd, so start mysqld directly instead of via service.
+restart_mysql() {
+  if [ "$mysql_version" == "9.7" ]; then
+    mysqladmin shutdown 2>/dev/null || pkill -x mysqld 2>/dev/null || true
+    sleep 3
+    mkdir -p /var/run/mysqld
+    chown mysql:mysql /var/run/mysqld
+    mysqld --user=mysql --daemonize
+    sleep 5
+  else
+    service mysql restart
+  fi
+}
+
 apt-get update
 apt-get -y install wget curl git gnupg2 lsb-release
 wget https://repo.percona.com/apt/percona-release_latest.generic_all.deb
@@ -62,7 +77,7 @@ cat > /etc/mysql/my.cnf << EOF
 [mysqld]
 innodb_buffer_pool_size=256M
 innodb_buffer_pool_instances=1
-innodb_log_file_size=1G
+innodb_redo_log_capacity=1G
 innodb_flush_method=O_DIRECT
 innodb_numa_interleave=1
 innodb_flush_neighbors=0
@@ -119,8 +134,8 @@ require_secure_transport=ON
 EOF
 
 fi
-service mysql restart
+restart_mysql
 mysql -e "create user pmm@'%' identified by \"pmm\""
 mysql -e "grant all on *.* to pmm@'%'"
 mysql -e "CREATE USER 'pmm_tls'@'%' REQUIRE X509"
-service mysql restart
+restart_mysql
