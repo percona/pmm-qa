@@ -78,6 +78,7 @@ setup_mysql() {
     [PMM_QA_GIT_BRANCH]="$(git_branch)"
     [ENCRYPTED_CLIENT_CONFIG]="$(resolve_value MYSQL ENCRYPTED_CLIENT_CONFIG DB_CONFIG)"
     [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"
+    [TIME_ZONE]="$(resolve_value PS TIME_ZONE DB_CONFIG)"
   )
   run_playbook 'mysql/mysql-setup.yml' env_map
 }

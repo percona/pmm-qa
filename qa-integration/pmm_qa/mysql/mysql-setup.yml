@@ -26,6 +26,12 @@
     my_rocks: "{{ lookup('env', 'MY_ROCKS') | default(false, true) }}"
     container_prefix: "mysql_pmm{{ (setup_type|default('')) and '_' ~ setup_type }}_{{ mysql_version }}_"
     encrypted_client_config: "{{ lookup('env', 'ENCRYPTED_CLIENT_CONFIG') | default(false, true) | bool }}"
+    time_zone: "{{ lookup('env', 'TIME_ZONE') | default('', true) }}"
+    # When TIME_ZONE is set, monitor the service with the time_zone DSN parameter.
+    # The value must reach pmm-admin with its single quotes intact (mysql expects
+    # SET time_zone='...'), so it is wrapped in double quotes to survive the host
+    # shell: --extra-dsn-params="time_zone='+00:00'". Empty when TIME_ZONE is unset.
+    extra_dsn_params_arg: "{{ ('--extra-dsn-params=\"time_zone=' ~ \"'\" ~ time_zone ~ \"'\" ~ '\"') if time_zone else '' }}"
 
   tasks:
     - name: Modify the node count for group replication
@@ -100,21 +106,21 @@
     - name: Add service to pmm server
       shell: >-
         docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --environment=mysql-gr-dev
-        --cluster=mysql-gr-dev-cluster --replication-set=mysql-gr-replication {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
+        {{ extra_dsn_params_arg }} --cluster=mysql-gr-dev-cluster --replication-set=mysql-gr-replication {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type == "gr"
 
     - name: Add service to pmm server
       shell: >-
         docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --environment=mysql-replication-dev
-        --cluster=mysql-replication-dev-cluster --replication-set=mysql-async-replication {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
+        {{ extra_dsn_params_arg }} --cluster=mysql-replication-dev-cluster --replication-set=mysql-async-replication {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type == "replication"
 
     - name: Add service to pmm server
       shell: >-
         docker exec {{ container_prefix }}{{ item }} pmm-admin add mysql --query-source={{ query_source }} --username=root --password={{ root_password }} --cluster=mysql-single-dev-cluster
-        --environment=mysql-dev {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
+        {{ extra_dsn_params_arg }} --environment=mysql-dev {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:3306
       loop: "{{ range(1, nodes_count | int + 1) | list }}"
       when: setup_type != "gr" and setup_type != "replication"
 
