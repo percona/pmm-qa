@@ -63,12 +63,6 @@ Scenario(
   }) => {
     const mongoService = await inventoryAPI.getServiceDetailsByPartialDetails({ cluster: 'replicaset', service_name: 'rs101' });
 
-    // Wait for the service's metrics before loading the dashboard, not after: Grafana
-    // resolves $database and $replication_set once, at page load, and never re-resolves
-    // them on refresh, so a dashboard opened before the first scrape keeps empty
-    // variables - and empty panels - for the rest of the test. mongodb_dbstats_* needs
-    // its own wait because PMM collects it on the exporter's low-resolution (1m) job,
-    // up to a minute behind the 5s job every other panel here reads.
     await grafanaAPI.waitForMetric('mongodb_top_commands_count', { type: 'service_name', value: mongoService.service_name }, 120);
     await grafanaAPI.waitForMetric('mongodb_dbstats_dataSize', { type: 'service_name', value: mongoService.service_name }, 120);
 
