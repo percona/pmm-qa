@@ -2,15 +2,12 @@ name: Claude Code Review
 
 on:
   pull_request:
-    types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+    # No `synchronize`: a review on every push spams the PR and spends a full
+    # Opus run per commit. Re-review on demand instead -- draft then ready for
+    # review, or `@claude review this with /qa-code-review`.
+    types: [opened, ready_for_review, reopened]
 
-# A push supersedes the review still running on the previous head.
+# A second trigger supersedes a review still running on the previous head.
 concurrency:
   group: claude-review-${{ github.event.pull_request.number }}
   cancel-in-progress: true
