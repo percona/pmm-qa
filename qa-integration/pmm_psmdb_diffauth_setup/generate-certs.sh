@@ -1,3 +1,4 @@
+#!/bin/bash
 #Generate certificates for tests
 rm -rf easy-rsa pki certs && mkdir certs
 git clone https://github.com/OpenVPN/easy-rsa.git

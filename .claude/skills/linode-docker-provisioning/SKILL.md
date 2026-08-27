@@ -100,6 +100,7 @@ fi
 `role` is `test-runner` or `investigator` — a tag only, but it must be a safe
 identifier (`[A-Za-z0-9._-]`, no spaces or `..`); the relay rejects anything else
 with `400 bad_role`. The relay:
+
 - Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443, tagged `pmm-qa-ephemeral`.
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or pass `"pmm_qa_ref":"<branch>"` in the POST body (must already be pushed; see "Never code on the Linode VM" above).

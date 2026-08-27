@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Internal variables
 declare PGSQL_VERSION CLIENT_VERSION PMM_CONTAINER_NAME PMM_CONTAINER_PORT PMM_CONTAINER_IMAGE PMM_UI_BRANCH PMM_QA_GIT_BRANCH PGSTAT_MONITOR_BRANCH PGSTAT_MONITOR_REPO
@@ -73,16 +73,16 @@ docker run -d -p 8081:80 -p ${PMM_CONTAINER_PORT}:443 -e PMM_DEBUG=1 --volumes-f
 ## Fetch PMM-QA Repo, this contains pgsql_pmm_setup scripts, playbook for
 sudo rm -r pmm-qa || true ## Delete if the Repo already checkedout
 git clone -b ${PMM_QA_GIT_BRANCH} https://github.com/percona/pmm-qa/
-pushd pmm-qa/pmm-tests
+pushd pmm-qa/pmm-tests || exit 1
 bash -x ./pmm-framework.sh --pdpgsql-version=${PGSQL_VERSION} --setup-pmm-pgsm-integration
-popd
+popd || exit 1
 
 
 ## Fetch PMM-UI-Tests Repo, this contains all the e2e tests present at path tests/qa-integration/pmm_pgsm_integration_test.js
 sudo rm -r pmm-ui-tests || true ## Delete if the Repo already checkedout
 git clone -b ${PMM_UI_BRANCH} https://github.com/percona/pmm-ui-tests
-pushd pmm-ui-tests
+pushd pmm-ui-tests || exit 1
 npm install --force
 export PMM_UI_URL="http://127.0.0.1:8081/"
 ./node_modules/.bin/codeceptjs run --debug --steps -c pr.codecept.js --grep '@pgsm-pmm-integration'
-popd
+popd || exit 1

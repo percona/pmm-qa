@@ -27,12 +27,13 @@ Once you have what you're investigating and a ref, use marker `## Failures fixed
 ## Knowledge (read by path)
 
 | Skill | Path |
-|-------|------|
+| ------- | ------ |
 | Linode VM + pmm-framework provisioning | `.claude/skills/linode-docker-provisioning/SKILL.md` |
 | FB checks, workflow mapping | `.claude/skills/fb-tests/SKILL.md` |
 | PR diffs, JSON dashboards | `.claude/skills/git-diff/SKILL.md` |
 | Repo map, gh rules | `.claude/skills/repos/SKILL.md` |
 | Jira (optional context) | `.claude/skills/jira/SKILL.md` |
+| Deep direct verification (API/CLI/logs/metrics/state) | `.claude/skills/verification-depth/SKILL.md` |
 
 ## Workflow
 
@@ -45,7 +46,7 @@ Once you have what you're investigating and a ref, use marker `## Failures fixed
      - **Product** (PMM/Grafana's own behavior contradicts what's intended — cross-check with `git-diff` (and `json-diff` for dashboard/config JSON) against what merged upstream in the relevant window as *supporting* evidence, not the sole basis) → do **not** attempt a pmm-qa fix. **File a PMM Jira bug** via the relay's `jira/create` action (`issuetype: "Bug"`, a clear `summary`, and a `description` carrying the reproduction, evidence, and the suspected upstream PR link) — the relay auto-sets **Found by Automation = Yes** (`customfield_10059`) on the bugs it files, so an automatically-detected regression is always flagged as such. (Dedup in step 1 already ruled out an existing ticket; if you *did* find one, comment on it instead of creating a duplicate.) Then stop.
      - **pmm-qa's own test code** (a selector, a fixture, timing, an out-of-scope or stale assertion) → if this came from the **FB source**, also check whether the test's new expectation matches an **open, not-yet-merged** PR in `percona/pmm` or `percona/grafana` (search open PRs there for one touching the same area) — a submodules test occasionally gets updated ahead of the upstream change it's testing for. If such a PR exists → it's a **blocked fix**; continue to step 4, but see the draft-PR handling in step 5. Otherwise → an ordinary test bug; continue to step 4.
      - **pmm-qa's own test infrastructure / setup data** (the assertion is right and the product is fine, but the environment never produced the data or state the test needs — a panel is empty because the QA setup generates no activity of that kind, a service was never registered, a fixture was never seeded) → fix the **provisioning/setup** so the data exists (`qa-integration/**` compose files, setup scripts, datagen configs, or the `pmm-framework` setup), not the test. This is still a test bug, in the setup rather than the spec; continue to step 4. **Never** loosen the assertion — e.g. raising a dashboard's tolerated-empty-panel count — to hide data the setup should be producing; that turns a real "PMM shows no data here" signal off for good.
-4. **Fix + fix verification** (test-bug path only, ordinary or blocked) — Minimal change in `percona/pmm-qa` only, made **in this environment**, never on the Linode box. Commit, push to a branch, `sync.sh <run-id> <branch>` onto the **same already-running** VM, re-run until green. For a **blocked fix**: if the blocking upstream PR's branch is reachable, verify against that instead of `main` (main doesn't have the new behavior yet, so the fixed test is *expected* to stay red there) — note in the PR that this is expected until the upstream PR lands.
+4. **Fix + fix verification** (test-bug path only, ordinary or blocked) — Minimal change in `percona/pmm-qa` only, made **in this environment**, never on the Linode box. Commit, push to a branch, `sync.sh <run-id> <branch>` onto the **same already-running** VM, re-run until green. Apply `verification-depth` to the fix verification and report honestly when the evidence supports only a smoke test. For a **blocked fix**: if the blocking upstream PR's branch is reachable, verify against that instead of `main` (main doesn't have the new behavior yet, so the fixed test is *expected* to stay red there) — note in the PR that this is expected until the upstream PR lands.
 
    **Verify under conditions that match CI, not your VM's.** A repro VM you have been iterating on has usually been alive far longer than a CI run's freshly-provisioned one, so it has accumulated events and time-series history CI won't have — panels that are still empty on a fresh cluster fill in over time. A green re-run on a long-lived VM is therefore weak evidence for a **setup-data** fix: re-provision from scratch (or restart the churn/data generator and let only a CI-like amount of time pass) before trusting it, and state in the PR exactly what you proved versus what only the next real CI/nightly run can confirm. In particular, don't set a test's expected count (tolerated-empty panels, expected services, row counts) from what a long-lived VM happens to show — a fresh run may legitimately differ.
 5. **PR** — Open **one** PR on `percona/pmm-qa`. Ordinary test-bug fix:
@@ -79,7 +80,16 @@ Once you have what you're investigating and a ref, use marker `## Failures fixed
 
 ## Relay the result
 
-If a human asked directly (or was routed here via Slack), report back what you found: fixed + PR link, blocked fix + draft PR link (note it's blocked), product-bug + report (no fix), not-a-bug + the correct way to do it, didn't reproduce, or already-in-flight/already-reported. If this ran from a CI/FB trigger payload with nobody waiting synchronously, no further reporting is needed — your PR (or lack of one) is the record.
+Never just produce output and move on — close the loop with whoever is waiting on it.
+
+- **Asked directly (or routed via Slack)** — report back what you found: fixed + PR link, blocked fix + draft PR link (note it's blocked), product-bug + report (no fix), not-a-bug + the correct way to do it, didn't reproduce, or already-in-flight/already-reported.
+- **FB source (a `Percona-Lab/pmm-submodules` PR went red)** — **always** post a brief comment (3–4 sentences) on that PR, via the GitHub MCP `add_issue_comment` (owner `Percona-Lab`, repo `pmm-submodules`, the PR number), so the dev sees their red FB run was actually looked at — not silently triaged. Say what happened, the verdict, and the next step:
+  - **Flaky / didn't reproduce** → the failing test(s) look flaky and didn't reproduce; their PR change isn't implicated; PMM-QA is addressing it (stabilizing/tracking the test).
+  - **pmm-qa test or setup-data bug** → it reproduced, it's a pmm-qa test/setup issue (not their change), here's the fix PR; for a **blocked** fix, the test now expects behavior from `<upstream PR>` not on `main` yet — link the draft PR and note it's expected red until that lands.
+  - **Product bug** → it reproduced as a real PMM/Grafana bug (not a test issue); filed `PMM-XXXX` for a product fix — link it.
+
+  Keep it to those few sentences, and end with the Claude Code attribution footer. If the cross-org comment is refused (the GitHub App lacks write on `Percona-Lab`), say so in your run output so a human can post it — never drop the loop silently.
+- **pmm-qa's own scheduled CI on `main`** — no dev PR to answer; your pmm-qa PR (or lack of one) is the record.
 
 ## Never
 

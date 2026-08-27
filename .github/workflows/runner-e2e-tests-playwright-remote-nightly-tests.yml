@@ -1,0 +1,322 @@
+name: _runner-e2e-tests-playwright-remote-nightly-tests
+
+on:
+  workflow_call:
+    inputs:
+      pmm_server_address:
+        required: true
+        type: string
+      admin_password:
+        required: false
+        default: 'admin'
+        type: string
+      pmm_qa_branch:
+        required: false
+        default: 'main'
+        type: string
+      pmm_client_version:
+        required: false
+        default: 'latest-tarball'
+        type: string
+      pmm_server_image:
+        required: false
+        default: 'perconalab/pmm-server:3-dev-latest'
+        type: string
+      tags_for_tests:
+        required: true
+        type: string
+      expected_setup_jobs:
+        required: false
+        default: 14
+        type: number
+      workers:
+        required: false
+        default: 1
+        type: number
+      launchable_confidence:
+        required: false
+        default: '100%'
+        type: string
+      installation_type:
+        required: false
+        default: 'docker'
+        type: string
+    secrets:
+      LAUNCHABLE_TOKEN:
+        required: false
+      GH_TOKEN:
+        required: false
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  tests:
+    name: "test execution / ${{ inputs.tags_for_tests }}"
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+      ADMIN_PASSWORD: ${{ inputs.admin_password || 'admin' }}
+      PMM_SERVER_ADDRESS: ${{ inputs.pmm_server_address }}
+      PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_QA_GIT_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
+      PMM_CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      CLIENT_VERSION: ${{ inputs.pmm_client_version || 'latest-tarball' }}
+      DOCKER_VERSION: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
+      PMM_TEST_FLAG: ${{ inputs.tags_for_tests }}
+      TAGS_FOR_TESTS: ${{ inputs.tags_for_tests }}
+      WORKERS: ${{ inputs.workers || 1 }}
+      LAUNCHABLE_CONFIDENCE: ${{ inputs.launchable_confidence || '100%' }}
+      INSTALLATION_TYPE: ${{ inputs.installation_type || 'docker' }}
+      LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
+      SUBSET_FILE_NAME: 'launchable-subset.txt'
+      SETUP_WAIT_STEP: 'Waiting for tests execution'
+      SETUP_JOB_PREFIX: 'setup / '
+      EXPECTED_SETUP_JOBS: ${{ inputs.expected_setup_jobs || 14 }}
+      WAIT_POLL_INTERVAL_SECONDS: 600
+      WAIT_TIMEOUT_SECONDS: 10800
+
+    steps:
+      - name: Checkout pmm-qa repo
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: ./pmm-qa
+
+      - name: Cleanup disk space on a worker according to https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
+      - name: Resolve PMM Server URLs
+        id: pmm_urls
+        run: |
+          ADDR="${{ env.PMM_SERVER_ADDRESS }}"
+          ADDR_NO_SCHEME=${ADDR#http://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
+          ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
+          {
+            echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/"
+            echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}"
+            echo "SERVER_IP=${ADDR_NO_SCHEME}"
+          } >> "$GITHUB_ENV"
+
+      - name: Sanity check remote PMM Server reachability
+        run: |
+          set -eux
+          for i in $(seq 1 30); do
+            code=$(curl -ksS -o /dev/null -w "%{http_code}" "https://${SERVER_IP}/v1/server/readyz" || echo "000")
+            if [ "$code" = "200" ]; then
+              echo "Remote PMM Server is ready"
+              exit 0
+            fi
+            echo "Attempt $i: PMM Server not ready (http=$code), sleeping 5s"
+            sleep 5
+          done
+          echo "Remote PMM Server did not become ready in time" >&2
+          exit 1
+
+      - name: Setup npm modules for e2e tests
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          npm ci
+          npx playwright install-deps
+          npx playwright install chromium
+
+      - uses: actions/github-script@v7
+        id: tags_processed
+        with:
+          script: |
+            return `${process.env.TAGS_FOR_TESTS.replaceAll('|', '-')}`
+          result-encoding: string
+
+      - name: Prepare launchable
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          pip3 install --user --upgrade launchable~=1.0
+          launchable verify || true
+
+          docker pull ${{ env.DOCKER_VERSION }} || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
+          echo "Launchable build: ${DOCKER_IMAGE_ID}"
+          echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
+
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
+            > launchable-session.txt || true
+          node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
+            --use-case feature-branch playwright < test_list.txt > ${{ env.SUBSET_FILE_NAME }} || true
+          cat ${{ env.SUBSET_FILE_NAME }} || true
+
+      - name: Check if launchable subset is empty
+        id: check_launchable_subset
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          if [ -s "${{ env.SUBSET_FILE_NAME }}" ]; then
+            echo "has_subset=true" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is not empty. Continue with tests."
+          else
+            echo "has_subset=false" >> "$GITHUB_OUTPUT"
+            echo "Launchable subset is empty. Test execution will be skipped."
+          fi
+
+      - name: Skip notice
+        if: ${{ steps.check_launchable_subset.outputs.has_subset != 'true' }}
+        run: echo "No tests selected by Launchable subset. Skipping setup wait and test execution."
+
+      - name: Wait for all setup jobs to be ready
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const run_id = context.runId;
+            const expectedSetupJobs = Number(process.env.EXPECTED_SETUP_JOBS);
+            const pollIntervalMs = Number(process.env.WAIT_POLL_INTERVAL_SECONDS) * 1000;
+            const timeoutMs = Number(process.env.WAIT_TIMEOUT_SECONDS) * 1000;
+            const setupPrefix = process.env.SETUP_JOB_PREFIX;
+            const setupWaitStep = process.env.SETUP_WAIT_STEP;
+            const startedAt = Date.now();
+
+            async function sleep(ms) {
+              return new Promise((resolve) => setTimeout(resolve, ms));
+            }
+
+            async function listJobs() {
+              return github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                owner,
+                repo,
+                run_id,
+                filter: 'latest',
+                per_page: 100,
+                headers: {
+                  'X-GitHub-Api-Version': '2026-03-10',
+                },
+              });
+            }
+
+            async function getJob(job) {
+              const response = await github.rest.actions.getJobForWorkflowRun({
+                owner,
+                repo,
+                job_id: job.id,
+                headers: {
+                  'X-GitHub-Api-Version': '2026-03-10',
+                },
+              });
+              return response.data;
+            }
+
+            function findSetupWaitStep(job) {
+              return (job.steps || []).find((step) => step.name === setupWaitStep);
+            }
+
+            function isWaitingForTests(job) {
+              const step = findSetupWaitStep(job);
+              return step?.status === 'in_progress';
+            }
+
+            function finishedWaitingSuccessfully(job) {
+              const step = findSetupWaitStep(job);
+              return step?.status === 'completed' && step?.conclusion === 'success';
+            }
+
+            function setupJobFailed(job) {
+              return ['failure', 'cancelled'].includes(job.conclusion);
+            }
+
+            while (true) {
+              const jobs = await listJobs();
+              const setupJobs = jobs.filter((job) => job.name.startsWith(setupPrefix) || job.name.includes(setupPrefix));
+              const detailedSetupJobs = await Promise.all(setupJobs.map(getJob));
+              const setupJobsWithWaitStep = detailedSetupJobs.filter(findSetupWaitStep);
+              const readySetupJobs = setupJobsWithWaitStep.filter(isWaitingForTests);
+              const failedSetupJobs = detailedSetupJobs.filter(setupJobFailed);
+              const finishedEarlyJobs = setupJobsWithWaitStep.filter(finishedWaitingSuccessfully);
+
+              core.info(`Setup jobs: discovered=${setupJobsWithWaitStep.length}/${expectedSetupJobs}, ready=${readySetupJobs.length}/${expectedSetupJobs}`);
+              for (const job of setupJobsWithWaitStep) {
+                const step = findSetupWaitStep(job);
+                core.info(`- ${job.name}: job_status=${job.status}, step_status=${step.status}, step_conclusion=${step.conclusion || 'null'}, job_conclusion=${job.conclusion || 'null'}`);
+              }
+
+              if (failedSetupJobs.length > 0) {
+                throw new Error(`Setup job(s) failed or were cancelled: ${failedSetupJobs.map((job) => `${job.name} (${job.conclusion})`).join(', ')}`);
+              }
+
+              if (finishedEarlyJobs.length > 0) {
+                throw new Error(`Setup wait step completed before this test job was ready: ${finishedEarlyJobs.map((job) => job.name).join(', ')}`);
+              }
+
+              if (setupJobsWithWaitStep.length >= expectedSetupJobs && readySetupJobs.length >= expectedSetupJobs) {
+                core.info('All setup jobs are waiting for test execution.');
+                return;
+              }
+
+              if (Date.now() - startedAt > timeoutMs) {
+                throw new Error(`Timed out waiting for ${expectedSetupJobs} setup jobs to reach '${setupWaitStep}' with status=in_progress.`);
+              }
+
+              await sleep(pollIntervalMs);
+            }
+
+      - name: Wait for metrics to be collected
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          sleep 60
+
+      - name: 'Run UI tests: ${{ env.PMM_TEST_FLAG }} with launchable'
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          # shellcheck disable=SC2046
+          # The launchable subset is a whitespace-separated list of test files,
+          # so it has to split into separate arguments.
+          npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
+
+      - name: Download PMM Server logs
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        working-directory: pmm-qa/e2e_tests
+        continue-on-error: true
+        run: |
+          curl --insecure "https://admin:${{ env.ADMIN_PASSWORD }}@${SERVER_IP}/logs.zip" --output logs.zip
+          unzip logs.zip -d logs || true
+
+      - name: Record launchable test results
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          launchable record tests --session "$(cat launchable-session.txt)" playwright --json output/results.json || true
+          launchable gate --session "$(cat launchable-session.txt)"
+
+      - name: Record launchable logs on failure
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && failure() }}
+        working-directory: pmm-qa/e2e_tests
+        continue-on-error: true
+        run: |
+          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        continue-on-error: true
+        with:
+          name: "artifacts_${{ steps.tags_processed.outputs.result }}"
+          path: |
+            pmm-qa/e2e_tests/playwright-report
+            pmm-qa/e2e_tests/screenshots
+            pmm-qa/e2e_tests/logs
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
+        continue-on-error: true
+        with:
+          name: "junit_${{ steps.tags_processed.outputs.result }}"
+          path: pmm-qa/e2e_tests/output/results.json

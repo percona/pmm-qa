@@ -44,7 +44,7 @@ Fields to fetch (via REST per the policy above; `getJiraIssue` is the
 connector equivalent, currently not to be used):
 
 | Field | ID | Notes |
-|-------|-----|-------|
+| ------- | ----- | ------- |
 | How to test | `customfield_10083` | Verify against code, do not trust blindly |
 | FB test screenshots | `customfield_10492` | Wiki markup + attachments |
 | Found by Automation | `customfield_10059` | Multi-checkbox; set `[{"value":"Yes"}]`. The relay sets this to Yes automatically on Bugs it `create`s |
