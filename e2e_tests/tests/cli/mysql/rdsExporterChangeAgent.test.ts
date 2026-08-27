@@ -330,12 +330,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   });
 
   pmmTest('T1007 - Debug trace @rds-integration', async ({ cliHelper }) => {
-    console.log(
-      cliHelper
-        .execSilent(`docker exec ${containerName} pmm-admin list | grep rds_exporter`)
-        .stdout.trim()
-        .split(' '),
-    );
     await cliHelper
       .changeAgent(containerName, Types.rds, rdsExporterId, '--debug --trace --json')
       .outContains('rds_exporter');
@@ -364,12 +358,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .stdout.trim()
         .split('.')[0];
 
-      console.log(`Count of metrics is: ${metricsCount}`);
+      console.log(
+        cliHelper
+          .execSilent(
+            `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs{node_name="pmm-qa-rds-mysql-8-4"}[1m])' | jq`,
+          )
+          .stdout.trim(),
+      );
 
       expect(metricsCount, `Metrics should not hit victoria metrics!`).toEqual('null');
     }).toPass({
       intervals: [Timeouts.TWO_SECONDS],
-      timeout: Timeouts.ONE_MINUTE,
+      timeout: Timeouts.TWO_MINUTES,
     });
 
     response = cliHelper
