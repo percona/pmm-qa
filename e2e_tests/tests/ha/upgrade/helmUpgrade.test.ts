@@ -8,6 +8,7 @@ import { pmmServerPodSelector } from '@helpers/haCluster.helper';
 import { serverVersionBelow } from '@helpers/version.helper';
 
 const pmmHaChart = 'pmm-ha';
+const dependenciesChart = 'pmm-ha-dependencies';
 const targetImage = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
 // Set by the pipeline to the image it asked k8s/install_pmm_ha.sh to install.
 const releaseImage = process.env.RELEASE_DOCKER_VERSION;
@@ -120,6 +121,96 @@ pmmTest(
 
     await pmmTest.step(`Record the baseline in "${baselineFile}"`, async () => {
       writeBaseline(baseline);
+    });
+  },
+);
+
+pmmTest(
+  'Verify a PMM HA cluster keeps serving while its dependencies are upgraded @pmm-helm-mid-upgrade',
+  async ({ api, haClusterHelper, helmHelper, highAvailabilityPage, k8sHelper, leftNavigation, page }) => {
+    const before = readBaseline();
+
+    await pmmTest.step('Verify HA mode is enabled', async () => {
+      expect(await api.haApi.getStatus()).toEqual('Enabled');
+    });
+
+    await pmmTest.step('Verify the dependencies moved and the pmm-ha release did not', async () => {
+      helmHelper.assertAvailable();
+
+      expect(
+        helmHelper.getRelease(dependenciesChart).status,
+        `"${dependenciesChart}" must be deployed after its upgrade`,
+      ).toEqual('deployed');
+
+      const release = helmHelper.getRelease(pmmHaChart);
+
+      expect(release.status, 'The pmm-ha release must still be deployed').toEqual('deployed');
+      expect(
+        Number(release.revision),
+        'Upgrading the dependencies must leave the pmm-ha release untouched',
+      ).toEqual(before.revision);
+    });
+
+    const podNames = await pmmTest.step('Verify the PMM Server pods were not replaced', async () => {
+      const pods = k8sHelper.getPods(pmmServerPodSelector);
+      const names = pods.map((pod) => pod.name).sort();
+
+      expect(names, 'Upgrading the dependencies must not replace the PMM Server pods').toEqual(
+        before.podNames,
+      );
+
+      for (const pod of pods) {
+        expect(
+          runsImage(pod.images, targetImage),
+          `Pod "${pod.name}" must not be on the upgrade target yet, got ${pod.images.join(', ')}`,
+        ).toBeFalsy();
+      }
+
+      return names;
+    });
+
+    await pmmTest.step(`Verify the cluster still serves "${before.version}"`, async () => {
+      const version = await api.serverApi.getPmmVersion();
+
+      expect(version.version, 'The dependencies upgrade must not move the server version').toEqual(
+        before.version,
+      );
+
+      for (const podName of podNames) {
+        expect(
+          haClusterHelper.versionFromPod(podName),
+          `Pod "${podName}" must serve the same version as the cluster API`,
+        ).toEqual(version.version);
+      }
+    });
+
+    await pmmTest.step('Verify the UI is accessible', async () => {
+      await page.goto(highAvailabilityPage.url, { timeout: Timeouts.TWO_MINUTES });
+      await expect(leftNavigation.elements.sidebar).toBeVisible({ timeout: Timeouts.TWO_MINUTES });
+      await leftNavigation.selectMenuItem('home');
+      await expect(leftNavigation.elements.iframe, 'The home dashboard must render').toBeVisible({
+        timeout: Timeouts.TWO_MINUTES,
+      });
+    });
+
+    const leader = await pmmTest.step('Verify the cluster still has exactly one leader', async () => {
+      const leaderPod = await haClusterHelper.waitForLeaderChange(undefined, Timeouts.FIVE_MINUTES);
+
+      await api.haApi.waitForLeaderStatusSum(1, Timeouts.TWO_MINUTES);
+      expect(await api.haApi.getNodeNames(), 'Every pod must still be in the HA cluster').toEqual(podNames);
+      expect(
+        (await api.haApi.getLeaderNode())?.node_name,
+        `${apiEndpoints.ha.nodes} must name the pod that answers the leader health check`,
+      ).toEqual(leaderPod);
+
+      return leaderPod;
+    });
+
+    await pmmTest.step(`Verify the HA badge names "${leader}" as leader`, async () => {
+      await highAvailabilityPage.reloadAndExpandHaNavItem();
+      await expect(highAvailabilityPage.leaderNameLocator()).toHaveText(leader, {
+        timeout: Timeouts.TWO_MINUTES,
+      });
     });
   },
 );

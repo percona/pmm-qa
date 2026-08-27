@@ -12,11 +12,23 @@
 # different --image upgrades the release in place, and --charts picks which of the
 # two charts a run touches.
 #
+# Install - both charts, the published pmm-ha, the newest released server image:
 #   ./install_pmm_ha.sh --platform eks --external-access
 #   ./install_pmm_ha.sh --platform lke --image percona/pmm-server:3.9.0
-#   ./install_pmm_ha.sh --platform eks --charts deps
-#   ./install_pmm_ha.sh --platform eks --charts pmm-ha --image perconalab/pmm-server:3-dev-latest
 #   ./install_pmm_ha.sh --platform openshift --chart-branch PMM-HA-GA
+#
+# Upgrade in the order a real one happens - dependencies first, then the server,
+#   ./install_pmm_ha.sh --platform openshift --charts deps --chart-branch PMM-HA-GA
+#   ./install_pmm_ha.sh --platform openshift --charts pmm-ha --chart-branch PMM-HA-GA \
+#       --image perconalab/pmm-server:3-dev-latest --external-access
+#
+# Upgrade the server image alone, holding the chart still at the installed version:
+#   ./install_pmm_ha.sh --platform eks --charts pmm-ha --chart-version 1.6.1 \
+#       --image perconalab/pmm-server:3-dev-latest
+#
+# Upgrade from a working checkout instead of a branch the script clones:
+#   ./install_pmm_ha.sh --platform eks --charts pmm-ha --chart-dir ~/percona-helm-charts \
+#       --image perconalab/pmm-server:3-dev-latest
 #
 # With no --image it installs the newest released percona/pmm-server tag, resolved
 # from Docker Hub.
