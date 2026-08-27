@@ -345,9 +345,41 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('rds_exporter');
   });
 
+  pmmTest('1008 - change aws keys', async ({ cliHelper }) => {
+    const response = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin inventory change agent rds-exporter f2f19293-b1f5-4269-8a77-d11e6b465b25 --server-url=http://admin:Heslo123@127.0.0.1:8080 --aws-access-key=NEWKEYID --aws-secret-key=NEWSECRET`,
+      )
+      .assertSuccess();
+
+    await response.outContains('updated AWS access key');
+    await response.outContains('updated AWS secret key');
+    console.log(
+      cliHelper.execSilent(
+        `docker exec pdpgsql_pmm_17_1 cat /usr/local/percona/pmm/tmp/rds_exporter/${rdsExporterId}:rds/NEWKEYID/config`,
+      ).stdout,
+    );
+
+    await expect(async () => {
+      const metricsCount = cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs{node_name="pmm-qa-rds-mysql-8-4"}[1m])' | jq '.data.result[0].value[1]'`,
+        )
+        .stdout.trim()
+        .split('.')[0];
+
+      console.log(`Count of metrics is: ${metricsCount}`);
+
+      expect(metricsCount, `Metrics should not hit victoria metrics!`).toEqual('null');
+    }).toPass({
+      intervals: [Timeouts.TWO_SECONDS],
+      timeout: Timeouts.ONE_MINUTE,
+    });
+  });
+
   // eslint-disable-next-line playwright/no-skipped-test -- Temporary test
   pmmTest.skip(
-    'PMM-T1008 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
+    'PMM-T1009 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
     async ({ cliHelper }) => {
       const commands = [
         `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
