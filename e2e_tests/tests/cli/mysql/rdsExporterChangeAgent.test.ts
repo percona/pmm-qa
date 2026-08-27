@@ -335,7 +335,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       .outContains('rds_exporter');
   });
 
-  pmmTest('1008 - change aws keys @rds-integration', async ({ cliHelper }) => {
+  pmmTest('1008 - change aws keys @rds-integration', async ({ cliHelper, page }) => {
     let response = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin inventory change agent rds-exporter ${rdsExporterId} --aws-access-key=NEWKEYID --aws-secret-key=NEWSECRET`,
@@ -344,6 +344,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     await response.outContains('updated AWS access key');
     await response.outContains('updated AWS secret key');
+
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- Temporary test
+    await page.waitForTimeout(Timeouts.TWENTY_SECONDS);
+
     console.log(
       cliHelper.execSilent(
         `docker exec pdpgsql_pmm_17_1 cat /usr/local/percona/pmm/tmp/rds_exporter/${rdsExporterId}:rds/NEWKEYID/config`,
@@ -361,7 +365,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       console.log(
         cliHelper
           .execSilent(
-            `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs{node_name="pmm-qa-rds-mysql-8-4"}[1m])' | jq`,
+            `docker exec pmm-server curl -s -G 'http://127.0.0.1:9090/prometheus/api/v1/query' --data-urlencode 'query=count_over_time(rdsosmetrics_General_numVCPUs{node_name="pmm-qa-rds-mysql-8-4"}[1m])' | jq '.data.result[0].value[1]'`,
           )
           .stdout.trim(),
       );
