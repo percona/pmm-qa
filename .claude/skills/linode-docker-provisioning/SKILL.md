@@ -26,6 +26,13 @@ Always address the box by hostname, never its bare IP:
 
 Both share port 443 (nginx routes by SNI hostname) and are reachable at the same time.
 
+**`run.sh` cannot return a large payload.** It hands the exec-server's whole JSON response
+to a local `python3` as a single argv, so a big remote *output* — not a long command —
+aborts the call with `Argument list too long` and you see none of it. Anything that could
+be large (a full API dump, a log file, `docker inspect` over everything) gets summarised
+**on the box** so only a few lines come back, or is returned as
+`tar czf - <paths> | base64 -w0` and decoded locally.
+
 ## Pick a run_id
 
 Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, or for Investigator — `heal-<submodules-pr>` when investigating an FB Tests red, `nightly-<workflow>-<date>` when investigating its own scheduled CI. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
@@ -188,6 +195,14 @@ PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
 ```
 
 `PMM_CERT_PATH` pins the exact cert fetched in step 2 (via Chromium's `--ignore-certificate-errors-spki-list`, not a blanket "trust anything") instead of the script's `ignoreHTTPSErrors` fallback. Pass it to `pw-screenshot.js`/`pw-record.js` too when the URL is PMM's own — omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
+
+Running the repo's **own Playwright suite** (`e2e_tests/`) against the VM from this
+environment needs the proxy set explicitly. Playwright's `APIRequestContext` ignores the
+`HTTPS_PROXY` that `curl` honours, so every request returns `503 upstream connect error`
+against a URL that `curl` fetches with 200 — a network gap, not a broken PMM. Point a
+scratch config at it: extend `playwright.config.ts` with `use.proxy.server` set to this
+session's `$HTTPS_PROXY`, run `npx playwright test --config <scratch>`, and keep that file
+out of the commit — CI runners have direct egress and the override would break them.
 
 ## 5. FB / nightly workflow reproduction (Investigator)
 
