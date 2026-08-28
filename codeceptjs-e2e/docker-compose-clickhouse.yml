@@ -28,11 +28,8 @@ services:
       - PMM_CLICKHOUSE_DATABASE=pmm
       - PMM_CLICKHOUSE_ADDR=external-clickhouse:9000
       - PMM_ENABLE_INTERNAL_PG_QAN=1
-    # PMM Server's own image healthcheck allows ~37s (start-period 25s, 3 x 4s)
-    # before it flags the container unhealthy, but a cold start needs longer than
-    # that. Compose aborts `up` the moment a service_healthy dependency turns
-    # unhealthy, so pmm-client below would fail on a slow runner. Same override as
-    # cli/test-setup/docker-compose-scrape-intervals.yml.
+    # The image healthcheck gives up before a cold PMM Server answers readyz,
+    # which aborts `up` for the service_healthy dependents below.
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/v1/server/readyz" ]
       interval: 5s
