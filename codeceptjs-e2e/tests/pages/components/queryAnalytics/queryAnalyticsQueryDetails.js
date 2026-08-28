@@ -83,8 +83,21 @@ class QueryAnalyticsQueryDetails {
       case parseFloat(result) <= 0.0149:
         assert.ok(value.startsWith('0.01'), `Values don't match. Value: ${value}, calculated Result: ${result}`);
         break;
-      default:
-        assert.ok(parseFloat(parseFloat(result).toFixed(2)) === parseFloat(value), `Values don't match. Value: ${value}, calculated Result: ${result}`);
+      default: {
+        // Both sides are read back from humanized UI text. The rate is printed
+        // to two decimals, and `result` is derived from a count (and, for query
+        // time, a per-query average) that QAN prints with numeral's '0.00a' --
+        // three significant digits, so "160.18k" stands for anything in
+        // [160175, 160185). Requiring the two to round to the same hundredth
+        // fails whenever those roundings land either side of a boundary, so
+        // allow exactly what they can introduce: 0.005 for the rate's own
+        // rounding plus 0.5% per humanized input.
+        const expected = parseFloat(result);
+        const tolerance = 0.005 + (0.01 * expected);
+
+        assert.ok(Math.abs(parseFloat(value) - expected) <= tolerance, `Values don't match. Value: ${value}, calculated Result: ${result}`);
+        break;
+      }
     }
   }
 
