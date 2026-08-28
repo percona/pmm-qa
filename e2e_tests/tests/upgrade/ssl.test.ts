@@ -18,12 +18,7 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
         .stdout.split('\n')
         .find((row: string) => row.includes('pmm_psmdb_diffauth_setup'))
         ?.trim();
-
-      console.log(`Ca Location is: ${caLocation}`);
-
       const ca = cliHelper.execSilent(`cat ${caLocation}`).assertSuccess().stdout;
-
-      console.log(`Ca certificate is: ${ca}`);
 
       await api.remoteInstanceApi.addRemoteInstance({
         mongodb: {
