@@ -69,6 +69,39 @@ EOF
 
 fi
 
+if [ "$mysql_version" == "8.4" ]; then
+    percona-release enable ps-84-lts release
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get -y install percona-server-server sysbench bc screen
+cat > /etc/mysql/my.cnf << EOF
+[mysqld]
+innodb_buffer_pool_size=256M
+innodb_buffer_pool_instances=1
+innodb_log_file_size=1G
+innodb_flush_method=O_DIRECT
+innodb_numa_interleave=1
+innodb_flush_neighbors=0
+log_bin
+server_id=1
+binlog_expire_logs_seconds=600
+log_output=file
+slow_query_log=ON
+long_query_time=0
+log_slow_rate_limit=1
+log_slow_rate_type=query
+log_slow_verbosity=full
+log_slow_admin_statements=ON
+log_slow_replica_statements=ON
+slow_query_log_always_write_time=1
+slow_query_log_use_global_control=all
+innodb_monitor_enable=all
+userstat=1
+bind-address=0.0.0.0
+require_secure_transport=ON
+EOF
+
+fi
+
 if [ "$mysql_version" == "9.7" ]; then
     percona-release enable ps-97-lts release
     apt-get update
