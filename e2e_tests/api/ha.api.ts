@@ -59,11 +59,13 @@ export default class HaApi {
       .sort();
   };
 
-  /** Per-node Raft term changes over `window`; a failover advances the term on every node. */
+  /** Per-node Raft term changes over `window`, sorted by node id so two calls line up. */
   getRaftTermChanges = async (window = '15m'): Promise<number[]> => {
     const samples = await this.prometheusApi.instantQuery(`changes(${HaApi.raftTermMetric}[${window}])`);
 
-    return samples.map((sample) => Number(sample.value[1]));
+    return samples
+      .sort((left, right) => left.metric.node_id.localeCompare(right.metric.node_id))
+      .map((sample) => Number(sample.value[1]));
   };
 
   getStatus = async (): Promise<string> => {

@@ -49,7 +49,7 @@ export default class HaClusterHelper {
 
   /** Restarts the current leader and returns the pod that takes over, once the API serves again. */
   failoverLeader = async (haApi: HaApi, timeout: Timeouts = Timeouts.FIVE_MINUTES): Promise<string> => {
-    const initialLeader = this.leaderFromPods();
+    const initialLeader = await this.waitForLeaderChange(undefined, timeout);
 
     this.k8sHelper.deletePod(initialLeader).assertSuccess();
 

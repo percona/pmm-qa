@@ -2,12 +2,31 @@ import { APIRequestContext, expect, Page } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
+import { GrafanaDashboard } from '@interfaces/grafana';
 
 export default class GrafanaApi {
   constructor(
     private readonly page: Page,
     private request: APIRequestContext,
   ) {}
+
+  createDashboard = async (title: string, panelTitle: string): Promise<GrafanaDashboard> => {
+    const response = await this.request.post(apiEndpoints.grafana.dashboards, {
+      data: {
+        dashboard: {
+          panels: [{ gridPos: { h: 8, w: 12, x: 0, y: 0 }, title: panelTitle, type: 'timeseries' }],
+          schemaVersion: 39,
+          title,
+        },
+        overwrite: false,
+      },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    return (await response.json()) as GrafanaDashboard;
+  };
 
   createFolder = async (title: string): Promise<string> => {
     const response = await this.request.post(apiEndpoints.grafana.folders, {
@@ -18,6 +37,16 @@ export default class GrafanaApi {
     expect(response.status(), await response.text()).toEqual(200);
 
     return (await response.json()).uid as string;
+  };
+
+  deleteDashboard = async (uid: string): Promise<void> => {
+    await expect(async () => {
+      const response = await this.request.delete(`${apiEndpoints.grafana.dashboardByUid}/${uid}`, {
+        headers: GrafanaHelper.getAuthHeader(),
+      });
+
+      expect(response.status()).toEqual(200);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
   deleteFolder = async (uid: string): Promise<void> => {

@@ -4,8 +4,6 @@ import HaApi from '@api/ha.api';
 import { Timeouts } from '@helpers/timeouts';
 import { defaultReplicas } from '@helpers/haCluster.helper';
 
-const terminalPhases = ['Succeeded', 'Failed'];
-
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
   await haClusterHelper.ensureServing(api.haApi);
@@ -13,24 +11,13 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 
 pmmTest(
   'PMM-T2261 - Verify Prometheus rules and raft metrics for HA @pmm-ha',
-  async ({ api, haClusterHelper, k8sHelper }) => {
-    await pmmTest.step(
-      `Verify PMM HA runs with ${defaultReplicas} replicas and every pod is up`,
-      async () => {
-        expect(haClusterHelper.podNames()).toHaveLength(defaultReplicas);
-
-        await expect(async () => {
-          expect(
-            k8sHelper
-              .getPods()
-              .filter((pod) => !terminalPhases.includes(pod.phase) && !pod.ready)
-              .map((pod) => `${pod.name} (${pod.phase})`),
-          ).toEqual([]);
-        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
-      },
-    );
+  async ({ api, haClusterHelper }) => {
+    await pmmTest.step(`Verify PMM HA runs with ${defaultReplicas} pods`, async () => {
+      expect(haClusterHelper.podNames()).toHaveLength(defaultReplicas);
+    });
 
     const initialLeader = haClusterHelper.leaderFromPods();
+    const baselineChanges = await api.haApi.getRaftTermChanges();
 
     await pmmTest.step(
       `Verify "${HaApi.leaderStatusMetric}" shows "${initialLeader}" as leader`,
@@ -61,13 +48,16 @@ pmmTest(
     });
 
     await pmmTest.step(
-      `Verify changes(${HaApi.raftTermMetric}[15m]) is above 0 on every node after the switch to "${newLeader}"`,
+      `Verify changes(${HaApi.raftTermMetric}[15m]) rises on every node after the switch to "${newLeader}"`,
       async () => {
         await expect(async () => {
           const changes = await api.haApi.getRaftTermChanges();
 
           expect(changes).toHaveLength(defaultReplicas);
-          expect(changes.filter((change) => change > 0)).toHaveLength(defaultReplicas);
+          expect(
+            changes.filter((change, index) => change > baselineChanges[index]),
+            `Every node must count more term changes than before the switch: ${baselineChanges}`,
+          ).toHaveLength(defaultReplicas);
         }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
       },
     );

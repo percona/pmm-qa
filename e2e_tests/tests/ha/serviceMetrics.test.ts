@@ -39,15 +39,7 @@ pmmTest(
     const switchoverAt = await pmmTest.step('Switch the leader to another node', async () => {
       await haClusterHelper.failoverLeader(api.haApi);
 
-      let serverTime = 0;
-
-      await expect(async () => {
-        serverTime = (await api.prometheusApi.instantQueryValue('time()')) ?? 0;
-
-        expect(serverTime).toBeGreaterThan(0);
-      }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
-
-      return serverTime;
+      return await api.prometheusApi.waitForServerTime();
     });
 
     for (const service of monitoredServices) {

@@ -14,6 +14,8 @@ const apiEndpoints = {
     scheduled: '/v1/backups/scheduled',
   },
   grafana: {
+    dashboardByUid: '/graph/api/dashboards/uid',
+    dashboards: '/graph/api/dashboards/db',
     folders: '/graph/api/folders',
     prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
   },

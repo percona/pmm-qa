@@ -15,3 +15,8 @@ export interface GrafanaUser {
 export interface GrafanaUserSearchResponse {
   users: GrafanaUser[];
 }
+
+export interface GrafanaDashboard {
+  uid: string;
+  url: string;
+}

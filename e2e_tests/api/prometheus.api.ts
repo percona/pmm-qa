@@ -2,6 +2,7 @@ import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import { GrafanaDatasource } from '@interfaces/grafana';
 import { PrometheusQueryResponse, PrometheusSample } from '@interfaces/prometheus';
+import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 /**
@@ -75,5 +76,18 @@ export default class PrometheusApi {
     const samples = await this.instantQuery(query);
 
     return samples.length > 0 ? Number(samples[0].value[1]) : undefined;
+  };
+
+  /** The server clock in epoch seconds, on the same scale as `timestamp(...)`. */
+  waitForServerTime = async (timeout: Timeouts = Timeouts.TWO_MINUTES): Promise<number> => {
+    let serverTime = 0;
+
+    await expect(async () => {
+      serverTime = (await this.instantQueryValue('time()')) ?? 0;
+
+      expect(serverTime, 'The metrics API must answer time()').toBeGreaterThan(0);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+
+    return serverTime;
   };
 }
