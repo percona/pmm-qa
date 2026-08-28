@@ -23,6 +23,8 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
 
       const ca = cliHelper.execSilent(`cat ${caLocation}`).assertSuccess().stdout;
 
+      console.log(`Ca certificate is: ${ca}`);
+
       await api.remoteInstanceApi.addRemoteInstance({
         mongodb: {
           add_node: { node_name: remoteServiceName, node_type: 'NODE_TYPE_REMOTE_NODE' },
