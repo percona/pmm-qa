@@ -7,7 +7,7 @@ interface SettingsResponse {
     backup_management_enabled: boolean;
     default_role_id?: number | string;
     enable_access_control: boolean;
-    ssh_key?: string;
+    ssh_key: string;
   };
 }
 

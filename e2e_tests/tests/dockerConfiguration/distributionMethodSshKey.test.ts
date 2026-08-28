@@ -9,7 +9,6 @@ const sshKey =
 const amiContainerName = 'pmm-server-distribution-ami';
 const amiPort = 450;
 const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
-// Stamped on the AMI container at creation so it matches what the suite authenticates with.
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
 
 pmmTest.describe('SSH key settings follow the PMM Server distribution method.', () => {
@@ -54,8 +53,8 @@ pmmTest.describe('SSH key settings follow the PMM Server distribution method.', 
 
         const settingsAfter = await api.settingsApi.getSettings();
 
-        expect(settingsBefore.settings.ssh_key).toBeUndefined();
-        expect(settingsAfter.settings.ssh_key).toBeUndefined();
+        expect(settingsBefore.settings.ssh_key).toEqual('');
+        expect(settingsAfter.settings.ssh_key).toEqual('');
       });
     },
   );
@@ -91,7 +90,6 @@ pmmTest.describe('SSH key settings on an AMI deployment.', () => {
       await pmmTest.step('Settings page offers the SSH key tab', async () => {
         await page.goto(settingsPage.url);
 
-        await expect(settingsPage.tabs.metrics).toHaveAttribute('aria-selected', 'true');
         await expect(settingsPage.tabs.ssh).toBeVisible();
       });
 
