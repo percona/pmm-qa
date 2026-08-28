@@ -16,12 +16,9 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
   });
 
   let PMM_VERSION = `${process.env.CLIENT_VERSION}`;
-  if (/^https?:/.test(PMM_VERSION) || /pmm3-rc/.test(PMM_VERSION)) {
-    // Feature-build / RC clients trail v3 VERSION once an RC branches, and the server is not a
-    // valid reference either: a feature build can ship a server image whose RPMs were reused from
-    // the previous build while the client tarball was rebuilt, so server and client carry
-    // different version labels off the same source commit. Take the client's own version, and
-    // assert it is the build we asked for whenever the artifact URL names one.
+  if (/^https?:/.test(PMM_VERSION)) {
+    // A feature build can ship a server whose version label came from an earlier build, so the
+    // server is not a reference for the client's. Pin to the artifact we asked for instead.
     const artifact = PMM_VERSION;
     const requestedBuild = artifact.match(/pmm-client-PR-\d+-([0-9a-f]{7,40})\.tar\.gz$/)?.[1];
     PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_admin_version;
@@ -29,6 +26,11 @@ test.describe('PMM Client "Generic" CLI tests', { tag: '@generic' }, () => {
     if (requestedBuild && !PMM_VERSION.includes(requestedBuild)) {
       throw new Error(`Installed client reports ${PMM_VERSION}, expected the ${requestedBuild} build from ${artifact}`);
     }
+  } else if (/pmm3-rc/.test(PMM_VERSION)) {
+    // RC clients trail v3 VERSION once an RC branches; an RC client and server come from one
+    // build, so the server is still a valid reference for them.
+    PMM_VERSION = JSON.parse(cli.execute('sudo pmm-admin status --json').stdout).pmm_agent_status?.server_version;
+    if (!PMM_VERSION) throw new Error('Could not read server version from "pmm-admin status --json"');
   } else if (/latest-tarball|3-dev-latest/.test(PMM_VERSION)) {
     // TODO: refactor to use docker hub API to remove file-update dependency
     // See: https://github.com/Percona-QA/package-testing/blob/master/playbooks/pmm2-client_integration_upgrade_custom_path.yml#L41
