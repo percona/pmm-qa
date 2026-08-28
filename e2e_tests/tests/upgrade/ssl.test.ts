@@ -15,7 +15,9 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
         .assertSuccess().stdout;
       const caLocation = cliHelper.execSilent(`find / -name "ca.crt"`).stdout;
 
-      console.log(`Ca Location is: ${caLocation}`);
+      console.log(
+        `Ca Location is: ${caLocation.split('\n').find((row: string) => row.includes('pmm_psmdb_diffauth_setup'))}`,
+      );
 
       const ca = cliHelper.execSilent(`cat ${caLocation}`).assertSuccess().stdout;
 
