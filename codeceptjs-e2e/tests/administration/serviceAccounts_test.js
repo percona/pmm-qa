@@ -60,9 +60,14 @@ Scenario('PMM-T1883 - Configuring pmm-agent to use service account @service-acco
   // them 0/0 and they render as "No data". Keep committing while the dashboard is polled.
   await I.verifyCommand(`sudo docker exec -d ${psContainerName} timeout 420 bash -c 'while true; do mysql ${mysqlCredentials} -e "INSERT INTO ${loadDatabase}.write_load (value) VALUES (UUID())"; sleep 1; done'`);
 
+  // The write load alone is not enough. The dashboard ships with refresh disabled, so without a
+  // refresh param the panels are queried once, over a window that still predates the first commit,
+  // and waitForGraphsToHaveData then re-counts that same static render for its whole timeout.
+  // Auto-refresh is what lets the wait actually observe the data arriving.
   const url = I.buildUrlWithParams(dashboardPage.mySQLInstanceOverview.clearUrl, {
     from: 'now-1m',
     to: 'now',
+    refresh: '10s',
     service_name: newServiceName,
   });
 
