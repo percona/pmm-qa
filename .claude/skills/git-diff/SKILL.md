@@ -33,6 +33,24 @@ gh api "repos/percona/pmm/pulls/<n>/files?per_page=100" \
 
 Return: files changed, behavioral summary, gaps in "How to test", suggested manual checks.
 
+## When the session doesn't have the repo
+
+A session scoped to `pmm-qa` alone gets "not configured for this session" from both the
+MCP tools and `gh` for `percona/pmm` and `percona/grafana`, and `add_repo` only offers
+anonymous read (see the `repos` skill). Both are public, so fetch the PR ref directly:
+
+```bash
+git clone --depth 1 --filter=blob:none --no-checkout https://github.com/percona/grafana /tmp/g
+git -C /tmp/g fetch --depth 2 origin refs/pull/<n>/head:pr<n>   # depth 2, not 1
+git -C /tmp/g show --stat pr<n>
+```
+
+**`--depth 2`, not `--depth 1`.** At depth 1 the PR head arrives with no parent, so
+`git show` renders the entire tree as one giant added commit instead of the diff — which
+reads like a PR that rewrote the repo. Depth 2 gives the real file list. To check whether
+the PR already merged: `git fetch --depth 50 origin main` then
+`git merge-base --is-ancestor pr<n> origin/main`.
+
 ## Large Grafana dashboard JSON diffs
 
 Grafana PRs often change dashboard JSON under `grafana/public/` or packaged dashboards. A raw diff can be **thousands of lines** of minified JSON — do not read the full diff inline.
