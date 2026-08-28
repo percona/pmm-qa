@@ -108,5 +108,26 @@ export default class MongodbReplSetSummary implements DashboardInterface {
   ];
 
   metricsWithDataForRow = (rowName: string, serviceNames: string[], nodeName: string[]): GrafanaPanel[] =>
-    this.metrics(serviceNames, nodeName).filter((metrics) => metrics.rowName === rowName)[0].metrics;
+    this.metrics(serviceNames, nodeName)
+      .filter((metrics) => metrics.rowName === rowName)[0]
+      .metrics.filter((metric) => !this.noDataMetricsForRow(rowName, serviceNames).includes(metric.name));
+
+  noDataMetricsForRow = (rowName: string, serviceNames: string[]): string[] => {
+    const noDataMetrics: string[] = [
+      {
+        metrics: [
+          ...serviceNames.map((serviceName): GrafanaPanel => ({
+            name: `Oplog GB/Hour - ${serviceName}`,
+            type: 'timeSeries',
+          })),
+        ],
+        rowName: 'Replication',
+      },
+    ]
+      .filter((metricsRow) => metricsRow.rowName === rowName)
+      .map((metricsRow) => metricsRow.metrics)
+      .map((metrics) => metrics.map((metric) => metric.name))[0];
+
+    return noDataMetrics ? noDataMetrics : [];
+  };
 }

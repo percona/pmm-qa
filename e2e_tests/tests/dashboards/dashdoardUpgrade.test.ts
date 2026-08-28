@@ -186,7 +186,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
         urlHelper.buildUrlWithParameters(dashboard.mongo.replSetSummary.url, {
           cluster: 'sharded',
           from: 'now-1h',
-          refresh: '5s',
+          refresh: '30s',
         }),
       );
       await dashboard.collapseAllRows();
@@ -197,10 +197,15 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       );
 
       for (const metric of metrics) {
+        const noDataMetrics = dashboard.mongo.replSetSummary.noDataMetricsForRow(
+          metric.rowName,
+          services.map((service) => service.service_name),
+        );
+
         await dashboard.expandRow(metric.rowName);
         await dashboard.waitForDashboardToLoad();
         await dashboard.verifyRowMetricsPresent(metric.rowName, metric.metrics);
-        await dashboard.verifyRowPanelsHaveData(metric.rowName, []);
+        await dashboard.verifyRowPanelsHaveData(metric.rowName, noDataMetrics);
         await dashboard.verifyRowPanelValues(
           metric.rowName,
           dashboard.mongo.replSetSummary.metricsWithDataForRow(

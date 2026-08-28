@@ -345,7 +345,7 @@ export default class Dashboards extends BasePage {
     }
 
     expect
-      .soft(missingMetrics, `Metrics for row ${rowName} without data are: ${missingMetrics}`)
+      .soft(missingMetrics, `Metrics for row "${rowName}" without data are: ${missingMetrics}`)
       .toHaveLength(0);
   };
 
