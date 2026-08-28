@@ -85,6 +85,32 @@ overridable in the POST body): `region=us-east`, `node_type=g6-standard-4`,
 `touch "$RUN_DIR/keep-alive"` — the marker keeps the SessionEnd hook from tearing
 it down; the cluster's `expires-<epoch>` tag (now + N h) still lets the reaper reap it.
 
+### Admin login — verify it, and reset Grafana's admin if it 401s
+
+The relay returns `passwords.pmm_admin_password`, but on a fresh cluster Grafana's admin
+user can be out of sync with it: every API and UI login 401s even from inside a pmm pod
+where `pmm-secret` puts that exact value in the env, and the chart's own `pmm-token-init`
+job crash-loops on the same 401. Run this once the chart you are testing is in place
+(after any swap below) and before any other verification — reset only if the check fails:
+
+```bash
+URL=$(jq -r .url "$RUN_DIR/provision.json")
+PW=$(jq -r .passwords.pmm_admin_password "$RUN_DIR/provision.json")
+curl -ksS -o /dev/null -w '%{http_code}\n' -u "admin:$PW" "$URL/v1/server/version"   # want 200
+
+# 401 → reset Grafana's admin inside a pmm pod. grafana-cli does NOT read the
+# GF_DATABASE_* env the server runs on, so without explicit overrides the reset lands in
+# an unused local DB and silently changes nothing.
+kubectl exec -n pmm statefulset/pmm-ha -- bash -c 'grafana-cli \
+  --homepath /usr/share/grafana --config /etc/grafana/grafana.ini \
+  --configOverrides "cfg:database.type=$GF_DATABASE_TYPE cfg:database.host=$GF_DATABASE_HOST cfg:database.name=$GF_DATABASE_NAME cfg:database.user=$GF_DATABASE_USER cfg:database.password=$GF_DATABASE_PASSWORD cfg:database.ssl_mode=$GF_DATABASE_SSL_MODE" \
+  admin reset-admin-password "$PMM_ADMIN_PASSWORD"'
+```
+
+The variables expand inside the pod, so nothing secret reaches the local shell; confirm
+the names the chart actually sets with `kubectl exec -n pmm statefulset/pmm-ha -- env | grep -E 'GF_DATABASE|PMM_ADMIN'` before adapting this. Once the reset takes, `pmm-token-init`
+completes on its own — don't re-run it.
+
 ### Charts — first decide: is the chart part of what you're testing? (TWO repos)
 
 An HA change routinely spans **two repos**, and the fix can be in either or **both**:
@@ -99,6 +125,22 @@ lives on that branch and is not merged or published yet, so it — not the relea
 *released* chart, so after the cluster comes up swap `PMM-HA-GA` in yourself (commands
 below). Only drop this once `PMM-HA-GA` has merged and shipped in a published chart
 version.
+
+**Compare the versions before swapping — the swap is not unconditional.** The published
+chart moves on its own, so the branch is not always ahead of it. Read `version` and
+`appVersion` from `charts/pmm-ha/Chart.yaml` on the branch and compare them with what the
+relay installed (`helm list -n pmm`):
+
+```bash
+helm list -n pmm    # installed chart version + app version
+# and, on the branch clone the swap below makes:
+grep -E '^(version|appVersion):' /tmp/phc/charts/pmm-ha/Chart.yaml
+```
+
+Swap when the branch **carries the change under test**, or when it is newer. When it is
+older and no chart change is under test, keep what the relay installed — swapping there
+downgrades the chart *and* the PMM server out from under the run, and every result after
+it describes the wrong build. Say which chart you ended up on in the report.
 
 Before installing anything, read the ticket's linked PR(s) and check **both** repos.
 When the change under test includes `percona-helm-charts` commits (a PR or branch off
@@ -187,6 +229,20 @@ Standing up the cluster isn't the test. Exercise what the change actually touche
 - **Leader failover** for leader-only work (backups, scheduler, checks, telemetry, cleaner, versionCache): delete the leader pod, confirm a new leader is elected and the singleton work resumes there once — not zero times, not on every replica.
 - Shared state: confirm data written on one replica is visible via another (it lives in the shared PG/ClickHouse/VM, not local `/srv`).
 - UI evidence (`ui-evidence` → "HA / LKE variant"): reach PMM by the hostname `.url` from `provision.json` (**not** the raw LB IP — the egress proxy refuses raw-IP HTTPS), log in with `PMM_UI_INSECURE=1` (self-signed cert) and `.passwords.pmm_admin_password`, and pass `PW_SCROLL=1` for the tall HA dashboards. Use the existing `pmm-ui-login.js` + `pw-screenshot.js` helpers — don't write a bespoke capture script.
+
+### Adding a remote database service
+
+An HA cluster has no PMM Client of its own, so a monitored database is added remotely
+through `POST /v1/management/services`. Two things about that payload are not guessable:
+
+- **`pmm_agent_id` is required.** Without it the add fails with `invalid AddMySQLServiceParams.PmmAgentId: value length must be at least 1 runes`. Take one from `/v1/inventory/agents` — the `pmm_agent` on a pmm-server node does the work.
+- **Leave `metrics_mode` at its default.** Push is rejected outright (`push metrics mode is not allowed for exporters running on pmm-server`), and pull is the right mode anyway: the exporter runs on a pmm-server node, which VictoriaMetrics already scrapes.
+
+A new service's series and QAN rows land a couple of scrape intervals after the add, so
+an empty query right after it means nothing — hold it to the freshness window
+[`verification-depth`](../verification-depth/SKILL.md) requires before calling a metric
+missing. Deleting and re-adding the service on the first empty result only costs the run
+the intervals it was already waiting on.
 
 ## Teardown — mandatory, every path
 
