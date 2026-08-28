@@ -83,7 +83,7 @@ export default class HaApi {
 
   /** Live nodes carrying a Raft vote; below the replica count the cluster cannot hold quorum. */
   getVoterCount = async (): Promise<number | undefined> =>
-    await this.prometheusApi.instantQueryValue(`count(${HaApi.upMetric}{role="voter"})`);
+    await this.prometheusApi.instantQueryValue(`count(${HaApi.upMetric}{role="voter"} == 1)`);
 
   /**
    * Metrics trail a failover by a scrape, and HAProxy 5xxs until it re-points at
