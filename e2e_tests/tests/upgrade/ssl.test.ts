@@ -13,11 +13,13 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
       const clientCert = cliHelper
         .execSilent(`docker exec ${container} cat /mongodb_certs/client.pem`)
         .assertSuccess().stdout;
-      const caLocation = cliHelper.execSilent(`find / -name "ca.crt"`).stdout;
+      const caLocation = cliHelper
+        .execSilent(`find / -name "ca.crt"`)
+        .stdout.split('\n')
+        .find((row: string) => row.includes('pmm_psmdb_diffauth_setup'))
+        ?.trim();
 
-      console.log(
-        `Ca Location is: ${caLocation.split('\n').find((row: string) => row.includes('pmm_psmdb_diffauth_setup'))}`,
-      );
+      console.log(`Ca Location is: ${caLocation}`);
 
       const ca = cliHelper.execSilent(`cat ${caLocation}`).assertSuccess().stdout;
 
