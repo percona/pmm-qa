@@ -13,15 +13,9 @@ publicIPs.add(['PMM-T1173', '127.0.0.1:8443']);
 publicIPs.add(['PMM-T1174', 'ec2-18-188-74-98.us-east-2.compute.amazonaws.com']);
 publicIPs.add(['PMM-T1174', 'ec2-18-188-74-98.us-east-2.compute.amazonaws.com:8443']);
 
-// A freshly started PMM Server needs ~26s before it can serve a login, so poll
-// readyz instead of sleeping a fixed amount that a slower CI runner overruns.
-const waitForPmmServerReady = async (I, baseUrl, timeout = 300) => {
-  await I.verifyCommand(`timeout ${timeout} bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" --user admin:admin ${baseUrl}v1/server/readyz)" = "200" ]; do sleep 2; done'`);
-};
-
 const runContainerWithPublicAddressVariable = async (I, publicAddress) => {
   await I.verifyCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_PUBLIC_ADDRESS=${publicAddress} --publish 8085:8080 --publish 8443:8443 --name ${contanerName} ${dockerVersion}`);
-  await waitForPmmServerReady(I, basePmmUrl);
+  await I.verifyCommand(`timeout 300 bash -c 'until curl -s -D - -o /dev/null -X POST -H "Content-Type: application/json" -d "{\\"user\\":\\"admin\\",\\"password\\":\\"admin\\"}" ${basePmmUrl}graph/login | grep -qi "^set-cookie:"; do sleep 2; done'`);
 };
 
 const runContainerWithPublicAddressVariableUpgrade = async (I, publicAddress) => {
