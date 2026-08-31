@@ -208,8 +208,8 @@ jobs:
         run: python3 pmm-qa/support_scripts/check_client_upgrade.py "$PMM_SERVER_LATEST"
 
       - name: Post-client-upgrade UI tests
-        working-directory: pmm-qa/codeceptjs-e2e
-        run: ./node_modules/.bin/codeceptjs run --reporter mocha-multi -c pr.codecept.js --steps --grep "@post-client-upgrade"
+        working-directory: pmm-qa/e2e_tests
+        run: npx playwright test --grep "@post-upgrade"
 
       - name: Post-upgrade Playwright E2E
         working-directory: pmm-qa/e2e_tests
