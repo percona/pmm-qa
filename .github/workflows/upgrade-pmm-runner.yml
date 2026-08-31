@@ -108,6 +108,7 @@ jobs:
           # 2. is the requested version installable via apt?
           if grep -qx "${{ matrix.version }}" <<< "$apt_versions"; then
             echo "${{ matrix.version }} is available in apt — leaving matrix.version unchanged"
+            TARBALL_URL="${{ matrix.version }}"
           else
             echo "${{ matrix.version }} not in apt — building tarball URL"
             TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ matrix.version }}/binary/tarball/pmm-client-${{ matrix.version }}-x86_64.tar.gz"
