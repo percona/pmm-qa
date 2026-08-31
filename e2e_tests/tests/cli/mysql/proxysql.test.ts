@@ -13,7 +13,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let serviceId: string;
   let proxysqlExporterId: string;
   // let pgExporterPort: string;
-  // const pgExporterPassword = 'newAgentPassword';
+  const proxysqlExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pxc_proxysql`).stdout.trim();
@@ -146,18 +146,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       }
     },
   );
-  // eslint-disable-next-line playwright/no-commented-out-tests -- Developing tests
-  /*
-  pmmTest('PMM-T9996 - Verify Change agent password @ps-integration', async ({ cliHelper, page }) => {
+
+  pmmTest('PMM-T9996 - Verify Change agent password @proxysql-integration', async ({ cliHelper, page }) => {
     cliHelper.execSilent(
-      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --agent-password=${pgExporterPassword}`,
+      `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --agent-password=${proxysqlExporterPassword}`,
     );
 
     // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
     await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
     const metrics = cliHelper.getMetrics({
-      agentPassword: pgExporterPassword,
+      agentPassword: proxysqlExporterPassword,
       dockerContainer: containerName,
       serviceName: serviceName,
     });
@@ -165,6 +164,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     expect(metrics).toContain('mysql_up');
   });
 
+  // eslint-disable-next-line playwright/no-commented-out-tests -- Developing tests
+  /*
   pmmTest('PMM-T9993 - Verify Change agent expose exporter @ps-integration', async ({ cliHelper, page }) => {
     pgExporterPort = cliHelper
       .execSilent(
