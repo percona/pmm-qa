@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [ main ]
     paths:
-      - '.github/workflows/upgrade-pmm-docker-runner.yml'
+      - 'upgrade-pmm-runner.yml'
   workflow_dispatch:
     inputs:
       docker_tag:
@@ -60,7 +60,7 @@ env:
   UPGRADE_TYPE: ${{ inputs.upgrade_type || 'docker' }}
 
 jobs:
-  upgrade-docker:
+  upgrade:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
