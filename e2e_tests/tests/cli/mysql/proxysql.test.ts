@@ -12,7 +12,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   let serviceName: string;
   let serviceId: string;
   let proxysqlExporterId: string;
-  // let pgExporterPort: string;
+  let proxysqlExporterPort: string;
   const proxysqlExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
@@ -36,6 +36,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       )
       .stdout.trim();
     console.log(`Exporter id is: ${proxysqlExporterId}`);
+    proxysqlExporterPort = cliHelper
+      .execSilent(
+        `docker exec ${containerName} pmm-admin list | grep ${proxysqlExporterId} | awk -F' ' '{print $6}'`,
+      )
+      .stdout.trim();
   });
 
   pmmTest(
@@ -161,33 +166,30 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       serviceName: serviceName,
     });
 
-    expect(metrics).toContain('mysql_up');
+    expect(metrics).toContain('proxysql_up');
   });
 
+  pmmTest(
+    'PMM-T9993 - Verify Change agent expose exporter @proxysql-integration',
+    async ({ cliHelper, page }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --expose-exporter`,
+        )
+        .assertSuccess()
+        .outContains('- enabled expose exporter');
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+      await cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -u pmm:${proxysqlExporterPassword} http://${containerName}:${proxysqlExporterPort}/metrics`,
+        )
+        .assertSuccess()
+        .outContains('proxysql_up');
+    },
+  );
   // eslint-disable-next-line playwright/no-commented-out-tests -- Developing tests
   /*
-  pmmTest('PMM-T9993 - Verify Change agent expose exporter @ps-integration', async ({ cliHelper, page }) => {
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --expose-exporter`,
-      )
-      .assertSuccess()
-      .outContains('- enabled expose exporter');
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-    await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-    await cliHelper
-      .execSilent(
-        `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
-      )
-      .assertSuccess()
-      .outContains('mysql_up');
-  });
-
   pmmTest('PMM-T9993 - Verify Change agent push metrics @ps-integration', async ({ cliHelper, page }) => {
     pgExporterPort = cliHelper
       .execSilent(
@@ -208,7 +210,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
       )
       .assertSuccess()
-      .outContains('mysql_up');
+      .outContains('proxysql_up');
     await cliHelper
       .execSilent(
         `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
