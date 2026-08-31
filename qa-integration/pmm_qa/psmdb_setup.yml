@@ -36,7 +36,7 @@
       - docker exec {{ psmdb_container }} apt-get update
       - docker exec {{ psmdb_container }} apt-get -y install wget curl git gnupg2 lsb-release jq
 
-  - name: Install pmm2-client on the psmdb_container
+  - name: Install pmm-client on the psmdb_container
     shell: "{{ item }}"
     with_items:
       - docker exec {{ psmdb_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/mongodb_user_setup.js
