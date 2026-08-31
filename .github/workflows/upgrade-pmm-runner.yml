@@ -119,13 +119,13 @@ jobs:
               echo "ERROR: ${{ matrix.version }} missing from apt AND tarball not found (HTTP $code): url: ${TARBALL_URL}"
               exit 1
             fi
-
-            # 3. assign the URL to CLIENT_VERSION for later steps
-            echo "CLIENT_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
-            echo "TARBALL_URL=$TARBALL_URL" >> "$GITHUB_ENV"
-            echo "PRE_UPGRADE_BRANCH=${{ matrix.version }}" >> "$GITHUB_ENV"
-            echo "CLIENT_VERSION reassigned to: $TARBALL_URL"
           fi
+
+          # 3. assign the URL to CLIENT_VERSION for later steps
+          echo "CLIENT_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
+          echo "TARBALL_URL=$TARBALL_URL" >> "$GITHUB_ENV"
+          echo "PRE_UPGRADE_BRANCH=${{ matrix.version }}" >> "$GITHUB_ENV"
+          echo "CLIENT_VERSION reassigned to: $TARBALL_URL"
       - name: Checkout pmm-qa
         uses: actions/checkout@v4
         with:
