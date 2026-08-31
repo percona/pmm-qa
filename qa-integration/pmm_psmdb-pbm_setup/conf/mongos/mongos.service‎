@@ -1,0 +1,31 @@
+[Unit]
+Description=Mongo Cluster Router
+Documentation=https://docs.mongodb.org/manual
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=mongod
+Group=mongod
+Environment="OPTIONS=-f /etc/mongos/mongos.conf"
+EnvironmentFile=-/etc/sysconfig/mongos
+ExecStart=/usr/bin/mongos $OPTIONS
+RuntimeDirectory=mongos
+# file size
+LimitFSIZE=infinity
+# cpu time
+LimitCPU=infinity
+# virtual memory size
+LimitAS=infinity
+# open files
+LimitNOFILE=64000
+# processes/threads
+LimitNPROC=64000
+# locked memory
+LimitMEMLOCK=infinity
+# total threads (user+kernel)
+TasksMax=infinity
+TasksAccounting=false
+
+[Install]
+WantedBy=multi-user.target

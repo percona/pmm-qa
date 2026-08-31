@@ -10,6 +10,8 @@
 # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY - self-descriptive
 # TESTS - whether to run tests, by default - yes
 # CLEANUP - whether to remove setup, by default - yes
+minio=${MINIO:-true}
+minio=${minio,,}
 
 set -e
 
@@ -28,6 +30,28 @@ bash -e ./generate-certs.sh
 #Start setup
 docker compose -f docker-compose-pmm-psmdb.yml down -v --remove-orphans
 docker compose -f docker-compose-pmm-psmdb.yml build
+
+# Start (or reuse) the shared minio container. Locked so that concurrent
+# --parallel setups can't both pass the "does minio exist" check before
+# either has actually created it, and both then try to create a container
+# named "minio". --no-deps keeps the locked section short: it starts just
+# minio/createbucket without pulling in the rest of this stack.
+# Skipped entirely when MINIO=false.
+if [ "$minio" != "false" ]; then
+  minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
+  (
+    flock -x 200
+    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
+      echo "minio container exists, reusing it"
+    else
+      echo "starting shared minio container"
+      docker compose -f docker-compose-pmm-psmdb.yml up -d --no-deps minio createbucket
+    fi
+  ) 200>"$minio_lock"
+else
+  echo "skipping minio container (MINIO=false)"
+fi
+
 docker compose -f docker-compose-pmm-psmdb.yml up -d
 
 #Add users
@@ -64,7 +88,7 @@ docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mgodatagen -
 tests=${TESTS:-yes}
 if [ $tests = "yes" ]; then
     echo "running tests"
-    output=$(docker compose -f docker-compose-pmm-psmdb.yml run test pytest -s --verbose test.py)
+    output=$(docker compose -f docker-compose-pmm-psmdb.yml --profile tests run test pytest -s --verbose test.py)
     else
     echo "skipping tests"
 fi

@@ -214,7 +214,7 @@ services:
 
   minio:
     image: minio/minio
-    profiles: ["classic", "extra"]
+    profiles: ["classic", "extra", "minio"]
     container_name: minio
     ports:
       - "9001:9000"
@@ -236,7 +236,7 @@ services:
   createbucket:
     container_name: createbucket
     image: minio/mc
-    profiles: ["classic", "extra"]
+    profiles: ["classic", "extra", "minio"]
     networks:
       - pmm-qa
       - pmm-ui-tests1
