@@ -16,10 +16,6 @@ on:
         default: 'perconalab/pmm-server:3-dev-latest'
         required: true
         type: string
-      client_version:
-        description: 'PMM Client version to start with (x.y.z | 3-dev-latest | pmm3-rc | https...tar.gz)'
-        default: 'latest-tarball'
-        type: string
       pmm_server_latest:
         description: 'Expected version after upgrade (for check_client_upgrade.py)'
         required: true
@@ -51,12 +47,10 @@ env:
   PMM_URL: http://admin:admin@127.0.0.1
   DOCKER_TAG: ${{ inputs.docker_tag || 'percona/pmm-server:3.0.0' }}
   DOCKER_TAG_UPGRADE: ${{ inputs.docker_tag_upgrade || 'perconalab/pmm-server:3-dev-latest' }}
-  CLIENT_VERSION: ${{ inputs.client_version || 'latest-tarball' }}
   PMM_SERVER_LATEST: ${{ inputs.pmm_server_latest || '3-dev-latest' }}
   CLIENT_REPOSITORY: ${{ inputs.client_repository || 'release' }}
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
-  PRE_UPGRADE_BRANCH: ${{ inputs.pre_upgrade_branch || format('pmm-{0}', inputs.client_version) }}
   UPGRADE_TYPE: ${{ inputs.upgrade_type || 'docker' }}
 
 jobs:
@@ -102,12 +96,7 @@ jobs:
       matrix:
         version: ${{ fromJSON(needs.prepare.outputs.versions) }}
     steps:
-      - name: Checkout pmm-qa
-        uses: actions/checkout@v4
-        with:
-          repository: percona/pmm-qa
-          ref: ${{ env.PMM_QA_BRANCH }}
-          path: pmm-qa
+
       - name: Resolve PMM client source
         shell: bash
         run: |
@@ -136,8 +125,15 @@ jobs:
             # 3. assign the URL to CLIENT_VERSION for later steps
             echo "CLIENT_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
             echo "TARBALL_URL=$TARBALL_URL" >> "$GITHUB_ENV"
+            echo "PRE_UPGRADE_BRANCH=${{ matrix.version }}" >> "$GITHUB_ENV"
             echo "CLIENT_VERSION reassigned to: $TARBALL_URL"
           fi
+      - name: Checkout pmm-qa
+        uses: actions/checkout@v4
+        with:
+          repository: percona/pmm-qa
+          ref: ${{ env.PMM_QA_BRANCH }}
+          path: pmm-qa
       - name: Start PMM Server (old image)
         run: |
           docker network create pmm-qa || true
@@ -334,10 +330,11 @@ jobs:
 
           # 2. is the requested version installable via apt?
           if grep -qx "${{ matrix.version }}" <<< "$apt_versions"; then
+            TARBALL_URL=${{ matrix.version }}
             echo "${{ matrix.version }} is available in apt — leaving matrix.version unchanged"
           else
             echo "${{ matrix.version }} not in apt — building tarball URL"
-            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${CLIENT_VERSION}/binary/tarball/pmm-client-${CLIENT_VERSION}-x86_64.tar.gz"
+            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ matrix.version }}/binary/tarball/pmm-client-${{ matrix.version }}-x86_64.tar.gz"
 
             # verify it exists before committing to it
             code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
