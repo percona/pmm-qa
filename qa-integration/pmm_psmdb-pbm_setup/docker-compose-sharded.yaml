@@ -29,11 +29,11 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rs101
     hostname: rs101
     ports:
-      - "27027:27017"
+      - "27127:27017"
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -56,9 +56,9 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rs102
     hostname: rs102
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -81,9 +81,9 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rs103
     hostname: rs103
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -106,9 +106,11 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rs201
     hostname: rs201
+    ports:
+      - "27137:27017"
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -131,9 +133,9 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rs202
     hostname: rs202
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -156,9 +158,9 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rs203
     hostname: rs203
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -181,9 +183,9 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rscfg01
     hostname: rscfg01
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -206,9 +208,9 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rscfg02
     hostname: rscfg02
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -231,9 +233,9 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    container_name: rscfg03
     hostname: rscfg03
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -242,7 +244,6 @@ services:
 
   mongos:
     image: replica_member/local
-    container_name: mongos
     hostname: mongos
     ports:
       - "127.0.0.1:27017:27017"
@@ -264,6 +265,7 @@ services:
       # node's identity instead of its own (see start-sharded.sh).
     entrypoint: bash -c "systemctl enable mongos && exec /usr/sbin/init"
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -277,7 +279,6 @@ services:
 
   chunk-churn:
     image: replica_member/local
-    container_name: chunk-churn
     hostname: chunk-churn
     restart: unless-stopped
     volumes:
@@ -294,6 +295,7 @@ services:
         until mongosh "$$uri" --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; do sleep 10; done;
         exec mongosh "$$uri" --quiet --file /etc/chunk-churn/chunk-churn.js
     networks:
+      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -303,6 +305,11 @@ services:
       - build_member
       - mongos
 
+  # Shared, single-instance object store for PBM backups. See the matching note
+  # in docker-compose-rs.yaml: kept behind the "minio" profile and pinned to the
+  # fixed container_name so one minio is shared across concurrent PSMDB
+  # projects. The start scripts actually bring the shared minio up from
+  # docker-compose-rs.yaml; this definition is retained for standalone use.
   minio:
     profiles: ["minio"]
     image: minio/minio
@@ -347,7 +354,6 @@ services:
     volumes:
       - ./test:/test
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    container_name: test
     hostname: test
     networks:
       - pmm-qa
@@ -357,6 +363,8 @@ services:
       - pmm-ui-tests2
 
 networks:
+  # Per-project inter-node network; see the note in docker-compose-rs.yaml.
+  mongo-internal:
   qa-integration:
     external: true
   pmm-ui-tests1:

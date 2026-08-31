@@ -10,6 +10,11 @@ pbm_pass=${PBM_PASS:-pbmpass}
 minio=${MINIO:-false}
 minio=${minio,,}
 
+# Isolate this sharded stack in its own compose project so it can run
+# concurrently with the replica-set stack (which shares the same service and
+# host names) without either one's `down --remove-orphans` reaching the other.
+export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-psmdb_sharded}
+
 docker network create qa-integration || true
 docker network create pmm-qa || true
 docker network create pmm-ui-tests_pmm-network || true

@@ -10,6 +10,10 @@ ol_version=${OL_VERSION:-9}
 minio=${MINIO:-false}
 minio=${minio,,}
 
+# Isolate this replica-set stack in its own compose project so it can run
+# concurrently with the sharded stack (which shares the same service and host
+# names) without either one's `down --remove-orphans` reaching the other.
+export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-psmdb_pss}
 export COMPOSE_PROFILES=${profile}
 export MONGO_SETUP_TYPE=${mongo_setup_type}
 export OL_VERSION=${ol_version}
