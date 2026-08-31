@@ -19,13 +19,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     console.log(`Container name is: ${containerName}`);
     serviceName = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep pxc_node__1 | head -1 | awk -F' ' '{print $2}'`,
+        `docker exec ${containerName} pmm-admin list | grep pxc_proxysql_pmm | head -1 | awk -F' ' '{print $2}'`,
       )
       .stdout.trim();
     console.log(`Service Name is: ${serviceName}`);
     serviceId = cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep pxc_node__1 | head -1 | awk -F' ' '{print $4}'`,
+        `docker exec ${containerName} pmm-admin list | grep pxc_proxysql_pmm | head -1 | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
     console.log(`Service Id is: ${serviceId}`);
