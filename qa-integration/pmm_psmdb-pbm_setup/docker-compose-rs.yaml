@@ -26,7 +26,6 @@ services:
     ports:
       - "27027:27017"
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -59,7 +58,6 @@ services:
     image: replica_member/local
     profiles: ["classic", "extra"]
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -79,6 +77,7 @@ services:
       PMM_AGENT_SERVER_USERNAME: admin
       PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
       PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs102
     hostname: rs102
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
@@ -91,7 +90,6 @@ services:
     image: replica_member/local
     profiles: ["classic", "extra"]
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -111,6 +109,7 @@ services:
       PMM_AGENT_SERVER_USERNAME: admin
       PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
       PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs103
     hostname: rs103
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
@@ -125,7 +124,6 @@ services:
     ports:
       - "27037:27017"
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -157,7 +155,6 @@ services:
     image: replica_member/local
     profiles: ["extra"]
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -189,7 +186,6 @@ services:
     image: replica_member/local
     profiles: ["extra"]
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration

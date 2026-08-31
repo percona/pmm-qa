@@ -33,7 +33,6 @@ services:
     ports:
       - "27127:27017"
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -58,7 +57,6 @@ services:
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
     hostname: rs102
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -83,7 +81,6 @@ services:
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
     hostname: rs103
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -110,7 +107,6 @@ services:
     ports:
       - "27137:27017"
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -135,7 +131,6 @@ services:
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
     hostname: rs202
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -160,7 +155,6 @@ services:
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
     hostname: rs203
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -185,7 +179,6 @@ services:
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
     hostname: rscfg01
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -210,7 +203,6 @@ services:
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
     hostname: rscfg02
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -235,7 +227,6 @@ services:
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
     hostname: rscfg03
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -265,7 +256,6 @@ services:
       # node's identity instead of its own (see start-sharded.sh).
     entrypoint: bash -c "systemctl enable mongos && exec /usr/sbin/init"
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
@@ -295,7 +285,6 @@ services:
         until mongosh "$$uri" --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; do sleep 10; done;
         exec mongosh "$$uri" --quiet --file /etc/chunk-churn/chunk-churn.js
     networks:
-      - mongo-internal
       - pmm-qa
       - pmm-ui-tests1
       - qa-integration
