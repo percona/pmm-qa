@@ -118,10 +118,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
   });
 
-
+*/
 
   pmmTest(
-    'PMM-T9995 - Verify Change agent enable true/false @ps-integration',
+    'PMM-T9995 - Verify Change agent enable true/false @proxysql-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
@@ -131,30 +131,28 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       for (const enableCommand of enableCommands) {
-        let commands = [
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} ${enableCommand.command}`,
-          `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} ${enableCommand.command}`,
-        ];
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} ${enableCommand.command}`,
+          )
+          .assertSuccess()
+          .outContains(enableCommand.response);
 
-        for (const command of commands) {
-          await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
-        }
-
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- Developing tests
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
-        commands = [
-          `docker exec ${containerName} pmm-admin list | grep mysqld_exporter | grep ${serviceId}`,
-          `docker exec ${containerName} pmm-admin list | grep mysql_perfschema_agent | grep ${serviceId}`,
-        ];
-
-        for (const command of commands) {
-          await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.status);
-        }
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin list | grep proxysql_exporter | grep ${serviceId}`,
+          )
+          .assertSuccess()
+          .outContains(enableCommand.status);
       }
     },
   );
-
-  pmmTest('PMM-T9996 - Verify Change agent agent password @ps-integration', async ({ cliHelper, page }) => {
+  // eslint-disable-next-line playwright/no-commented-out-tests -- Developing tests
+  /*
+  pmmTest('PMM-T9996 - Verify Change agent password @ps-integration', async ({ cliHelper, page }) => {
     cliHelper.execSilent(
       `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --agent-password=${pgExporterPassword}`,
     );
