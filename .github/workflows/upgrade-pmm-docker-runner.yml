@@ -70,7 +70,8 @@ jobs:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
           path: pmm-qa
-
+      - name: Get PMM Versions
+        run: curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=25&ordering=-last_updated" | jq -r '.results[] | "\(.name)\t\(.last_updated)"'
       - name: Start PMM Server (old image)
         run: |
           docker network create pmm-qa || true
