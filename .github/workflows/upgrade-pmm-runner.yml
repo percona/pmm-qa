@@ -83,6 +83,35 @@ jobs:
             | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' \
             | sort -Vr \
             | awk -v floor="$FLOOR" '{print} $0==floor{exit}'
+      - name: Resolve PMM client source
+        shell: bash
+        run: |
+          # 1. all X.Y.Z versions available in the apt pool
+          apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
+            | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
+            | sed -E 's/pmm-client_//' | sort -Vu)
+
+          echo "apt versions available:"
+          echo "$apt_versions"
+
+          # 2. is the requested version installable via apt?
+          if grep -qx "$CLIENT_VERSION" <<< "$apt_versions"; then
+            echo "$CLIENT_VERSION is available in apt — leaving CLIENT_VERSION unchanged"
+          else
+            echo "$CLIENT_VERSION not in apt — building tarball URL"
+            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${CLIENT_VERSION}/binary/tarball/pmm-client-${CLIENT_VERSION}-x86_64.tar.gz"
+
+            # verify it exists before committing to it
+            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
+            if [ "$code" != "200" ]; then
+              echo "ERROR: $CLIENT_VERSION missing from apt AND tarball not found (HTTP $code)"
+              exit 1
+            fi
+
+            # 3. assign the URL to CLIENT_VERSION for later steps
+            echo "CLIENT_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
+            echo "CLIENT_VERSION reassigned to: $TARBALL_URL"
+          fi
       - name: Start PMM Server (old image)
         run: |
           docker network create pmm-qa || true
