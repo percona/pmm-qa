@@ -115,7 +115,7 @@ jobs:
             # verify it exists before committing to it
             code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
             if [ "$code" != "200" ]; then
-              echo "ERROR: ${{ matrix.version }} missing from apt AND tarball not found (HTTP $code)"
+              echo "::error::${{ matrix.version }} missing from apt AND tarball not found (HTTP $code)"
               exit 1
             fi
 
