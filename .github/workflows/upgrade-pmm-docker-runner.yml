@@ -72,9 +72,17 @@ jobs:
           path: pmm-qa
       - name: Get PMM Versions
         run: |
-          export FLOOR=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100"   | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))'   | sed -E 's/\.[0-9]+$//'   | sort -Vru   | sed -n '5p'   | sed 's/$/.0/')
-          echo $FLOOR
-          curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100"   | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))'   | sed -E 's/\.ort -Vr   | awk -v floor="$FLOOR" '{print} $0==floor{exit}'
+          FLOOR=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
+            | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' \
+            | sed -E 's/\.[0-9]+$//' \
+            | sort -Vru \
+            | sed -n '5p' \
+            | sed 's/$/.0/')
+          echo "FLOOR=$FLOOR"
+          curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
+            | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' \
+            | sort -Vr \
+            | awk -v floor="$FLOOR" '{print} $0==floor{exit}'
       - name: Start PMM Server (old image)
         run: |
           docker network create pmm-qa || true
