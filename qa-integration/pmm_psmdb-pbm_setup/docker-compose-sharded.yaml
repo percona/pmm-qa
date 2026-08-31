@@ -29,6 +29,7 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rs101
     hostname: rs101
     ports:
       - "27027:27017"

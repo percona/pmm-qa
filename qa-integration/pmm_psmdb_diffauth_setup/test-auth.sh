@@ -54,6 +54,22 @@ fi
 
 docker compose -f docker-compose-pmm-psmdb.yml up -d
 
+# Wait for the replica set primary before adding users. mongod is started by
+# systemd inside the container, so it is not listening the instant `up -d`
+# returns -- and under a parallel provisioning run it can take noticeably
+# longer. The stack's healthcheck runs rs.initiate(); we just wait for the
+# primary to be elected. Without this the createUser below races mongod and
+# fails with "MongoNetworkError: connect ECONNREFUSED 127.0.0.1:27017".
+echo "waiting for the psmdb-server replica set primary"
+for _ in $(seq 1 90); do
+  primary=$(docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server \
+    mongo --quiet --eval 'try { db.isMaster().ismaster } catch (e) { false }' 2>/dev/null | tr -d '\r') || true
+  if [ "$primary" = "true" ]; then
+    break
+  fi
+  sleep 3
+done
+
 #Add users
 docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mongo --quiet << EOF
 db.getSiblingDB("admin").createUser({ user: "root", pwd: "root", roles: [ "root", "userAdminAnyDatabase", "clusterAdmin" ] });
