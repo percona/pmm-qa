@@ -106,6 +106,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@pmm-server`
 - `@pmm-valkey-integration`
 - `@post-release`
+- `@proxysql-integration`
 - `@ps-integration`
 - `@ps-slowlog-integration`
 - `@rds-integration`
