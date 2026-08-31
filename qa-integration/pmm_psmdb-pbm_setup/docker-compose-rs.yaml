@@ -46,6 +46,7 @@ services:
       PMM_AGENT_SERVER_USERNAME: admin
       PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
       PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs101
     hostname: rs101
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
@@ -143,6 +144,7 @@ services:
       PMM_AGENT_SERVER_USERNAME: admin
       PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
       PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs201
     hostname: rs201
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
@@ -174,6 +176,7 @@ services:
       PMM_AGENT_SERVER_USERNAME: admin
       PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
       PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs202
     hostname: rs202
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
@@ -205,16 +208,10 @@ services:
       PMM_AGENT_SERVER_USERNAME: admin
       PMM_AGENT_SERVER_PASSWORD: ${ADMIN_PASSWORD:-password}
       PMM_AGENT_SERVER_INSECURE_TLS: 1
+    container_name: rs203
     hostname: rs203
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
-  # Shared, single-instance object store for PBM backups. Kept behind its own
-  # "minio" profile (not classic/extra) and pinned to the fixed container_name
-  # "minio" so the start scripts can share ONE minio across concurrent PSMDB
-  # projects: whichever setup runs first creates it under its own project, the
-  # others detect it by name and reuse it. If it were also in classic/extra a
-  # second project's `up` would try to manage the already-owned "minio"
-  # container and collide.
   minio:
     image: minio/minio
     profiles: ["minio"]
@@ -275,11 +272,6 @@ services:
       retries: 5
 
 networks:
-  # Per-project inter-node network. Compose names it <project>_mongo-internal,
-  # so the replica-set members of each PSMDB stack resolve each other here
-  # without clashing with an identically named member in a sibling project on
-  # the shared pmm-qa network.
-  mongo-internal:
   qa-integration:
     external: true
   pmm-ui-tests1:

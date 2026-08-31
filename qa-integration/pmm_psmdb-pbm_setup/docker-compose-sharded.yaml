@@ -31,7 +31,7 @@ services:
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
     hostname: rs101
     ports:
-      - "27127:27017"
+      - "27027:27017"
     networks:
       - pmm-qa
       - pmm-ui-tests1
@@ -55,6 +55,7 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rs102
     hostname: rs102
     networks:
       - pmm-qa
@@ -79,6 +80,7 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rs103
     hostname: rs103
     networks:
       - pmm-qa
@@ -103,9 +105,8 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rs201
     hostname: rs201
-    ports:
-      - "27137:27017"
     networks:
       - pmm-qa
       - pmm-ui-tests1
@@ -129,6 +130,7 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rs202
     hostname: rs202
     networks:
       - pmm-qa
@@ -153,6 +155,7 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rs203
     hostname: rs203
     networks:
       - pmm-qa
@@ -177,6 +180,7 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rscfg01
     hostname: rscfg01
     networks:
       - pmm-qa
@@ -201,6 +205,7 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rscfg02
     hostname: rscfg02
     networks:
       - pmm-qa
@@ -225,6 +230,7 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
+    container_name: rscfg03
     hostname: rscfg03
     networks:
       - pmm-qa
@@ -235,6 +241,7 @@ services:
 
   mongos:
     image: replica_member/local
+    container_name: mongos
     hostname: mongos
     ports:
       - "127.0.0.1:27017:27017"
@@ -269,6 +276,7 @@ services:
 
   chunk-churn:
     image: replica_member/local
+    container_name: chunk-churn
     hostname: chunk-churn
     restart: unless-stopped
     volumes:
@@ -343,6 +351,7 @@ services:
     volumes:
       - ./test:/test
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    container_name: test
     hostname: test
     networks:
       - pmm-qa
@@ -352,8 +361,6 @@ services:
       - pmm-ui-tests2
 
 networks:
-  # Per-project inter-node network; see the note in docker-compose-rs.yaml.
-  mongo-internal:
   qa-integration:
     external: true
   pmm-ui-tests1:
