@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# SessionStart hook -- installs gh, terraform, ffmpeg, json-diff, and the
-# Playwright helper scripts. Everything else (PMM, pmm-framework, Ansible)
-# runs on the Linode VM, not here -- see .claude/skills/linode-docker-provisioning.
+# SessionStart hook -- installs gh, terraform, the linters the commit gate and
+# .github/workflows/lint.yml run, ffmpeg, json-diff, and the Playwright helper
+# scripts. Everything else (PMM, pmm-framework, Ansible) runs on the Linode VM,
+# not here -- see .claude/skills/linode-docker-provisioning.
 set -euo pipefail
 
 if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
@@ -9,6 +10,8 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
 fi
 
 QA_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+# shellcheck source=.claude/hooks/lib/install-linters.sh
+. "$QA_ROOT/.claude/hooks/lib/install-linters.sh"
 
 # --- gh CLI -----------------------------------------------------------
 if ! command -v gh >/dev/null 2>&1; then
@@ -41,6 +44,9 @@ if ! command -v terraform >/dev/null 2>&1; then
   sudo unzip -o -q "$TF_ZIP" -d /usr/local/bin terraform
 fi
 
+# --- linters -- shellcheck, yamllint, actionlint, hadolint, ruff --------
+ensure_all_linters || true
+
 # --- ffmpeg -- only for pw-record.js's .webm -> .mp4 transcode ---------
 command -v ffmpeg >/dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y ffmpeg)
 
@@ -51,4 +57,6 @@ command -v json-diff >/dev/null 2>&1 || npm install -g json-diff >/dev/null 2>&1
 cd "$QA_ROOT/.claude/scripts"
 npm install >/dev/null
 
-chmod +x "$QA_ROOT"/terraform/linode-runner/*.sh "$QA_ROOT"/.claude/hooks/*.sh
+# Not .claude/hooks/*.sh -- settings.json runs those as `bash "$h"`, and
+# chmod-ing one git tracks as 100644 leaves a mode-only diff behind.
+chmod +x "$QA_ROOT"/terraform/linode-runner/*.sh

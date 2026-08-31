@@ -1,4 +1,4 @@
-
+#!/bin/bash
 mkdir -p certs
 
 OPENSSL_SUBJ="/C=US/ST=California/L=Santa Clara"

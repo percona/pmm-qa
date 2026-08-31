@@ -9,7 +9,7 @@ on:
       pmm_server_image:
         description: 'PMM Server docker image:'
         default: 'perconalab/pmm-server:3-dev-latest'
-        required: true
+        required: false
         type: string
       pmm_client_image:
         description: "pmm2-client docker image, default perconalab/pmm-client:3-dev-latest"
@@ -18,7 +18,7 @@ on:
       pmm_client_version:
         description: 'PMM Client version (latest-tarball|pmm3-rc|x.xx.x|https...)'
         default: 'latest-tarball'
-        required: true
+        required: false
         type: string
       services_list:
         description: "pmm-framework flags to perform setup"
@@ -142,12 +142,14 @@ jobs:
           pip3 install --user --upgrade launchable~=1.0
           launchable verify || true
           
-          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.PMM_SERVER_IMAGE }} | cut -d@ -f2) || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.PMM_SERVER_IMAGE }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
           
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "cli-tests-${{ steps.test_name_processed.outputs.result }}-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "cli-tests-${{ steps.test_name_processed.outputs.result }}-${{ steps.tags_processed.outputs.result }}" > \
+            launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > launchable-subset.txt || true
-          echo "$(cat launchable-subset.txt)" || true
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright < test_list.txt > launchable-subset.txt || true
+          cat launchable-subset.txt || true
 
       - name: 'Check if launchable subset is empty'
         working-directory: pmm-qa/cli
@@ -178,6 +180,9 @@ jobs:
             -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 \
             -e PERCONA_TEST_PLATFORM_PUBLIC_KEY=RWTg+ZmCCjt7O8eWeAmTLAqW+1ozUbpRSKSwNTmO+exlS5KEIPYWuYdX \
             --volumes-from pmm-server-data --name pmm-server --restart always ${{ env.PMM_SERVER_IMAGE }} 
+          # shellcheck disable=SC2016
+          # Deliberately unexpanded: the inner bash -c does the expanding, and
+          # curl's %{http_code} must reach curl literally.
           timeout 240 bash -c 'while [[ "$(curl -k -s -o /dev/null -w ''%{http_code}'' https://127.0.0.1:443/v1/readyz)" != "200" ]]; do sleep 2; done' || false
 
       - name: 'Setup PMM Client: <${{ env.PMM_CLIENT_VERSION }}>'
@@ -194,13 +199,17 @@ jobs:
       - name: 'Run CLI tests: ${{ inputs.cli_tag }}'
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: ./pmm-qa/cli
-        run: npx playwright test --quiet --grep "${{ inputs.cli_tag }}" $(cat launchable-subset.txt) || true
+        run: |
+          # shellcheck disable=SC2046
+          # The launchable subset is a whitespace-separated list of test files,
+          # so it has to split into separate arguments.
+          npx playwright test --quiet --grep "${{ inputs.cli_tag }}" $(cat launchable-subset.txt) || true
 
       - name: Record launchable test results
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/cli
         run: |
-          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json
+          launchable record tests --session "$(cat launchable-session.txt)" playwright --json output/results.json
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Download logs
@@ -237,4 +246,3 @@ jobs:
       # - name: Setup tmate session  on failure
       #   if: ${{ failure() }}
       #   uses: percona/gh-action-action-tmate@v2
-

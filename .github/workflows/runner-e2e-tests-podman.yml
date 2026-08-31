@@ -129,6 +129,9 @@ jobs:
 
       - name: Setup PMM3-Server
         working-directory: ./pmm-qa/codeceptjs-e2e
+        # yamllint disable rule:line-length
+        # ExecStart below is a systemd unit line inside a heredoc, not
+        # shell; systemd owns its own continuation syntax.
         run: |
           mkdir -p ~/.config/systemd/user/
           cat > ~/.config/systemd/user/pmm-server.service <<EOF
@@ -184,18 +187,22 @@ jobs:
           export LOGS="pmm-managed entered RUNNING state"
           attempt=0
           while [ $attempt -le 3 ]; do
-            attempt=$(( $attempt + 1 ))
+            attempt=$(( attempt + 1 ))
             echo "Waiting for ${CONTAINER_NAME} to be up (attempt: $attempt)..."
             result=$(systemctl --user status ${CONTAINER_NAME})
-            if grep "${LOGS}" <<< $result ; then
+            if grep "${LOGS}" <<< "$result" ; then
               echo "${CONTAINER_NAME} is ready!"
               break
             fi
             sleep 10
           done;
+          # shellcheck disable=SC2016
+          # Deliberately unexpanded: the inner bash -c does the expanding, and
+          # curl's %{http_code} must reach curl literally.
           timeout 100 bash -c 'while [[ "$(curl -s -o /dev/null -w "%{http_code}" --user "admin:${ADMIN_PASSWORD}" http://127.0.0.1/v1/server/readyz)" != "200" ]]; do sleep 5; done'
           # bash -x testdata/db_setup.sh
 
+        # yamllint enable rule:line-length
       - name: Print Podman logs on failure
         if: ${{ failure() }}
         run: |
@@ -211,7 +218,7 @@ jobs:
 
       - name: Export path to pmm-qa repo
         working-directory: ./pmm-qa
-        run: echo "PATH_TO_PMM_QA=$(pwd)" >> $GITHUB_ENV
+        run: echo "PATH_TO_PMM_QA=$(pwd)" >> "$GITHUB_ENV"
 
       - name: Setup PMM3-Client
         working-directory: ./pmm-qa/qa-integration/pmm_qa
@@ -220,8 +227,9 @@ jobs:
       - name: Run Setup for E2E Tests
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
-          export HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
-          ./pmm-framework/pmm-framework --parallel --pmm-server-ip=$HOST_IP --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
+          HOST_IP=$(ip -4 addr show docker0 | awk '/inet / {print $2}' | cut -d/ -f1)
+          export HOST_IP
+          ./pmm-framework/pmm-framework --parallel --pmm-server-ip="$HOST_IP" --pmm-server-password=${{ env.ADMIN_PASSWORD }} ${{ env.WIZARD_ARGS }}
 
       - name: Setup npm modules for e2e tests
         working-directory: ./pmm-qa/codeceptjs-e2e
@@ -233,10 +241,14 @@ jobs:
       - name: Execute e2e tests with tags ${{ env.TAGS_FOR_TESTS }}
         working-directory: ./pmm-qa/codeceptjs-e2e
         env:
-          SERVER_IP : "127.0.0.1"
-          PMM_UI_URL : "http://127.0.0.1/"
-          PMM_URL : "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
+          SERVER_IP: "127.0.0.1"
+          PMM_UI_URL: "http://127.0.0.1/"
+          PMM_URL: "http://admin:${{ env.ADMIN_PASSWORD }}@${{ env.SERVER_IP }}"
         run: |
+          # shellcheck disable=SC2016
+          # This substitutes the literal string ${PMM_UI_URL}, not its value. It only
+          # rewrites the unused fallback in pr.codecept.js, so it is inert today --
+          # left as-is rather than changed blind. See the PR description.
           sed -i 's+http://localhost/+${PMM_UI_URL}/+g' pr.codecept.js
           ./node_modules/.bin/codeceptjs run -c pr.codecept.js --grep "${{ env.TAGS_FOR_TESTS }}"
 

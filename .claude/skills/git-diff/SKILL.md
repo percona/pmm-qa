@@ -60,7 +60,7 @@ done
 json-diff "$tmp/base.json" "$tmp/head.json"
 ```
 
-4. Summarize **what panels/queries/alerts changed**, not every byte.
+1. Summarize **what panels/queries/alerts changed**, not every byte.
 
 `json-diff` is installed globally by `.claude/hooks/session-start.sh` (`npm install -g json-diff`).
 

@@ -52,10 +52,10 @@ fi
 
 apt-get update
 apt-get install -y wget gnupg2 libtinfo-dev libnuma-dev mysql-client postgresql-client
-wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb
-dpkg -i percona-release_latest.$(lsb_release -sc)_all.deb
+wget "https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb"
+dpkg -i "percona-release_latest.$(lsb_release -sc)_all.deb"
 apt-get update
-export PMM_AGENT_SETUP_NODE_NAME=client_container_$(echo $((1 + $RANDOM % 9999)))
+export PMM_AGENT_SETUP_NODE_NAME=client_container_$((1 + $RANDOM % 9999))
 mv -v /artifacts/* .
 
 # Percona's CDN/repo occasionally serves inconsistent metadata during builds,
@@ -105,7 +105,7 @@ if [[ "$client_version" =~ ^3\.[0-9]+\.[0-9]+$ ]]; then
   elif [ "$client_version" = "3.8.1" ] || [ "$minor_version" -gt 8 ]; then
     build_number=1
   fi
-  wget -O pmm-client.deb https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb
+  wget -O pmm-client.deb "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/pmm-client_${client_version}-${build_number}.$(lsb_release -sc)_amd64.deb"
   dpkg -i pmm-client.deb
 fi
 
@@ -121,17 +121,17 @@ if [[ "$client_version" == http* ]]; then
     fi
     tar -zxpf pmm-client.tar.gz
     rm -r pmm-client.tar.gz
-    PMM_CLIENT=`ls -1td pmm-client* 2>/dev/null | grep -v ".tar" | grep -v ".sh" | head -n1`
+    PMM_CLIENT=$(ls -1td pmm-client*/ 2>/dev/null | head -n1)
     echo ${PMM_CLIENT}
     rm -rf pmm-client
     mv ${PMM_CLIENT} pmm-client
     rm -rf /usr/local/bin/pmm-client
     mv -f pmm-client /usr/local/bin
-    pushd /usr/local/bin/pmm-client
+    pushd /usr/local/bin/pmm-client || exit 1
     ## only setting up all binaries in default path /usr/local/percona/pmm
     bash -x ./install_tarball ${upgrade}
     pwd
-    popd
+    popd || exit 1
     pmm-admin --version
 fi
 

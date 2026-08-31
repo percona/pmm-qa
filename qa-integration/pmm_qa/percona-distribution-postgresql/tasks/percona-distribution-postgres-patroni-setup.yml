@@ -129,7 +129,9 @@
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Get already connected services to pmm server
-  shell: docker exec {{ container_prefix }}1 sh -c 'curl --location --insecure -u"admin:{{ admin_password }}" -s --request GET "http://{{ pmm_server_ip }}:{{ "80" if pmm_server_ip is match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$') else "8080" }}/v1/management/services" | jq -r ".services[].service_name"'
+  shell: >-
+    docker exec {{ container_prefix }}1 sh -c 'curl --location --insecure -u"admin:{{ admin_password }}" -s --request GET "http://{{ pmm_server_ip }}:{{ "80" if pmm_server_ip is
+    match('^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(\.|$)){4}$') else "8080" }}/v1/management/services" | jq -r ".services[].service_name"'
   register: pmm_server_services
 
 - name: Display already connected services to pmm server
@@ -145,14 +147,18 @@
       when: "('pdpgsql_pmm_patroni_' ~ pdpgsql_version ~ '_' ~ item) in pmm_server_services.stdout"
 
 - name: Add service to pmm server
-  shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=postgres --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment --password=pass+this --query-source=pgstatmonitor {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:5432
+  shell: >-
+    docker exec {{ container_prefix }}{{ item }} pmm-admin add postgresql --username=postgres --cluster=pdpgsql_patroni_cluster --environment=pdpgsql_patroni_environment --password=pass+this
+    --query-source=pgstatmonitor {{ container_prefix }}{{ item }}{{ random_service_name_value }} --debug 127.0.0.1:5432
   loop: "{{ range(1, nodes_count | int + 1) | list }}"
 
 - name: Add patroni primary service to pmm server
   shell: docker exec {{ container_prefix }}1 pmm-admin add external --listen-port=8008 --service-name=patroni_service_1{{ random_service_name_value }}
 
 - name: Add patroni replication service to pmm server
-  shell: docker exec {{ container_prefix }}{{ item }} pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster --environment=pdpgsql_patroni_service_environment --service-name=patroni_service_{{ item }}{{ random_service_name_value }}
+  shell: >-
+    docker exec {{ container_prefix }}{{ item }} pmm-admin add external --listen-port=8008 --cluster=pdpgsql_patroni_service_cluster --environment=pdpgsql_patroni_service_environment
+    --service-name=patroni_service_{{ item }}{{ random_service_name_value }}
   loop: "{{ range(2, nodes_count | int + 1) | list }}"
 
 - name: Copy a file into the container

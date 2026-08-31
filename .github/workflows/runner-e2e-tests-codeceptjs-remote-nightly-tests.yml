@@ -46,6 +46,8 @@ on:
         required: false
       GH_TOKEN:
         required: false
+      ZEPHYR_PMM_API_KEY:
+        required: false
 
 permissions:
   actions: read
@@ -100,9 +102,11 @@ jobs:
           ADDR_NO_SCHEME=${ADDR#http://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
-          echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/" >> "$GITHUB_ENV"
-          echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
-          echo "SERVER_IP=${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
+          {
+            echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/"
+            echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}"
+            echo "SERVER_IP=${ADDR_NO_SCHEME}"
+          } >> "$GITHUB_ENV"
 
       - name: Sanity check remote PMM Server reachability
         run: |
@@ -140,14 +144,17 @@ jobs:
           launchable verify || true
 
           docker pull ${{ env.DOCKER_VERSION }} || true
-          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
 
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
+            > launchable-session.txt || true
           node launchable-prepare.js "${{ env.TAGS_FOR_TESTS }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch codeceptjs > launchable-subset.json || true
-          echo "$(cat launchable-subset.json)" || true
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
+            --use-case feature-branch codeceptjs < test_list.txt > launchable-subset.json || true
+          cat launchable-subset.json || true
 
       - name: Check if launchable subset is empty
         id: check_launchable_subset
