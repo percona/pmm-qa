@@ -36,11 +36,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       )
       .stdout.trim();
     console.log(`Exporter id is: ${proxysqlExporterId}`);
-    proxysqlExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${proxysqlExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
   });
 
   pmmTest(
@@ -172,6 +167,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9993 - Verify Change agent expose exporter @proxysql-integration',
     async ({ cliHelper, page }) => {
+      proxysqlExporterPort = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${proxysqlExporterId} | awk -F' ' '{print $6}'`,
+        )
+        .stdout.trim();
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --expose-exporter`,
