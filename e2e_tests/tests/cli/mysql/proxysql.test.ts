@@ -22,16 +22,19 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} pmm-admin list | grep pxc_node__1 | head -1 | awk -F' ' '{print $2}'`,
       )
       .stdout.trim();
+    console.log(`Service Name is: ${serviceName}`);
     serviceId = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep pxc_node__1 | head -1 | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
+    console.log(`Service Id is: ${serviceId}`);
     proxysqlExporterId = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ${serviceId} | grep proxysql_exporter | awk -F' ' '{print $4}'`,
       )
       .stdout.trim();
+    console.log(`Exporter id is: ${proxysqlExporterId}`);
   });
 
   pmmTest(
@@ -42,6 +45,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "INSERT INTO mysql_users (username, password) VALUES ('${newUsername}', '${newPassword}-wrong'); LOAD MYSQL USERS TO RUNTIME; SAVE MYSQL USERS TO DISK;"`,
         )
         .assertSuccess();
+
+      console.log(
+        `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --password=${newPassword} --username=${newUsername}`,
+      );
 
       await cliHelper
         .execSilent(
