@@ -7,11 +7,11 @@ pmm_user=${PMM_USER:-pmm}
 pmm_pass=${PMM_PASS:-pmmpass}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
+minio=${MINIO:-true}
+minio=${minio,,}
 
-# Start our own minio only if no other setup is already running one.
-if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-    echo "minio container exists, reusing it"
-else
+# minio backs PBM's S3 store; enable it unless the caller opted out via MINIO.
+if [ "$minio" != "false" ]; then
     COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}minio"
 fi
 export COMPOSE_PROFILES

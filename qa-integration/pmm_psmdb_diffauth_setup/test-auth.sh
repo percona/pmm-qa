@@ -31,35 +31,18 @@ bash -e ./generate-certs.sh
 docker compose -f docker-compose-pmm-psmdb.yml down -v --remove-orphans
 docker compose -f docker-compose-pmm-psmdb.yml build
 
-# Start (or reuse) the shared minio container. Locked so that concurrent
-# --parallel setups can't both pass the "does minio exist" check before
-# either has actually created it, and both then try to create a container
-# named "minio". --no-deps keeps the locked section short: it starts just
-# minio/createbucket without pulling in the rest of this stack.
-# Skipped entirely when MINIO=false.
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
 if [ "$minio" != "false" ]; then
-  minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
-  (
-    flock -x 200
-    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-      echo "minio container exists, reusing it"
-    else
-      echo "starting shared minio container"
-      docker compose -f docker-compose-pmm-psmdb.yml up -d --no-deps minio createbucket
-    fi
-  ) 200>"$minio_lock"
+  echo "starting minio container"
+  docker compose -f docker-compose-pmm-psmdb.yml up -d --no-deps minio createbucket
 else
   echo "skipping minio container (MINIO=false)"
 fi
 
 docker compose -f docker-compose-pmm-psmdb.yml up -d
 
-# Wait for the replica set primary before adding users. mongod is started by
-# systemd inside the container, so it is not listening the instant `up -d`
-# returns -- and under a parallel provisioning run it can take noticeably
-# longer. The stack's healthcheck runs rs.initiate(); we just wait for the
-# primary to be elected. Without this the createUser below races mongod and
-# fails with "MongoNetworkError: connect ECONNREFUSED 127.0.0.1:27017".
+# mongod is started by systemd, so it isn't listening when `up -d` returns; wait
+# for the healthcheck's rs.initiate() to elect a primary before adding users.
 echo "waiting for the psmdb-server replica set primary"
 for _ in $(seq 1 90); do
   primary=$(docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server \
@@ -69,6 +52,7 @@ for _ in $(seq 1 90); do
   fi
   sleep 3
 done
+[ "$primary" = "true" ] || { echo "psmdb-server never became primary"; exit 1; }
 
 #Add users
 docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mongo --quiet << EOF

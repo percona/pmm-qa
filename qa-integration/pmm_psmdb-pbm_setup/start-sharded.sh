@@ -7,7 +7,7 @@ pmm_mongo_user=${PMM_MONGO_USER:-${PMM_USER:-pmm}}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-${PMM_PASS:-pmmpass}}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
-minio=${MINIO:-false}
+minio=${MINIO:-true}
 minio=${minio,,}
 
 # Isolate this sharded stack in its own compose project so it can run
@@ -21,29 +21,17 @@ docker network create pmm-ui-tests_pmm-network || true
 docker network create pmm2-upgrade-tests_pmm-network || true
 docker network create pmm2-ui-tests_pmm-network || true
 
-# Start (or reuse) the shared minio container. Locked so that concurrent
-# --parallel setups can't both pass the "does minio exist" check before
-# either has actually created it, and both then try to create a container
-# named "minio". --no-deps keeps the locked section short: it starts just
-# minio/createbucket without pulling in the rest of this stack.
-# Skipped entirely when MINIO=false.
+docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
+docker compose -f docker-compose-sharded.yaml build
+
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
 if [ "$minio" != "false" ]; then
-  minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
-  (
-    flock -x 200
-    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-      echo "minio container exists, reusing it"
-    else
-      echo "starting shared minio container"
-      docker compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket
-    fi
-  ) 200>"$minio_lock"
+  echo "starting minio container"
+  docker compose -f docker-compose-sharded.yaml up -d --no-deps minio createbucket
 else
   echo "skipping minio container (MINIO=false)"
 fi
 
-docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
-docker compose -f docker-compose-sharded.yaml build
 docker compose -f docker-compose-sharded.yaml up -d
 
 echo

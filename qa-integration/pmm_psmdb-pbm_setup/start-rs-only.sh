@@ -7,7 +7,7 @@ mongo_setup_type=${mongo_setup_type,,}
 mongo_storage_engine=${MONGO_STORAGE_ENGINE:-wiredTiger}
 mongo_storage_engine=${mongo_storage_engine,,}
 ol_version=${OL_VERSION:-9}
-minio=${MINIO:-false}
+minio=${MINIO:-true}
 minio=${minio,,}
 
 # Isolate this replica-set stack in its own compose project so it can run
@@ -37,23 +37,10 @@ docker network create pmm2-ui-tests_pmm-network || true
 
 docker compose -f docker-compose-rs.yaml down -v --remove-orphans
 docker compose -f docker-compose-rs.yaml build --no-cache
-# Start (or reuse) the shared minio container. Locked so that concurrent
-# --parallel setups can't both pass the "does minio exist" check before
-# either has actually created it, and both then try to create a container
-# named "minio". --no-deps keeps the locked section short: it starts just
-# minio/createbucket without pulling in the rest of this stack.
-# Skipped entirely when MINIO=false.
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
 if [ "$minio" != "false" ]; then
-  minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
-  (
-    flock -x 200
-    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-      echo "minio container exists, reusing it"
-    else
-      echo "starting shared minio container"
-      docker compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket
-    fi
-  ) 200>"$minio_lock"
+  echo "starting minio container"
+  docker compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket
 else
   echo "skipping minio container (MINIO=false)"
 fi
