@@ -1,5 +1,6 @@
 import pmmTest from '@fixtures/pmmTest';
 import { Timeouts } from '@helpers/timeouts';
+import { expect } from '@playwright/test';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
@@ -86,29 +87,25 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await expect(agentsPage.builders.property(customLabel)).toBeVisible();
       await agentsPage.hideRowDetails(mysqldPerfschemaAgentId);
     },
-  );
+  );*/
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent log level @ps-integration',
+    'PMM-T9993 - Verify Change agent log level @proxysql-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
-      const commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --log-level=debug`,
-        `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --log-level=debug`,
-      ];
-
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --log-level=debug`,
+        )
+        .assertSuccess();
 
       await grafanaHelper.authorize();
       await page.goto(agentsPage.url(serviceId));
-      await agentsPage.showRowDetails(mysqldExporterId);
+      await agentsPage.showRowDetails(proxysqlExporterId);
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldExporterId);
-      await agentsPage.showRowDetails(mysqldPerfschemaAgentId);
-      await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
-      await agentsPage.hideRowDetails(mysqldPerfschemaAgentId);
     },
   );
-
+  // eslint-disable-next-line playwright/no-commented-out-tests -- Developing tests
+  /*
   pmmTest('PMM-T9993 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
     const commands = [
       `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --debug --trace --json`,
