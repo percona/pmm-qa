@@ -89,7 +89,7 @@ jobs:
       - name: Resolve PMM client source
         shell: bash
         run: |
-          echo ${{ needs.prepare.outputs.rc_version }}
+          echo "${{ needs.prepare.outputs.rc_version }} is the RC docker tag"
           # 1. all X.Y.Z versions available in the apt pool
           apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
