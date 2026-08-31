@@ -1,4 +1,4 @@
-name: PMM Upgrade runner
+name: PMM Upgrade
 
 on:
   pull_request:
@@ -72,17 +72,22 @@ jobs:
           TAGS=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
             | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))')
 
-          # floor = 5th-latest minor, as X.Y.0
+          # --- CLIENT range: latest -> 5 minors back ---
           FLOOR=$(echo "$TAGS" | sed -E 's/\.[0-9]+$//' | sort -Vru | sed -n '5p' | sed 's/$/.0/')
-          echo "Floor: $FLOOR"
-
-          # full range: all X.Y.Z from latest down to floor, inclusive
           VERSIONS=$(echo "$TAGS" | sort -Vr \
             | awk -v floor="$FLOOR" '{print} $0==floor{exit}' \
             | jq -R . | jq -sc .)
 
-          echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
-          echo "Matrix versions: $VERSIONS"
+          # --- UI range: latest -> 3.8.0 inclusive ---
+          UI_FLOOR=3.8.0
+          UI_VERSIONS=$(echo "$TAGS" | sort -Vr \
+            | awk -v floor="$UI_FLOOR" '{print} $0==floor{exit}' \
+            | jq -R . | jq -sc .)
+
+          echo "versions=$VERSIONS"       >> "$GITHUB_OUTPUT"
+          echo "ui_versions=$UI_VERSIONS" >> "$GITHUB_OUTPUT"
+          echo "CLIENT versions: $VERSIONS"
+          echo "UI versions:     $UI_VERSIONS"
 
   upgrade:
     needs: prepare
