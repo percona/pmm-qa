@@ -60,6 +60,22 @@ export default class HaClusterHelper {
     return newLeader;
   };
 
+  /** How Grafana itself reaches the shared PostgreSQL, read from the pod rather than from the API under test. */
+  grafanaDatabaseEnv = (podName: string): Record<string, string> => {
+    const { stdout } = this.k8sHelper.execInPod(podName, 'env', { silent: true });
+    const variables = stdout
+      .split('\n')
+      .map((line) => /^(GF_DATABASE_[A-Z_]+)=(.*)$/.exec(line))
+      .filter((match) => match !== null)
+      .map((match) => [match[1], match[2].trim()]);
+
+    if (variables.length === 0) {
+      throw new Error(`Pod "${podName}" exports no GF_DATABASE_* variables`);
+    }
+
+    return Object.fromEntries(variables);
+  };
+
   /** HA status as the pod itself reports it; HAProxy would only ever answer for the leader. */
   haStatusFromPod = (podName: string): string => {
     const password = process.env.ADMIN_PASSWORD ?? 'admin';

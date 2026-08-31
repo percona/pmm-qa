@@ -16,6 +16,9 @@ const apiEndpoints = {
   grafana: {
     dashboardByUid: '/graph/api/dashboards/uid',
     dashboards: '/graph/api/dashboards/db',
+    datasourceByUid: '/graph/api/datasources/uid',
+    datasources: '/graph/api/datasources',
+    dsQuery: '/graph/api/ds/query',
     folders: '/graph/api/folders',
     prometheusRules: '/graph/api/prometheus/grafana/api/v1/rules',
   },
@@ -35,7 +38,6 @@ const apiEndpoints = {
   prometheus: {
     // The Grafana datasource proxy, not PMM's /prometheus route - see PrometheusApi.
     datasourceProxy: '/graph/api/datasources/proxy/uid',
-    datasources: '/graph/api/datasources',
   },
   realtimeanalytics: {
     queriesSearch: '/v1/realtimeanalytics/queries:search',

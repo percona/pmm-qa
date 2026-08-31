@@ -49,6 +49,16 @@ export default class GrafanaApi {
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
   };
 
+  deleteDataSource = async (uid: string): Promise<void> => {
+    await expect(async () => {
+      const response = await this.request.delete(`${apiEndpoints.grafana.datasourceByUid}/${uid}`, {
+        headers: GrafanaHelper.getAuthHeader(),
+      });
+
+      expect(response.status()).toEqual(200);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
+  };
+
   deleteFolder = async (uid: string): Promise<void> => {
     await expect(async () => {
       const response = await this.request.delete(`${apiEndpoints.grafana.folders}/${uid}`, {
@@ -61,8 +71,9 @@ export default class GrafanaApi {
   };
 
   getDataSourceByName = async (name = 'Metrics') => {
-    const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
-    const dataSources = await this.request.get('graph/api/datasources', { headers });
+    const dataSources = await this.request.get(apiEndpoints.grafana.datasources, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
 
     expect(
       dataSources.status(),
@@ -91,7 +102,7 @@ export default class GrafanaApi {
       ],
       to: 'now',
     };
-    const metric = await this.request.post('graph/api/ds/query', { data: requestBody, headers });
+    const metric = await this.request.post(apiEndpoints.grafana.dsQuery, { data: requestBody, headers });
 
     expect(
       metric.status(),

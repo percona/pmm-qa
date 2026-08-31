@@ -21,7 +21,7 @@ export default class PrometheusApi {
   getDatasourceUid = async (): Promise<string> => {
     if (this.datasourceUid) return this.datasourceUid;
 
-    const response = await this.request.get(apiEndpoints.prometheus.datasources, {
+    const response = await this.request.get(apiEndpoints.grafana.datasources, {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
