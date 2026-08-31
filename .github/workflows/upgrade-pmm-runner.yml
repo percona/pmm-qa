@@ -60,9 +60,32 @@ env:
   UPGRADE_TYPE: ${{ inputs.upgrade_type || 'docker' }}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      versions: ${{ steps.set.outputs.versions }}
+    steps:
+      - name: Compute latest 5 minor versions
+        id: set
+        shell: bash
+        run: |
+          VERSIONS=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
+            | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' \
+            | sed -E 's/\.[0-9]+$//' \
+            | sort -Vru \
+            | head -5 \
+            | sed 's/$/.0/' \
+            | jq -R . | jq -sc .)
+          echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
+          echo "Matrix versions: $VERSIONS"
   upgrade:
+    needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ${{ fromJSON(needs.prepare.outputs.versions) }}
     steps:
       - name: Checkout pmm-qa
         uses: actions/checkout@v4
