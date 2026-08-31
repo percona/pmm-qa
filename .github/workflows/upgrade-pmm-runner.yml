@@ -110,12 +110,12 @@ jobs:
             echo "${{ matrix.version }} is available in apt — leaving matrix.version unchanged"
           else
             echo "${{ matrix.version }} not in apt — building tarball URL"
-            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${CLIENT_VERSION}/binary/tarball/pmm-client-${CLIENT_VERSION}-x86_64.tar.gz"
+            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ matrix.version }}/binary/tarball/pmm-client-${{ matrix.version }}-x86_64.tar.gz"
 
             # verify it exists before committing to it
             code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
             if [ "$code" != "200" ]; then
-              echo "::error::${{ matrix.version }} missing from apt AND tarball not found (HTTP $code)"
+              echo "ERROR: ${{ matrix.version }} missing from apt AND tarball not found (HTTP $code): url: ${TARBALL_URL}"
               exit 1
             fi
 
