@@ -135,6 +135,7 @@ jobs:
 
             # 3. assign the URL to CLIENT_VERSION for later steps
             echo "CLIENT_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
+            echo "TARBALL_URL=$TARBALL_URL" >> "$GITHUB_ENV"
             echo "CLIENT_VERSION reassigned to: $TARBALL_URL"
           fi
       - name: Start PMM Server (old image)
@@ -347,6 +348,7 @@ jobs:
 
             # 3. assign the URL to CLIENT_VERSION for later steps
             echo "CLIENT_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
+            echo "TARBALL_URL=$TARBALL_URL" >> "$GITHUB_ENV"
             echo "CLIENT_VERSION reassigned to: $TARBALL_URL"
           fi
       - name: Start PMM Server (old image)
