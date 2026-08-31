@@ -44,6 +44,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       versions: ${{ steps.set.outputs.versions }}
+      ui_versions: ${{ steps.set.outputs.ui_versions }}
+      rc_version:  ${{ steps.set.outputs.rc_version }}
     steps:
       - name: Compute version range (latest -> 5 minors back)
         id: set
