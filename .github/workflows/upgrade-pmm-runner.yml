@@ -7,11 +7,6 @@ on:
       - '.github/workflows/upgrade-pmm-runner.yml'
   workflow_dispatch:
     inputs:
-      docker_tag_upgrade:
-        description: 'PMM Server image to upgrade to (new)'
-        default: 'perconalab/pmm-server:3-dev-latest'
-        required: true
-        type: string
       pmm_server_latest:
         description: 'Expected version after upgrade (for check_client_upgrade.py)'
         required: true
@@ -38,7 +33,6 @@ on:
 env:
   ADMIN_PASSWORD: admin
   PMM_URL: http://admin:admin@127.0.0.1
-  DOCKER_TAG_UPGRADE: ${{ inputs.docker_tag_upgrade || 'perconalab/pmm-server:3-dev-latest' }}
   PMM_SERVER_LATEST: ${{ inputs.pmm_server_latest || '3-dev-latest' }}
   CLIENT_REPOSITORY: ${{ inputs.client_repository || 'release' }}
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
@@ -78,6 +72,9 @@ jobs:
           echo "ui_versions=$UI_VERSIONS" >> "$GITHUB_OUTPUT"
           echo "CLIENT versions: $VERSIONS"
           echo "UI versions:     $UI_VERSIONS"
+          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
+          echo "Latest RC: $RC_VERSION"
+          echo "rc_version=$RC_VERSION" >> "$GITHUB_OUTPUT"
 
   upgrade-docker:
     needs: prepare
@@ -218,12 +215,12 @@ jobs:
         if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
           docker stop pmm-server
-          docker pull "$DOCKER_TAG_UPGRADE"
+          docker pull "${{ needs.prepare.outputs.rc_version }}"
           docker rename pmm-server pmm-server-old
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
-            --volumes-from pmm-server-old --name pmm-server "$DOCKER_TAG_UPGRADE"
+            --volumes-from pmm-server-old --name pmm-server "${{ needs.prepare.outputs.rc_version }}"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
 
       - name: Post-server-upgrade UI tests
