@@ -104,18 +104,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await expect(agentsPage.builders.property('log_level=LOG_LEVEL_DEBUG')).toBeVisible();
     },
   );
-  // eslint-disable-next-line playwright/no-commented-out-tests -- Developing tests
-  /*
-  pmmTest('PMM-T9993 - Verify Change agent debug, trace and json @ps-integration', async ({ cliHelper }) => {
-    const commands = [
-      `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --debug --trace --json`,
-      `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --debug --trace --json`,
-    ];
 
-    commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
-  });
-
-*/
+  pmmTest(
+    'PMM-T9993 - Verify Change agent debug, trace and json @proxysql-integration',
+    async ({ cliHelper }) => {
+      cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --debug --trace --json`,
+        )
+        .assertSuccess();
+    },
+  );
 
   pmmTest(
     'PMM-T9995 - Verify Change agent enable true/false @proxysql-integration',
