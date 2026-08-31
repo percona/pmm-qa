@@ -108,7 +108,35 @@ jobs:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
           path: pmm-qa
+      - name: Resolve PMM client source
+        shell: bash
+        run: |
+          # 1. all X.Y.Z versions available in the apt pool
+          apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
+            | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
+            | sed -E 's/pmm-client_//' | sort -Vu)
 
+          echo "apt versions available:"
+          echo "$apt_versions"
+
+          # 2. is the requested version installable via apt?
+          if grep -qx "${{ matrix.version }}" <<< "$apt_versions"; then
+            echo "${{ matrix.version }} is available in apt — leaving matrix.version unchanged"
+          else
+            echo "${{ matrix.version }} not in apt — building tarball URL"
+            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${CLIENT_VERSION}/binary/tarball/pmm-client-${CLIENT_VERSION}-x86_64.tar.gz"
+
+            # verify it exists before committing to it
+            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
+            if [ "$code" != "200" ]; then
+              echo "ERROR: ${{ matrix.version }} missing from apt AND tarball not found (HTTP $code)"
+              exit 1
+            fi
+
+            # 3. assign the URL to CLIENT_VERSION for later steps
+            echo "CLIENT_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
+            echo "CLIENT_VERSION reassigned to: $TARBALL_URL"
+          fi
       - name: Start PMM Server (old image)
         run: |
           docker network create pmm-qa || true
@@ -137,9 +165,10 @@ jobs:
       - name: Setup databases + clients
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
+          echo $TARBALL_URL
           mkdir -m 777 -p /tmp/backup_data
           ./pmm-framework/pmm-framework --parallel \
-            --client-version="${{ matrix.version }}" \
+            --client-version="$TARBALL_URL" \
             --pmm-server-password="$ADMIN_PASSWORD" \
             --database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb,MINIO=false --database external
 
@@ -291,6 +320,35 @@ jobs:
           repository: percona/pmm-qa
           ref: ${{ env.PMM_QA_BRANCH }}
           path: pmm-qa
+      - name: Resolve PMM client source
+        shell: bash
+        run: |
+          # 1. all X.Y.Z versions available in the apt pool
+          apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
+            | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
+            | sed -E 's/pmm-client_//' | sort -Vu)
+
+          echo "apt versions available:"
+          echo "$apt_versions"
+
+          # 2. is the requested version installable via apt?
+          if grep -qx "${{ matrix.version }}" <<< "$apt_versions"; then
+            echo "${{ matrix.version }} is available in apt — leaving matrix.version unchanged"
+          else
+            echo "${{ matrix.version }} not in apt — building tarball URL"
+            TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${CLIENT_VERSION}/binary/tarball/pmm-client-${CLIENT_VERSION}-x86_64.tar.gz"
+
+            # verify it exists before committing to it
+            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
+            if [ "$code" != "200" ]; then
+              echo "ERROR: ${{ matrix.version }} missing from apt AND tarball not found (HTTP $code)"
+              exit 1
+            fi
+
+            # 3. assign the URL to CLIENT_VERSION for later steps
+            echo "CLIENT_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
+            echo "CLIENT_VERSION reassigned to: $TARBALL_URL"
+          fi
       - name: Start PMM Server (old image)
         run: |
           docker network create pmm-qa || true
@@ -319,9 +377,10 @@ jobs:
       - name: Setup databases + clients
         working-directory: pmm-qa/qa-integration/pmm_qa
         run: |
+          $TARBALL_URL
           mkdir -m 777 -p /tmp/backup_data
           ./pmm-framework/pmm-framework --parallel \
-            --client-version="${{ matrix.version }}" \
+            --client-version="$TARBALL_URL" \
             --pmm-server-password="$ADMIN_PASSWORD" \
             --database pgsql --database ps=8.4 --database psmdb,SETUP_TYPE=sharding --database ssl_psmdb,MINIO=false --database external
 
