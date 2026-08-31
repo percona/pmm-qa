@@ -209,14 +209,7 @@ jobs:
 
       - name: Post-client-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
-        run: npx playwright test --grep "@post-upgrade"
-
-      - name: Post-upgrade Playwright E2E
-        working-directory: pmm-qa/e2e_tests
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-          CI=true npx playwright test --grep "$PLAYWRIGHT_FLAG" --pass-with-no-tests
+        run: npx playwright test --grep "@post-upgrade|@rta"
 
       - name: Check packages after upgrade
         run: |
