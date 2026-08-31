@@ -33,9 +33,6 @@ on:
         description: 'pmm-qa branch'
         default: 'main'
         type: string
-      pre_upgrade_branch:
-        description: 'Branch for pmm-qa repo to run tests before upgrade'
-        type: string
       upgrade_type:
         description: 'PMM Upgrade type'
         default: 'docker'
