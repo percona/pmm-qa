@@ -45,7 +45,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${proxysqlExporterId} --password=${newPassword} --username=${newUsername}`,
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --password=${newPassword} --username=${newUsername}`,
         )
         .outContains('Access denied for user');
 
