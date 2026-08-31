@@ -7,10 +7,6 @@ on:
       - '.github/workflows/upgrade-pmm-runner.yml'
   workflow_dispatch:
     inputs:
-      docker_tag:
-        description: 'PMM Server image to start from (old)'
-        default: 'percona/pmm-server:3.0.0'
-        type: string
       docker_tag_upgrade:
         description: 'PMM Server image to upgrade to (new)'
         default: 'perconalab/pmm-server:3-dev-latest'
@@ -42,7 +38,6 @@ on:
 env:
   ADMIN_PASSWORD: admin
   PMM_URL: http://admin:admin@127.0.0.1
-  DOCKER_TAG: ${{ inputs.docker_tag || 'percona/pmm-server:3.0.0' }}
   DOCKER_TAG_UPGRADE: ${{ inputs.docker_tag_upgrade || 'perconalab/pmm-server:3-dev-latest' }}
   PMM_SERVER_LATEST: ${{ inputs.pmm_server_latest || '3-dev-latest' }}
   CLIENT_REPOSITORY: ${{ inputs.client_repository || 'release' }}
@@ -138,7 +133,7 @@ jobs:
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
-            --volume pmm-volume:/srv --name pmm-server "$DOCKER_TAG"
+            --volume pmm-volume:/srv --name pmm-server "percona/pmm-server:${{ matrix.version }}"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
           # TODO: watchtower + platform-dev env vars only needed for UI-triggered updates.
 
@@ -352,7 +347,7 @@ jobs:
           docker run --detach --restart always --network pmm-qa \
             -e PMM_ENABLE_UPDATES=1 -e PMM_ENABLE_INTERNAL_PG_QAN=1 \
             --publish 80:8080 --publish 443:8443 \
-            --volume pmm-volume:/srv --name pmm-server "$DOCKER_TAG"
+            --volume pmm-volume:/srv --name pmm-server "percona/pmm-server:${{ matrix.version }}"
           timeout 200 bash -c 'until [ "$(curl -s -o /dev/null -w "%{http_code}" "$PMM_URL/v1/server/readyz")" = 200 ]; do sleep 5; done'
           # TODO: watchtower + platform-dev env vars only needed for UI-triggered updates.
 
