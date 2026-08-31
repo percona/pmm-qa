@@ -70,7 +70,7 @@ jobs:
         shell: bash
         run: |
           TAGS=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
-            | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))')
+          | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))')
 
           # --- CLIENT range: latest -> 5 minors back ---
           FLOOR=$(echo "$TAGS" | sed -E 's/\.[0-9]+$//' | sort -Vru | sed -n '5p' | sed 's/$/.0/')
@@ -78,10 +78,14 @@ jobs:
             | awk -v floor="$FLOOR" '{print} $0==floor{exit}' \
             | jq -R . | jq -sc .)
 
-          # --- UI range: latest -> 3.8.0 inclusive ---
-          UI_FLOOR=3.8.0
-          UI_VERSIONS=$(echo "$TAGS" | sort -Vr \
-            | awk -v floor="$UI_FLOOR" '{print} $0==floor{exit}' \
+          UI_LOW=3.5.0
+          UI_HIGH=3.8.0
+          UI_VERSIONS=$(echo "$TAGS" | sort -Vr | awk -v low="$UI_LOW" -v high="$UI_HIGH" '
+            { split($0,a,"."); split(low,l,"."); split(high,h,".");
+              v = a[1]*1000000 + a[2]*1000 + a[3];
+              lo = l[1]*1000000 + l[2]*1000 + l[3];
+              hi = h[1]*1000000 + h[2]*1000 + h[3];
+              if (v >= lo && v <= hi) print }' \
             | jq -R . | jq -sc .)
 
           echo "versions=$VERSIONS"       >> "$GITHUB_OUTPUT"
