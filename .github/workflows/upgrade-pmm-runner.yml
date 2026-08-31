@@ -65,19 +65,25 @@ jobs:
     outputs:
       versions: ${{ steps.set.outputs.versions }}
     steps:
-      - name: Compute latest 5 minor versions
+      - name: Compute version range (latest -> 5 minors back)
         id: set
         shell: bash
         run: |
-          VERSIONS=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
-            | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' \
-            | sed -E 's/\.[0-9]+$//' \
-            | sort -Vru \
-            | head -5 \
-            | sed 's/$/.0/' \
+          TAGS=$(curl -s "https://hub.docker.com/v2/repositories/percona/pmm-server/tags?page_size=100" \
+            | jq -r '.results[].name | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))')
+
+          # floor = 5th-latest minor, as X.Y.0
+          FLOOR=$(echo "$TAGS" | sed -E 's/\.[0-9]+$//' | sort -Vru | sed -n '5p' | sed 's/$/.0/')
+          echo "Floor: $FLOOR"
+
+          # full range: all X.Y.Z from latest down to floor, inclusive
+          VERSIONS=$(echo "$TAGS" | sort -Vr \
+            | awk -v floor="$FLOOR" '{print} $0==floor{exit}' \
             | jq -R . | jq -sc .)
+
           echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
           echo "Matrix versions: $VERSIONS"
+
   upgrade:
     needs: prepare
     runs-on: ubuntu-latest
