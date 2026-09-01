@@ -76,7 +76,7 @@ jobs:
           echo "UI versions:     $UI_VERSIONS"
           RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
           echo "Latest RC: $RC_VERSION"
-          echo "rc_version=$RC_VERSION" >> "$GITHUB_OUTPUT"
+          echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
 
   upgrade-docker:
     needs: prepare
