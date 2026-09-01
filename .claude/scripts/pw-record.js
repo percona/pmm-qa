@@ -7,6 +7,11 @@
 // Usage:
 //   node pw-record.js <url> <output.mp4> [sessionId] [dwellSeconds]
 //
+// Env:
+//   PMM_UI_INSECURE=1   disable TLS verification (HA/LKE: self-signed cert
+//                       behind the egress MITM, so an SPKI pin can't match)
+//   PMM_CERT_PATH       pin PMM's own cert (single-VM Docker path)
+//
 // If <sessionId> is given and a storage state from pmm-ui-login.js exists
 // for it, the recording starts already logged in. <dwellSeconds> (default
 // 15) is how long it sits on the page after load -- for anything more
@@ -38,13 +43,17 @@ async function main() {
   const width = Number(process.env.PMM_UI_WIDTH || 1920);
   const height = Number(process.env.PMM_UI_HEIGHT || 1080);
 
+  // PMM_UI_INSECURE=1 disables TLS verification (no pin) — for HA/LKE, where
+  // PMM's cert is self-signed and the egress gateway MITMs outbound TLS, so
+  // SPKI-pinning can't match. Strict pinning stays the default everywhere else.
+  const insecure = process.env.PMM_UI_INSECURE === "1";
   // PMM_CERT_PATH (see pmm-ui-login.js) pins PMM's own cert instead of
   // trusting any cert -- optional since this script can also record
   // non-PMM pages with a real CA already, which strict verification (the
   // default below) already handles fine.
   const certPath = process.env.PMM_CERT_PATH;
   const spkiPins = [];
-  if (certPath) {
+  if (certPath && !insecure) {
     if (!fs.existsSync(certPath)) {
       console.error(`PMM_CERT_PATH set but not found: ${certPath}`);
       process.exit(1);
@@ -54,7 +63,7 @@ async function main() {
 
   const videoDir = fs.mkdtempSync(path.join(os.tmpdir(), "pmm-qa-recording-"));
   const contextOpts = {
-    ignoreHTTPSErrors: false,
+    ignoreHTTPSErrors: insecure,
     viewport: { width, height },
     recordVideo: { dir: videoDir, size: { width, height } },
   };

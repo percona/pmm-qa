@@ -1,0 +1,38 @@
+# Second PMM-HA instance (DR / restore target) per PMM-15149 docs:
+#   - distinct release name (pmm-dr -> fullname pmm-dr-pmm-ha)
+#   - prometheus-node-exporter off (required: host port 9100 is cluster-unique)
+#   - kube-state-metrics off (optional; toggled back on later to verify the vmagent gate)
+image:
+  repository: perconalab/pmm-server
+  tag: "3-dev-latest"
+prometheus-node-exporter:
+  enabled: false
+kube-state-metrics:
+  # Left ENABLED: the PMM HA Health Overview dashboard reads kube_* metrics, and with this
+  # subchart off every component panel on that dashboard reports "Not Healthy".
+  enabled: true
+
+# Test-cluster sizing only: requests trimmed so two full HA stacks fit on 5x g6-standard-6.
+# Topology is unchanged (3 PMM replicas, 3 ClickHouse, 3 Keeper) so the HA peer/DNS and
+# release-name behaviour under test is exercised exactly as with default sizing.
+pmmResources:
+  requests:
+    memory: "2Gi"
+    cpu: "1"
+  limits:
+    memory: "4Gi"
+    cpu: "2"
+clickhouse:
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "500m"
+    limits:
+      memory: "4Gi"
+      cpu: "2"
+
+# Each instance gets its own LoadBalancer; the chart's haproxy service is namespaced, so
+# the two do not collide (external access per instance, as multi-namespace requires).
+haproxy:
+  service:
+    type: LoadBalancer
