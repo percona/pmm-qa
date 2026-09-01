@@ -8,22 +8,6 @@
     state: present
   ignore_errors: yes
 
-# Another setup may already run minio. Reuse it instead of removing it - the
-# recreate below would otherwise delete a container (and volume) in use.
-- name: Check for a running MinIO container
-  community.docker.docker_container_info:
-    name: minio
-  register: existing_minio
-
-- name: Set MinIO reuse fact
-  set_fact:
-    minio_running: "{{ existing_minio.exists and existing_minio.container.State.Running }}"
-
-- name: Reuse existing MinIO
-  debug:
-    msg: "minio already running, reusing it"
-  when: minio_running
-
 - name: Remove old MinIO docker container
   community.docker.docker_container:
     name: minio
@@ -31,19 +15,16 @@
     restart_policy: always
     state: absent
   ignore_errors: yes
-  when: not minio_running
 
 - name: Remove MinIO Docker volume
   community.docker.docker_volume:
     name: "{{ minio_volume_name }}"
     state: absent
   ignore_errors: true
-  when: not minio_running
 
 - name: Create MinIO Docker volume
   community.docker.docker_volume:
     name: "{{ minio_volume_name }}"
-  when: not minio_running
 
 - name: Run MinIO container
   community.docker.docker_container:
@@ -59,17 +40,6 @@
       MINIO_ACCESS_KEY: "{{ minio_access_key }}"
       MINIO_SECRET_KEY: "{{ minio_secret_key }}"
     command: server /backups --address 0.0.0.0:9000 --console-address 0.0.0.0:9001
-  when: not minio_running
-
-# Reused container may live on another network; make sure it is reachable here.
-- name: Connect existing MinIO to the network
-  community.docker.docker_network:
-    name: "{{ network_name }}"
-    connected:
-      - minio
-    appends: yes
-  ignore_errors: yes
-  when: minio_running
 
 - name: Show the list of buckets
   debug:
