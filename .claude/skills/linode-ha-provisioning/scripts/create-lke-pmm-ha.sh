@@ -112,7 +112,28 @@ _diag() {
     kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp >"$RUN_DIR/events.txt" 2>&1 || true
     kubectl describe pods -n "$NAMESPACE" >"$RUN_DIR/describe.txt" 2>&1 || true
 }
-trap _diag EXIT
+# Tag this cluster's Block Storage volumes + NodeBalancer with its pmm-qa-run:<id>
+# so teardown can positively attribute and delete only its own orphans. Runs on
+# EVERY exit path (via the trap), so a FAILED bring-up's resources are tagged too
+# -- otherwise a timed-out provision would leak untagged volumes the sweep won't
+# touch. Best-effort: a missed tag is a leak (recoverable), never a wrong delete.
+_tag_for_teardown() {
+    [ -n "${CLUSTER_ID:-}" ] || return 0
+    local ids vols lid vid nbid
+    ids="$(linode-cli lke pools-list "$CLUSTER_ID" --json 2>/dev/null | jq -r '.[].nodes[].instance_id' 2>/dev/null)"
+    vols="$(linode-cli volumes list --page-size 500 --json 2>/dev/null)"
+    for lid in $ids; do
+        [ -n "$lid" ] && [ "$lid" != "null" ] || continue
+        for vid in $(printf '%s' "$vols" | jq -r --argjson l "$lid" '.[] | select(.linode_id==$l) | .id' 2>/dev/null); do
+            linode-cli volumes update "$vid" --tags pmm-qa-ephemeral --tags "pmm-qa-run:$RUN_ID" >/dev/null 2>&1 || true
+        done
+    done
+    for nbid in $(linode-cli nodebalancers list --page-size 500 --json 2>/dev/null \
+                    | jq -r --arg c "lke$CLUSTER_ID-" '.[] | select(.label|startswith($c)) | .id' 2>/dev/null); do
+        linode-cli nodebalancers update "$nbid" --tags pmm-qa-ephemeral --tags "pmm-qa-run:$RUN_ID" >/dev/null 2>&1 || true
+    done
+}
+trap '_diag; _tag_for_teardown' EXIT
 # Linode reports the pool "ready" before the nodes register with the k8s API
 # server, so `kubectl wait --all` would hit an empty list and fail immediately
 # ("no matching resources found"). Wait for the nodes to appear first, then wait
@@ -244,24 +265,8 @@ until [ "$(curl -k -sS -m 10 -o /dev/null -w '%{http_code}' "https://$EXTERNAL_I
     sleep 10
 done
 log "PMM is serving (/v1/readyz 200)."
-
-# --- tag this cluster's Block Storage volumes for teardown attribution --------
-# cluster-delete orphans the CSI volumes; teardown must only ever delete a volume
-# it can PROVE is ours and whose cluster is gone. Stamp each of this cluster's
-# volumes with the same pmm-qa-run:<id> tag the cluster carries, so
-# prune-lke-orphans.sh deletes a volume only when its run has no live cluster --
-# never a live cluster's (unattached during provisioning/failover) or another
-# owner's. Best-effort: a missed tag just means it isn't auto-swept, never a
-# wrong deletion, so this never fails the build.
-log "Tagging cluster volumes for teardown attribution (best-effort)..."
-for lid in $(linode-cli lke pools-list "$CLUSTER_ID" --json 2>/dev/null \
-                | jq -r '.[].nodes[].instance_id' 2>/dev/null); do
-    [ -n "$lid" ] && [ "$lid" != "null" ] || continue
-    for vid in $(linode-cli volumes list --json 2>/dev/null \
-                    | jq -r --argjson l "$lid" '.[] | select(.linode_id==$l) | .id' 2>/dev/null); do
-        linode-cli volumes update "$vid" --tags pmm-qa-ephemeral --tags "pmm-qa-run:$RUN_ID" >/dev/null 2>&1 || true
-    done
-done
+# (volumes + NodeBalancer are tagged for teardown attribution by the EXIT trap,
+# so failed bring-ups are covered too -- see _tag_for_teardown above.)
 
 # --- persist run artifacts ---------------------------------------------------
 {

@@ -15,8 +15,10 @@
 #     pmm-qa-run:<id> tag whose run has NO live cluster -- so a live cluster's
 #     volumes (its run is still listed) and untagged/other-owner volumes are
 #     never touched.
-#   * NodeBalancers: named lke<clusterid>-*; delete only when that cluster id is
-#     no longer in the live cluster list.
+#   * NodeBalancers: create-lke stamps the cluster's NodeBalancer with the same
+#     pmm-qa-run:<id> tag. Delete only one carrying that tag whose run has no live
+#     cluster -- so another owner's NB, or a deliberately-kept migrate target, is
+#     never touched.
 # If a volume was never tagged (tagging is best-effort at provision), it is left
 # alone -- the failure mode is a leak (recoverable by hand), never a wrong delete.
 #
@@ -46,7 +48,6 @@ pages() {  # $1 = path (may contain ?query); prints each .data[] as compact JSON
 
 clusters="$(pages /lke/clusters)"
 live_runs="$(printf '%s' "$clusters" | jq -r '.tags[]? | select(startswith("pmm-qa-run:"))' | sort -u)"
-live_ids="$(printf '%s' "$clusters"  | jq -r '.id' | sort -u)"
 
 vol=0 nb=0 fail=0
 # Volumes: ours (pmm-qa-run:<id> tag) AND run has no live cluster AND unattached.
@@ -62,17 +63,20 @@ done < <(pages /volumes | jq -r '
   . as $v | ($v.tags[]? | select(startswith("pmm-qa-run:"))) as $t
   | [$v.id, $v.label, $t, ($v.linode_id|tostring)] | @tsv')
 
-# NodeBalancers: lke<clusterid>-* whose cluster is gone.
-while IFS=$'\t' read -r id label; do
+# NodeBalancers: ours (pmm-qa-run:<id> tag, stamped at provision) AND run has no
+# live cluster. Same positive attribution as volumes -- a NodeBalancer without
+# our run tag (another owner's, or a deliberately-kept migrate target) is never
+# touched, even if its lke<id> cluster is gone.
+while IFS=$'\t' read -r id label run; do
   [ -n "$id" ] || continue
-  cid="$(printf '%s' "$label" | sed -n 's/^lke\([0-9]\{1,\}\)-.*/\1/p')"
-  [ -n "$cid" ] || continue
-  grep -qx "$cid" <<<"$live_ids" && continue
-  if [ "$DRY" -eq 1 ]; then echo "would delete nodebalancer $id ($label)"; nb=$((nb + 1)); continue; fi
+  grep -qx "$run" <<<"$live_runs" && continue
+  if [ "$DRY" -eq 1 ]; then echo "would delete nodebalancer $id ($label) [$run]"; nb=$((nb + 1)); continue; fi
   if "${CURL[@]}" -o /dev/null -X DELETE "$BASE/nodebalancers/$id"; then
-    echo "deleted nodebalancer $id ($label)"; nb=$((nb + 1))
+    echo "deleted nodebalancer $id ($label) [$run]"; nb=$((nb + 1))
   else echo "FAILED nodebalancer $id ($label)" >&2; fail=$((fail + 1)); fi
-done < <(pages /nodebalancers | jq -r '[.id,.label]|@tsv')
+done < <(pages /nodebalancers | jq -r '
+  . as $n | ($n.tags[]? | select(startswith("pmm-qa-run:"))) as $t
+  | [$n.id, $n.label, $t] | @tsv')
 
 echo "prune-lke-orphans: volumes=$vol nodebalancers=$nb failed=$fail$([ "$DRY" -eq 1 ] && echo ' (dry-run)')"
 [ "$fail" -eq 0 ]
