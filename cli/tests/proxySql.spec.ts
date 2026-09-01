@@ -173,4 +173,76 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
       `Expected pmm-admin to honor --connection-timeout=5s, got ${output.durationMs.toFixed(0)} ms`,
     ).toBeGreaterThan(5_000);
   });
+
+  /**
+   * @link https://perconadev.atlassian.net/browse/PMM-15259
+   *
+   * Regression coverage for caching_sha2_password on the ProxySQL admin
+   * interface (port 6032). PXC Operator 1.19 switched ProxySQL's
+   * mysql-default_authentication_plugin to caching_sha2_password, which broke
+   * the proxysql_exporter with "unexpected resp from server for
+   * caching_sha2_password, perform full authentication". A ProxySQL
+   * admin/stats credential (admin:admin here) completes the handshake over a
+   * plaintext admin connection, so the exporter must authenticate and scrape.
+   */
+  test('PMM-15259 - proxysql exporter authenticates against caching_sha2_password admin auth', async ({}) => {
+    const serviceName = `caching_sha2_proxysql_${containerName}_${Date.now()}`;
+    const agentPassword = 'mypass';
+    const proxysqlAdmin = `docker exec ${containerName} mysql -h 127.0.0.1 -P 6032 -u ${PXC_USER} -p${PXC_PASSWORD}`;
+    let serviceId = '';
+
+    await test.step('set ProxySQL default authentication plugin to caching_sha2_password', async () => {
+      await cli.executeAndVerify(
+        `${proxysqlAdmin} -e "SET mysql-default_authentication_plugin='caching_sha2_password'; LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"`,
+      );
+      const runtimeValue = await cli.executeAndVerify(
+        `${proxysqlAdmin} -N -e "SELECT variable_value FROM runtime_global_variables WHERE variable_name='mysql-default_authentication_plugin';"`,
+      );
+      expect(runtimeValue.trim(), 'ProxySQL is not using caching_sha2_password').toContain('caching_sha2_password');
+    });
+
+    try {
+      await test.step('add proxysql service against the caching_sha2_password admin interface', async () => {
+        serviceId = JSON.parse(
+          await cli.executeAndVerify(
+            `docker exec ${containerName} pmm-admin add proxysql --username=${PXC_USER} --password=${PXC_PASSWORD} --agent-password=${agentPassword} --service-name=${serviceName} --host=127.0.0.1 --port=6032 --json`,
+          ),
+        ).service.service_id;
+      });
+
+      await test.step('verify proxysql metrics are scraped (exporter authenticated)', async () => {
+        await expect(async () => {
+          const metrics = await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName);
+          const expectedValue = 'proxysql_up 1';
+          expect(metrics, `Scraped metrics do not contain ${expectedValue}!`).toContain(expectedValue);
+        }).toPass({
+          intervals: [5_000],
+          timeout: 60_000,
+        });
+      });
+
+      await test.step('verify the caching_sha2_password auth error is absent from the exporter log', async () => {
+        const jsonList = JSON.parse(await cli.executeAndVerify(`docker exec ${containerName} pmm-admin list --json`));
+        const { agent_id: agentId } = jsonList
+          .agent
+          .find(({ agent_type, service_id, status }: { agent_type: string; service_id: string; status: string }) => {
+            return service_id === serviceId && agent_type === 'AGENT_TYPE_PROXYSQL_EXPORTER' && status === 'RUNNING';
+          });
+
+        await cli.executeAndVerify(`docker exec ${containerName} pmm-admin summary --filename=pmm-summary.zip`, '.zip created.');
+        await cli.executeAndVerify(`docker cp ${containerName}:/pmm-summary.zip ./`);
+        const logFileContent = await zipHelper.getFileContentFromZip('pmm-summary.zip', `client/pmm-agent/AGENT_TYPE_PROXYSQL_EXPORTER ${agentId}.log`);
+
+        expect(
+          logFileContent.toLowerCase(),
+          'ProxySQL exporter log reports a caching_sha2_password full-authentication failure',
+        ).not.toContain('perform full authentication');
+      });
+    } finally {
+      await cli.exec(`docker exec ${containerName} pmm-admin remove proxysql ${serviceName}`);
+      await cli.exec(
+        `${proxysqlAdmin} -e "SET mysql-default_authentication_plugin='mysql_native_password'; LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"`,
+      );
+    }
+  });
 });
