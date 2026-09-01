@@ -315,7 +315,12 @@ app?.event("app_mention", async ({ event, body, client }) => {
   const history = event.thread_ts ? await fetchThreadHistory(client, event.channel, event.thread_ts) : "";
   const exp = Date.now() + CAP_TTL_MS;
   const routeCap = sign("route", [event.user, event.channel, threadTs], exp);
-  const agents = Object.keys(person.routines || {});
+  // Only a routine with BOTH id and token is usable — /route -> fire needs the
+  // token. A half-configured entry (id, no token) is not "available", so the
+  // router nudges them to finish it rather than trying to fire an unusable one.
+  const agents = Object.entries(person.routines || {})
+    .filter(([, r]) => r && r.id && r.token)
+    .map(([name]) => name);
 
   const payload =
     `Slack mention from ${person.name} (${event.user}) in channel ${event.channel} (thread ${threadTs}):\n` +
