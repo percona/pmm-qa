@@ -5,6 +5,8 @@ pmm_server_admin_pass=${ADMIN_PASSWORD:-password}
 profile=${COMPOSE_PROFILES:-classic}
 mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
 ol_version=${OL_VERSION:-9}
+minio=${MINIO:-true}
+minio=${minio,,}
 
 docker network create qa-integration || true
 docker network create pmm-qa || true
@@ -18,6 +20,15 @@ export OL_VERSION=${ol_version}
 
 docker compose -f docker-compose-rs.yaml -f docker-compose-pmm.yaml down -v --remove-orphans
 docker compose -f docker-compose-rs.yaml -f docker-compose-pmm.yaml build
+
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
+if [ "$minio" != "false" ]; then
+  echo "starting minio container"
+  docker compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket
+else
+  echo "skipping minio container (MINIO=false)"
+fi
+
 docker compose -f docker-compose-pmm.yaml -f docker-compose-rs.yaml up -d
 echo
 echo "waiting for pmm-server to start"
@@ -28,12 +39,23 @@ else
   bash -e ./configure-psa.sh
 fi
 bash -e ./configure-agents.sh
+
+generate_traffic=${GENERATE_TRAFFIC:-yes}
+if [ $generate_traffic != "no" ]; then
+    echo
+    echo "generating opcountersRepl traffic (insert/update/delete) against the replica set"
+    COMPOSE_FILE=docker-compose-rs.yaml MONGO_SERVICE=rs101 MONGO_URI="mongodb://root:root@localhost/?replicaSet=rs" bash ./generate_opcountersrepl_traffic.sh
+else
+    echo
+    echo "skipping opcountersRepl traffic generation"
+fi
+
 tests=${TESTS:-yes}
 if [ $tests != "no" ]; then
     echo
     echo "running tests"
-    docker compose -f docker-compose-pmm.yaml run test pytest -s -x --verbose test.py
-    docker compose -f docker-compose-pmm.yaml run test chmod -R 777 .
+    docker compose -f docker-compose-pmm.yaml --profile tests run test pytest -s -x --verbose test.py
+    docker compose -f docker-compose-pmm.yaml --profile tests run test chmod -R 777 .
     else
     echo
     echo "skipping tests"

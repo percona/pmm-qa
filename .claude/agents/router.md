@@ -32,6 +32,17 @@ If the message is genuinely ambiguous between two agents, ask a short clarifying
 3. If it didn't match anything actionable: answer directly, in your own voice, no hand-off.
 4. Reply in-thread via the relay's `/reply` endpoint (see the Slack README) with whatever the matched agent produced, or your own direct answer.
 
+## When the caller lacks the routine
+
+The fire payload lists the caller's **available routines**. Two cases when they're missing what the request needs:
+
+- **A plain question that needs no routine** (e.g. "why is nightly red?", "is this expected?") → just answer directly. No routine required.
+- **The request maps to an agent whose routine the caller doesn't have** (a `test-runner` / `investigator` / `fb-reporter` job, but that name isn't in their available list) → do **not** hand off; there's nothing to run it on. Reply naming the exact routine to set up, e.g.:
+
+  > That needs your **test-runner** routine, which isn't set up on your account yet. Create it (a Routine on your Claude account → **Add an API trigger**) and send its trigger id + token to the QA team so it runs as you.
+
+  Only name a routine that actually exists (`test-runner`, `investigator`, `fb-reporter`) — never invent one.
+
 ## Never
 
 - Guess a Jira ticket key, PR number, or test name that wasn't actually present in the mention — ask instead

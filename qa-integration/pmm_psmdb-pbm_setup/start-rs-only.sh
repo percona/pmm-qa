@@ -7,8 +7,13 @@ mongo_setup_type=${mongo_setup_type,,}
 mongo_storage_engine=${MONGO_STORAGE_ENGINE:-wiredTiger}
 mongo_storage_engine=${mongo_storage_engine,,}
 ol_version=${OL_VERSION:-9}
+minio=${MINIO:-true}
+minio=${minio,,}
 
-
+# Isolate this replica-set stack in its own compose project so it can run
+# concurrently with the sharded stack (which shares the same service and host
+# names) without either one's `down --remove-orphans` reaching the other.
+export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-psmdb_pss}
 export COMPOSE_PROFILES=${profile}
 export MONGO_SETUP_TYPE=${mongo_setup_type}
 export OL_VERSION=${ol_version}
@@ -32,6 +37,14 @@ docker network create pmm2-ui-tests_pmm-network || true
 
 docker compose -f docker-compose-rs.yaml down -v --remove-orphans
 docker compose -f docker-compose-rs.yaml build --no-cache
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
+if [ "$minio" != "false" ]; then
+  echo "starting minio container"
+  docker compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket
+else
+  echo "skipping minio container (MINIO=false)"
+fi
+
 docker compose -f docker-compose-rs.yaml up -d
 echo
 echo "waiting 60 seconds for replica set members to start"
