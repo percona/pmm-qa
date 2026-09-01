@@ -18,8 +18,19 @@ echo "[pmm-ha] Deleting LKE cluster $CLUSTER_ID"
 linode-cli lke cluster-delete "$CLUSTER_ID"
 echo "[pmm-ha] Deleted."
 
-# Sweep the cluster's orphan tags (best-effort).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# cluster-delete does NOT cascade to the CSI volumes or the CCM NodeBalancer, so
+# delete the orphans it left behind (best-effort). The relay reaper re-runs this
+# on a timer, which also catches volumes that were still detaching just now.
+ORPH="$SCRIPT_DIR/prune-lke-orphans.sh"
+if [ -x "$ORPH" ]; then
+  LINODE_TOKEN="$LINODE_TOKEN" "$ORPH" || echo "[pmm-ha] orphan sweep skipped (non-fatal)" >&2
+else
+  echo "[pmm-ha] prune-lke-orphans.sh not found at $ORPH (orphans not swept)" >&2
+fi
+
+# Sweep the cluster's orphan tags (best-effort).
 PRUNE="$SCRIPT_DIR/../../../../terraform/linode-runner/prune-tags.sh"
 if [ -x "$PRUNE" ]; then
   LINODE_TOKEN="$LINODE_TOKEN" "$PRUNE" || echo "[pmm-ha] tag prune skipped (non-fatal)" >&2

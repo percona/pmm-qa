@@ -622,6 +622,13 @@ async function reapLke() {
         await execFileP("bash", [`${RUNNER_DIR}/prune-tags.sh`], { env: process.env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
       } catch (e) { console.error(`lke-reaper: tag prune skipped (non-fatal): ${e.message}`); }
     }
+    // Every tick, delete the Block Storage volumes and NodeBalancers that LKE
+    // teardown orphans (cluster-delete doesn't cascade to them). Runs even when
+    // nothing was reaped this tick, since a just-deleted cluster's volumes only
+    // become detached (and thus sweepable) a little later. Orphan-only.
+    try {
+      await execFileP("bash", [`${HA_DIR}/prune-lke-orphans.sh`], { env: process.env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
+    } catch (e) { console.error(`lke-reaper: orphan sweep skipped (non-fatal): ${e.message}`); }
   } catch (e) {
     console.error(`lke-reaper error (relay stays up): ${e.message}`);
   }
