@@ -293,24 +293,20 @@ app?.event("app_mention", async ({ event, body, client }) => {
   if (!(await markSeen(client, event.channel, event.ts, body.event_id))) return;
 
   const threadTs = event.thread_ts || event.ts;
-  // ALLOW_FALLBACK gates BOTH entry points the same way: true lets a person with
-  // no usable routines run on the central owner's routines; false blocks. A
-  // person with no routines yet (IDs pre-loaded, token not added) still can't
-  // fire the central router by accident — but when blocked, the reason is split
-  // so they know what to do: no people file at all -> not registered; file
-  // present but routines:{} -> on the roster, routine just isn't set up yet.
-  const mapped = (p) => p && Object.keys(p.routines || {}).length > 0;
+  // Fire the central router for anyone on the roster (a people/ file exists),
+  // even with routines:{}. The router answers general questions on the central
+  // account and, for a request that needs a routine the caller lacks, names the
+  // one they must set up (see router.md) rather than blocking silently. Only a
+  // stranger with no file is turned away; ALLOW_FALLBACK still lets one run on
+  // the central owner's routines.
   let person = bySlack[event.user];
-  if (!mapped(person) && ALLOW_FALLBACK && byName[CENTRAL_OWNER])
+  if (!person && ALLOW_FALLBACK && byName[CENTRAL_OWNER])
     person = { ...byName[CENTRAL_OWNER], name: `${CENTRAL_OWNER} (fallback for ${event.user})` };
-  if (!mapped(person)) {
-    const onRoster = !!bySlack[event.user];
+  if (!person) {
     await client.chat.postMessage({
       channel: event.channel,
       thread_ts: threadTs,
-      text: onRoster
-        ? `:hourglass_flowing_sand: <@${event.user}> you're on the PMM AI roster, but your personal routine isn't set up yet — create a routine (e.g. Test Runner) and hand its API token to the QA team so jobs run on your account.`
-        : `:lock: <@${event.user}> you're not registered with PMM AI yet — ask the QA team to add you to the relay map.`,
+      text: `:lock: <@${event.user}> you're not registered with PMM AI yet — ask the QA team to add you to the relay map.`,
     });
     return;
   }
@@ -329,8 +325,8 @@ app?.event("app_mention", async ({ event, body, client }) => {
     `{"user":"${event.user}","channel":"${event.channel}","thread_ts":"${threadTs}",` +
     `"agent":"<one of the available routines>","instruction":"<self-contained task for that agent>",` +
     `"cap":"${routeCap}","exp":${exp}} — the work then runs on the caller's own account.\n` +
-    `If the request is off-topic, or no suitable routine is available, do NOT hand off; ` +
-    `reply briefly instead. ${replyInstructions(event.channel, threadTs)}`;
+    `If the request needs a routine the caller doesn't have, or is off-topic, do NOT hand off; ` +
+    `follow router.md to reply — answer a general question, or name the exact routine they must set up and send to QA. ${replyInstructions(event.channel, threadTs)}`;
 
   try {
     console.log(`router-fire for ${person.name}: ${await fire(ROUTER, payload)}`);
