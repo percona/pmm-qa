@@ -20,15 +20,10 @@ echo "[pmm-ha] Deleted."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# cluster-delete does NOT cascade to the CSI volumes or the CCM NodeBalancer, so
-# delete the orphans it left behind (best-effort). The relay reaper re-runs this
-# on a timer, which also catches volumes that were still detaching just now.
-ORPH="$SCRIPT_DIR/prune-lke-orphans.sh"
-if [ -x "$ORPH" ]; then
-  LINODE_TOKEN="$LINODE_TOKEN" "$ORPH" || echo "[pmm-ha] orphan sweep skipped (non-fatal)" >&2
-else
-  echo "[pmm-ha] prune-lke-orphans.sh not found at $ORPH (orphans not swept)" >&2
-fi
+# The orphaned CSI volumes and NodeBalancer this cluster leaves behind are swept
+# by the relay reaper (prune-lke-orphans.sh on a timer), not here: cluster-delete
+# is async, so a sweep now would still see this cluster's nodes attached and the
+# cluster itself listed -- it could only act on OTHER runs' resources.
 
 # Sweep the cluster's orphan tags (best-effort).
 PRUNE="$SCRIPT_DIR/../../../../terraform/linode-runner/prune-tags.sh"

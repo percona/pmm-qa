@@ -245,6 +245,24 @@ until [ "$(curl -k -sS -m 10 -o /dev/null -w '%{http_code}' "https://$EXTERNAL_I
 done
 log "PMM is serving (/v1/readyz 200)."
 
+# --- tag this cluster's Block Storage volumes for teardown attribution --------
+# cluster-delete orphans the CSI volumes; teardown must only ever delete a volume
+# it can PROVE is ours and whose cluster is gone. Stamp each of this cluster's
+# volumes with the same pmm-qa-run:<id> tag the cluster carries, so
+# prune-lke-orphans.sh deletes a volume only when its run has no live cluster --
+# never a live cluster's (unattached during provisioning/failover) or another
+# owner's. Best-effort: a missed tag just means it isn't auto-swept, never a
+# wrong deletion, so this never fails the build.
+log "Tagging cluster volumes for teardown attribution (best-effort)..."
+for lid in $(linode-cli lke pools-list "$CLUSTER_ID" --json 2>/dev/null \
+                | jq -r '.[].nodes[].instance_id' 2>/dev/null); do
+    [ -n "$lid" ] && [ "$lid" != "null" ] || continue
+    for vid in $(linode-cli volumes list --json 2>/dev/null \
+                    | jq -r --argjson l "$lid" '.[] | select(.linode_id==$l) | .id' 2>/dev/null); do
+        linode-cli volumes update "$vid" --tags pmm-qa-ephemeral --tags "pmm-qa-run:$RUN_ID" >/dev/null 2>&1 || true
+    done
+done
+
 # --- persist run artifacts ---------------------------------------------------
 {
     echo "cluster_label=$CLUSTER_LABEL"
