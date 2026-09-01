@@ -614,6 +614,17 @@ async function reapLke() {
       page++;
     } while (page <= pages);
     if (checked) console.log(`lke-reaper: checked ${checked} ephemeral cluster(s), reaped ${reaped}`);
+    // Sweep the tags the reaped clusters left behind (orphan-checked in the script).
+    if (reaped) {
+      try {
+        await execFileP("bash", [`${RUNNER_DIR}/prune-tags.sh`], { env: process.env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
+      } catch (e) { console.error(`lke-reaper: tag prune skipped (non-fatal): ${e.message}`); }
+    }
+    // Runs every tick, not just when reaped: a just-deleted cluster's volumes
+    // detach a little later, so they're sweepable on a later tick that reaped nothing.
+    try {
+      await execFileP("bash", [`${HA_DIR}/prune-lke-orphans.sh`], { env: process.env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
+    } catch (e) { console.error(`lke-reaper: orphan sweep skipped (non-fatal): ${e.message}`); }
   } catch (e) {
     console.error(`lke-reaper error (relay stays up): ${e.message}`);
   }
