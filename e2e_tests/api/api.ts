@@ -35,6 +35,7 @@ export default class Api {
     this.inventoryApi = new InventoryApi(request);
     this.prometheusApi = new PrometheusApi(request);
     this.grafanaApi = new GrafanaApi(page, request);
+    this.inventoryApi = new InventoryApi(request);
     this.realTimeAnalyticsApi = new RealTimeAnalyticsApi(request);
     this.remoteInstanceApi = new RemoteInstanceApi(request);
     this.serverApi = new ServerApi(request);

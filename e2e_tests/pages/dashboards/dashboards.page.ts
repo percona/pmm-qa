@@ -264,6 +264,9 @@ export default class Dashboards extends BasePage {
         case 'stat':
           await this.panels().stat.verifyPanelData(panel.name);
           break;
+        case 'gauge':
+          await this.panels().gauge.verifyPanelData(panel.name);
+          break;
         case 'barGauge':
           await this.panels().barGauge.verifyPanelData(panel.name);
           break;
@@ -356,6 +359,9 @@ export default class Dashboards extends BasePage {
           break;
         case 'stat':
           await this.panels().stat.verifyPanelData(panel.name);
+          break;
+        case 'gauge':
+          await this.panels().gauge.verifyPanelData(panel.name);
           break;
         case 'barGauge':
           await this.panels().barGauge.verifyPanelData(panel.name);
