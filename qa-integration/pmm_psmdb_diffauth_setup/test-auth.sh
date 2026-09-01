@@ -10,6 +10,8 @@
 # AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY - self-descriptive
 # TESTS - whether to run tests, by default - yes
 # CLEANUP - whether to remove setup, by default - yes
+minio=${MINIO:-true}
+minio=${minio,,}
 
 set -e
 
@@ -23,53 +25,34 @@ if [ -z "$ADMIN_PASSWORD" ]; then
     export ADMIN_PASSWORD=admin
 fi
 
-# MINIO - whether to start the shared minio/createbucket containers, by default - true
-minio=${MINIO:-true}
-minio=${minio,,}
-
 bash -e ./generate-certs.sh
 
 #Start setup
 docker compose -f docker-compose-pmm-psmdb.yml down -v --remove-orphans
 docker compose -f docker-compose-pmm-psmdb.yml build
 
-# Start (or reuse) the shared minio container. Locked so that concurrent
-# --parallel setups can't both pass the "does minio exist" check before
-# either has actually created it, and both then try to create a container
-# named "minio". --no-deps keeps the locked section short: it starts just
-# minio/createbucket without pulling in the rest of this stack.
-# Skipped entirely when MINIO=false.
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
 if [ "$minio" != "false" ]; then
-  minio_lock=${TMPDIR:-/tmp}/pmm-qa-minio.lock
-  (
-    flock -x 200
-    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-      echo "minio container exists, reusing it"
-    else
-      echo "starting shared minio container"
-      docker compose -f docker-compose-pmm-psmdb.yml up -d --no-deps minio createbucket
-    fi
-  ) 200>"$minio_lock"
+  echo "starting minio container"
+  docker compose -f docker-compose-pmm-psmdb.yml up -d --no-deps minio createbucket
 else
   echo "skipping minio container (MINIO=false)"
 fi
 
-# The "test" service lives in docker-compose-test.yml and is merged in only for
-# the TESTS=yes run below, so `up` here can never create the fixed-name "test"
-# container that would clash across the parallel PSMDB stacks.
 docker compose -f docker-compose-pmm-psmdb.yml up -d
 
-# Wait until psmdb-server reports healthy (i.e. its replica set is
-# initiated -- see its healthcheck in docker-compose-pmm-psmdb.yml). This
-# used to happen implicitly, as a side effect of minio's depends_on waiting
-# on psmdb-server's health before the (single) "up -d" call returned;
-# splitting minio into its own --no-deps step above removed that accidental
-# wait, so it's made explicit here. (Not using "up -d --wait" for this: it
-# requires every container in the stack to be running/healthy, but
-# build_member is a throwaway container that intentionally exits 0 as soon
-# as its image is built, which --wait would wrongly treat as a failure.)
-echo "waiting for psmdb-server to become healthy..."
-timeout 180 bash -c 'until [ "$(docker inspect -f "{{.State.Health.Status}}" psmdb-server 2>/dev/null)" = "healthy" ]; do sleep 3; done'
+# mongod is started by systemd, so it isn't listening when `up -d` returns; wait
+# for the healthcheck's rs.initiate() to elect a primary before adding users.
+echo "waiting for the psmdb-server replica set primary"
+for _ in $(seq 1 90); do
+  primary=$(docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server \
+    mongo --quiet --eval 'try { db.isMaster().ismaster } catch (e) { false }' 2>/dev/null | tr -d '\r') || true
+  if [ "$primary" = "true" ]; then
+    break
+  fi
+  sleep 3
+done
+[ "$primary" = "true" ] || { echo "psmdb-server never became primary"; exit 1; }
 
 #Add users
 docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mongo --quiet << EOF
@@ -105,7 +88,7 @@ docker compose -f docker-compose-pmm-psmdb.yml exec -T psmdb-server mgodatagen -
 tests=${TESTS:-yes}
 if [ $tests = "yes" ]; then
     echo "running tests"
-    output=$(docker compose -f docker-compose-pmm-psmdb.yml -f docker-compose-test.yml --profile tests run --rm test pytest -s --verbose test.py)
+    output=$(docker compose -f docker-compose-pmm-psmdb.yml --profile tests run test pytest -s --verbose test.py)
     else
     echo "skipping tests"
 fi

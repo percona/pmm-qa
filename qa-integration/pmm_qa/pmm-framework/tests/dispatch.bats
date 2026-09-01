@@ -160,7 +160,7 @@ load helpers/test_helper
   [[ $CAPTURE_OVERRIDE_CONTENT != *"$PMM_SERVER_PASSWORD"* ]]
   [[ ${CAPTURE_ENV[PSMDB_VERSION]} == latest ]]
   [[ ${CAPTURE_ENV[MONGO_SETUP_TYPE]} == pss ]]
-  [[ ${CAPTURE_ENV[MINIO]} == true ]]
+  [[ ${CAPTURE_ENV[MINIO]} == false ]]
 
   first_target=$CAPTURE_TARGET
   dispatch_setup

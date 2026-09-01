@@ -222,11 +222,11 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    # Run mongos as a proper systemd-managed service (see conf/mongos/mongos.service)
-    # instead of as the container's raw PID 1, so this container can also run
-    # its own local pmm-agent -- otherwise the router has to be registered
-    # "remotely" from another node's agent and ends up misattributed to that
-    # node's identity instead of its own (see start-sharded-with-pmm.sh).
+      # Run mongos as a proper systemd-managed service (see conf/mongos/mongos.service)
+      # instead of as the container's raw PID 1, so this container can also run
+      # its own local pmm-agent -- otherwise the router has to be registered
+      # "remotely" from another node's agent and ends up misattributed to that
+      # node's identity instead of its own (see start-sharded-with-pmm.sh).
     entrypoint: bash -c "systemctl enable mongos && exec /usr/sbin/init"
     networks:
       - test-network
@@ -252,9 +252,9 @@ services:
     command: server /backups
 
   createbucket:
-    profiles: ["minio"]
-    image: minio/mc
     container_name: createbucket
+    image: minio/mc
+    profiles: ["minio"]
     networks:
       - test-network
     depends_on:
@@ -278,10 +278,6 @@ services:
       - pmm-server:/srv
 
   test:
-    # Only started when the "tests" profile is active, so `docker compose up -d`
-    # never launches it. The test suite runs via `docker compose run test ...`
-    # (which targets the service by name regardless of profile), gated on TESTS
-    # in the start scripts.
     profiles: ["tests"]
     build:
       dockerfile: ./Dockerfile-testinfra

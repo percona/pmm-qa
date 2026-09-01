@@ -16,10 +16,6 @@ services:
       - pmm-server:/srv
 
   test:
-    # Only started when the "tests" profile is active, so `docker compose up -d`
-    # never launches it. The test suite runs via `docker compose run test ...`
-    # (which targets the service by name regardless of profile), gated on TESTS
-    # in the start scripts.
     profiles: ["tests"]
     build:
       dockerfile: ./Dockerfile-testinfra

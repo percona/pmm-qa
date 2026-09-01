@@ -212,13 +212,9 @@ services:
     hostname: rs203
     entrypoint: bash -c "chown -R mongod:mongod /keytabs && exec /usr/sbin/init"
 
-  # Opt-in: started only with --profile minio. start-rs-only.sh starts it
-  # (under a flock, see pmm-qa-minio.lock) only when no minio container is
-  # already running, so a minio from another concurrent setup is reused
-  # instead of a second one clashing on this fixed container name/port.
   minio:
-    profiles: ["minio"]
     image: minio/minio
+    profiles: ["minio"]
     container_name: minio
     ports:
       - "9001:9000"
@@ -238,9 +234,9 @@ services:
     command: server /backups
 
   createbucket:
-    profiles: ["minio"]
-    image: minio/mc
     container_name: createbucket
+    image: minio/mc
+    profiles: ["minio"]
     networks:
       - pmm-qa
       - pmm-ui-tests1

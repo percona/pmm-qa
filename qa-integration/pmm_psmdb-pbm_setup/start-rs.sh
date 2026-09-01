@@ -5,6 +5,8 @@ pmm_server_admin_pass=${ADMIN_PASSWORD:-password}
 profile=${COMPOSE_PROFILES:-classic}
 mongo_setup_type=${MONGO_SETUP_TYPE:-pss}
 ol_version=${OL_VERSION:-9}
+minio=${MINIO:-true}
+minio=${minio,,}
 
 docker network create qa-integration || true
 docker network create pmm-qa || true
@@ -26,6 +28,15 @@ export OL_VERSION=${ol_version}
 
 docker compose -f docker-compose-rs.yaml -f docker-compose-pmm.yaml down -v --remove-orphans
 docker compose -f docker-compose-rs.yaml -f docker-compose-pmm.yaml build
+
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
+if [ "$minio" != "false" ]; then
+  echo "starting minio container"
+  docker compose -f docker-compose-rs.yaml up -d --no-deps minio createbucket
+else
+  echo "skipping minio container (MINIO=false)"
+fi
+
 docker compose -f docker-compose-pmm.yaml -f docker-compose-rs.yaml up -d
 echo
 echo "waiting for pmm-server to start"

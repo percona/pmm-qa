@@ -249,7 +249,6 @@ services:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - ./conf/datagen:/etc/datagen:ro
-      - ./conf/mongos:/etc/mongos
     privileged: true
     cgroup: host
     environment:
@@ -257,11 +256,11 @@ services:
       - "PMM_AGENT_SERVER_USERNAME=admin"
       - "PMM_AGENT_SERVER_PASSWORD=${ADMIN_PASSWORD:-password}"
       - "PMM_AGENT_SERVER_INSECURE_TLS=1"
-    # Run mongos as a proper systemd-managed service (see conf/mongos/mongos.service)
-    # instead of as the container's raw PID 1, so this container can also run
-    # its own local pmm-agent -- otherwise the router has to be registered
-    # "remotely" from another node's agent and ends up misattributed to that
-    # node's identity instead of its own (see start-sharded.sh).
+      # Run mongos as a proper systemd-managed service (see conf/mongos/mongos.service)
+      # instead of as the container's raw PID 1, so this container can also run
+      # its own local pmm-agent -- otherwise the router has to be registered
+      # "remotely" from another node's agent and ends up misattributed to that
+      # node's identity instead of its own (see start-sharded.sh).
     entrypoint: bash -c "systemctl enable mongos && exec /usr/sbin/init"
     networks:
       - pmm-qa
@@ -303,6 +302,11 @@ services:
       - build_member
       - mongos
 
+  # Shared, single-instance object store for PBM backups. See the matching note
+  # in docker-compose-rs.yaml: kept behind the "minio" profile and pinned to the
+  # fixed container_name so one minio is shared across concurrent PSMDB
+  # projects. The start scripts actually bring the shared minio up from
+  # docker-compose-rs.yaml; this definition is retained for standalone use.
   minio:
     profiles: ["minio"]
     image: minio/minio
@@ -324,8 +328,8 @@ services:
 
   createbucket:
     profiles: ["minio"]
-    image: minio/mc
     container_name: createbucket
+    image: minio/mc
     networks:
       - pmm-qa
       - pmm-ui-tests1
@@ -337,10 +341,24 @@ services:
     entrypoint: >
       /bin/sh -c " sleep 5; /usr/bin/mc alias set myminio http://minio:9000 minio1234 minio1234; /usr/bin/mc mb myminio/bcp; exit 0; "
 
-  # The test harness lives in docker-compose-test.yaml (merged in only for the
-  # TESTS=yes run via `docker compose -f docker-compose-sharded.yaml -f
-  # docker-compose-test.yaml ... run --rm test`), so `up` here never creates the
-  # fixed-name "test" container that would clash across the parallel PSMDB stacks.
+  test:
+    profiles: ["tests"]
+    build:
+      dockerfile: ./Dockerfile-testinfra
+      context: .
+    environment:
+      PMM_SERVER_CONTAINER_ADDRESS: ${PMM_SERVER_CONTAINER_ADDRESS:-pmm-server:8443}
+    volumes:
+      - ./test:/test
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    container_name: test
+    hostname: test
+    networks:
+      - pmm-qa
+      - pmm-ui-tests1
+      - qa-integration
+      - pmm-ui-tests3
+      - pmm-ui-tests2
 
 networks:
   qa-integration:

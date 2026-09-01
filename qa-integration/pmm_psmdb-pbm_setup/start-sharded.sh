@@ -7,6 +7,13 @@ pmm_mongo_user=${PMM_MONGO_USER:-${PMM_USER:-pmm}}
 pmm_mongo_user_pass=${PMM_MONGO_USER_PASS:-${PMM_PASS:-pmmpass}}
 pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
+minio=${MINIO:-true}
+minio=${minio,,}
+
+# Isolate this sharded stack in its own compose project so it can run
+# concurrently with the replica-set stack (which shares the same service and
+# host names) without either one's `down --remove-orphans` reaching the other.
+export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-psmdb_sharded}
 
 docker network create qa-integration || true
 docker network create pmm-qa || true
@@ -14,27 +21,17 @@ docker network create pmm-ui-tests_pmm-network || true
 docker network create pmm2-upgrade-tests_pmm-network || true
 docker network create pmm2-ui-tests_pmm-network || true
 
-# Start minio (the "minio" compose profile) unless MINIO=false. When enabled,
-# start our own only if no other setup is already running one.
-minio=${MINIO:-true}
-minio=${minio,,}
-if [ "$minio" != "false" ]; then
-    if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-        echo "minio container exists, reusing it"
-    else
-        COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}minio"
-    fi
-else
-    echo "skipping minio container (MINIO=false)"
-fi
-export COMPOSE_PROFILES
-
 docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded.yaml build
 
-# The "test" service lives in docker-compose-test.yaml and is merged in only for
-# the TESTS=yes run below, so `up` here can never create the fixed-name "test"
-# container that would clash across the parallel PSMDB stacks.
+# minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
+if [ "$minio" != "false" ]; then
+  echo "starting minio container"
+  docker compose -f docker-compose-sharded.yaml up -d --no-deps minio createbucket
+else
+  echo "skipping minio container (MINIO=false)"
+fi
+
 docker compose -f docker-compose-sharded.yaml up -d
 
 echo
@@ -401,8 +398,8 @@ fi
 tests=${TESTS:-yes}
 if [ $tests != "no" ]; then
     echo "running tests"
-    docker compose -f docker-compose-sharded.yaml -f docker-compose-test.yaml --profile tests run --rm test pytest -s -x --verbose test.py
-    docker compose -f docker-compose-sharded.yaml -f docker-compose-test.yaml --profile tests run --rm test chmod -R 777 .
+    docker compose -f docker-compose-sharded.yaml --profile tests run test pytest -s -x --verbose test.py
+    docker compose -f docker-compose-sharded.yaml --profile tests run test chmod -R 777 .
     else
     echo "skipping tests"
 fi

@@ -88,7 +88,7 @@ register_database SSL_PSMDB \
   '4.4 5.0 6.0 7.0 8.0 latest' \
   'CLIENT_VERSION SETUP_TYPE COMPOSE_PROFILES TARBALL MINIO' \
   'DEFAULT_VERSION=latest' \
-  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=true'
+  'CLIENT_VERSION=3-dev-latest' 'SETUP_TYPE=pss' 'COMPOSE_PROFILES=classic' 'TARBALL=' 'MINIO=false'
 
 register_database MYSQL \
   '5.7 8.0 8.4 9.7' \
@@ -98,14 +98,14 @@ register_database MYSQL \
   'TARBALL=' 'ENCRYPTED_CLIENT_CONFIG=false'
 
 register_database PS \
-  '5.7 8.0 8.4' \
+  '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL NODES_COUNT MY_ROCKS ENCRYPTED_CLIENT_CONFIG BACKUP' \
   'DEFAULT_VERSION=8.0' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' \
   'TARBALL=' 'NODES_COUNT=1' 'MY_ROCKS=false' 'ENCRYPTED_CLIENT_CONFIG=false' 'BACKUP=false'
 
 register_database SSL_MYSQL \
-  '5.7 8.0 8.4' \
+  '5.7 8.0 8.4 9.7' \
   'QUERY_SOURCE SETUP_TYPE CLIENT_VERSION TARBALL' \
   'DEFAULT_VERSION=8.0' \
   'QUERY_SOURCE=perfschema' 'SETUP_TYPE=' 'CLIENT_VERSION=3-dev-latest' 'TARBALL='
