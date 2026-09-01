@@ -78,7 +78,7 @@ linode-cli lke cluster-create \
     --node_pools.count "$NODE_COUNT" \
     --tags pmm-qa-ephemeral \
     --tags "expires-${EXPIRES_EPOCH}" \
-    --tags "$RUN_ID"
+    --tags "pmm-qa-run:$RUN_ID"
 
 log "Resolving cluster ID..."
 CLUSTER_ID=""

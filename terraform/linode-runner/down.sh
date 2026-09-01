@@ -49,4 +49,10 @@ else
 fi
 
 rm -rf "$RUN_DIR"
+
+# The instance is gone, so its unique run tag (pmm-qa-run:<id>-<rand>) is now an
+# orphan account-level tag -- Linode never removes those on destroy. Sweep it,
+# best-effort: cleanup must never fail the teardown.
+LINODE_TOKEN="$LINODE_TOKEN" "$MODULE_DIR/prune-tags.sh" || echo "tag prune skipped (non-fatal)" >&2
+
 echo "Destroyed run_id=$RUN_ID"

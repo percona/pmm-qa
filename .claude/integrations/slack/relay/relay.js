@@ -601,6 +601,16 @@ async function reapLke() {
           console.log(`lke-reaper: deleted cluster ${c.id} "${c.label}" (expiry ${expiry} < now ${nowS}) -> ${del.status}`);
           if (del.ok) {
             reaped++;
+            // Delete this cluster's unique account-level tags (Linode leaves them
+            // behind on cluster delete, so they pile up). Only the per-cluster
+            // ones -- never the shared pmm-qa-ephemeral / pmm-qa-role:* tags.
+            for (const t of tags) {
+              if (!/^(expires-\d+|pmm-qa-run:)/.test(t)) continue;
+              try {
+                const dt = await linodeApi(`/tags/${encodeURIComponent(t)}`, { method: "DELETE" });
+                if (!dt.ok && dt.status !== 404) console.error(`lke-reaper: delete tag "${t}" -> ${dt.status}`);
+              } catch (e) { console.error(`lke-reaper: delete tag "${t}" failed: ${e.message}`); }
+            }
             // Derive the run dir from the (Linode-controlled) label, but never let it
             // escape LKE_RUNS_DIR before an rmSync(recursive).
             try {
