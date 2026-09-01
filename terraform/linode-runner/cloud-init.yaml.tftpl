@@ -33,6 +33,10 @@ write_files:
       id=$(curl -fsS -H "Authorization: Bearer $token" \
         -H 'X-Filter: {"tags": "pmm-qa-run:${run_id}"}' \
         "https://api.linode.com/v4/linode/instances" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
+      # Delete our unique run tag first (Linode leaves it behind on instance
+      # delete, so it would orphan). Best-effort -- never block self-destruct.
+      curl -fsS -X DELETE -H "Authorization: Bearer $token" \
+        "https://api.linode.com/v4/tags/pmm-qa-run:${run_id}" || true
       curl -fsS -X DELETE -H "Authorization: Bearer $token" \
         "https://api.linode.com/v4/linode/instances/$id"
 
