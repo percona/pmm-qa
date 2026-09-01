@@ -6,7 +6,7 @@ Before(async ({ I }) => {
   await I.Authorize();
 });
 
-// Muted: expects the cardinality panels percona/pmm#5822 removed. Unskip with pmm-qa#1275, or when the panels return.
+// skip-until: 2026-09-29 -- cardinality panels removed by percona/pmm#5822; unskip via pmm-qa#1275, or when the panels return.
 Scenario.skip(
   'PMM-T506 - Verify metrics on VictoriaMetrics dashboard @nightly  @dashboards @gssapi-nightly',
   async ({ I, dashboardPage }) => {
