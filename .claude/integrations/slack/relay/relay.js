@@ -620,11 +620,8 @@ async function reapLke() {
         await execFileP("bash", [`${RUNNER_DIR}/prune-tags.sh`], { env: process.env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
       } catch (e) { console.error(`lke-reaper: tag prune skipped (non-fatal): ${e.message}`); }
     }
-    // Every tick, delete the volumes/NodeBalancers LKE teardown orphans
-    // (cluster-delete doesn't cascade to them). Runs unconditionally because a
-    // just-deleted cluster's volumes only become sweepable a little later. The
-    // script deletes only volumes tagged for a run whose cluster is gone (and
-    // NBs of a gone cluster), so a live cluster's resources are never touched.
+    // Runs every tick, not just when reaped: a just-deleted cluster's volumes
+    // detach a little later, so they're sweepable on a later tick that reaped nothing.
     try {
       await execFileP("bash", [`${HA_DIR}/prune-lke-orphans.sh`], { env: process.env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
     } catch (e) { console.error(`lke-reaper: orphan sweep skipped (non-fatal): ${e.message}`); }

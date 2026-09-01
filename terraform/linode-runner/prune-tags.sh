@@ -52,7 +52,7 @@ for t in "${candidates[@]:-}"; do
   enc="$(jq -rn --arg t "$t" '$t|@uri')"
   # Authoritative check across ALL resource types, right before deleting. A tag
   # that raced back into use (or a transient error) is left alone, not deleted.
-  info="$("${CURL[@]}" "$BASE/tags/${enc}?page_size=1" 2>/dev/null || true)"
+  info="$("${CURL[@]}" "$BASE/tags/${enc}?page_size=25" 2>/dev/null || true)"
   [ -n "$info" ] || { kept=$((kept + 1)); continue; }
   n="$(printf '%s' "$info" | jq -r '.results // (.data | length)')"
   [ "$n" = "0" ] || { kept=$((kept + 1)); continue; }
