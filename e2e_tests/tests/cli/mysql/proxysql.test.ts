@@ -219,10 +219,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
-  /**
-   * @link https://perconadev.atlassian.net/browse/PMM-14919
-   */
-  pmmTest(
+  // eslint-disable-next-line playwright/no-skipped-test -- Bug in the PMM: https://perconadev.atlassian.net/browse/PMM-15410
+  pmmTest.skip(
     'PMM-T9993 - Verify Change agent disable collectors CLI @proxysql-integration',
     async ({ cliHelper }) => {
       await cliHelper
@@ -231,13 +229,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         )
         .assertSuccess()
         .outContains('- updated disabled collectors: [mysql_connection_pool]');
-    },
-  );
 
-  // eslint-disable-next-line playwright/no-skipped-test -- Bug in the PMM: https://perconadev.atlassian.net/browse/PMM-15410
-  pmmTest.skip(
-    'PMM-T9993 - Verify Change agent disable collectors metrics @proxysql-integration',
-    async ({ cliHelper }) => {
       await expect(async () => {
         const metrics = cliHelper.getMetrics({
           agentPassword: proxysqlExporterPassword,
