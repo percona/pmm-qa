@@ -246,10 +246,10 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
         ).not.toContain('perform full authentication');
       });
     } finally {
-      await cli.exec(`docker exec ${containerName} pmm-admin remove proxysql ${serviceName}`);
-      await cli.exec(
-        `${proxysqlAdmin} -e "SET mysql-default_authentication_plugin='mysql_native_password'; LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"`,
-      );
+      // await cli.exec(`docker exec ${containerName} pmm-admin remove proxysql ${serviceName}`);
+      // await cli.exec(
+      //   `${proxysqlAdmin} -e "SET mysql-default_authentication_plugin='mysql_native_password'; LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"`,
+      // );
     }
   });
 });
