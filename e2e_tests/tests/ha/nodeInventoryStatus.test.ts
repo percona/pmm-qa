@@ -24,28 +24,10 @@ pmmTest(
       return { initialLeader: podLeader, podNames: pods };
     });
 
-    const verifyNodesTable = async (expectedLeader: string): Promise<void> => {
-      for (const podName of podNames) {
-        const expectedRole = podName === expectedLeader ? 'Leader' : 'Follower';
-
-        await pmmTest.step(`Verify "${podName}" is Up and labelled ${expectedRole}`, async () => {
-          await expect(
-            nodesPage.builders.nodeStatusCell(podName),
-            `HA node "${podName}" is running, so the Nodes page must show it Up`,
-          ).toHaveText('Up', { timeout: Timeouts.ONE_MINUTE });
-
-          await expect(
-            nodesPage.builders.nodeRoleLabel(podName),
-            `The cluster shows "${expectedLeader}" leading, so "${podName}" must be labelled ${expectedRole}`,
-          ).toHaveText(expectedRole, { timeout: Timeouts.THIRTY_SECONDS });
-        });
-      }
-    };
-
     await page.goto(nodesPage.url);
 
     await pmmTest.step('Verify every HA node is Up with exactly one leader', async () => {
-      await verifyNodesTable(initialLeader);
+      await nodesPage.verifyHaNodeRoles(podNames, initialLeader);
     });
 
     await pmmTest.step(`Restart the leader pod "${initialLeader}"`, async () => {
@@ -75,7 +57,7 @@ pmmTest(
     await pmmTest.step(`Verify the Nodes page shows "${newLeader}" leading and every node Up`, async () => {
       // Its queries can be left holding the request that failed with the pod.
       await page.reload({ timeout: Timeouts.TWO_MINUTES });
-      await verifyNodesTable(newLeader);
+      await nodesPage.verifyHaNodeRoles(podNames, newLeader);
     });
   },
 );

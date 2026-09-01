@@ -11,7 +11,6 @@ const healthByReplicas = [
   { expectedHealth: 'Unreachable', replicas: 0 },
 ];
 const expectedNodes = 3;
-let statefulSet: string | undefined;
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
@@ -25,9 +24,9 @@ pmmTest.afterEach(async ({ api, haClusterHelper }) => {
 pmmTest(
   'PMM-T2250 Verify the HA badge reflects the health of the PMM HA cluster @pmm-ha',
   async ({ api, haClusterHelper, highAvailabilityPage, k8sHelper, page }) => {
-    await pmmTest.step(`Verify the cluster starts with ${expectedNodes} pods up and running`, async () => {
-      statefulSet = haClusterHelper.statefulSetName();
+    const statefulSet = haClusterHelper.statefulSetName();
 
+    await pmmTest.step(`Verify the cluster starts with ${expectedNodes} pods up and running`, async () => {
       expect(
         k8sHelper.getStatefulSetReplicas(statefulSet),
         `The Degraded and Critical thresholds below are derived from a ${expectedNodes}-node cluster`,
@@ -72,7 +71,7 @@ pmmTest(
 
     for (const { expectedHealth, replicas } of healthByReplicas) {
       await pmmTest.step(`Scale the cluster to ${replicas} replicas`, async () => {
-        k8sHelper.scaleStatefulSet(statefulSet as string, replicas).assertSuccess();
+        k8sHelper.scaleStatefulSet(statefulSet, replicas).assertSuccess();
       });
 
       // Never reload: at 0 replicas nothing serves the page. The app's own 15s

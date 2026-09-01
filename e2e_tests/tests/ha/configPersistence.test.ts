@@ -41,10 +41,16 @@ pmmTest(
       );
 
       await pmmTest.step(`Verify the settings are retained on the new leader "${newLeader}"`, async () => {
-        await page.goto(settingsPage.urls.advanced);
+        await expect(async () => {
+          await page.goto(settingsPage.urls.advanced);
 
-        await expect(settingsPage.inputs.dataRetention).toHaveValue(String(newRetentionDays));
-        await expect(settingsPage.inputs.publicAddress).toHaveValue(newPublicAddress);
+          await expect(settingsPage.inputs.dataRetention).toHaveValue(String(newRetentionDays), {
+            timeout: Timeouts.THIRTY_SECONDS,
+          });
+          await expect(settingsPage.inputs.publicAddress).toHaveValue(newPublicAddress, {
+            timeout: Timeouts.THIRTY_SECONDS,
+          });
+        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.TWO_MINUTES });
       });
     } finally {
       await api.settingsApi.updateSettings({

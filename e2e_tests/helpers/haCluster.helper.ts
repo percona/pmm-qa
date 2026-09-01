@@ -4,7 +4,7 @@ import { Timeouts } from '@helpers/timeouts';
 import type HaApi from '@api/ha.api';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { HaStatusResponse } from '@interfaces/ha';
-import { expect } from '@playwright/test';
+import { APIRequestContext, expect } from '@playwright/test';
 
 const leaderLogLine = 'I am the leader!';
 const pmmManagedLog = '/srv/logs/pmm-managed.log';
@@ -58,6 +58,44 @@ export default class HaClusterHelper {
     await this.waitForApiServing(haApi);
 
     return newLeader;
+  };
+
+  /**
+   * {@link failoverLeader} while polling `path` through HAProxy, which is the only way to
+   * tell a brief election gap from the public URL actually going down. Reports the longest
+   * unbroken stretch of 5xx or connection errors.
+   */
+  failoverLeaderWhileProbing = async (
+    haApi: HaApi,
+    request: APIRequestContext,
+    path: string,
+  ): Promise<{ longestOutage: number; newLeader: string }> => {
+    let probing = true;
+    let longestOutage = 0;
+    let outageStart = 0;
+    const probe = (async () => {
+      while (probing) {
+        const served = await request
+          .get(path, { failOnStatusCode: false, maxRedirects: 0, timeout: Timeouts.TEN_SECONDS })
+          .then((response) => response.status() < 500)
+          .catch(() => false);
+
+        if (served) {
+          outageStart = 0;
+        } else {
+          outageStart ||= Date.now();
+          longestOutage = Math.max(longestOutage, Date.now() - outageStart);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, Timeouts.ONE_SECOND));
+      }
+    })();
+    const newLeader = await this.failoverLeader(haApi);
+
+    probing = false;
+    await probe;
+
+    return { longestOutage, newLeader };
   };
 
   /** How Grafana itself reaches the shared PostgreSQL, read from the pod rather than from the API under test. */

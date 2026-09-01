@@ -99,7 +99,7 @@ pmmTest(
 
     await pmmTest.step(`Verify the HA badge shows "${newLeader}" as the new leader`, async () => {
       await highAvailabilityPage.reloadAndExpandHaNavItem();
-      await expect(highAvailabilityPage.leaderNameLocator()).toHaveText(newLeader, {
+      await expect(highAvailabilityPage.elements.leaderNodeName).toHaveText(newLeader, {
         timeout: Timeouts.TWO_MINUTES,
       });
     });
