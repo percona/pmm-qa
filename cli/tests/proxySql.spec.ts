@@ -177,23 +177,29 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
   /**
    * @link https://perconadev.atlassian.net/browse/PMM-15259
    *
-   * Regression coverage for caching_sha2_password on the ProxySQL admin
-   * interface (port 6032). PXC Operator 1.19 switched ProxySQL's
-   * mysql-default_authentication_plugin to caching_sha2_password, which broke
-   * the proxysql_exporter with "unexpected resp from server for
-   * caching_sha2_password, perform full authentication". A ProxySQL
-   * admin/stats credential (admin:admin here) completes the handshake over a
-   * plaintext admin connection, so the exporter must authenticate and scrape.
+   * ProxySQL admin interface (6032) + caching_sha2_password. PXC Operator 1.19
+   * set mysql-default_authentication_plugin=caching_sha2_password; the
+   * proxysql_exporter connects as the ProxySQL monitor user (operator DSN is
+   * monitor:monitor@tcp(localhost:6032)/), NOT as an admin/stats credential.
+   * Admin/stats-credential users (admin, read_user) skip the caching_sha2
+   * full-auth exchange, so they authenticate on every ProxySQL build -- that is
+   * why exercising this bug requires the monitor user. The monitor user goes
+   * through full authentication, which ProxySQL could not complete over a
+   * non-TLS admin connection until 3.0.11 (it now intercepts the cleartext
+   * password during the full-auth exchange). Expected: fails on ProxySQL
+   * < 3.0.11 with "perform full authentication", passes on >= 3.0.11.
    */
-  test('PMM-15259 - proxysql exporter authenticates against caching_sha2_password admin auth', { tag: '@proxysql' }, async ({}) => {
+  test('PMM-15259 - proxysql exporter authenticates as monitor user under caching_sha2_password', async ({}) => {
     const serviceName = `caching_sha2_proxysql_${containerName}_${Date.now()}`;
     const agentPassword = 'mypass';
+    const monitorUser = 'monitor';
+    const monitorPassword = 'monitor';
     const proxysqlAdmin = `docker exec ${containerName} mysql -h 127.0.0.1 -P 6032 -u ${PXC_USER} -p${PXC_PASSWORD}`;
     let serviceId = '';
 
-    await test.step('set ProxySQL default authentication plugin to caching_sha2_password', async () => {
+    await test.step('configure the monitor user and caching_sha2_password on the admin interface', async () => {
       await cli.executeAndVerify(
-        `${proxysqlAdmin} -e "SET mysql-default_authentication_plugin='caching_sha2_password'; LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"`,
+        `${proxysqlAdmin} -e "SET mysql-monitor_username='${monitorUser}'; SET mysql-monitor_password='${monitorPassword}'; SET mysql-default_authentication_plugin='caching_sha2_password'; LOAD MYSQL VARIABLES TO RUNTIME; SAVE MYSQL VARIABLES TO DISK;"`,
       );
       const runtimeValue = await cli.executeAndVerify(
         `${proxysqlAdmin} -N -e "SELECT variable_value FROM runtime_global_variables WHERE variable_name='mysql-default_authentication_plugin';"`,
@@ -202,15 +208,15 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
     });
 
     try {
-      await test.step('add proxysql service against the caching_sha2_password admin interface', async () => {
+      await test.step('add proxysql service as the monitor user (non-TLS, full-auth path)', async () => {
         serviceId = JSON.parse(
           await cli.executeAndVerify(
-            `docker exec ${containerName} pmm-admin add proxysql --username=${PXC_USER} --password=${PXC_PASSWORD} --agent-password=${agentPassword} --service-name=${serviceName} --host=127.0.0.1 --port=6032 --json`,
+            `docker exec ${containerName} pmm-admin add proxysql --username=${monitorUser} --password=${monitorPassword} --agent-password=${agentPassword} --service-name=${serviceName} --host=127.0.0.1 --port=6032 --json`,
           ),
         ).service.service_id;
       });
 
-      await test.step('verify proxysql metrics are scraped (exporter authenticated)', async () => {
+      await test.step('verify proxysql metrics are scraped (monitor user completed caching_sha2 auth)', async () => {
         await expect(async () => {
           const metrics = await cli.getMetrics(serviceName, 'pmm', agentPassword, containerName);
           const expectedValue = 'proxysql_up 1';
@@ -221,7 +227,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
         });
       });
 
-      await test.step('verify the caching_sha2_password auth error is absent from the exporter log', async () => {
+      await test.step('verify the caching_sha2_password full-authentication error is absent from the exporter log', async () => {
         const jsonList = JSON.parse(await cli.executeAndVerify(`docker exec ${containerName} pmm-admin list --json`));
         const { agent_id: agentId } = jsonList
           .agent
