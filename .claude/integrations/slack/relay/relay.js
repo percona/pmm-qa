@@ -293,20 +293,24 @@ app?.event("app_mention", async ({ event, body, client }) => {
   if (!(await markSeen(client, event.channel, event.ts, body.event_id))) return;
 
   const threadTs = event.thread_ts || event.ts;
-  // ALLOW_FALLBACK gates BOTH entry points the same way: true lets an
-  // unregistered person run on the central owner's routines; false blocks.
-  // A person with no routines yet (IDs pre-loaded, token not added) counts as
-  // unregistered here too — same zero-cost reply as the Jira path, so their
-  // mention never fires the central router by accident.
+  // ALLOW_FALLBACK gates BOTH entry points the same way: true lets a person with
+  // no usable routines run on the central owner's routines; false blocks. A
+  // person with no routines yet (IDs pre-loaded, token not added) still can't
+  // fire the central router by accident — but when blocked, the reason is split
+  // so they know what to do: no people file at all -> not registered; file
+  // present but routines:{} -> on the roster, routine just isn't set up yet.
   const mapped = (p) => p && Object.keys(p.routines || {}).length > 0;
   let person = bySlack[event.user];
   if (!mapped(person) && ALLOW_FALLBACK && byName[CENTRAL_OWNER])
     person = { ...byName[CENTRAL_OWNER], name: `${CENTRAL_OWNER} (fallback for ${event.user})` };
   if (!mapped(person)) {
+    const onRoster = !!bySlack[event.user];
     await client.chat.postMessage({
       channel: event.channel,
       thread_ts: threadTs,
-      text: `:lock: <@${event.user}> you're not registered with PMM AI yet — ask the QA team to add you to the relay map.`,
+      text: onRoster
+        ? `:hourglass_flowing_sand: <@${event.user}> you're on the PMM AI roster, but your personal routine isn't set up yet — create a routine (e.g. Test Runner) and hand its API token to the QA team so jobs run on your account.`
+        : `:lock: <@${event.user}> you're not registered with PMM AI yet — ask the QA team to add you to the relay map.`,
     });
     return;
   }
