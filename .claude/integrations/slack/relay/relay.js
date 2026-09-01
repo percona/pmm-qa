@@ -601,16 +601,6 @@ async function reapLke() {
           console.log(`lke-reaper: deleted cluster ${c.id} "${c.label}" (expiry ${expiry} < now ${nowS}) -> ${del.status}`);
           if (del.ok) {
             reaped++;
-            // Delete this cluster's unique account-level tags (Linode leaves them
-            // behind on cluster delete, so they pile up). Only the per-cluster
-            // ones -- never the shared pmm-qa-ephemeral / pmm-qa-role:* tags.
-            for (const t of tags) {
-              if (!/^(expires-\d+|pmm-qa-run:)/.test(t)) continue;
-              try {
-                const dt = await linodeApi(`/tags/${encodeURIComponent(t)}`, { method: "DELETE" });
-                if (!dt.ok && dt.status !== 404) console.error(`lke-reaper: delete tag "${t}" -> ${dt.status}`);
-              } catch (e) { console.error(`lke-reaper: delete tag "${t}" failed: ${e.message}`); }
-            }
             // Derive the run dir from the (Linode-controlled) label, but never let it
             // escape LKE_RUNS_DIR before an rmSync(recursive).
             try {
@@ -624,6 +614,14 @@ async function reapLke() {
       page++;
     } while (page <= pages);
     if (checked) console.log(`lke-reaper: checked ${checked} ephemeral cluster(s), reaped ${reaped}`);
+    // Sweep the tags the reaped clusters left behind. prune-tags.sh only deletes
+    // a tag once GET /tags/<label> shows nothing attached, so a tag shared with a
+    // still-live cluster (LKE run/expires tags aren't unique) is never stripped.
+    if (reaped) {
+      try {
+        await execFileP("bash", [`${RUNNER_DIR}/prune-tags.sh`], { env: process.env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
+      } catch (e) { console.error(`lke-reaper: tag prune skipped (non-fatal): ${e.message}`); }
+    }
   } catch (e) {
     console.error(`lke-reaper error (relay stays up): ${e.message}`);
   }

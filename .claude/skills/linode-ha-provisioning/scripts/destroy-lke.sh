@@ -18,11 +18,11 @@ echo "[pmm-ha] Deleting LKE cluster $CLUSTER_ID"
 linode-cli lke cluster-delete "$CLUSTER_ID"
 echo "[pmm-ha] Deleted."
 
-# The cluster's unique tags (expires-<epoch>, pmm-qa-run:<id>) are now orphan
-# account-level tags -- Linode never removes those on delete. Sweep them,
-# best-effort: cleanup must never fail the teardown.
+# Sweep the cluster's orphan tags (best-effort).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PRUNE="$SCRIPT_DIR/../../../../terraform/linode-runner/prune-tags.sh"
 if [ -x "$PRUNE" ]; then
   LINODE_TOKEN="$LINODE_TOKEN" "$PRUNE" || echo "[pmm-ha] tag prune skipped (non-fatal)" >&2
+else
+  echo "[pmm-ha] prune-tags.sh not found at $PRUNE (tags not swept)" >&2
 fi

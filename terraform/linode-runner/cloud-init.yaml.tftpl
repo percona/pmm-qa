@@ -33,11 +33,9 @@ write_files:
       id=$(curl -fsS -H "Authorization: Bearer $token" \
         -H 'X-Filter: {"tags": "pmm-qa-run:${run_id}"}' \
         "https://api.linode.com/v4/linode/instances" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
-      # Delete the instance first, THEN its unique run tag. The tag is the only
-      # handle on a box with no terraform state, so we must not drop it while the
-      # instance delete can still fail (set -e stops here on a non-2xx delete,
-      # leaving the tag intact for a later sweep). Linode otherwise leaves the tag
-      # behind on delete, so remove it once the instance is actually gone.
+      # Instance first, then its tag: the tag is the only handle on this box (no
+      # terraform state), so set -e must abort before the tag delete if the
+      # instance delete fails.
       curl -fsS -X DELETE -H "Authorization: Bearer $token" \
         "https://api.linode.com/v4/linode/instances/$id"
       curl -fsS -X DELETE -H "Authorization: Bearer $token" \
