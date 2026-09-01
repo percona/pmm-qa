@@ -118,7 +118,7 @@ jobs:
 
           # 3. assign the URL to CLIENT_VERSION for later steps
           echo "CLIENT_INSTALL_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
-          echo "PRE_UPGRADE_BRANCH=pmm-${{ matrix.version }}" >> "$GITHUB_ENV"
+          echo "PRE_UPGRADE_BRANCH=pmm-${{ matrix.version }}-upgrade" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION reassigned to: $CLIENT_INSTALL_VERSION"
       - name: Checkout pmm-qa
         uses: actions/checkout@v4
