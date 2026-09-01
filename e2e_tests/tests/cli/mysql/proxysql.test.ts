@@ -251,12 +251,18 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  /**
+   * @link https://perconadev.atlassian.net/browse/PMM-14919
+   * Note: ProxySQL's mysql-have_ssl enables TLS as optional (unlike MySQL's require_secure_transport),
+   * so the service stays Up throughout. We verify the TLS change-agent flags are accepted and
+   * the exporter continues to scrape metrics after TLS configuration.
+   */
   pmmTest(
     'PMM-T9994 - Verify Change agent tls @proxysql-integration',
-    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
+    async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper.createTlsCertificates(containerName);
 
-      const commands = [
+      const certCommands = [
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/private/${containerName}.key /certs/${containerName}.key`,
         `docker exec ${containerName} cp /easy-rsa/easyrsa3/pki/issued/${containerName}.crt /certs/${containerName}.crt`,
         `docker exec ${containerName} bash -c "cat /easy-rsa/easyrsa3/pki/private/pmm-test.key > /certs/client.key"`,
@@ -266,9 +272,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
       ];
 
-      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+      certCommands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
-      // Configure ProxySQL admin interface to use TLS
+      // Configure ProxySQL to support TLS connections
       const proxysqlTlsCommands = [
         `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "SET GLOBAL mysql-have_ssl='true';"`,
         `docker exec ${containerName} mysql -h127.0.0.1 -P6032 -uadmin -p${mysqlPassword} -e "SET GLOBAL mysql-ssl_ca='/certs/ca-certs.pem';"`,
@@ -279,19 +285,22 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       proxysqlTlsCommands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
-      await grafanaHelper.authorize();
-      await page.goto(servicesPage.url);
-      await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
-
-      cliHelper
+      // Apply TLS flags to proxysql-exporter
+      await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
         )
-        .assertSuccess();
+        .assertSuccess()
+        .outContains('- enabled TLS')
+        .outContains('- enabled TLS skip verification');
 
-      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+      // Verify agent details show TLS enabled
+      await grafanaHelper.authorize();
+      await page.goto(agentsPage.url(serviceId));
+      await agentsPage.showRowDetails(proxysqlExporterId);
+      await expect(agentsPage.builders.property('tls=true')).toBeVisible();
 
-      // Verify exporter is scraping metrics over TLS
+      // Verify exporter is still scraping metrics over TLS
       await expect(async () => {
         const metrics = cliHelper.getMetrics({
           agentPassword: proxysqlExporterPassword,
