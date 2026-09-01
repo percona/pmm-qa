@@ -232,7 +232,7 @@ update_values_yaml() {
     update_values_yaml "repository" "$IMAGE_REPO"
 
     kubectl exec pmm4-0 -- supervisorctl stop all
-    kubectl exec pmm4-0 -- chown -R pmm:pmm /srv
+    kubectl exec pmm4-0 -- chown -R 1000:0 /srv
 
     upgrade_pmm_chart pmm4 -f values.yaml
     sleep 7 # give a chance to update manifest
