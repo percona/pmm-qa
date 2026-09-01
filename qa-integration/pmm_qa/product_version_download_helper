@@ -26,6 +26,6 @@ ms # 8.4 # https://dev.mysql.com/get/Downloads/MySQL-8.4/mysql-8.4.3-linux-glibc
 
 ms # 8.0.40 # https://dev.mysql.com/get/Downloads/MySQL-8.0/mysql-8.0.40-linux-glibc2.17-x86_64-minimal.tar.xz
 
-proxysql # 3.0.11 # https://github.com/sysown/proxysql/releases/download/v3.0.9/proxysql_3.0.9-ubuntu22_amd64.deb
+proxysql # 3.0.11 # https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql_3.0.11-ubuntu22_amd64.deb
 
-https://github.com/sysown/proxysql/releases/download/v3.0.11/proxysql_3.0.11-ubuntu22_amd64.deb
+
