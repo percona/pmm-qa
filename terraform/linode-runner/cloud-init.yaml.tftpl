@@ -33,12 +33,15 @@ write_files:
       id=$(curl -fsS -H "Authorization: Bearer $token" \
         -H 'X-Filter: {"tags": "pmm-qa-run:${run_id}"}' \
         "https://api.linode.com/v4/linode/instances" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
-      # Delete our unique run tag first (Linode leaves it behind on instance
-      # delete, so it would orphan). Best-effort -- never block self-destruct.
-      curl -fsS -X DELETE -H "Authorization: Bearer $token" \
-        "https://api.linode.com/v4/tags/pmm-qa-run:${run_id}" || true
+      # Delete the instance first, THEN its unique run tag. The tag is the only
+      # handle on a box with no terraform state, so we must not drop it while the
+      # instance delete can still fail (set -e stops here on a non-2xx delete,
+      # leaving the tag intact for a later sweep). Linode otherwise leaves the tag
+      # behind on delete, so remove it once the instance is actually gone.
       curl -fsS -X DELETE -H "Authorization: Bearer $token" \
         "https://api.linode.com/v4/linode/instances/$id"
+      curl -fsS -X DELETE -H "Authorization: Bearer $token" \
+        "https://api.linode.com/v4/tags/pmm-qa-run:${run_id}" || true
 
   # Controllers behind a proxied-HTTPS-only network policy cannot open a
   # raw SSH connection to this box (confirmed live -- see docs.md). Every
