@@ -194,8 +194,8 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
     const agentPassword = 'mypass';
     const monitorUser = 'monitor';
     const monitorPassword = 'monitor';
-    const monitorPort = '6033';
-    const proxysqlAdmin = `docker exec ${containerName} mysql -h 127.0.0.1 -P 6032 -u ${PXC_USER} -p${PXC_PASSWORD}`;
+    const port = '6032';
+    const proxysqlAdmin = `docker exec ${containerName} mysql -h 127.0.0.1 -P ${port} -u ${PXC_USER} -p${PXC_PASSWORD}`;
     let serviceId = '';
 
     await test.step('configure the monitor user and caching_sha2_password on the admin interface', async () => {
@@ -212,7 +212,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
       await test.step('add proxysql service as the monitor user (non-TLS, full-auth path)', async () => {
         serviceId = JSON.parse(
           await cli.executeAndVerify(
-            `docker exec ${containerName} pmm-admin add proxysql --username=${monitorUser} --password=${monitorPassword} --agent-password=${agentPassword} --service-name=${serviceName} --host=127.0.0.1 --port=${monitorPort} --json`,
+            `docker exec ${containerName} pmm-admin add proxysql --username=${monitorUser} --password=${monitorPassword} --agent-password=${agentPassword} --service-name=${serviceName} --host=127.0.0.1 --port=${port} --json`,
           ),
         ).service.service_id;
       });
