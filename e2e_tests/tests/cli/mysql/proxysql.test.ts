@@ -219,19 +219,39 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  pmmTest(
+    'PMM-T9993 - Verify Change agent disable collectors @proxysql-integration',
+    async ({ cliHelper, page }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --disable-collectors=mysql_connection_pool`,
+        )
+        .assertSuccess()
+        .outContains('- updated disabled collectors: [mysql_connection_pool]');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
+      const metrics = cliHelper.getMetrics({
+        agentPassword: proxysqlExporterPassword,
+        dockerContainer: containerName,
+        serviceName: serviceName,
+      });
+
+      expect(metrics, 'Exporter should still be up after disabling a collector').toContain('proxysql_up 1');
+      expect(metrics, 'Non-disabled collector mysql_status should still produce metrics').toContain(
+        'proxysql_mysql_status_',
+      );
+      expect(metrics, 'Disabled collector mysql_connection_pool should not produce metrics').not.toContain(
+        'proxysql_connection_pool_',
+      );
+    },
+  );
+
   // eslint-disable-next-line playwright/no-commented-out-tests -- Developing tests
   /*
-  pmmTest('PMM-T9993 - Verify Change agent disable collectors @ps-integration', async ({ cliHelper }) => {
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --disable-collectors=stat_statements,locks`,
-      )
-      .assertSuccess()
-      .outContains('- updated disabled collectors: [stat_statements locks]');
-  });
-
   pmmTest(
-    'PMM-T9994 - Verify Change agent tls @ps-integration',
+    'PMM-T9994 - Verify Change agent tls @proxysql-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;
 
