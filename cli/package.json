@@ -29,9 +29,9 @@
     "cli:all": "npx playwright test"
   },
   "dependencies": {
-    "@faker-js/faker": "^10.5.0",
+    "@faker-js/faker": "^10.6.0",
     "@playwright/test": "^1.62.1",
-    "@types/luxon": "^3.7.4",
+    "@types/luxon": "^3.7.5",
     "adm-zip": "^0.6.0",
     "luxon": "^3.7.2",
     "playwright": "^1.62.1",
@@ -43,7 +43,7 @@
   },
   "devDependencies": {
     "@types/adm-zip": "^0.5.8",
-    "@types/node": "^26.2.0",
+    "@types/node": "^26.4.0",
     "@types/shelljs": "^0.10.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
