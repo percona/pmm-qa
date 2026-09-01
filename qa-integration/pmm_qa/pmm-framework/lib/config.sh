@@ -138,7 +138,7 @@ register_database PXC \
 
 # PROXYSQL is not independently setup-able: it only supplies defaults that the
 # PXC setup reads (see setups/mysql.sh). dispatch_setup rejects it explicitly.
-register_database PROXYSQL '2' 'PACKAGE' 'DEFAULT_VERSION=2' 'PACKAGE='
+register_database PROXYSQL '3' 'PACKAGE' 'DEFAULT_VERSION=3' 'PACKAGE='
 
 # Versionless types: '' means "no version accepted", so `--database haproxy=1`
 # logs a note under --verbose and falls back to the (empty) default.

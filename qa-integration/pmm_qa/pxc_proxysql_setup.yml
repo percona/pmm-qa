@@ -5,7 +5,7 @@
   vars:
     pxc_version: "{{ lookup('vars', 'extra_pxc_version', default=lookup('env','PXC_VERSION') | default('8.0', true) ) }}"
     pxc_tarball: "{{ lookup('vars', 'extra_pxc_tarball', default=lookup('env','PXC_TARBALL') | default('', true) ) }}"
-    proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL_VERSION') | default('2', true) ) }}"
+    proxysql_version: "{{ lookup('vars', 'extra_proxysql_version', default=lookup('env','PROXYSQL_VERSION') | default('3', true) ) }}"
     proxysql_package: "{{ lookup('vars', 'extra_proxysql_package', default=lookup('env','PROXYSQL_PACKAGE') | default('', true) ) }}"
     pxc_container: "{{ lookup('vars', 'extra_pxc_container', default=lookup('env','PXC_CONTAINER') | default('pxc_container', true) ) }}"
     pmm_server_ip: "{{ lookup('vars', 'extra_pmm_server_ip', default=lookup('env','PMM_SERVER_IP') | default('host.docker.internal', true) ) }}"
@@ -53,7 +53,7 @@
       pxc_tarball: "{{tarball.stdout | default(pxc_tarball,true)}}"
 
   - name: Get ProxySQL Product package URL based on the version
-    shell: cat product_version_download_helper | grep proxysql | grep "\-{{ proxysql_version }}" | head -1 | awk -F'# ' '{print $3}'
+    shell: cat product_version_download_helper | grep proxysql | grep "{{ proxysql_version }}" | head -1 | awk -F'# ' '{print $3}'
     register: package
     when: lookup('env', 'PROXYSQL_PACKAGE') == ''
 
