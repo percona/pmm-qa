@@ -185,7 +185,7 @@ test.describe('PMM Client CLI tests for ProxySQL', { tag: '@proxysql' }, () => {
    * admin/stats credential (admin:admin here) completes the handshake over a
    * plaintext admin connection, so the exporter must authenticate and scrape.
    */
-  test('PMM-15259 - proxysql exporter authenticates against caching_sha2_password admin auth', async ({}) => {
+  test('PMM-15259 - proxysql exporter authenticates against caching_sha2_password admin auth', { tag: '@proxysql' }, async ({}) => {
     const serviceName = `caching_sha2_proxysql_${containerName}_${Date.now()}`;
     const agentPassword = 'mypass';
     const proxysqlAdmin = `docker exec ${containerName} mysql -h 127.0.0.1 -P 6032 -u ${PXC_USER} -p${PXC_PASSWORD}`;
