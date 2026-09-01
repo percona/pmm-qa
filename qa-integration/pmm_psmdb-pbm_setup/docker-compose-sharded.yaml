@@ -249,6 +249,7 @@ services:
     volumes:
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - ./conf/datagen:/etc/datagen:ro
+      - ./conf/mongos:/etc/mongos
     privileged: true
     cgroup: host
     environment:
