@@ -195,7 +195,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .stdout.trim();
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${proxysqlExporterId} --push-metrics`,
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --push-metrics`,
         )
         .assertSuccess()
         .outContains('- enabled push metrics');
@@ -224,7 +224,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest('PMM-T9993 - Verify Change agent disable collectors @ps-integration', async ({ cliHelper }) => {
     await cliHelper
       .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --disable-collectors=stat_statements,locks`,
+        `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --disable-collectors=stat_statements,locks`,
       )
       .assertSuccess()
       .outContains('- updated disabled collectors: [stat_statements locks]');
@@ -270,7 +270,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceStatus(serviceName, 'Down', Timeouts.TWO_MINUTES);
 
       commands = [
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
+        `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
         `docker exec ${containerName} pmm-admin inventory change agent qan-mysql-perfschema-agent ${mysqldPerfschemaAgentId} --tls-cert-file=/certs/client.crt --tls-key-file=/certs/client.key --tls-ca-file=/certs/ca-certs.pem --tls --tls-skip-verify`,
       ];
 
