@@ -46,9 +46,19 @@ mapfile -t candidates < <(
   done | { grep -E '^(pmm-qa|expires-)' || true; } | sort -u
 )
 
+# Tags carried by a live LKE cluster: GET /tags/<label> lists Linodes, Volumes,
+# NodeBalancers and Domains but NOT LKE clusters, so a cluster's tags would look
+# orphaned there during its build window (before its volumes are tagged). Union
+# them into a keep-set so a live cluster's tag is never stripped.
+live_cluster_tags="$(
+  "${CURL[@]}" "$BASE/lke/clusters?page_size=500" 2>/dev/null \
+    | jq -r '.data[].tags[]?' 2>/dev/null | sort -u
+)"
+
 deleted=0 kept=0 failed=0
 for t in "${candidates[@]:-}"; do
   [ -n "$t" ] || continue
+  grep -qx "$t" <<<"$live_cluster_tags" && { kept=$((kept + 1)); continue; }
   enc="$(jq -rn --arg t "$t" '$t|@uri')"
   # Authoritative check across ALL resource types, right before deleting. A tag
   # that raced back into use (or a transient error) is left alone, not deleted.
