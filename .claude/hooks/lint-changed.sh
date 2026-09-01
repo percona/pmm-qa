@@ -49,6 +49,7 @@ mapfile -t tf_files < <(select_files '\.tf$')
 mapfile -t docker_files < <(select_files '(^|/)Dockerfile[^/]*$')
 mapfile -t compose_files < <(select_files '(^|/)(docker-)?compose[^/]*\.ya?ml$')
 mapfile -t groovy_files < <(select_files '\.groovy$')
+mapfile -t test_files < <(select_files '\.(js|ts)$')
 
 # TypeScript: each Playwright workspace owns its eslint + tsconfig, so lint the
 # whole workspace rather than the individual files.
@@ -121,6 +122,26 @@ if [ ${#groovy_files[@]} -gt 0 ]; then
   echo "==> npm-groovy-lint"
   ensure_npm_groovy_lint || fail "npm-groovy-lint not installed"
   npm-groovy-lint --failon error --files "$(printf '%s,' "${groovy_files[@]}" | sed 's/,$//')" || fail "npm-groovy-lint"
+fi
+
+# A skip parked with `skip-until: YYYY-MM-DD` becomes a lint failure on that
+# date, so a temporary skip cannot quietly become permanent. CI passes every
+# tracked file, so once a date is reached every PR fails here until the skip is
+# revisited or the date is deliberately moved. Only skips that opted in by
+# carrying the marker are checked.
+if [ ${#test_files[@]} -gt 0 ]; then
+  echo "==> skip-until expiry"
+  mapfile -t expired < <(
+    grep -HnoE 'skip-until:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}' "${test_files[@]}" 2>/dev/null |
+      awk -v today="$(date -u +%F)" '
+        match($0, /[0-9]{4}-[0-9]{2}-[0-9]{2}/) {
+          d = substr($0, RSTART, RLENGTH)
+          if (d "" <= today "") print $0
+        }'
+  )
+  for hit in "${expired[@]}"; do
+    [ -n "$hit" ] && fail "skip-until date reached -- revisit the skip or move the date: $hit"
+  done
 fi
 
 exit $rc
