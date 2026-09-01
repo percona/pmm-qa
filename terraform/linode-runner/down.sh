@@ -37,8 +37,11 @@ STATE="$RUN_DIR/terraform.tfstate"
 ROLE=$(cat "$RUN_DIR/role" 2>/dev/null || echo unknown)
 ALLOWED_INBOUND_CIDR="${ALLOWED_INBOUND_CIDR:-0.0.0.0/0}"
 
+RUN_TAG=""
 if [ -f "$STATE" ]; then
   terraform -chdir="$MODULE_DIR" init -input=false -upgrade=false >/dev/null
+  # Capture the run tag before destroy removes it from state.
+  RUN_TAG="$(terraform -chdir="$MODULE_DIR" output -state="$STATE" -raw run_tag 2>/dev/null || true)"
   terraform -chdir="$MODULE_DIR" destroy -auto-approve -input=false \
     -state="$STATE" \
     -var "role=$ROLE" \
@@ -50,7 +53,15 @@ fi
 
 rm -rf "$RUN_DIR"
 
-# Sweep the orphan run tag the destroy left behind (best-effort).
-LINODE_TOKEN="$LINODE_TOKEN" "$MODULE_DIR/prune-tags.sh" || echo "tag prune skipped (non-fatal)" >&2
+# Delete just THIS run's own orphan tag (targeted, O(1)). The instance is gone,
+# so its unique pmm-qa-run tag is now an orphan. A full account sweep here would
+# risk the relay's 240s teardown timeout; prune-tags.sh stays for the reaper /
+# manual use, which aren't timeout-bound.
+if [ -n "$RUN_TAG" ]; then
+  enc="$(jq -rn --arg t "$RUN_TAG" '$t|@uri')"
+  curl -fsS --connect-timeout 10 --max-time 30 -o /dev/null -X DELETE \
+    -H "Authorization: Bearer $LINODE_TOKEN" "https://api.linode.com/v4/tags/$enc" \
+    || echo "tag delete skipped (non-fatal): $RUN_TAG" >&2
+fi
 
 echo "Destroyed run_id=$RUN_ID"

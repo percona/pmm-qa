@@ -20,9 +20,6 @@ echo "[pmm-ha] Deleted."
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Orphaned volumes/NodeBalancer are swept by the relay reaper, not here:
-# cluster-delete is async, so a sweep now would only see OTHER runs' resources.
-
 # Sweep the cluster's orphan tags (best-effort).
 PRUNE="$SCRIPT_DIR/../../../../terraform/linode-runner/prune-tags.sh"
 if [ -x "$PRUNE" ]; then

@@ -112,11 +112,9 @@ _diag() {
     kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp >"$RUN_DIR/events.txt" 2>&1 || true
     kubectl describe pods -n "$NAMESPACE" >"$RUN_DIR/describe.txt" 2>&1 || true
 }
-# Tag this cluster's Block Storage volumes + NodeBalancer with its pmm-qa-run:<id>
-# so teardown can positively attribute and delete only its own orphans. Runs on
-# EVERY exit path (via the trap), so a FAILED bring-up's resources are tagged too
-# -- otherwise a timed-out provision would leak untagged volumes the sweep won't
-# touch. Best-effort: a missed tag is a leak (recoverable), never a wrong delete.
+# Stamp this cluster's volumes + NodeBalancer with pmm-qa-run:<id> so teardown
+# (prune-lke-orphans.sh) can attribute them. Runs on every exit path via the trap
+# so a failed bring-up is tagged too. Best-effort.
 _tag_for_teardown() {
     [ -n "${CLUSTER_ID:-}" ] || return 0
     local ids vols lid vid nbid
