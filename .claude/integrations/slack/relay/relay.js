@@ -293,16 +293,16 @@ app?.event("app_mention", async ({ event, body, client }) => {
   if (!(await markSeen(client, event.channel, event.ts, body.event_id))) return;
 
   const threadTs = event.thread_ts || event.ts;
-  // ALLOW_FALLBACK gates BOTH entry points the same way: true lets an
-  // unregistered person run on the central owner's routines; false blocks.
-  // A person with no routines yet (IDs pre-loaded, token not added) counts as
-  // unregistered here too — same zero-cost reply as the Jira path, so their
-  // mention never fires the central router by accident.
-  const mapped = (p) => p && Object.keys(p.routines || {}).length > 0;
+  // Fire the central router for anyone on the roster (a people/ file exists),
+  // even with routines:{}. The router answers general questions on the central
+  // account and, for a request that needs a routine the caller lacks, names the
+  // one they must set up (see router.md) rather than blocking silently. Only a
+  // stranger with no file is turned away; ALLOW_FALLBACK still lets one run on
+  // the central owner's routines.
   let person = bySlack[event.user];
-  if (!mapped(person) && ALLOW_FALLBACK && byName[CENTRAL_OWNER])
+  if (!person && ALLOW_FALLBACK && byName[CENTRAL_OWNER])
     person = { ...byName[CENTRAL_OWNER], name: `${CENTRAL_OWNER} (fallback for ${event.user})` };
-  if (!mapped(person)) {
+  if (!person) {
     await client.chat.postMessage({
       channel: event.channel,
       thread_ts: threadTs,
@@ -315,7 +315,12 @@ app?.event("app_mention", async ({ event, body, client }) => {
   const history = event.thread_ts ? await fetchThreadHistory(client, event.channel, event.thread_ts) : "";
   const exp = Date.now() + CAP_TTL_MS;
   const routeCap = sign("route", [event.user, event.channel, threadTs], exp);
-  const agents = Object.keys(person.routines || {});
+  // Only a routine with BOTH id and token is usable — /route -> fire needs the
+  // token. A half-configured entry (id, no token) is not "available", so the
+  // router nudges them to finish it rather than trying to fire an unusable one.
+  const agents = Object.entries(person.routines || {})
+    .filter(([, r]) => r && r.id && r.token)
+    .map(([name]) => name);
 
   const payload =
     `Slack mention from ${person.name} (${event.user}) in channel ${event.channel} (thread ${threadTs}):\n` +
@@ -325,8 +330,8 @@ app?.event("app_mention", async ({ event, body, client }) => {
     `{"user":"${event.user}","channel":"${event.channel}","thread_ts":"${threadTs}",` +
     `"agent":"<one of the available routines>","instruction":"<self-contained task for that agent>",` +
     `"cap":"${routeCap}","exp":${exp}} — the work then runs on the caller's own account.\n` +
-    `If the request is off-topic, or no suitable routine is available, do NOT hand off; ` +
-    `reply briefly instead. ${replyInstructions(event.channel, threadTs)}`;
+    `If the request needs a routine the caller doesn't have, or is off-topic, do NOT hand off; ` +
+    `follow router.md to reply — answer a general question, or name the exact routine they must set up and send to QA. ${replyInstructions(event.channel, threadTs)}`;
 
   try {
     console.log(`router-fire for ${person.name}: ${await fire(ROUTER, payload)}`);
