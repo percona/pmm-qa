@@ -185,39 +185,42 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  pmmTest(
+    'PMM-T9993 - Verify Change agent push metrics @proxysql-integration',
+    async ({ cliHelper, page }) => {
+      proxysqlExporterPort = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${proxysqlExporterId} | awk -F' ' '{print $6}'`,
+        )
+        .stdout.trim();
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${proxysqlExporterId} --push-metrics`,
+        )
+        .assertSuccess()
+        .outContains('- enabled push metrics');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.ONE_MINUTE);
+      await cliHelper
+        .execSilent(
+          `docker exec pmm-server curl -u pmm:${proxysqlExporterPassword} http://${containerName}:${proxysqlExporterPort}/metrics`,
+        )
+        .assertSuccess()
+        .outContains('proxysql_up');
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
+        )
+        .outEquals('');
+      await cliHelper
+        .execSilent(`docker exec ${containerName} pmm-admin list | grep ${proxysqlExporterId}`)
+        .outContains('Running');
+    },
+  );
+
   // eslint-disable-next-line playwright/no-commented-out-tests -- Developing tests
   /*
-  pmmTest('PMM-T9993 - Verify Change agent push metrics @ps-integration', async ({ cliHelper, page }) => {
-    pgExporterPort = cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId} | awk -F' ' '{print $6}'`,
-      )
-      .stdout.trim();
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --push-metrics`,
-      )
-      .assertSuccess()
-      .outContains('- enabled push metrics');
-
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-    await page.waitForTimeout(Timeouts.FIVE_SECONDS);
-    await cliHelper
-      .execSilent(
-        `docker exec pmm-server curl -u pmm:${pgExporterPassword} http://${containerName}:${pgExporterPort}/metrics`,
-      )
-      .assertSuccess()
-      .outContains('proxysql_up');
-    await cliHelper
-      .execSilent(
-        `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
-      )
-      .outEquals('');
-    await cliHelper
-      .execSilent(`docker exec ${containerName} pmm-admin list | grep ${mysqldExporterId}`)
-      .outContains('Running');
-  });
-
   pmmTest('PMM-T9993 - Verify Change agent disable collectors @ps-integration', async ({ cliHelper }) => {
     await cliHelper
       .execSilent(
