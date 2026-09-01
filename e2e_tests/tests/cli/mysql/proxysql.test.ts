@@ -219,9 +219,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     },
   );
 
+  /**
+   * @link https://perconadev.atlassian.net/browse/PMM-14919
+   */
   pmmTest(
     'PMM-T9993 - Verify Change agent disable collectors @proxysql-integration',
-    async ({ cliHelper, page }) => {
+    async ({ cliHelper }) => {
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --disable-collectors=mysql_connection_pool`,
@@ -229,22 +232,24 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .assertSuccess()
         .outContains('- updated disabled collectors: [mysql_connection_pool]');
 
-      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
-      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+      await expect(async () => {
+        const metrics = cliHelper.getMetrics({
+          agentPassword: proxysqlExporterPassword,
+          dockerContainer: containerName,
+          serviceName: serviceName,
+        });
 
-      const metrics = cliHelper.getMetrics({
-        agentPassword: proxysqlExporterPassword,
-        dockerContainer: containerName,
-        serviceName: serviceName,
+        expect(metrics, 'Exporter should still be up after disabling a collector').toContain('proxysql_up 1');
+        expect(metrics, 'Non-disabled collector mysql_status should still produce metrics').toContain(
+          'proxysql_mysql_status_',
+        );
+        expect(metrics, 'Disabled collector mysql_connection_pool should not produce metrics').not.toContain(
+          'proxysql_connection_pool_',
+        );
+      }).toPass({
+        intervals: [Timeouts.FIVE_SECONDS],
+        timeout: Timeouts.TWO_MINUTES,
       });
-
-      expect(metrics, 'Exporter should still be up after disabling a collector').toContain('proxysql_up 1');
-      expect(metrics, 'Non-disabled collector mysql_status should still produce metrics').toContain(
-        'proxysql_mysql_status_',
-      );
-      expect(metrics, 'Disabled collector mysql_connection_pool should not produce metrics').not.toContain(
-        'proxysql_connection_pool_',
-      );
     },
   );
 
