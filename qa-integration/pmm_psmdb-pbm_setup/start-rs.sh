@@ -15,14 +15,6 @@ docker network create pmm2-upgrade-tests_pmm-network || true
 docker network create pmm2-ui-tests_pmm-network || true
 
 export COMPOSE_PROFILES=${profile}
-
-# Start our own minio only if no other setup is already running one.
-if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-    echo "minio container exists, reusing it"
-else
-    COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}minio"
-fi
-export COMPOSE_PROFILES
 export MONGO_SETUP_TYPE=${mongo_setup_type}
 export OL_VERSION=${ol_version}
 

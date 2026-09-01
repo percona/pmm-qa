@@ -16,14 +16,6 @@ if [ "$minio" != "false" ]; then
 fi
 export COMPOSE_PROFILES
 
-# Start our own minio only if no other setup is already running one.
-if docker ps -a --filter name=minio --format '{{.Names}}' | grep -qx minio; then
-    echo "minio container exists, reusing it"
-else
-    COMPOSE_PROFILES="${COMPOSE_PROFILES:+$COMPOSE_PROFILES,}minio"
-fi
-export COMPOSE_PROFILES
-
 docker compose -f docker-compose-sharded-with-pmm.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded-with-pmm.yaml build
 docker compose -f docker-compose-sharded-with-pmm.yaml up -d
