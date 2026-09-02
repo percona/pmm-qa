@@ -1,0 +1,46 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "types": [
+      "node",
+      "playwright"
+    ],
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "paths": {
+      "@fixtures/*": [
+        "./fixtures/*"
+      ],
+      "@interfaces/*": [
+        "./interfaces/*"
+      ],
+      "@helpers/*": [
+        "./helpers/*"
+      ],
+      "@components/*": [
+        "./components/*"
+      ],
+      "@pages/*": [
+        "./pages/*"
+      ],
+      "@api/*": [
+        "./api/*"
+      ],
+      "@valkey": [
+        "./pages/dashboards/valkey/index.ts"
+      ]
+    }
+  },
+  "include": [
+    "tests/**/*.ts",
+    "playwright.config.ts"
+  ]
+}
