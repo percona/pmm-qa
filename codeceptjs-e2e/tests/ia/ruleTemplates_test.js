@@ -423,7 +423,10 @@ Scenario(
   'PMM-T1514 - Verify that alert rule templates has only 1 exit button @fb-alerting',
   async ({ I, ruleTemplatesPage, alertRulesPage }) => {
     ruleTemplatesPage.openRuleTemplatesTab();
-    ruleTemplatesPage.openAddDialog(await ruleTemplatesPage.grabFirstTemplateName());
+    // The name cell also carries a "Dynamic" badge for overridable templates.
+    const [name] = (await I.grabTextFrom(ruleTemplatesPage.elements.templateName)).split('\n');
+
+    ruleTemplatesPage.openAddDialog(name.trim());
     I.dontSeeElement('//button[span[text()="Save"]]');
     I.seeElement(alertRulesPage.buttons.saveAndExit);
   },
