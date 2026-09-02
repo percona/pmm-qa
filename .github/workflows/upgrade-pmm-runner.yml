@@ -83,9 +83,10 @@ jobs:
       matrix:
         version: ${{ fromJSON(needs.prepare.outputs.versions) }}
     steps:
-
       - name: Resolve PMM client source
         shell: bash
+        env:
+          RC_VERSION: ${{ needs.prepare.outputs.rc_version }}
         run: |
           echo "${{ needs.prepare.outputs.rc_version }} is the RC docker tag"
           # 1. all X.Y.Z versions available in the apt pool
@@ -117,6 +118,7 @@ jobs:
           echo "PRE_UPGRADE_BRANCH=pmm-${{ matrix.version }}-upgrade" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION reassigned to: $CLIENT_INSTALL_VERSION"
+          echo "PMM_SERVER_LATEST=${RC_VERSION%-rc*}" >> "$GITHUB_OUTPUT"
       - name: Checkout pmm-qa
         uses: actions/checkout@v4
         with:
