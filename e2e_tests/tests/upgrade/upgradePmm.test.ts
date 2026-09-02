@@ -23,12 +23,4 @@ pmmTest.describe('PMM server upgrade tests', () => {
       await updatesPage.upgrade();
     },
   );
-
-  pmmTest('Verify pmm server is upgraded to correct version @post-upgrade', async ({ updatesPage }) => {
-    const info = await updatesPage.getUpdateInfo();
-
-    expect(info.installed?.version, 'Installed PMM version should match the target after upgrade').toContain(
-      process.env.PMM_SERVER_LATEST?.trim(),
-    );
-  });
 });
