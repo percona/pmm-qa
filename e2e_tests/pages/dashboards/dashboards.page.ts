@@ -308,14 +308,7 @@ export default class Dashboards extends BasePage {
 
     await this.elements.panelName.first().waitFor({ state: 'visible' });
 
-    for (let i = 0; i < (await this.elements.gridItems.count()); i++) {
-      const item = this.elements.gridItems.nth(i);
-
-      await item.scrollIntoViewIfNeeded();
-    }
-
-    // eslint-disable-next-line playwright/prefer-web-first-assertions -- the order might be different
-    const availableMetrics = await this.elements.panelName.allTextContents();
+    const availableMetrics = await this.collectTextsAcrossScroll(this.elements.panelName);
 
     expect
       .soft(

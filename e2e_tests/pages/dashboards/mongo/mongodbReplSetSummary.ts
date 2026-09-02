@@ -115,6 +115,10 @@ export default class MongodbReplSetSummary implements DashboardInterface {
   noDataMetricsForRow = (rowName: string, serviceNames: string[]): string[] => {
     const noDataMetrics: string[] = [
       {
+        metrics: [{ name: 'Top Hottest Collections by Write', type: 'barGauge' }],
+        rowName: 'Details',
+      },
+      {
         metrics: [
           ...serviceNames.map((serviceName): GrafanaPanel => ({
             name: `Oplog GB/Hour - ${serviceName}`,
