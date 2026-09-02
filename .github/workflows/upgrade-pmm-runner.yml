@@ -33,7 +33,7 @@ env:
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
   UPGRADE_TYPE: ${{ inputs.upgrade_type || 'docker' }}
-  WORKERS: ${{ 4 }}
+#  WORKERS: ${{ 4 }}
 
 jobs:
   prepare:
