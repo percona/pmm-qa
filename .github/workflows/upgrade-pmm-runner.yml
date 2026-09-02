@@ -249,6 +249,7 @@ jobs:
                 docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
                 docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz && d=$(ls -1td pmm-client*/ | head -n1) && rm -rf /usr/local/bin/pmm-client && mv -f "$d" /usr/local/bin/pmm-client && bash -x /usr/local/bin/pmm-client/install_tarball -u'
               else
+                echo "Upgrading using packages to repository: $CLIENT_REPOSITORY"
                 docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
                 docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
               fi
@@ -262,13 +263,16 @@ jobs:
               rm -f "$log"
               exit $status
             fi
+              docker exec "$c" pmm-admin --version
               version=$(docker exec "$c" pmm-admin --version 2>&1 | head -1)
               echo "== upgrade succeeded in $c == ($version)"
             rm -f "$log"
           done
 
       - name: Check client after upgrade
-        run: python3 pmm-qa/support_scripts/check_client_upgrade.py "${{ matrix.version }}"
+        env:
+          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
+        run: python3 pmm-qa/support_scripts/check_client_upgrade.py "$PMM_SERVER_LATEST"
 
       - name: Post-client-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
