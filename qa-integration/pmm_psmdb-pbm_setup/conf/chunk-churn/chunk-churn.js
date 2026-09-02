@@ -11,10 +11,12 @@
 const ns = process.env.CHURN_NAMESPACE || 'test.test';
 const maxChunks = Number(process.env.CHURN_MAX_CHUNKS || 64);
 // Soft bound so an abandoned command does not keep running server-side after
-// the entrypoint's `timeout` has already killed this process. A non-positive or
-// unparseable value would mean "no limit" to the server, so fall back instead.
+// the entrypoint's `timeout` has already killed this process. maxTimeMS wants a
+// positive integer: 0 means "no limit" to the server, and a fraction or Infinity
+// is not a valid value at all, so anything else falls back.
 const commandTimeoutSeconds = Number(process.env.CHURN_COMMAND_TIMEOUT_SECONDS);
-const commandTimeoutMs = (commandTimeoutSeconds > 0 ? commandTimeoutSeconds : 45) * 1000;
+const commandTimeoutValid = Number.isInteger(commandTimeoutSeconds) && commandTimeoutSeconds > 0;
+const commandTimeoutMs = (commandTimeoutValid ? commandTimeoutSeconds : 45) * 1000;
 const dbName = ns.slice(0, ns.indexOf('.'));
 const collName = ns.slice(ns.indexOf('.') + 1);
 const config = db.getSiblingDB('config');
