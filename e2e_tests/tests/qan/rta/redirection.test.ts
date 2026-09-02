@@ -10,7 +10,7 @@ pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
 pmmTest(
   'PMM-T2195 Verify user is redirected to Sessions page when sessions are running @rta',
   async ({ api, helpPage, page, queryAnalytics, realTimeAnalyticsPage }) => {
-    const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+    const service = await api.inventoryApi.getServiceDetailsByRegex('^rs101_');
 
     await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
 

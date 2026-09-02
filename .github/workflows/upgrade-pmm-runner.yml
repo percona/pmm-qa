@@ -276,6 +276,8 @@ jobs:
 
       - name: Post-client-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
+        env:
+          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: npx playwright test --grep "@post-upgrade|@rta"
 
       - name: Check packages after upgrade
