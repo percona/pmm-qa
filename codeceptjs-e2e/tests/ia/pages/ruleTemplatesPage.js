@@ -1,7 +1,9 @@
 const { I } = inject();
 const YAML = require('yaml');
 
-const templateRow = (templateName) => `//tr[td[contains(., "${templateName}")]]`;
+// Scoped to the name column and matched exactly: the name renders as the cell's own text,
+// or nested in an element once a template carries a badge.
+const templateRow = (templateName) => `//tr[td[1][text()[normalize-space() = "${templateName}"] or .//*[normalize-space(text()) = "${templateName}"]]]`;
 
 module.exports = {
   url: 'graph/alerting/alert-rule-templates',
