@@ -37,7 +37,9 @@ function chunkFilter() {
 // throwing, so both shapes need reporting.
 function attempt(label, command) {
   try {
-    const res = admin.runCommand(Object.assign({ maxTimeMS: commandTimeoutMs }, command));
+    // maxTimeMS must trail the command fields: the server reads the first key
+    // of the document as the command name.
+    const res = admin.runCommand(Object.assign({}, command, { maxTimeMS: commandTimeoutMs }));
 
     if (res.ok !== 1) print(`${label} skipped: ${res.errmsg}`);
   } catch (e) {
