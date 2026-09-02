@@ -1,8 +1,15 @@
 const apiEndpoints = {
+  alerting: {
+    folders: 'graph/api/folders',
+    listAlerts: 'graph/api/prometheus/grafana/api/v1/rules',
+    rules: '/v1/alerting/rules',
+    templates: '/v1/alerting/templates',
+  },
   inventory: {
     services: '/v1/inventory/services',
   },
   management: {
+    annotations: '/v1/management/annotations',
     services: '/v1/management/services',
   },
   platform: {
@@ -14,7 +21,9 @@ const apiEndpoints = {
     sessionsStop: '/v1/realtimeanalytics/sessions:stop',
   },
   server: {
-    updates: '/v1/server/updates',
+    readyz: '/v1/server/readyz',
+    settings: '/v1/server/settings',
+    updates: '**/v1/server/updates?force=**',
   },
   users: {
     me: '/v1/users/me',
