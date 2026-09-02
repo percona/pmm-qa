@@ -19,3 +19,15 @@ export interface KubernetesPodResource {
     phase?: string;
   };
 }
+
+export interface KubernetesService {
+  loadBalancerAddresses: string[];
+  name: string;
+  type: string;
+}
+
+export interface KubernetesServiceResource {
+  metadata: { name: string };
+  spec?: { type?: string };
+  status?: { loadBalancer?: { ingress?: { hostname?: string; ip?: string }[] } };
+}

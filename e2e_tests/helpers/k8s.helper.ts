@@ -2,7 +2,13 @@ import CliHelper from '@helpers/cli.helper';
 import ExecReturn from '@interfaces/execReturn';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { KubernetesPod, KubernetesPodResource, KubernetesResourceList } from '@interfaces/kubernetes';
+import {
+  KubernetesPod,
+  KubernetesPodResource,
+  KubernetesResourceList,
+  KubernetesService,
+  KubernetesServiceResource,
+} from '@interfaces/kubernetes';
 import { Timeouts } from '@helpers/timeouts';
 
 interface ExecInPodOptions {
@@ -99,6 +105,21 @@ export default class K8sHelper {
       .stdout.trim();
 
     return encoded ? Buffer.from(encoded, 'base64').toString('utf8') : '';
+  };
+
+  /** Services with their externally reachable addresses, so a test can tell which one fronts the public URL. */
+  getServices = (labelSelector = ''): KubernetesService[] => {
+    const selector = labelSelector ? ` --selector=${labelSelector}` : '';
+    const result = this.execSilent(`get services${selector} --output=json`).assertSuccess();
+    const serviceList = JSON.parse(result.stdout) as KubernetesResourceList<KubernetesServiceResource>;
+
+    return serviceList.items.map((item) => ({
+      loadBalancerAddresses: (item.status?.loadBalancer?.ingress ?? [])
+        .flatMap((ingress) => [ingress.hostname, ingress.ip])
+        .filter((address): address is string => Boolean(address)),
+      name: item.metadata.name,
+      type: item.spec?.type ?? 'ClusterIP',
+    }));
   };
 
   /** @param labelSelector `-l` selector; empty means every StatefulSet */

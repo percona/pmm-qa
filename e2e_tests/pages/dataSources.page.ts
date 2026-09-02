@@ -10,8 +10,13 @@ export default class DataSourcesPage extends BasePage {
       this.grafanaIframe().getByRole('button', { name: `Add new data source ${pluginName}` }),
   };
   buttons = {
-    // The settings page's own action: navigates to Explore with this data source preselected.
-    exploreData: this.grafanaIframe().getByRole('link', { name: 'Explore data' }),
+    // The settings page's own action: navigates to Explore with this data source
+    // preselected. The success alert renders a second link with the same accessible
+    // name ("Explore data" via aria-label) but the text "Explore view" - excluded here
+    // so this stays a single element.
+    exploreData: this.grafanaIframe()
+      .getByRole('link', { name: 'Explore data' })
+      .filter({ hasNotText: 'Explore view' }),
     saveAndTest: this.grafanaIframe().getByTestId(
       'data-testid Data source settings page Save and Test button',
     ),
