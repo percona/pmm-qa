@@ -20,9 +20,7 @@ pmmTest.describe('SSH key settings follow the PMM Server distribution method.', 
   pmmTest(
     'PMM-T2282 - Verify the SSH key tab is hidden and its URL redirects on a non-AMI deployment @docker-configuration',
     async ({ api, page, settingsPage }) => {
-      await pmmTest.step('Distribution method is reported as Docker', async () => {
-        expect(await api.serverApi.getDistributionMethod()).toEqual('DISTRIBUTION_METHOD_DOCKER');
-      });
+      expect(await api.serverApi.getDistributionMethod()).toEqual('DISTRIBUTION_METHOD_DOCKER');
 
       await pmmTest.step('Settings page offers no SSH key tab', async () => {
         await page.goto(settingsPage.url);
@@ -60,6 +58,9 @@ pmmTest.describe('SSH key settings follow the PMM Server distribution method.', 
   );
 });
 
+// No minPmmVersion entry for PMM-T2283: the auto versionGate fixture would resolve against
+// baseUrl below, which nothing serves until the test body starts the container. It needs no gate
+// anyway -- the tab is offered on AMI both before and after percona/pmm#5744.
 pmmTest.describe('SSH key settings on an AMI deployment.', () => {
   const baseUrl = `https://127.0.0.1:${amiPort}/`;
 
