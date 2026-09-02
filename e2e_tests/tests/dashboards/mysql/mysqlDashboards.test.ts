@@ -61,7 +61,7 @@ data(services).pmmTest(
   },
 );
 data(services).pmmTest(
-  'PMM-T319 - Open the MySQL Instances Overview dashboard and verify Metrics are present and graphs are displayed @pmm-ps-pxc-haproxy-integration',
+  'PMM-T319 - Open the MySQL Instances Overview dashboard and verify Metrics are present and graphs are displayed @pmm-ps-pxc-haproxy-integration @post-upgrade',
   async (data, { api, dashboard, page, urlHelper }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByRegex(data);
 

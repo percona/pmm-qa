@@ -7,10 +7,6 @@ on:
       - '.github/workflows/upgrade-pmm-runner.yml'
   workflow_dispatch:
     inputs:
-      pmm_server_latest:
-        description: 'Expected version after upgrade (for check_client_upgrade.py)'
-        required: true
-        type: string
       client_repository:
         description: 'pmm3-client repo channel for client upgrade'
         default: 'release'
@@ -33,7 +29,6 @@ on:
 env:
   ADMIN_PASSWORD: admin
   PMM_URL: http://admin:admin@127.0.0.1
-  PMM_SERVER_LATEST: ${{ inputs.pmm_server_latest || '3-dev-latest' }}
   CLIENT_REPOSITORY: ${{ inputs.client_repository || 'release' }}
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
@@ -262,7 +257,7 @@ jobs:
           done
 
       - name: Check client after upgrade
-        run: python3 pmm-qa/support_scripts/check_client_upgrade.py "$PMM_SERVER_LATEST"
+        run: python3 pmm-qa/support_scripts/check_client_upgrade.py "${{ matrix.version }}"
 
       - name: Post-client-upgrade UI tests
         working-directory: pmm-qa/e2e_tests

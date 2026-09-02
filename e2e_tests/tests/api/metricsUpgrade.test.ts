@@ -1,5 +1,4 @@
 import pmmTest from '@fixtures/pmmTest';
-import { Timeouts } from '@helpers/timeouts';
 
 pmmTest.describe('PMM settings tests for upgrade', () => {
   const services = [
@@ -10,7 +9,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
 
   for (const service of services) {
     pmmTest(
-      `Check metrics present after upgrade for service ${service.serviceType} @post-upgrade @post-client-upgrade`,
+      `Check metrics present after upgrade for service ${service.serviceType} @post-upgrade`,
       async ({ api }) => {
         const serviceName = await api.inventoryApi.getServiceDetailsByPartialName(service.serviceName);
 
@@ -20,7 +19,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   }
 
   pmmTest(
-    'Verify metrics from custom queries for mysqld_exporter after upgrade @post-upgrade @post-client-upgrade',
+    'Verify metrics from custom queries for mysqld_exporter after upgrade @post-upgrade',
     async ({ api }) => {
       const metricName = 'mysql_performance_schema_memory_summary_current_bytes';
       // const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
@@ -30,7 +29,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'Verify metrics from custom queries for postgres_exporter after upgrade @post-upgrade @post-client-upgrade',
+    'Verify metrics from custom queries for postgres_exporter after upgrade @post-upgrade',
     async ({ api }) => {
       const metricName = 'pg_stat_user_tables_analyze_count';
       // const serviceName = await api.inventoryApi.getServiceDetailsByPartialName('pgsql_pgss');
@@ -40,7 +39,7 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
   );
 
   pmmTest(
-    'Verify textfile collector extend metrics is still collected post upgrade @post-upgrade @post-client-upgrade',
+    'Verify textfile collector extend metrics is still collected post upgrade @post-upgrade',
     async ({ api }) => {
       const metricName = 'node_role';
 

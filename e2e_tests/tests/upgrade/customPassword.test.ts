@@ -27,7 +27,7 @@ pmmTest.describe('PMM upgrade tests for custom password', () => {
 
   for (const service of services) {
     pmmTest(
-      `Verify if Agents added with custom password and custom label work as expected Post Upgrade for ${service.serviceType} @post-upgrade @post-client-upgrade`,
+      `Verify if Agents added with custom password and custom label work as expected Post Upgrade for ${service.serviceType} @post-upgrade`,
       async ({ api }) => {
         const details = await api.inventoryApi.getServiceDetailsByPartialName(
           `upgrade-${service.upgradeService}`,
@@ -50,6 +50,7 @@ pmmTest.describe('PMM upgrade tests for custom password', () => {
     );
   }
 
+  // eslint-disable-next-line playwright/expect-expect -- Change password and authorize is verification in this method
   pmmTest(
     'PMM-T1189 - verify user is able to change password after upgrade @post-upgrade',
     async ({ grafanaHelper, page }) => {

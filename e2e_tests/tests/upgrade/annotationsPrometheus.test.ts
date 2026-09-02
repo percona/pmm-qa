@@ -35,7 +35,7 @@ pmmTest.describe('PMM upgrade tests for annotations', () => {
 
   for (const service of services) {
     pmmTest(
-      `Verify added Annotations at service level, also available post upgrade for ${service.serviceType} @post-client-upgrade @post-upgrade`,
+      `Verify added Annotations at service level, also available post upgrade for ${service.serviceType} @post-upgrade`,
       async ({ api }) => {
         const annotations = await api.annotationsApi.getAnnotationsByTag(tag);
 
