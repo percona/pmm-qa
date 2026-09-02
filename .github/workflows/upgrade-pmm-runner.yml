@@ -119,7 +119,10 @@ jobs:
           echo "PRE_UPGRADE_BRANCH=pmm-${{ matrix.version }}-upgrade" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION reassigned to: $CLIENT_INSTALL_VERSION"
-          echo "PMM_SERVER_LATEST=${RC_VERSION%-rc*}" >> "$GITHUB_OUTPUT"
+          ver="${RC_VERSION##*:}"
+          ver="${ver%-rc*}"
+          ver="${ver%.}"
+          echo "PMM_SERVER_LATEST=$ver" >> "$GITHUB_OUTPUT"
       - name: Checkout pmm-qa
         uses: actions/checkout@v4
         with:
@@ -127,7 +130,10 @@ jobs:
           ref: ${{ env.PMM_QA_BRANCH }}
           path: pmm-qa
       - name: Start PMM Server (old image)
+        env:
+          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: |
+          echo $PMM_SERVER_LATEST is the latest version.
           docker network create pmm-qa || true
           docker volume create pmm-volume
           docker run --detach --restart always --network pmm-qa \
