@@ -167,30 +167,53 @@ Suggested fix: set `GF_SECURITY_ADMIN_PASSWORD` from `secret.name`/`PMM_ADMIN_PA
 regardless of `secret.create` (the key is required either way — `secret.yaml` already defaults
 it), and fail the install if it is absent.
 
-### D3 — `helm upgrade` becomes permanently impossible after the PG operator recreates a user secret
+### D3 — `helm upgrade` of a `pmm-ha` release fails ~10% of the time (Helm hook vs PG operator race)
 
-Severity: medium. Specific to the second namespace in this run.
-
-`templates/pg-user-credentials-secrets.yaml` creates `gfuser-credentials` and
-`pmmuser-credentials` as `pre-install,pre-upgrade` hooks with **no `hook-delete-policy`**. In
-`pmm-dr` the PG cluster sat unreconciled for ~15 min (scenario 2) and when PGO finally picked it
-up it recreated `gfuser-credentials` itself — its `managedFields` owner became
-`postgrescluster-controller` alone and Helm's `meta.helm.sh/*` annotations were gone. Every
-subsequent `helm upgrade pmm-dr` then failed:
+Severity: medium. Affects **any** `pmm-ha` release, in any namespace, regardless of install
+order. Transient — a plain retry succeeds.
 
 ```
 Error: UPGRADE FAILED: pre-upgrade hooks failed: warning: Hook pre-upgrade
 pmm-ha/templates/pg-user-credentials-secrets.yaml failed: 1 error occurred:
-	* secrets "gfuser-credentials" already exists
+	* secrets "pmmuser-credentials" already exists
 ```
 
-The primary namespace, where the operators were cluster-wide before the PG cluster came up, is
-unaffected — both its secrets still carry Helm's annotations. Worked around by re-adding the
-annotations by hand. ([log](evidence/logs/s17-upgrade-hook-bug.txt))
+**Cause — two controllers own the same object.** `templates/pg-user-credentials-secrets.yaml`
+creates `gfuser-credentials` and `pmmuser-credentials` as `helm.sh/hook: pre-install,pre-upgrade`
+resources. The *same* two names are also declared as `pg-db.users[].secretName`, so the Percona
+PG operator manages them as the user secrets of `PerconaPGCluster`. Then:
 
-This is a second, quieter sense in which the docs' "not recoverable by retrying" ordering
-warning is true: the release survives but can no longer be upgraded. Suggested fix: add
-`helm.sh/hook-delete-policy: before-hook-creation` to those two secrets.
+1. Helm's hook policy defaults to `before-hook-creation`, so **every `helm upgrade` deletes both
+   secrets and recreates them** (confirmed: their `creationTimestamp` advances on each upgrade,
+   while a normal release resource such as `pmm-secret` keeps its original one).
+2. The recreated object carries only the chart's `pmm.labels` — not PGO's
+   `postgres-operator.crunchydata.com/role` label — so PGO reconciles it back, logging
+   `failed to update secret: secret gfuser-credentials label
+   postgres-operator.crunchydata.com/role not yet propagated`.
+3. If PGO's write lands in the gap between Helm's delete and Helm's create, Helm's create returns
+   `AlreadyExists` and the upgrade aborts. Just before a failure the secret is stamped
+   `app.kubernetes.io/managed-by: percona-postgresql-operator` with no `meta.helm.sh/*`
+   annotations — i.e. PGO won the race.
+
+**Measured:** 4 failures in 40 consecutive `helm upgrade` runs (~10%) on the primary instance,
+hitting either secret. Retrying immediately after a failure succeeded every time.
+Reproduce with [`repro-d3-hook-race.sh`](repro-d3-hook-race.sh) · [log](evidence/logs/s24-d3-race-repro.txt)
+
+Two things this is **not**, both checked:
+
+- Not caused by missing Helm ownership annotations. Stripping `meta.helm.sh/release-name` and
+  `meta.helm.sh/release-namespace` from the secret and upgrading **succeeds** — Helm does not
+  ownership-check hook resources, and the chart re-stamps those annotations anyway.
+- Not a stuck finalizer. Holding the object with a finalizer produces a different error
+  (`pre-upgrade hooks failed: context deadline exceeded`), because Helm waits for its delete to
+  complete before creating.
+
+Suggested fix: stop recreating a secret another controller owns. Narrowing the hook to
+`helm.sh/hook: pre-install` removes the delete/create churn entirely (on upgrade the secret
+already exists and PGO maintains it), and closes the window. Adding PGO's
+`postgres-operator.crunchydata.com/role` label to the template would additionally stop the
+reconcile error in step 2. Note that adding `hook-delete-policy: before-hook-creation` would
+change nothing — that is already the default and is exactly what performs the delete.
 
 ### D4 — smaller observations
 
