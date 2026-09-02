@@ -34,8 +34,6 @@ pmmTest.describe('PMM upgrade tests for custom password', () => {
         );
         const customLabels = details.custom_labels as unknown as Record<string, string>;
 
-        console.log(`Custom labels are: ${JSON.stringify(customLabels)}`);
-
         await api.grafanaApi.waitForMetric(service.metric, details.service_name);
         expect(
           customLabels,

@@ -133,7 +133,6 @@ jobs:
         env:
           PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: |
-          echo $PMM_SERVER_LATEST is the latest version.
           docker network create pmm-qa || true
           docker volume create pmm-volume
           docker run --detach --restart always --network pmm-qa \
@@ -240,7 +239,6 @@ jobs:
 
       - name: Upgrade PMM client in every client container to show logs only if error occurs
         run: |
-          docker ps
           for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos)$'); do
             echo "== upgrading client in $c =="
             log=$(mktemp)
@@ -264,7 +262,8 @@ jobs:
               rm -f "$log"
               exit $status
             fi
-            echo "== upgrade succeeded in $c =="
+              version=$(docker exec "$c" pmm-admin --version 2>&1 | head -1)
+              echo "== upgrade succeeded in $c == ($version)"
             rm -f "$log"
           done
 
