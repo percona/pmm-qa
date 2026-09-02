@@ -4,21 +4,17 @@
 // initial shardCollection there is nothing left to keep the Chunks Split/Move
 // Events panels populated.
 //
-// This script performs exactly ONE churn cycle and exits. The repeat loop lives
-// in the compose entrypoint, wrapped in `timeout`, because a chunk command can
-// block indefinitely inside the server: a wedged range deleter leaves both
-// moveChunk and any later splitChunk on the same collection waiting forever.
-// When the loop ran in-process here, one such wedge stopped the whole loop --
-// mongosh stayed alive, so `restart: unless-stopped` never fired -- and every
-// event aged out of the 10-minute window, blanking both panels for the rest of
-// the run. A fresh short-lived process per cycle makes that unrecoverable state
-// impossible.
+// One cycle per process, by design: the repeat loop is in the compose
+// entrypoint under `timeout`, so a chunk command the server blocks forever
+// costs one cycle instead of the run.
 
 const ns = process.env.CHURN_NAMESPACE || 'test.test';
 const maxChunks = Number(process.env.CHURN_MAX_CHUNKS || 64);
 // Soft bound so an abandoned command does not keep running server-side after
-// the entrypoint's `timeout` has already killed this process.
-const commandTimeoutMs = Number(process.env.CHURN_COMMAND_TIMEOUT_SECONDS || 45) * 1000;
+// the entrypoint's `timeout` has already killed this process. A non-positive or
+// unparseable value would mean "no limit" to the server, so fall back instead.
+const commandTimeoutSeconds = Number(process.env.CHURN_COMMAND_TIMEOUT_SECONDS);
+const commandTimeoutMs = (commandTimeoutSeconds > 0 ? commandTimeoutSeconds : 45) * 1000;
 const dbName = ns.slice(0, ns.indexOf('.'));
 const collName = ns.slice(ns.indexOf('.') + 1);
 const config = db.getSiblingDB('config');
@@ -62,21 +58,6 @@ function sampleOne(collection, filter) {
   return collection.aggregate(stages).toArray()[0];
 }
 
-// Sending a range straight back to the shard that just gave it up is what wedges
-// the range deleter: the recipient still has orphans from the previous move, and
-// each retry adds another pending deletion. Draining onto the least-loaded shard
-// instead follows the same direction the balancer would, so a range only returns
-// once the counts have genuinely swung back.
-function leastLoadedShard(shards, filter, exclude) {
-  const candidates = shards.filter((shard) => shard !== exclude);
-
-  if (!candidates.length) return null;
-
-  return candidates
-    .map((shard) => ({ shard, n: config.chunks.countDocuments(Object.assign({ shard }, filter)) }))
-    .sort((a, b) => a.n - b.n)[0].shard;
-}
-
 const filter = chunkFilter();
 
 if (!filter) {
@@ -91,14 +72,9 @@ if (!filter) {
     .toArray()
     .map((shard) => shard._id);
   const chunk = sampleOne(config.chunks, filter);
-  const target = chunk ? leastLoadedShard(shards, filter, chunk.shard) : null;
+  const target = shards.find((id) => chunk && id !== chunk.shard);
 
   if (chunk && target) {
-    // No _waitForDelete: blocking this command until the donor's range deleter
-    // finishes is what let a single stuck deletion wedge the cycle. The deleter
-    // runs on its own in the background, and the panels match every *moveChunk*
-    // event -- moveChunk.start and moveChunk.error included -- so a cycle that
-    // loses the race to orphan cleanup still keeps the series alive.
     attempt('moveChunk', {
       moveChunk: ns,
       bounds: [chunk.min, chunk.max],

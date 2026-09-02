@@ -288,25 +288,26 @@ services:
       - "CHURN_MAX_CHUNKS=${CHURN_MAX_CHUNKS:-64}"
       - "CHURN_COMMAND_TIMEOUT_SECONDS=${CHURN_COMMAND_TIMEOUT_SECONDS:-45}"
       - "CHURN_CYCLE_TIMEOUT_SECONDS=${CHURN_CYCLE_TIMEOUT_SECONDS:-90}"
-    # The repeat loop lives here, not inside chunk-churn.js, so that `timeout`
-    # can kill a cycle that a wedged range deleter has blocked in the server.
-    # An in-process loop had no way out of that: mongosh stayed alive, so
-    # `restart: unless-stopped` never fired, and once the last split/moveChunk
-    # aged past the metric's 10-minute window both Chunks panels went blank for
-    # the rest of the run. CHURN_CYCLE_TIMEOUT_SECONDS is the hard backstop and
-    # is deliberately longer than the script's own maxTimeMS
-    # (CHURN_COMMAND_TIMEOUT_SECONDS), so the soft bound normally wins and the
-    # cycle still reports which command it gave up on. Worst case is one cycle
-    # per cycle-timeout+interval (~210s), comfortably inside the 10m window.
+    # The repeat loop lives here rather than in chunk-churn.js so `timeout` can
+    # kill a cycle the server has blocked; the script's own maxTimeMS
+    # (CHURN_COMMAND_TIMEOUT_SECONDS) is the shorter, softer bound. Both are
+    # rejected unless they are positive integers -- `timeout 0` and
+    # `maxTimeMS: 0` each mean "no limit", which would disable the safeguard.
     entrypoint:
       - /bin/bash
       - -c
       - >-
         uri="mongodb://${MONGO_ROOT_USER:-root}:${MONGO_ROOT_PASS:-root}@mongos:27017/admin";
+        case "$${CHURN_CYCLE_TIMEOUT_SECONDS}" in ''|*[!0-9]*|0) CHURN_CYCLE_TIMEOUT_SECONDS=90;; esac;
+        case "$${CHURN_COMMAND_TIMEOUT_SECONDS}" in ''|*[!0-9]*|0) CHURN_COMMAND_TIMEOUT_SECONDS=45;; esac;
+        [ "$${CHURN_COMMAND_TIMEOUT_SECONDS}" -lt "$${CHURN_CYCLE_TIMEOUT_SECONDS}" ]
+        || CHURN_COMMAND_TIMEOUT_SECONDS=$$(( CHURN_CYCLE_TIMEOUT_SECONDS / 2 ));
+        export CHURN_COMMAND_TIMEOUT_SECONDS;
+        case "$${CHURN_INTERVAL_SECONDS}" in ''|*[!0-9]*) CHURN_INTERVAL_SECONDS=120;; esac;
         until mongosh "$$uri" --quiet --eval 'db.adminCommand({ ping: 1 })' >/dev/null 2>&1; do sleep 10; done;
         while true; do
         timeout --signal=KILL "$${CHURN_CYCLE_TIMEOUT_SECONDS}" mongosh "$$uri" --quiet --file /etc/chunk-churn/chunk-churn.js
-        || echo "churn cycle aborted after $${CHURN_CYCLE_TIMEOUT_SECONDS}s";
+        || echo "churn cycle failed or timed out";
         sleep "$${CHURN_INTERVAL_SECONDS}";
         done
     networks:
