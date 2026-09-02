@@ -84,6 +84,7 @@ jobs:
         version: ${{ fromJSON(needs.prepare.outputs.versions) }}
     steps:
       - name: Resolve PMM client source
+        id: resolve
         shell: bash
         env:
           RC_VERSION: ${{ needs.prepare.outputs.rc_version }}
@@ -227,6 +228,8 @@ jobs:
 
       - name: Post-server-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
+        env:
+          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: npx playwright test --grep "@post-upgrade"
 
       - name: Upgrade PMM client in every client container to show logs only if error occurs
