@@ -1,4 +1,4 @@
-import { Locator, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import BasePage from '@pages/base.page';
 import pmmTest from '@fixtures/pmmTest';
 import GrafanaHelper from '@helpers/grafana.helper';
@@ -16,15 +16,15 @@ export default class UpdatesPage extends BasePage {
   homeUrl = '/pmm-ui/graph/';
   builders = {};
   buttons = {
-    goToUpdates: this.page.getByTestId('update-modal-go-to-updates-button'),
-    releaseNotes: this.page.getByTestId('update-modal-release-notes-link'),
+    checkUpdatesNow: this.page.getByRole('button', { name: 'Check Updates Now' }),
     updateNow: this.page.getByRole('button', { name: 'Update now' }),
+    whatsNew: this.grafanaIframe().getByRole('link', { name: "What's new" }),
   };
   elements = {
     availableSection: this.page.getByRole('heading', { name: /New update available/i }),
-    newVersionLine: this.page.locator('p').filter({ hasText: 'New version:' }),
+    newVersionLine: this.page.getByText('New version:'),
     pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
-    updateModalTitle: this.page.getByTestId('modal-title'),
+    updateSuccess: this.page.getByText('PMM Server installation complete!'),
   };
   inputs = {};
   messages = {};
@@ -52,9 +52,22 @@ export default class UpdatesPage extends BasePage {
       await this.elements.pageTitle.waitFor({ state: 'visible' });
     });
 
-  openHomeForUpdateModal = async (): Promise<void> =>
-    await pmmTest.step('Open home page to show update modal', async () => {
+  openHomeForWhatsNew = async (): Promise<void> =>
+    await pmmTest.step('Open home page', async () => {
       await this.page.goto(this.homeUrl);
-      await this.buttons.releaseNotes.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
+      await expect(this.buttons.whatsNew).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    });
+
+  upgrade = async (): Promise<void> =>
+    await pmmTest.step('Upgrade PMM server via the Updates page', async () => {
+      await this.open();
+      await this.buttons.updateNow.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
+
+      if (await this.buttons.checkUpdatesNow.isVisible()) {
+        await this.buttons.checkUpdatesNow.click();
+      }
+
+      await this.buttons.updateNow.click();
+      await expect(this.elements.updateSuccess).toBeVisible({ timeout: Timeouts.FIVE_MINUTES });
     });
 }
