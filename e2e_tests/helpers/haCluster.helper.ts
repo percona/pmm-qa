@@ -72,9 +72,12 @@ export default class HaClusterHelper {
   ): Promise<HaFailoverProbe> => {
     let probing = true;
     let longestOutage = 0;
-    let outageStart = 0;
     let failures = 0;
     let probes = 0;
+    // Measured from the last good response, not from the first failed probe: anchoring
+    // on the failure makes an isolated one measure zero, which reads as "no outage"
+    // next to a non-zero failure count.
+    let lastServedAt = Date.now();
     // Back-to-back, with no sleep between requests: a sampled probe can only ever
     // bound an outage by its own interval, so "the UI never went down" is not a
     // claim a 1s poll is entitled to make. Each request costs milliseconds, which
@@ -89,11 +92,10 @@ export default class HaClusterHelper {
         probes++;
 
         if (served) {
-          outageStart = 0;
+          lastServedAt = Date.now();
         } else {
           failures++;
-          outageStart ||= Date.now();
-          longestOutage = Math.max(longestOutage, Date.now() - outageStart);
+          longestOutage = Math.max(longestOutage, Date.now() - lastServedAt);
         }
       }
     })();

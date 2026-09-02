@@ -52,7 +52,8 @@ pmmTest(
     );
 
     await pmmTest.step(
-      `Verify the UI stayed available while "${newLeader}" took over, across ${probes} requests`,
+      `Verify the PMM UI never goes down and stays active while "${newLeader}" takes over, ` +
+        `across ${probes} requests`,
       async () => {
         // The case is "the UI should always be up", so the budget is zero: every
         // request through HAProxy is served, or this is a real outage.
