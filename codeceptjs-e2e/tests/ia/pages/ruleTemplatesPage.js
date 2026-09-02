@@ -32,10 +32,10 @@ module.exports = {
     // deleteButtonBySource returns Delete template button locators for a given source
     deleteButtonBySource: (source) => `//tr[descendant::div[contains(text(), "${source}")]]//button[@data-testid="delete-template-button"]`,
     // editButtonByName returns Delete template button locator for a given Template name
-    editButtonByName: (name) => `//td[contains(text(), "${name}")]/following-sibling::td//button[@data-testid="edit-template-button"]`,
+    editButtonByName: (name) => `${templateRow(name)}//button[@data-testid="edit-template-button"]`,
     // deleteButtonByName returns Delete template button locator for a given Template name
-    deleteButtonByName: (name) => `//td[contains(text(), "${name}")]/following-sibling::td//button[@data-testid="delete-template-button"]`,
-    addRuleButtonByName: (name) => `//td[contains(text(), "${name}")]/following-sibling::td//a[@data-testid="create-from-template-button"]`,
+    deleteButtonByName: (name) => `${templateRow(name)}//button[@data-testid="delete-template-button"]`,
+    addRuleButtonByName: (name) => `${templateRow(name)}//a[@data-testid="create-from-template-button"]`,
   },
   fields: {
     templateInput: locate('$yaml-textarea-input'),
@@ -140,5 +140,13 @@ module.exports = {
   openAddDialog(templateName) {
     I.waitForElement(this.buttons.addRuleButtonByName(templateName), 30);
     I.click(this.buttons.addRuleButtonByName(templateName));
+  },
+
+  // The name cell also carries a "Dynamic" badge for overridable templates,
+  // so the template name is only the cell's first line.
+  async grabFirstTemplateName() {
+    const cell = await I.grabTextFrom(this.elements.templateName);
+
+    return cell.split('\n')[0].trim();
   },
 };
