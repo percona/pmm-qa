@@ -38,14 +38,28 @@ fi
 
 ids="$("${CURL[@]}" "$BASE/lke/clusters/$CID/pools?page_size=500" 2>/dev/null \
         | jq -r '.data[].nodes[].instance_id' 2>/dev/null | grep -vx null || true)"
-vols="$("${CURL[@]}" "$BASE/volumes?page_size=500" 2>/dev/null || true)"
-payload="$(jq -cn --arg r "pmm-qa-run:$RUN" '{tags:["pmm-qa-ephemeral",$r]}')"
+
+# All volumes as JSONL, across every page -- the account can hold more than one.
+vols=""
+page=1 total=1
+while [ "$page" -le "$total" ]; do
+  resp="$("${CURL[@]}" "$BASE/volumes?page=$page&page_size=500" 2>/dev/null || true)"
+  [ -n "$resp" ] || break
+  vols+="$(printf '%s' "$resp" | jq -c '.data[]')"$'\n'
+  total="$(printf '%s' "$resp" | jq -r '.pages // 1')"
+  page=$((page + 1))
+done
 
 n=0
 for lid in $ids; do
-  for vid in $(printf '%s' "$vols" | jq -r --argjson l "$lid" '.data[] | select(.linode_id==$l) | .id' 2>/dev/null); do
-    "${CURL[@]}" -o /dev/null -X PUT -H "Content-Type: application/json" -d "$payload" \
+  while IFS= read -r vjson; do
+    [ -n "$vjson" ] || continue
+    vid="$(printf '%s' "$vjson" | jq -r '.id')"
+    # Merge our tags with the volume's existing ones (PUT replaces the whole list),
+    # so unrelated tags are preserved.
+    tags="$(printf '%s' "$vjson" | jq -c --arg r "pmm-qa-run:$RUN" '((.tags // []) + ["pmm-qa-ephemeral", $r]) | unique')"
+    "${CURL[@]}" -o /dev/null -X PUT -H "Content-Type: application/json" -d "{\"tags\":$tags}" \
       "$BASE/volumes/$vid" && n=$((n + 1)) || echo "tag-lke-resources: tag failed for volume $vid (non-fatal)" >&2
-  done
+  done < <(printf '%s\n' "$vols" | jq -c --argjson l "$lid" 'select(.linode_id==$l)')
 done
 echo "tag-lke-resources: cluster $CID run=$RUN tagged $n volume(s)"
