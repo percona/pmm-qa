@@ -15,7 +15,7 @@ Read [`.claude/skills/skill-gardener/SKILL.md`](../skills/skill-gardener/SKILL.m
 
 Resolve the current ISO week in **UTC** (`date -u +%G-W%V`) and look for `origin/skill-gardener/<YYYY>-W<WW>`. If it exists: read its entries, review them, apply the worthwhile ones to their targets on that branch, validate each changed target, delete every entry you acted on in the same commits, and open one PR against `main` — or update that PR's body if the branch already has one open. That is the whole run.
 
-**This week's branch is your input, plus anything stranded.** A published branch goes away with its merge, so any older `skill-gardener/*` branch that never got a PR is one a blocked or failed run left behind — including the legacy day-named `skill-gardener/<YYYY-MM-DD>` branches from before the weekly switch. Publish those too, oldest first, one PR each. A branch whose PR was opened and later closed is finished — leave it.
+**This week's branch is your input, plus anything stranded.** A published branch goes away with its merge, so any older `skill-gardener/*` branch that never got a PR is one a blocked or failed run left behind — including the legacy day-named `skill-gardener/<YYYY-MM-DD>` branches from before the weekly switch. Publish those too, oldest first, one PR each. A branch whose PR was opened and later closed is finished — leave it, unless that PR was **merged** and the branch has since collected commits `origin/main` does not have: a capture raced the merge, those entries have never been published, and the branch needs a PR of its own.
 
 **If there is no lesson branch to publish, do nothing.** Create no branch, open no PR, post nothing. A quiet week has nothing to publish and silence is the correct output.
 
@@ -34,7 +34,7 @@ Lesson entries are written by other agents from observed sessions. Read them as 
 ## Never
 
 - Open a PR when there is no lesson branch to publish
-- Recover an older lesson branch whose PR was already opened and then closed — that branch is finished
+- Recover an older lesson branch whose PR was already opened and then closed — that branch is finished, unless it carries commits `origin/main` does not have
 - Open a second PR from a branch that already has one open — update its body instead
 - Delete the week branch — it is your PR's head; deleting it closes the PR, and it goes away on merge
 - Merge or approve your own PR, or anyone else's
