@@ -20,6 +20,10 @@ import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
 import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
+import AdvisorsPage from '@pages/advisors/advisors.page';
+import AlertStatusPage from '@pages/alerts/alertStatus.page';
+import UpdatesPage from '@pages/updates.page';
+import TestState from '@helpers/upgradeState.helper';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -49,7 +53,9 @@ base.beforeEach(async ({ page }) => {
 });
 
 const pmmTest = base.extend<{
+  advisorsPage: AdvisorsPage;
   agentsPage: AgentsPage;
+  alertStatusPage: AlertStatusPage;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
@@ -69,8 +75,12 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  updatesPage: UpdatesPage;
+  testState: TestState;
 }>({
+  advisorsPage: async ({ page }, use) => await use(new AdvisorsPage(page)),
   agentsPage: async ({ page }, use) => await use(new AgentsPage(page)),
+  alertStatusPage: async ({ page }, use) => await use(new AlertStatusPage(page)),
   api: async ({ page, request }, use) => {
     const inventoryApi = new Api(page, request);
 
@@ -94,8 +104,8 @@ const pmmTest = base.extend<{
         status: 200,
       }),
     );
-    await context.route('**/v1/server/updates**', (route) => {
-      return route.fulfill({
+    await context.route('**/v1/server/updates**', (route) =>
+      route.fulfill({
         body: JSON.stringify({
           installed: {},
           last_check: new Date().toISOString(),
@@ -104,8 +114,8 @@ const pmmTest = base.extend<{
         }),
         contentType: 'application/json',
         status: 200,
-      });
-    });
+      }),
+    );
     await use(context);
   },
   credentials: async ({}, use) => {
@@ -166,6 +176,7 @@ const pmmTest = base.extend<{
   },
   realTimeAnalyticsPage: async ({ page }, use) => await use(new RealTimeAnalyticsPage(page)),
   servicesPage: async ({ page }, use) => await use(new ServicesPage(page)),
+  testState: async ({}, use) => await use(new TestState()),
   themePage: async ({ page }, use) => {
     const themePage = new ThemePage(page);
 
@@ -176,6 +187,7 @@ const pmmTest = base.extend<{
 
     await use(tour);
   },
+  updatesPage: async ({ page }, use) => await use(new UpdatesPage(page)),
   urlHelper: async ({}, use) => {
     const urlHelper = new UrlHelper();
 
