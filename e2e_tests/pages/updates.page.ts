@@ -16,13 +16,15 @@ export default class UpdatesPage extends BasePage {
   homeUrl = '/pmm-ui/graph/';
   builders = {};
   buttons = {
+    checkUpdatesNow: this.page.getByRole('button', { name: 'Check Updates Now' }),
     updateNow: this.page.getByRole('button', { name: 'Update now' }),
     whatsNew: this.grafanaIframe().getByRole('link', { name: "What's new" }),
   };
   elements = {
     availableSection: this.page.getByRole('heading', { name: /New update available/i }),
-    newVersionLine: this.page.locator('p').filter({ hasText: 'New version:' }),
+    newVersionLine: this.page.getByText('New version:'),
     pageTitle: this.page.getByRole('heading', { exact: true, name: 'Updates' }),
+    updateSuccess: this.page.getByText('PMM Server installation complete!'),
   };
   inputs = {};
   messages = {};
@@ -54,5 +56,18 @@ export default class UpdatesPage extends BasePage {
     await pmmTest.step('Open home page', async () => {
       await this.page.goto(this.homeUrl);
       await expect(this.buttons.whatsNew).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+    });
+
+  upgrade = async (): Promise<void> =>
+    await pmmTest.step('Upgrade PMM server via the Updates page', async () => {
+      await this.open();
+      await this.buttons.updateNow.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
+
+      if (await this.buttons.checkUpdatesNow.isVisible()) {
+        await this.buttons.checkUpdatesNow.click();
+      }
+
+      await this.buttons.updateNow.click();
+      await expect(this.elements.updateSuccess).toBeVisible({ timeout: Timeouts.FIVE_MINUTES });
     });
 }
