@@ -129,6 +129,7 @@ export default class Dashboards extends BasePage {
   verifyAllPanelsHaveData = async (noDataMetrics: string[], timeout: Timeouts = Timeouts.ONE_MINUTE) => {
     await this.loadAllPanels();
 
+    // eslint-disable-next-line no-useless-assignment -- panels are using in for loop
     let noDataPanels: string[] = [];
     let missingMetrics: string[] = [];
 
@@ -172,8 +173,9 @@ export default class Dashboards extends BasePage {
     await this.loadAllPanels();
 
     for (const panelName of panelNames) {
-      const panel = this.builders.panelByExactName(panelName);
-      const panelText = await panel.innerText();
+      const panelText = await this.grafanaIframe()
+        .getByRole('region', { exact: true, name: panelName })
+        .innerText();
 
       expect(hasKnownNoDataMarker(panelText)).toBeTruthy();
     }
@@ -191,6 +193,9 @@ export default class Dashboards extends BasePage {
           break;
         case 'stat':
           await this.panels().stat.verifyPanelData(panel.name);
+          break;
+        case 'gauge':
+          await this.panels().gauge.verifyPanelData(panel.name);
           break;
         case 'barGauge':
           await this.panels().barGauge.verifyPanelData(panel.name);
