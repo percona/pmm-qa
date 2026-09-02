@@ -97,4 +97,21 @@ pmmTest.describe('PMM settings tests for upgrade', () => {
       expect(page.url()).toContain(secondUrl);
     },
   );
+
+  pmmTest(
+    'PMM-T319 - Open the MySQL Instances Overview dashboard after upgrade @post-upgrade',
+    async ({ api, dashboard, page, urlHelper }) => {
+      const { service_name } = await api.inventoryApi.getServiceDetailsByPartialName('ps_pmm');
+
+      await page.goto(
+        urlHelper.buildUrlWithParameters(dashboard.mysql.mysqlInstanceOverview.url, {
+          from: 'now-1h',
+          serviceName: service_name,
+        }),
+      );
+      await dashboard.verifyMetricsPresent(dashboard.mysql.mysqlInstanceOverview.metrics);
+      await dashboard.verifyAllPanelsHaveData(dashboard.mysql.mysqlInstanceOverview.noDataMetrics);
+      await dashboard.verifyPanelValues(dashboard.mysql.mysqlInstanceOverview.metricsWithData);
+    },
+  );
 });
