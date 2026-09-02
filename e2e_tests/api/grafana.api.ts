@@ -2,7 +2,7 @@ import { APIRequestContext, expect, Page } from '@playwright/test';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { GrafanaDashboard } from '@interfaces/grafana';
+import { GrafanaDashboard, GrafanaQueryResponse } from '@interfaces/grafana';
 
 export default class GrafanaApi {
   constructor(
@@ -110,6 +110,26 @@ export default class GrafanaApi {
     ).toEqual(200);
 
     return await metric.json();
+  };
+
+  /** Runs `rawSql` through `/api/ds/query`, the same route Explore uses, and returns the first frame's columns. */
+  queryDataSource = async (uid: string, rawSql: string, type = 'grafana-postgresql-datasource') => {
+    const response = await this.request.post(apiEndpoints.grafana.dsQuery, {
+      data: {
+        from: 'now-5m',
+        queries: [{ datasource: { type, uid }, format: 'table', rawQuery: true, rawSql, refId: 'A' }],
+        to: 'now',
+      },
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), await response.text()).toEqual(200);
+
+    const result = ((await response.json()) as GrafanaQueryResponse).results.A;
+
+    expect(result.error, `Query "${rawSql}" failed on data source "${uid}"`).toBeUndefined();
+
+    return result.frames[0]?.data.values ?? [];
   };
 
   waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {

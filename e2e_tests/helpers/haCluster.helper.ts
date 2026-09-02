@@ -3,7 +3,7 @@ import { Timeouts } from '@helpers/timeouts';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type HaApi from '@api/ha.api';
 import apiEndpoints from '@helpers/apiEndpoints';
-import { HaStatusResponse } from '@interfaces/ha';
+import { HaFailoverProbe, HaStatusResponse } from '@interfaces/ha';
 import { APIRequestContext, expect } from '@playwright/test';
 
 const leaderLogLine = 'I am the leader!';
@@ -69,10 +69,16 @@ export default class HaClusterHelper {
     haApi: HaApi,
     request: APIRequestContext,
     path: string,
-  ): Promise<{ longestOutage: number; newLeader: string }> => {
+  ): Promise<HaFailoverProbe> => {
     let probing = true;
     let longestOutage = 0;
     let outageStart = 0;
+    let failures = 0;
+    let probes = 0;
+    // Back-to-back, with no sleep between requests: a sampled probe can only ever
+    // bound an outage by its own interval, so "the UI never went down" is not a
+    // claim a 1s poll is entitled to make. Each request costs milliseconds, which
+    // is the rate limit.
     const probe = (async () => {
       while (probing) {
         const served = await request
@@ -80,14 +86,15 @@ export default class HaClusterHelper {
           .then((response) => response.status() < 500)
           .catch(() => false);
 
+        probes++;
+
         if (served) {
           outageStart = 0;
         } else {
+          failures++;
           outageStart ||= Date.now();
           longestOutage = Math.max(longestOutage, Date.now() - outageStart);
         }
-
-        await new Promise((resolve) => setTimeout(resolve, Timeouts.ONE_SECOND));
       }
     })();
     const newLeader = await this.failoverLeader(haApi);
@@ -95,7 +102,7 @@ export default class HaClusterHelper {
     probing = false;
     await probe;
 
-    return { longestOutage, newLeader };
+    return { failures, longestOutage, newLeader, probes };
   };
 
   /** How Grafana itself reaches the shared PostgreSQL, read from the pod rather than from the API under test. */

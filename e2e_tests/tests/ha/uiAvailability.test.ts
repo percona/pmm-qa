@@ -29,18 +29,21 @@ pmmTest(
       expect(leaders.map((node) => node.node_name)).toEqual([haClusterHelper.leaderFromPods()]);
     });
 
-    const { longestOutage, newLeader } = await pmmTest.step(
+    const { failures, longestOutage, newLeader, probes } = await pmmTest.step(
       'Restart the leader pod while polling the public URL',
       async () => await haClusterHelper.failoverLeaderWhileProbing(api.haApi, request, dashboard.home.url),
     );
 
     await pmmTest.step(
-      `Verify the UI stayed available while "${newLeader}" took over, ` +
-        `the longest gap being ${longestOutage / Timeouts.ONE_SECOND}s`,
+      `Verify the UI stayed available while "${newLeader}" took over, across ${probes} requests`,
       async () => {
-        // HAProxy only routes to the leader, so the public URL 5xxs until Raft elects
-        // one - seconds, not the minutes an unavailable UI would take.
-        expect(longestOutage).toBeLessThan(Timeouts.ONE_MINUTE);
+        // The case is "the UI should always be up", so the budget is zero: every
+        // request through HAProxy is served, or this is a real outage.
+        expect(
+          failures,
+          `The public URL must serve every request through the failover, but ${failures} of ${probes} ` +
+            `failed - the longest unbroken outage was ${longestOutage / Timeouts.ONE_SECOND}s`,
+        ).toEqual(0);
 
         await page.goto(dashboard.home.url);
 

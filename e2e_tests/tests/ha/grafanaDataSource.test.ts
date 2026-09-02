@@ -4,6 +4,7 @@ import { Timeouts } from '@helpers/timeouts';
 
 const dataSourceName = `PMM-T2231 PostgreSQL ${Date.now()}`;
 const connectDatabase = 'postgres';
+const probeQuery = 'SELECT datname FROM pg_database;';
 
 pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
   await grafanaHelper.authorize();
@@ -58,6 +59,28 @@ pmmTest(
         dataSourcesPage.elements.testResult,
         `Connecting to "${grafanaDatabase.GF_DATABASE_HOST}" as "${grafanaDatabase.GF_DATABASE_USER}" must succeed`,
       ).toContainText('Database Connection OK', { timeout: Timeouts.ONE_MINUTE });
+
+      // Save and Test only proves the credentials connect. Running a query is what
+      // shows the data source is actually usable from Explore.
+      await pmmTest.step(`Run "${probeQuery}" against the new data source`, async () => {
+        const rows = await api.grafanaApi.queryDataSource(uid, probeQuery);
+
+        expect(rows[0], `"${probeQuery}" must return the databases on the server`).toContain(connectDatabase);
+      });
+
+      // Grafana is embedded in an iframe, so the click navigates the frame and the
+      // top-level URL never changes - assert on Explore's own controls instead.
+      await pmmTest.step('Open the new data source in Explore', async () => {
+        await dataSourcesPage.buttons.exploreData.click();
+
+        await expect(dataSourcesPage.elements.exploreRunQuery).toBeVisible({
+          timeout: Timeouts.ONE_MINUTE,
+        });
+        await expect(
+          dataSourcesPage.builders.exploreDataSourceName(dataSourceName),
+          `Explore must open on "${dataSourceName}"`,
+        ).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
+      });
     } finally {
       if (uid) await api.grafanaApi.deleteDataSource(uid);
     }
