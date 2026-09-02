@@ -5,7 +5,7 @@ import { Timeouts } from '@helpers/timeouts';
 pmmTest.beforeEach(async ({ api, grafanaHelper, page, realTimeAnalyticsPage }) => {
   await grafanaHelper.authorize();
 
-  const service = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
+  const service = await api.inventoryApi.getServiceDetailsByRegex('^rs101_');
 
   await api.realTimeAnalyticsApi.startRealTimeAnalytics(service.service_id);
   await page.goto(realTimeAnalyticsPage.getUrlWithServices([service.service_id]));
