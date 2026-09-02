@@ -9,6 +9,10 @@ import Api from '@api/api';
 import HelpPage from '@pages/helpCenter.page';
 import ThemePage from '@pages/theme.page';
 import TourPage from '@pages/tour.page';
+import AdvisorsPage from '@pages/advisors/advisors.page';
+import AlertStatusPage from '@pages/alerts/alertStatus.page';
+import UpdatesPage from '@pages/updates.page';
+import TestState from '@helpers/upgradeState.helper';
 
 base.beforeEach(async ({ page }) => {
   // Mock user details call to prevent the tours from showing
@@ -39,6 +43,8 @@ base.beforeEach(async ({ page }) => {
 });
 
 const pmmTest = base.extend<{
+  advisorsPage: AdvisorsPage;
+  alertStatusPage: AlertStatusPage;
   cliHelper: CliHelper;
   credentials: Credentials;
   dashboard: Dashboard;
@@ -49,7 +55,19 @@ const pmmTest = base.extend<{
   helpPage: HelpPage;
   themePage: ThemePage;
   tour: TourPage;
+  updatesPage: UpdatesPage;
+  testState: TestState;
 }>({
+  advisorsPage: async ({ page }, use) => {
+    const advisorsPage = new AdvisorsPage(page);
+    await use(advisorsPage);
+  },
+
+  alertStatusPage: async ({ page }, use) => {
+    const alertStatusPage = new AlertStatusPage(page);
+    await use(alertStatusPage);
+  },
+
   cliHelper: async ({}, use) => {
     const cliHelper = new CliHelper();
     await use(cliHelper);
@@ -98,6 +116,16 @@ const pmmTest = base.extend<{
   tour: async ({ page }, use) => {
     const tour = new TourPage(page);
     await use(tour);
+  },
+
+  updatesPage: async ({ page }, use) => {
+    const updatesPage = new UpdatesPage(page);
+    await use(updatesPage);
+  },
+
+  testState: async ({}, use) => {
+    const testState = new TestState();
+    await use(testState);
   },
 });
 
