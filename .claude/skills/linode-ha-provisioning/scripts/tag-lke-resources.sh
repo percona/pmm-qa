@@ -1,23 +1,11 @@
 #!/usr/bin/env bash
-# Tag an LKE cluster's currently-attached Block Storage volumes with its
-# pmm-qa-run:<id> tag, so prune-lke-orphans.sh can attribute and delete them once
-# the cluster (and its in-cluster CSI controller) is gone.
-#
-# Called on three paths so every volume that exists at the cluster's death is
-# tagged, not just the ones present when provisioning finished:
-#   * create-lke-pmm-ha.sh EXIT trap  -- at provision (covers failed bring-ups)
-#   * destroy-lke.sh                  -- right before an explicit cluster-delete
-#   * the relay reaper                -- right before a TTL cluster-delete
-# The last two matter because a cluster grows PVCs after provisioning (a scaled
-# StatefulSet, a backup), and those later volumes are never seen by the
-# provision-time pass.
-#
-# NodeBalancers are deliberately NOT tagged here: the Linode CCM reconciles a
-# NodeBalancer's tags back to its defaults, so a custom tag does not survive.
-# prune-lke-orphans.sh attributes NodeBalancers by their immutable lke<id> label
-# instead.
-#
-# Best-effort and API-only (curl+jq); never fails its caller.
+# Tag an LKE cluster's attached Block Storage volumes with its pmm-qa-run:<id> tag
+# so prune-lke-orphans.sh can attribute and delete them once the cluster is gone.
+# Must run while the cluster's nodes still exist -- cluster-delete does not cascade
+# to the volumes, and only an attached volume can be linked back to the cluster
+# here (a volume unattached at call time is not tagged). NodeBalancers are not
+# tagged: the CCM reconciles their tags away; the sweep attributes them by their
+# lke<id> label instead. Best-effort and API-only; never fails its caller.
 #   LINODE_TOKEN=... tag-lke-resources.sh <cluster_id> [run_id]
 set -euo pipefail
 : "${LINODE_TOKEN:?LINODE_TOKEN must be set}"

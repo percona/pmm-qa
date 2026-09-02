@@ -597,11 +597,8 @@ async function reapLke() {
         for (const t of tags) { const mm = /^expires-(\d+)$/.exec(t); if (mm) { expiry = Number(mm[1]); break; } }
         if (expiry == null) { const created = Date.parse(c.created || "") / 1000; expiry = Number.isFinite(created) ? created + hardMax : 0; }
         if (nowS > expiry) {
-          // Tag the cluster's still-attached volumes BEFORE deleting it, while its
-          // nodes (and the attachments) still exist -- cluster-delete does not
-          // cascade to them, and once the cluster is gone an untagged volume can no
-          // longer be attributed. Covers clusters provisioned before volume tagging
-          // shipped, and volumes created after provisioning. Best-effort.
+          // Tag the cluster's volumes before deleting it: cluster-delete does not
+          // cascade to them, and only an attached volume can be attributed. Best-effort.
           try {
             await execFileP("bash", [`${HA_DIR}/tag-lke-resources.sh`, String(c.id)], { env: process.env, timeout: 120000, maxBuffer: 4 * 1024 * 1024 });
           } catch (e) { console.error(`lke-reaper: pre-delete volume tag skipped (non-fatal) for ${c.id}: ${e.message}`); }

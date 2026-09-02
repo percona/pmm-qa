@@ -16,11 +16,8 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Tag the cluster's still-attached volumes BEFORE deleting it, while the nodes
-# (and so the volume attachments) still exist. cluster-delete does not cascade to
-# these volumes; tagging them now lets prune-lke-orphans.sh attribute and delete
-# them once they detach. Covers volumes created after provisioning, which the
-# create-lke provision-time pass never saw. Best-effort.
+# Tag the cluster's volumes before deleting it: cluster-delete does not cascade to
+# them, and only an attached volume can be attributed. Best-effort.
 LINODE_TOKEN="$LINODE_TOKEN" bash "$SCRIPT_DIR/tag-lke-resources.sh" "$CLUSTER_ID" \
   || echo "[pmm-ha] volume tagging skipped (non-fatal)" >&2
 

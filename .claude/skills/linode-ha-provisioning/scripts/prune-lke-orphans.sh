@@ -15,12 +15,8 @@
 #     pmm-qa-run:<id> tag whose run has NO live cluster -- so a live cluster's
 #     volumes (its run is still listed) and untagged/other-owner volumes are
 #     never touched.
-#   * NodeBalancers: attributed by their immutable lke<clusterid>- label (set by
-#     the CCM), NOT by a tag -- the CCM reconciles a NodeBalancer's tags back to
-#     its defaults, so a pmm-qa-run tag does not survive on it. Delete one only
-#     when its lke<id> cluster is no longer live. On this PMM-dedicated account
-#     every lke<id> NodeBalancer is an LKE one and an orphaned one bills for
-#     nothing; if the account is ever shared with non-PMM LKE clusters, revisit.
+#   * NodeBalancers: attributed by their immutable lke<clusterid>- label, deleted
+#     only when the cluster is gone AND no backend node is up (see the loop).
 # If a volume was never tagged (tagging is best-effort), it is left alone -- the
 # failure mode is a leak (recoverable by hand), never a wrong delete.
 #
@@ -66,17 +62,26 @@ done < <(pages /volumes | jq -r '
   . as $v | ($v.tags[]? | select(startswith("pmm-qa-run:"))) as $t
   | [$v.id, $v.label, $t, ($v.linode_id|tostring)] | @tsv')
 
-# NodeBalancers: attributed by the immutable lke<clusterid>- label. Delete one
-# only when its cluster id is no longer live. A tag can't be used (the CCM strips
-# custom NodeBalancer tags); the cluster id baked into the label by the CCM can.
+# NodeBalancers: the CCM strips custom tags, so attribute by the immutable
+# lke<clusterid>- label instead. Delete one only when its cluster is no longer
+# live AND no backend node is up -- the idle check guards against an NB adopted
+# and reused by another live cluster, which keeps the original cluster's id in
+# its label.
 while IFS=$'\t' read -r id label; do
   [ -n "$id" ] || continue
   cid="$(sed -n 's/^lke\([0-9]\{1,\}\)-.*/\1/p' <<<"$label")"
   [ -n "$cid" ] || continue                       # not an LKE NodeBalancer -> never ours
   grep -qx "$cid" <<<"$live_cluster_ids" && continue   # its cluster is still live -> keep
-  if [ "$DRY" -eq 1 ]; then echo "would delete nodebalancer $id ($label) [cluster $cid gone]"; nb=$((nb + 1)); continue; fi
+  # An orphan has zero backends up once its cluster is gone; a reused NB (label
+  # keeps the old cluster id) still serves traffic. If configs are unreadable, keep
+  # it -- fail safe.
+  cfg="$("${CURL[@]}" "$BASE/nodebalancers/$id/configs?page_size=100" 2>/dev/null)" \
+    || { echo "keeping nodebalancer $id ($label): configs unreadable" >&2; continue; }
+  up="$(printf '%s' "$cfg" | jq '[.data[]?.nodes_status.up // 0] | add // 0')"
+  [ "${up:-0}" -eq 0 ] || { echo "keeping nodebalancer $id ($label): $up backend(s) up (in use)" >&2; continue; }
+  if [ "$DRY" -eq 1 ]; then echo "would delete nodebalancer $id ($label) [cluster $cid gone, idle]"; nb=$((nb + 1)); continue; fi
   if "${CURL[@]}" -o /dev/null -X DELETE "$BASE/nodebalancers/$id"; then
-    echo "deleted nodebalancer $id ($label) [cluster $cid gone]"; nb=$((nb + 1))
+    echo "deleted nodebalancer $id ($label) [cluster $cid gone, idle]"; nb=$((nb + 1))
   else echo "FAILED nodebalancer $id ($label)" >&2; fail=$((fail + 1)); fi
 done < <(pages /nodebalancers | jq -r '[.id, .label] | @tsv')
 
