@@ -19,6 +19,7 @@ import MongoDBHelper from '@helpers/mongodb.helper';
 import QanStoredMetrics from '@pages/qan/storedMetrics/storedMetrics.page';
 import QueryAnalytics from '@pages/qan/queryAnalytics.page';
 import RealTimeAnalyticsPage from '@pages/qan/rta/realTimeAnalytics.page';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 
 interface pmmTestDataType {
   settingsPage: SettingsPage;
@@ -40,6 +41,7 @@ interface pmmTestDataType {
   nodesPage: NodesPage;
   leftNavigation: LeftNavigation;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  vacuumDashboardPage: VacuumDashboard;
   page: Page;
 }
 
@@ -73,6 +75,7 @@ const data = <T>(rows: T[]) => ({
             settingsPage,
             tour,
             urlHelper,
+            vacuumDashboardPage,
           },
           testInfo,
         ) => {
@@ -99,6 +102,7 @@ const data = <T>(rows: T[]) => ({
               settingsPage,
               tour,
               urlHelper,
+              vacuumDashboardPage,
             },
             testInfo,
           );

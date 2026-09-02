@@ -19,6 +19,7 @@ import NodesPage from '@pages/inventory/nodes.page';
 import MongoDBHelper from '@helpers/mongodb.helper';
 import K8sHelper from '@helpers/k8s.helper';
 import HaClusterHelper from '@helpers/haCluster.helper';
+import VacuumDashboard from '@pages/dashboards/postgresql/vacuumDashboard';
 import apiEndpoints from '@helpers/apiEndpoints';
 import SettingsPage from '@pages/ha/settings.page';
 import HighAvailabilityPage from '@pages/ha/highAvailability.page';
@@ -56,6 +57,7 @@ const pmmTest = base.extend<{
   queryAnalytics: QueryAnalytics;
   nodesPage: NodesPage;
   realTimeAnalyticsPage: RealTimeAnalyticsPage;
+  vacuumDashboardPage: VacuumDashboard;
   versionGate: undefined;
   updatesPage: UpdatesPage;
   downloadsPage: DownloadsPage;
@@ -176,6 +178,7 @@ const pmmTest = base.extend<{
 
     await use(urlHelper);
   },
+  vacuumDashboardPage: async ({ page }, use) => await use(new VacuumDashboard(page)),
   // Registering this as a beforeEach hook would only gate the first spec file that imports this
   // module, since the module is evaluated once and the hook attaches to the file loading at that
   // moment. An auto fixture applies to every test instead.

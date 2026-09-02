@@ -4,7 +4,7 @@ import { AddRemoteInstance } from '@api/remoteInstance.api';
 pmmTest.describe('Api tests to verify remote mongodb', () => {
   // eslint-disable-next-line playwright/expect-expect -- Pre upgrade test
   pmmTest(
-    'PMM-T948 Verify adding MongoDB SSL services remotely via API before upgrade @pre-ssl-upgrade',
+    'PMM-T948 Verify adding MongoDB SSL services remotely via API before upgrade @pre-upgrade',
     async ({ api, cliHelper }) => {
       console.log(cliHelper.execSilent('docker exec psmdb-server cat /mongodb_certs/ca-certs.pem').stdout);
 

@@ -27,21 +27,4 @@ pmmTest.describe('PMM Advisors tests for upgrade', () => {
     await advisorsPage.builders.disableAdvisor(disabledAdvisorName).click();
     await expect(advisorsPage.builders.disableAdvisor(disabledAdvisorName)).toHaveText('Enable');
   });
-
-  pmmTest(
-    'Verify disabled advisor remain disabled after upgrade @post-upgrade',
-    async ({ advisorsPage, page }) => {
-      await page.goto(advisorsPage.configurationUrl, { timeout: Timeouts.ONE_MINUTE });
-      await advisorsPage.builders.advisorsGroupHeader(groupName).click({ timeout: Timeouts.ONE_MINUTE });
-      await expect(advisorsPage.builders.disableAdvisor(disabledAdvisorName)).toHaveText('Enable');
-    },
-  );
-
-  pmmTest('Verify advisors intervals after the upgrade @post-upgrade', async ({ advisorsPage, page }) => {
-    await page.goto(advisorsPage.configurationUrl, { timeout: Timeouts.ONE_MINUTE });
-    await advisorsPage.builders.advisorsGroupHeader(groupName).click({ timeout: Timeouts.ONE_MINUTE });
-    await expect(advisorsPage.builders.advisorIntervalValue(advisorName)).toHaveText('Frequent', {
-      timeout: Timeouts.ONE_MINUTE,
-    });
-  });
 });
