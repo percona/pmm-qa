@@ -52,7 +52,7 @@ export default class BackupsApi {
     await this.waitForSuccessfulBackupArtifact(service.service_name, scheduleName);
   };
 
-  getLocationsList = async () => {
+  getLocations = async () => {
     const response = await this.request.get(apiEndpoints.backups.locations, {
       headers: GrafanaHelper.getAuthHeader(),
     });
@@ -63,9 +63,7 @@ export default class BackupsApi {
   };
 
   private ensureLocalStorageLocation = async () => {
-    const existingLocation = (await this.getLocationsList()).find(
-      ({ name }) => name === BACKUP_LOCATION_NAME,
-    );
+    const existingLocation = (await this.getLocations()).find(({ name }) => name === BACKUP_LOCATION_NAME);
 
     if (existingLocation) return existingLocation.location_id;
 
