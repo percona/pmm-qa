@@ -40,16 +40,37 @@ MCP tools and `gh` for `percona/pmm` and `percona/grafana`, and `add_repo` only 
 anonymous read (see the `repos` skill). Both are public, so fetch the PR ref directly:
 
 ```bash
-git clone --depth 1 --filter=blob:none --no-checkout https://github.com/percona/grafana /tmp/g
-git -C /tmp/g fetch --depth 2 origin refs/pull/<n>/head:pr<n>   # depth 2, not 1
-git -C /tmp/g show --stat pr<n>
+REPO=percona/pmm        # or percona/grafana — whichever the PR is in
+N=<pr-number>
+BASE=main               # the PR's base branch, if it isn't main
+
+git clone --depth 1 --filter=blob:none --no-checkout "https://github.com/$REPO" /tmp/g
+git -C /tmp/g fetch --depth 50 origin "refs/pull/$N/head:pr$N"
+git -C /tmp/g fetch --depth 50 origin "$BASE:refs/remotes/origin/$BASE"
+base=$(git -C /tmp/g merge-base "origin/$BASE" "pr$N")
+git -C /tmp/g diff --stat "$base" "pr$N"        # the whole PR
+git -C /tmp/g log --oneline "$base..pr$N"       # its commits
 ```
 
-**`--depth 2`, not `--depth 1`.** At depth 1 the PR head arrives with no parent, so
-`git show` renders the entire tree as one giant added commit instead of the diff — which
-reads like a PR that rewrote the repo. Depth 2 gives the real file list. To check whether
-the PR already merged: `git fetch --depth 50 origin main` then
-`git merge-base --is-ancestor pr<n> origin/main`.
+**Diff the merge-base range, not `git show`.** `git show --stat pr<n>` compares the head
+with its immediate parent, so on a multi-commit PR it reports the last commit and nothing
+else — on a 5-commit PR that read 1 file changed where the range is 4. And at `--depth 1`
+the head arrives with no parent at all, so `git show` renders the entire tree as one giant
+added commit, which looks like a PR that rewrote the repo.
+
+**Both fetches need explicit refspecs.** `git clone --depth 1` implies `--single-branch`,
+so the remote's fetch refspec covers only the default branch — `git fetch origin "$BASE"`
+alone updates `FETCH_HEAD` and nothing else, and `merge-base` then dies on an unknown
+revision. If `merge-base` fails even with the refspec, the shallow boundary is inside the
+PR range: refetch both deeper (`--depth 500`) or drop `--depth` entirely.
+
+**Don't try to answer "did it merge?" from ancestry here.** `git merge-base --is-ancestor
+pr<n> origin/$BASE` only holds for a merge-commit merge; a squash or rebase merge never
+puts the PR head on the base branch, so it reports "not merged" for a PR that shipped, and
+a shallow boundary makes it answer false too. Merge state is PR metadata (`merged_at`,
+`base.ref`) — read it with `pull_request_read`/`get` in a session that has the repo, or off
+the PR page. Anonymous `api.github.com` is **not** a fallback: the session proxy 403s it
+for a repo this session isn't scoped to, which is exactly the case this section covers.
 
 ## Large Grafana dashboard JSON diffs
 

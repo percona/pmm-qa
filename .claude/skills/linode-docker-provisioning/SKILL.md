@@ -27,11 +27,33 @@ Always address the box by hostname, never its bare IP:
 Both share port 443 (nginx routes by SNI hostname) and are reachable at the same time.
 
 **`run.sh` cannot return a large payload.** It hands the exec-server's whole JSON response
-to a local `python3` as a single argv, so a big remote *output* — not a long command —
-aborts the call with `Argument list too long` and you see none of it. Anything that could
-be large (a full API dump, a log file, `docker inspect` over everything) gets summarised
-**on the box** so only a few lines come back, or is returned as
-`tar czf - <paths> | base64 -w0` and decoded locally.
+to a local `python3` as a single argv, and Linux caps one argument at `MAX_ARG_STRLEN`
+(128 KiB), so a big remote *output* — not a long command — aborts the call with
+`Argument list too long` and you see none of it. Anything that could be large (a full API
+dump, a log file, `docker inspect` over everything) gets summarised **on the box** so only
+a few lines come back.
+
+When you need the bytes themselves, `tar czf - <paths> | base64 -w0` is only safe under a
+budget: base64 inflates by 4/3 and the JSON wrapper adds more, so keep the *compressed*
+archive **≤ 64 KiB**. Compression is no guarantee — already-compressed logs, images and
+binaries barely shrink — so measure on the box before shipping, and chunk when it's over:
+
+```bash
+run.sh <run_id> -- "tar czf /tmp/o.tgz <paths>; stat -c%s /tmp/o.tgz"
+
+# ≤ 64 KiB — one call:
+run.sh <run_id> -- "base64 -w0 /tmp/o.tgz" | base64 -d > out.tgz
+
+# larger — split on the box, one call per chunk (49152 is a multiple of 3, so no
+# '=' padding lands mid-stream and the concatenated base64 decodes as one archive):
+run.sh <run_id> -- "split -b 49152 -d /tmp/o.tgz /tmp/o.part-; ls /tmp/o.part-*"
+for part in <the listed parts, in order>; do
+  run.sh <run_id> -- "base64 -w0 $part"
+done | base64 -d > out.tgz
+```
+
+Past a few hundred KiB, stop fetching and summarise on the box instead — the chunk loop is
+one round trip each and is not a bulk transfer channel.
 
 ## Pick a run_id
 
@@ -197,12 +219,14 @@ PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
 `PMM_CERT_PATH` pins the exact cert fetched in step 2 (via Chromium's `--ignore-certificate-errors-spki-list`, not a blanket "trust anything") instead of the script's `ignoreHTTPSErrors` fallback. Pass it to `pw-screenshot.js`/`pw-record.js` too when the URL is PMM's own — omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
 Running the repo's **own Playwright suite** (`e2e_tests/`) against the VM from this
-environment needs the proxy set explicitly. Playwright's `APIRequestContext` ignores the
-`HTTPS_PROXY` that `curl` honours, so every request returns `503 upstream connect error`
-against a URL that `curl` fetches with 200 — a network gap, not a broken PMM. Point a
-scratch config at it: extend `playwright.config.ts` with `use.proxy.server` set to this
-session's `$HTTPS_PROXY`, run `npx playwright test --config <scratch>`, and keep that file
-out of the commit — CI runners have direct egress and the override would break them.
+environment needs the proxy set explicitly. The symptom: every request fails with
+`503 upstream connect error` against a URL that `curl` fetches with 200. That 503 is the
+egress proxy's own response, so the traffic did reach it — this is a proxy *path* problem,
+not a broken PMM, and not the suite bypassing the proxy altogether. The fix is to make the
+suite go through it explicitly: extend `playwright.config.ts` in a scratch config with
+`use.proxy.server` set to this session's `$HTTPS_PROXY`, run
+`npx playwright test --config <scratch>`, and keep that file out of the commit — CI runners
+have direct egress and the override would break them.
 
 ## 5. FB / nightly workflow reproduction (Investigator)
 

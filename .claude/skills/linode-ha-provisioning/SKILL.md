@@ -85,32 +85,6 @@ overridable in the POST body): `region=us-east`, `node_type=g6-standard-4`,
 `touch "$RUN_DIR/keep-alive"` — the marker keeps the SessionEnd hook from tearing
 it down; the cluster's `expires-<epoch>` tag (now + N h) still lets the reaper reap it.
 
-### Admin login — verify it, and reset Grafana's admin if it 401s
-
-The relay returns `passwords.pmm_admin_password`, but on a fresh cluster Grafana's admin
-user can be out of sync with it: every API and UI login 401s even from inside a pmm pod
-where `pmm-secret` puts that exact value in the env, and the chart's own `pmm-token-init`
-job crash-loops on the same 401. Run this once the chart you are testing is in place
-(after any swap below) and before any other verification — reset only if the check fails:
-
-```bash
-URL=$(jq -r .url "$RUN_DIR/provision.json")
-PW=$(jq -r .passwords.pmm_admin_password "$RUN_DIR/provision.json")
-curl -ksS -o /dev/null -w '%{http_code}\n' -u "admin:$PW" "$URL/v1/server/version"   # want 200
-
-# 401 → reset Grafana's admin inside a pmm pod. grafana-cli does NOT read the
-# GF_DATABASE_* env the server runs on, so without explicit overrides the reset lands in
-# an unused local DB and silently changes nothing.
-kubectl exec -n pmm statefulset/pmm-ha -- bash -c 'grafana-cli \
-  --homepath /usr/share/grafana --config /etc/grafana/grafana.ini \
-  --configOverrides "cfg:database.type=$GF_DATABASE_TYPE cfg:database.host=$GF_DATABASE_HOST cfg:database.name=$GF_DATABASE_NAME cfg:database.user=$GF_DATABASE_USER cfg:database.password=$GF_DATABASE_PASSWORD cfg:database.ssl_mode=$GF_DATABASE_SSL_MODE" \
-  admin reset-admin-password "$PMM_ADMIN_PASSWORD"'
-```
-
-The variables expand inside the pod, so nothing secret reaches the local shell; confirm
-the names the chart actually sets with `kubectl exec -n pmm statefulset/pmm-ha -- env | grep -E 'GF_DATABASE|PMM_ADMIN'` before adapting this. Once the reset takes, `pmm-token-init`
-completes on its own — don't re-run it.
-
 ### Charts — first decide: is the chart part of what you're testing? (TWO repos)
 
 An HA change routinely spans **two repos**, and the fix can be in either or **both**:
@@ -133,7 +107,12 @@ relay installed (`helm list -n pmm`):
 
 ```bash
 helm list -n pmm    # installed chart version + app version
-# and, on the branch clone the swap below makes:
+
+# the branch's own versions — clone it here, before deciding; the swap below reuses
+# this same clone, so it is fetched once either way
+CHART_BRANCH=PMM-HA-GA   # or the ticket's chart PR branch
+[ -d /tmp/phc ] || git clone -b "$CHART_BRANCH" --depth 1 \
+  https://github.com/percona/percona-helm-charts /tmp/phc
 grep -E '^(version|appVersion):' /tmp/phc/charts/pmm-ha/Chart.yaml
 ```
 
@@ -158,8 +137,9 @@ when the unmerged chart is exactly what adds it). After the relay brings the clu
 up, swap in the chart yourself against the returned `$KUBECONFIG`:
 
 ```bash
-# <chart-branch> = the ticket's chart PR/branch if the change includes one, else PMM-HA-GA
-git clone -b <chart-branch> --depth 1 https://github.com/percona/percona-helm-charts /tmp/phc
+# $CHART_BRANCH from the version gate above — already cloned there, this is a no-op then
+[ -d /tmp/phc ] || git clone -b "$CHART_BRANCH" --depth 1 \
+  https://github.com/percona/percona-helm-charts /tmp/phc
 # keys per that chart's values.yaml — read it, don't assume
 helm upgrade --install pmm-ha /tmp/phc/charts/pmm-ha -n pmm --reuse-values \
   --set image.repository=perconalab/pmm-server,image.tag=<fb-tag>
@@ -222,6 +202,60 @@ tag) from the latest JNKPercona comment on the ticket's linked `pmm-submodules` 
 
 ## Verify HA behaviour (not just "it's up")
 
+### First: admin login — verify it, and reset Grafana's admin if it 401s
+
+The chart you are testing is now in place, so this is the first verification to run —
+everything below depends on it. The relay returns `passwords.pmm_admin_password`, but on a
+fresh cluster Grafana's admin user can be out of sync with it: every API and UI login 401s
+even from inside a pmm pod where `pmm-secret` puts that exact value in the env, and the
+chart's own `pmm-token-init` job crash-loops on the same 401. Reset only if the check fails:
+
+```bash
+URL=$(jq -r .url "$RUN_DIR/provision.json")
+# keep the password out of argv (and out of any `ps` / shell history): feed curl a
+# config on stdin rather than `-u "admin:$PW"`
+jq -r '"user = " + ("admin:" + .passwords.pmm_admin_password | @json)' "$RUN_DIR/provision.json" \
+  | curl -ksS --config - -o /dev/null -w '%{http_code}\n' "$URL/v1/server/version"   # want 200
+```
+
+`-k` stays. The cluster serves a self-signed cert, and this session's egress proxy
+terminates and re-signs TLS anyway, so the cert curl sees is the proxy's — there is
+nothing stable of PMM's to pin, and `--cacert`/`--pinnedpubkey` fail here even with the
+correct leaf. The trust boundary for this call is the proxy and the LKE control plane, not
+the leaf cert; don't send these credentials over a path you don't already trust for
+`kubectl`.
+
+On 401, reset Grafana's admin inside a pmm pod:
+
+```bash
+# grafana-cli does NOT read the GF_DATABASE_* env the server runs on, so without explicit
+# overrides the reset lands in an unused local DB and silently changes nothing.
+# Prefer --password-from-stdin so the password stays out of the pod's argv; check the
+# image supports it first:
+#   kubectl exec -n pmm statefulset/pmm-ha -- grafana-cli admin reset-admin-password --help
+kubectl exec -n pmm statefulset/pmm-ha -- bash -c 'printf %s "$PMM_ADMIN_PASSWORD" | grafana-cli \
+  --homepath /usr/share/grafana --config /etc/grafana/grafana.ini \
+  --configOverrides "cfg:database.type=$GF_DATABASE_TYPE cfg:database.host=$GF_DATABASE_HOST cfg:database.name=$GF_DATABASE_NAME cfg:database.user=$GF_DATABASE_USER cfg:database.password=$GF_DATABASE_PASSWORD cfg:database.ssl_mode=$GF_DATABASE_SSL_MODE" \
+  admin reset-admin-password --password-from-stdin'
+```
+
+If the flag isn't supported, fall back to the positional
+`admin reset-admin-password "$PMM_ADMIN_PASSWORD"` — the variables still expand inside the
+pod, so nothing secret reaches the local shell, but the value does land in the pod's argv.
+
+Confirm the variable *names* the chart actually sets before adapting this, printing names
+only so no value reaches the terminal or a captured log:
+
+```bash
+kubectl exec -n pmm statefulset/pmm-ha -- env | grep -E 'GF_DATABASE|PMM_ADMIN' | sed 's/=.*//'
+```
+
+Once the reset takes, `pmm-token-init` completes on its own — don't re-run it. **A reset
+changes the password the rest of the run must use:** `provision.json` still holds the old
+one, and the Playwright helpers read `process.env.ADMIN_PASSWORD` (defaulting to `admin`),
+so export `ADMIN_PASSWORD` to the value you reset to before any UI test or `pmm-ui-login.js`
+run — otherwise the suite 401s in a way that looks like the bug you're chasing.
+
 Standing up the cluster isn't the test. Exercise what the change actually touched (see `test-scope`'s `references/ha.md`), e.g.:
 
 - `kubectl get pods -n pmm` — replicas, operators, HAProxy all Ready.
@@ -241,8 +275,7 @@ through `POST /v1/management/services`. Two things about that payload are not gu
 A new service's series and QAN rows land a couple of scrape intervals after the add, so
 an empty query right after it means nothing — hold it to the freshness window
 [`verification-depth`](../verification-depth/SKILL.md) requires before calling a metric
-missing. Deleting and re-adding the service on the first empty result only costs the run
-the intervals it was already waiting on.
+missing.
 
 ## Teardown — mandatory, every path
 
