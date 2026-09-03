@@ -1,11 +1,13 @@
 import BasePage from '../base.page';
 
 export default class AlertStatusPage extends BasePage {
-  url = 'pmm-ui/alerting/status';
+  // PMM 3.8.1 renders fired alerts on the Grafana-based "Fired alerts" page (inside the
+  // #grafana-iframe), not on the pmm-ui/alerting/status page introduced in later versions.
+  url = 'graph/alerting/alerts';
   builders = {
     firingAlert: (alertName: string) =>
-      this.page.locator(
-        `//td[text()="${alertName}"]/parent::tr//td[position()="2"]//span[contains(text(), "Firing")]`,
+      this.grafanaIframe().locator(
+        `//td[contains(., "${alertName}")]/parent::tr//td[position()="2"]//span[contains(text(), "active")]`,
       ),
   };
   buttons = {};
