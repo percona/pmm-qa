@@ -21,31 +21,10 @@ pmmTest.beforeAll(async () => {
   await requestContext.dispose();
 });
 
-const scenarios = [
-  {
-    assertLineCount: (lineCount: number, message: string) => expect(lineCount, message).toBe(50_000),
-    expectation: '50000',
-    query: '',
-    title: 'PMM-T1902 - Verify no line_count parameter when downloading logs @fb-settings',
-  },
-  {
-    assertLineCount: (lineCount: number, message: string) => expect(lineCount, message).toBe(10),
-    expectation: '10',
-    query: '?line-count=10',
-    title: 'PMM-T1903 - Verify line_count=10 parameter when downloading logs @fb-settings',
-  },
-  {
-    assertLineCount: (lineCount: number, message: string) =>
-      expect(lineCount, message).toBeGreaterThan(50_000),
-    expectation: 'more than 50000',
-    query: '?line-count=-1',
-    title: 'PMM-T1904 - Verify line_count=-1 parameter when downloading logs @fb-settings',
-  },
-];
-
-for (const { assertLineCount, expectation, query, title } of scenarios) {
-  pmmTest(title, async ({ request }) => {
-    const response = await request.get(`${apiEndpoints.server.logs}${query}`, {
+pmmTest(
+  'PMM-T1902 - Verify no line_count parameter when downloading logs @fb-settings',
+  async ({ request }) => {
+    const response = await request.get(apiEndpoints.server.logs, {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
@@ -53,9 +32,41 @@ for (const { assertLineCount, expectation, query, title } of scenarios) {
 
     const actualLineCount = getFileLineCount(await response.body(), fileNameToCheck);
 
-    assertLineCount(
-      actualLineCount,
-      `File ${fileNameToCheck} has ${actualLineCount} lines, but expected ${expectation}`,
+    expect(actualLineCount, `File ${fileNameToCheck} has ${actualLineCount} lines, but expected 50000`).toBe(
+      50_000,
     );
-  });
-}
+  },
+);
+
+pmmTest(
+  'PMM-T1903 - Verify line_count=10 parameter when downloading logs @fb-settings',
+  async ({ request }) => {
+    const response = await request.get(`${apiEndpoints.server.logs}?line-count=10`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), response.statusText()).toEqual(200);
+
+    const actualLineCount = getFileLineCount(await response.body(), fileNameToCheck);
+
+    expect(actualLineCount, `File ${fileNameToCheck} has ${actualLineCount} lines, but expected 10`).toBe(10);
+  },
+);
+
+pmmTest(
+  'PMM-T1904 - Verify line_count=-1 parameter when downloading logs @fb-settings',
+  async ({ request }) => {
+    const response = await request.get(`${apiEndpoints.server.logs}?line-count=-1`, {
+      headers: GrafanaHelper.getAuthHeader(),
+    });
+
+    expect(response.status(), response.statusText()).toEqual(200);
+
+    const actualLineCount = getFileLineCount(await response.body(), fileNameToCheck);
+
+    expect(
+      actualLineCount,
+      `File ${fileNameToCheck} has ${actualLineCount} lines, but expected more than 50000`,
+    ).toBeGreaterThan(50_000);
+  },
+);
