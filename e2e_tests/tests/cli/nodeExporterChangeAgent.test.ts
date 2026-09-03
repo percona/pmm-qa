@@ -10,6 +10,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   // let pgVersion: string;
   // let nodeName: string;
   let nodeId: string;
+  let nodeExporterId: string;
   // let pgExporterId: string;
   // let pgExporterPort: string;
   // let pgStatMonitorId: string;
@@ -27,6 +28,10 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     nodeId = cliHelper
       .execSilent(`docker exec ${containerName} pmm-admin status | grep "Node ID" | awk -F' ' '{print $4}'`)
       .stdout.trim();
+    nodeExporterId = cliHelper
+      .execSilent(`docker exec ${containerName} pmm-admin list | grep node_exporter | awk -F' ' '{print $4}'`)
+      .stdout.trim();
+
     /*socketServiceId = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep socket_pdpgsql_pmm | head -1 | awk -F' ' '{print $4}'`,
@@ -95,11 +100,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 */
 
   pmmTest(
-    'PMM-T9992 - Verfiy Change agent custom labels @node-exporter-integration',
+    'PMM-T9992 - Verify Change agent custom labels @node-exporter-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeId} --custom-labels=env=qa_testing_node_exporter`,
+          `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --custom-labels=env=qa_testing_node_exporter`,
         )
         .assertSuccess();
       await grafanaHelper.authorize();
