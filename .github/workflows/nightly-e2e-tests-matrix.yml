@@ -123,13 +123,14 @@ jobs:
       pmm_server_image: ${{ inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       setup_services: ${{ matrix.setup_services }}
       shard_name: ${{ matrix.shard_name }}
-      # 4: the two CodeceptJS `test_execution / ...` jobs plus the two
-      # Playwright `test_execution / playwright ...` matrix jobs below. The
-      # setup shards poll by job-name prefix "test execution / " to know when
-      # it's safe to finish waiting -- undercounting here lets a shard finish
-      # (and its runner terminate) while a still-running consumer job needs
-      # it, so bump this whenever either matrix gains an entry.
-      expected_test_jobs: 4
+      # 3: the two CodeceptJS `test_execution / ...` jobs plus the single
+      # Playwright `test_execution / playwright ...` job below. The setup
+      # shards poll by job-name prefix "test execution / " to know when it's
+      # safe to finish waiting -- undercounting here lets a shard finish (and
+      # its runner terminate) while a still-running consumer job needs it.
+      # Migrated tags go into that job's tag expression rather than into new
+      # matrix entries, so this count does not grow as migration proceeds.
+      expected_test_jobs: 3
 
   test_execution:
     name: "test execution / ${{ matrix.tags_for_tests }}"
@@ -155,12 +156,20 @@ jobs:
       launchable_confidence: ${{ inputs.launchable_confidence || '100%' }}
       installation_type: ${{ inputs.installation_type || 'docker' }}
 
-  # Migrated CodeceptJS scenarios keep their original tag bucket here (per
-  # .claude/skills/codeceptjs-migration/branch-workflow.md "Workflow coverage")
-  # so this workflow's coverage stays equivalent instead of silently dropping
-  # once the CodeceptJS source retires. Add a migrated tag to tags_for_tests
-  # below as each one lands; the test itself must keep the matching tag
-  # alongside its own file's execution tag.
+  # Migrated CodeceptJS scenarios keep their original tag bucket here so this
+  # workflow's coverage stays equivalent instead of silently dropping once the
+  # CodeceptJS source retires. `--grep` takes a regex, so a newly migrated tag
+  # joins the alternation below -- not as another matrix entry, which would
+  # cost a whole runner per tag and silently require bumping
+  # `expected_test_jobs` above.
+  #
+  # Select the migrated tags, never `@nightly`: unlike the CodeceptJS suite,
+  # where `@nightly` *is* the nightly bucket, the Playwright suite also puts
+  # `@nightly` on tests that belong to other suites' jobs
+  # (`@pmm-ps-integration`, `@pmm-psmdb-integration`, `@pmm-valkey-integration`
+  # -- selected by fb-e2e-suite.yml and e2e-tests-matrix.yml). Grepping
+  # `@nightly` here would re-run those against the nightly setup shards, which
+  # do not provision their services.
   test_execution_playwright:
     # Name must start with "test execution / " -- the setup shards' own wait
     # step (runner-e2e-tests-codeceptjs-remote-nightly-setup.yml) polls jobs
@@ -171,8 +180,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - tags_for_tests: '@annotations'
-          - tags_for_tests: '@menu'
+          - tags_for_tests: '@annotations|@menu'
     uses: ./.github/workflows/runner-e2e-tests-playwright-remote-nightly-tests.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}
