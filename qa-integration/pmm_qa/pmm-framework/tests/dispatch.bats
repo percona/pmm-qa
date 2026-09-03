@@ -66,7 +66,18 @@ load helpers/test_helper
   [[ ${CAPTURE_ENV[COMPOSE_PROFILES]} == extra ]]
   [[ ${CAPTURE_ENV[OL_VERSION]} == 8 ]]
   [[ ${CAPTURE_ENV[GSSAPI]} == true ]]
+  [[ ${CAPTURE_ENV[MINIO]} == true ]]
   [[ ${CAPTURE_ENV[PMM_CLIENT_VERSION]} == 3-dev-latest ]]
+}
+
+@test "PSMDB MINIO defaults to true and honors an explicit false" {
+  parse_database_spec 'psmdb=latest,SETUP_TYPE=pss'
+  dispatch_setup
+  [[ ${CAPTURE_ENV[MINIO]} == true ]]
+
+  parse_database_spec 'psmdb=latest,SETUP_TYPE=pss,MINIO=false'
+  dispatch_setup
+  [[ ${CAPTURE_ENV[MINIO]} == false ]]
 }
 
 @test "PXC tarball selects PXC and ProxySQL playbook" {
@@ -149,6 +160,7 @@ load helpers/test_helper
   [[ $CAPTURE_OVERRIDE_CONTENT != *"$PMM_SERVER_PASSWORD"* ]]
   [[ ${CAPTURE_ENV[PSMDB_VERSION]} == latest ]]
   [[ ${CAPTURE_ENV[MONGO_SETUP_TYPE]} == pss ]]
+  [[ ${CAPTURE_ENV[MINIO]} == false ]]
 
   first_target=$CAPTURE_TARGET
   dispatch_setup

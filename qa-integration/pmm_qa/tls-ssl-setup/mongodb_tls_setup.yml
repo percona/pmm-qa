@@ -46,7 +46,7 @@
     with_items:
       - docker exec {{ mongodb_ssl_container }} bash -xe ./mongodb_ssl_setup.sh --mongodb_version {{ mongodb_version }} > mongodb/setup_mongodb_ssl_{{ mongodb_version }}.log
 
-  - name: Install pmm2-client on the mongodb_ssl_container
+  - name: Install pmm-client on the mongodb_ssl_container
     shell: "{{ item }}"
     with_items:
       - docker exec {{ mongodb_ssl_container }} wget https://raw.githubusercontent.com/percona/pmm-qa/{{ pmm_qa_branch }}/pmm-tests/pmm2-client-setup.sh
@@ -56,7 +56,7 @@
         --use_metrics_mode no
 
   - name: Add pmm-admin binary to path when tar ball installation
-    shell: docker exec {{ mongodb_ssl_container }} echo "export PATH=$PATH:/pmm2-client/bin" > setup_path.sh
+    shell: docker exec {{ mongodb_ssl_container }} echo "export PATH=$PATH:/pmm-client/bin" > setup_path.sh
     when: '"http" in client_version'
 
   - name: Remove mongodb service if already added previously

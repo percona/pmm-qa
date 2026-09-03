@@ -1,7 +1,7 @@
 # PMM-QA Development Guide for AI Agents
 
 <!-- SINGLE ENTRY POINT for all AI coding assistants (Claude Code, Cursor, GitHub Copilot, etc.)
-     Compatibility shims: CLAUDE.md, .cursorrules, .github/copilot-instructions.md
+     Compatibility shim: CLAUDE.md
      Last reviewed: 2026-07 -->
 
 ## Maintaining This Document
@@ -228,7 +228,7 @@ npx playwright test --grep @inventory
 
 ## Patterns and Conventions
 
-The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/skills/skill-gardener/SKILL.md` observation reminder into every main-agent and subagent turn without forcing another LLM pass at Stop; `SKILL_GARDENER=off` silences it for a session. After the primary task is stable, evaluate the full observable sequence. Capture every distinct qualifying lesson without numeric or expiry limits, as immutable per-observation files committed by the main agent to that day's shared `skill-gardener/<YYYY-MM-DD>` branch — cut from `main`, created only if today's does not exist yet, and given no PR by the session. Reviewing entries, editing a target, and opening a PR happen only in the scheduled Publish pass ([`skill-gardener-publisher`](.claude/agents/skill-gardener-publisher.md)), never inside a user session: it applies the worthwhile lessons and deletes their entries on that same branch, then opens the single PR against `main`, whose review is the gate in front of every target edit. No lesson branch to publish means no PR; a branch a failed run stranded without a PR is picked up by the next. If no lesson qualifies, write and report nothing. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly.
+The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/skills/skill-gardener/SKILL.md` observation reminder into every main-agent and subagent turn without forcing another LLM pass at Stop; `SKILL_GARDENER=off` silences it for a session. After the primary task is stable, evaluate the full observable sequence. Capture every distinct qualifying lesson without numeric or expiry limits, as immutable per-observation files committed by the main agent to the current ISO week's shared `skill-gardener/<YYYY>-W<WW>` branch (`date -u +%G-W%V`) — cut from `main`, created only if this week's does not exist yet, and given no PR by the session (a week whose PR already merged and took its branch has the rest of its captures routed to the next week's branch, since recreating the merged name would strand them). Reviewing entries, editing a target, and opening a PR happen only in the scheduled weekly Publish pass ([`skill-gardener-publisher`](.claude/agents/skill-gardener-publisher.md), Sundays), never inside a user session: it applies the worthwhile lessons and deletes their entries on that same branch, then opens the single PR against `main`, whose review is the gate in front of every target edit. No lesson branch to publish means no PR; a branch a failed run stranded without a PR is picked up by the next. If no lesson qualifies, write and report nothing. Agents that do not discover `.claude/skills/` automatically must read the skill explicitly.
 
 ### Do
 
@@ -240,6 +240,7 @@ The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/
 - Use path aliases (`@pages/`, `@helpers/`) in imports
 - Use Playwright's `test.step()` for readable test structure
 - Read suite-specific docs before contributing to `cli/`, `codeceptjs-e2e/`, or `package_tests/`
+- Write a skill or agent that wraps an **external CLI against the installed binary** — install the version CI actually pins and read `--help` for the real subcommand tree before documenting a single command
 
 ### Don't
 
@@ -248,6 +249,7 @@ The `UserPromptSubmit` and `SubagentStart` hooks inject a two-sentence `.claude/
 - Don't hardcode admin passwords — use `ADMIN_PASSWORD` env var (default `admin`)
 - Don't skip cleanup — CI runs accumulate state across tests
 - Don't mix Playwright Test and CodeceptJS patterns — new UI tests go in `e2e_tests/` (Playwright)
+- Don't document an external CLI from vendor docs alone — they may describe an unreleased, renamed or separately-packaged tool whose commands the installed one doesn't have. Where it can't be authenticated while authoring, mark command names and flags verified but output field names **unverified**, with an instruction to print one payload and correct them on the first real run, rather than inventing plausible keys
 
 ## Environment Variables
 
