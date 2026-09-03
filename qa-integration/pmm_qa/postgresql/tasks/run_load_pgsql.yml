@@ -17,8 +17,6 @@
         ) | trim
       }}
 
-
-
 - name: Ensure pgbench is installed (Debian-based container)
   community.docker.docker_container_exec:
     container: "{{ node_name }}"

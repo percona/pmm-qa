@@ -33,6 +33,45 @@ gh api "repos/percona/pmm/pulls/<n>/files?per_page=100" \
 
 Return: files changed, behavioral summary, gaps in "How to test", suggested manual checks.
 
+## When the session doesn't have the repo
+
+A session scoped to `pmm-qa` alone gets "not configured for this session" from both the
+MCP tools and `gh` for `percona/pmm` and `percona/grafana`, and `add_repo` only offers
+anonymous read (see the `repos` skill). Both are public, so fetch the PR ref directly:
+
+```bash
+REPO=percona/pmm        # or percona/grafana — whichever the PR is in
+N=<pr-number>
+BASE=main               # the PR's base branch, if it isn't main
+
+git clone --depth 1 --filter=blob:none --no-checkout "https://github.com/$REPO" /tmp/g
+git -C /tmp/g fetch --depth 50 origin "refs/pull/$N/head:pr$N"
+git -C /tmp/g fetch --depth 50 origin "$BASE:refs/remotes/origin/$BASE"
+base=$(git -C /tmp/g merge-base "origin/$BASE" "pr$N")
+git -C /tmp/g diff --stat "$base" "pr$N"        # the whole PR
+git -C /tmp/g log --oneline "$base..pr$N"       # its commits
+```
+
+**Diff the merge-base range, not `git show`.** `git show --stat pr<n>` compares the head
+with its immediate parent, so on a multi-commit PR it reports the last commit and nothing
+else — on a 5-commit PR that read 1 file changed where the range is 4. And at `--depth 1`
+the head arrives with no parent at all, so `git show` renders the entire tree as one giant
+added commit, which looks like a PR that rewrote the repo.
+
+**Both fetches need explicit refspecs.** `git clone --depth 1` implies `--single-branch`,
+so the remote's fetch refspec covers only the default branch — `git fetch origin "$BASE"`
+alone updates `FETCH_HEAD` and nothing else, and `merge-base` then dies on an unknown
+revision. If `merge-base` fails even with the refspec, the shallow boundary is inside the
+PR range: refetch both deeper (`--depth 500`) or drop `--depth` entirely.
+
+**Don't try to answer "did it merge?" from ancestry here.** `git merge-base --is-ancestor
+pr<n> origin/$BASE` only holds for a merge-commit merge; a squash or rebase merge never
+puts the PR head on the base branch, so it reports "not merged" for a PR that shipped, and
+a shallow boundary makes it answer false too. Merge state is PR metadata (`merged_at`,
+`base.ref`) — read it with `pull_request_read`/`get` in a session that has the repo, or off
+the PR page. Anonymous `api.github.com` is **not** a fallback: the session proxy 403s it
+for a repo this session isn't scoped to, which is exactly the case this section covers.
+
 ## Large Grafana dashboard JSON diffs
 
 Grafana PRs often change dashboard JSON under `grafana/public/` or packaged dashboards. A raw diff can be **thousands of lines** of minified JSON — do not read the full diff inline.
@@ -60,7 +99,7 @@ done
 json-diff "$tmp/base.json" "$tmp/head.json"
 ```
 
-4. Summarize **what panels/queries/alerts changed**, not every byte.
+1. Summarize **what panels/queries/alerts changed**, not every byte.
 
 `json-diff` is installed globally by `.claude/hooks/session-start.sh` (`npm install -g json-diff`).
 

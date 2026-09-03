@@ -51,14 +51,16 @@
     with_items:
       - docker exec {{ mysql_ssl_container }} bash -xe ./mysql_ssl_setup.sh --mysql_version {{ mysql_version }} > mysql/setup_mysql_ssl_{{ mysql_version }}.log
 
-  - name: Install pmm2-client on the mysql_ssl_container
+  - name: Install pmm-client on the mysql_ssl_container
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ mysql_ssl_container }}
-      - docker exec {{ mysql_ssl_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }} --use_metrics_mode no
+      - >-
+        docker exec {{ mysql_ssl_container }} bash -x ./pmm3-client-setup.sh --pmm_server_ip {{ pmm_server_ip }} --client_version {{ client_version }} --admin_password {{ admin_password }}
+        --use_metrics_mode no
   
   - name: Add pmm-admin binary to path when tar ball installation
-    shell: docker exec {{ mysql_ssl_container }} echo "export PATH=$PATH:/pmm2-client/bin" > setup_path.sh
+    shell: docker exec {{ mysql_ssl_container }} echo "export PATH=$PATH:/pmm-client/bin" > setup_path.sh
     when: '"http" in client_version'
 
   - name: Remove mysql service if already added previously
@@ -75,7 +77,9 @@
     shell: "{{ item }}"
     with_items:
       - docker exec {{ mysql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin list'
-      - docker exec {{ mysql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add mysql --username=pmm --password=pmm --query-source=perfschema --tls --tls-skip-verify --tls-ca=/var/lib/mysql/ca.pem --tls-cert=/var/lib/mysql/client-cert.pem --tls-key=/var/lib/mysql/client-key.pem {{ mysql_ssl_container }}_ssl_service_{{ random_number }}'
+      - >-
+        docker exec {{ mysql_ssl_container }} bash -c 'source ~/.bash_profile || true; pmm-admin add mysql --username=pmm --password=pmm --query-source=perfschema --tls --tls-skip-verify
+        --tls-ca=/var/lib/mysql/ca.pem --tls-cert=/var/lib/mysql/client-cert.pem --tls-key=/var/lib/mysql/client-key.pem {{ mysql_ssl_container }}_ssl_service_{{ random_number }}'
   
   - name: Get client cert Files on host
     shell: "{{ item }}"

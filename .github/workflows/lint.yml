@@ -1,0 +1,59 @@
+---
+name: lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  # Weekly, so a skip-until date that passes during a quiet week still surfaces
+  # instead of waiting for the next PR.
+  schedule:
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # persist-credentials: false because this job runs code out of the PR it
+      # is checking -- lint-changed.sh, the installers it sources, and `npm ci`
+      # all execute PR-controlled content. The default leaves GITHUB_TOKEN
+      # readable in .git/config for that code, and nothing here pushes.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      # npm ci rather than letting the dispatcher's ensure_node_modules fall
+      # back to npm install: CI should install exactly what the lockfile says.
+      - name: Install workspace dependencies
+        run: |
+          set -euo pipefail
+          for ws in e2e_tests cli; do (cd "$ws" && npm ci); done
+
+      # One call, because .claude/hooks/lint-changed.sh already owns the
+      # which-linter-for-which-file mapping and the PreToolUse commit gate calls
+      # the same script. Re-listing the linters here is how CI and the local
+      # gate drift apart. The dispatcher runs every group before returning, so a
+      # run still reports all failures at once, and it prints a `==> <linter>`
+      # header per group so the log stays readable.
+      - name: Lint (all tracked files)
+        run: git ls-files -z | xargs -0 bash .claude/hooks/lint-changed.sh

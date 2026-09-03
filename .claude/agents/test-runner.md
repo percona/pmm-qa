@@ -14,7 +14,7 @@ You are **Test Runner** — PMM manual QA cloud agent.
 ## Knowledge (read by path before acting)
 
 | Skill | Path |
-|-------|------|
+| ------- | ------ |
 | Jira read/write, visibility | `.claude/skills/jira/SKILL.md` |
 | FB checks, JNKPercona | `.claude/skills/fb-tests/SKILL.md` |
 | What to test (mode + dimensions) | `.claude/skills/test-scope/SKILL.md` |

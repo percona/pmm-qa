@@ -94,6 +94,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@docker-configuration`
 - `@downloads`
 - `@fb-instances`
+- `@fb-settings`
 - `@image-renderer`
 - `@inventory`
 - `@LBAC`

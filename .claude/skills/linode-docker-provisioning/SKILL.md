@@ -26,6 +26,35 @@ Always address the box by hostname, never its bare IP:
 
 Both share port 443 (nginx routes by SNI hostname) and are reachable at the same time.
 
+**`run.sh` cannot return a large payload.** It hands the exec-server's whole JSON response
+to a local `python3` as a single argv, and Linux caps one argument at `MAX_ARG_STRLEN`
+(128 KiB), so a big remote *output* — not a long command — aborts the call with
+`Argument list too long` and you see none of it. Anything that could be large (a full API
+dump, a log file, `docker inspect` over everything) gets summarised **on the box** so only
+a few lines come back.
+
+When you need the bytes themselves, `tar czf - <paths> | base64 -w0` is only safe under a
+budget: base64 inflates by 4/3 and the JSON wrapper adds more, so keep the *compressed*
+archive **≤ 64 KiB**. Compression is no guarantee — already-compressed logs, images and
+binaries barely shrink — so measure on the box before shipping, and chunk when it's over:
+
+```bash
+run.sh <run_id> -- "tar czf /tmp/o.tgz <paths>; stat -c%s /tmp/o.tgz"
+
+# ≤ 64 KiB — one call:
+run.sh <run_id> -- "base64 -w0 /tmp/o.tgz" | base64 -d > out.tgz
+
+# larger — split on the box, one call per chunk (49152 is a multiple of 3, so no
+# '=' padding lands mid-stream and the concatenated base64 decodes as one archive):
+run.sh <run_id> -- "split -b 49152 -d /tmp/o.tgz /tmp/o.part-; ls /tmp/o.part-*"
+for part in <the listed parts, in order>; do
+  run.sh <run_id> -- "base64 -w0 $part"
+done | base64 -d > out.tgz
+```
+
+Past a few hundred KiB, stop fetching and summarise on the box instead — the chunk loop is
+one round trip each and is not a bulk transfer channel.
+
 ## Pick a run_id
 
 Something unique and traceable: the Jira key (`PMM-15196`) for Test Runner, or for Investigator — `heal-<submodules-pr>` when investigating an FB Tests red, `nightly-<workflow>-<date>` when investigating its own scheduled CI. Reused as the Linode instance label/tags, and as the key the self-destruct timer uses to find its own instance.
@@ -100,6 +129,7 @@ fi
 `role` is `test-runner` or `investigator` — a tag only, but it must be a safe
 identifier (`[A-Za-z0-9._-]`, no spaces or `..`); the relay rejects anything else
 with `400 bad_role`. The relay:
+
 - Creates a Linode VM (default `g6-standard-6`, Ubuntu 24.04) with a firewall open only on 443, tagged `pmm-qa-ephemeral`.
 - Waits for the exec-server to answer, then for cloud-init to finish installing Docker + Ansible and scheduling its own self-destruct timer (default 24h — see Cleanup below).
 - `git clone`s `percona/pmm-qa` onto the box at `/root/pmm-qa` — `main` by default, or pass `"pmm_qa_ref":"<branch>"` in the POST body (must already be pushed; see "Never code on the Linode VM" above).
@@ -188,6 +218,16 @@ PMM_CERT_PATH="terraform/linode-runner/runs/<run_id>/pmm_cert.pem" \
 
 `PMM_CERT_PATH` pins the exact cert fetched in step 2 (via Chromium's `--ignore-certificate-errors-spki-list`, not a blanket "trust anything") instead of the script's `ignoreHTTPSErrors` fallback. Pass it to `pw-screenshot.js`/`pw-record.js` too when the URL is PMM's own — omit it for non-PMM URLs (e.g. a GitHub Actions run), which already have a real CA.
 
+Running the repo's **own Playwright suite** (`e2e_tests/`) against the VM from this
+environment needs the proxy set explicitly. The symptom: every request fails with
+`503 upstream connect error` against a URL that `curl` fetches with 200. That 503 is the
+egress proxy's own response, so the traffic did reach it — this is a proxy *path* problem,
+not a broken PMM, and not the suite bypassing the proxy altogether. The fix is to make the
+suite go through it explicitly: extend `playwright.config.ts` in a scratch config with
+`use.proxy.server` set to this session's `$HTTPS_PROXY`, run
+`npx playwright test --config <scratch>`, and keep that file out of the commit — CI runners
+have direct egress and the override would break them.
+
 ## 5. FB / nightly workflow reproduction (Investigator)
 
 Follow `pmm-qa/.github/workflows/runner-e2e-tests-codeceptjs.yml`, `runner-e2e-tests-playwright.yml`, or `runner-integration-cli-tests.yml` for the exact steps — not Jenkins staging. If the fix under test lives on a branch, push it, then `up.sh`/`sync.sh` with `PMM_QA_REF` set to that branch — never patch it in by hand on the box.
@@ -221,7 +261,7 @@ else
 fi
 ```
 
-Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `/linode/destroy` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires. (For an explicit keep-alive run, skip destroy — the `keep-alive` marker and the on-box timer handle it.)
+Call this whether the run passed, failed, or was blocked — it's the primary, immediate cleanup mechanism. The instance also self-destructs on its own after `ttl_hours` (default 24h) regardless, via an on-box systemd timer — no external reaper process, no scheduled Routine, nothing that could mistakenly delete a still-active run out from under someone. Never skip `/linode/destroy` anyway: an unterminated Linode VM keeps costing money for however long is left before its own timer fires. (For an explicit keep-alive run, skip destroy — the `keep-alive` marker and the on-box timer handle it.) Teardown also deletes the run's unique account-level tag (Linode leaves those behind on destroy, so they otherwise pile up); to sweep any leftovers by hand on the relay, `LINODE_TOKEN=… terraform/linode-runner/prune-tags.sh --dry-run` lists every matching orphan tag (`pmm-qa*` / `expires-`), then run it without `--dry-run` to delete them.
 
 ## Network policy — shared env is `Full` (tracking claude-code#82284)
 

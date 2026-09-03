@@ -159,7 +159,7 @@ pmmTest('PMM-T2133 Verify Welcome Card start tour @new-navigation', async ({ hel
   });
 });
 
-pmmTest('PMM-T2134 Verify Update check @new-navigation', async ({ helpPage, mocks, page }) => {
+pmmTest('PMM-T2284 Verify Update check @new-navigation', async ({ helpPage, mocks, page }) => {
   const cases = helpPage.cases;
 
   for (const c of cases) {

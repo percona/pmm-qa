@@ -100,9 +100,11 @@ jobs:
           ADDR_NO_SCHEME=${ADDR#http://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME#https://}
           ADDR_NO_SCHEME=${ADDR_NO_SCHEME%/}
-          echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/" >> "$GITHUB_ENV"
-          echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
-          echo "SERVER_IP=${ADDR_NO_SCHEME}" >> "$GITHUB_ENV"
+          {
+            echo "PMM_UI_URL=https://${ADDR_NO_SCHEME}/"
+            echo "PMM_URL=https://admin:${{ env.ADMIN_PASSWORD }}@${ADDR_NO_SCHEME}"
+            echo "SERVER_IP=${ADDR_NO_SCHEME}"
+          } >> "$GITHUB_ENV"
 
       - name: Sanity check remote PMM Server reachability
         run: |
@@ -140,14 +142,17 @@ jobs:
           launchable verify || true
 
           docker pull ${{ env.DOCKER_VERSION }} || true
-          export DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          DOCKER_IMAGE_ID=$(docker inspect -f '{{index .RepoDigests 0}}' ${{ env.DOCKER_VERSION }} | cut -d@ -f2) || true
+          export DOCKER_IMAGE_ID
           echo "Launchable build: ${DOCKER_IMAGE_ID}"
           echo "Launchable confidence: ${{ env.LAUNCHABLE_CONFIDENCE }}"
 
-          launchable record session --build ${DOCKER_IMAGE_ID} --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" > launchable-session.txt || true
+          launchable record session --build "${DOCKER_IMAGE_ID}" --test-suite "${{ env.INSTALLATION_TYPE }}-nightly-ui-tests-${{ steps.tags_processed.outputs.result }}" \
+            > launchable-session.txt || true
           node launchable-prepare.js "${{ env.PMM_TEST_FLAG }}"
-          cat test_list.txt | launchable subset --session $(cat launchable-session.txt) --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} --use-case feature-branch playwright > ${{ env.SUBSET_FILE_NAME }} || true
-          echo "$(cat ${{ env.SUBSET_FILE_NAME }})" || true
+          launchable subset --session "$(cat launchable-session.txt)" --confidence ${{ env.LAUNCHABLE_CONFIDENCE }} \
+            --use-case feature-branch playwright < test_list.txt > ${{ env.SUBSET_FILE_NAME }} || true
+          cat ${{ env.SUBSET_FILE_NAME }} || true
 
       - name: Check if launchable subset is empty
         id: check_launchable_subset
@@ -272,6 +277,9 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' }}
         working-directory: pmm-qa/e2e_tests
         run: |
+          # shellcheck disable=SC2046
+          # The launchable subset is a whitespace-separated list of test files,
+          # so it has to split into separate arguments.
           npx playwright test --grep "${{ env.PMM_TEST_FLAG }}" $(cat "${{ env.SUBSET_FILE_NAME }}") || true
 
       - name: Download PMM Server logs
@@ -286,7 +294,7 @@ jobs:
         if: ${{ steps.check_launchable_subset.outputs.has_subset == 'true' && always() }}
         working-directory: pmm-qa/e2e_tests
         run: |
-          launchable record tests --session $(cat launchable-session.txt) playwright --json output/results.json || true
+          launchable record tests --session "$(cat launchable-session.txt)" playwright --json output/results.json || true
           launchable gate --session "$(cat launchable-session.txt)"
 
       - name: Record launchable logs on failure
@@ -294,7 +302,7 @@ jobs:
         working-directory: pmm-qa/e2e_tests
         continue-on-error: true
         run: |
-          launchable record attachment --session $(cat launchable-session.txt) --include "*.log" logs.zip || true
+          launchable record attachment --session "$(cat launchable-session.txt)" --include "*.log" logs.zip || true
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() }}

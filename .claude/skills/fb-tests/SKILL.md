@@ -28,7 +28,7 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 ```
 
 | Field in comment | Use as |
-|------------------|--------|
+| ------------------ | -------- |
 | Server docker | `DOCKER_VERSION` / `PMM_SERVER_IMAGE` |
 | Watchtower docker | `WATCHTOWER_VERSION` |
 | Client tarball | `CLIENT_VERSION` |
@@ -37,7 +37,7 @@ gh api repos/Percona-Lab/pmm-submodules/issues/<PR>/comments \
 ## Map failures to workflows
 
 | Failed check pattern | pmm-qa workflow | Runner |
-|---------------------|-----------------|--------|
+| --------------------- | ----------------- | -------- |
 | `@* UI tests` | `fb-e2e-suite.yml` | `runner-e2e-tests-codeceptjs.yml` (legacy) or `runner-e2e-tests-playwright.yml` (`e2e_tests/`) |
 | `CLI tests *` | `fb-integration-suite.yml` | `runner-integration-cli-tests.yml` |
 
@@ -46,6 +46,17 @@ Extract `setup_services` / `tags_for_tests` or `services_list` / `cli_tag` from 
 ## Flaky triage
 
 Mark each failure: **relevant** (overlaps ticket) / **flaky** / **out of scope**. Only expand manual scope for **relevant** failures.
+
+### A re-run reuses the same pinned image
+
+Re-running failed jobs re-executes the FB build that already exists — `perconalab/pmm-server-fb:PR-<n>-<sha>`, built when the feature build ran. A product fix merged upstream *after* that build is not in the image, so the re-run goes red for the same reason and proves nothing about the fix. To confirm a post-build fix, either get the feature build rebuilt, or dispatch the equivalent pmm-qa workflow against a post-merge image, taking into consideration that it may not have the changes carried over there if the changes were never merged (e.g. `perconalab/pmm-server:3-dev-latest`) — and check the tag was actually rebuilt after the merge before trusting it:
+
+```bash
+curl -s https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags/3-dev-latest \
+  | jq -r .last_updated
+```
+
+Re-running is still the right move for a suspected flake, where the same image failing twice is exactly the evidence you want.
 
 ## Green gate (FB Reporter)
 

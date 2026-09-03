@@ -8,13 +8,30 @@ description: PMM GitHub repository map, GitHub access (MCP-first), and rules for
 ## Product & QA
 
 | Repo | Remote | Agent may open PR? |
-|------|--------|-------------------|
+| ------ | -------- | ------------------- |
 | `percona/pmm-qa` | QA tests, provisioning | **Yes** (Test Runner, Investigator, FB Reporter) |
 | `percona/pmm` | PMM server monorepo | **No** (read/diff only) |
 | `percona/grafana` | Grafana UI | **No** (read/diff only) |
 | `percona/percona-helm-charts` | Helm charts — `pmm`, `pmm-ha`, `pmm-ha-dependencies` (K8s/HA deploys) | **No** (read/diff only) |
 | `Percona-Lab/pmm-submodules` | FB integration | Different org — see **Cross-org access** below |
-| `Percona-Lab/jenkins-pipelines` | Jenkins defs | Different org — see **Cross-org access** below |
+| `Percona-Lab/jenkins-pipelines` | Jenkins defs | Different org — see **Cross-org access** below. **PMM owns `pmm/` only** — see below |
+
+### jenkins-pipelines is multi-team
+
+Every top-level directory belongs to a different team (`.github/CODEOWNERS`): `ppg`, `ps`, `pxc`,
+`pxb`, `psmdb`, `pbm`, the distributions, `cloud`. **Stay inside `pmm/`** — never edit, lint, gate
+or report on another one, and don't "fix in passing" a problem noticed there.
+
+Two shared libraries, only one of them ours:
+
+- **`vars/` at the repo root** is loaded as `lib@master` by *every* product's builds. Call its
+  steps freely; changing one changes everyone's CI. Raise it with the owners instead.
+- **`pmm/v3/vars/`** is PMM's own, loaded as `v3lib@master` via `libraryPath: 'pmm/v3/'`. This is
+  the right home for a PMM-only step.
+
+PMM pipelines live in `pmm/v3/` (`pmm3-*.groovy`). They only provision and invoke the test
+suites — the test logic itself lives in this repo (`qa-integration/pmm_qa`, `e2e_tests`), which
+they clone at `PMM_QA_GIT_BRANCH` and rsync to `/srv/pmm-qa`.
 
 ## GitHub access — MCP-first
 
@@ -28,7 +45,7 @@ repos/{owner}/{repo}/...` is a **fallback only where `gh` is actually present**
 Tool map (what replaces each old `gh` recipe):
 
 | Need | GitHub MCP tool | `gh` fallback (only if present) |
-|------|-----------------|-------------------------------|
+| ------ | ----------------- | ------------------------------- |
 | Your GitHub login (for `X-Actor`) | `get_me` → `.login` | `gh api user --jq .login` |
 | List PRs (page through all before dedup) | `list_pull_requests` / `search_pull_requests` (`perPage: 100`, bump `page` until a short page) | `gh api --paginate "repos/{o}/{r}/pulls?state=..."` |
 | PR details / diff / files / commits | `pull_request_read` (`get` / `get_diff` / `get_files` / `get_commits`) | `gh api repos/{o}/{r}/pulls/<n>` (+ `Accept: …diff`) |
@@ -40,6 +57,25 @@ Tool map (what replaces each old `gh` recipe):
 | Failed-job logs | `get_job_logs` (`failed_only: true`) | `gh run view <id> --log-failed -R {owner}/{repo}` |
 | Re-run failed jobs | `actions_run_trigger` (`rerun_failed_jobs`) | `gh run rerun <id> --failed -R {owner}/{repo}` |
 | Issues | `issue_read`, `list_issues`, `search_issues` | `gh api …/issues/<n>` |
+
+### Big listings overflow the result cap — that is expected
+
+On these repos the listing calls routinely exceed the tool-result token cap and get
+spilled to a file instead of returned: `actions_list` (`list_workflow_jobs` on an FB
+matrix of ~48 jobs, `list_workflow_runs` at 20 runs) and `list_pull_requests` (every
+open pmm-qa PR — dedup needs each `body`, so trimming `fields` doesn't shrink it
+enough). This is the normal path, not an error to retry with a smaller page: parse the
+saved file with `jq`/`python3`. The three responses nest differently — assuming one
+shape for all three is what produces `TypeError: string indices must be integers`:
+
+| Call | Saved shape |
+| ------ | ------------- |
+| `actions_list` → `list_workflow_jobs` | `{"jobs": {"total_count": N, "jobs": [...]}}` |
+| `actions_list` → `list_workflow_runs` | `{"total_count": N, "workflow_runs": [...]}` |
+| `list_pull_requests` | bare top-level list |
+
+If a payload doesn't match, check before parsing rather than guessing:
+`jq 'if type == "array" then "array" else keys end' <file>`.
 
 Two whole classes of `gh` command **403 even where `gh` exists** (never use them):
 **global search** (`gh search`, `gh api search/issues`) and **GraphQL-backed**
@@ -62,6 +98,16 @@ only for repos **attached at session/Routine creation** — verify with a small 
   with the repo attached instead.
 - On an access/authorization error, relay the exact message to the user; don't
   silently guess.
+
+### An unattached `percona/*` repo is the same case
+
+Same org is not the same as attached. In a session scoped to `pmm-qa` alone, both the
+MCP tools and `gh` answer `percona/pmm` and `percona/grafana` with "not configured for
+this session / Allowed repositories: percona/pmm-qa"; `add_repo` returns
+`read_available` (anonymous git is already possible, nothing gets attached) and refuses
+`access: "push"` as a cross-tier add. Both repos are public, so read what you need over
+anonymous git rather than reporting the ticket unreadable — the `git-diff` skill carries
+the PR-ref recipe.
 
 ## Cloud environment
 

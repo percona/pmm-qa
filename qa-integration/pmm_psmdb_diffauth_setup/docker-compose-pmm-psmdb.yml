@@ -63,9 +63,9 @@ services:
       retries: 3
     depends_on:
       pmm-server:
-       condition: service_healthy
+        condition: service_healthy
       kerberos:
-       condition: service_healthy
+        condition: service_healthy
 
   pmm-server:
     container_name: pmm-server
@@ -118,6 +118,7 @@ services:
       retries: 5
 
   minio:
+    profiles: [minio]
     image: minio/minio
     container_name: minio
     ports:
@@ -130,9 +131,10 @@ services:
     command: server /backups
     depends_on:
       psmdb-server:
-       condition: service_healthy
+        condition: service_healthy
 
   createbucket:
+    profiles: [minio]
     container_name: createbucket
     image: minio/mc
     depends_on:

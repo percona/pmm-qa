@@ -59,7 +59,7 @@ flowchart TB
 ## 2. Module map
 
 | File | Responsibility | Depends on |
-|---|---|---|
+| --- | --- | --- |
 | `pmm-framework` | Bash version gate, path anchors, sources everything, calls `parse_args` then `run_database_setups` | — |
 | `lib/common.sh` | `log_*`, `die`, `require_command`, `bool_string`, `normalize_client_version` | nothing |
 | `lib/config.sh` | The catalogue: `register_database`, lookups, `resolve_value` | common |
@@ -128,7 +128,7 @@ directories. They cannot run at the same time.
 When `--parallel` is asked for and a conflict exists, the framework keeps every
 setup and gives up only the concurrency:
 
-```
+```text
 WARNING: Running setups sequentially: two PS setups cannot run in parallel.
 ```
 
@@ -137,8 +137,8 @@ would fail jobs that are perfectly valid, just not parallelisable.
 
 ### Sequential vs parallel
 
-|  | sequential | parallel |
-|---|---|---|
+| | sequential | parallel |
+| --- | --- | --- |
 | Order | argument order | all at once, reported as they finish |
 | Output | streams straight to the console | buffered per setup, printed whole |
 | On failure | stops immediately | every setup still finishes, run exits non-zero |
@@ -168,7 +168,7 @@ Four sources can supply a value. Highest wins:
 
 ```mermaid
 flowchart LR
-    A["1. environment variable<br/>SETUP_TYPE=gr ./pmm-framework ..."] --> B["2. global flag<br/>--client-version<br/>(CLIENT_VERSION only)"]
+    A["1. global flag<br/>--client-version<br/>(CLIENT_VERSION only)"] --> B["2. environment variable<br/>SETUP_TYPE=gr ./pmm-framework ..."]
     B --> C["3. spec option<br/>--database ps,SETUP_TYPE=gr"]
     C --> D["4. registered default<br/>lib/config.sh"]
 ```
@@ -176,7 +176,7 @@ flowchart LR
 Two resolvers implement this, and they differ on purpose:
 
 | Helper | Used for | Empty env var |
-|---|---|---|
+| --- | --- | --- |
 | `resolve_value TYPE KEY MAP` | spec options | **wins** — yields `''`, mirroring Python's `os.environ.get` |
 | `resolved_version ENV TYPE REQ` | versions | **skipped** — mirrors Python's `os.getenv(X) or ...` |
 
@@ -295,7 +295,7 @@ make test      # bats only
 Three suites, none of which start a container:
 
 | Suite | Covers |
-|---|---|
+| --- | --- |
 | `tests/cli.bats` | parsing, precedence, the catalogue, server discovery, log formatting |
 | `tests/dispatch.bats` | each type selects the right playbook/script and env map |
 | `tests/integration.bats` | the real entrypoint with stubbed `docker`/`ansible-playbook`/`curl` |
