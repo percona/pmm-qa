@@ -109,7 +109,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .assertSuccess();
       await grafanaHelper.authorize();
       await page.goto(agentsPage.nodesUrl(nodeId));
-      await agentsPage.showRowDetails(nodeId);
+      await agentsPage.showRowDetails(nodeExporterId);
       await expect(agentsPage.builders.property('env=qa_testing_node_exporter')).toBeVisible();
     },
   );
