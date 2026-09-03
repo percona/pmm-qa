@@ -273,12 +273,12 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     async ({ cliHelper, page }) => {
       nodeExporterPassword = cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin list | grep ${nodeExporterId} | awk -F' ' '{print $6}'`,
+          `docker exec ${containerName} pmm-admin list | grep ${nodeExporterId} | awk -F' ' '{print $4}'`,
         )
         .stdout.trim();
       nodeExporterPort = cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin list | grep ${nodeExporterId} | awk -F' ' '{print $6}'`,
+          `docker exec ${containerName} pmm-admin list | grep ${nodeExporterId} | awk -F' ' '{print $5}'`,
         )
         .stdout.trim();
       await cliHelper
