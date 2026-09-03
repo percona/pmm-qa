@@ -278,7 +278,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   */
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent expose exporter @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent expose exporter @node-exporter-integration',
     async ({ cliHelper, page }) => {
       nodeExporterPassword = cliHelper
         .execSilent(
