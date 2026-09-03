@@ -1,0 +1,6 @@
+# AGENTS.md — a reviewer's suggested command is a hypothesis until it runs in the target environment
+
+- Added: 2026-09-03
+- Applies to: all skills
+- Evidence: Two review suggestions on pmm-qa#1274 were unworkable here and only execution showed it — replacing `curl -k` with `--cacert`/`--pinnedpubkey` fails as `curl: (90) SSL: public key does not match pinned public key` even with the genuine leaf, because the session egress proxy terminates and re-signs TLS; and the suggested anonymous `api.github.com` fallback returns 403 through that proxy for a repo the session is not scoped to, which was exactly the case the section covered. Executing the third suggestion instead confirmed a real defect quantitatively (`git show --stat` reported 1 file/6 deletions where the merge-base range was 4 files/99 insertions).
+- Proposed change: Add a `Don't` bullet beside the existing vendor-docs rule — don't write a command into a skill on a reviewer's or vendor's say-so; run it in the environment the skill targets first, and where it can't be run, record it as unverified rather than asserting it. An unverified command in a skill is worse than an acknowledged gap, because the next run treats it as confirmed.
