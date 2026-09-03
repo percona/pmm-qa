@@ -3,11 +3,6 @@ import { expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
 
-const sshKey =
-  'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEtU7ftdqg3rdRcv06kPAOnKX+WRmHlnG2UBpUNKw65h pmm-qa@distribution-method-test';
-
-// The AMI side of this gate is covered by the tests that run on real AMI deployments; simulating
-// AMI here would assert against a distribution method no AMI is involved in producing.
 pmmTest.describe('SSH key settings are unavailable off an AMI deployment.', () => {
   pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
     await page.goto('');
@@ -36,7 +31,10 @@ pmmTest.describe('SSH key settings are unavailable off an AMI deployment.', () =
       await pmmTest.step('The server refuses an SSH key', async () => {
         const settingsBefore = await api.settingsApi.getSettings();
         const response = await page.request.put(apiEndpoints.server.settings, {
-          data: { ssh_key: sshKey },
+          data: {
+            ssh_key:
+              'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEtU7ftdqg3rdRcv06kPAOnKX+WRmHlnG2UBpUNKw65h pmm-qa@distribution-method-test',
+          },
           headers: GrafanaHelper.getAuthHeader(),
         });
 
