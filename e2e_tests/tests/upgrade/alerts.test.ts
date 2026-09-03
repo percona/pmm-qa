@@ -13,7 +13,9 @@ pmmTest.describe('PMM Alerts tests for upgrade', () => {
   pmmTest(
     'PMM-T577 - Verify user is able to create and see firing alerts before upgrade @pre-upgrade',
     async ({ alertStatusPage, api, page }) => {
-      const folder = await api.alertingApi.getFolderByName('PMM Health');
+      // PMM 3.7.1 has no dedicated "PMM Health" alerting folder (added in later
+      // releases), so host the rule in the "Insight" folder, which ships with 3.7.1.
+      const folder = await api.alertingApi.getFolderByName('Insight');
 
       await api.alertingApi.createRule(GrafanaHelper.getAuthHeader(), {
         filters: [{ label: 'node_name', regexp: 'pmm-server', type: 'FILTER_TYPE_MATCH' }],
