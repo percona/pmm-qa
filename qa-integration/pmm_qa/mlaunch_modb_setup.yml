@@ -43,7 +43,7 @@
       - docker exec {{ modb_container }} python3 -m pip install --upgrade pip
       - docker exec {{ modb_container }} pip3 install 'mtools[all]'
 
-  - name: Install pmm2-client on the modb_container
+  - name: Install pmm-client on the modb_container
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ modb_container }}
