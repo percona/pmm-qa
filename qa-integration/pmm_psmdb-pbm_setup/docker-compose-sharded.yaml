@@ -276,6 +276,7 @@ services:
       - rscfg03
 
   chunk-churn:
+    profiles: ["traffic"]
     image: replica_member/local
     container_name: chunk-churn
     hostname: chunk-churn

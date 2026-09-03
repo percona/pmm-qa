@@ -9,6 +9,9 @@ pbm_user=${PBM_USER:-pbm}
 pbm_pass=${PBM_PASS:-pbmpass}
 minio=${MINIO:-true}
 minio=${minio,,}
+generate_traffic=${GENERATE_TRAFFIC:-yes}
+generate_traffic=${generate_traffic,,}
+wt_cache_gb=${WT_CACHE_GB:-}
 
 # Isolate this sharded stack in its own compose project so it can run
 # concurrently with the replica-set stack (which shares the same service and
@@ -24,6 +27,23 @@ docker network create pmm2-ui-tests_pmm-network || true
 docker compose -f docker-compose-sharded.yaml down -v --remove-orphans
 docker compose -f docker-compose-sharded.yaml build
 
+# WiredTiger cache is set in the mounted mongod.conf, not via env: mongod runs
+# under systemd inside the container, which does not inherit the compose
+# environment. So a WT_CACHE_GB override is applied host-side here, before the
+# members mount their config.
+if [ -n "$wt_cache_gb" ]; then
+  echo "overriding WiredTiger cacheSizeGB=$wt_cache_gb on shard and config members"
+  sed -i "s/^\( *cacheSizeGB:\).*/\1 $wt_cache_gb/" \
+    conf/mongod-rs1/mongod.conf conf/mongod-rs2/mongod.conf conf/mongod-cfg/mongod.conf
+fi
+
+# chunk-churn is gated behind the "traffic" compose profile so a lightweight run
+# (GENERATE_TRAFFIC=no) can skip it along with the host-side generators below.
+compose_profiles=()
+if [ "$generate_traffic" != "no" ]; then
+  compose_profiles=(--profile traffic)
+fi
+
 # minio backs PBM's S3 store; the caller selects which stack runs it via MINIO.
 if [ "$minio" != "false" ]; then
   echo "starting minio container"
@@ -32,7 +52,7 @@ else
   echo "skipping minio container (MINIO=false)"
 fi
 
-docker compose -f docker-compose-sharded.yaml up -d
+docker compose -f docker-compose-sharded.yaml "${compose_profiles[@]}" up -d
 
 echo
 echo "waiting 60 seconds for replica set members to start"
@@ -359,6 +379,7 @@ docker compose -f docker-compose-sharded.yaml exec -T mongos pmm-admin add mongo
 echo "adding some data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos mgodatagen -f /etc/datagen/sharded.json --uri=mongodb://root:root@127.0.0.1:27017
 
+if [ "$generate_traffic" != "no" ]; then
 echo "writing chunk-activity generator so the chunk-move/split dashboards keep getting data"
 docker compose -f docker-compose-sharded.yaml exec -T mongos tee /tmp/keep_chunks_moving.js > /dev/null << 'JSEOF'
 var shards = db.getSiblingDB("config").shards.find().toArray().map(function (s) { return s._id; });
@@ -385,10 +406,12 @@ done
 SHEOF
 echo "starting background chunk-activity generator"
 docker compose -f docker-compose-sharded.yaml exec -d mongos bash /tmp/keep_chunks_moving.sh
+else
+    echo "skipping background chunk-activity generator (GENERATE_TRAFFIC=no)"
+fi
 
 
-generate_traffic=${GENERATE_TRAFFIC:-yes}
-if [ $generate_traffic != "no" ]; then
+if [ "$generate_traffic" != "no" ]; then
     echo "generating opcountersRepl traffic (insert/update/delete) against the sharded cluster"
     COMPOSE_FILE=docker-compose-sharded.yaml bash ./generate_opcountersrepl_traffic.sh
 else
