@@ -811,8 +811,6 @@ module.exports = {
       'Slow Inserts',
       'Memory Usage',
       'Time Series',
-      'Top 10 metrics by time series count',
-      'Top 10 hosts by time series count',
       'Flags',
       'CPU Busy',
       'Mem Avail',
