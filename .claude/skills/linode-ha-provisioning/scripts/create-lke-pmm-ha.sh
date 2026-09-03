@@ -134,6 +134,9 @@ kubectl get nodes
 # --- storage class: tag every CSI volume at birth ----------------------------
 # LKE's default SC has no volumeTags and a StorageClass's parameters are immutable,
 # so its volumes are born untagged and prune-lke-orphans.sh can never attribute them.
+# Also flip reclaimPolicy to Delete (the default is Retain): on a throwaway cluster a
+# churned/deleted PVC should free its volume immediately, not leave a Released PV
+# billing until teardown. The name is kept so charts that reference it still resolve.
 kubectl delete storageclass linode-block-storage-retain --ignore-not-found
 kubectl apply -f - <<EOF
 apiVersion: storage.k8s.io/v1
@@ -145,7 +148,7 @@ metadata:
 provisioner: linodebs.csi.linode.com
 parameters:
   linodebs.csi.linode.com/volumeTags: "pmm-qa-ephemeral,pmm-qa-run:$RUN_ID"
-reclaimPolicy: Retain
+reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: true
 EOF
