@@ -287,7 +287,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .stdout.trim();
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${nodeExporterId} --expose-exporter`,
+          `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --expose-exporter`,
         )
         .assertSuccess()
         .outContains('- enabled expose exporter');
