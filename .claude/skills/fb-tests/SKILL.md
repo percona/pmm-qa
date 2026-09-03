@@ -49,7 +49,7 @@ Mark each failure: **relevant** (overlaps ticket) / **flaky** / **out of scope**
 
 ### A re-run reuses the same pinned image
 
-Re-running failed jobs re-executes the FB build that already exists — `perconalab/pmm-server-fb:PR-<n>-<sha>`, built when the feature build ran. A product fix merged upstream *after* that build is not in the image, so the re-run goes red for the same reason and proves nothing about the fix. To confirm a post-build fix, either get the feature build rebuilt, or dispatch the equivalent pmm-qa workflow against a post-merge image (e.g. `perconalab/pmm-server:3-dev-latest`) — and check the tag was actually rebuilt after the merge before trusting it:
+Re-running failed jobs re-executes the FB build that already exists — `perconalab/pmm-server-fb:PR-<n>-<sha>`, built when the feature build ran. A product fix merged upstream *after* that build is not in the image, so the re-run goes red for the same reason and proves nothing about the fix. To confirm a post-build fix, either get the feature build rebuilt, or dispatch the equivalent pmm-qa workflow against a post-merge image, taking into consideration that it may not have the changes carried over there if the changes were never merged (e.g. `perconalab/pmm-server:3-dev-latest`) — and check the tag was actually rebuilt after the merge before trusting it:
 
 ```bash
 curl -s https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags/3-dev-latest \
