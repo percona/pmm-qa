@@ -44,16 +44,13 @@ load helpers/test_helper
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == slowlog ]]
 
-  # The explicit --client-version flag beats an ambient CLIENT_VERSION env var.
   CLIENT_VERSION=from-env
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
 
-  # With no flag, the env var wins over the spec option.
   GLOBAL_CLIENT_VERSION=''
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-env ]]
   unset CLIENT_VERSION
 
-  # With neither flag nor env var, the spec option wins.
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-spec ]]
 
   unset 'DB_CONFIG[QUERY_SOURCE]'

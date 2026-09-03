@@ -210,10 +210,6 @@ database_default_value() {
 #   3. the per-database option parsed from the --database spec
 #   4. the default registered above
 #
-# Step 1 comes first because an explicit CLI flag must beat an ambient
-# CLIENT_VERSION in the environment: a run that passes --client-version=X wants
-# X installed even when CLIENT_VERSION=Y is exported (e.g. by CI).
-#
 # Step 2 mirrors the Python framework's `os.environ.get(KEY)`, so an exported
 # but *empty* variable deliberately wins and yields ''. Contrast with
 # resolved_version() in lib/runners.sh, which mirrors `os.getenv(...) or ...`
