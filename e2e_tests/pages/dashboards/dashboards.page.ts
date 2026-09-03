@@ -104,7 +104,7 @@ export default class Dashboards extends BasePage {
     return Array.from(collected);
   };
 
-  hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {
+  hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     // Markers carry no attribute naming their annotation, so identifying one
     // means hovering it and reading the tooltip. Picking a marker by position
     // instead breaks under `retries`: a retry re-runs the annotation setup, and
@@ -120,11 +120,20 @@ export default class Dashboards extends BasePage {
     await pmmTest.step(`Hover the annotation marker for "${annotationTitle}"`, async () => {
       await this.elements.annotationMarkers.first().waitFor({ state: 'visible', timeout });
 
-      do {
+      while (Date.now() < deadline) {
         for (let i = 0; i < (await this.elements.annotationMarkers.count()); i++) {
-          await this.elements.annotationMarkers.nth(i).hover();
+          if (Date.now() >= deadline) break;
 
           try {
+            // Every panel draws its own marker for each annotation, and two
+            // annotations minutes apart land within a few pixels of each other,
+            // so a marker whose centre another marker covers cannot be hovered
+            // at all -- Playwright reports "intercepts pointer events". That is
+            // ordinary here (9 of 24 markers on Processes Details), not a
+            // failure: skip to the next marker instead of letting it end the
+            // search. The short timeout keeps a full sweep well inside the
+            // budget, since the project's actionTimeout is 10s.
+            await this.elements.annotationMarkers.nth(i).hover({ timeout: Timeouts.THREE_SECONDS });
             await tooltip.first().waitFor({ state: 'visible', timeout: Timeouts.TWO_SECONDS });
           } catch {
             continue;
@@ -132,7 +141,7 @@ export default class Dashboards extends BasePage {
 
           if (await tooltipShowsTitle()) return;
         }
-      } while (Date.now() < deadline);
+      }
 
       throw new Error(
         `No annotation marker on ${this.page.url()} showed an annotation titled "${annotationTitle}"`,
