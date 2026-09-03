@@ -1,5 +1,6 @@
 import BasePage from '../base.page';
 import pmmTest from '../../fixtures/pmmTest';
+import { Timeouts } from '@helpers/timeouts';
 
 export default class SettingsPage extends BasePage {
   url = '/pmm-ui/settings';
@@ -36,16 +37,26 @@ export default class SettingsPage extends BasePage {
     },
   };
   elements = {
+    advancedLabel: this.page.getByTestId('advanced-label'),
+    advisorsLabel: this.page.getByTestId('advanced-advisors'),
+    checkForUpdatesLabel: this.page.getByTestId('advanced-updates'),
+    errorAlert: this.page.getByTestId('data-testid Alert error'),
+    metricsResolutionLabel: this.page.getByTestId('metrics-resolution-label'),
     //review this selector - seems redundant
     pageBody: this.page.locator('body'),
     pageTitle: this.page.getByRole('heading', { name: 'Settings' }),
+    publicAddressLabel: this.page.getByTestId('public-address-label'),
+    sshKeyLabel: this.page.getByTestId('ssh-key-label'),
+    tabContent: this.page.getByTestId('settings-tab-content'),
+    telemetryLabel: this.page.getByTestId('advanced-telemetry'),
   };
   inputs = {
-    high: this.page.locator('[name="hr"]'),
-    low: this.page.locator('[name="lr"]'),
-    medium: this.page.locator('[name="mr"]'),
-    publicAddress: this.page.getByTestId('text-input-public-address'),
-    sshKey: this.page.getByTestId('text-input-ssh-key'),
+    dataRetention: this.page.getByTestId('retention-number-input'),
+    high: this.page.getByTestId('hr-number-input'),
+    low: this.page.getByTestId('lr-number-input'),
+    medium: this.page.getByTestId('mr-number-input'),
+    publicAddress: this.page.getByTestId('publicAddress-text-input'),
+    sshKey: this.page.getByTestId('ssh-key'),
   };
   messages = {};
 
@@ -55,4 +66,15 @@ export default class SettingsPage extends BasePage {
       await this.buttons.toggles[toggleName].locator.click();
       await this.buttons.applyAdvancedChanges.click();
     });
+
+  getDataRetentionValidationMessage = async (): Promise<string> =>
+    await this.inputs.dataRetention.evaluate((input: HTMLInputElement) => input.validationMessage);
+
+  settleAfterApplyingChanges = async (): Promise<void> => {
+    // eslint-disable-next-line playwright/no-wait-for-timeout -- ported fixed pause: the advanced form re-renders after a save and exposes no signal to wait on
+    await this.page.waitForTimeout(Timeouts.FIVE_SECONDS);
+  };
+
+  waitForPageLoaded = async (): Promise<void> =>
+    await this.elements.tabContent.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });
 }
