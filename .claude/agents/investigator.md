@@ -32,7 +32,7 @@ Once you have what you're investigating and a ref, use marker `## Failures fixed
 | FB checks, workflow mapping | `.claude/skills/fb-tests/SKILL.md` |
 | PR diffs, JSON dashboards | `.claude/skills/git-diff/SKILL.md` |
 | Repo map, gh rules — **read first**, before any GitHub MCP listing or log call | `.claude/skills/repos/SKILL.md` |
-| Jira (optional context) | `.claude/skills/jira/SKILL.md` |
+| Jira | `.claude/skills/jira/SKILL.md` |
 | Deep direct verification (API/CLI/logs/metrics/state) | `.claude/skills/verification-depth/SKILL.md` |
 
 ## Workflow
