@@ -1,0 +1,6 @@
+# .claude/skills/linode-docker-provisioning/SKILL.md — an e2e test that shells into a container must run on the VM, not from the session through the proxy
+
+- Added: 2026-09-03
+- Applies to: target only
+- Evidence: step 4 offers running the repo's own Playwright suite from this environment via a scratch config pointing `use.proxy.server` at the session proxy. Two tests under reproduction invoke `docker exec <container> pmm-admin annotate`, which cannot work from the session because Docker runs only on the VM; a session-side run also reached only the login redirect, never the dashboard. Installing Node and the suite on the box and running the same `npx playwright test --grep` the workflow runs reproduced both failures immediately and then verified the fix. A scratch spec also had to be placed under the configured `testDir: ./tests`, or Playwright reported "No tests found".
+- Proposed change: in the reproduction guidance, state that any test touching Docker, `pmm-admin`, or the local filesystem must be run on the VM the way the workflow runs it (`e2e_tests` needs only `PMM_UI_URL` and `ADMIN_PASSWORD`), limit the session-side proxy recipe to suites that only drive the UI over HTTP, and note that an ad-hoc spec must live under the config's `testDir`.
