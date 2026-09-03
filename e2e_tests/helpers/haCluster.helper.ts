@@ -110,17 +110,17 @@ export default class HaClusterHelper {
       )
       .assertSuccess()
       .stdout.trim();
-    let parsed: Partial<HaNodesResponse>;
+    let parsed: Partial<HaNodesResponse> | null;
 
     try {
-      parsed = JSON.parse(stdout) as Partial<HaNodesResponse>;
+      parsed = JSON.parse(stdout) as Partial<HaNodesResponse> | null;
     } catch {
       throw new Error(`"${podName}" did not answer ${apiEndpoints.ha.nodes} with JSON, got: ${stdout}`);
     }
 
     // `curl -sk` exits 0 on a 401 or a 500, whose body is valid JSON too.
-    if (!parsed.nodes) {
-      throw new Error(`"${podName}" answered ${apiEndpoints.ha.nodes} without nodes, got: ${stdout}`);
+    if (!Array.isArray(parsed?.nodes) || typeof parsed.expected_nodes !== 'number') {
+      throw new Error(`"${podName}" answered ${apiEndpoints.ha.nodes} with an invalid body, got: ${stdout}`);
     }
 
     return parsed as HaNodesResponse;
