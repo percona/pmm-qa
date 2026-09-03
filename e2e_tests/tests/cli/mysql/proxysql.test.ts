@@ -318,6 +318,51 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T99101 - Verify Change agent connection timeout @proxysql-integration',
+    async ({ cliHelper, page }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --connection-timeout=5s`,
+        )
+        .assertSuccess()
+        .outContains('ProxySQL Exporter agent configuration updated');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+      await cliHelper
+        .execSilent(`docker exec ${containerName} pmm-admin list | grep ${proxysqlExporterId}`)
+        .assertSuccess()
+        .outContains('Running');
+    },
+  );
+
+  pmmTest(
+    'PMM-T99102 - Verify Change agent skip connection check @proxysql-integration',
+    async ({ cliHelper }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --skip-connection-check`,
+        )
+        .assertSuccess()
+        .outContains('ProxySQL Exporter agent configuration updated');
+    },
+  );
+
+  pmmTest(
+    'PMM-T99103 - Verify Change agent server url and server insecure tls @proxysql-integration',
+    async ({ cliHelper }) => {
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --server-url=https://admin:${adminPassword}@pmm-server:8443/ --server-insecure-tls`,
+        )
+        .assertSuccess()
+        .outContains('ProxySQL Exporter agent configuration updated');
+    },
+  );
+
+  pmmTest(
     'PMM-T9993 - Verify Change agent pmm agent listen port @proxysql-integration',
     async ({ cliHelper }) => {
       const commands = [
