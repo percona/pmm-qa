@@ -65,11 +65,11 @@ pmmTest.describe('PMM upgrade tests for external services', () => {
       `PMM-T2073 - Verify Agents are RUNNING after Upgrade (API) for ${service.serviceType} @post-upgrade`,
       async ({ api }) => {
         await expect
-          .poll(() => api.inventoryApi.verifyAgentsAreRunning(`upgrade-${service.upgradeService}`), {
+          .poll(() => api.inventoryApi.getNotRunningAgents(`upgrade-${service.upgradeService}`), {
             message: `One or more agents are not running for upgrade-${service.upgradeService}`,
             timeout: Timeouts.TWO_MINUTES,
           })
-          .toBe(true);
+          .toEqual([]);
       },
     );
   }

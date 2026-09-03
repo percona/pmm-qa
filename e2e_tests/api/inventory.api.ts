@@ -27,6 +27,20 @@ export default class InventoryApi {
     return filteredServices;
   };
 
+  getNotRunningAgents = async (serviceName: string) =>
+    this.getServiceDetailsByPartialName(serviceName)
+      .then((service) =>
+        service.agents
+          .filter((agent) => agent.agent_type !== 'pmm-agent')
+          .filter((agent) => agent.status !== AgentStatus.running)
+          .map((agent) => ({
+            agent_id: agent.agent_id,
+            agent_type: agent.agent_type,
+            status: agent.status,
+          })),
+      )
+      .catch((error) => [{ agent_id: 'unknown', agent_type: 'unknown', status: `error: ${error.message}` }]);
+
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
     const service = services.services.find((service: GetService) =>
@@ -95,15 +109,6 @@ export default class InventoryApi {
 
     return service;
   };
-
-  verifyAgentsAreRunning = async (serviceName: string) =>
-    this.getServiceDetailsByPartialName(serviceName)
-      .then((service) =>
-        service.agents
-          .filter((agent) => agent.agent_type !== 'pmm-agent')
-          .every((agent) => agent.status === AgentStatus.running),
-      )
-      .catch(() => false);
 
   verifyServiceAgentsStatus = async (service: GetService, expectedStatus: AgentStatus) => {
     const agents = service.agents.filter((agent) => agent.agent_type !== 'pmm-agent');

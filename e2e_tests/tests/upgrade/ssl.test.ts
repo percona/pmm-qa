@@ -39,11 +39,11 @@ pmmTest.describe('PMM upgrade tests for SSL', () => {
       });
 
       await expect
-        .poll(() => api.inventoryApi.verifyAgentsAreRunning(remoteServiceName), {
+        .poll(() => api.inventoryApi.getNotRunningAgents(remoteServiceName), {
           message: `One or more agents are not running for ${remoteServiceName}`,
           timeout: Timeouts.TWO_MINUTES,
         })
-        .toBe(true);
+        .toEqual([]);
     },
   );
 
