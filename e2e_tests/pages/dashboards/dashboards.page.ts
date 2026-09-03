@@ -3,7 +3,6 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
 import { Timeouts } from '@helpers/timeouts';
-import { xpathLiteral } from '@helpers/xpath.helper';
 import BasePage from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
@@ -33,27 +32,10 @@ export default class Dashboards extends BasePage {
   readonly os: OperatingSystemDashboardsType = OperatingSystemDashboards;
   readonly postgresql: PostgresqlDashboardsType = PostgresqlDashboards;
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
-  builders = {
-    annotationTagText: (tagValue: string) =>
-      this.grafanaIframe().locator(`//span[contains(text(), ${xpathLiteral(tagValue)})]`),
-    annotationText: (annotationTitle: string) =>
-      this.grafanaIframe().locator(`//div[contains(text(), ${xpathLiteral(annotationTitle)})]`),
-    panelByExactName: (panelName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
-    panelByName: (panelName: string) =>
-      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
-    panelHeaderByName: (panelName: string) =>
-      this.builders.panelByExactName(panelName).getByTestId('header-container'),
-    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
-    panelMenuItemByName: (menuItemName: string) =>
-      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
-  };
-  buttons = {
-    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
-    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
-  };
   elements = {
     annotationMarkers: this.grafanaIframe().getByTestId('data-testid annotation-marker'),
+    // The open tooltip's own test id, distinct from the marker's (AnnotationMarker2.tsx).
+    annotationTooltip: this.grafanaIframe().getByTestId('annotation-marker'),
     expandRow: this.grafanaIframe().getByLabel('Expand row'),
     gridItems: this.grafanaIframe().locator('.react-grid-item'),
     loadingBar: this.grafanaIframe().getByLabel('Panel loading bar'),
@@ -69,6 +51,23 @@ export default class Dashboards extends BasePage {
     summaryPanelText: this.grafanaIframe().locator(
       '//pre[@data-testid="pt-summary-fingerprint" and contains(text(), "Summary Report")]',
     ),
+  };
+  builders = {
+    annotationTagText: (tagValue: string) =>
+      this.elements.annotationTooltip.getByText(tagValue, { exact: true }),
+    panelByExactName: (panelName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
+    panelByName: (panelName: string) =>
+      this.grafanaIframe().locator(`//section[contains(@data-testid, "${panelName}")]`),
+    panelHeaderByName: (panelName: string) =>
+      this.builders.panelByExactName(panelName).getByTestId('header-container'),
+    panelMenuIconByName: (panelName: string) => this.builders.panelHeaderByName(panelName).getByTitle('menu'),
+    panelMenuItemByName: (menuItemName: string) =>
+      this.grafanaIframe().getByTestId(`data-testid Panel menu item ${menuItemName}`),
+  };
+  buttons = {
+    imageRendererDownloadImage: this.grafanaIframe().getByRole('button', { name: 'Download image' }),
+    imageRendererGenerateImage: this.grafanaIframe().getByRole('button', { name: 'Generate image' }),
   };
   inputs = {};
   messages = {};
@@ -107,12 +106,10 @@ export default class Dashboards extends BasePage {
 
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
     // Markers are unlabelled, so the tooltip is the only way to tell them apart.
-    const tooltip = this.builders.annotationText(annotationTitle);
-    // An API annotation's tooltip appends " (Service Name: x. Node Name: y)".
-    const tooltipShowsTitle = async () =>
-      (await tooltip.allTextContents())
-        .map((text) => text.trim())
-        .some((text) => text === annotationTitle || text.startsWith(`${annotationTitle} (`));
+    // API annotations render `title (Service Name: x. Node Name: y)`, CLI ones the bare title.
+    const tooltipTitle = this.elements.annotationTooltip
+      .getByText(annotationTitle, { exact: true })
+      .or(this.elements.annotationTooltip.getByText(`${annotationTitle} (`));
     const deadline = Date.now() + timeout;
 
     await pmmTest.step(`Hover the annotation marker for "${annotationTitle}"`, async () => {
@@ -125,12 +122,12 @@ export default class Dashboards extends BasePage {
           try {
             // Overlapping markers cover each other, so some cannot be hovered.
             await this.elements.annotationMarkers.nth(i).hover({ timeout: Timeouts.THREE_SECONDS });
-            await tooltip.first().waitFor({ state: 'visible', timeout: Timeouts.TWO_SECONDS });
+            await tooltipTitle.waitFor({ state: 'visible', timeout: Timeouts.TWO_SECONDS });
+
+            return;
           } catch {
             continue;
           }
-
-          if (await tooltipShowsTitle()) return;
         }
       }
 

@@ -1,22 +1,10 @@
 import { APIRequestContext, expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
-import { AgentStatus, GetNode, GetService, GetServices, ServiceType } from '@interfaces/inventory';
+import { AgentStatus, GetService, GetServices, ServiceType } from '@interfaces/inventory';
 import apiEndpoints from '@helpers/apiEndpoints';
 
 export default class InventoryApi {
   constructor(private request: APIRequestContext) {}
-
-  getNodeName = async (nodeId: string): Promise<string> => {
-    const response = await this.request.get(`${apiEndpoints.management.nodes}/${nodeId}`, {
-      headers: GrafanaHelper.getAuthHeader(),
-    });
-    const nodes = Object.values((await response.json()) as Record<string, GetNode>).flat();
-    const node = nodes.find((node: GetNode) => node.node_id === nodeId);
-
-    if (!node) throw new Error(`Node with id ${nodeId} is not present`);
-
-    return node.node_name;
-  };
 
   getServiceDetailsByPartialName = async (partialServiceName: string): Promise<GetService> => {
     const services = await this.getServices();
