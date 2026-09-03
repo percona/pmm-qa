@@ -1,7 +1,5 @@
-// Migrated to e2e_tests/tests/configuration/settingsPageElements.test.ts, but deliberately kept:
-// the only @grafana-pr consumer is package.json e2e:grafana-pr, invoked by percona/grafana CI,
-// which runs CodeceptJS only. Retiring this file would silently drop its 4 @grafana-pr scenarios
-// from that gate. Safe to retire once percona/grafana CI can invoke the Playwright suite instead.
+// Kept after migration to e2e_tests/tests/configuration/settingsPageElements.test.ts: percona/grafana
+// CI runs @grafana-pr via package.json e2e:grafana-pr, which is CodeceptJS-only.
 const page = require('./pages/pmmSettingsPage');
 
 const dataRetentionTable = new DataTable(['value', 'message']);

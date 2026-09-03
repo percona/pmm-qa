@@ -203,9 +203,6 @@ jobs:
       pmm_server_version: ${{ inputs.pmm_server_image || github.event.inputs.pmm_server_image || 'perconalab/pmm-server:3-dev-latest' }}
       pmm_client_version: ${{ inputs.pmm_client_version || github.event.inputs.pmm_client_version || 'latest-tarball' }}
       pmm_qa_branch: ${{ github.event_name == 'pull_request' && github.head_ref || (inputs.pmm_qa_branch || github.event.inputs.pmm_qa_branch || 'main') }}
-      # No database: every @settings test needs PMM Server only. `workers` is
-      # deliberately unset -- the runner defaults it to 1, and these tests mutate
-      # shared server settings, so they cannot run in parallel.
       setup_services: '-h'
       pmm_test_flag: '@settings'
 

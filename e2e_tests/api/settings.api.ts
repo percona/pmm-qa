@@ -66,24 +66,35 @@ export default class SettingsApi {
       headers: GrafanaHelper.getAuthHeader(),
     });
 
-    if (response.status() !== 400) return;
+    if (response.status() !== 400) {
+      expect(response.status()).toEqual(200);
+
+      return;
+    }
 
     const { message } = (await response.json()) as { message?: string };
 
-    if (!message?.includes('Telemetry is configured via PMM_ENABLE_TELEMETRY')) return;
+    expect(message, 'Unexpected 400 from the settings restore').toContain(
+      'Telemetry is configured via PMM_ENABLE_TELEMETRY',
+    );
 
     delete body.enable_advisor;
     delete body.enable_telemetry;
-    await this.request.put(apiEndpoints.server.settings, {
+
+    const retry = await this.request.put(apiEndpoints.server.settings, {
       data: body,
       headers: GrafanaHelper.getAuthHeader(),
     });
+
+    expect(retry.status()).toEqual(200);
   };
 
   setPublicAddress = async (address: string): Promise<void> => {
-    await this.request.put(apiEndpoints.server.settings, {
+    const response = await this.request.put(apiEndpoints.server.settings, {
       data: { pmm_public_address: address },
       headers: GrafanaHelper.getAuthHeader(),
     });
+
+    expect(response.status()).toEqual(200);
   };
 }

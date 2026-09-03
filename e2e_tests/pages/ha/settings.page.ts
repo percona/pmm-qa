@@ -1,5 +1,6 @@
 import BasePage from '../base.page';
 import pmmTest from '../../fixtures/pmmTest';
+import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 
 export default class SettingsPage extends BasePage {
@@ -60,20 +61,23 @@ export default class SettingsPage extends BasePage {
   };
   messages = {};
 
+  applyAdvancedChanges = async (): Promise<void> => {
+    const saved = this.page.waitForResponse(
+      (response) =>
+        response.url().includes(apiEndpoints.server.settings) && response.request().method() === 'PUT',
+      { timeout: Timeouts.THIRTY_SECONDS },
+    );
+
+    await this.buttons.applyAdvancedChanges.click();
+    await saved;
+  };
+
   enableToggleAndApplyChanges = async (toggleName: keyof typeof this.buttons.toggles): Promise<void> =>
     await pmmTest.step(`Enable ${toggleName} and apply changes`, async () => {
       await this.page.goto(this.urls.advanced);
       await this.buttons.toggles[toggleName].locator.click();
       await this.buttons.applyAdvancedChanges.click();
     });
-
-  getDataRetentionValidationMessage = async (): Promise<string> =>
-    await this.inputs.dataRetention.evaluate((input: HTMLInputElement) => input.validationMessage);
-
-  settleAfterApplyingChanges = async (): Promise<void> => {
-    // eslint-disable-next-line playwright/no-wait-for-timeout -- ported fixed pause: the advanced form re-renders after a save and exposes no signal to wait on
-    await this.page.waitForTimeout(Timeouts.FIVE_SECONDS);
-  };
 
   waitForPageLoaded = async (): Promise<void> =>
     await this.elements.tabContent.waitFor({ state: 'visible', timeout: Timeouts.THIRTY_SECONDS });

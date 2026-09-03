@@ -28,14 +28,9 @@ for (const row of dataRetentionRows) {
         await settingsPage.inputs.dataRetention.clear();
         await settingsPage.inputs.dataRetention.fill(row.value);
         await page.keyboard.press('Tab');
-        await settingsPage.inputs.dataRetention.waitFor({
-          state: 'attached',
+        await expect(settingsPage.inputs.dataRetention).toHaveJSProperty('validationMessage', row.message, {
           timeout: Timeouts.THIRTY_SECONDS,
         });
-        expect(
-          await settingsPage.getDataRetentionValidationMessage(),
-          `Data retention "${row.value}" should report its own validation message`,
-        ).toEqual(row.message);
       });
     },
   );
@@ -62,7 +57,12 @@ pmmTest(
 pmmTest(
   'PMM-T85 - Verify SSH Key Section Elements @settings @grafana-pr',
   async ({ api, page, settingsPage }) => {
-    if ((await api.serverApi.getDistributionMethod()) !== 'DISTRIBUTION_METHOD_AMI') return;
+    // TODO: Remove the skip once CI provisions an AMI-distribution PMM Server.
+    // eslint-disable-next-line playwright/no-skipped-test -- the SSH key section renders only on an AMI distribution; a runtime skip reports that honestly where the source's early return reported a pass.
+    pmmTest.skip(
+      (await api.serverApi.getDistributionMethod()) !== 'DISTRIBUTION_METHOD_AMI',
+      'SSH key section renders only on an AMI distribution',
+    );
 
     await page.goto(settingsPage.urls.ssh);
     await settingsPage.waitForPageLoaded();
@@ -120,24 +120,27 @@ pmmTest(
       });
       await settingsPage.inputs.publicAddress.clear();
       await settingsPage.inputs.publicAddress.fill('192.168.1.1:8433');
-      await settingsPage.buttons.applyAdvancedChanges.click();
-      await expect(settingsPage.elements.errorAlert).toBeHidden();
+      await settingsPage.applyAdvancedChanges();
+      await expect(settingsPage.buttons.applyAdvancedChanges).toHaveText('Apply changes', {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
       await expect(settingsPage.inputs.publicAddress).toHaveValue('192.168.1.1:8433', {
         timeout: Timeouts.THIRTY_SECONDS,
       });
+      await expect(settingsPage.elements.errorAlert).toBeHidden();
     });
-
-    await settingsPage.settleAfterApplyingChanges();
 
     await pmmTest.step('Change data retention with the public address still set', async () => {
       await settingsPage.inputs.dataRetention.clear();
       await settingsPage.inputs.dataRetention.fill('1');
-      await settingsPage.buttons.applyAdvancedChanges.click();
-      await expect(settingsPage.inputs.dataRetention).toHaveValue('1', { timeout: Timeouts.TEN_SECONDS });
-      await expect(settingsPage.elements.errorAlert).toBeHidden();
+      await settingsPage.applyAdvancedChanges();
+      await expect(settingsPage.buttons.applyAdvancedChanges).toHaveText('Apply changes', {
+        timeout: Timeouts.THIRTY_SECONDS,
+      });
       await expect(settingsPage.inputs.dataRetention).toHaveValue('1', {
         timeout: Timeouts.THIRTY_SECONDS,
       });
+      await expect(settingsPage.elements.errorAlert).toBeHidden();
     });
   },
 );
