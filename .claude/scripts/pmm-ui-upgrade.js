@@ -10,6 +10,11 @@ const URL_BASE = process.env.PMM_URL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const OUT = process.env.OUT_PREFIX || '/tmp/pmm-upgrade';
 const DEADLINE_MS = Number(process.env.DEADLINE_MS || 1500000);
+// How long to keep watching after the server build changes. The tab under an
+// old-version upgrade is the interesting case: 3.7.0/3.8.0 have no reload of
+// any kind, so this window is what decides "stale until the user reloads"
+// versus "recovers on its own".
+const POST_CHANGE_MS = Number(process.env.POST_CHANGE_MS || 90000);
 
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 
@@ -132,7 +137,7 @@ const version = async (page) => {
       changedAt = Date.now();
       log('*** server version changed:', baseline, '->', v);
     }
-    if (changedAt && Date.now() - changedAt > 90000) break;
+    if (changedAt && Date.now() - changedAt > POST_CHANGE_MS) break;
   }
 
   log('final version:', await version(page));
