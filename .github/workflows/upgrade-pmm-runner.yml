@@ -238,7 +238,7 @@ jobs:
 
       - name: Upgrade PMM client in every client container to show logs only if error occurs
         run: |
-          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos)$'); do
+          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio)$'); do
             echo "== upgrading client in $c =="
             log=$(mktemp)
             set +e
