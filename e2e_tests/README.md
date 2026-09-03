@@ -99,6 +99,7 @@ For test, page-object, fixture, and helper conventions, see [CONTRIBUTING.md](./
 - `@link`
 - `@new-navigation`
 - `@nightly`
+- `@node-exporter-integration`
 - `@pgsm-pmm-integration`
 - `@pmm-ha`
 - `@pmm-ps-integration`
