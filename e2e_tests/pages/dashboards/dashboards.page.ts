@@ -110,11 +110,15 @@ export default class Dashboards extends BasePage {
     // instead breaks under `retries`: a retry re-runs the annotation setup, and
     // the extra marker shifts every index after it.
     const tooltip = this.builders.annotationText(annotationTitle);
-    // `annotationText` matches on a substring, so compare exactly here --
-    // otherwise "annotation-for-postgres" also accepts the tooltip of
-    // "annotation-for-postgres-server".
+    // `annotationText` matches on a substring, so "annotation-for-postgres"
+    // would otherwise accept the tooltip of "annotation-for-postgres-server".
+    // Match the title at a boundary instead of comparing whole strings: a
+    // `pmm-admin annotate` tooltip is the bare title, while an API annotation
+    // renders as `<title> (Service Name: x. Node Name: y)`.
     const tooltipShowsTitle = async () =>
-      (await tooltip.allTextContents()).some((text) => text.trim() === annotationTitle);
+      (await tooltip.allTextContents())
+        .map((text) => text.trim())
+        .some((text) => text === annotationTitle || text.startsWith(`${annotationTitle} (`));
     const deadline = Date.now() + timeout;
 
     await pmmTest.step(`Hover the annotation marker for "${annotationTitle}"`, async () => {
