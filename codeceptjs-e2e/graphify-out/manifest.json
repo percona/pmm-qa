@@ -20,9 +20,9 @@
     "semantic_hash": "1b49da361007acc40b0629d218f4922a"
   },
   "package.json": {
-    "mtime": 1787233825.231151,
-    "ast_hash": "1bba59122210eab978aede99af9e243f",
-    "semantic_hash": "1bba59122210eab978aede99af9e243f"
+    "mtime": 1788466154.0524638,
+    "ast_hash": "4b0689fdbb600ad43806f7a06eccbcbf",
+    "semantic_hash": "4b0689fdbb600ad43806f7a06eccbcbf"
   },
   "pr.codecept.js": {
     "mtime": 1787233825.231151,
@@ -45,24 +45,24 @@
     "semantic_hash": "bb4945c905e141513703b4e5856ea8ad"
   },
   "testdata/db_setup.sh": {
-    "mtime": 1784571729.0568657,
-    "ast_hash": "cccf33f451ffd1ebaa30a029ef2ed123",
-    "semantic_hash": "cccf33f451ffd1ebaa30a029ef2ed123"
+    "mtime": 1788457779.7918346,
+    "ast_hash": "a560470fa44f6e3f2fb6359a7cc0d3b9",
+    "semantic_hash": "a560470fa44f6e3f2fb6359a7cc0d3b9"
   },
   "testdata/docker-cleanup.sh": {
-    "mtime": 1784571729.0568657,
+    "mtime": 1787753017.9850283,
     "ast_hash": "da14ce010cf0e772bf3253183ae1fa2e",
     "semantic_hash": "da14ce010cf0e772bf3253183ae1fa2e"
   },
   "testdata/docker-db-setup-scripts/docker_mongodb_ssl_4_4.sh": {
-    "mtime": 1784571729.0568657,
-    "ast_hash": "6e17cca797fc19fbe4d29434788f8560",
-    "semantic_hash": "6e17cca797fc19fbe4d29434788f8560"
+    "mtime": 1788457779.7932334,
+    "ast_hash": "6fb6f8b1747f4ed70d88dc7b1cbd5a71",
+    "semantic_hash": "6fb6f8b1747f4ed70d88dc7b1cbd5a71"
   },
   "testdata/docker-db-setup-scripts/docker_mysql_ssl_8_0.sh": {
-    "mtime": 1784571729.0568657,
-    "ast_hash": "79a1bc8f774a8fd5fec76392548df587",
-    "semantic_hash": "79a1bc8f774a8fd5fec76392548df587"
+    "mtime": 1788457779.7932334,
+    "ast_hash": "54068baf43fa93f3a7c066498508fe5d",
+    "semantic_hash": "54068baf43fa93f3a7c066498508fe5d"
   },
   "testdata/docker-db-setup-scripts/docker_postgres_13.sh": {
     "mtime": 1784571729.0568657,
@@ -70,9 +70,9 @@
     "semantic_hash": "31f008d65b68735404e1d92f3171ca5e"
   },
   "testdata/docker-db-setup-scripts/docker_postgres_ssl_13.sh": {
-    "mtime": 1784571729.0568657,
-    "ast_hash": "e8fd61281b38b1c3a1e890fd78cfb5ad",
-    "semantic_hash": "e8fd61281b38b1c3a1e890fd78cfb5ad"
+    "mtime": 1788457779.7943459,
+    "ast_hash": "5cff8663b0382b5eb7d8ed809c20c4cb",
+    "semantic_hash": "5cff8663b0382b5eb7d8ed809c20c4cb"
   },
   "testdata/docker-db-setup-scripts/docker_ps_5_7.sh": {
     "mtime": 1784571729.0568657,
@@ -95,9 +95,9 @@
     "semantic_hash": "6bef5c273a0eea09838dee5561e0b8ed"
   },
   "testdata/ia/gencerts.sh": {
-    "mtime": 1784571729.0701568,
-    "ast_hash": "eab5ac0b6b15aef5e2859fb208ca938b",
-    "semantic_hash": "eab5ac0b6b15aef5e2859fb208ca938b"
+    "mtime": 1788457779.8098583,
+    "ast_hash": "168f31603f1276394b6da4f4dc107c5c",
+    "semantic_hash": "168f31603f1276394b6da4f4dc107c5c"
   },
   "testdata/ia/scripts/alert.sh": {
     "mtime": 1784571729.0727148,
@@ -115,24 +115,24 @@
     "semantic_hash": "8684e097f3ee63c277f6b2096819fea1"
   },
   "testdata/mysql/ssl-cert-scripts/gencerts.sh": {
-    "mtime": 1784571729.0747232,
-    "ast_hash": "083e8c8edc0ba42141e1b1aeb010b507",
-    "semantic_hash": "083e8c8edc0ba42141e1b1aeb010b507"
+    "mtime": 1788457779.8098583,
+    "ast_hash": "7afa8af39203f705e946de5506885463",
+    "semantic_hash": "7afa8af39203f705e946de5506885463"
   },
   "testdata/mysql/ssl-cert-scripts/genclient.sh": {
-    "mtime": 1784571729.0747232,
-    "ast_hash": "a1c2ef9b9c4edb2bf498d01e1e0a4b78",
-    "semantic_hash": "a1c2ef9b9c4edb2bf498d01e1e0a4b78"
+    "mtime": 1788457779.8098583,
+    "ast_hash": "da89a5f48cb84536a80c28623d97db56",
+    "semantic_hash": "da89a5f48cb84536a80c28623d97db56"
   },
   "testdata/mysql/ssl-cert-scripts/genroot.sh": {
-    "mtime": 1784571729.0747232,
-    "ast_hash": "424bbd61b5a5175885308982bd0427a1",
-    "semantic_hash": "424bbd61b5a5175885308982bd0427a1"
+    "mtime": 1788457779.8098583,
+    "ast_hash": "238805e8971b92f923e6f784903ee11a",
+    "semantic_hash": "238805e8971b92f923e6f784903ee11a"
   },
   "testdata/mysql/ssl-cert-scripts/genserver.sh": {
-    "mtime": 1784571729.0783482,
-    "ast_hash": "581367c19d69830cc86fc989706a14bf",
-    "semantic_hash": "581367c19d69830cc86fc989706a14bf"
+    "mtime": 1788457779.8118758,
+    "ast_hash": "7f3d9537c750a7cce48f80d16b7ddccb",
+    "semantic_hash": "7f3d9537c750a7cce48f80d16b7ddccb"
   },
   "testdata/pgsql/initialize.sql": {
     "mtime": 1784571729.0783482,
@@ -205,9 +205,9 @@
     "semantic_hash": "8e1f591643f2b559d2c616c24bf5539c"
   },
   "tests/QAN/externalClickhouse_test.js": {
-    "mtime": 1787241459.4243603,
-    "ast_hash": "4bd8c5f08162fb2faa80de1655cd8145",
-    "semantic_hash": "4bd8c5f08162fb2faa80de1655cd8145"
+    "mtime": 1787601718.7849405,
+    "ast_hash": "69617946081ed9f9371ffc12372fdf8d",
+    "semantic_hash": "69617946081ed9f9371ffc12372fdf8d"
   },
   "tests/QAN/filters_test.js": {
     "mtime": 1784571729.0940616,
@@ -230,14 +230,14 @@
     "semantic_hash": "ae28b4cee03b648f9f0a3d765dac6528"
   },
   "tests/QAN/timerange_test.js": {
-    "mtime": 1787241459.4243603,
+    "mtime": 1787747571.7791975,
     "ast_hash": "3af5f527634c52f581c722ef11a85292",
     "semantic_hash": "3af5f527634c52f581c722ef11a85292"
   },
   "tests/administration/serviceAccounts_test.js": {
-    "mtime": 1787237400.4759607,
-    "ast_hash": "964b251d36d642afa2a20413d07babd3",
-    "semantic_hash": "964b251d36d642afa2a20413d07babd3"
+    "mtime": 1788466154.0662222,
+    "ast_hash": "72481a4188838ffb39fd764cb37a9467",
+    "semantic_hash": "72481a4188838ffb39fd764cb37a9467"
   },
   "tests/advisors/advisors_test.js": {
     "mtime": 1784571729.0961483,
@@ -435,7 +435,7 @@
     "semantic_hash": "d3bb4db9c839049ad43451ec4785819d"
   },
   "tests/configuration/verifyRoleBasedAccessControl_test.js": {
-    "mtime": 1787241459.4243603,
+    "mtime": 1787747571.780201,
     "ast_hash": "40e2f7c224ab2d3d7ccd030281ca48e1",
     "semantic_hash": "40e2f7c224ab2d3d7ccd030281ca48e1"
   },
@@ -505,9 +505,9 @@
     "semantic_hash": "34396e74712de6aafa04d0cfae6045dc"
   },
   "tests/dockerConfiguration/publicAddressVariable_test.js": {
-    "mtime": 1784571729.1468308,
-    "ast_hash": "548ee13f3044177562dcb9a52aa7c242",
-    "semantic_hash": "548ee13f3044177562dcb9a52aa7c242"
+    "mtime": 1788466154.070015,
+    "ast_hash": "3a482378c7e2c11666814623fcf302f9",
+    "semantic_hash": "3a482378c7e2c11666814623fcf302f9"
   },
   "tests/dockerConfiguration/verifySrvDataDirectory_test.js": {
     "mtime": 1784571729.1468308,
@@ -660,9 +660,9 @@
     "semantic_hash": "7cc36a65fde62f72ec07f44ae3388f65"
   },
   "tests/ia/pages/ruleTemplatesPage.js": {
-    "mtime": 1784571729.1728964,
-    "ast_hash": "ab765ee77a2c4f1a6e24da1373ae6914",
-    "semantic_hash": "ab765ee77a2c4f1a6e24da1373ae6914"
+    "mtime": 1788466154.0798864,
+    "ast_hash": "65d02844a7291ebea3594c5375915596",
+    "semantic_hash": "65d02844a7291ebea3594c5375915596"
   },
   "tests/ia/pages/silencesPage.js": {
     "mtime": 1784571729.1728964,
@@ -675,9 +675,9 @@
     "semantic_hash": "4c77df9ff8c28c2735394a314f1e6396"
   },
   "tests/ia/ruleTemplates_test.js": {
-    "mtime": 1784571729.1843238,
-    "ast_hash": "1da88d5f4f7fb91652d27bdaa4ba5d8f",
-    "semantic_hash": "1da88d5f4f7fb91652d27bdaa4ba5d8f"
+    "mtime": 1788466154.0850203,
+    "ast_hash": "20c90a2aee957eecd8ececdf67f6759b",
+    "semantic_hash": "20c90a2aee957eecd8ececdf67f6759b"
   },
   "tests/metrics/explorePage_test.js": {
     "mtime": 1784571729.1925294,
@@ -760,7 +760,7 @@
     "semantic_hash": "ef4cb0594b3e4c2261222af8789dc293"
   },
   "tests/pages/api/grafanaAPI.js": {
-    "mtime": 1787241459.4290507,
+    "mtime": 1787747571.7822025,
     "ast_hash": "ecffa68d1702c5d7a43cacb1670f11b0",
     "semantic_hash": "ecffa68d1702c5d7a43cacb1670f11b0"
   },
@@ -820,9 +820,9 @@
     "semantic_hash": "63d18840f42a8c5c3673da0bf4b2ef9c"
   },
   "tests/pages/dashboardPage.js": {
-    "mtime": 1785354626.6823075,
-    "ast_hash": "c13d521e5a0683b10bb3b4da1da1c1ab",
-    "semantic_hash": "c13d521e5a0683b10bb3b4da1da1c1ab"
+    "mtime": 1788466154.0850203,
+    "ast_hash": "fc340c69b195c06204bd30a96db13f0f",
+    "semantic_hash": "fc340c69b195c06204bd30a96db13f0f"
   },
   "tests/pages/dashboards/components/DashboardPanelMenu.js": {
     "mtime": 1784571729.2285361,
@@ -1074,18 +1074,13 @@
     "ast_hash": "ac5f450800b6d92ba1993d81b2637ea6",
     "semantic_hash": "ac5f450800b6d92ba1993d81b2637ea6"
   },
-  "tests/serverLogs_test.js": {
-    "mtime": 1787254423.1725528,
-    "ast_hash": "4685265ab01152da03c293921e9fd65f",
-    "semantic_hash": "4685265ab01152da03c293921e9fd65f"
-  },
   "tests/sshOVF_test.js": {
     "mtime": 1784571729.3461256,
     "ast_hash": "7c8c24fd7d317496b16e78cc925f999b",
     "semantic_hash": "7c8c24fd7d317496b16e78cc925f999b"
   },
   "tests/upgrade/advisorsAlerting_test.js": {
-    "mtime": 1787241459.4290507,
+    "mtime": 1787747571.7832842,
     "ast_hash": "4617ef3267876771ca83105f492a518e",
     "semantic_hash": "4617ef3267876771ca83105f492a518e"
   },
@@ -1105,7 +1100,7 @@
     "semantic_hash": "86d5d04c8ec42108407bc97be88661ba"
   },
   "tests/upgrade/dashboards_test.js": {
-    "mtime": 1787241459.4290507,
+    "mtime": 1787747571.784297,
     "ast_hash": "0c62ad8d608b73fc2f77da163e0c6110",
     "semantic_hash": "0c62ad8d608b73fc2f77da163e0c6110"
   },
@@ -1144,11 +1139,6 @@
     "ast_hash": "d4b6c7e888b1fb9eada61c47316b07b0",
     "semantic_hash": "d4b6c7e888b1fb9eada61c47316b07b0"
   },
-  "tests/verifyAnnotations_test.js": {
-    "mtime": 1784571729.3609574,
-    "ast_hash": "b64e82b5cd607281ff7958c359f26e8b",
-    "semantic_hash": "b64e82b5cd607281ff7958c359f26e8b"
-  },
   "tests/verifyAuroraMySQLRemoteInstance_test.js": {
     "mtime": 1786123231.886947,
     "ast_hash": "13f08d5ac05fb55b9c5ad0c04040e858",
@@ -1180,9 +1170,9 @@
     "semantic_hash": "43cae22200b109d0950f3ef2788c8094"
   },
   "tests/verifyMongodbDashboards_test.js": {
-    "mtime": 1786654590.5804608,
-    "ast_hash": "56792a8b4acece20b4b35e273b53883c",
-    "semantic_hash": "56792a8b4acece20b4b35e273b53883c"
+    "mtime": 1788466154.0850203,
+    "ast_hash": "188557e53ebbd0d77b1b3db43cec1d5e",
+    "semantic_hash": "188557e53ebbd0d77b1b3db43cec1d5e"
   },
   "tests/verifyMysqlDashboards_test.js": {
     "mtime": 1784571729.3720355,
@@ -1235,7 +1225,7 @@
     "semantic_hash": "391f90a42c62943ae5692e352d8b6453"
   },
   "tests/verifyVMDashboards_test.js": {
-    "mtime": 1784571729.3868754,
+    "mtime": 1788375337.0679812,
     "ast_hash": "cd6e7cc035cb46e646c6fd377a7f031b",
     "semantic_hash": "cd6e7cc035cb46e646c6fd377a7f031b"
   },
@@ -1245,19 +1235,19 @@
     "semantic_hash": "e8e418a470f29c84f350115e5f83aa9d"
   },
   "tests/leftNavigation_migrated.js": {
-    "mtime": 1787254423.1725528,
+    "mtime": 1787747571.781196,
     "ast_hash": "1db986cdad74e02fdb8637d236b79148",
     "semantic_hash": "1db986cdad74e02fdb8637d236b79148"
   },
   "CONTRIBUTING.md": {
-    "mtime": 1784571729.015237,
-    "ast_hash": "d0795a89ed61d0ff7548125136e2be4b",
-    "semantic_hash": "d0795a89ed61d0ff7548125136e2be4b"
+    "mtime": 1788457779.7771928,
+    "ast_hash": "117ff57ac8705a273b360265d11e95d0",
+    "semantic_hash": "117ff57ac8705a273b360265d11e95d0"
   },
   "README.md": {
-    "mtime": 1784571729.0286689,
-    "ast_hash": "9016f91ce17c5b7599dc2f70ad128988",
-    "semantic_hash": "9016f91ce17c5b7599dc2f70ad128988"
+    "mtime": 1788457779.778197,
+    "ast_hash": "382221a59db89ff898ee5c5de2c1147b",
+    "semantic_hash": "382221a59db89ff898ee5c5de2c1147b"
   },
   "docker-compose-allure.yml": {
     "mtime": 1784571729.0286689,
@@ -1270,9 +1260,9 @@
     "semantic_hash": "78f7db78a992999191ce118e2d624193"
   },
   "docker-compose-clickhouse.yml": {
-    "mtime": 1785354626.6738682,
-    "ast_hash": "56565152fe84d556a7b95f86ec724dc6",
-    "semantic_hash": "56565152fe84d556a7b95f86ec724dc6"
+    "mtime": 1788466154.0368078,
+    "ast_hash": "c6b309473ff1a19c23fecc8dfc5c5e99",
+    "semantic_hash": "c6b309473ff1a19c23fecc8dfc5c5e99"
   },
   "docker-compose-disconnect.yml": {
     "mtime": 1784571729.034307,
@@ -1305,7 +1295,7 @@
     "semantic_hash": "e587e968feb2184f31abf3b8d1872a0d"
   },
   "docker-compose-ubuntu.yml": {
-    "mtime": 1784571729.034307,
+    "mtime": 1787753022.5905573,
     "ast_hash": "68273ae71096bddaef94e02d5cb761c8",
     "semantic_hash": "68273ae71096bddaef94e02d5cb761c8"
   },
@@ -1315,24 +1305,24 @@
     "semantic_hash": "63cf6b3f8287318ac3bc1505e2501e5d"
   },
   "pmm-ssl.yml": {
-    "mtime": 1784571729.05057,
+    "mtime": 1787753026.1595292,
     "ast_hash": "781db46985a73a6967bef9e922fafab6",
     "semantic_hash": "781db46985a73a6967bef9e922fafab6"
   },
   "testdata/external-services/external-pgsql-ssl.yml": {
-    "mtime": 1785354626.6757104,
-    "ast_hash": "6355b1e25c813676e9ac543caa7d81a5",
-    "semantic_hash": "6355b1e25c813676e9ac543caa7d81a5"
+    "mtime": 1788466154.0579984,
+    "ast_hash": "89abecd789b7fb28c643a77f46e59071",
+    "semantic_hash": "89abecd789b7fb28c643a77f46e59071"
   },
   "testdata/external-services/external-pgsql.yml": {
-    "mtime": 1785354626.6757104,
-    "ast_hash": "e7b8224ab2d3b0fd2e082828290fd3a4",
-    "semantic_hash": "e7b8224ab2d3b0fd2e082828290fd3a4"
+    "mtime": 1788466154.0645535,
+    "ast_hash": "4a2fcb25b787f41b9dcb2087665e27ee",
+    "semantic_hash": "4a2fcb25b787f41b9dcb2087665e27ee"
   },
   "tests/ia/README.md": {
-    "mtime": 1784571729.168397,
-    "ast_hash": "d3f8c90491be3aa549308c7de90be984",
-    "semantic_hash": "d3f8c90491be3aa549308c7de90be984"
+    "mtime": 1788457779.8179557,
+    "ast_hash": "69eda11a5f75e6140181960e098a3db6",
+    "semantic_hash": "69eda11a5f75e6140181960e098a3db6"
   },
   "tests/ia/templates/customParam.yml": {
     "mtime": 1784571729.1843238,
@@ -1403,5 +1393,15 @@
     "mtime": 1784571729.3343894,
     "ast_hash": "cf06274f5dab87a4b88934e4d5df956f",
     "semantic_hash": "cf06274f5dab87a4b88934e4d5df956f"
+  },
+  "tests/serverLogs_migrated.js": {
+    "mtime": 1788466154.0850203,
+    "ast_hash": "4685265ab01152da03c293921e9fd65f",
+    "semantic_hash": "4685265ab01152da03c293921e9fd65f"
+  },
+  "tests/verifyAnnotations_migrated.js": {
+    "mtime": 1788466154.0850203,
+    "ast_hash": "b64e82b5cd607281ff7958c359f26e8b",
+    "semantic_hash": "b64e82b5cd607281ff7958c359f26e8b"
   }
 }
