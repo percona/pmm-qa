@@ -74,7 +74,6 @@ for (const annotation of annotations) {
               : await api.inventoryApi.getServiceDetailsByTypeAndPartialName(
                   annotation.service_type,
                   annotation.service,
-                  'pmm-server',
                 );
           const node = await api.inventoryApi.getNodeName(service.node_id);
           const response = await api.annotationApi.setAnnotation(

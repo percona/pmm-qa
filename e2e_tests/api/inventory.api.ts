@@ -63,14 +63,11 @@ export default class InventoryApi {
   getServiceDetailsByTypeAndPartialName = async (
     serviceType: ServiceType,
     partialServiceName: string,
-    excludeSubstring?: string,
   ): Promise<GetService> => {
     const services = (await this.getServicesByType(serviceType)).filter((service: GetService) =>
       service.service_name.includes(partialServiceName),
     );
-    const service = excludeSubstring
-      ? services.find((service: GetService) => !service.service_name.includes(excludeSubstring))
-      : services.at(0);
+    const service = services.at(0);
 
     if (!service) {
       throw new Error(`Service ${partialServiceName} of type ${serviceType} is not present`);
