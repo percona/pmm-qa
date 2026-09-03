@@ -346,7 +346,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .outContains(`- updated disabled collectors: [${disabledCollectors.join(' ')}]`);
 
       const check = cliHelper
-        .execSilent(`docker exec ${containerName} curl -sk https://127.0.0.1:${nodeExporterPort}/metrics`)
+        .execSilent(
+          `docker exec ${containerName} curl -sk https://${containerName}:${nodeExporterPort}/metrics`,
+        )
         .assertSuccess();
 
       for (const collector of disabledCollectors) {
