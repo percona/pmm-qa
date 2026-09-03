@@ -1,0 +1,6 @@
+# .claude/skills/linode-docker-provisioning/SKILL.md — the PMM_CERT_PATH pin does fail on the single-server Docker path, so PMM_UI_INSECURE is not HA-only
+
+- Added: 2026-09-03
+- Applies to: .claude/skills/linode-docker-provisioning/SKILL.md and .claude/skills/ui-evidence/SKILL.md
+- Evidence: This settles the question an earlier entry left open ("whether Chromium's SPKI flag behaves the same against a run's .nip.io PMM was not tested — no VM was provisioned"). On a provisioned single-server Docker run, `pmm-ui-login.js` with `PMM_CERT_PATH` set to the cert fetched in step 2 failed with `net::ERR_CERT_AUTHORITY_INVALID`; `openssl s_client` against the run's host on 443 returned `subject=CN = *.nip.io`, `issuer=O = Anthropic, CN = Egress Gateway SDS Issuing CA (production)`, i.e. the egress gateway's cert, not PMM's, so the pin can never match. `PMM_UI_INSECURE=1` succeeded immediately. Both skills currently present pinning as the Docker-path default and `PMM_UI_INSECURE=1` as an HA/LKE-only fallback.
+- Proposed change: State that behind the session's re-signing egress proxy the browser sees the gateway's cert on both paths, so `PMM_UI_INSECURE=1` is the working setting for single-server Docker too, and name the real trust boundary (the proxy plus the cert-pinned exec channel) instead of implying an end-to-end pin.
