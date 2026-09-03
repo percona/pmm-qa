@@ -17,7 +17,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   // let pgStatMonitorId: string;
   // let pgExporterSocketId: string;
   // let pgStatMonitorSocketId: string;
-  const nodeExporterPassword = 'newAgentPassword';
+  let nodeExporterPassword = 'newAgentPassword';
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep pdpgsql`).stdout.trim();
