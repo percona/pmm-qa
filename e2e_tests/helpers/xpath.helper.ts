@@ -1,6 +1,4 @@
-// An XPath 1.0 string literal has no escape syntax and cannot mix quote
-// styles, so a value containing an apostrophe has to be assembled with
-// concat() rather than wrapped in quotes.
+// XPath 1.0 literals have no escape syntax, so an apostrophe needs concat().
 export const xpathLiteral = (value: string) => {
   if (!value.includes("'")) {
     return `'${value}'`;

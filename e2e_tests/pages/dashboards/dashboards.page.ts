@@ -106,16 +106,9 @@ export default class Dashboards extends BasePage {
   };
 
   hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.TWO_MINUTES) => {
-    // Markers carry no attribute naming their annotation, so identifying one
-    // means hovering it and reading the tooltip. Picking a marker by position
-    // instead breaks under `retries`: a retry re-runs the annotation setup, and
-    // the extra marker shifts every index after it.
+    // Markers are unlabelled, so the tooltip is the only way to tell them apart.
     const tooltip = this.builders.annotationText(annotationTitle);
-    // `annotationText` matches on a substring, so "annotation-for-postgres"
-    // would otherwise accept the tooltip of "annotation-for-postgres-server".
-    // Match the title at a boundary instead of comparing whole strings: a
-    // `pmm-admin annotate` tooltip is the bare title, while an API annotation
-    // renders as `<title> (Service Name: x. Node Name: y)`.
+    // An API annotation's tooltip appends " (Service Name: x. Node Name: y)".
     const tooltipShowsTitle = async () =>
       (await tooltip.allTextContents())
         .map((text) => text.trim())
@@ -130,14 +123,7 @@ export default class Dashboards extends BasePage {
           if (Date.now() >= deadline) break;
 
           try {
-            // Every panel draws its own marker for each annotation, and two
-            // annotations minutes apart land within a few pixels of each other,
-            // so a marker whose centre another marker covers cannot be hovered
-            // at all -- Playwright reports "intercepts pointer events". That is
-            // ordinary here (9 of 24 markers on Processes Details), not a
-            // failure: skip to the next marker instead of letting it end the
-            // search. The short timeout keeps a full sweep well inside the
-            // budget, since the project's actionTimeout is 10s.
+            // Overlapping markers cover each other, so some cannot be hovered.
             await this.elements.annotationMarkers.nth(i).hover({ timeout: Timeouts.THREE_SECONDS });
             await tooltip.first().waitFor({ state: 'visible', timeout: Timeouts.TWO_SECONDS });
           } catch {
