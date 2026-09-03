@@ -320,7 +320,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec pmm-server curl -u pmm:${nodeExporterPassword} http://${containerName}:${nodeExporterPort}/metrics`,
         )
         .assertSuccess()
-        .outContains('pg_up');
+        .outContains('node_exporter_build_info');
       await cliHelper
         .execSilent(
           `docker exec ${containerName} cat /var/log/pmm-agent.log | grep vmagent | tail -20 | grep error`,
