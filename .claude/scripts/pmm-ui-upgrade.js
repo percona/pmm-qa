@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
 const { proxyLaunchOptions } = require('./lib/proxy');
 
 const URL_BASE = process.env.PMM_URL;
-const SESSION = process.env.SESSION;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const OUT = process.env.OUT_PREFIX || '/tmp/pmm-upgrade';
 const DEADLINE_MS = Number(process.env.DEADLINE_MS || 1500000);
 
@@ -32,7 +32,6 @@ const version = async (page) => {
     proxy: opts.proxy,
   });
   const ctx = await browser.newContext({
-    storageState: `${__dirname}/.sessions/${SESSION}.json`,
     ignoreHTTPSErrors: true,
     viewport: { width: 1600, height: 1000 },
     recordVideo: { dir: `${OUT}-video`, size: { width: 1600, height: 1000 } },
@@ -44,16 +43,57 @@ const version = async (page) => {
   });
   page.on('pageerror', (e) => consoleErrors.push(`pageerror: ${String(e).slice(0, 300)}`));
 
-  log('STEP 2: open Home dashboard');
-  await page.goto(`${URL_BASE}/graph/d/pmm-home`, { waitUntil: 'load' });
+  // Logs in here rather than reusing a pmm-ui-login.js storage state: that
+  // helper stubs GET /v1/users/me and /v1/server/updates, and a run of it
+  // left snoozed_pmm_version set, which suppresses the very popup step 2
+  // needs. No stubs at all in this script.
+  log('STEP 1: log in');
+  await page.goto(URL_BASE, { waitUntil: 'load' });
+  const origin = new URL(page.url()).origin;
+  if (origin !== new URL(URL_BASE).origin) {
+    throw new Error(`redirected to ${origin} — refusing to send credentials`);
+  }
+  const login = await page.evaluate(
+    async ({ origin, password }) => {
+      const res = await fetch(`${origin}/graph/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: 'admin', password }),
+        redirect: 'error',
+      });
+      return { ok: res.ok, status: res.status };
+    },
+    { origin, password: ADMIN_PASSWORD }
+  );
+  if (!login.ok) throw new Error(`login failed: HTTP ${login.status}`);
+  log('logged in');
+
+  const userInfo = async (label) => {
+    try {
+      const r = await page.request.get(`${URL_BASE}/v1/users/me`, { timeout: 15000 });
+      log(`users/me (${label}):`, (await r.text()).replace(/\s+/g, ' '));
+    } catch (e) {
+      log(`users/me (${label}): ${e.message.split('\n')[0]}`);
+    }
+  };
+  await userInfo('after login');
+
+  log('STEP 2: open Home dashboard inside the PMM shell');
+  await page.goto(`${URL_BASE}/pmm-ui/graph/d/pmm-home`, { waitUntil: 'load' });
   const baseline = await version(page);
   log('baseline version:', baseline);
 
   log('waiting for the update popup');
   const goToUpdates = page.locator('[data-testid="update-modal-go-to-updates-button"]');
   await goToUpdates.waitFor({ state: 'visible', timeout: 120000 });
-  const modalTitle = await page.locator('[data-testid="update-modal-title"], .MuiDialogTitle-root').first().innerText().catch(() => '(no title node)');
-  log('popup visible, title:', JSON.stringify(modalTitle.replace(/\s+/g, ' ')));
+  const isSnackbar = await page.locator('[data-testid="update-modal-snackbar"]').count();
+  const modalTitle = await page
+    .locator('[data-testid="update-modal-title"], .MuiDialogTitle-root')
+    .first()
+    .innerText()
+    .catch(() => '(no title node)');
+  log(`popup visible as ${isSnackbar ? 'SNACKBAR (snooze_count>=1)' : 'MODAL'}, title:`,
+    JSON.stringify(modalTitle.replace(/\s+/g, ' ')));
   await page.screenshot({ path: `${OUT}-02-popup.png` });
 
   log('clicking Go To Updates');
