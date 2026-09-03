@@ -132,15 +132,8 @@ kubectl wait --for=condition=Ready nodes --all --timeout=300s
 kubectl get nodes
 
 # --- storage class: tag every CSI volume at birth ----------------------------
-# LKE's default SC (linode-block-storage-retain, which every PMM HA PVC uses) has
-# no volumeTags and its parameters are immutable, so each volume it provisions is
-# born untagged and -- being Retain -- survives teardown unattributable, which is
-# exactly what prune-lke-orphans.sh can never reap. Recreate that SC (same name,
-# so it covers PVCs that reference it explicitly or via default) with this run's
-# tags, so the CSI driver stamps pmm-qa-run:<id> on every volume at creation --
-# attached or not, at provision or later. The EXIT-trap / teardown tagging stays
-# as a backstop for the brief window before this applies (and if LKE re-reconciles
-# the SC).
+# LKE's default SC has no volumeTags and a StorageClass's parameters are immutable,
+# so its volumes are born untagged and prune-lke-orphans.sh can never attribute them.
 kubectl delete storageclass linode-block-storage-retain --ignore-not-found
 kubectl apply -f - <<EOF
 apiVersion: storage.k8s.io/v1
