@@ -28,6 +28,14 @@ services:
       - PMM_CLICKHOUSE_DATABASE=pmm
       - PMM_CLICKHOUSE_ADDR=external-clickhouse:9000
       - PMM_ENABLE_INTERNAL_PG_QAN=1
+    # The image healthcheck gives up before a cold PMM Server answers readyz,
+    # which aborts `up` for the service_healthy dependents below.
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://127.0.0.1:8080/v1/server/readyz" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 60s
 
   pmm-client:
     image: perconalab/pmm-client:3-dev-latest

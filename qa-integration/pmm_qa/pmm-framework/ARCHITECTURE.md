@@ -168,7 +168,7 @@ Four sources can supply a value. Highest wins:
 
 ```mermaid
 flowchart LR
-    A["1. environment variable<br/>SETUP_TYPE=gr ./pmm-framework ..."] --> B["2. global flag<br/>--client-version<br/>(CLIENT_VERSION only)"]
+    A["1. global flag<br/>--client-version<br/>(CLIENT_VERSION only)"] --> B["2. environment variable<br/>SETUP_TYPE=gr ./pmm-framework ..."]
     B --> C["3. spec option<br/>--database ps,SETUP_TYPE=gr"]
     C --> D["4. registered default<br/>lib/config.sh"]
 ```
