@@ -66,7 +66,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   /*
   pdmmTest(
-    'PMM-T9991 - Verfiy Change agent username and password @pgsm-pmm-integration',
+    'PMM-T9991 - Verfiy Change agent username and password @node-exporter-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       let commands = [
         `docker exec ${containerName} psql -U postgres -c "CREATE ROLE ${newUsername} WITH LOGIN PASSWORD '${newPassword}-Wrong';"`,
@@ -118,7 +118,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   // eslint-disable-next-line playwright/no-commented-out-tests -- Temporary test
   /*
   pmmTgest(
-    'PMM-T9993 - Verify Change agent log level @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent log level @node-exporter-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --log-level=debug`,
@@ -150,7 +150,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmsmTest(
-    'PMM-T9993 - Verify Change agent debug, trace and json @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent debug, trace and json @node-exporter-integration',
     async ({ cliHelper }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --debug --trace --json`,
@@ -162,7 +162,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9994 - Verify Change agent tls @pgsm-pmm-integration',
+    'PMM-T9994 - Verify Change agent tls @node-exporter-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/postgresql/${pgVersion}/main/postgresql.conf`;
 
@@ -216,9 +216,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await servicesPage.waitForServiceMonitoring(serviceName, 'OK', Timeouts.TWO_MINUTES);
     },
   );
-
-  pmmsTest(
-    'PMM-T9995 - Verify Change agent enable true/false @pgsm-pmm-integration',
+*/
+  pmmTest(
+    'PMM-T9995 - Verify Change agent enable true/false @node-exporter-integration',
     async ({ cliHelper, page }) => {
       const enableCommands = [
         { command: '--enable=false', response: '- disabled agent', status: 'Done (disabled)' },
@@ -228,34 +228,25 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       ];
 
       for (const enableCommand of enableCommands) {
-        const commands = [
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} ${enableCommand.command}`,
-          `docker exec ${containerName} pmm-admin inventory change agent qan-postgresql-pgstatmonitor-agent ${pgStatMonitorId} ${enableCommand.command}`,
-        ];
-
-        for (const command of commands) {
-          await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
-        }
+        await cliHelper
+          .execSilent(
+            `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} ${enableCommand.command}`,
+          )
+          .assertSuccess()
+          .outContains(enableCommand.response);
 
         // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the agents to be enabled/disabled
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         await cliHelper
-          .execSilent(
-            `docker exec ${containerName} pmm-admin list | grep postgres_exporter | grep ${serviceId}`,
-          )
-          .outContains(enableCommand.status);
-        await cliHelper
-          .execSilent(
-            `docker exec ${containerName} pmm-admin list | grep postgresql_pgstatmonitor_agent | grep ${serviceId}`,
-          )
+          .execSilent(`docker exec ${containerName} pmm-admin list | grep node_exporter`)
           .outContains(enableCommand.status);
       }
     },
   );
-
+  /*
   pmmTesst(
-    'PMM-T9996 - Verify Change agent agent password @pgsm-pmm-integration',
+    'PMM-T9996 - Verify Change agent agent password @node-exporter-integration',
     async ({ cliHelper, page }) => {
       const commands = [
         `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --agent-password=${pgExporterPassword}`,
@@ -285,6 +276,11 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} pmm-admin list | grep ${nodeExporterId} | awk -F' ' '{print $6}'`,
         )
         .stdout.trim();
+      nodeExporterPort = cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin list | grep ${nodeExporterId} | awk -F' ' '{print $6}'`,
+        )
+        .stdout.trim();
       await cliHelper
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --expose-exporter`,
@@ -303,7 +299,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent push metrics @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent push metrics @node-exporter-integration',
     async ({ cliHelper, page }) => {
       nodeExporterPort = cliHelper
         .execSilent(
@@ -337,7 +333,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
   /*
   pmmTesst(
-    'PMM-T9993 - Verify Change agent disable collectors @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent disable collectors @node-exporter-integration',
     async ({ cliHelper }) => {
       await cliHelper
         .execSilent(
@@ -349,7 +345,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTesst(
-    'PMM-T9993 - Verify Change agent max exporter connections @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent max exporter connections @node-exporter-integration',
     async ({ cliHelper, page }) => {
       await cliHelper
         .execSilent(
@@ -368,7 +364,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTesst(
-    'PMM-T9993 - Verify Change agent pmm agent listen port @pgsm-pmm-integration',
+    'PMM-T9993 - Verify Change agent pmm agent listen port @node-exporter-integration',
     async ({ cliHelper }) => {
       let commands = [
         `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
