@@ -22,6 +22,10 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Reachable custom steps were inspected and mapped.
 - [ ] No behavior was added, removed, weakened, or improved.
 - [ ] Where a migrated helper branches on server configuration, the running server's environment was read (`docker exec pmm-server env`) and the evidence states which branch the green run actually took. Code alone cannot show it, so a ported fallback can look exercised when it never ran, or look dead when it is the only live path.
+- [ ] Data-driven rows generate one test each, not a loop inside one test - a loop hides which row failed, stops at the first, and collapses N selectable titles into one.
+- [ ] Source version conditionals are ported to `helpers/versionGates.ts` plus the `versionGate` fixture, keyed by the `PMM-T` id, never an inline `if (version...)`.
+- [ ] Zip entry assertions were re-derived, not copied: `codeceptjs-e2e/tests/custom_steps.js` maps `entryName` to the basename while `e2e_tests/helpers/archive.helper.ts` returns the full path, so a copied assertion changes meaning and stays green. `logs.zip` really contains both `pmm-agent.log` and `client/pmm-agent/pmm-agent.log`.
+- [ ] The assertion most at risk of being vacuous was proven able to fail by mutating its expected value and re-running. Inverting a matcher is not a mutation.
 
 ### Migration rules compliance
 
@@ -76,6 +80,10 @@ Against `playwright-practices.md`. Check the changed files, not the whole reposi
 - [ ] No block-level ESLint disable comments were added anywhere in migration-related code.
 - [ ] Changed-file ESLint passes.
 - [ ] No new TypeScript or full-project ESLint failures were introduced.
+- [ ] No newly added POM or helper method has exactly one caller; inline it at the call site instead. New surfaces only - exposing an existing method for reuse is `SKILL.md` Minimal reuse diffs and is not a finding.
+- [ ] No new wrapper method around a single click; the test uses the locator directly.
+- [ ] `e2e_tests/pages/base.page.ts` was checked before any method was added: `selectTimeRange`, `selectVariableValue`, `getVariableValues`, `grafanaIframe`, `duplicateCurrentPage`, and `haEnableCheck` already exist.
+- [ ] No function or method is declared in a `*.test.ts`; behavior lives in a POM or helper.
 
 ### MCP locator verification
 
@@ -131,6 +139,10 @@ Any non-zero value produces `REVIEW_FAILED` or `LOCATOR_FIX_REQUIRED`.
 - [ ] No unrelated files or behavior are included.
 - [ ] Static validation still introduces zero new failures.
 - [ ] The selected CodeceptJS source can be safely retired.
+- [ ] `expected_setup_jobs` matches the number of setup shards, and no job this PR added or renamed falls outside its required prefix: setup jobs start with `setup / `, nightly consumer jobs with `test execution / `, and the poll step is named exactly `Waiting for tests execution`. A job renamed out of its prefix is invisible to the poller - the shard finishes and a running consumer loses its client.
+- [ ] A migrated no-DB (B1) row was given a job named outside the `test execution / ` prefix, so the setup shards do not wait on it.
+- [ ] Any Launchable job this PR added passes a `--test-suite` name that distinguishes `playwright` from `codeceptjs`; the two use different path formats and a shared name poisons the model. `launchable subset` selects at file granularity, so a tag decision is a per-file decision.
+- [ ] Regions of `e2e_tests/README.md` between `<!-- *-START -->` and `<!-- *-END -->` were produced by `support_scripts/generate_readme.py`, not hand-edited, even where the text happens to be right.
 
 ## Final decision
 
