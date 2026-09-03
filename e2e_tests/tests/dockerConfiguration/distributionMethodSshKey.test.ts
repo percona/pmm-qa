@@ -2,16 +2,13 @@ import pmmTest from '@fixtures/pmmTest';
 import { expect } from '@playwright/test';
 import GrafanaHelper from '@helpers/grafana.helper';
 import apiEndpoints from '@helpers/apiEndpoints';
-import { Timeouts } from '@helpers/timeouts';
 
 const sshKey =
   'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEtU7ftdqg3rdRcv06kPAOnKX+WRmHlnG2UBpUNKw65h pmm-qa@distribution-method-test';
-const amiContainerName = 'pmm-server-distribution-ami';
-const amiPort = 450;
-const dockerVersion = process.env.DOCKER_VERSION || 'perconalab/pmm-server:3-dev-latest';
-const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
 
-pmmTest.describe('SSH key settings follow the PMM Server distribution method.', () => {
+// The AMI side of this gate is covered by the tests that run on real AMI deployments; simulating
+// AMI here would assert against a distribution method no AMI is involved in producing.
+pmmTest.describe('SSH key settings are unavailable off an AMI deployment.', () => {
   pmmTest.beforeEach(async ({ grafanaHelper, page }) => {
     await page.goto('');
     await grafanaHelper.authorize();
@@ -53,52 +50,6 @@ pmmTest.describe('SSH key settings follow the PMM Server distribution method.', 
 
         expect(settingsBefore.settings.ssh_key).toEqual('');
         expect(settingsAfter.settings.ssh_key).toEqual('');
-      });
-    },
-  );
-});
-
-// No minPmmVersion entry for PMM-T2283: the auto versionGate fixture would resolve against
-// baseUrl below, which nothing serves until the test body starts the container. It needs no gate
-// anyway -- the tab is offered on AMI both before and after percona/pmm#5744.
-pmmTest.describe('SSH key settings on an AMI deployment.', () => {
-  const baseUrl = `https://127.0.0.1:${amiPort}/`;
-
-  pmmTest.use({ baseURL: baseUrl });
-
-  pmmTest.afterEach(async ({ cliHelper }) => {
-    cliHelper.execSilent(`docker rm -f ${amiContainerName}`);
-  });
-
-  pmmTest(
-    'PMM-T2283 - Verify the SSH key tab is available on an AMI deployment @docker-configuration',
-    async ({ api, cliHelper, grafanaHelper, page, settingsPage }) => {
-      await pmmTest.step('Start a PMM Server that reports the AMI distribution method', async () => {
-        cliHelper
-          .execSilent(
-            `docker run --detach --restart always --network="pmm-qa" -e PMM_ENABLE_TELEMETRY=0 -e PMM_DISTRIBUTION_METHOD=ami -e GF_SECURITY_ADMIN_PASSWORD=${adminPassword} --publish ${amiPort}:8443 --name ${amiContainerName} ${dockerVersion}`,
-          )
-          .assertSuccess();
-        await api.serverApi.waitForReady(Timeouts.FIVE_MINUTES);
-
-        expect(await api.serverApi.getDistributionMethod()).toEqual('DISTRIBUTION_METHOD_AMI');
-      });
-
-      await pmmTest.step('Authorize against the AMI server', async () => {
-        await grafanaHelper.authorize('admin', adminPassword, baseUrl);
-      });
-
-      await pmmTest.step('Settings page offers the SSH key tab', async () => {
-        await page.goto(settingsPage.url);
-
-        await expect(settingsPage.tabs.ssh).toBeVisible();
-      });
-
-      await pmmTest.step('The SSH key URL opens the tab instead of redirecting', async () => {
-        await page.goto(settingsPage.urls.ssh);
-
-        await expect(settingsPage.tabs.ssh).toHaveAttribute('aria-selected', 'true');
-        await expect(page).toHaveURL(new RegExp(`${settingsPage.urls.ssh}$`));
       });
     },
   );
