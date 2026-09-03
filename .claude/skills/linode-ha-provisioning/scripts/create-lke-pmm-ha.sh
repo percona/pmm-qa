@@ -134,8 +134,12 @@ kubectl get nodes
 # --- storage class: tag every CSI volume at birth ----------------------------
 # LKE's default SC has no volumeTags and a StorageClass's parameters are immutable,
 # so its volumes are born untagged and prune-lke-orphans.sh can never attribute them.
-kubectl delete storageclass linode-block-storage-retain --ignore-not-found
-kubectl apply -f - <<EOF
+# `replace --force` recreates it in one step (a plain apply would hit "parameters
+# forbidden"); non-fatal with one retry so losing a race with LKE's addon reconciler
+# degrades to an untagged volume (imperative tagging backstop) -- never a failed
+# provision that leaks the already-created cluster.
+_apply_tagged_sc() {
+    kubectl replace --force -f - <<EOF
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
@@ -149,6 +153,8 @@ reclaimPolicy: Retain
 volumeBindingMode: Immediate
 allowVolumeExpansion: true
 EOF
+}
+_apply_tagged_sc || { sleep 3; _apply_tagged_sc || log "WARN: tagged StorageClass not applied; volumes fall back to imperative tagging"; }
 
 # --- dependencies (operators) ------------------------------------------------
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
