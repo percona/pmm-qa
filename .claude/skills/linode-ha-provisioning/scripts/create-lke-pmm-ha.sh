@@ -78,7 +78,7 @@ linode-cli lke cluster-create \
     --node_pools.count "$NODE_COUNT" \
     --tags pmm-qa-ephemeral \
     --tags "expires-${EXPIRES_EPOCH}" \
-    --tags "$RUN_ID"
+    --tags "pmm-qa-run:$RUN_ID"
 
 log "Resolving cluster ID..."
 CLUSTER_ID=""
@@ -112,7 +112,16 @@ _diag() {
     kubectl get events -n "$NAMESPACE" --sort-by=.metadata.creationTimestamp >"$RUN_DIR/events.txt" 2>&1 || true
     kubectl describe pods -n "$NAMESPACE" >"$RUN_DIR/describe.txt" 2>&1 || true
 }
-trap _diag EXIT
+# Stamp this cluster's volumes with pmm-qa-run:<id> so teardown
+# (prune-lke-orphans.sh) can attribute them. Runs on every exit path via the trap
+# so a failed bring-up is tagged too. Best-effort. destroy-lke / the reaper tag
+# again right before deleting the cluster, catching volumes created after this.
+_tag_for_teardown() {
+    [ -n "${CLUSTER_ID:-}" ] || return 0
+    local SD; SD="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    LINODE_TOKEN="$LINODE_TOKEN" bash "$SD/tag-lke-resources.sh" "$CLUSTER_ID" "$RUN_ID" || true
+}
+trap '_diag; _tag_for_teardown' EXIT
 # Linode reports the pool "ready" before the nodes register with the k8s API
 # server, so `kubectl wait --all` would hit an empty list and fail immediately
 # ("no matching resources found"). Wait for the nodes to appear first, then wait
@@ -244,6 +253,8 @@ until [ "$(curl -k -sS -m 10 -o /dev/null -w '%{http_code}' "https://$EXTERNAL_I
     sleep 10
 done
 log "PMM is serving (/v1/readyz 200)."
+# (volumes + NodeBalancer are tagged for teardown attribution by the EXIT trap,
+# so failed bring-ups are covered too -- see _tag_for_teardown above.)
 
 # --- persist run artifacts ---------------------------------------------------
 {
