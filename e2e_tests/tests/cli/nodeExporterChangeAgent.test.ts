@@ -347,7 +347,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       const check = cliHelper
         .execSilent(
-          `docker exec ${containerName} curl -sk https://${containerName}:${nodeExporterPort}/metrics`,
+          `docker exec pmm-server curl -u pmm:${nodeExporterPassword} http://${containerName}:${nodeExporterPort}/metrics`,
         )
         .assertSuccess();
 
