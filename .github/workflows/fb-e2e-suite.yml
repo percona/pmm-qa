@@ -152,7 +152,7 @@ jobs:
       tags_for_tests: '@fb-instances'
 
   instances_playwright:
-    name: Instances UI tests (Playwright)
+    name: Instances UI tests
     uses: ./.github/workflows/runner-e2e-tests-playwright.yml
     secrets:
       LAUNCHABLE_TOKEN: ${{ secrets.LAUNCHABLE_TOKEN }}

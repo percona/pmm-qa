@@ -1,56 +1,45 @@
 import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
 import { ServiceType } from '@interfaces/inventory';
-import { Timeouts } from '@helpers/timeouts';
 import MongoDashboards from '@pages/dashboards/mongo';
 import MysqlDashboards from '@pages/dashboards/mysql';
 import OperatingSystemDashboards from '@pages/dashboards/operating-system';
 import PostgresqlDashboards from '@pages/dashboards/postgresql';
 
-const isJenkinsGssapiJob = Boolean(process.env.JOB_NAME?.includes('gssapi'));
 const nodeAnnotationName = 'mysql-node-name';
 const processesDetailsUrl = OperatingSystemDashboards.processesDetails.url;
-const annotations = isJenkinsGssapiJob
-  ? [
-      {
-        annotationName: 'annotation-for-mongo',
-        dashboard: MongoDashboards.instanceSummary.url,
-        service: 'rs101_gssapi',
-        service_type: ServiceType.mongodb,
-      },
-    ]
-  : [
-      {
-        annotationName: 'annotation-for-postgres-server',
-        dashboard: PostgresqlDashboards.postgresqlInstanceSummary.url,
-        service: 'pmm-server',
-        service_type: ServiceType.postgresql,
-      },
-      {
-        annotationName: 'annotation-for-mongo',
-        dashboard: MongoDashboards.instanceSummary.url,
-        service: 'rs101',
-        service_type: ServiceType.mongodb,
-      },
-      {
-        annotationName: 'annotation-for-postgres',
-        dashboard: PostgresqlDashboards.postgresqlInstanceSummary.url,
-        service: 'pgsql',
-        service_type: ServiceType.postgresql,
-      },
-      {
-        annotationName: 'annotation-for-mysql',
-        dashboard: MysqlDashboards.mysqlInstanceSummary.url,
-        service: 'ps_',
-        service_type: ServiceType.mysql,
-      },
-      {
-        annotationName: nodeAnnotationName,
-        dashboard: OperatingSystemDashboards.nodesCompare.url,
-        service: 'ps_',
-        service_type: ServiceType.mysql,
-      },
-    ];
+const annotations = [
+  {
+    annotationName: 'annotation-for-postgres-server',
+    dashboard: PostgresqlDashboards.postgresqlInstanceSummary.url,
+    service: 'pmm-server',
+    service_type: ServiceType.postgresql,
+  },
+  {
+    annotationName: 'annotation-for-mongo',
+    dashboard: MongoDashboards.instanceSummary.url,
+    service: 'rs101',
+    service_type: ServiceType.mongodb,
+  },
+  {
+    annotationName: 'annotation-for-postgres',
+    dashboard: PostgresqlDashboards.postgresqlInstanceSummary.url,
+    service: 'pgsql',
+    service_type: ServiceType.postgresql,
+  },
+  {
+    annotationName: 'annotation-for-mysql',
+    dashboard: MysqlDashboards.mysqlInstanceSummary.url,
+    service: 'ps_',
+    service_type: ServiceType.mysql,
+  },
+  {
+    annotationName: nodeAnnotationName,
+    dashboard: OperatingSystemDashboards.nodesCompare.url,
+    service: 'ps_',
+    service_type: ServiceType.mysql,
+  },
+];
 
 pmmTest.beforeEach(async ({ grafanaHelper }) => {
   await grafanaHelper.authorize();
@@ -59,12 +48,7 @@ pmmTest.beforeEach(async ({ grafanaHelper }) => {
 for (const annotation of annotations) {
   pmmTest(
     `PMM-T878 - Verify adding annotation specific dashboard @nightly  @dashboards @annotations | ${JSON.stringify(annotation)}`,
-    async ({ api, dashboard, page, servicesPage, urlHelper }) => {
-      const isNodeAnnotation = annotation.annotationName === nodeAnnotationName;
-      const annotationMarker = dashboard.elements.annotationMarkers.nth(isNodeAnnotation ? 1 : 0);
-
-      await page.goto(servicesPage.url);
-
+    async ({ api, dashboard, page, urlHelper }) => {
       const { nodeName, serviceName } = await pmmTest.step(
         `Add annotation ${annotation.annotationName} for ${annotation.service}`,
         async () => {
@@ -74,9 +58,8 @@ for (const annotation of annotations) {
               : await api.inventoryApi.getServiceDetailsByTypeAndPartialName(
                   annotation.service_type,
                   annotation.service,
-                  'pmm-server',
                 );
-          const node = await api.inventoryApi.getNodeName(service.node_id);
+          const node = service.node_name;
           const response = await api.annotationApi.setAnnotation(
             annotation.annotationName,
             'PMM-T878',
@@ -94,6 +77,7 @@ for (const annotation of annotations) {
       );
 
       await pmmTest.step(`Verify ${annotation.annotationName} is loaded on the dashboard`, async () => {
+        const isNodeAnnotation = annotation.annotationName === nodeAnnotationName;
         const filteredDashboardUrl = urlHelper.buildUrlWithParameters(
           annotation.dashboard,
           isNodeAnnotation
@@ -101,15 +85,9 @@ for (const annotation of annotations) {
             : { from: 'now-1h', refresh: '5s', serviceName, to: 'now' },
         );
 
-        await page.goto(annotation.dashboard);
-        await dashboard.waitForDashboardToLoad();
         await page.goto(filteredDashboardUrl);
         await dashboard.waitForDashboardToLoad();
-        await expect(annotationMarker).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-        await annotationMarker.hover();
-        await expect(dashboard.builders.annotationText(annotation.annotationName)).toBeVisible({
-          timeout: Timeouts.THIRTY_SECONDS,
-        });
+        await dashboard.hoverAnnotationMarker(annotation.annotationName);
       });
     },
   );
@@ -117,9 +95,7 @@ for (const annotation of annotations) {
 
 pmmTest(
   'PMM-T878 - Verify user is not able to add an annotation for non-existing node name or service name and without service name @nightly  @dashboards @annotations',
-  async ({ api, page, servicesPage }) => {
-    await page.goto(servicesPage.url);
-
+  async ({ api }) => {
     const { service_name } = await api.inventoryApi.getServiceDetailsByTypeAndPartialName(
       ServiceType.mysql,
       'ps_',
@@ -159,17 +135,12 @@ pmmTest(
   'PMM-T165 - Verify Annotation with Default Options @fb-instances',
   async ({ cliHelper, dashboard, page, urlHelper }) => {
     const annotationTitle = 'pmm-annotate-without-tags';
-    const annotationMarker = dashboard.elements.annotationMarkers.first();
 
     cliHelper.execute(`docker exec haproxy_pmm pmm-admin annotate "${annotationTitle}"`).assertSuccess();
 
     await page.goto(urlHelper.buildUrlWithParameters(processesDetailsUrl, { from: 'now-45m', to: 'now' }));
     await dashboard.waitForDashboardToLoad();
-    await expect(annotationMarker).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-    await annotationMarker.hover();
-    await expect(dashboard.builders.annotationText(annotationTitle)).toBeVisible({
-      timeout: Timeouts.THIRTY_SECONDS,
-    });
+    await dashboard.hoverAnnotationMarker(annotationTitle);
   },
 );
 
@@ -180,7 +151,6 @@ pmmTest(
     const annotationTag1 = 'pmm-testing-tag1';
     const annotationTag2 = 'pmm-testing-tag2';
     const defaultAnnotationTag = 'pmm_annotation';
-    const annotationMarker = dashboard.elements.annotationMarkers.nth(1);
 
     cliHelper
       .execute(
@@ -190,11 +160,7 @@ pmmTest(
 
     await page.goto(urlHelper.buildUrlWithParameters(processesDetailsUrl, { from: 'now-45m', to: 'now' }));
     await dashboard.waitForDashboardToLoad();
-    await expect(annotationMarker).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-    await annotationMarker.hover();
-    await expect(dashboard.builders.annotationText(annotationTitle)).toBeVisible({
-      timeout: Timeouts.THIRTY_SECONDS,
-    });
+    await dashboard.hoverAnnotationMarker(annotationTitle);
     await expect(dashboard.builders.annotationTagText(annotationTag1)).toBeVisible();
     await expect(dashboard.builders.annotationTagText(annotationTag2)).toBeVisible();
     await expect(dashboard.builders.annotationTagText(defaultAnnotationTag)).toBeVisible();
