@@ -2,6 +2,7 @@ import { APIRequestContext, expect, Page, Locator } from '@playwright/test';
 import apiEndpoints from '@helpers/apiEndpoints';
 import { Timeouts } from '@helpers/timeouts';
 import GrafanaHelper from '@helpers/grafana.helper';
+import SnackbarComponent from '@components/snackbar.component';
 
 export type DropdownName = 'Service Name' | 'Node Name' | 'Environment';
 
@@ -15,6 +16,7 @@ export type NestedLocator = Locator | NestedLocators;
 export type NestedLocatorMap = Record<string, NestedLocator>;
 
 export default abstract class BasePage {
+  snackBar = new SnackbarComponent(this.page);
   abstract builders: Record<string, (...args: string[]) => Locator>;
   abstract buttons: NestedLocatorMap;
   abstract elements: Record<string, Locator>;

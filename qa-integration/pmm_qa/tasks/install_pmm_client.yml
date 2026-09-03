@@ -136,6 +136,10 @@
   until: dnf_install_result.rc == 0
   when: distro_family == "rhel" and client_version == "pmm3-latest"
 
+- name: Client version is
+  debug:
+    var: client_version
+
 - name: Install specific PMM client version on Debian-family containers
   shell: |
     docker exec --user root {{ container_name }} bash -c '

@@ -8,8 +8,8 @@ let sortedHostNames: string[];
 pmmTest.beforeEach(async ({ api, grafanaHelper, page, queryAnalytics }) => {
   await grafanaHelper.authorize();
 
-  const service1 = await api.inventoryApi.getServiceDetailsByPartialName('rs101');
-  const service2 = await api.inventoryApi.getServiceDetailsByPartialName('rs102');
+  const service1 = await api.inventoryApi.getServiceDetailsByRegex('^rs101_');
+  const service2 = await api.inventoryApi.getServiceDetailsByRegex('^rs102_');
 
   sortedHostNames = [service1.service_name, service2.service_name].sort();
 

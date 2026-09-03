@@ -20,19 +20,17 @@ export default class GrafanaApi {
     return (await dataSources.json()).find((d: { name: string }) => d.name === name);
   };
 
-  getMetric = async (metricName: string) => {
+  getMetric = async (metricName: string, serviceName?: string) => {
     const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
     const datasource = await this.getDataSourceByName();
+    const expr = serviceName ? `${metricName}{service_name="${serviceName}"}` : metricName;
     const requestBody = {
       from: 'now-1m',
       queries: [
         {
-          datasource: {
-            type: 'prometheus',
-            uid: datasource.uid,
-          },
+          datasource: { type: 'prometheus', uid: datasource.uid },
           datasourceId: datasource.uid,
-          expr: metricName,
+          expr,
           intervalMs: 1_000,
           maxDataPoints: 100,
         },
@@ -49,13 +47,33 @@ export default class GrafanaApi {
     return await metric.json();
   };
 
-  waitForMetric = async (metricName: string, timeout: Timeouts = Timeouts.ONE_MINUTE) => {
+  getActiveTargetByExternalGroup = async (externalGroup: string) => {
+    const headers = { Authorization: `Basic ${GrafanaHelper.getToken()}` };
+    const response = await this.request.get('prometheus/api/v1/targets', { headers });
+
+    expect(
+      response.status(),
+      `Get active targets API call returned status code: ${response.status()} with error message: ${response.statusText()}`,
+    ).toEqual(200);
+
+    const body = await response.json();
+
+    return body.data.activeTargets.find(
+      (target: { labels: { external_group: string } }) => target.labels.external_group === externalGroup,
+    );
+  };
+
+  waitForMetric = async (
+    metricName: string,
+    serviceName?: string,
+    timeout: Timeouts = Timeouts.ONE_MINUTE,
+  ) => {
     let iterator = 0;
 
     while (true) {
       if (iterator > timeout) throw new Error(`Timed out waiting for metric data for metric: ${metricName}`);
 
-      const metric = await this.getMetric(metricName);
+      const metric = await this.getMetric(metricName, serviceName);
 
       if (metric.results.A.frames[0].data.values.length !== 0) return metric.data;
 
