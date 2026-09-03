@@ -21,8 +21,7 @@ pmmTest(
 
     await pmmTest.step('Verify every pod lists the whole cluster alive under one leader', async () => {
       // Asked of each pod in turn inside one poll: a pod that joined or left
-      // recently is in the others' memberlist only after the next gossip round,
-      // and comparing responses read minutes apart would prove nothing anyway.
+      // recently is in the others' memberlist only after the next gossip round.
       await expect(async () => {
         const leader = haClusterHelper.leaderFromPods(podNames);
 

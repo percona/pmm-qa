@@ -28,14 +28,12 @@ export default class HaClusterHelper {
    * configuration, so a scale-down that evicts the leader leaves the survivors
    * in a configuration they can never reach quorum in again.
    */
-  ensureLeaderAmong = async (podNames: string[], attempts = 8): Promise<string> => {
-    for (let attempt = 0; ; attempt++) {
+  ensureLeaderAmong = async (podNames: string[]): Promise<string> => {
+    // Each failover is a coin flip between the followers, so allow plenty.
+    for (let attempt = 0; attempt < 8; attempt++) {
       const leader = this.leaderFromPods();
 
       if (podNames.includes(leader)) return leader;
-
-      // Each failover is a coin flip between the followers, so allow plenty.
-      expect(attempt, `Leadership never landed on one of: ${podNames.join(', ')}`).toBeLessThan(attempts);
 
       const replicas = this.podNames().length;
 
@@ -43,6 +41,8 @@ export default class HaClusterHelper {
       await this.waitForLeaderChange(leader);
       await this.waitForReadyPods(replicas);
     }
+
+    throw new Error(`Leadership never landed on one of: ${podNames.join(', ')}`);
   };
 
   /**
@@ -110,12 +110,20 @@ export default class HaClusterHelper {
       )
       .assertSuccess()
       .stdout.trim();
+    let parsed: Partial<HaNodesResponse>;
 
     try {
-      return JSON.parse(stdout) as HaNodesResponse;
+      parsed = JSON.parse(stdout) as Partial<HaNodesResponse>;
     } catch {
       throw new Error(`"${podName}" did not answer ${apiEndpoints.ha.nodes} with JSON, got: ${stdout}`);
     }
+
+    // `curl -sk` exits 0 on a 401 or a 500, whose body is valid JSON too.
+    if (!parsed.nodes) {
+      throw new Error(`"${podName}" answered ${apiEndpoints.ha.nodes} without nodes, got: ${stdout}`);
+    }
+
+    return parsed as HaNodesResponse;
   };
 
   podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();

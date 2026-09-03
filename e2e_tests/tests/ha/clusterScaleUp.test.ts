@@ -12,9 +12,6 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 });
 
 pmmTest.afterEach(async ({ api, haClusterHelper }) => {
-  // Only the leader removes departing members from the Raft configuration, so
-  // scaling down while one of the new pods leads leaves the survivors in a
-  // five-member configuration they can never reach quorum in again.
   await haClusterHelper.ensureLeaderAmong(haClusterHelper.podNames().slice(0, defaultReplicas));
   await haClusterHelper.ensureServing(api.haApi, defaultReplicas);
 });
@@ -36,8 +33,6 @@ pmmTest(
         `The cluster must start from its ${defaultReplicas} chart replicas`,
       ).toEqual(defaultReplicas);
 
-      // Each PMM pod requests 2 CPU, so the cluster needs that much headroom per
-      // added replica - otherwise the new pods sit Pending and never go Ready.
       k8sHelper.scaleStatefulSet(statefulSet, scaledReplicas).assertSuccess();
       await haClusterHelper.waitForReadyPods(scaledReplicas, Timeouts.TEN_MINUTES);
     });
