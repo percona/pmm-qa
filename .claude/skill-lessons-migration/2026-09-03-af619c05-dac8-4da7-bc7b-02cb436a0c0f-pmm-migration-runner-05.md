@@ -1,0 +1,6 @@
+# .claude/skills/codeceptjs-migration/branch-workflow.md - draft the migration commit body from the diff, not from the phase handoff
+
+- Added: 2026-09-03
+- Applies to: target only
+- Evidence: Row 4's migration commit body was composed from the writer's phase report and named two things that never landed - `SettingsApi.changeSettings`, which is the CodeceptJS-side helper name (the migration added `restoreSettingsDefaults` and `setPublicAddress`), and "advanced/SSH settings URLs ... and toggles on the settings POM", when `urls` and `buttons.toggles` were byte-identical to `origin/main` and only `elements` and `inputs` changed; the final gate caught both as a non-gating find, which then cost a full detach/amend/cherry-pick/verify cycle at publish time, and each claim was falsifiable in about 30 seconds by one scoped Grep for the symbol and one `git diff origin/main HEAD -- <file>`.
+- Proposed change: In "Move the work across", require the commit body to be written from `git diff origin/main HEAD --stat` plus the per-file diffs rather than from the phase handoff, and to name only symbols confirmed present by a scoped Grep - a phase report names what the writer intended, the diff names what landed.

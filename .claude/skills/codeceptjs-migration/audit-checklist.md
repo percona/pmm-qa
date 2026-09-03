@@ -9,7 +9,7 @@ The reviewer performs this checklist twice: before execution and after execution
 - [ ] Every active executable scenario is migrated.
 - [ ] For `already-covered`, every active executable scenario is mapped to existing Playwright coverage.
 - [ ] Commented-out scenarios are excluded.
-- [ ] Scenario titles and every original CodeceptJS tag are preserved; a destination execution tag may be added but does not replace a source tag. Prove title fidelity by extracting both title lists programmatically and printing them as quoted strings side by side, not by reading the two files - that form exposes a trailing-space or byte-level difference, and it must include commented-out and skipped scenarios so their handling is visible in the same output. For a data-driven scenario, check the generated suffix against CodeceptJS's own `<title> | <JSON.stringify(row)>` construction, derived from the data-table source rather than assumed.
+- [ ] Scenario titles and every original CodeceptJS tag are preserved; a destination execution tag may be added but does not replace a source tag. Prove title fidelity by extracting both title lists programmatically and printing them as quoted strings side by side, not by reading the two files - that form exposes a trailing-space or byte-level difference, and it must include commented-out and skipped scenarios so their handling is visible in the same output. For a data-driven scenario, get the expected titles from the real runner first - `npx codeceptjs dry-run -c pr.codecept.js --grep '<tag>'` from `codeceptjs-e2e/` prints them in about a minute, and proves in the same command that the source still parses and is still discovered. The suffix is **not** `JSON.stringify(row)`: a `DataTable` row takes `replaceTitle`'s custom-`toString` branch in `codeceptjs/lib/data/context.js` (`${title} | ${dataRow.data}`), which fixes key order to the **column order** passed to `new DataTable([...])`, not the order of the migrated row literal - and `perfectionist/sort-objects` alphabetises that literal, so a stringify-based target diverges silently. Reconstructing through the library's own `DataTable`/`Data()` is the corroborating second opinion, never the only check, and never a hand-typed expectation.
 - [ ] Data-driven rows and generated titles are preserved.
 - [ ] The writer's `scenarioSelectability` report is re-derived, not trusted: every scenario either already matches an existing job's grep, or carries `destinationTagNeeded: true` with a stated plan for what tag or job the runner will add at step 5b. No scenario is left unresolved with no plan.
 
@@ -75,7 +75,13 @@ Against `playwright-practices.md`. Check the changed files, not the whole reposi
 - [ ] No CodeceptJS `I.*` calls remain.
 - [ ] No arbitrary sleeps or unsupported shortcuts were added.
 - [ ] Helper APIs have no mode flags or union returns unless source behavior truly requires it.
-- [ ] Changed migration docs contain ASCII punctuation only.
+- [ ] Changed migration docs contain ASCII punctuation only, measured over **added lines only**. `grep -P` is unavailable here - it fails with "grep: -P supports only unibyte and UTF-8 locales" on every invocation, which in a per-file loop reads as N file failures rather than one unusable matcher. Scan the added lines instead:
+
+  ```bash
+  git diff -U0 origin/main..HEAD -- '*.md' | grep '^+' | grep -v '^+++'     | python -c "import sys; [print(repr(l)) for l in sys.stdin if any(ord(c) > 127 for c in l)]"
+  ```
+
+  A file-scoped scan flags pre-existing punctuation the migration never touched.
 - [ ] Migrated test files contain zero comments, including ESLint disable comments.
 - [ ] No block-level ESLint disable comments were added anywhere in migration-related code.
 - [ ] Changed-file ESLint passes.

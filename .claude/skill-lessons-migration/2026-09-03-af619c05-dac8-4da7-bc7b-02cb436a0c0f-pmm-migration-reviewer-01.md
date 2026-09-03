@@ -1,0 +1,6 @@
+# .claude/skills/codeceptjs-migration/audit-checklist.md — name the CodeceptJS dry-run as the primary data-driven title check, and correct the construction it describes
+
+- Added: 2026-09-03
+- Applies to: target only
+- Evidence: Line 12 tells the reviewer to check a data-driven suffix against "CodeceptJS's own `<title> | <JSON.stringify(row)>` construction", but a `DataTable` row takes `replaceTitle`'s custom-`toString` branch (`${title} | ${dataRow.data}`) in `codeceptjs/lib/data/context.js`, which fixes JSON key order to column order rather than the row literal's order; row 4's initial gate failed on exactly that divergence at attempt 1, and at attempt 2 `npx codeceptjs dry-run -c pr.codecept.js --grep '<tag>'` printed the real runner's titles in about a minute and proved in the same command that the edited source still parses and is still discovered.
+- Proposed change: In the line 12 bullet, direct the reviewer to obtain the expected titles from `npx codeceptjs dry-run -c pr.codecept.js --grep '<tag>'` first, describe the construction as column-ordered via `replaceTitle`'s custom-`toString` branch rather than as `JSON.stringify(row)`, and keep reconstruction through the library's own `DataTable`/`Data()` as the corroborating second opinion.

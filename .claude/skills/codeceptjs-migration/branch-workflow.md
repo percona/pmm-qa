@@ -146,6 +146,8 @@ git -C ../pmm-qa-publish apply --3way <tmpfile>
 
 List the paths explicitly rather than taking the whole diff, so an unrelated edit sitting in control's worktree cannot ride along. Never pipe the diff into `apply` and never redirect it with `>` - write it with `--output=` and apply from that file, for the same reason given in "Checkpointing uncommitted work" above.
 
+Write the commit body from `git diff origin/main HEAD --stat` plus the per-file diffs, never from the phase handoff - a phase report names what the writer intended, the diff names what landed. Confirm every symbol you name with a scoped Grep before writing it. Row 4's body named an API method that did not exist and POM sections that were byte-identical to `origin/main`; both were falsifiable in about 30 seconds each, and missing them cost a full amend cycle after the final gate had passed.
+
 A patch that fails to apply at all is the same cross-migration dependency surfacing earlier and more legibly than a merge conflict would. Resolve it the same way, before the PR exists. A patch that *appears* to apply can still be wrong: `git apply --3way` can land conflict markers in a file and still exit non-zero for that file while other files in the same patch apply cleanly - check `git -C ../pmm-qa-publish status --short` for `U` entries and `git -C ../pmm-qa-publish grep -n '^<<<<<<< '` for stray markers before committing anything in the publish worktree.
 
 ### Retire the source and add coverage, here
@@ -176,6 +178,8 @@ cd ../pmm-qa-publish/e2e_tests
 PMM_MIGRATION=1 PMM_UI_URL='https://127.0.0.1/' ADMIN_PASSWORD='admin' npx playwright test <target-test-file> --workers=1
 ```
 
+Also run `python support_scripts/generate_readme.py --check` from the publish worktree's root. There is no npm script for it; `npm run readme:check` does not exist and its missing-script exit 1 reads like a failing check.
+
 If the test selects state by index, empty that state before this run as well - it is a second run against the same environment.
 
 ## Workflow coverage
@@ -203,6 +207,8 @@ If retiring this source leaves a CodeceptJS job's grep expression selecting zero
 For Playwright coverage, add it on the surfaces the enumeration above showed the *source* actually runs on. Only when the source is genuinely in a nightly grep does the append-to-nightly default apply; appending otherwise manufactures nightly coverage that never existed while leaving the surface the source really ran on with zero Playwright coverage once the tag retires - the exact "coverage vanishes on retirement" failure these rules exist to prevent.
 
 On a surface the source genuinely ran on, and only there, append the migrated tag to that surface's existing `test_execution_playwright` matrix entry. Do not add a new Playwright job block: that job and its counter are already established on `main`, and adding coverage should be a one-line tag append to the existing `tags_for_tests` matrix entry. Two cases are not this case, and both take a new job rather than an append: no Playwright job of any kind exists yet for this migration's CI surface, or the surface is `fb-e2e-suite.yml`, which has no `test_execution_playwright` entry to append to - see The FB-suite case below. In either, mirror the retiring CodeceptJS job's setup verbatim.
+
+When there is no retiring job to mirror - the source is kept, or the new job needs no database - the server-only value is `setup_services: '-h'`, as used by `fb-e2e-suite.yml`'s `alerting` job. Omitting the input is **not** equivalent: `runner-e2e-tests-playwright.yml` falls back to `''`, so `pmm-framework` runs with no arguments at all.
 
 `expected_test_jobs` in `nightly-e2e-tests-matrix.yml` is the number of nightly test-execution jobs the setup shards wait for, matched by the `"test execution / "` name prefix in `runner-e2e-tests-codeceptjs-remote-nightly-setup.yml`. Both CodeceptJS and Playwright test-execution jobs count toward it. So:
 
@@ -233,11 +239,34 @@ A source file's scenarios rarely all carry the same tags, so the file's union of
 - every migrated scenario is now selected by some Playwright job; and
 - every tag the edited job already carried still selects exactly what it selected before.
 
+Bound the reverse direction first. Run `git diff --name-status origin/main HEAD -- e2e_tests/tests/`: when it shows no modified test file (only additions), no existing expression's selection can change except by newly matching the added file, so the whole reverse check reduces to listing each existing expression once and confirming zero hits for that filename. Do not re-derive per-scenario selections for expressions nothing could have moved.
+
 Then widen the check beyond the job you just edited: tags are reused across many tracker rows, so a migrated scenario's tag can already be selected by a job you never touched - one that was written for an earlier, different migration and may not provision what this scenario needs. For each tag on each migrated scenario, enumerate every job across `.github/workflows/` whose `pmm_test_flag`/`tags_for_tests` would select it (`grep -n "pmm_test_flag\|tags_for_tests" .github/workflows/*.yml`), and for every consumer found - not only the one this migration edited - confirm its `setup_services` actually covers what the scenario needs. Selection is not the same claim as executability: a scenario can be correctly *selected* by a job whose environment cannot make it *pass*.
 
 A migrated scenario that matches no destination grep is coverage that vanishes the moment the source is retired, and nothing about a green test run reveals it. A migrated scenario selected by a job that cannot supply its required services is worse: it may fail (swallowed by the `|| true` on the run step, reading as flake) or silently pass while asserting less than the source did.
 
-**When the edit newly selects tests outside the migrated file, run them.** Widening a grep can pull in existing tests that no job selects today. Selection evidence is not execution evidence, and the `|| true` hides the difference - a newly-selected test the job's environment cannot support fails silently and reads as flake rather than as a coverage defect this migration introduced. Run them against the provisioned environment before committing the edit; it costs one short run.
+**When the edit newly selects tests outside the migrated file, run them.** Widening a grep can pull in existing tests that no job selects today. Selection evidence is not execution evidence, and the `|| true` hides the difference - a newly-selected test the job's environment cannot support fails silently and reads as flake rather than as a coverage defect this migration introduced. Run the **edited job's own full grep expression** once, at the job's own worker count, rather than only the newly-selected tests - it costs one run instead of two, discharges the same obligation, and reproduces exactly what CI will select and the order and concurrency it runs at, which a per-file run cannot. Report that command as the coverage-edit execution evidence.
+
+### Fixing a non-tip commit message after the final gate
+
+`git rebase -i` is unavailable in this environment. To correct the message of a commit that is not the branch tip:
+
+```bash
+git checkout --detach <commit>
+git commit --amend -F <msgfile>      # preserves the original author and author date
+git cherry-pick <old-tip>
+git branch -f <branch> HEAD
+git checkout <branch>
+```
+
+A passing final gate is only valid for the tree it reviewed, so prove the rewrite was message-only **before** pushing, with all three checks - an empty top-level diff alone does not show the intermediate commit's tree survived:
+
+```bash
+git diff <old-tip> <new-tip>                      # must be empty
+git rev-parse <old-tip>^{tree} <new-tip>^{tree}   # must match
+git rev-parse <old-commit>^{tree} <new-commit>^{tree}   # must match at the amended commit too
+git log -1 --format=%B <new-tip>                  # tip message unchanged
+```
 
 ## Push and open the PR
 
@@ -283,7 +312,7 @@ After the PR exists, on control's own checkout (never switched away from - only 
 
 1. update the row to `done`;
 2. record the PR URL or number, GitHub Actions run URL, actual target and setup, review, MCP, test, and pre-migration graph-refresh results;
-3. commit and push only the tracker change; and
+3. commit and push only the tracker change - edit the row as an **anchored substring replacement**, never a whole-file rewrite. `tracker.md` is LF-only and a naive whole-file write flips all 164 lines to CRLF on this Windows setup. Before staging, require `git diff --numstat -- <tracker>` to show `1 1` and `grep -c $'' <tracker>` to return 0; and
 4. restore control's worktree to clean.
 
 Step 4 is not optional. The migration's edits are still sitting there uncommitted, and leaving them means the next migration starts on top of them and sweeps them into its own patch:
