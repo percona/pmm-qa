@@ -3,13 +3,10 @@ import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 import apiEndpoints from '@helpers/apiEndpoints';
 
+// Only the methods PMM ships. The API can also emit OVF, AZURE and DO
+// (managed/utils/distribution/distribution_util.go), but no such build exists to test.
 export type DistributionMethod =
-  | 'DISTRIBUTION_METHOD_AMI'
-  | 'DISTRIBUTION_METHOD_AZURE'
-  | 'DISTRIBUTION_METHOD_DO'
-  | 'DISTRIBUTION_METHOD_DOCKER'
-  | 'DISTRIBUTION_METHOD_OVF'
-  | 'DISTRIBUTION_METHOD_UNSPECIFIED';
+  'DISTRIBUTION_METHOD_AMI' | 'DISTRIBUTION_METHOD_DOCKER' | 'DISTRIBUTION_METHOD_UNSPECIFIED';
 
 export interface PmmVersion {
   major: number;
