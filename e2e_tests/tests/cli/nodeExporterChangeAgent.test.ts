@@ -331,19 +331,30 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .outContains('Running');
     },
   );
-  /*
-  pmmTesst(
+
+  pmmTest(
     'PMM-T9993 - Verify Change agent disable collectors @node-exporter-integration',
     async ({ cliHelper }) => {
+      const disabledCollectors = ['diskstats', 'meminfo'];
+
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent postgres-exporter ${pgExporterId} --disable-collectors=stat_statements,locks`,
+          `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} ` +
+            `--disable-collectors=${disabledCollectors.join(',')}`,
         )
         .assertSuccess()
-        .outContains('- updated disabled collectors: [stat_statements locks]');
+        .outContains(`- updated disabled collectors: [${disabledCollectors.join(' ')}]`);
+
+      const check = cliHelper
+        .execSilent(`docker exec ${containerName} curl -sk https://127.0.0.1:${nodeExporterPort}/metrics`)
+        .assertSuccess();
+
+      for (const collector of disabledCollectors) {
+        await check.outNotContains(`node_scrape_collector_success{collector="${collector}"}`);
+      }
     },
   );
-
+  /*
   pmmTesst(
     'PMM-T9993 - Verify Change agent max exporter connections @node-exporter-integration',
     async ({ cliHelper, page }) => {
