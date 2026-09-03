@@ -3,6 +3,7 @@ import { GrafanaPanel } from '@interfaces/grafanaPanel';
 import { GetService } from '@interfaces/inventory';
 import { replaceWildcards } from '@helpers/metrics.helper';
 import { Timeouts } from '@helpers/timeouts';
+import { xpathLiteral } from '@helpers/xpath.helper';
 import BasePage from '@pages/base.page';
 import { ValkeyDashboards, ValkeyDashboardsType } from '@valkey';
 import { MysqlDashboards, MysqlDashboardsType } from '@pages/dashboards/mysql';
@@ -34,9 +35,9 @@ export default class Dashboards extends BasePage {
   readonly valkey: ValkeyDashboardsType = ValkeyDashboards;
   builders = {
     annotationTagText: (tagValue: string) =>
-      this.grafanaIframe().locator(`//span[contains(text(), '${tagValue}')]`),
+      this.grafanaIframe().locator(`//span[contains(text(), ${xpathLiteral(tagValue)})]`),
     annotationText: (annotationTitle: string) =>
-      this.grafanaIframe().locator(`//div[contains(text(), '${annotationTitle}')]`),
+      this.grafanaIframe().locator(`//div[contains(text(), ${xpathLiteral(annotationTitle)})]`),
     panelByExactName: (panelName: string) =>
       this.grafanaIframe().getByTestId(`data-testid Panel header ${panelName}`),
     panelByName: (panelName: string) =>
