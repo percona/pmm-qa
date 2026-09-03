@@ -49,7 +49,7 @@
         docker exec {{ pdpgsql_pgsm_container }} bash -xe ./pg_stat_monitor_setup.sh --distribution {{ distribution }} --pgsql_version {{ pdpgsql_version }} --pgstat_monitor_branch {{
         pgstat_monitor_branch }} --pgstat_monitor_repo {{ pgstat_monitor_repo }} > setup_{{ pdpgsql_pgsm_container }}.log
 
-  - name: Install pmm2-client on the pdpgsql_pgsm_container
+  - name: Install pmm-client on the pdpgsql_pgsm_container
     shell: "{{ item }}"
     with_items:
       - docker network connect pmm-qa {{ pdpgsql_pgsm_container }}
