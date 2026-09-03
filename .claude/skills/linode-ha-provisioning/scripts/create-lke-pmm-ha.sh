@@ -131,6 +131,25 @@ until [ "$(kubectl get nodes --no-headers 2>/dev/null | grep -c .)" -ge "$NODE_C
 kubectl wait --for=condition=Ready nodes --all --timeout=300s
 kubectl get nodes
 
+# --- storage class: tag every CSI volume at birth ----------------------------
+# LKE's default SC has no volumeTags and a StorageClass's parameters are immutable,
+# so its volumes are born untagged and prune-lke-orphans.sh can never attribute them.
+kubectl delete storageclass linode-block-storage-retain --ignore-not-found
+kubectl apply -f - <<EOF
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: linode-block-storage-retain
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: linodebs.csi.linode.com
+parameters:
+  linodebs.csi.linode.com/volumeTags: "pmm-qa-ephemeral,pmm-qa-run:$RUN_ID"
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+EOF
+
 # --- dependencies (operators) ------------------------------------------------
 kubectl create namespace "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f -
 
