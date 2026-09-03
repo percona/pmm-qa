@@ -17,7 +17,9 @@ pmmTest(
     });
 
     const initialLeader = haClusterHelper.leaderFromPods();
-    const baselineChanges = await api.haApi.getRaftTermChanges();
+    // Waited for rather than read once: a node missing from the baseline would drop
+    // out of the post-switch comparison instead of failing it.
+    const baselineTerms = await api.haApi.waitForRaftTerms(haClusterHelper.podNames());
 
     await pmmTest.step(
       `Verify "${HaApi.leaderStatusMetric}" shows "${initialLeader}" as leader`,
@@ -48,16 +50,37 @@ pmmTest(
     });
 
     await pmmTest.step(
-      `Verify changes(${HaApi.raftTermMetric}[15m]) rises on every node after the switch to "${newLeader}"`,
+      `Verify ${HaApi.raftTermMetric} rises on every node after the switch to "${newLeader}"`,
+      async () => {
+        // The term itself, not changes() over a rolling window: an older change ages
+        // out of that window as the new one enters it, so the count can stay flat
+        // across a switch that really did raise the term.
+        await expect(async () => {
+          const terms = await api.haApi.getRaftTerms();
+
+          expect(Object.keys(terms).sort()).toEqual(haClusterHelper.podNames());
+
+          Object.entries(baselineTerms).forEach(([node, baseline]) => {
+            expect(
+              terms[node],
+              `Node "${node}" must reach a higher Raft term than the ${baseline} it held before the switch`,
+            ).toBeGreaterThan(baseline);
+          });
+        }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
+      },
+    );
+
+    await pmmTest.step(
+      `Verify changes(${HaApi.raftTermMetric}[15m]) counts the switch on every node`,
       async () => {
         await expect(async () => {
           const changes = await api.haApi.getRaftTermChanges();
 
-          expect(changes).toHaveLength(defaultReplicas);
-          expect(
-            changes.filter((change, index) => change > baselineChanges[index]),
-            `Every node must count more term changes than before the switch: ${baselineChanges}`,
-          ).toHaveLength(defaultReplicas);
+          expect(Object.keys(changes).sort()).toEqual(haClusterHelper.podNames());
+
+          Object.entries(changes).forEach(([node, count]) => {
+            expect(count, `Node "${node}" must count the term change the switch caused`).toBeGreaterThan(0);
+          });
         }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout: Timeouts.FIVE_MINUTES });
       },
     );

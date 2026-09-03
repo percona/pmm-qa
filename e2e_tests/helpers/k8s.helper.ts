@@ -6,6 +6,8 @@ import {
   KubernetesPod,
   KubernetesPodResource,
   KubernetesResourceList,
+  KubernetesRoute,
+  KubernetesRouteResource,
   KubernetesService,
   KubernetesServiceResource,
 } from '@interfaces/kubernetes';
@@ -97,6 +99,25 @@ export default class K8sHelper {
         restarts: containerStatuses.reduce((total, status) => total + status.restartCount, 0),
       };
     });
+  };
+
+  /**
+   * OpenShift Routes, empty on a cluster that has no such resource type - on ROSA
+   * a Route, not a cloud load balancer, is what publishes a service externally.
+   */
+  getRoutes = (labelSelector = ''): KubernetesRoute[] => {
+    const selector = labelSelector ? ` --selector=${labelSelector}` : '';
+    const result = this.execSilent(`get routes.route.openshift.io${selector} --output=json`);
+
+    if (result.code !== 0) return [];
+
+    const routeList = JSON.parse(result.stdout) as KubernetesResourceList<KubernetesRouteResource>;
+
+    return routeList.items.map((item) => ({
+      host: item.spec?.host ?? '',
+      name: item.metadata.name,
+      serviceName: item.spec?.to?.name ?? '',
+    }));
   };
 
   getSecretValue = (secretName: string, key: string): string => {

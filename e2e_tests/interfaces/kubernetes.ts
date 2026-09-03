@@ -20,6 +20,17 @@ export interface KubernetesPodResource {
   };
 }
 
+export interface KubernetesRoute {
+  host: string;
+  name: string;
+  serviceName: string;
+}
+
+export interface KubernetesRouteResource {
+  metadata: { name: string };
+  spec?: { host?: string; to?: { name?: string } };
+}
+
 export interface KubernetesService {
   loadBalancerAddresses: string[];
   name: string;

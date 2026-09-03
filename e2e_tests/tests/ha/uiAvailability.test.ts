@@ -15,18 +15,32 @@ pmmTest.beforeEach(async ({ api, grafanaHelper, haClusterHelper }) => {
 pmmTest(
   'PMM-T2138 - Verify PMM UI is accessible if leader pod goes down @pmm-ha',
   async ({ api, dashboard, haClusterHelper, k8sHelper, page, request }) => {
-    // The case's precondition: the public URL is served by the HAProxy LoadBalancer.
-    // Asserted by address rather than by the case's AWS annotations, which would only
-    // ever hold on ROSA - what matters is that PMM_UI_URL really is the load balancer,
-    // otherwise "the UI stayed up" could be measured against a single pod and pass
-    // while proving nothing.
-    await pmmTest.step(`Verify "${publicHost}" is a LoadBalancer service in the cluster`, async () => {
-      const loadBalancers = k8sHelper.getServices().filter((service) => service.type === 'LoadBalancer');
+    // The case's precondition: the public URL is the cluster's shared entry point in
+    // front of HAProxy, not one pod. Without it, "the UI stayed up" could be measured
+    // against a single pod and pass while proving nothing.
+    await pmmTest.step(`Verify "${publicHost}" fronts a service in the cluster`, async () => {
+      const services = k8sHelper.getServices();
+      // ROSA publishes HAProxy through an OpenShift Route rather than a cloud load
+      // balancer, so on that cluster the public host is the route's and no Service
+      // ever carries it.
+      const frontDoors = [
+        ...services
+          .filter(
+            (service) =>
+              service.type === 'LoadBalancer' && service.loadBalancerAddresses.includes(publicHost),
+          )
+          .map((service) => service.name),
+        ...k8sHelper
+          .getRoutes()
+          .filter((route) => route.host === publicHost)
+          .map((route) => route.serviceName),
+      ];
 
       expect(
-        loadBalancers.flatMap((service) => service.loadBalancerAddresses),
-        `No LoadBalancer service in namespace "${k8sHelper.namespace}" answers for the public URL`,
-      ).toContain(publicHost);
+        frontDoors.filter((target) => services.some((service) => service.name === target)),
+        `No LoadBalancer service and no OpenShift route in namespace "${k8sHelper.namespace}" answers ` +
+          `for the public URL in front of a service`,
+      ).not.toHaveLength(0);
     });
 
     await pmmTest.step('Log in to the PMM UI on the public URL', async () => {

@@ -59,14 +59,15 @@ export default class HaApi {
       .sort();
   };
 
-  /** Per-node Raft term changes over `window`, sorted by node id so two calls line up. */
-  getRaftTermChanges = async (window = '15m'): Promise<number[]> => {
-    const samples = await this.prometheusApi.instantQuery(`changes(${HaApi.raftTermMetric}[${window}])`);
+  /**
+   * Per-node Raft term changes over `window`. A rolling window, so a count is only
+   * ever a lower bound on the changes a node has seen - older ones age out of it.
+   */
+  getRaftTermChanges = async (window = '15m'): Promise<Record<string, number>> =>
+    await this.getByNode(`changes(${HaApi.raftTermMetric}[${window}])`);
 
-    return samples
-      .sort((left, right) => left.metric.node_id.localeCompare(right.metric.node_id))
-      .map((sample) => Number(sample.value[1]));
-  };
+  /** Per-node Raft term. Monotonic per node, and every election raises it. */
+  getRaftTerms = async (): Promise<Record<string, number>> => await this.getByNode(HaApi.raftTermMetric);
 
   getStatus = async (): Promise<string> => {
     const response = await this.request.get(apiEndpoints.ha.status, {
@@ -121,4 +122,29 @@ export default class HaApi {
       ).toEqual(expected);
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
   };
+
+  /** Per-node Raft term, once every node in `nodes` reports one - a usable baseline. */
+  waitForRaftTerms = async (
+    nodes: string[],
+    timeout: Timeouts = Timeouts.FIVE_MINUTES,
+  ): Promise<Record<string, number>> => {
+    let terms: Record<string, number> = {};
+
+    await expect(async () => {
+      terms = await this.getRaftTerms();
+
+      expect(Object.keys(terms).sort(), `Every node must report ${HaApi.raftTermMetric}`).toEqual(nodes);
+    }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
+
+    return terms;
+  };
+
+  /** Keyed by node id, not positional: a node whose series drops out cannot shift the rest. */
+  private getByNode = async (query: string): Promise<Record<string, number>> =>
+    Object.fromEntries(
+      (await this.prometheusApi.instantQuery(query)).map((sample) => [
+        sample.metric.node_id,
+        Number(sample.value[1]),
+      ]),
+    );
 }
