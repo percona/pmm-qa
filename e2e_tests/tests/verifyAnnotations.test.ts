@@ -1,7 +1,6 @@
 import { expect } from '@playwright/test';
 import pmmTest from '@fixtures/pmmTest';
 import { ServiceType } from '@interfaces/inventory';
-import { Timeouts } from '@helpers/timeouts';
 import MongoDashboards from '@pages/dashboards/mongo';
 import MysqlDashboards from '@pages/dashboards/mysql';
 import OperatingSystemDashboards from '@pages/dashboards/operating-system';
@@ -61,7 +60,6 @@ for (const annotation of annotations) {
     `PMM-T878 - Verify adding annotation specific dashboard @nightly  @dashboards @annotations | ${JSON.stringify(annotation)}`,
     async ({ api, dashboard, page, servicesPage, urlHelper }) => {
       const isNodeAnnotation = annotation.annotationName === nodeAnnotationName;
-      const annotationMarker = dashboard.elements.annotationMarkers.nth(isNodeAnnotation ? 1 : 0);
 
       await page.goto(servicesPage.url);
 
@@ -104,11 +102,7 @@ for (const annotation of annotations) {
         await dashboard.waitForDashboardToLoad();
         await page.goto(filteredDashboardUrl);
         await dashboard.waitForDashboardToLoad();
-        await expect(annotationMarker).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-        await annotationMarker.hover();
-        await expect(dashboard.builders.annotationText(annotation.annotationName)).toBeVisible({
-          timeout: Timeouts.THIRTY_SECONDS,
-        });
+        await dashboard.hoverAnnotationMarker(annotation.annotationName);
       });
     },
   );
@@ -158,17 +152,12 @@ pmmTest(
   'PMM-T165 - Verify Annotation with Default Options @fb-instances',
   async ({ cliHelper, dashboard, page, urlHelper }) => {
     const annotationTitle = 'pmm-annotate-without-tags';
-    const annotationMarker = dashboard.elements.annotationMarkers.first();
 
     cliHelper.execute(`docker exec haproxy_pmm pmm-admin annotate "${annotationTitle}"`).assertSuccess();
 
     await page.goto(urlHelper.buildUrlWithParameters(processesDetailsUrl, { from: 'now-45m', to: 'now' }));
     await dashboard.waitForDashboardToLoad();
-    await expect(annotationMarker).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-    await annotationMarker.hover();
-    await expect(dashboard.builders.annotationText(annotationTitle)).toBeVisible({
-      timeout: Timeouts.THIRTY_SECONDS,
-    });
+    await dashboard.hoverAnnotationMarker(annotationTitle);
   },
 );
 
@@ -179,7 +168,6 @@ pmmTest(
     const annotationTag1 = 'pmm-testing-tag1';
     const annotationTag2 = 'pmm-testing-tag2';
     const defaultAnnotationTag = 'pmm_annotation';
-    const annotationMarker = dashboard.elements.annotationMarkers.nth(1);
 
     cliHelper
       .execute(
@@ -189,11 +177,7 @@ pmmTest(
 
     await page.goto(urlHelper.buildUrlWithParameters(processesDetailsUrl, { from: 'now-45m', to: 'now' }));
     await dashboard.waitForDashboardToLoad();
-    await expect(annotationMarker).toBeVisible({ timeout: Timeouts.THIRTY_SECONDS });
-    await annotationMarker.hover();
-    await expect(dashboard.builders.annotationText(annotationTitle)).toBeVisible({
-      timeout: Timeouts.THIRTY_SECONDS,
-    });
+    await dashboard.hoverAnnotationMarker(annotationTitle);
     await expect(dashboard.builders.annotationTagText(annotationTag1)).toBeVisible();
     await expect(dashboard.builders.annotationTagText(annotationTag2)).toBeVisible();
     await expect(dashboard.builders.annotationTagText(defaultAnnotationTag)).toBeVisible();

@@ -104,6 +104,42 @@ export default class Dashboards extends BasePage {
     return Array.from(collected);
   };
 
+  hoverAnnotationMarker = async (annotationTitle: string, timeout: Timeouts = Timeouts.THIRTY_SECONDS) => {
+    // Markers carry no attribute naming their annotation, so identifying one
+    // means hovering it and reading the tooltip. Picking a marker by position
+    // instead breaks under `retries`: a retry re-runs the annotation setup, and
+    // the extra marker shifts every index after it.
+    const tooltip = this.builders.annotationText(annotationTitle);
+    // `annotationText` matches on a substring, so compare exactly here --
+    // otherwise "annotation-for-postgres" also accepts the tooltip of
+    // "annotation-for-postgres-server".
+    const tooltipShowsTitle = async () =>
+      (await tooltip.allTextContents()).some((text) => text.trim() === annotationTitle);
+    const deadline = Date.now() + timeout;
+
+    await pmmTest.step(`Hover the annotation marker for "${annotationTitle}"`, async () => {
+      await this.elements.annotationMarkers.first().waitFor({ state: 'visible', timeout });
+
+      do {
+        for (let i = 0; i < (await this.elements.annotationMarkers.count()); i++) {
+          await this.elements.annotationMarkers.nth(i).hover();
+
+          try {
+            await tooltip.first().waitFor({ state: 'visible', timeout: Timeouts.TWO_SECONDS });
+          } catch {
+            continue;
+          }
+
+          if (await tooltipShowsTitle()) return;
+        }
+      } while (Date.now() < deadline);
+
+      throw new Error(
+        `No annotation marker on ${this.page.url()} showed an annotation titled "${annotationTitle}"`,
+      );
+    });
+  };
+
   loadAllPanels = async () => {
     await this.waitForDashboardToLoad();
 
