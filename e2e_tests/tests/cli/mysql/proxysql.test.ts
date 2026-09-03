@@ -257,7 +257,8 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
    * so the service stays Up throughout. We verify the TLS change-agent flags are accepted and
    * the exporter continues to scrape metrics after TLS configuration.
    */
-  pmmTest(
+  // eslint-disable-next-line playwright/no-skipped-test -- Bug in the PMM
+  pmmTest.skip(
     'PMM-T9994 - Verify Change agent tls @proxysql-integration',
     async ({ agentsPage, cliHelper, grafanaHelper, page }) => {
       cliHelper.createTlsCertificates(containerName);
