@@ -318,6 +318,94 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T99101 - Verify Change agent connection timeout is propagated to the exporter @proxysql-integration',
+    async ({ cliHelper, page }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --connection-timeout=5s`,
+        )
+        .assertSuccess()
+        .outContains('ProxySQL Exporter agent configuration updated');
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for the exporter to be restarted with the new DSN
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+      await cliHelper
+        .execSilent(`docker exec ${containerName} pmm-admin list | grep ${proxysqlExporterId}`)
+        .assertSuccess()
+        .outContains('Running');
+
+      // The connection timeout is passed to the exporter as the DSN dial timeout,
+      // so the running proxysql_exporter process must carry timeout=5s in DATA_SOURCE_NAME.
+      const exporterDsn = cliHelper
+        .execSilent(
+          `docker exec ${containerName} bash -c "cat /proc/*/environ 2>/dev/null | tr '\\0' '\\n' | grep DATA_SOURCE_NAME"`,
+        )
+        .stdout.trim();
+
+      expect(exporterDsn, 'connection-timeout should be propagated to the proxysql-exporter DSN').toContain(
+        'timeout=5s',
+      );
+    },
+  );
+
+  pmmTest(
+    'PMM-T99102 - Verify Change agent skip connection check @proxysql-integration',
+    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
+      const badUsername = 'nonexistent_pmm_user';
+
+      // Without the flag the server verifies the connection and rejects the invalid user.
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --username=${badUsername}`,
+        )
+        .outContains('Access denied for user');
+
+      // With the flag the connection check is skipped and the change is applied regardless.
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --username=${badUsername} --skip-connection-check`,
+        )
+        .assertSuccess()
+        .outContains('ProxySQL Exporter agent configuration updated');
+
+      // Restore the working username so subsequent tests keep a healthy exporter.
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --username=admin --skip-connection-check`,
+        )
+        .assertSuccess();
+
+      await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+    },
+  );
+
+  pmmTest(
+    'PMM-T99103 - Verify Change agent server url and server insecure tls @proxysql-integration',
+    async ({ cliHelper }) => {
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+      const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+
+      // The PMM Server uses a self-signed certificate, so with an explicit --server-url the
+      // client rejects it unless --server-insecure-tls skips certificate validation.
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --server-url=${serverUrl}`,
+        )
+        .outContains('certificate signed by unknown authority');
+
+      // With --server-insecure-tls the certificate check is skipped and the change succeeds.
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${proxysqlExporterId} --server-url=${serverUrl} --server-insecure-tls`,
+        )
+        .assertSuccess()
+        .outContains('ProxySQL Exporter agent configuration updated');
+    },
+  );
+
+  pmmTest(
     'PMM-T9993 - Verify Change agent pmm agent listen port @proxysql-integration',
     async ({ cliHelper }) => {
       const commands = [
