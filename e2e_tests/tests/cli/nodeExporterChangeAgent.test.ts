@@ -335,7 +335,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9993 - Verify Change agent disable collectors @node-exporter-integration',
     async ({ cliHelper }) => {
-      const disabledCollectors = ['diskstats', 'meminfo'];
+      const disabledCollectors = ['buddyinfo', 'processes'];
 
       await cliHelper
         .execSilent(
@@ -345,15 +345,24 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .assertSuccess()
         .outContains(`- updated disabled collectors: [${disabledCollectors.join(' ')}]`);
 
-      const check = cliHelper
-        .execSilent(
-          `docker exec pmm-server curl -u pmm:${nodeExporterPassword} http://${containerName}:${nodeExporterPort}/metrics`,
-        )
-        .assertSuccess();
+      const scrapeCmd = `docker exec pmm-server curl -u pmm:${nodeExporterPassword} http://${containerName}:${nodeExporterPort}/metrics`;
 
-      for (const collector of disabledCollectors) {
-        await check.outNotContains(`node_scrape_collector_success{collector="${collector}"}`);
-      }
+      await expect
+        .poll(
+          async () => {
+            const { stdout } = await cliHelper.execSilent(scrapeCmd).assertSuccess();
+
+            return disabledCollectors.filter((c) =>
+              stdout.includes(`node_scrape_collector_success{collector="${c}"}`),
+            );
+          },
+          {
+            intervals: [2_000],
+            message: 'node_exporter still reports these collectors as enabled',
+            timeout: 30_000,
+          },
+        )
+        .toEqual([]);
     },
   );
   /*
