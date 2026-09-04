@@ -81,6 +81,13 @@ then work locally against `$KUBECONFIG`. Defaults (all
 overridable in the POST body): `region=us-east`, `node_type=g6-standard-4`,
 `node_count=3` (Raft quorum, tolerates one node down); `k8s_version` defaults to the latest LKE offers (versions roll — a retired pin 400s).
 
+**Running the `@pmm-ha` suite? Ask for `"node_count":4`.** The default 3 sizes the
+cluster for exactly what the chart installs — each PMM pod requests 2 CPU and the
+stack leaves ~1.3 free per node — so PMM-T2124, which scales `pmm-ha` to five pods,
+leaves the new pods `Pending` forever. The fourth node takes both of them (the
+chart's pod anti-affinity is preferred-only and its selector does not even match
+these pods). Same reason `pmm3-ha-rosa` runs four workers.
+
 **Keep-alive:** add `"ttl_hours":<N>` to the POST body **and**
 `touch "$RUN_DIR/keep-alive"` — the marker keeps the SessionEnd hook from tearing
 it down; the cluster's `expires-<epoch>` tag (now + N h) still lets the reaper reap it.

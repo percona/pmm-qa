@@ -1,8 +1,10 @@
 import K8sHelper from '@helpers/k8s.helper';
+import GrafanaHelper from '@helpers/grafana.helper';
 import { Timeouts } from '@helpers/timeouts';
 // Type-only: keeps this helper free of a runtime dependency on the api layer.
 import type HaApi from '@api/ha.api';
 import apiEndpoints from '@helpers/apiEndpoints';
+import { HaNodesResponse } from '@interfaces/ha';
 import { expect } from '@playwright/test';
 
 const leaderLogLine = 'I am the leader!';
@@ -21,6 +23,29 @@ export default class HaClusterHelper {
   constructor(private k8sHelper: K8sHelper = new K8sHelper()) {}
 
   /**
+   * Moves leadership onto one of `podNames` by restarting whoever leads until it
+   * lands there. Only the leader removes departing members from the Raft
+   * configuration, so a scale-down that evicts the leader leaves the survivors
+   * in a configuration they can never reach quorum in again.
+   */
+  ensureLeaderAmong = async (podNames: string[]): Promise<string> => {
+    // Each failover is a coin flip between the followers, so allow plenty.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const leader = this.leaderFromPods();
+
+      if (podNames.includes(leader)) return leader;
+
+      const replicas = this.podNames().length;
+
+      this.k8sHelper.deletePod(leader).assertSuccess();
+      await this.waitForLeaderChange(leader);
+      await this.waitForReadyPods(replicas);
+    }
+
+    throw new Error(`Leadership never landed on one of: ${podNames.join(', ')}`);
+  };
+
+  /**
    * Brings the cluster back to `replicas` ready and *reachable* nodes. A run
    * killed mid-scale-down never reaches its cleanup, so the next one repairs.
    */
@@ -33,15 +58,7 @@ export default class HaClusterHelper {
       this.k8sHelper.scaleStatefulSet(statefulSet, replicas).assertSuccess();
     }
 
-    // `kubectl wait` fails outright on pods the StatefulSet has not recreated yet.
-    // Scaling 0 -> 3 is the slow path at roughly two minutes, the pods being
-    // OrderedReady, so they come up one at a time.
-    await expect
-      .poll(() => this.k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
-        message: `The HA cluster must have ${replicas} ready pods`,
-        timeout: Timeouts.FIVE_MINUTES,
-      })
-      .toEqual(replicas);
+    await this.waitForReadyPods(replicas);
 
     // Ready pods, and even an elected leader, are not yet reachable: HAProxy has
     // to re-run its health check and re-point first.
@@ -77,6 +94,36 @@ export default class HaClusterHelper {
     }
 
     return leaders[0];
+  };
+
+  /**
+   * `/v1/ha/nodes` asked of one pod directly. Every external request goes
+   * through HAProxy, which only ever routes to the leader, so this is the only
+   * way to see what an individual follower believes about the cluster.
+   */
+  nodesFromPod = (podName: string): HaNodesResponse => {
+    const stdout = this.k8sHelper
+      .execInPod(
+        podName,
+        `curl -sk -H "Authorization: Basic ${GrafanaHelper.getToken()}" https://127.0.0.1:${pmmServerPort}${apiEndpoints.ha.nodes}`,
+        { silent: true },
+      )
+      .assertSuccess()
+      .stdout.trim();
+    let parsed: Partial<HaNodesResponse> | null;
+
+    try {
+      parsed = JSON.parse(stdout) as Partial<HaNodesResponse> | null;
+    } catch {
+      throw new Error(`"${podName}" did not answer ${apiEndpoints.ha.nodes} with JSON, got: ${stdout}`);
+    }
+
+    // `curl -sk` exits 0 on a 401 or a 500, whose body is valid JSON too.
+    if (!Array.isArray(parsed?.nodes) || typeof parsed.expected_nodes !== 'number') {
+      throw new Error(`"${podName}" answered ${apiEndpoints.ha.nodes} with an invalid body, got: ${stdout}`);
+    }
+
+    return parsed as HaNodesResponse;
   };
 
   podNames = (): string[] => this.k8sHelper.getPodNames(pmmServerPodSelector).sort();
@@ -115,6 +162,20 @@ export default class HaClusterHelper {
     }).toPass({ intervals: [Timeouts.FIVE_SECONDS], timeout });
 
     return leader;
+  };
+
+  /**
+   * `kubectl wait` fails outright on pods the StatefulSet has not recreated yet.
+   * The pods are OrderedReady, so they come up one at a time: 0 -> 3 is the slow
+   * path at roughly two minutes.
+   */
+  waitForReadyPods = async (replicas: number, timeout: Timeouts = Timeouts.FIVE_MINUTES): Promise<void> => {
+    await expect
+      .poll(() => this.k8sHelper.getPods(pmmServerPodSelector).filter((pod) => pod.ready).length, {
+        message: `The HA cluster must have ${replicas} ready pods`,
+        timeout,
+      })
+      .toEqual(replicas);
   };
 
   // Hits the pod directly rather than through HAProxy, which only ever routes
