@@ -37,6 +37,8 @@ Preserve exactly:
 - API, CLI, UI, download, and file-check behavior;
 - ordering when it affects behavior.
 
+Titles are byte-identical **through the gates**, and that is what the invariant buys: a programmatic diff of the two title lists proves no scenario or data row was silently dropped or renamed. It is a migration-time check, not a permanent constraint on the file. Once both gates have passed, a reviewer may explicitly approve a clearer title - a data-driven suffix that imitates CodeceptJS's `DataTable` output is the usual case, since nothing consumes the format (CI greps the tag; Launchable subsets by file, not by test name). Make such a change only on an explicit reviewer request, in its own commit, and record it in the tracker Notes. Never retitle on your own judgement mid-migration: that is the silent rename the invariant exists to catch.
+
 Do not add, remove, weaken, or improve coverage during migration.
 Preserve behavior, not redundant syntax. Omit arguments/options only when they restate a default and removal is behaviorally identical for the migrated values.
 When unsure, keep the source syntax.

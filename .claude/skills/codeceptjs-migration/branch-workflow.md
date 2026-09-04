@@ -312,7 +312,7 @@ After the PR exists, on control's own checkout (never switched away from - only 
 
 1. update the row to `done`;
 2. record the PR URL or number, GitHub Actions run URL, actual target and setup, review, MCP, test, and pre-migration graph-refresh results;
-3. commit and push only the tracker change - edit the row as an **anchored substring replacement**, never a whole-file rewrite. `tracker.md` is LF-only and a naive whole-file write flips all 164 lines to CRLF on this Windows setup. Before staging, require `git diff --numstat -- <tracker>` to show `1 1` and `grep -c $'' <tracker>` to return 0; and
+3. commit and push only the tracker change - edit the row as an **anchored substring replacement**, never a whole-file rewrite. `tracker.md` is LF-only and a naive whole-file write flips all 164 lines to CRLF on this Windows setup. Before staging, require `git diff --numstat -- <tracker>` to show `1 1` and a zero carriage-return count from `python -c "print(open('<tracker>','rb').read().count(bytes([13])))"`. Do not reach for a shell CR literal here: it does not survive quoting or a heredoc, and a grep left holding an empty pattern reports every line as a match, which reads as a total CRLF flip that never happened; and
 4. restore control's worktree to clean.
 
 Step 4 is not optional. The migration's edits are still sitting there uncommitted, and leaving them means the next migration starts on top of them and sweeps them into its own patch:
