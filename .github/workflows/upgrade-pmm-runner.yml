@@ -79,6 +79,8 @@ jobs:
           echo "DOCKER_TAGS=${DOCKER_TAGS[@]}" >> "$GITHUB_OUTPUT"
           VERSIONS=$(echo '["3-dev-latest"]' | jq ". + $VERSIONS")
           echo "versions=$VERSIONS"       >> "$GITHUB_OUTPUT"
+          MATRIX=$(jq -n --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS" '[range(0; $versions | length) as $i | {version: $versions[$i], docker_tag: $tags[$i]}]')
+          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   upgrade-docker:
     needs: prepare
@@ -87,7 +89,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ${{ fromJSON(needs.prepare.outputs.versions) }}
+        include: ${{ fromJSON(needs.prepare.outputs.matrix) }}
     steps:
       - name: Resolve PMM client source
         id: resolve
@@ -95,7 +97,8 @@ jobs:
         env:
           RC_VERSION: ${{ needs.prepare.outputs.rc_version }}
         run: |
-          echo "${{ needs.prepare.outputs.rc_version }} is the RC docker tag"
+          echo "Version: ${{ matrix.version }}"
+          echo "Docker Tag: ${{ matrix.docker_tag }}"
           # 1. all X.Y.Z versions available in the apt pool
           apt_versions=$(curl -s "https://repo.percona.com/pmm3-client/apt/pool/main/p/pmm-client/" \
             | grep -oE 'pmm-client_[0-9]+\.[0-9]+\.[0-9]+' \
@@ -108,6 +111,16 @@ jobs:
           if grep -qx "${{ matrix.version }}" <<< "$apt_versions"; then
             echo "${{ matrix.version }} is available in apt — leaving matrix.version unchanged"
             TARBALL_URL="${{ matrix.version }}"
+          elif [ "${{ matrix.version }}" == "3-dev-latest" ]; then
+            echo "3-dev-latest is a special dev tag"
+            TARBALL_URL="3-dev-latest"
+  
+            # verify it exists before committing to it
+            code=$(curl -s -o /dev/null -w '%{http_code}' -I "$TARBALL_URL")
+            if [ "$code" != "200" ]; then
+              echo "ERROR: 3-dev-latest tarball not found (HTTP $code): url: ${TARBALL_URL}"
+              exit 1
+            fi
           else
             echo "${{ matrix.version }} not in apt — building tarball URL"
             TARBALL_URL="https://downloads.percona.com/downloads/pmm3/${{ matrix.version }}/binary/tarball/pmm-client-${{ matrix.version }}-x86_64.tar.gz"
