@@ -335,13 +335,13 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --server-url=${serverUrl}`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --server-url=${serverUrl}`,
         )
         .outContains('tls: failed to verify certificate:');
 
       await cliHelper
         .execSilent(
-          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --server-url=${serverUrl} --server-insecure-tls`,
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --server-url=${serverUrl} --server-insecure-tls`,
         )
         .assertSuccess()
         .outContains('Mysqld Exporter agent configuration updated');
