@@ -24,7 +24,7 @@ for c in "${containers[@]}"; do
   docker exec "$c" apt-get update
   docker exec "$c" sh -c 'cp /usr/local/percona/pmm/config/pmm-agent.yaml /tmp/pmm-agent.yaml.old'
 
-  if ! docker exec "$c" bash -c "DEBIAN_FRONTEND=noninteractive apt-get install -y 'pmm-client=${version}*'"; then
+  if ! docker exec --env DEBIAN_FRONTEND=noninteractive "$c" apt-get install -y "pmm-client=${version}*"; then
     echo "ERROR: pmm-client=${version}* is not available on ${c}" >&2; exit 1
   fi
 

@@ -3,7 +3,7 @@
 # pmm-qa-perf-run:<PERF_RUN_ID> tag (not by label, which is account-wide).
 set -Eeuo pipefail
 
-INVENTORY="${INVENTORY_FILE:-inventory_client_container2}"
+INVENTORY="inventory_client_container2"   # git-ignored; keep the name in sync with .gitignore
 : "${PERF_RUN_ID:?set PERF_RUN_ID to the batch you provisioned}"
 SSH_KEY="${PMM_PERF_SSH_KEY:-$HOME/.ssh/id_rsa}"
 RUN_TAG="pmm-qa-perf-run:${PERF_RUN_ID}"
@@ -15,7 +15,7 @@ hosts="$(linode-cli linodes list --json | jq -r --arg tag "$RUN_TAG" '.[] | sele
 {
   echo "[linode_clients]"
   printf '%s\n' "$hosts" | sed '/^$/d' | while read -r ip; do
-    echo "${ip} ansible_ssh_user=root ansible_ssh_private_key_file=${SSH_KEY}"
+    echo "${ip} ansible_ssh_user=root ansible_ssh_private_key_file=\"${SSH_KEY}\""
   done
 } > "$INVENTORY"
 

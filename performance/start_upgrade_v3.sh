@@ -10,7 +10,7 @@ fi
 export ANSIBLE_HOST_KEY_CHECKING="${ANSIBLE_HOST_KEY_CHECKING:-True}"
 export version="$1"
 export install_repo="$2"
-INVENTORY="${INVENTORY_FILE:-inventory_client_container2}"
+INVENTORY="inventory_client_container2"
 
 echo "Running upgrade with version=$version repo=$install_repo (host_key_checking=$ANSIBLE_HOST_KEY_CHECKING)"
 ansible-playbook -i "$INVENTORY" upgrade_client.yml

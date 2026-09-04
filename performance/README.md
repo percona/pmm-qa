@@ -44,6 +44,13 @@ PERF_RUN_ID=myrun-01 ./prepare_ansible_client_inventory.sh   # selects that batc
 monitored async job, upgrading the PMM client in every `*client_container*`
 Docker container and failing if the upgrade does not complete.
 
+**Host-key precondition:** the inventory is freshly-provisioned VMs with no
+`known_hosts` entries, and `start_upgrade_v3.sh` keeps `ANSIBLE_HOST_KEY_CHECKING`
+on by default, so Ansible will refuse the first connection. Enroll each host's
+key from a trusted source (e.g. the fingerprint Linode reports for the instance)
+before running the upgrade. For throwaway hosts you already trust you may instead
+run with `ANSIBLE_HOST_KEY_CHECKING=False`, accepting the MITM risk on that run.
+
 ## Tear down (do this — the VMs bill until deleted)
 
 ```bash

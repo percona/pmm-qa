@@ -5,7 +5,13 @@
 # account-wide). See README.md for usage.
 set -Eeuo pipefail
 
-DRY=0; [ "${1:-}" = "--dry-run" ] && DRY=1
+# Strict parse: this is destructive, so anything but a lone --dry-run is a hard error.
+DRY=0
+case "$#" in
+  0) ;;
+  1) [ "$1" = "--dry-run" ] || { echo "usage: $0 [--dry-run]" >&2; exit 2; }; DRY=1 ;;
+  *) echo "usage: $0 [--dry-run]" >&2; exit 2 ;;
+esac
 TAG="${PMM_PERF_TAG:-pmm-qa-perf}"
 command -v linode-cli >/dev/null || { echo "linode-cli is required" >&2; exit 1; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
