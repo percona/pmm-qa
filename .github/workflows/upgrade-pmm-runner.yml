@@ -69,11 +69,12 @@ jobs:
           DEV_LATEST_VERSION=$(curl https://raw.githubusercontent.com/Percona-Lab/pmm-submodules/refs/heads/v3/VERSION)
           echo "dev latest version: $DEV_LATEST_VERSION"
           echo "DEV_LATEST_VERSION=$DEV_LATEST_VERSION" >> "$GITHUB_OUTPUT"
-          export DOCKER_TAGS
-          for item in "${VERSIONS[@]}"; do
-            DOCKER_TAGS+=("percona/pmm-server:$item")
+          export DOCKER_TAGS=()
+          for version in "${VERSIONS[@]}"; do
+            DOCKER_TAGS+=("percona/pmm-server:$version")
           done
           echo $DOCKER_TAGS
+          echo "${DOCKER_TAGS[@]}"
 
   upgrade-docker:
     needs: prepare
