@@ -54,7 +54,9 @@ live_cluster_ids="$(printf '%s' "$clusters" | jq -r '.id' | sort -u)"
 # linode-cli). FAIL-SAFE: any unreadable cluster leaves xref_ok=0 -> volume sweep
 # skipped below.
 liveids=""; livepv=""; xref_ok=1
-kf=""; trap 'rm -f "${kf:-}"' EXIT   # a decoded kubeconfig holds cluster creds -- drop it even on interrupt
+# A decoded kubeconfig holds cluster creds -- drop it even if the reaper's timeout
+# kills us. EXIT alone does not run on SIGTERM, so convert the signals to an exit.
+kf=""; trap 'rm -f "${kf:-}"' EXIT; trap 'exit 143' HUP INT TERM
 if command -v kubectl >/dev/null 2>&1; then
   for cid in $live_cluster_ids; do
     [ -n "$cid" ] || continue
