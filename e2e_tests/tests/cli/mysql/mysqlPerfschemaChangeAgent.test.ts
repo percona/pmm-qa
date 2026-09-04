@@ -226,7 +226,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T1009 - Verify Change agent disable collectors @ps-integration',
     async ({ api, cliHelper }) => {
-      const collectorsToDisable = ['stat_statements', 'locks'];
+      const collectorsToDisable = ['perf_schema.eventsstatements', 'perf_schema.tablelocks'];
 
       await cliHelper
         .execSilent(
@@ -263,6 +263,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+    'PMM-T1012 - Verify Change agent tablestats group table limit @ps-integration',
+    async ({ api, cliHelper }) => {
+      const tablestatsGroupTableLimit = 2_000;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tablestats-group-table-limit=${tablestatsGroupTableLimit}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed tablestats group table limit to ${tablestatsGroupTableLimit}`);
+
+      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
+
+      expect(
+        agent.table_count_tablestats_group_limit,
+        'Tablestats group table limit was not persisted on the mysqld_exporter agent',
+      ).toEqual(tablestatsGroupTableLimit);
     },
   );
 
@@ -327,4 +344,25 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
   });
+
+  pmmTest(
+    'PMM-T99103 - Verify Change agent server url and server insecure tls @ps-integration',
+    async ({ cliHelper }) => {
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+      const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --server-url=${serverUrl}`,
+        )
+        .outContains('tls: failed to verify certificate:');
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --server-url=${serverUrl} --server-insecure-tls`,
+        )
+        .assertSuccess()
+        .outContains('Mysqld Exporter agent configuration updated');
+    },
+  );
 });

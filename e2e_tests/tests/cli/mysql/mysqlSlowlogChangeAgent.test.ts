@@ -238,9 +238,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
-    'PMM-T9993 - Verify Change agent disable collectors @ps-integration',
+    'PMM-T9993 - Verify Change agent disable collectors @ps-slowlog-integration',
     async ({ api, cliHelper }) => {
-      const collectorsToDisable = ['stat_statements', 'locks'];
+      const collectorsToDisable = ['info_schema.query_response_time', 'info_schema.processlist'];
 
       await cliHelper
         .execSilent(
@@ -277,6 +277,23 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
       await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
+    'PMM-T9997 - Verify Change agent tablestats group table limit @ps-slowlog-integration',
+    async ({ api, cliHelper }) => {
+      const tablestatsGroupTableLimit = 2_000;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tablestats-group-table-limit=${tablestatsGroupTableLimit}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed tablestats group table limit to ${tablestatsGroupTableLimit}`);
+
+      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
+
+      expect(
+        agent.table_count_tablestats_group_limit,
+        'Tablestats group table limit was not persisted on the mysqld_exporter agent',
+      ).toEqual(tablestatsGroupTableLimit);
     },
   );
 
