@@ -58,6 +58,7 @@ preflight_database_setups() {
   local mysql_data_owner='' conflict=''
   local pdpgsql_seen=false pgsql_replication_seen=false
   declare -A seen_types=()
+  declare -A seen_psmdb_classes=()
 
   for spec in "${DATABASE_SPECS[@]}"; do
     parse_database_spec "$spec"
@@ -68,7 +69,23 @@ preflight_database_setups() {
     # Two setups of the same product, or any two of the MySQL family, reuse the
     # same container names, host ports and data directories, so they cannot run
     # at the same time.
-    if [[ -v "seen_types[$DB_TYPE]" ]]; then
+    #
+    # PSMDB is the exception: its replica-set (pss/psa) and sharded
+    # (shards/sharding) SETUP_TYPEs run from separate compose projects with
+    # non-overlapping container names, host ports and inter-node networks, so
+    # they parallelize. Only two PSMDB setups of the *same* class collide.
+    if [[ $DB_TYPE == PSMDB ]]; then
+      local psmdb_setup_type psmdb_class
+      psmdb_setup_type=$(resolve_value PSMDB SETUP_TYPE DB_CONFIG)
+      case "${psmdb_setup_type,,}" in
+        shards | sharding) psmdb_class=sharded ;;
+        *) psmdb_class=rs ;;
+      esac
+      if [[ -v "seen_psmdb_classes[$psmdb_class]" ]]; then
+        conflict="two PSMDB $psmdb_class setups"
+      fi
+      seen_psmdb_classes["$psmdb_class"]=1
+    elif [[ -v "seen_types[$DB_TYPE]" ]]; then
       conflict="two $DB_TYPE setups"
     elif [[ $DB_TYPE == PS || $DB_TYPE == MYSQL ]]; then
       if [[ -n $mysql_data_owner ]]; then

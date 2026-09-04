@@ -38,17 +38,21 @@ load helpers/test_helper
   [[ $(resolved_version PS_VERSION PS "$DB_VERSION") == 8.0 ]]
 }
 
-@test "value precedence is environment then global then database then default" {
+@test "value precedence is global flag then environment then database then default" {
   parse_database_spec 'ps,CLIENT_VERSION=from-spec,QUERY_SOURCE=slowlog'
   GLOBAL_CLIENT_VERSION=from-global
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == slowlog ]]
 
   CLIENT_VERSION=from-env
+  [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-global ]]
+
+  GLOBAL_CLIENT_VERSION=''
   [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-env ]]
   unset CLIENT_VERSION
 
-  GLOBAL_CLIENT_VERSION=''
+  [[ $(resolve_value PS CLIENT_VERSION DB_CONFIG) == from-spec ]]
+
   unset 'DB_CONFIG[QUERY_SOURCE]'
   [[ $(resolve_value PS QUERY_SOURCE DB_CONFIG) == perfschema ]]
 }

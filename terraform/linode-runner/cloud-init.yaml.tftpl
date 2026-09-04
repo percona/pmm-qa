@@ -33,8 +33,13 @@ write_files:
       id=$(curl -fsS -H "Authorization: Bearer $token" \
         -H 'X-Filter: {"tags": "pmm-qa-run:${run_id}"}' \
         "https://api.linode.com/v4/linode/instances" | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["id"])')
+      # Instance first, then its tag: the tag is the only handle on this box (no
+      # terraform state), so set -e must abort before the tag delete if the
+      # instance delete fails.
       curl -fsS -X DELETE -H "Authorization: Bearer $token" \
         "https://api.linode.com/v4/linode/instances/$id"
+      curl -fsS -X DELETE -H "Authorization: Bearer $token" \
+        "https://api.linode.com/v4/tags/pmm-qa-run:${run_id}" || true
 
   # Controllers behind a proxied-HTTPS-only network policy cannot open a
   # raw SSH connection to this box (confirmed live -- see docs.md). Every

@@ -15,7 +15,7 @@ publicIPs.add(['PMM-T1174', 'ec2-18-188-74-98.us-east-2.compute.amazonaws.com:84
 
 const runContainerWithPublicAddressVariable = async (I, publicAddress) => {
   await I.verifyCommand(`docker run -d --restart always -e PERCONA_TEST_PLATFORM_ADDRESS=https://check-dev.percona.com:443 -e PMM_ENABLE_INTERNAL_PG_QAN=1 -e PMM_PUBLIC_ADDRESS=${publicAddress} --publish 8085:8080 --publish 8443:8443 --name ${contanerName} ${dockerVersion}`);
-  await I.wait(30);
+  await I.verifyCommand(`timeout 60 bash -c 'until curl -s -D - -o /dev/null -X POST -H "Content-Type: application/json" -d "{\\"user\\":\\"admin\\",\\"password\\":\\"admin\\"}" ${basePmmUrl}graph/login | grep -qi "^set-cookie:"; do sleep 2; done'`);
 };
 
 const runContainerWithPublicAddressVariableUpgrade = async (I, publicAddress) => {
@@ -83,7 +83,6 @@ Scenario(
     const basePmmUrl = `http://${serverIP}:8085/`;
 
     await runContainerWithPublicAddressVariable(I, '127.0.0.5');
-    await I.wait(30);
     await I.Authorize('admin', 'admin', basePmmUrl);
     await I.amOnPage(buildUrl(basePmmUrl, pmmSettingsPage.advancedSettingsUrl));
     await I.waitForVisible(pmmSettingsPage.fields.publicAddressInput, 30);

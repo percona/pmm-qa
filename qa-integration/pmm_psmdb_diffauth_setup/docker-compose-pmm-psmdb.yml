@@ -118,6 +118,7 @@ services:
       retries: 5
 
   minio:
+    profiles: [minio]
     image: minio/minio
     container_name: minio
     ports:
@@ -133,6 +134,7 @@ services:
         condition: service_healthy
 
   createbucket:
+    profiles: [minio]
     container_name: createbucket
     image: minio/mc
     depends_on:

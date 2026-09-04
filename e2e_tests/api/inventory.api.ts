@@ -48,6 +48,22 @@ export default class InventoryApi {
     return filteredServices[0];
   };
 
+  getServiceDetailsByTypeAndPartialName = async (
+    serviceType: ServiceType,
+    partialServiceName: string,
+  ): Promise<GetService> => {
+    const services = (await this.getServicesByType(serviceType)).filter((service: GetService) =>
+      service.service_name.includes(partialServiceName),
+    );
+    const service = services.at(0);
+
+    if (!service) {
+      throw new Error(`Service ${partialServiceName} of type ${serviceType} is not present`);
+    }
+
+    return service;
+  };
+
   getServices = async (): Promise<GetServices> => {
     const authToken = GrafanaHelper.getToken();
     const services = await this.request.get(apiEndpoints.management.services, {
