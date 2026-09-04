@@ -259,6 +259,24 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T9998 - Verify Change agent skip connection check @ps-slowlog-integration',
+    async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --password=invalid_skip_check_password --skip-connection-check`,
+        )
+        .assertSuccess()
+        .outContains('MySQL Exporter agent configuration updated.');
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --username=${newUsername} --password=${newPassword}`,
+        )
+        .assertSuccess();
+
+      await grafanaHelper.authorize();
+      await page.goto(servicesPage.url);
+      await servicesPage.waitForServiceStatus(serviceName, 'Up', Timeouts.TWO_MINUTES);
     'PMM-T9997 - Verify Change agent tablestats group table limit @ps-slowlog-integration',
     async ({ api, cliHelper }) => {
       const tablestatsGroupTableLimit = 2_000;
