@@ -220,8 +220,14 @@ jobs:
       - name: Checkout pre upgrade branch
         working-directory: pmm-qa
         run: |
-          git fetch origin $PRE_UPGRADE_BRANCH
-          git checkout FETCH_HEAD
+          if [[ "$CLIENT_INSTALL_VERSION" == "3-dev-latest" ]]; then
+            git fetch origin "$PMM_QA_BRANCH"
+            git checkout FETCH_HEAD
+          else
+            git fetch origin $PRE_UPGRADE_BRANCH
+            git checkout FETCH_HEAD
+          fi
+
 
       - name: Prepare dependencies before upgrade
         working-directory: pmm-qa/e2e_tests
