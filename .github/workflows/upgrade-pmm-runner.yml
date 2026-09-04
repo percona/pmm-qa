@@ -77,7 +77,7 @@ jobs:
           done
           echo "${DOCKER_TAGS[@]}"
           echo "DOCKER_TAGS=${DOCKER_TAGS[@]}" >> "$GITHUB_OUTPUT"
-          VERSIONS=$(echo '["3-dev-latest"]' | jq ". + $VERSIONS")
+          VERSIONS=$(jq -n --argjson versions "$VERSIONS" '["3-dev-latest"] + $versions')
           echo "versions=$VERSIONS"       >> "$GITHUB_OUTPUT"
           DOCKER_TAGS_JSON=$(printf '%s\n' "${DOCKER_TAGS[@]}" | jq -R . | jq -sc .)
           MATRIX=$(jq -n --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" '[range(0; $versions | length) as $i | {version: $versions[$i], docker_tag: $tags[$i]}]')
