@@ -81,7 +81,7 @@ jobs:
           echo $VERSIONS
           echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
           DOCKER_TAGS_JSON=$(printf '%s\n' "${DOCKER_TAGS[@]}" | jq -Rsc 'split("\n")[:-1]')
-          MATRIX=$(jq -cn --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" '[range(0; $versions | length) as $i {version: $versions[$i], docker_tag: $tags[$i]}]')
+          MATRIX=$(jq -cn --argjson versions "$VERSIONS" --argjson tags "$DOCKER_TAGS_JSON" '[range(0; ($versions | length)) as $i | { version: $versions[$i], docker_tag: $tags[$i]}]')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
 
   upgrade-docker:
