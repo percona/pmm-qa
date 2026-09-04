@@ -322,7 +322,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --server-url=${serverUrl}`,
         )
-        .outContains('certificate signed by unknown authority');
+        .outContains('tls: failed to verify certificate:');
 
       // With --server-insecure-tls the certificate check is skipped and the change succeeds.
       await cliHelper
@@ -330,7 +330,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --server-url=${serverUrl} --server-insecure-tls`,
         )
         .assertSuccess()
-        .outContains('ProxySQL Exporter agent configuration updated');
+        .outContains('Node Exporter agent configuration updated');
     },
   );
 });
