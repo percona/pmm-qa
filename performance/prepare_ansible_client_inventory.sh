@@ -24,13 +24,21 @@ list_all() {
 
 hosts="$(list_all | jq -r --arg tag "$RUN_TAG" 'select(.tags | index($tag)) | .ipv4[0] // empty')"
 
+# Build into a temp file and validate before replacing the inventory, so a
+# no-match run can't destroy a good inventory from another batch.
+tmp="$(mktemp)"
 {
   echo "[linode_clients]"
   printf '%s\n' "$hosts" | sed '/^$/d' | while read -r ip; do
     echo "${ip} ansible_ssh_user=root ansible_ssh_private_key_file=\"${SSH_KEY}\""
   done
-} > "$INVENTORY"
+} > "$tmp"
 
-count=$(($(wc -l < "$INVENTORY") - 1))
+count=$(($(wc -l < "$tmp") - 1))
+if [ "$count" -le 0 ]; then
+  rm -f "$tmp"
+  echo "no instances matched $RUN_TAG (left $INVENTORY untouched)" >&2
+  exit 1
+fi
+mv "$tmp" "$INVENTORY"
 echo "wrote $count host(s) for $RUN_TAG to $INVENTORY"
-[ "$count" -gt 0 ] || { echo "no instances matched $RUN_TAG" >&2; exit 1; }

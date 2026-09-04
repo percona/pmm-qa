@@ -10,12 +10,13 @@ Usage: linode_stackScript_load_pmm3.sh <pmm_server_host> <client_version> <insta
   dbtype: mysql | postgresql | mongodb
 
 Required environment:
-  LINODE_ROOT_PASS     root password for the provisioned VMs
   PMM_PERF_SSH_PUBKEY  SSH public key to authorize on the provisioned VMs
   PMM_SERVER_PASSWORD  PMM server admin password (from env; still reaches
                        linode-cli via --stackscript_data, so visible in ps)
 
 Optional environment:
+  LINODE_ROOT_PASS     root password; random per run when unset (access is by
+                       SSH key, so this stays throwaway)
   LINODE_REGION        default: us-east
   LINODE_TYPE          default: g6-standard-2
   PERF_RUN_ID          batch id, tagged pmm-qa-perf-run:<id> and put in the
@@ -31,7 +32,11 @@ INSTANCES=$3
 METRICS_MODE=$4
 DBTYPE=$5
 
-: "${LINODE_ROOT_PASS:?set LINODE_ROOT_PASS (do not hardcode)}"
+# Access to the VMs is by SSH key, not the console, so the root password is
+# throwaway: generate a random one per run when unset. That also shrinks the
+# CWE-214 exposure -- what lands on linode-cli's argv is then a single-use secret
+# for a VM that gets destroyed, not a reused credential.
+LINODE_ROOT_PASS="${LINODE_ROOT_PASS:-$(openssl rand -base64 24)}"
 : "${PMM_PERF_SSH_PUBKEY:?set PMM_PERF_SSH_PUBKEY (do not hardcode)}"
 : "${PMM_SERVER_PASSWORD:?set PMM_SERVER_PASSWORD}"
 LINODE_REGION=${LINODE_REGION:-us-east}

@@ -10,7 +10,7 @@ Root password and SSH keys are read from the environment. Do not hardcode them:
 
 | Variable | Used by | Purpose |
 | --- | --- | --- |
-| `LINODE_ROOT_PASS` | create | root password for provisioned VMs |
+| `LINODE_ROOT_PASS` | create | root password for provisioned VMs (optional; random per run if unset — access is by SSH key) |
 | `PMM_PERF_SSH_PUBKEY` | create | SSH public key authorized on the VMs |
 | `PMM_SERVER_PASSWORD` | create | PMM server admin password |
 | `PMM_PERF_SSH_KEY` | inventory | local private key path (default `~/.ssh/id_rsa`) |
