@@ -19,7 +19,7 @@ pmmTest.afterEach(async ({ api }) => {
 
 for (const row of dataRetentionRows) {
   pmmTest(
-    `PMM-T97 - Verify server diagnostics on PMM Settings Page @settings @grafana-pr | {"value":"${row.value}","message":"${row.message}"}`,
+    `PMM-T97 - Verify server diagnostics on PMM Settings Page: data retention "${row.value}" @settings @grafana-pr`,
     async ({ page, settingsPage }) => {
       await page.goto(settingsPage.urls.advanced);
       await settingsPage.waitForPageLoaded();
