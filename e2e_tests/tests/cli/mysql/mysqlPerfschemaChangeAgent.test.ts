@@ -366,7 +366,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --server-url=${serverUrl} --server-insecure-tls`,
         )
         .assertSuccess()
-        .outContains('Mysqld Exporter agent configuration updated');
+        .outContains('MySQL Exporter agent configuration updated.');
     },
   );
 });
