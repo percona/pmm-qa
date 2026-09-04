@@ -186,11 +186,14 @@ jobs:
           echo "Investigate, then run perf-cleanup with run_id=${PERF_RUN_ID}."
           # TODO: wire a real notification (Slack webhook / routine-fire like notify-investigator.yml).
 
-      - name: Tear down clients on success
-        if: success()
+      - name: Tear down clients (success or cancel/timeout)
+        # A genuine test failure (gate red) is left running for investigation
+        # (meeting: keep ~12h). A cancel/timeout has nothing to investigate, so
+        # cancelled() cleans up rather than leaking — the CI-level backstop for the
+        # ERR/signal traps in the create script, which a hard SIGKILL escapes.
+        if: ${{ success() || cancelled() }}
         env:
           PMM_PERF_TAG: pmm-qa-perf-run:${{ env.PERF_RUN_ID }}
         run: performance/teardown_perf_linodes.sh
-        # On failure the batch is intentionally left running for investigation
-        # (meeting: keep ~12h). TODO: a delayed/auto cleanup so a forgotten failed
-        # run can't bill forever — e.g. a scheduled sweep of expired pmm-qa-perf tags.
+        # Even this can't survive a runner dying, so a scheduled out-of-band sweep
+        # of expired pmm-qa-perf tags is still the real guarantee. TODO.
