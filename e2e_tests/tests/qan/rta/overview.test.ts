@@ -193,11 +193,11 @@ pmmTest('PMM-T2185 Verify RTA overview sorting by Host @rta', async ({ queryAnal
 
     expect(rs101HostSubstring).not.toBe(rs101HostName);
     expect(rs102HostSubstring).not.toBe(rs102HostName);
-    await queryAnalytics.rta.openFilters();
+    await queryAnalytics.rta.openFiltersIfHidden();
     await queryAnalytics.rta.inputs.filterByHost.fill(rs101HostSubstring);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName)).toHaveCount(0);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName).first()).toBeVisible();
-    await queryAnalytics.rta.openFilters();
+    await queryAnalytics.rta.openFiltersIfHidden();
     await queryAnalytics.rta.inputs.filterByHost.fill(rs102HostSubstring);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs101HostName)).toHaveCount(0);
     await expect(queryAnalytics.rta.builders.rowByQueryText(rs102HostName).first()).toBeVisible();
@@ -271,6 +271,9 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
     expect(csvOperationIds).toHaveLength(uiOperationIds.length);
     expect(csvOperationIds).toEqual(uiOperationIds);
 
+    // Headers are the union of keys across rows. client_app_name is dropped when
+    // empty (proto3 omits empty scalars), which it is unless a client sets an
+    // application name, so it is not required here.
     expect(headers).toEqual(
       expect.arrayContaining([
         'operation_id',
@@ -283,7 +286,6 @@ pmmTest('PMM-T2252 Verify RTA overview CSV export @rta', async ({ page, queryAna
         'collection',
         'operation',
         'plan_summary',
-        'client_app_name',
         'operation_start_time',
         'data_capture_time',
         'raw_query',
