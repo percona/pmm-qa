@@ -1,0 +1,47 @@
+---
+# Delete the Linode client VMs from a performance run, by its pmm-qa-perf-run tag.
+# Pairs with perf-provision.yml (which leaves the batch alive on failure for
+# investigation). Uses performance/teardown_perf_linodes.sh from #1324/#1333.
+#
+# DRAFT — depends on the performance/ scripts landing on main (PR #1333).
+name: perf-cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'PERF_RUN_ID of the batch to delete (from the provision run''s log/summary).'
+        type: string
+        required: true
+      dry_run:
+        description: 'List what would be deleted without deleting.'
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    name: "perf-cleanup: ${{ inputs.run_id }}"
+    runs-on: ubuntu-22.04
+    # Environment protection gates who can spend/delete on the Linode account.
+    # TODO: create this environment and attach the LINODE_CLI_TOKEN secret to it.
+    environment: pmm-perf-staging
+    env:
+      LINODE_CLI_TOKEN: ${{ secrets.LINODE_CLI_TOKEN }}
+    steps:
+      - name: Checkout pmm-qa
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install linode-cli
+        run: pipx install linode-cli
+
+      - name: Tear down the batch
+        env:
+          PMM_PERF_TAG: pmm-qa-perf-run:${{ inputs.run_id }}
+        run: |
+          set -Eeuo pipefail
+          chmod +x performance/teardown_perf_linodes.sh
+          performance/teardown_perf_linodes.sh ${{ inputs.dry_run && '--dry-run' || '' }}
