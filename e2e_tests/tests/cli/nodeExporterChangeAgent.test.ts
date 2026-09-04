@@ -292,13 +292,17 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest(
     'PMM-T9993 - Verify Change agent pmm agent listen port @node-exporter-integration',
-    async ({ cliHelper }) => {
+    async ({ cliHelper, page }) => {
       let commands = [
         `docker exec ${containerName} sed -i 's/listen-port: 7777/listen-port: 7778/' /usr/local/percona/pmm/config/pmm-agent.yaml`,
         `docker restart ${containerName}`,
       ];
 
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
+
+      // eslint-disable-next-line playwright/no-wait-for-timeout -- wait for the agents to be enabled/disabled
+      await page.waitForTimeout(Timeouts.TEN_SECONDS);
+
       commands = [
         `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --pmm-agent-listen-port=7778`,
       ];
