@@ -79,7 +79,7 @@ jobs:
           done
           echo "${DOCKER_TAGS[@]}"
           echo "DOCKER_TAGS=${DOCKER_TAGS[@]}" >> "$GITHUB_OUTPUT"
-          VERSIONS=$(jq -cn --argjson versions "$VERSIONS" '["3-dev-latest"] + $versions')
+          VERSIONS=$(jq -cn --argjson versions "$VERSIONS" '["pmm3-rc"] + $versions')
           echo $VERSIONS
           echo "versions=$VERSIONS" >> "$GITHUB_OUTPUT"
           DOCKER_TAGS_JSON=$(printf '%s\n' "${DOCKER_TAGS[@]}" | jq -Rsc 'split("\n")[:-1]')
@@ -117,9 +117,9 @@ jobs:
             echo "${{ matrix.version }} is available in apt — leaving matrix.version unchanged"
             TARBALL_URL="${{ matrix.version }}"
             echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
-          elif [ "${{ matrix.version }}" == "3-dev-latest" ]; then
-            echo "3-dev-latest is a special dev tag and version: $DEV_LATEST_VERSION"
-            TARBALL_URL="3-dev-latest"
+          elif [ "${{ matrix.version }}" == "pmm3-rc" ]; then
+            echo "pmm3-rc is a special dev tag and version: $DEV_LATEST_VERSION"
+            TARBALL_URL="pmm3-rc"
             echo "CLIENT_VERSION=$DEV_LATEST_VERSION" >> "$GITHUB_ENV"
           else
             echo "${{ matrix.version }} not in apt — building tarball URL"
@@ -220,7 +220,7 @@ jobs:
       - name: Checkout pre upgrade branch
         working-directory: pmm-qa
         run: |
-          if [[ "$CLIENT_INSTALL_VERSION" == "3-dev-latest" ]]; then
+          if [[ "$CLIENT_INSTALL_VERSION" == "pmm3-rc" ]]; then
             git fetch origin "$PMM_QA_BRANCH"
             git checkout FETCH_HEAD
           else
