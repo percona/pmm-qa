@@ -37,6 +37,8 @@ Preserve exactly:
 - API, CLI, UI, download, and file-check behavior;
 - ordering when it affects behavior.
 
+That list is exhaustive. A synchronization wait is a means, not one of the preserved behaviors, so which element it watches is governed by the locator ladder like any other locator - re-anchoring a load guard is not a fidelity change and needs no reviewer dispensation. What a wait does carry is its timeout budget; see Drop what is inert below.
+
 Titles are byte-identical **through the gates**, and that is what the invariant buys: a programmatic diff of the two title lists proves no scenario or data row was silently dropped or renamed. It is a migration-time check, not a permanent constraint on the file. Once both gates have passed, a reviewer may explicitly approve a clearer title. Make such a change only on an explicit reviewer request, in its own commit, and record it in the tracker Notes. Never retitle on your own judgement mid-migration: that is the silent rename the invariant exists to catch.
 
 Two parts of a title are load-bearing at runtime and survive any retitle verbatim:
@@ -49,6 +51,7 @@ Only the descriptive middle is free text. Launchable does not key on it either, 
 Do not add, remove, weaken, or improve coverage during migration.
 Preserve behavior, not redundant syntax. Omit arguments/options only when they restate a default and removal is behaviorally identical for the migrated values.
 When unsure, keep the source syntax.
+That applies to syntax, never to locator form. A ported locator is migrated at the level of the **element**, not the selector string: once the live environment exists, re-derive each one at the highest rung of `playwright-practices.md`'s ladder that resolves to the same element, and keep the source selector only when nothing higher does. That the source uses it and is green today is evidence the **element** is right, never that the selector form is - CodeceptJS sources predate the ladder entirely, and a resolving locator is not the same thing as a well-formed one.
 
 **Drop what is inert in Playwright.** The test: if removing it cannot change the outcome for any migrated value, remove it. This is not a coverage change - inert code asserts nothing, so removing it removes nothing - and it is the one place where fidelity to the source is the wrong answer. Shapes seen so far:
 
@@ -59,6 +62,8 @@ When unsure, keep the source syntax.
 - a branch unreachable on the target's library version.
 
 Record each removal and why it is inert. If you cannot show that removal is outcome-neutral, keep it.
+
+Waits are the one shape where that proof is arithmetic rather than judgement. Sequential source waits on **different** locators sum, so collapsing them into a single assertion timeout is outcome-neutral only when that timeout is at least the sum - folding a 60s page-load wait and a 30s cell wait into one 60s assertion silently cuts the worst case from 90s to 60s. State the sum when you collapse. A wait on a locator the same step already acted on is the genuinely inert case, because it adds no budget the following web-first assertion does not already have.
 
 ## Minimal reuse diffs
 

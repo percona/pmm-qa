@@ -13,6 +13,11 @@ Do not use playwright-cli for migration verification. Do not change test behavio
 
 After a substantial POM fix, rerun changed-file ESLint/TypeScript validation and reverify the locator before rerunning.
 
+## Two MCP checks that answer the wrong question
+
+- **Credentials in the URL bypass the PMM shell.** `pmmLogin.md` already forbids it; this is the consequence that makes the failure recognizable. Navigating to `https://<user>:<pass>@<host>/graph/...` serves Grafana at top level with no `#grafana-iframe` at all, so a correct iframe-scoped locator counts 0 and reads as broken. A clean navigation reproduces the redirect into `/pmm-ui/...` and the iframe. If a locator that should be inside the frame resolves at top level, or the frame is missing entirely, suspect the navigation before the locator.
+- **`expect` is not loadable inside the Playwright MCP server process**, so the mutation proof the audit checklist requires cannot be run there literally - `require` of both `@playwright/test` and `playwright/test` fails. Emulate the matcher instead (for `toHaveText`: strict single-node resolution plus whitespace-normalized `textContent` equality) and say in the evidence that it is an emulation, never a bare PASS/FAIL. When the fix was to narrow an ambiguous locator, prefer the stronger form: compare the un-narrowed locator's `allTextContents()` with the narrowed one's. That names the node the narrowing dropped, where a mutation only shows that some assertion moved.
+
 ## Locator rules
 
 - All POM entries must be Playwright `Locator` objects (`this.page.getByTestId(...)`, etc.), not strings.

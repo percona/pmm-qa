@@ -88,7 +88,10 @@ Removed or deprecated upstream:
 - `import pmmTest from '@fixtures/pmmTest';` and `import { expect } from '@playwright/test';`.
   Never a bare `test` in a `*.test.ts`.
 - Wrap meaningful phases in `await pmmTest.step('<sentence>', async () => { ... })`, including
-  value-returning steps.
+  value-returning steps. A phase is two or more actions or assertions, or one action together with
+  the assertion that checks it. A step around a single bare `expect` is not a phase: `expect` reports
+  itself, so the wrapper only adds a duplicate nested entry. Across `e2e_tests` 4 of 168 steps take
+  that shape, and `playwright/expect-expect` does not flag it either way, so lint will not catch it.
 - Timeouts always come from `@helpers/timeouts`, never a bare number.
 - Every POM, helper, API client, and component used by a test is registered in
   `e2e_tests/fixtures/pmmTest.ts` and destructured alphabetically in the test signature.
