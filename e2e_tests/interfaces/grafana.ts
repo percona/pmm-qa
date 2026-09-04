@@ -1,10 +1,3 @@
-export interface GrafanaDatasource {
-  id: number;
-  name: string;
-  type: string;
-  uid: string;
-}
-
 export interface GrafanaUser {
   id: number;
   login: string;

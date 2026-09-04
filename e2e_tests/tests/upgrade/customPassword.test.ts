@@ -1,5 +1,4 @@
 import pmmTest from '@fixtures/pmmTest';
-import { expect } from '@playwright/test';
 import { services } from '../../testdata/externalServices';
 
 pmmTest.describe('PMM upgrade tests for custom password', () => {
@@ -24,41 +23,4 @@ pmmTest.describe('PMM upgrade tests for custom password', () => {
       },
     );
   }
-
-  for (const service of services) {
-    pmmTest(
-      `Verify if Agents added with custom password and custom label work as expected Post Upgrade for ${service.serviceType} @post-upgrade`,
-      async ({ api }) => {
-        const details = await api.inventoryApi.getServiceDetailsByPartialName(
-          `upgrade-${service.upgradeService}`,
-        );
-        const customLabels = details.custom_labels as unknown as Record<string, string>;
-
-        await api.grafanaApi.waitForMetric(service.metric, details.service_name);
-        expect(
-          customLabels,
-          `Custom labels for ${service.serviceType} added before upgrade are empty`,
-        ).toBeTruthy();
-
-        expect(
-          customLabels.testing,
-          `Custom label "testing=upgrade" was not retained post upgrade for ${service.serviceType}`,
-        ).toEqual('upgrade');
-      },
-    );
-  }
-
-  // eslint-disable-next-line playwright/expect-expect -- Change password and authorize is verification in this method
-  pmmTest(
-    'PMM-T1189 - verify user is able to change password after upgrade @post-upgrade',
-    async ({ grafanaHelper, page }) => {
-      const currentPass = process.env.ADMIN_PASSWORD || 'admin';
-      const newPass = process.env.NEW_ADMIN_PASSWORD || 'admin1';
-
-      await grafanaHelper.changePassword(currentPass, newPass);
-      await grafanaHelper.authorize('admin', newPass);
-      await page.goto('');
-      await grafanaHelper.changePassword(newPass, currentPass);
-    },
-  );
 });

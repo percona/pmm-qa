@@ -10,7 +10,7 @@ export default class PanelComponent {
   protected verifyData = async (locator: Locator, panelName: string, verifyTexts = true) => {
     const target = locator.first();
 
-    await target.first().waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
+    await target.waitFor({ state: 'visible', timeout: Timeouts.ONE_MINUTE });
 
     try {
       await target.scrollIntoViewIfNeeded();
