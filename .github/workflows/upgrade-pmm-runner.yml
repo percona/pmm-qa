@@ -7,11 +7,6 @@ on:
       - '.github/workflows/upgrade-pmm-runner.yml'
   workflow_dispatch:
     inputs:
-      client_repository:
-        description: 'pmm3-client repo channel for client upgrade'
-        default: 'release'
-        type: choice
-        options: [experimental, testing, release]
       client_tarball_upgrade:
         description: 'Client tarball URL to upgrade to (empty = use repo)'
         default: ''
@@ -29,11 +24,9 @@ on:
 env:
   ADMIN_PASSWORD: admin
   PMM_URL: http://admin:admin@127.0.0.1
-  CLIENT_REPOSITORY: ${{ inputs.client_repository || 'release' }}
   CLIENT_TARBALL_UPGRADE: ${{ inputs.client_tarball_upgrade || '' }}
   PMM_QA_BRANCH: ${{ inputs.pmm_qa_branch || 'main' }}
   UPGRADE_TYPE: ${{ inputs.upgrade_type || 'docker' }}
-  WORKERS: ${{ 2 }}
 
 jobs:
   prepare:
@@ -70,7 +63,7 @@ jobs:
           echo "ui_versions=$UI_VERSIONS" >> "$GITHUB_OUTPUT"
           echo "CLIENT versions: $VERSIONS"
           echo "UI versions:     $UI_VERSIONS"
-          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
+          RC_VERSION=$(curl -s "https://hub.docker.com/v2/repositories/perconalab/pmm-server/tags?page_size=100&name=rc&ordering=last_updated" | jq -r '.results[].name | select(test("-rc$"))' | head -1)
           echo "Latest RC: $RC_VERSION"
           echo "rc_version=perconalab/pmm-server:$RC_VERSION" >> "$GITHUB_OUTPUT"
 
@@ -118,6 +111,7 @@ jobs:
           echo "CLIENT_INSTALL_VERSION=$TARBALL_URL" >> "$GITHUB_ENV"
           echo "PRE_UPGRADE_BRANCH=pmm-${{ matrix.version }}-upgrade" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION=${{ matrix.version }}" >> "$GITHUB_ENV"
+          echo "CLIENT_REPOSITORY=testing" >> "$GITHUB_ENV"
           echo "CLIENT_VERSION reassigned to: $CLIENT_INSTALL_VERSION"
           ver="${RC_VERSION##*:}"
           ver="${ver%-rc*}"
@@ -219,6 +213,12 @@ jobs:
           git fetch origin "$PMM_QA_BRANCH"
           git checkout FETCH_HEAD
 
+      - name: Prepare dependencies for upgrade branch
+        working-directory: pmm-qa/e2e_tests
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
       - name: Docker upgrade (swap server image, keep volume)
         if: ${{ inputs.upgrade_type == 'docker' }}
         run: |
@@ -238,8 +238,11 @@ jobs:
         run: npx playwright test --grep "@post-upgrade"
 
       - name: Upgrade PMM client in every client container to show logs only if error occurs
+        env:
+          CLIENT_REPOSITORY: ${{ steps.resolve.outputs.CLIENT_REPOSITORY }}
+          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
         run: |
-          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos)$'); do
+          for c in $(docker ps --format '{{.Names}}' | grep -Ev '^(pmm-server|pmm-server-old|watchtower|ldap-server|kerberos|minio|redis_container)$'); do
             echo "== upgrading client in $c =="
             log=$(mktemp)
             set +e
@@ -249,6 +252,7 @@ jobs:
                 docker exec "$c" wget -qO /pmm-client.tar.gz "$CLIENT_TARBALL_UPGRADE"
                 docker exec "$c" sh -c 'cd / && tar -zxpf /pmm-client.tar.gz && d=$(ls -1td pmm-client*/ | head -n1) && rm -rf /usr/local/bin/pmm-client && mv -f "$d" /usr/local/bin/pmm-client && bash -x /usr/local/bin/pmm-client/install_tarball -u'
               else
+                echo "Upgrading using packages to repository: $CLIENT_REPOSITORY"
                 docker exec "$c" percona-release enable-only pmm3-client "$CLIENT_REPOSITORY"
                 docker exec "$c" sh -c 'command -v apt >/dev/null && apt install -y pmm-client || dnf install -y pmm-client'
               fi
@@ -262,13 +266,26 @@ jobs:
               rm -f "$log"
               exit $status
             fi
-              version=$(docker exec "$c" pmm-admin --version 2>&1 | head -1)
-              echo "== upgrade succeeded in $c == ($version)"
+              UPGRADE_VERSION=$(docker exec "$c" pmm-admin --version 2>&1 | sed -n '2p')
+              CLIENT_UPGRADE_VERSION=$(docker exec "$c" pmm-admin --version 2>&1 | sed -n '3p')
+              if [[ "$UPGRADE_VERSION" == *"$PMM_SERVER_LATEST"* ]]; then
+                echo "OK: version contains $PMM_SERVER_LATEST ($UPGRADE_VERSION)"
+              else
+                echo "FAIL: expected $PMM_SERVER_LATEST, got $UPGRADE_VERSION"
+              fi
+              if [[ "$CLIENT_UPGRADE_VERSION" == *"$PMM_SERVER_LATEST"* ]]; then
+                echo "OK: version contains $PMM_SERVER_LATEST ($CLIENT_UPGRADE_VERSION)"
+              else
+                echo "FAIL: expected $PMM_SERVER_LATEST, got $CLIENT_UPGRADE_VERSION"
+              fi
+              echo "== upgrade succeeded in $c == ($CLIENT_UPGRADE_VERSION)"
             rm -f "$log"
           done
 
       - name: Check client after upgrade
-        run: python3 pmm-qa/support_scripts/check_client_upgrade.py "${{ matrix.version }}"
+        env:
+          PMM_SERVER_LATEST: ${{ steps.resolve.outputs.PMM_SERVER_LATEST }}
+        run: python3 pmm-qa/support_scripts/check_client_upgrade.py "$PMM_SERVER_LATEST"
 
       - name: Post-client-upgrade UI tests
         working-directory: pmm-qa/e2e_tests
