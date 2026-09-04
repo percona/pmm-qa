@@ -62,6 +62,8 @@ setup_psmdb() {
     [OL_VERSION]="$(resolve_value PSMDB OL_VERSION DB_CONFIG)"
     [GSSAPI]="$(resolve_value PSMDB GSSAPI DB_CONFIG)"
     [MINIO]="$(bool_string "$(resolve_value PSMDB MINIO DB_CONFIG)")"
+    [GENERATE_TRAFFIC]="$(resolve_value PSMDB GENERATE_TRAFFIC DB_CONFIG)"
+    [WT_CACHE_GB]="$(resolve_value PSMDB WT_CACHE_GB DB_CONFIG)"
     [TESTS]=no
     [CLEANUP]=no
     [CLIENT_DEBUG]="$(bool_string "$CLIENT_DEBUG")"

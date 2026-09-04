@@ -27,13 +27,15 @@
     ignore_errors: true
 
   - name: Prepare Container for External Exporters
+    # pmm-agent and both exporters run as plain `nohup` processes (see the tasks
+    # below and install_pmm_client.yml), so this host needs no init system. A
+    # plain ubuntu kept alive with `sleep infinity` drops the systemd, privileged
+    # and cgroup-mount overhead of a full docker-systemd image.
     shell: |
       docker run -d \
         --name={{ external_container }} \
         --network=pmm-qa \
-        --privileged --cgroupns=host -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        -v /var/lib/containerd \
-        antmelekhin/docker-systemd:ubuntu-24.04
+        ubuntu:24.04 sleep infinity
 
   - name: Copy all required Artifacts to the docker external_container
     shell: "{{ item }}"
