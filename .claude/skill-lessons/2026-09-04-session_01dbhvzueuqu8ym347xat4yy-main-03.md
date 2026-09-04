@@ -1,0 +1,6 @@
+# .claude/skills/linode-ha-provisioning/SKILL.md — paginate account-wide cloud list calls, and give a provisioning loop print-first + teardown-on-failure
+
+- Added: 2026-09-04
+- Applies to: all skills that create or delete cloud resources (Linode/LKE provisioning + teardown scripts)
+- Evidence: A perf-harness teardown and inventory used `linode-cli linodes list` with no pagination — it defaults to one 100-row page, so on a busy account a destructive teardown would report `failed=0` while leaving instances billing, and an inventory would silently run against fewer hosts than provisioned. The create loop also tagged VMs `pmm-qa-ephemeral` (no reaper acts on plain instances), and only printed the run id / teardown command after the loop, so a mid-loop failure leaked billing VMs with the id off-screen. Repo convention already pages (prune-tags.sh, prune-lke-orphans.sh page at 500; relay.js walks j.pages).
+- Proposed change: In any script that lists cloud resources account-wide, page explicitly (`--page-size 500`, loop until a short page) rather than taking the CLI default page. In a loop that creates billing resources, print the batch id and its teardown command before the loop and trap ERR to tear the batch down on failure; never stamp a shared reaper tag the resource type is not actually reaped by.
