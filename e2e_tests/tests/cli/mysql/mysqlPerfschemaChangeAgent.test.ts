@@ -337,7 +337,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         .execSilent(
           `docker exec ${containerName} pmm-admin inventory change agent proxysql-exporter ${mysqldExporterId} --server-url=${serverUrl}`,
         )
-        .outContains('certificate signed by unknown authority');
+        .outContains('tls: failed to verify certificate:');
 
       await cliHelper
         .execSilent(
