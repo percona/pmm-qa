@@ -5,9 +5,9 @@
     "semantic_hash": "1fecd6e169ee1e19f013f9358193d699"
   },
   "codeceptConfigHelper.js": {
-    "mtime": 1784571729.0286689,
-    "ast_hash": "b17523950fd6eed9f535fd02f720f15a",
-    "semantic_hash": "b17523950fd6eed9f535fd02f720f15a"
+    "mtime": 1788548881.1705625,
+    "ast_hash": "28658af0a6fa9e249a9aa176b3e07ac7",
+    "semantic_hash": "28658af0a6fa9e249a9aa176b3e07ac7"
   },
   "jsconfig.json": {
     "mtime": 1784571729.034307,
@@ -20,19 +20,19 @@
     "semantic_hash": "1b49da361007acc40b0629d218f4922a"
   },
   "package.json": {
-    "mtime": 1788466154.0524638,
-    "ast_hash": "4b0689fdbb600ad43806f7a06eccbcbf",
-    "semantic_hash": "4b0689fdbb600ad43806f7a06eccbcbf"
+    "mtime": 1788548881.1755638,
+    "ast_hash": "a99bedef0e4b2ca68d55e6ef84a6f61e",
+    "semantic_hash": "a99bedef0e4b2ca68d55e6ef84a6f61e"
   },
   "pr.codecept.js": {
-    "mtime": 1787233825.231151,
-    "ast_hash": "bee5cb5e75c566ef67f62f498923b91b",
-    "semantic_hash": "bee5cb5e75c566ef67f62f498923b91b"
+    "mtime": 1788548881.1765618,
+    "ast_hash": "8aedbc60b20e9d36427ee08e8dcb130e",
+    "semantic_hash": "8aedbc60b20e9d36427ee08e8dcb130e"
   },
   "steps.d.ts": {
-    "mtime": 1784571729.05057,
-    "ast_hash": "84960166c9f068497be209f8a1201c10",
-    "semantic_hash": "84960166c9f068497be209f8a1201c10"
+    "mtime": 1788548881.1780715,
+    "ast_hash": "3bfdfcd06e804b480070bb6d844e9440",
+    "semantic_hash": "3bfdfcd06e804b480070bb6d844e9440"
   },
   "testdata/backup-management/mongodb/setup-replica-and-pbm-local.sh": {
     "mtime": 1784571729.05057,
@@ -45,9 +45,9 @@
     "semantic_hash": "bb4945c905e141513703b4e5856ea8ad"
   },
   "testdata/db_setup.sh": {
-    "mtime": 1788457779.7918346,
-    "ast_hash": "a560470fa44f6e3f2fb6359a7cc0d3b9",
-    "semantic_hash": "a560470fa44f6e3f2fb6359a7cc0d3b9"
+    "mtime": 1788548881.1790826,
+    "ast_hash": "26feb19fad82e6ad7656524547afd3ea",
+    "semantic_hash": "26feb19fad82e6ad7656524547afd3ea"
   },
   "testdata/docker-cleanup.sh": {
     "mtime": 1787753017.9850283,
@@ -205,9 +205,9 @@
     "semantic_hash": "8e1f591643f2b559d2c616c24bf5539c"
   },
   "tests/QAN/externalClickhouse_test.js": {
-    "mtime": 1787601718.7849405,
-    "ast_hash": "69617946081ed9f9371ffc12372fdf8d",
-    "semantic_hash": "69617946081ed9f9371ffc12372fdf8d"
+    "mtime": 1788548881.1790826,
+    "ast_hash": "1aa9d7a090ef1a4ace45e5258e9c9206",
+    "semantic_hash": "1aa9d7a090ef1a4ace45e5258e9c9206"
   },
   "tests/QAN/filters_test.js": {
     "mtime": 1784571729.0940616,
@@ -235,7 +235,7 @@
     "semantic_hash": "3af5f527634c52f581c722ef11a85292"
   },
   "tests/administration/serviceAccounts_test.js": {
-    "mtime": 1788466154.0662222,
+    "mtime": 1788548601.185821,
     "ast_hash": "72481a4188838ffb39fd764cb37a9467",
     "semantic_hash": "72481a4188838ffb39fd764cb37a9467"
   },
@@ -405,9 +405,9 @@
     "semantic_hash": "cb2cd6c97f68b9ac9a58313e7ba6c695"
   },
   "tests/configuration/profile_test.js": {
-    "mtime": 1784571729.134492,
-    "ast_hash": "dfaae5c0b790ff3c85e3f1bf3e6e17d8",
-    "semantic_hash": "dfaae5c0b790ff3c85e3f1bf3e6e17d8"
+    "mtime": 1788548881.1790826,
+    "ast_hash": "683f87cc7bcf94996b3c41a2f91f922a",
+    "semantic_hash": "683f87cc7bcf94996b3c41a2f91f922a"
   },
   "tests/configuration/verifyPMMInventoryPagination_test.js": {
     "mtime": 1784571729.1360152,
@@ -424,15 +424,10 @@
     "ast_hash": "0086a703d5582581c447c6152504678a",
     "semantic_hash": "0086a703d5582581c447c6152504678a"
   },
-  "tests/configuration/verifyPMMSettingsPageElements_test.js": {
-    "mtime": 1787237400.4886856,
-    "ast_hash": "de3ddce773589e8e2d209d7e12072883",
-    "semantic_hash": "de3ddce773589e8e2d209d7e12072883"
-  },
   "tests/configuration/verifyPMMSettingsPageFunctionality_test.js": {
-    "mtime": 1784571729.1360152,
-    "ast_hash": "d3bb4db9c839049ad43451ec4785819d",
-    "semantic_hash": "d3bb4db9c839049ad43451ec4785819d"
+    "mtime": 1788548881.1790826,
+    "ast_hash": "793efa9cf7b53294a11bcd48c0d95e10",
+    "semantic_hash": "793efa9cf7b53294a11bcd48c0d95e10"
   },
   "tests/configuration/verifyRoleBasedAccessControl_test.js": {
     "mtime": 1787747571.780201,
@@ -505,7 +500,7 @@
     "semantic_hash": "34396e74712de6aafa04d0cfae6045dc"
   },
   "tests/dockerConfiguration/publicAddressVariable_test.js": {
-    "mtime": 1788466154.070015,
+    "mtime": 1788548601.1925805,
     "ast_hash": "3a482378c7e2c11666814623fcf302f9",
     "semantic_hash": "3a482378c7e2c11666814623fcf302f9"
   },
@@ -660,7 +655,7 @@
     "semantic_hash": "7cc36a65fde62f72ec07f44ae3388f65"
   },
   "tests/ia/pages/ruleTemplatesPage.js": {
-    "mtime": 1788466154.0798864,
+    "mtime": 1788548601.198156,
     "ast_hash": "65d02844a7291ebea3594c5375915596",
     "semantic_hash": "65d02844a7291ebea3594c5375915596"
   },
@@ -675,7 +670,7 @@
     "semantic_hash": "4c77df9ff8c28c2735394a314f1e6396"
   },
   "tests/ia/ruleTemplates_test.js": {
-    "mtime": 1788466154.0850203,
+    "mtime": 1788548601.209419,
     "ast_hash": "20c90a2aee957eecd8ececdf67f6759b",
     "semantic_hash": "20c90a2aee957eecd8ececdf67f6759b"
   },
@@ -805,9 +800,9 @@
     "semantic_hash": "924b10f47730ba1d158d6f2f830c2876"
   },
   "tests/pages/components/queryAnalytics/queryAnalyticsQueryDetails.js": {
-    "mtime": 1784571729.20926,
-    "ast_hash": "e9ebbc8da19147378ad27a2c42265a1f",
-    "semantic_hash": "e9ebbc8da19147378ad27a2c42265a1f"
+    "mtime": 1788548881.1790826,
+    "ast_hash": "84e965cd4e6b7ed1d2019a6642c1ff25",
+    "semantic_hash": "84e965cd4e6b7ed1d2019a6642c1ff25"
   },
   "tests/pages/components/updatesAvailableModal.js": {
     "mtime": 1785429902.304967,
@@ -820,7 +815,7 @@
     "semantic_hash": "63d18840f42a8c5c3673da0bf4b2ef9c"
   },
   "tests/pages/dashboardPage.js": {
-    "mtime": 1788466154.0850203,
+    "mtime": 1788548601.209419,
     "ast_hash": "fc340c69b195c06204bd30a96db13f0f",
     "semantic_hash": "fc340c69b195c06204bd30a96db13f0f"
   },
@@ -1170,7 +1165,7 @@
     "semantic_hash": "43cae22200b109d0950f3ef2788c8094"
   },
   "tests/verifyMongodbDashboards_test.js": {
-    "mtime": 1788466154.0850203,
+    "mtime": 1788548601.2114253,
     "ast_hash": "188557e53ebbd0d77b1b3db43cec1d5e",
     "semantic_hash": "188557e53ebbd0d77b1b3db43cec1d5e"
   },
@@ -1260,7 +1255,7 @@
     "semantic_hash": "78f7db78a992999191ce118e2d624193"
   },
   "docker-compose-clickhouse.yml": {
-    "mtime": 1788466154.0368078,
+    "mtime": 1788548601.1421268,
     "ast_hash": "c6b309473ff1a19c23fecc8dfc5c5e99",
     "semantic_hash": "c6b309473ff1a19c23fecc8dfc5c5e99"
   },
@@ -1285,9 +1280,9 @@
     "semantic_hash": "5b8713d4a032524367a0f914fbfb26a2"
   },
   "docker-compose-nomad.yml": {
-    "mtime": 1784571729.034307,
-    "ast_hash": "38c6fb3c183eb0d0ba76271e16804efa",
-    "semantic_hash": "38c6fb3c183eb0d0ba76271e16804efa"
+    "mtime": 1788548881.1715605,
+    "ast_hash": "b942f9dd309b172faa6305b6f68539ce",
+    "semantic_hash": "b942f9dd309b172faa6305b6f68539ce"
   },
   "docker-compose-postgresql-ssl.yml": {
     "mtime": 1784571729.034307,
@@ -1300,9 +1295,9 @@
     "semantic_hash": "68273ae71096bddaef94e02d5cb761c8"
   },
   "docker-compose.yml": {
-    "mtime": 1785354626.6757104,
-    "ast_hash": "63cf6b3f8287318ac3bc1505e2501e5d",
-    "semantic_hash": "63cf6b3f8287318ac3bc1505e2501e5d"
+    "mtime": 1788548881.1725624,
+    "ast_hash": "c312ea61f937781d4c3917f4965246a8",
+    "semantic_hash": "c312ea61f937781d4c3917f4965246a8"
   },
   "pmm-ssl.yml": {
     "mtime": 1787753026.1595292,
@@ -1310,12 +1305,12 @@
     "semantic_hash": "781db46985a73a6967bef9e922fafab6"
   },
   "testdata/external-services/external-pgsql-ssl.yml": {
-    "mtime": 1788466154.0579984,
+    "mtime": 1788548601.1788187,
     "ast_hash": "89abecd789b7fb28c643a77f46e59071",
     "semantic_hash": "89abecd789b7fb28c643a77f46e59071"
   },
   "testdata/external-services/external-pgsql.yml": {
-    "mtime": 1788466154.0645535,
+    "mtime": 1788548601.1848254,
     "ast_hash": "4a2fcb25b787f41b9dcb2087665e27ee",
     "semantic_hash": "4a2fcb25b787f41b9dcb2087665e27ee"
   },
@@ -1395,13 +1390,28 @@
     "semantic_hash": "cf06274f5dab87a4b88934e4d5df956f"
   },
   "tests/serverLogs_migrated.js": {
-    "mtime": 1788466154.0850203,
+    "mtime": 1788548601.2114253,
     "ast_hash": "4685265ab01152da03c293921e9fd65f",
     "semantic_hash": "4685265ab01152da03c293921e9fd65f"
   },
   "tests/verifyAnnotations_migrated.js": {
-    "mtime": 1788466154.0850203,
+    "mtime": 1788548601.2114253,
     "ast_hash": "b64e82b5cd607281ff7958c359f26e8b",
     "semantic_hash": "b64e82b5cd607281ff7958c359f26e8b"
+  },
+  "testdata/docker-db-setup-scripts/drop_default_db.sh": {
+    "mtime": 1788548881.1790826,
+    "ast_hash": "6f4d10cc2eb4664d012d9a9bd86f3b57",
+    "semantic_hash": "6f4d10cc2eb4664d012d9a9bd86f3b57"
+  },
+  "testdata/docker-db-setup-scripts/verify_no_default_db.sh": {
+    "mtime": 1788548881.1790826,
+    "ast_hash": "bd557b3e41e6b5272af32ab99b447937",
+    "semantic_hash": "bd557b3e41e6b5272af32ab99b447937"
+  },
+  "tests/configuration/verifyPMMSettingsPageElements_migrated.js": {
+    "mtime": 1788548881.1790826,
+    "ast_hash": "de3ddce773589e8e2d209d7e12072883",
+    "semantic_hash": "de3ddce773589e8e2d209d7e12072883"
   }
 }
