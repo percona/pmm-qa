@@ -240,7 +240,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   pmmTest(
     'PMM-T9993 - Verify Change agent disable collectors @ps-integration',
     async ({ api, cliHelper }) => {
-      const collectorsToDisable = ['perf_schema.eventsstatements', 'perf_schema.tablelocks'];
+      const collectorsToDisable = ['info_schema.query_response_time', 'info_schema.processlist'];
 
       await cliHelper
         .execSilent(
