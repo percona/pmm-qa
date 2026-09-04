@@ -5,7 +5,7 @@ import fs from 'node:fs';
 
 pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality', () => {
   pmmTest.describe.configure({ mode: 'serial' });
-// qan-mysql-perfschema-agent
+
   const mysqlPassword = 'GRgrO9301RuF';
   const newUsername = 'new_pmmm_username';
   const newPassword = 'new_pmm_user_password';
@@ -19,8 +19,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
 
   pmmTest.beforeAll(async ({ cliHelper }) => {
     containerName = cliHelper.execSilent(`docker ps --format '{{.Names}}' | grep ps_pmm_`).stdout.trim();
-    console.log(`Container name is: ${containerName}`);
-    // pgVersion = containerName.match(/\d+/)?.[0] ?? '';
     serviceName = cliHelper
       .execSilent(
         `docker exec ${containerName} pmm-admin list | grep ps_pmm | head -1 | awk -F' ' '{print $2}'`,
@@ -120,8 +118,6 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
     commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
   });
 
-
-
   pmmTest(
     'PMM-T9995 - Verify Change agent enable true/false @ps-integration',
     async ({ cliHelper, page }) => {
@@ -142,6 +138,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
           await cliHelper.execSilent(command).assertSuccess().outContains(enableCommand.response);
         }
 
+        // eslint-disable-next-line playwright/no-wait-for-timeout -- Wait for parameter to be propagated to exporter
         await page.waitForTimeout(Timeouts.TEN_SECONDS);
 
         commands = [
@@ -254,7 +251,7 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
         `docker exec ${containerName} chmod 644 /certs/${containerName}.crt`,
       ];
 
-      commands.forEach((command) => console.log(cliHelper.execSilent(command).assertSuccess()));
+      commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
 
       fs.writeFileSync(
         '/tmp/ssl.conf',
@@ -262,13 +259,9 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       );
 
       cliHelper.execSilent(`docker cp /tmp/ssl.conf ${containerName}:/tmp/ssl.conf`);
-      console.log(
-        cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`),
-      );
-      console.log(cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`));
-      console.log(
-        cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess(),
-      );
+      cliHelper.execSilent(`docker exec ${containerName} bash -c "cat /tmp/ssl.conf >> ${confPath}"`);
+      cliHelper.execSilent(`docker exec ${containerName} cat ${confPath}`);
+      cliHelper.execSilent(`docker exec ${containerName} systemctl restart mysql`).assertSuccess();
 
       await grafanaHelper.authorize();
       await page.goto(servicesPage.url);
