@@ -259,6 +259,27 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
   );
 
   pmmTest(
+    'PMM-T9997 - Verify Change agent tablestats group table limit @ps-slowlog-integration',
+    async ({ api, cliHelper }) => {
+      const tablestatsGroupTableLimit = 2_000;
+
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent mysqld-exporter ${mysqldExporterId} --tablestats-group-table-limit=${tablestatsGroupTableLimit}`,
+        )
+        .assertSuccess()
+        .outContains(`- changed tablestats group table limit to ${tablestatsGroupTableLimit}`);
+
+      const agent = await api.inventoryApi.getAgentById(mysqldExporterId);
+
+      expect(
+        agent.table_count_tablestats_group_limit,
+        'Tablestats group table limit was not persisted on the mysqld_exporter agent',
+      ).toEqual(tablestatsGroupTableLimit);
+    },
+  );
+
+  pmmTest(
     'PMM-T9994 - Verify Change agent tls @ps-slowlog-integration',
     async ({ cliHelper, grafanaHelper, page, servicesPage }) => {
       const confPath = `/etc/mysql/mysql.conf.d/mysqld.cnf`;

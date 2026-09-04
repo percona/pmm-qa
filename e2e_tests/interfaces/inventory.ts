@@ -96,7 +96,7 @@ export interface GetService {
       service_id: string;
       status: string;
       table_count: 0;
-      table_count_tablestats_group_limit: 0;
+      table_count_tablestats_group_limit: number;
       tls: true;
       tls_skip_verify: true;
       username: string;
