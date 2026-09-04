@@ -52,11 +52,8 @@ Scenario(
 Scenario('PMM-T2020 - Verify external clickhouse as datasource on explore page @docker-configuration', async ({ I, explorePage }) => {
   I.amOnPage(basePmmUrl + explorePage.url);
   explorePage.selectDataSource('ClickHouse');
-  explorePage.openSqlEditor();
-  I.clearField(explorePage.elements.sqlBuilder);
-  I.fillField(explorePage.elements.sqlBuilder, 'SELECT * FROM pmm.metrics LIMIT 10;');
-  I.click(explorePage.elements.runQueryButton);
-  I.waitForVisible(explorePage.elements.resultRow, 10);
+  explorePage.runSqlQuery('SELECT * FROM pmm.metrics LIMIT 10');
+  I.waitForVisible(explorePage.elements.resultRow, 30);
   I.dontSee(explorePage.messages.authError);
 });
 
