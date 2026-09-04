@@ -309,4 +309,28 @@ pmmTest.describe('Tests to verify pmm-admin inventory change agent functionality
       commands.forEach((command) => cliHelper.execSilent(command).assertSuccess());
     },
   );
+
+  pmmTest(
+    'PMM-T99103 - Verify Change agent server url and server insecure tls @node-exporter-integration',
+    async ({ cliHelper }) => {
+      const adminPassword = process.env.ADMIN_PASSWORD || 'admin';
+      const serverUrl = `https://admin:${adminPassword}@pmm-server:8443/`;
+
+      // The PMM Server uses a self-signed certificate, so with an explicit --server-url the
+      // client rejects it unless --server-insecure-tls skips certificate validation.
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --server-url=${serverUrl}`,
+        )
+        .outContains('certificate signed by unknown authority');
+
+      // With --server-insecure-tls the certificate check is skipped and the change succeeds.
+      await cliHelper
+        .execSilent(
+          `docker exec ${containerName} pmm-admin inventory change agent node-exporter ${nodeExporterId} --server-url=${serverUrl} --server-insecure-tls`,
+        )
+        .assertSuccess()
+        .outContains('ProxySQL Exporter agent configuration updated');
+    },
+  );
 });
