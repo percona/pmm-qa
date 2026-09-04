@@ -158,6 +158,23 @@ it. Real examples:
 Field IDs verified against the live PMM project. Anything not listed here is
 refinement's to fill in.
 
+Nothing in this repo can check these IDs, so a wrong one surfaces only as a
+failed `create`. If a create is rejected on a field, or you suspect an ID has
+drifted, re-derive it rather than guessing — JQL knows fields by name, the REST
+response knows them by ID, so correlating the two identifies any of them:
+
+```bash
+# 1. find an issue where the named field has a known value
+J search "$(jq -n '{jql:"\"Regression Issue\" = Yes ORDER BY created DESC", maxResults:1, fields:"summary"}')"
+# 2. read that issue's raw fields and look for the value you searched on
+J read "$(jq -n --arg i PMM-15336 '{issue:$i, fieldsCsv:"*all"}')" \
+  | jq '.fields | with_entries(select(.key | startswith("customfield")))
+        | with_entries(select(.value != null))'
+```
+
+The same trick separates two candidates: pick an issue where the named field is
+`Yes` and one where it is `No`, and the ID that flips between them is the field.
+
 | Field | Key | Shape | Agent sets it |
 | ------- | ----- | ------- | --------------- |
 | Summary | `summary` | string | Always |
@@ -186,6 +203,26 @@ Labels are mostly applied by automation (`CVE`, `ES`, `Ext`, `Int`) or by the
 team during refinement (`refined`, `triaged`, `QAA`, `Unplanned`). The two an
 agent may set on its own: `tech-debt`, and `Defect` for a regression the team
 introduced in the release currently under development.
+
+## Evidence hygiene
+
+A PMM ticket is **publicly visible** unless someone sets the Security level
+(Internal only) padlock — which an agent cannot do on the relay path. Everything
+you paste into a description is published, so quote evidence, don't dump it:
+
+- Excerpt the log lines that carry the failure, not whole log files. Keep the
+  error and enough surrounding context to place it.
+- Strip credentials, tokens, API keys, session cookies and connection strings —
+  PMM logs carry these, and `pmm-admin` command lines carry `--password`.
+- Replace customer identifiers with a placeholder. A customer-reported bug gets
+  reproduced on a QA environment and the ticket describes *that*; the reporting
+  customer's hostnames, database names and data never go in.
+- Internal-only infrastructure (relay hostnames, internal IPs, Linode VM
+  addresses, cluster endpoints) is not evidence — a run URL is.
+
+If the failure genuinely cannot be described without sensitive material, file
+the ticket with what is safe, say what is being withheld, and ask a human to
+attach the rest with the padlock set.
 
 `Fix version`, `Planned version`, `Story Points`, `QA Estimation`, `Sprint` and
 `Escalation Priority` are **never** set by an agent.
@@ -262,6 +299,8 @@ J create "$(jq -n --arg s "MySQL 8.4 instances register but report no metrics (a
 6. Details carry version, environment, evidence and links — including an honest
    note when the failure was diagnosed from logs rather than reproduced.
 7. Body is wiki markup: no `##`, no `**bold**`, no Markdown fences.
-8. At least one component; priority set deliberately.
-9. Regression → `versions` + `customfield_10058` both set.
-10. Summary names the observable failure, specific enough to dedup against.
+8. Evidence is excerpted and scrubbed — no credentials, customer identifiers or
+   internal hostnames in a ticket that is public by default.
+9. At least one component; priority set deliberately.
+10. Regression → `versions` + `customfield_10058` both set.
+11. Summary names the observable failure, specific enough to dedup against.
