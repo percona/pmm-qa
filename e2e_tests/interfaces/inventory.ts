@@ -54,7 +54,7 @@ export interface GetService {
         additionalProp3: string;
       };
       disabled: true;
-      disabled_collectors: [string];
+      disabled_collectors: string[];
       listen_port: 0;
       log_level: string;
       max_query_length: 0;
